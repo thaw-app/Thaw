@@ -14,17 +14,10 @@ extension MenuBarItemManager {
     func commitKeepingAppsTogether(_ items: [MenuBarItem], to section: MenuBarSection.Name, _ commit: () -> Void) {
         commit()
         guard let menuBarManager = appState?.menuBarManager, menuBarManager.nativeAppHidingExperiment.isActive else { return }
-        let controller = menuBarManager.sectionController
-        let siblings = AbsentAppSiblings.identifiers(
-            following: items,
-            to: section,
-            assignment: controller.sectionAssignment,
-            liveIdentifiers: Set(managedItems.map(\.uniqueIdentifier))
+        let siblings = AbsentAppSiblings.carry(
+            items, to: section, in: menuBarManager.sectionController, liveIdentifiers: Set(managedItems.map(\.uniqueIdentifier))
         )
         guard !siblings.isEmpty else { return }
-        for identifier in siblings {
-            controller.setSection(section, identifier: identifier)
-        }
         MenuBarItemManager.diagLog.info("Moved \(siblings) with their app to \(section.logString); they aren't on the bar")
     }
 }

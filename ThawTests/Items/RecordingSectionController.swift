@@ -21,6 +21,10 @@ final class RecordingSectionController: MenuBarSectionControlling, ObservedOrder
     private(set) var observedOrders = [[MenuBarSectionName: [String]]]()
     private(set) var observedCommits = 0
     private(set) var sectionAssignments = [(MenuBarSectionName, String)]()
+    /// setSection(_:identifier:) calls, in order.
+    private(set) var identifierAssignments = [(MenuBarSectionName, String)]()
+    /// What section(for:) answers per identifier; anything else is Hidden.
+    var sectionsByIdentifier = [String: MenuBarSectionName]()
     private(set) var sectionOrderCalls = [(MenuBarSectionName, [String])]()
     private(set) var temporaryReveals = [String]()
     private(set) var scheduledConceals = [String]()
@@ -106,8 +110,8 @@ final class RecordingSectionController: MenuBarSectionControlling, ObservedOrder
         .hidden
     }
 
-    func section(for _: String) -> MenuBarSectionName {
-        .hidden
+    func section(for identifier: String) -> MenuBarSectionName {
+        sectionsByIdentifier[identifier] ?? .hidden
     }
 
     func isSectionHidden(_: MenuBarSectionName) -> Bool {
@@ -166,7 +170,10 @@ final class RecordingSectionController: MenuBarSectionControlling, ObservedOrder
         sectionOrderCalls.append((section, items.map(\.uniqueIdentifier)))
     }
 
-    func setSection(_: MenuBarSectionName, identifier _: String) {}
+    func setSection(_ section: MenuBarSectionName, identifier: String) {
+        identifierAssignments.append((section, identifier))
+    }
+
     func setSection(_ section: MenuBarSectionName, item: MenuBarItem) {
         sectionAssignments.append((section, item.uniqueIdentifier))
     }

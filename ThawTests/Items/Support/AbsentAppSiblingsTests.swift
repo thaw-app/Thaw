@@ -28,11 +28,41 @@ struct AbsentAppSiblingsTests {
 
     private let droppy = "iordv.Droppy"
 
+    /// The scan as the manager runs it: explicit assignments and recorded orders are the candidates,
+    /// and a recorded item with no assignment resolves to Visible, as the section controller does.
+    private func siblings(
+        of items: [MenuBarItem],
+        to target: MenuBarSectionName,
+        assignment: [String: MenuBarSectionName],
+        recorded: [String] = [],
+        live: Set<String>
+    ) -> [String] {
+        AbsentAppSiblings.identifiers(
+            following: items,
+            to: target,
+            candidates: Array(assignment.keys) + recorded,
+            sectionOf: { assignment[$0] ?? .visible },
+            liveIdentifiers: live
+        )
+    }
+
+    @Test("A sibling only recorded in an order, implicitly Visible, follows a move to Hidden")
+    func recordedVisibleSiblingFollows() {
+        let moved = siblings(
+            of: [item(droppy, "DroppyMenuBar")],
+            to: .hidden,
+            assignment: ["iordv.Droppy:DroppyMenuBar": .hidden],
+            recorded: ["iordv.Droppy:Item-0", "iordv.Droppy:DroppyMenuBar"],
+            live: ["iordv.Droppy:DroppyMenuBar"]
+        )
+        #expect(moved == ["iordv.Droppy:Item-0"])
+    }
+
     @Test("An app's items placed elsewhere and not on the bar follow the dropped one")
     func undrawnSiblingsFollow() {
         let dropped = item(droppy, "DroppyMenuBar")
-        let moved = AbsentAppSiblings.identifiers(
-            following: [dropped],
+        let moved = siblings(
+            of: [dropped],
             to: .hidden,
             assignment: [
                 "iordv.Droppy:DroppyMenuBar": .hidden,
@@ -40,33 +70,66 @@ struct AbsentAppSiblingsTests {
                 "iordv.Droppy:LiquidPlayerMenuBar": .visible,
                 "com.example.Other:Item-0": .visible,
             ],
-            liveIdentifiers: ["iordv.Droppy:DroppyMenuBar", "com.example.Other:Item-0"]
+            live: ["iordv.Droppy:DroppyMenuBar", "com.example.Other:Item-0"]
         )
         #expect(moved == ["iordv.Droppy:Item-0", "iordv.Droppy:LiquidPlayerMenuBar"])
     }
 
     @Test("A sibling on the bar, one already in the target, and another app's lookalike prefix stay put")
     func onlyAbsentSiblingsOfTheSameAppMove() {
-        let moved = AbsentAppSiblings.identifiers(
-            following: [item(droppy, "DroppyMenuBar")],
+        let moved = siblings(
+            of: [item(droppy, "DroppyMenuBar")],
             to: .hidden,
             assignment: [
                 "iordv.Droppy:Live": .visible,
                 "iordv.Droppy:AlreadyThere": .hidden,
                 "iordv.DroppyHelper:Item-0": .visible,
             ],
-            liveIdentifiers: ["iordv.Droppy:Live"]
+            live: ["iordv.Droppy:Live"]
         )
         #expect(moved.isEmpty)
     }
 
+    @MainActor
+    @Test("Carrying moves an app's absent siblings through the controller and reports them")
+    func carryMovesThroughTheController() {
+        let controller = RecordingSectionController(order: [.visible: ["iordv.Droppy:Item-0", "com.example.Other:Item-0"]])
+        controller.sectionAssignment = ["iordv.Droppy:DroppyMenuBar": .hidden]
+        controller.sectionsByIdentifier = [
+            "iordv.Droppy:DroppyMenuBar": .hidden,
+            "iordv.Droppy:Item-0": .visible,
+            "com.example.Other:Item-0": .visible,
+        ]
+
+        let moved = AbsentAppSiblings.carry(
+            [item(droppy, "DroppyMenuBar")],
+            to: .hidden,
+            in: controller,
+            liveIdentifiers: ["iordv.Droppy:DroppyMenuBar"]
+        )
+
+        #expect(moved == ["iordv.Droppy:Item-0"])
+        #expect(controller.identifierAssignments.map(\.1) == ["iordv.Droppy:Item-0"])
+        #expect(controller.identifierAssignments.allSatisfy { $0.0 == .hidden })
+    }
+
+    @MainActor
+    @Test("Without Native hiding, a section change only runs its own commit")
+    func withoutNativeHidingOnlyTheCommitRuns() {
+        let appState = AppState()
+        var commits = 0
+        appState.itemManager.commitKeepingAppsTogether([item(droppy, "DroppyMenuBar")], to: .hidden) { commits += 1 }
+        #expect(commits == 1)
+        #expect(!appState.menuBarManager.nativeAppHidingExperiment.isActive)
+    }
+
     @Test("Items that aren't grouped by app, such as Apple's, bring nothing along")
     func systemItemsBringNothing() {
-        let moved = AbsentAppSiblings.identifiers(
-            following: [item("com.apple.MenuBarAgent", "com.apple.menuextra.wifi")],
+        let moved = siblings(
+            of: [item("com.apple.MenuBarAgent", "com.apple.menuextra.wifi")],
             to: .hidden,
             assignment: ["com.apple.MenuBarAgent:com.apple.menuextra.bluetooth": .visible],
-            liveIdentifiers: []
+            live: []
         )
         #expect(moved.isEmpty)
     }
