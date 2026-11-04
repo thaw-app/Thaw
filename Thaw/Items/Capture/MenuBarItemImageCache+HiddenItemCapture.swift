@@ -35,12 +35,13 @@ nonisolated struct HiddenItemCaptureResult: Equatable {
 }
 
 extension MenuBarItemImageCache {
-    /// Whether a prewarm leaves this item out for having no size on the bar. An app
-    /// Native hiding keeps off the bar has none until this capture reveals it.
+    /// Whether a prewarm leaves this item out. A Control Center module Thaw hid by switching
+    /// it off never draws when revealed, so it would only cost a settle wait. A blank item has
+    /// no size on the bar, except an app Native hiding keeps off it until this capture reveals it.
     @MainActor
-    func skipsAsBlank(_ item: MenuBarItem) -> Bool {
-        appState?.menuBarManager.nativeAppHidingExperiment.allowsCaptureReveal != true
-            && Self.isBlankItem(item.bounds)
+    func prewarmSkips(_ item: MenuBarItem) -> Bool {
+        item.tag.isControlCenterGovernable
+            || appState?.menuBarManager.nativeAppHidingExperiment.allowsCaptureReveal != true && Self.isBlankItem(item.bounds)
     }
 
     /// Unlike the automatic passes this also runs under Native hiding, where each
@@ -63,7 +64,7 @@ extension MenuBarItemImageCache {
         let newlyCaptured = tally.tags
 
         let items = sections.flatMap { appState.itemManager.itemCache[$0] }
-            .filter { Self.isCapturable($0) && !Self.isBlankItem($0.bounds) }
+            .filter { Self.isCapturable($0) && !Self.isBlankItem($0.bounds) && !$0.tag.isControlCenterGovernable }
         let attempted = items.filter { !alreadyGood.contains($0.tag) || Self.isTag($0.tag, in: newlyCaptured) }
         return .tally(
             attempted.map { (name: $0.displayName, hasImage: Self.isTag($0.tag, in: newlyCaptured)) },
