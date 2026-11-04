@@ -165,8 +165,8 @@ extension MenuBarItemImageCache {
         appState: AppState,
         captureSection: @MainActor (MenuBarSection.Name) async -> CapturePass
     ) async -> Bool {
-        // Before the first await: what this pass publishes must still describe
-        // the layout it started from. See publicationRejection(of:).
+        guard !standsDownForConcealedPrewarm("recaptureNow") else { return false }
+        // Before the first await: what this pass publishes must still describe the layout it started from. See publicationRejection(of:).
         let admission = CapturePublicationPolicy.admit(
             layout: appState.itemManager.layoutPublication,
             displayID: displayID
@@ -739,15 +739,15 @@ extension MenuBarItemImageCache {
                 sources.uncover()
             }
 
-            let revealed = await sources.settledItems(batch)
+            let firstRead = await sources.settledItems(batch)
             guard !skipCaptureWhileScreenLocked("capture reveal completed") else { return }
-            guard !revealed.isEmpty else { continue }
+            guard !firstRead.isEmpty else { continue }
 
             // AX bounds stabilize before MenuBarAgent finishes recompositing
             // the revealed glyphs; wait for them to settle so the screenshot
             // captures fully-rendered icons. One settle for the group, since
             // they were revealed together.
-            await sources.renderSettle(revealed.map(\.live))
+            let revealed = await settleAtFinalFrames(firstRead, using: sources)
             guard !Task.isCancelled, !skipCaptureWhileScreenLocked("settled capture batch") else { return }
 
             // Admitted here, after the reveal and its settle, with nothing
@@ -856,7 +856,7 @@ extension MenuBarItemImageCache {
                 continue
             }
             if let cachedImage = capturesByTag[tag] {
-                let preferred = Self.preferredCachedImage(existing: cachedImage, candidate: image)
+                let preferred = Self.preferredRevealedImage(existing: cachedImage, candidate: image)
                 if MenuBarItemGlyphCapture.isVisuallyEqual(preferred, cachedImage) {
                     continue
                 }
@@ -898,7 +898,7 @@ extension MenuBarItemImageCache {
 
         // Only a pass the user asked for (onlyMissingImages false) retries failed items at
         // once. Automatic passes wait out the cooldown, so they don't rewrite the bar on every open.
-        if let itemManager = appState?.itemManager, !onlyMissingImages {
+        if let itemManager = appState?.itemManager, !onlyMissingImages || tally != nil {
             let tags = sections.reduce(into: Set<MenuBarItemTag>()) { result, section in
                 result.formUnion(itemManager.itemCache[section].map(\.tag))
             }
@@ -933,7 +933,7 @@ extension MenuBarItemImageCache {
                 // Native notch overflow remains in force when Thaw removes an item from its own
                 // concealment assertion. A prewarm in that state can only capture the system
                 // overflow chevron, never the item's real glyph.
-                guard !isNativeOverflowActive, !skipsAsBlank(item) else {
+                guard !isNativeOverflowActive, !prewarmSkips(item) else {
                     return false
                 }
                 return !onlyMissingImages || Self.prewarmNeedsCapture(
@@ -979,7 +979,7 @@ extension MenuBarItemImageCache {
     /// tally, so a queued request can't touch a running one's. Waiters are resumed in arrival order.
     @MainActor
     func beginConcealedPrewarm(tally: RequestedCaptureTally? = nil) async {
-        defer { Self.requestedCaptureTally = tally }
+        defer { markConcealedPrewarmStarted(tally: tally) }
         guard isConcealedPrewarmRunning else {
             isConcealedPrewarmRunning = true
             return

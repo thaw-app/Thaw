@@ -30,6 +30,11 @@ the items under New and Fixed.
 
 Fixes for beta 5, two small additions and an alpha setting for the Thaw Bar.
 
+> [!NOTE]
+> **On a macOS version before 27.2?**
+>
+> This beta may have problems there. Some are already known, such as the macOS 27.0.1 full-screen bug; see [Known macOS 27 limitations](https://github.com/thaw-app/Thaw/blob/development/FREQUENT_ISSUES.md#known-macos-27-limitations). If Thaw got slower or less responsive after you updated and it isn't listed there, please [open an issue](https://github.com/thaw-app/Thaw/issues/new/choose) with your macOS version and a diagnostic log.
+
 ### New
 
 - **Show on hover works on Thaw's icon too.** Rest the pointer on Thaw's icon and your hidden items appear, as they do over an empty part of the menu bar. A click on the icon right after they appear keeps them open. Suggested by @daniilsys in [#1431](https://github.com/thaw-app/Thaw/issues/1431).
@@ -39,6 +44,7 @@ Fixes for beta 5, two small additions and an alpha setting for the Thaw Bar.
 ### Changed
 
 - **Turning the Thaw Bar on or off is clearer.** Settings › Thaw Bar asks where to show hidden items: In the menu bar, In the Thaw Bar, or Always in the menu bar. The text below it says whether the Thaw Bar is on, and the preview's button reads Turn On & Open.
+- **Capture Hidden Items leaves good pictures alone.** It now retakes only pictures that are missing or too small to be an icon, since each item it shows on the menu bar is another chance at a worse picture. Hold Option when you click it to retake every picture. It also waits for an icon to hold still a little longer before taking its picture, and keeps the picture it has over a new one where the icon is drawn much smaller, as it is while it grows back in. With Native hiding it no longer skips items that macOS moves after showing them: it waits for them where they end up. It leaves out Bluetooth, Wi-Fi and the other items Thaw hides by switching them off in Control Center, since showing them for a picture never draws them, so a capture is quicker.
 - **Stable and beta updates reach Macs in stages.** Thaw offers a new version to a few Macs at a time, so a bad update can be stopped before it reaches everyone. Your Mac can get it up to two days after it comes out, and checking for updates yourself finds it right away.
 - **Pull requests get a security review from Strix,** an AI security testing tool, when they open. It adds to the checks we already run, and maintainers decide what to fix. The [security assurance case](https://github.com/thaw-app/Thaw/blob/development/docs/ASSURANCE_CASE.md#7-evidence-pointers) lists it with the rest.
 
@@ -46,12 +52,18 @@ Fixes for beta 5, two small additions and an alpha setting for the Thaw Bar.
 
 - **One click on empty menu bar space opens or closes the Thaw Bar once.** A single click could open the bar and close it straight away, or close it and open it again, so the click seemed to do nothing. Double-clicking for Always Hidden items works as before. Reported by @RonenMars in [#1440](https://github.com/thaw-app/Thaw/issues/1440).
 - **Pictures of hidden items are no longer cut off.** Thaw took the picture while revealed icons could still be sliding into place. It now waits until they stop moving, for up to a second more.
+- **Capture Hidden Items no longer saves cut-off pictures while Settings is open.** Thaw kept refreshing pictures of the menu bar in the background while Capture Hidden Items showed hidden items one at a time, and could take a picture of one as it slid into place. Those refreshes now wait until Capture Hidden Items is done.
 - **Capture Hidden Items counts only what it captured.** The count included older pictures kept after a failed try. It now counts new pictures only, leaves out items with nothing to capture, and names the rest as having no new picture.
 - **Capture Hidden Items gets pictures of apps hidden with Native hiding.** Thaw measured such an icon where it sat while hidden, then turned the picture down because the icon had moved. If an icon moves after Thaw measured it, Thaw now measures it again in its new place. The Thaw Bar and Layout take their pictures the same way and get the fix too.
 - **Hidden items whose app Thaw couldn't identify open again.** macOS can list a hidden item without the app that owns it, and every way Thaw opens an item needs that app, so clicking one from the Thaw Bar or Search did nothing and the pointer disappeared for a moment. Thaw now finds the app from the app ID stored with the item. Reported in [#1119](https://github.com/thaw-app/Thaw/issues/1119).
 - **Hidden items keep their pictures.** Thaw hides Bluetooth, Wi-Fi and Sound by turning off their Control Center modules, so it can't show them again to take a new picture. A picture taken before you hid one was thrown away after 10 minutes, and the item showed a placeholder. Pictures of hidden items now last until Thaw has been closed for a week.
+- **Bluetooth and other system items show their own symbol when Thaw has no picture of them.** Thaw hides Bluetooth, Wi-Fi and Sound by switching them off, so it can't photograph one it has no picture of yet. Instead of a generic placeholder, each now shows its own symbol until Thaw has a picture.
 - **Hidden icons no longer shuffle each time you show them with Native hiding.** macOS puts the apps back where it remembers them, and Thaw tried to move each one, which macOS ignored. Thaw now leaves them where macOS puts them. It also stops retrying any icon macOS refused to move until something changes, such as your layout or display.
 - **Visible icons, Thaw's own included, no longer disappear after you put something in Hidden.** The Always Hidden divider could end up among your visible icons, and everything left of it was hidden. Thaw now moves the divider back left of your Hidden items. Reported by @DoNotResuscitate in [#1329](https://github.com/thaw-app/Thaw/issues/1329).
+- **iStat Menus Weather and Time items keep their place.** Thaw tells iStat items apart by their titles. The Weather title changes with the conditions, and the Time title changes between AM and PM and every month. Each change made Thaw treat the item as new, so it snapped back after you moved it. Thaw now leaves those words out when it names the item. An item with your connected devices in its title, such as Battery, can still lose its place. Reported by @crimsonsunset in [#1445](https://github.com/thaw-app/Thaw/issues/1445).
+- **An app hidden with Native hiding stays hidden after you move it back.** Moving an app's icon out of Hidden and back could leave some of its items in Visible. The app doesn't draw them, so Layout doesn't show them, but they kept the whole app in the menu bar. Moving an app's icon between sections now takes those items along. If an app is stuck in the menu bar this way, move its icon to Visible and back to Hidden.
+- **Thaw's widget keeps its place.** Thaw named the widget by its readings, so each change in battery or Wi-Fi strength made it a new item. A drop next to it could land somewhere else, and its position wasn't kept. The widget now has a fixed name, and its saved position carries over.
+- **Notion Calendar keeps its place.** Its menu bar item shows the next event and the minutes left, such as "Standup · 13 m left", and has no title between events. Each change made it a new item. Thaw now treats every Notion Calendar title as the same item.
 
 ## [3.0.0-beta.5] - 2026-11-01
 

@@ -13,31 +13,42 @@ nonisolated struct HiddenItemCaptureResult: Equatable {
     let total: Int
     /// The items this capture got no new picture of, by name.
     let missing: [String]
+    /// The items left alone because their picture was already good.
+    let kept: Int
 
-    /// Tallies items as (name, got a new picture). The same name lists once, since an
-    /// app's items can share one.
-    static func tally(_ items: [(name: String, hasImage: Bool)]) -> HiddenItemCaptureResult {
+    init(captured: Int, total: Int, missing: [String], kept: Int = 0) {
+        self.captured = captured
+        self.total = total
+        self.missing = missing
+        self.kept = kept
+    }
+
+    /// Tallies items as (name, got a new picture), with kept items counted apart. The same
+    /// name lists once, since an app's items can share one.
+    static func tally(_ items: [(name: String, hasImage: Bool)], kept: Int = 0) -> HiddenItemCaptureResult {
         var missing: [String] = []
         for item in items where !item.hasImage && !missing.contains(item.name) {
             missing.append(item.name)
         }
-        return HiddenItemCaptureResult(captured: items.count(where: \.hasImage), total: items.count, missing: missing)
+        return HiddenItemCaptureResult(captured: items.count(where: \.hasImage), total: items.count, missing: missing, kept: kept)
     }
 }
 
 extension MenuBarItemImageCache {
-    /// Whether a prewarm leaves this item out for having no size on the bar. An app
-    /// Native hiding keeps off the bar has none until this capture reveals it.
+    /// Whether a prewarm leaves this item out. A Control Center module Thaw hid by switching
+    /// it off never draws when revealed, so it would only cost a settle wait. A blank item has
+    /// no size on the bar, except an app Native hiding keeps off it until this capture reveals it.
     @MainActor
-    func skipsAsBlank(_ item: MenuBarItem) -> Bool {
-        appState?.menuBarManager.nativeAppHidingExperiment.allowsCaptureReveal != true
-            && Self.isBlankItem(item.bounds)
+    func prewarmSkips(_ item: MenuBarItem) -> Bool {
+        item.tag.isControlCenterGovernable
+            || appState?.menuBarManager.nativeAppHidingExperiment.allowsCaptureReveal != true && Self.isBlankItem(item.bounds)
     }
 
     /// Unlike the automatic passes this also runs under Native hiding, where each
-    /// reveal makes macOS rebuild the bar. Nil when no capture can run.
+    /// reveal makes macOS rebuild the bar. Items whose picture is already good are left
+    /// alone unless retakingAll, since each reveal risks a worse one. Nil when no capture can run.
     @MainActor
-    func captureHiddenItems() async -> HiddenItemCaptureResult? {
+    func captureHiddenItems(retakingAll: Bool = false) async -> HiddenItemCaptureResult? {
         guard let appState else { return nil }
         let native = appState.menuBarManager.nativeAppHidingExperiment
         native.allowsCaptureReveal = true
@@ -45,13 +56,20 @@ extension MenuBarItemImageCache {
         guard ConcealedPrewarmGate.mayReveal(for: appState) else { return nil }
 
         let sections: [MenuBarSection.Name] = [.hidden, .alwaysHidden]
+        let alreadyGood = retakingAll ? [] : Set(sections.flatMap { appState.itemManager.itemCache[$0] }
+            .filter { !Self.prewarmNeedsCapture(cachedImage: image(for: $0.tag), wouldAttemptCapture: true) }
+            .map(\.tag))
         let tally = RequestedCaptureTally()
-        await prewarmConcealedImages(sections: sections, onlyMissingImages: false, tally: tally)
+        await prewarmConcealedImages(sections: sections, onlyMissingImages: !retakingAll, tally: tally)
         let newlyCaptured = tally.tags
 
         let items = sections.flatMap { appState.itemManager.itemCache[$0] }
-            .filter { Self.isCapturable($0) && !Self.isBlankItem($0.bounds) }
-        return .tally(items.map { (name: $0.displayName, hasImage: Self.isTag($0.tag, in: newlyCaptured)) })
+            .filter { Self.isCapturable($0) && !Self.isBlankItem($0.bounds) && !$0.tag.isControlCenterGovernable }
+        let attempted = items.filter { !alreadyGood.contains($0.tag) || Self.isTag($0.tag, in: newlyCaptured) }
+        return .tally(
+            attempted.map { (name: $0.displayName, hasImage: Self.isTag($0.tag, in: newlyCaptured)) },
+            kept: items.count - attempted.count
+        )
     }
 
     /// Whether a pass captured tag. A reveal can rebuild the bar, so a window ID

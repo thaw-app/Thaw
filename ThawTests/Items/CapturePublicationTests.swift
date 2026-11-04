@@ -548,6 +548,84 @@ struct GroupedRevealPublicationTests {
         #expect(events == ["cover revealed=0", "uncover concealed=1", "cover revealed=1", "uncover concealed=2"])
     }
 
+    /// Under Native hiding a reveal rebuilds the bar, and the item can reach its slot only
+    /// after its first position was read; the settle and the crop must follow it there.
+    @Test("An item that moves after its first read is settled again and cropped where it ended up")
+    func movedItemIsFollowed() async throws {
+        let (world, controller) = try makeWorld(gated: false)
+        let stale = MenuBarItem(
+            tag: world.fresh.tag,
+            windowID: world.fresh.windowID,
+            ownerPID: world.fresh.ownerPID,
+            sourcePID: world.fresh.sourcePID,
+            bounds: world.fresh.bounds.offsetBy(dx: -150, dy: 0),
+            title: world.fresh.title,
+            isOnScreen: true
+        )
+        var reads = 0
+        var settledAt: [[CGFloat]] = []
+        await world.cache.captureRevealBatches(
+            [[world.fresh]],
+            controller: controller,
+            target: .init(displayID: CaptureWorld.display, admittedDisplayID: world.appState.itemManager.itemDisplayID, scale: 2),
+            missPolicy: .dropUntrustedEntries,
+            appState: world.appState,
+            sources: .init(
+                settledItems: { batch in
+                    reads += 1
+                    return batch.map { (requested: $0, live: reads == 1 ? stale : $0) }
+                },
+                renderSettle: { items in settledAt.append(items.map(\.bounds.minX)) },
+                reader: world.reader
+            )
+        )
+        #expect(settledAt == [[stale.bounds.minX], [world.fresh.bounds.minX]])
+        #expect(world.cache.capturesByTag[world.fresh.tag] != nil)
+    }
+
+    @Test("The second read asks only for the items that appeared the first time")
+    func secondReadSkipsItemsThatNeverAppeared() async throws {
+        let (world, controller) = try makeWorld(gated: false)
+        var asked: [[MenuBarItemTag]] = []
+        await world.cache.captureRevealBatches(
+            [[world.fresh, world.retried]],
+            controller: controller,
+            target: .init(displayID: CaptureWorld.display, admittedDisplayID: world.appState.itemManager.itemDisplayID, scale: 2),
+            missPolicy: .dropUntrustedEntries,
+            appState: world.appState,
+            sources: .init(
+                settledItems: { batch in
+                    asked.append(batch.map(\.tag))
+                    // Retried never draws, like a module that stays switched off.
+                    return batch.filter { $0.tag != world.retried.tag }.map { (requested: $0, live: $0) }
+                },
+                renderSettle: { _ in },
+                reader: world.reader
+            )
+        )
+        #expect(asked == [[world.fresh.tag, world.retried.tag], [world.fresh.tag]])
+    }
+
+    @Test("An item that stays put is settled once")
+    func stillItemIsSettledOnce() async throws {
+        let (world, controller) = try makeWorld(gated: false)
+        var settles = 0
+        await world.cache.captureRevealBatches(
+            [[world.fresh]],
+            controller: controller,
+            target: .init(displayID: CaptureWorld.display, admittedDisplayID: world.appState.itemManager.itemDisplayID, scale: 2),
+            missPolicy: .dropUntrustedEntries,
+            appState: world.appState,
+            sources: .init(
+                settledItems: { batch in batch.map { (requested: $0, live: $0) } },
+                renderSettle: { _ in settles += 1 },
+                reader: world.reader
+            )
+        )
+        #expect(settles == 1)
+        #expect(world.cache.capturesByTag[world.fresh.tag] != nil)
+    }
+
     /// The hiding method can change while a pass waits between batches, so
     /// the gate is asked again right before each reveal.
     @Test("A batch the gate refuses is never revealed")
@@ -620,5 +698,48 @@ struct GroupedRevealPublicationTests {
         #expect(await world.reader.captures.isEmpty, "No pixels are taken for a batch that cannot publish")
         #expect(controller.revealed == [world.fresh.uniqueIdentifier])
         #expect(controller.concealed == [world.fresh.uniqueIdentifier])
+    }
+}
+
+/// Capture Hidden Items reveals hidden items one at a time; a recapture pass would crop them as they slide in.
+@MainActor
+@Suite("Recapture during Capture Hidden Items", .serialized, .timeLimit(.minutes(1)))
+struct RecaptureDuringHiddenItemCaptureTests {
+    @Test("A pass while hidden items are being captured takes no screenshot and changes nothing", arguments: [false, true])
+    func passStandsDown(forced: Bool) async throws {
+        let world = try CaptureWorld(gated: false)
+        await world.cache.beginConcealedPrewarm()
+        defer { world.cache.endConcealedPrewarm() }
+        let before = world.state
+
+        #expect(await world.recapture(forced: forced) == false)
+        #expect(world.state == before)
+        #expect(await world.reader.captures.isEmpty)
+    }
+
+    @Test("A pass already taking its screenshot when the hidden-item capture starts publishes nothing", arguments: [false, true])
+    func inFlightPassIsDiscarded(forced: Bool) async throws {
+        let world = try CaptureWorld(gated: true)
+        let before = world.state
+
+        let pass = Task { await world.recapture(forced: forced) }
+        await world.gate.waitUntilArrived()
+        await world.cache.beginConcealedPrewarm()
+        await world.gate.release()
+
+        #expect(await pass.value == false)
+        #expect(world.state == before)
+        #expect(await world.reader.captures.contains(.strip), "The pass was rejected after it took pixels")
+        world.cache.endConcealedPrewarm()
+    }
+
+    @Test("Passes publish again once the hidden-item capture ends")
+    func passesResumeAfterwards() async throws {
+        let world = try CaptureWorld(gated: false)
+        await world.cache.beginConcealedPrewarm()
+        world.cache.endConcealedPrewarm()
+
+        #expect(await world.recapture(forced: false))
+        #expect(world.cache.capturesByTag[world.fresh.tag] != nil)
     }
 }

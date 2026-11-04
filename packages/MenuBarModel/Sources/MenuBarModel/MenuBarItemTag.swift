@@ -185,7 +185,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
 
     /// Wholly volatile titles, such as Dato's date and event countdown, have no stable fragment; use sibling position instead.
     /// - Important: Add only apps with volatile titles in every item; instanceIndex alone distinguishes siblings, so reordering swaps identities.
-    private static let volatileTitleBundleMatchers: [(prefix: String, suffix: String)] = [
+    private static let volatileTitleBundleMatchers: [(prefix: String, suffix: String)] = singleItemCalendarBundleMatchers + [
         (prefix: "com.sindresorhus.Dato", suffix: ""),
         // ThermalForge's single temperature item uses instanceIndex to avoid migration shuffles.
         // Its startup "Item-0" fallback maps to the same placeholder, preserving identity across launch.
@@ -605,7 +605,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
         guard case let .string(bundleID) = namespace else {
             return title
         }
-        return migratedAppKitPlaceholderTitle(bundleID: bundleID, title: title)
+        return migratedAppKitPlaceholderTitle(bundleID: bundleID, title: title) ?? migratedWidgetTitle(bundleID: bundleID, title: title)
             ?? titleCanonicalizer(for: bundleID)?(title)
             ?? title
     }
@@ -638,12 +638,12 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
             return "\(prefix)\(title)\(instance)"
         }
         guard let canonicalize = titleCanonicalizer(for: bundleID) else {
-            return identifier
+            return migratedWidgetTitle(bundleID: bundleID, title: suffix).map { "\(prefix)\($0)" } ?? identifier
         }
 
         // A clock's trailing minutes are not an instance index; splitting them would churn identity every minute.
         // Distinguish times by digits before the colon and two digits after it.
-        if !suffix.contains(/\d{1,2}:\d{2}(?::\d{2})?$/),
+        if !suffix.contains(/\d{1,2}:\d{2}(?::\d{2})?$/), !isSingleItemCalendar(bundleID),
            let separator = suffix.lastIndex(of: ":")
         {
             let title = String(suffix[..<separator])
@@ -697,10 +697,10 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
                 return module
             }
         }
-        return raw
+        return collapsingReadingWords(raw
             .replacing(/[-+]?\d+(?:[.,]\d+)?/, with: "#")
             .replacing(/#\s*[KMGTPE]?[Bb]\/s/, with: "# B/s")
-            .replacing(/#\s*[KMGTPE]?[Bb]/, with: "# B")
+            .replacing(/#\s*[KMGTPE]?[Bb]/, with: "# B"))
     }
 
     /// Keeps the name after ": " without matching localized countdown words; identity changes only when the meeting changes.

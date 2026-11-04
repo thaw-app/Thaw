@@ -64,6 +64,19 @@ struct StatusIconNetworkTests {
         #expect(action.isEnabled)
     }
 
+    @Test("The widget keeps one identifier while its readings change")
+    func identifierIgnoresReadings() {
+        let button = NSButton()
+        var state = StatusIconPreviewState(composition: .init(), samples: .init(network: .wifi), isLive: true)
+        StatusItemPublisher.configure(button, for: state)
+        let firstLabel = button.accessibilityLabel()
+        state.samples.network = .ethernet
+        StatusItemPublisher.configure(button, for: state)
+
+        #expect(button.accessibilityIdentifier() == "Thaw.Widget.Preview")
+        #expect(button.accessibilityLabel() != firstLabel, "The label still describes the readings")
+    }
+
     @Test("Ethernet and Wi-Fi produce different template images")
     func renderedConnectionChanges() throws {
         let wifi = StatusItemPublisher.render(CompositeStatusIcon(composition: .init(), samples: .init(network: .wifi)), size: 22)

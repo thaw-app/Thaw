@@ -22,7 +22,7 @@ extension MenuBarItemImageCache {
     static var requestedCaptureTally: RequestedCaptureTally?
 
     /// Waits for a revealed batch to stop moving before its screenshot. See
-    /// waitForSettledPixels(minimumSettle:interval:budget:sleep:read:).
+    /// waitForSettledPixels(minimumSettle:interval:requiredMatches:budget:sleep:read:).
     func settleRevealedPixels(_ revealed: [MenuBarItem], displayID: CGDirectDisplayID) async {
         let frames = revealed.map(\.bounds)
         let reader = LiveMenuBarCaptureReader()
@@ -43,7 +43,7 @@ extension MenuBarItemImageCache {
         if let tally = Self.requestedCaptureTally {
             for pair in revealed {
                 guard let image = captureResult.captured[pair.live.tag] else { continue }
-                let kept = capturesByTag[pair.requested.tag].map { Self.preferredCachedImage(existing: $0, candidate: image) }
+                let kept = capturesByTag[pair.requested.tag].map { Self.preferredRevealedImage(existing: $0, candidate: image) }
                 if kept == nil || kept == image {
                     tally.tags.insert(pair.requested.tag)
                 }
@@ -52,10 +52,11 @@ extension MenuBarItemImageCache {
         commitCaptureLedger(of: captureResult)
     }
 
-    /// Waits until two reads of the revealed items' pixels match.
+    /// Waits until three reads in a row of the revealed items' pixels match.
     ///
     /// AX reports an item's final frame while MenuBarAgent is still sliding its
-    /// glyph there, so a crop by that frame can cut the glyph off. Ends at the
+    /// glyph there, so a crop by that frame can cut the glyph off. A bar that moves in steps
+    /// can repeat one frame mid-slide, so a single matching pair isn't enough. Ends at the
     /// budget for an icon that keeps changing, or when the bar can't be read.
     /// Each read gets only the time left, so a slow screenshot can't hold the reveal.
     ///
@@ -65,6 +66,7 @@ extension MenuBarItemImageCache {
     static func waitForSettledPixels(
         minimumSettle: Duration = Constants.MenuBarTuning.layoutPrewarmRenderSettle,
         interval: Duration = .milliseconds(100),
+        requiredMatches: Int = 2,
         budget: Duration = Constants.MenuBarTuning.revealCapturePixelSettleBudget,
         sleep: @MainActor (Duration) async -> Void = { try? await Task.sleep(for: $0) },
         read: @escaping @MainActor () async -> [Data]?
@@ -73,11 +75,13 @@ extension MenuBarItemImageCache {
         let deadline = ContinuousClock.now + budget
         guard case let .read(first) = await readBefore(deadline, read) else { return false }
         guard var previous = first else { return true }
+        var matches = 0
         while !Task.isCancelled, ContinuousClock.now < deadline {
             await sleep(interval)
             guard case let .read(next) = await readBefore(deadline, read) else { return false }
             guard let current = next else { return true }
-            if current == previous {
+            matches = current == previous ? matches + 1 : 0
+            if matches >= requiredMatches {
                 return true
             }
             previous = current

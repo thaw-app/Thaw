@@ -1,0 +1,32 @@
+//
+//  MenuBarItemTag+ReadingWords.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+extension MenuBarItemTag {
+    /// Notion Calendar, still under Cron's bundle ID, has one item titled by the next event and
+    /// its countdown, and untitled between events. No part of the title is stable.
+    static let singleItemCalendarBundleMatchers: [(prefix: String, suffix: String)] = [
+        (prefix: "com.cron.electron", suffix: ""),
+    ]
+
+    /// Whether bundleID is such a calendar. Its one item has no instance index, so a
+    /// trailing ":<number>" in a saved identifier belongs to the event title.
+    static func isSingleItemCalendar(_ bundleID: String) -> Bool {
+        singleItemCalendarBundleMatchers.contains { bundleID.hasPrefix($0.prefix) && bundleID.hasSuffix($0.suffix) }
+    }
+
+    /// Drops the words that still change once a reading's numbers are #: the weather conditions
+    /// after "Currently #°", and a date's AM/PM and month, whether the month comes before or after the day.
+    static func collapsingReadingWords(_ neutralized: String) -> String {
+        if neutralized.hasPrefix("Currently #°") {
+            return "Currently"
+        }
+        let month = /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?(?= #| at\b)/
+        return neutralized
+            .replacing(month, with: "#")
+            .replacing(/(#:#)\s*[AaPp]\.?\s?[Mm]\.?$/) { $0.output.1 }
+    }
+}

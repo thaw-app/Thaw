@@ -5,6 +5,9 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
+import CoreGraphics
+import MenuBarModel
 import Testing
 @testable import Thaw
 
@@ -22,6 +25,46 @@ struct HiddenItemCaptureTests {
         #expect(result.captured == 1)
         #expect(result.total == 4)
         #expect(result.missing == ["OneDrive", "Tailscale"])
+    }
+
+    @Test("Items left alone for already having a good picture are counted apart, not as missing")
+    func keptPicturesAreCountedApart() {
+        let result = HiddenItemCaptureResult.tally([(name: "Tailscale", hasImage: true)], kept: 3)
+        #expect(result.captured == 1)
+        #expect(result.total == 1)
+        #expect(result.kept == 3)
+        #expect(result.missing.isEmpty)
+        #expect(HiddenItemCaptureButton.message(for: result).contains("3"))
+        #expect(HiddenItemCaptureButton.message(for: .tally([(name: "Tailscale", hasImage: true)])).contains("kept") == false)
+    }
+
+    @Test("Option-click retakes every picture; a plain click only the missing and weak ones")
+    func optionRetakesAll() {
+        #expect(HiddenItemCaptureButton.retakesAll(modifierFlags: [.option]))
+        #expect(HiddenItemCaptureButton.retakesAll(modifierFlags: [.option, .shift]))
+        #expect(!HiddenItemCaptureButton.retakesAll(modifierFlags: []))
+        #expect(!HiddenItemCaptureButton.retakesAll(modifierFlags: [.command]))
+    }
+
+    private func item(_ namespace: MenuBarItemTag.Namespace, _ title: String, width: CGFloat = 24) -> MenuBarItem {
+        MenuBarItem(
+            tag: MenuBarItemTag(namespace: namespace, title: title, windowID: 9, instanceIndex: 0),
+            windowID: 9,
+            ownerPID: 1,
+            sourcePID: 1,
+            bounds: CGRect(x: 900, y: 4, width: width, height: 24),
+            title: nil,
+            isOnScreen: true
+        )
+    }
+
+    @Test("A hidden Control Center module is left out, since showing it never draws it")
+    func controlCenterModulesAreSkipped() {
+        let cache = MenuBarItemImageCache(screenIsLocked: { false })
+        #expect(cache.prewarmSkips(item(.menuBarAgent, "com.apple.menuextra.bluetooth")))
+        #expect(cache.prewarmSkips(item(.menuBarAgent, "com.apple.menuextra.wifi")))
+        #expect(!cache.prewarmSkips(item(.string("com.example.app"), "Item-0")))
+        #expect(cache.prewarmSkips(item(.string("com.example.app"), "Item-0", width: 2)), "A blank item is still left out")
     }
 
     @Test("Each outcome gets a message, naming what's missing")

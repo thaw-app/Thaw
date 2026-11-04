@@ -38,12 +38,20 @@ struct RevealPixelSettleTests {
         )
     }
 
-    @Test("Keeps reading while a glyph slides, and stops at the first matching pair")
+    @Test("Keeps reading while a glyph slides, and stops at the first three matching frames")
     func waitsOutASlide() async {
         let a = Data([1]), b = Data([2]), c = Data([3])
-        let script = Script([[a], [b], [c], [c], [a]])
+        let script = Script([[a], [b], [c], [c], [c], [a]])
         #expect(await wait(script))
-        #expect(script.count == 4)
+        #expect(script.count == 5)
+    }
+
+    @Test("Two matching frames that then change aren't settled; three in a row are")
+    func briefPauseIsNotSettled() async {
+        let a = Data([1]), b = Data([2])
+        let script = Script([[a], [a], [b], [b], [b]])
+        #expect(await wait(script))
+        #expect(script.count == 5)
     }
 
     @Test("A bar that can't be read ends the wait")
