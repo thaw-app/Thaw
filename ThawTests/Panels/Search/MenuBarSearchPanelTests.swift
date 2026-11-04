@@ -47,7 +47,7 @@ struct MenuBarSearchPanelTests {
         #expect(panel.presentation == .inspector)
     }
 
-    @Test("Edit Name starts a rename seeded with the item's custom name")
+    @Test("Rename… starts a rename seeded with the item's custom name")
     func beginRenameSeedsDraft() throws {
         let world = World()
         var alpha = World.item("Alpha")

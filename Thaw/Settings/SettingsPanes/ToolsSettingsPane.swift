@@ -124,9 +124,9 @@ struct ToolsSettingsPane: View {
             }
 
             toolRow(
-                title: "Saved item positions",
-                detail: "Delete macOS's saved menu bar layout and restart the menu bar so it rebuilds from scratch. Use this when items won't come back to the menu bar after you move them. A backup is saved first; restore it from Layout backups below.",
-                buttonTitle: "Reset Positions…",
+                title: "macOS's saved layout",
+                detail: "Delete the menu bar layout macOS keeps and restart the menu bar so macOS builds a new one. Use this when items won't come back to the menu bar after you move them. To move every item into one section instead, use Reset Layout on the Layout page. A backup is saved first; restore it from Layout backups below.",
+                buttonTitle: "Rebuild Saved Layout…",
                 role: .destructive,
                 statusFor: .resetMenuBarLayoutPositions
             ) {
@@ -241,11 +241,11 @@ struct ToolsSettingsPane: View {
                 if let backup {
                     reportSuccess(
                         String(
-                            localized: "Saved item positions were reset. Backup saved as \(backup.url.lastPathComponent). Relaunching…"
+                            localized: "macOS's saved layout was deleted. Backup saved as \(backup.url.lastPathComponent). Relaunching…"
                         )
                     )
                 } else {
-                    reportSuccess(String(localized: "Saved item positions were reset. Relaunching…"))
+                    reportSuccess(String(localized: "macOS's saved layout was deleted. Relaunching…"))
                 }
                 // Access granted to the old layout table does not carry over to
                 // the one the menu bar writes next, so relaunch once it exists.
@@ -289,7 +289,7 @@ private enum MaintenanceToolAction: Identifiable {
     var confirmationTitle: String {
         switch self {
         case .resetSettings: String(localized: "Reset all settings?")
-        case .resetMenuBarLayoutPositions: String(localized: "Reset saved item positions?")
+        case .resetMenuBarLayoutPositions: String(localized: "Rebuild macOS's saved layout?")
         case .restartMenuBar: String(localized: "Restart the menu bar?")
         case .resetPermissions: String(localized: "Reset permissions?")
         }
@@ -298,7 +298,7 @@ private enum MaintenanceToolAction: Identifiable {
     var errorTitle: LocalizedStringResource {
         switch self {
         case .resetSettings: "Couldn’t reset settings"
-        case .resetMenuBarLayoutPositions: "Couldn’t reset saved item positions"
+        case .resetMenuBarLayoutPositions: "Couldn’t rebuild macOS's saved layout"
         case .restartMenuBar: "Couldn’t restart the menu bar"
         case .resetPermissions: "Couldn’t reset permissions"
         }
@@ -307,7 +307,7 @@ private enum MaintenanceToolAction: Identifiable {
     var confirmationButtonTitle: LocalizedStringResource {
         switch self {
         case .resetSettings: "Reset"
-        case .resetMenuBarLayoutPositions: "Reset Positions"
+        case .resetMenuBarLayoutPositions: "Rebuild Saved Layout"
         case .restartMenuBar: "Restart Menu Bar"
         case .resetPermissions: "Reset Permissions"
         }

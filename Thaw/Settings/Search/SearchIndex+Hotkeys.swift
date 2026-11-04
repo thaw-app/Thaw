@@ -15,7 +15,7 @@ nonisolated extension SearchIndex {
     static let hotkeyEntries: [SearchEntry] = [
         SearchEntry(
             id: "hotkeys.toggleHiddenSection",
-            title: "Toggle the Hidden section",
+            title: "Show or hide hidden items",
             descriptionText: nil,
             pane: .hotkeys,
             section: "Visibility",
@@ -24,7 +24,7 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "hotkeys.toggleAlwaysHiddenSection",
-            title: "Toggle the Always Hidden section",
+            title: "Show or hide Always Hidden items",
             descriptionText: nil,
             pane: .hotkeys,
             section: "Visibility",
@@ -90,7 +90,7 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "hotkeys.toggleApplicationMenus",
-            title: "Toggle application menus",
+            title: "Hide or show app menus",
             descriptionText: nil,
             pane: .hotkeys,
             section: "Visibility",

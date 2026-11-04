@@ -46,7 +46,7 @@ struct LayoutBarItemMenuTests {
         #expect(titles.contains(String(localized: "Move to")))
         #expect(titles.contains(String(localized: "Choose Icon…")))
         #expect(titles.contains(String(localized: "Set Shortcut…")))
-        #expect(titles.last == String(localized: "Reveal When Its Icon Changes"))
+        #expect(titles.last == String(localized: "Show When Its Icon Changes"))
 
         let groupWith = try #require(menu.items.first { $0.title == String(localized: "Group With") })
         #expect(groupWith.submenu?.items.map(\.title) == [beta.displayName])
@@ -116,7 +116,7 @@ struct LayoutBarItemMenuTests {
         let group = try #require(world.appState.itemGroupManager.resolvedGroups(for: pair).first)
         let menu = try #require(LayoutBarItemMenu.menu(subject: .group(group), section: .visible, orderedItems: pair, appState: world.appState))
         #expect(menu.items.count == 3)
-        #expect(!menu.items.contains { $0.title == String(localized: "Reveal When Its Icon Changes") })
+        #expect(!menu.items.contains { $0.title == String(localized: "Show When Its Icon Changes") })
     }
 
     @Test("A loose item beside a group can be added to it")

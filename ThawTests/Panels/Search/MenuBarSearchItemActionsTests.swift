@@ -52,7 +52,7 @@ struct MenuBarSearchItemActionsTests {
         #expect(settings.keyEquivalentModifierMask == .command)
         _ = settings.target?.perform(settings.action)
         #expect(openedSettings)
-        #expect(menu.items.contains { $0.title == String(localized: "Reveal When Its Icon Changes") })
+        #expect(menu.items.contains { $0.title == String(localized: "Show When Its Icon Changes") })
     }
 
     @Test("A control item's menu has no item entries, only the reveal and settings entries")

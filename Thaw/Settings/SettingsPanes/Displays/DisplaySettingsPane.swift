@@ -128,7 +128,7 @@ private struct WideDisplayRuleSection: View {
     var body: some View {
         ThawSection("Wide displays") {
             Toggle("Show every item on wide displays", isOn: $rule.isEnabled)
-                .annotation("While the menu bar is on a display at least this wide, hidden items stay in the menu bar, as if “Always show hidden items” were on for that display.")
+                .annotation("While the menu bar is on a display at least this wide, hidden items stay in the menu bar, as if Show hidden items were set to “Always in the menu bar” for that display.")
 
             if rule.isEnabled {
                 LabeledContent {

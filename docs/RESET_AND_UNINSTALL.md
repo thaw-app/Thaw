@@ -37,7 +37,7 @@ This puts every setting back to its default. Your saved profiles are kept. It ca
 |---|---|---|
 | An app's item is gone | Restore Missing Items… | Brings items back without touching your layout |
 | The menu bar is stuck, for example on top of full-screen apps | Restart Menu Bar… | Restarts the menu bar and keeps your layout |
-| Items will not stay where you put them | Reset Positions… | Deletes the layout macOS saved and restarts the menu bar. A backup is saved first. |
+| Items will not stay where you put them | Rebuild Saved Layout… | Deletes the layout macOS saved and restarts the menu bar. A backup is saved first. |
 | A permission is stuck | Reset Permissions… | Clears Accessibility and Screen Recording for Thaw, then quits so you can grant them again |
 
 ## Uninstall

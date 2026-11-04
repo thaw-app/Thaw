@@ -49,22 +49,17 @@ struct MenuBarAccessPane: View {
 
     // MARK: - Swap
 
-    /// The swap is the reason the two groups exist: trade them and the bar
-    /// carries the other group, without ever holding both. The bar is the
-    /// surface that makes it one click; the keyboard shortcut and the Shortcuts action
-    /// are the other two ways in, named here so the toggle does not read as
-    /// the only one.
+    /// The Swap Bar makes swapping one click; the note names the other ways so the toggle doesn't read as the only one.
     private var swapBarToggle: some View {
         Toggle("Show Swap Bar", isOn: $advancedSettings.enableSwapBar)
             .annotation(
                 "A strip under the menu bar that trades your shown and hidden items in one click.",
                 more: """
-                Swap moves the hidden items onto the menu bar and the shown ones off, each group \
-                in its own order, until you swap back. It is a real layout change, so it stays \
-                that way through a relaunch. The Swap Bar sits under the menu bar on the display \
-                your pointer is on, beside the active profile, the section toggles, and Zen Mode, \
-                and never takes focus from the app you are in. Right-click the menu bar, a \
-                keyboard shortcut, or a Shortcuts action reach the same swap without it.
+                The hidden items move onto the menu bar and the shown ones move off, each group \
+                in its own order. It's a real layout change, so it lasts through a relaunch until \
+                you swap back. The Swap Bar also holds the active profile, the section toggles \
+                and Zen Mode, and never takes focus from your app. Without it, swap with a \
+                keyboard shortcut, a Shortcuts action, or the More menu in Settings.
                 """
             )
     }

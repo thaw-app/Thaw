@@ -85,7 +85,7 @@ enum LayoutBarItemMenu {
         }
         let identifier = item.tag.tagIdentifier
         let isEnabled = MenuBarItemAlertReveals.contains(identifier)
-        let entry = ClosureMenuItem(title: String(localized: "Reveal When Its Icon Changes")) {
+        let entry = ClosureMenuItem(title: String(localized: "Show When Its Icon Changes")) {
             MenuBarItemAlertReveals.setEnabled(!isEnabled, for: identifier)
         }
         entry.state = isEnabled ? .on : .off

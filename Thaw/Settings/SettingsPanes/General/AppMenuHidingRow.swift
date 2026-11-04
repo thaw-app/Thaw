@@ -18,14 +18,19 @@ struct AppMenuHidingRow: View {
         ToggleButtonRow("Hide app menus") {
             Toggle("When showing items", isOn: $settings.hideApplicationMenus)
                 .help("Hides the current app's menus when hidden items need the room.")
-            Toggle("On the desktop", isOn: $settings.enableDesktopMenuHiding)
-                .help("Covers the Finder's menus after you click the desktop, until you switch to something else.")
+            Toggle(isOn: $settings.enableDesktopMenuHiding) {
+                HStack(spacing: ThawSpacing.compact) {
+                    Text("On the desktop")
+                    ThawBadge.alpha
+                }
+            }
+            .help("Covers the Finder's menus after you click the desktop, until you switch to something else.")
         }
         .annotation(
             "Makes room in the menu bar by taking app menus out of it. The Apple menu always stays.",
             more: """
             When showing items, macOS requires \(Constants.displayName) to show itself in the Dock while the \
-            menus are hidden. On the desktop is in alpha: Finder windows keep their menus, and the cover is a \
+            menus are hidden. On the desktop, Finder windows keep their menus, and the cover is a \
             capture of what sits behind the bar so it matches your wallpaper. Without Screen Recording it \
             falls back to a flat patch of the bar's average color, which can show against the wallpaper.
             """

@@ -382,7 +382,7 @@ private struct MenuBarSearchContentView: View {
 
             if let selection = model.selection, let item = panel.cachedItem(for: selection) {
                 if model.renameSession == nil {
-                    ShortcutHintButton(title: String(localized: "Edit Name")) {
+                    ShortcutHintButton(title: String(localized: "Rename…")) {
                         panel.beginRenamingSelection()
                     } hint: {
                         KeyCapView(text: "⌘")

@@ -21,12 +21,17 @@ struct HoverReadoutsRow: View {
             Toggle("Name", isOn: $settings.showMenuBarTooltips)
                 .help("A tooltip with the item's name.")
                 .disabled(!ScreenCapture.hasCachedScreenRecordingPermission)
-            Toggle("Details", isOn: $settings.enableMenuBarItemDescenders)
-                .help("A small readout below the item with what it reports, such as a temperature or a count.")
+            Toggle(isOn: $settings.enableMenuBarItemDescenders) {
+                HStack(spacing: ThawSpacing.compact) {
+                    Text("Details")
+                    ThawBadge.beta
+                }
+            }
+            .help("A small readout below the item with what it reports, such as a temperature or a count.")
         }
         .annotation(
             "Shows an item's name, or what it reports, while the pointer rests on it in the menu bar.",
-            more: "Details are in beta. They show what an item already reports in the space the menu bar has no room for; items that report nothing useful stay as they are."
+            more: "Details show what an item already reports in the space the menu bar has no room for; items that report nothing useful stay as they are."
         )
         if !ScreenCapture.hasCachedScreenRecordingPermission {
             SettingsWarningPill(

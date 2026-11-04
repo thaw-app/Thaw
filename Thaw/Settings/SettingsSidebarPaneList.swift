@@ -26,7 +26,7 @@ enum SettingsSidebarPanes {
     static let groups: [Group] = [
         Group(heading: nil, panes: [.general, .menuBarLayout, .visibility, .menuBarAppearance, .thawBar, .displays, .hotkeys]),
         Group(
-            heading: String(localized: "Modules", comment: "A heading in the settings sidebar, over the pages of the parts switched on in Extras."),
+            heading: String(localized: "Extras", comment: "A heading in the settings sidebar, over the pages of the extras that are switched on. The same name as the Extras page."),
             panes: [.profiles, .scripts, .triggers, .widgets]
         ),
         Group(

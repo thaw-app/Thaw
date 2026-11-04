@@ -82,9 +82,9 @@ struct HotkeysSettingsPane: View {
             HotkeyRecorder(hotkey: hotkey) {
                 switch action {
                 case .toggleHiddenSection:
-                    Text("Toggle the Hidden section")
+                    Text("Show or hide hidden items")
                 case .toggleAlwaysHiddenSection:
-                    Text("Toggle the Always Hidden section")
+                    Text("Show or hide Always Hidden items")
                 case .toggleSwap:
                     Text("Swap shown and hidden items")
                 case .searchMenuBarItems:
@@ -96,9 +96,9 @@ struct HotkeysSettingsPane: View {
                 case .enableThawBar:
                     Text("Turn \(Constants.displayName) Bar on or off")
                 case .toggleApplicationMenus:
-                    Text("Toggle application menus")
+                    Text("Hide or show app menus")
                 case .toggleAutoRehide:
-                    Text("Toggle automatic rehiding")
+                    Text("Turn “Hide items again” on or off")
                 case .toggleZenMode:
                     Text("Toggle Zen Mode")
                 case .toggleLayoutEditor:

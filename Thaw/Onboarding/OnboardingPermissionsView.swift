@@ -162,8 +162,8 @@ struct ThawPermissionsView: View {
                 : "\(Constants.displayName) needs Accessibility to see and move your menu bar items. Permission checks stay on your Mac."
         }
         return finishesFlow
-            ? "One last thing: \(Constants.displayName) needs the menu bar layout table to reorder items without taking over your cursor. You choose that one file yourself."
-            : "\(Constants.displayName) needs the menu bar layout table to reorder items without taking over your cursor. You choose that one file yourself."
+            ? "One last thing: \(Constants.displayName) needs Menu Bar Layout Access to reorder items without taking over your cursor. It can open only the layout file you choose."
+            : "\(Constants.displayName) needs Menu Bar Layout Access to reorder items without taking over your cursor. It can open only the layout file you choose."
     }
 
     /// The page's action, its waiting state, and the System Settings route
@@ -174,7 +174,7 @@ struct ThawPermissionsView: View {
                 SettingsWarningPill(
                     title: focusIsAccessibility
                         ? "Accessibility was not turned on"
-                        : "Access to the layout table was not granted",
+                        : "Menu Bar Layout Access was not granted",
                     message: focusIsAccessibility
                         ? "Open System Settings, go to Privacy & Security \(Constants.menuArrow) Accessibility, and turn on \(Constants.displayName)."
                         : "Choose the file again, or give \(Constants.displayName) Full Disk Access in System Settings instead.",

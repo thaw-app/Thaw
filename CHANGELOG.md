@@ -55,6 +55,7 @@ Scripts, Triggers and Widgets become modules you can switch on and off, and Sett
 - **Permission icons line up.** Each permission's icon sits in the same box as the sidebar's, so the names start in the same place.
 - **The Thaw Bar's own look has a Corners slider,** from square to round, like the menu bar's shape. It replaces the Rounded corners switch, and a look saved with the switch opens fully round or square. When it follows the menu bar, the Thaw Bar now matches the menu bar's Corners setting instead of only round or square.
 - **Choose System, Light, Dark or Black for Thaw's settings.** Theme, in the new Language and theme section of General, replaces "Black background in dark mode" and also sets the look of onboarding. Black is dark on pure black, which suits OLED displays. After the update, settings look as they did before: Black if you had the black background on, otherwise System, which follows macOS. The Thaw Bar, Search and menus still match your menu bar.
+- **Settings and menus use one name for each thing.** The sidebar heading over your modules is now Extras, like the page that turns them on, and shortcuts, Search, onboarding and the item menu now use the names found elsewhere in Thaw. Alpha and Beta features have a badge instead of a note in their description. In Troubleshooting, Reset Positions is now Rebuild Saved Layout, so it no longer reads like Reset Layout on the Layout page.
 
 ### Fixed
 
