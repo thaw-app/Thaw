@@ -157,14 +157,6 @@ repository. Leaving **ref** empty does not switch to the default branch. The
 `build-dev-<short sha>` and holds `Thaw-dev.dmg`, its checksum, the SBOM and
 the exported app as a ZIP.
 
-### Release discussions
-
-**Discussion category** opens a linked discussion in that category. It defaults
-to `none` and only takes effect when **Publish release** is checked, because
-GitHub creates the discussion on the draft-to-published transition, which is
-step 6. Setting it on the draft in step 5 would do nothing. An unknown category
-fails the run while the release is still a draft.
-
 ## Dry runs
 
 Check **Dry run** when dispatching the workflow to build and report without
@@ -320,6 +312,13 @@ the last Macs get it up to about 48 hours after `pubDate`.
 
 A manual update check or an item marked as critical skips the stages. So does
 anything that doesn't update through Sparkle, such as the DMG.
+
+To offer a stable or beta update to every Mac at once, uncheck **Staged
+rollout** when dispatching **Release**, or answer no to the staging question in
+`scripts/release.sh`. Release then runs
+[`prepare_appcasts_unstaged.py`](../.github/actions/prepare-appcasts/prepare_appcasts_unstaged.py),
+which leaves the interval off the released item; older items keep theirs. Macs
+still get it at their next automatic check, so the last ones can take a day.
 
 [`prepare_appcasts.py`](../.github/actions/prepare-appcasts/prepare_appcasts.py)
 adds the interval to stable and beta items that don't have one. Later runs keep

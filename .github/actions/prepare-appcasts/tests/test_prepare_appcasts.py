@@ -170,6 +170,33 @@ class PrepareAppcastsTests(unittest.TestCase):
         overridden = feed("3.0.0-nightly.2").replace(b"</item>", b"<sparkle:channel>beta</sparkle:channel></item>")
         self.assertEqual(intervals(prepare_appcasts(overridden, "3.0.0-nightly.2")[0]), {"3.0.0-nightly.2": ["14400"]})
 
+    def test_an_unstaged_release_reaches_every_mac_at_once_and_older_items_keep_their_rollout(self):
+        canonical, _ = prepare_appcasts(feed("3.0.0-beta.6", "3.0.0-beta.5"), "3.0.0-beta.6", staged=False)
+        with minidom.parseString(canonical) as document:
+            intervals = {
+                item.getElementsByTagNameNS(SPARKLE_NS, "shortVersionString")[0].firstChild.data:
+                    [node.firstChild.data for node in item.getElementsByTagNameNS(SPARKLE_NS, "phasedRolloutInterval")]
+                for item in document.getElementsByTagName("item")
+            }
+        self.assertEqual(intervals, {"3.0.0-beta.6": [], "3.0.0-beta.5": ["14400"]})
+
+    def test_the_unstaged_entry_point_leaves_the_released_item_unstaged(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            source = directory / "source.xml"
+            source.write_bytes(feed("3.0.0-beta.6"))
+            output = directory / "outputs"
+            output.write_text("")
+            result = subprocess.run(
+                [sys.executable, str(ACTION_PATH / "prepare_appcasts_unstaged.py")],
+                env=dict(os.environ, APPCAST_PATH=str(source), RELEASE_TAG="3.0.0-beta.6",
+                         RUNNER_TEMP=str(directory), GITHUB_OUTPUT=str(output)),
+                capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            outputs = dict(line.split("=", 1) for line in output.read_text().splitlines())
+            self.assertNotIn(b"phasedRolloutInterval", Path(outputs["appcast-path"]).read_bytes())
+
     def test_a_rollout_interval_already_in_the_feed_is_kept(self):
         xml = feed("2.2.0").replace(
             b"</item>", b"<sparkle:phasedRolloutInterval>86400</sparkle:phasedRolloutInterval></item>"

@@ -40,22 +40,19 @@ ask() { # ask <prompt> <default-y|default-n>
     [[ "$reply" =~ ^[Yy] ]]
 }
 
-dry_run=false; publish_release=false; publish_appcast=false
-discussion_category=none
+dry_run=false; publish_release=false; publish_appcast=false; staged_rollout=true
 
 ask "Dry run (build and report, publish nothing)?" n && dry_run=true
 if [[ "$dry_run" == false ]]; then
     ask "Publish the GitHub Release (otherwise it stays a draft)?" n && publish_release=true
-    # The appcast and the discussion both require a published release: the
-    # workflow gates them on publish_release, so asking otherwise collects an
-    # answer it discards and prints it in the summary below.
+    # The appcast requires a published release: the workflow gates it on
+    # publish_release, so asking otherwise collects an answer it discards.
     if [[ "$publish_release" == true ]]; then
         publish_appcast=true
         ask "Push the signed appcast to thaw-app/updates?" y || publish_appcast=false
-        PS3="discussion category> "
-        select discussion_category in none Announcements General Ideas; do
-            [[ -n "$discussion_category" ]] && break
-        done
+        if [[ "$publish_appcast" == true ]]; then
+            ask "Stage the update over a day (otherwise every Mac gets it at once)?" y || staged_rollout=false
+        fi
     fi
 fi
 
@@ -67,7 +64,7 @@ cat <<SUMMARY
   dry run    $dry_run
   publish    $publish_release
   appcast    $publish_appcast
-  discussion $discussion_category
+  staged     $staged_rollout
 
 SUMMARY
 ask "Dispatch?" n || { echo "aborted"; exit 1; }
@@ -80,6 +77,6 @@ gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$tag" \
     -f dry_run="$dry_run" \
     -f publish_release="$publish_release" \
     -f publish_appcast="$publish_appcast" \
-    -f discussion_category="$discussion_category"
+    -f staged_rollout="$staged_rollout"
 
 echo "dispatched; watch with: gh run list --repo $REPO --workflow $WORKFLOW"

@@ -80,7 +80,7 @@ def previous_descriptions(xml: bytes | None):
 
 
 def prepare_appcasts(
-    xml: bytes, release_tag: str, previous_xml: bytes | None = None
+    xml: bytes, release_tag: str, previous_xml: bytes | None = None, staged: bool = True
 ) -> tuple[bytes, bytes | None]:
     descriptions = previous_descriptions(previous_xml)
     # DOM serialization preserves CDATA, namespace prefixes, and enclosure signatures.
@@ -132,11 +132,13 @@ def prepare_appcasts(
                     raise ValueError(f"{version} must have one minimumSystemVersion to anchor the cap on")
                 insert_sparkle_element_after(document, minimums[0], "maximumSystemVersion", "26.99")
 
-            # Stage everything but alpha. Older items are past their last group, so the tag changes nothing for them.
+            # Stage everything but alpha, and an unstaged release's own item, which reaches every Mac at once.
+            # Older items are past their last group, so the tag changes nothing for them.
             channels = [text(channel) for channel in sparkle_elements(item, "channel")]
             # A channel on the item wins, because Release can override the one a tag implies.
             is_alpha = "alpha" in channels if channels else re.search(r"-(alpha|nightly)(\.|$)", version, re.IGNORECASE)
-            if not is_alpha and not sparkle_elements(item, "phasedRolloutInterval"):
+            unstaged = not staged and text(versions[0]) == release_tag
+            if not is_alpha and not unstaged and not sparkle_elements(item, "phasedRolloutInterval"):
                 insert_sparkle_element_after(
                     document, versions[0], "phasedRolloutInterval", PHASED_ROLLOUT_INTERVAL_SECONDS
                 )
@@ -154,11 +156,11 @@ def prepare_appcasts(
         return canonical, document.toxml(encoding="utf-8")
 
 
-def main():
+def main(staged: bool = True):
     previous_path = os.environ.get("PREVIOUS_APPCAST_PATH", "")
     previous = Path(previous_path).read_bytes() if previous_path and Path(previous_path).is_file() else None
     canonical, legacy = prepare_appcasts(
-        Path(os.environ["APPCAST_PATH"]).read_bytes(), os.environ["RELEASE_TAG"], previous
+        Path(os.environ["APPCAST_PATH"]).read_bytes(), os.environ["RELEASE_TAG"], previous, staged
     )
     directory = Path(os.environ["RUNNER_TEMP"]) / "thaw-appcasts"
     directory.mkdir(parents=True, exist_ok=True)
