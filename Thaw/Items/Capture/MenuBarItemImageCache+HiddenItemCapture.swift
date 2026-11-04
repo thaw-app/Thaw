@@ -65,7 +65,14 @@ extension MenuBarItemImageCache {
 
         let items = sections.flatMap { appState.itemManager.itemCache[$0] }
             .filter { Self.isCapturable($0) && !Self.isBlankItem($0.bounds) && !$0.tag.isControlCenterGovernable }
-        let attempted = items.filter { !alreadyGood.contains($0.tag) || Self.isTag($0.tag, in: newlyCaptured) }
+        return Self.hiddenItemCaptureResult(items: items, alreadyGood: alreadyGood, newlyCaptured: newlyCaptured)
+    }
+
+    /// Counts kept and attempted pictures using identities that survive a rebuilt menu bar.
+    static nonisolated func hiddenItemCaptureResult(
+        items: [MenuBarItem], alreadyGood: Set<MenuBarItemTag>, newlyCaptured: Set<MenuBarItemTag>
+    ) -> HiddenItemCaptureResult {
+        let attempted = items.filter { !Self.isTag($0.tag, in: alreadyGood) || Self.isTag($0.tag, in: newlyCaptured) }
         return .tally(
             attempted.map { (name: $0.displayName, hasImage: Self.isTag($0.tag, in: newlyCaptured)) },
             kept: items.count - attempted.count

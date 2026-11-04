@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- Capture Hidden Items no longer reports a kept picture as missing when macOS rebuilds the menu bar.
+
 ## [3.0.0-beta.6] - 2026-11-03
 
 **macOS 27 only · Build 123**
