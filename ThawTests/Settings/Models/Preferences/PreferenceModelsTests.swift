@@ -368,6 +368,7 @@ struct PreferenceModelsTests {
         #expect(RehideStrategy.fromString("smart") == .smart)
         #expect(RehideStrategy.fromString("1") == .timed)
         #expect(RehideStrategy.fromString("focusedApp") == .focusedApp)
+        #expect(RehideStrategy.fromString("focused_app") == .focusedApp)
         #expect(RehideStrategy.fromString("2") == .focusedApp)
         #expect(RehideStrategy.fromString("0") == .smart)
         #expect(RehideStrategy.fromString("timed") == .timed)

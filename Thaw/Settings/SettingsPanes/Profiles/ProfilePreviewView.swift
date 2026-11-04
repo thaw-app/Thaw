@@ -238,10 +238,13 @@ struct ProfilePreviewView: View {
 
     private var settingsSummary: String {
         var parts: [String] = []
+        let general = profile.generalSettings
         parts.append(
-            profile.generalSettings.autoRehide
-                ? String(localized: "Auto-rehide on")
-                : String(localized: "Auto-rehide off")
+            SimpleRehideChoice(
+                autoRehide: general.autoRehide,
+                strategy: RehideStrategy(rawValue: general.rehideStrategyRawValue) ?? Defaults.DefaultValue.rehideStrategy,
+                interval: general.rehideInterval
+            ).summaryLine
         )
         parts.append(
             profile.generalSettings.useThawBar

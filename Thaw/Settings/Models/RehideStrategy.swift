@@ -34,7 +34,7 @@ nonisolated enum RehideStrategy: Int, CaseIterable, Identifiable {
             return .smart
         case "timed", "1":
             return .timed
-        case "focusedApp", "2":
+        case "focusedApp", "focused_app", "2":
             return .focusedApp
         default:
             return nil

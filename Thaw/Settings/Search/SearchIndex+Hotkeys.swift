@@ -99,11 +99,11 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "hotkeys.toggleAutoRehide",
-            title: "Toggle automatic rehiding",
-            descriptionText: nil,
+            title: "Turn “Hide items again” on or off",
+            descriptionText: String(localized: "Switches Hide items again between Never and your last other choice."),
             pane: .hotkeys,
             section: "Visibility",
-            keywords: ["toggle", "auto rehide", "automatically rehide", "hotkey", "shortcut"],
+            keywords: ["toggle", "auto rehide", "automatically rehide", "hide items again", "rehide", "hotkey", "shortcut"],
             property: nil
         ),
         SearchEntry(

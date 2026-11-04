@@ -96,7 +96,7 @@ Read and write Thaw settings via `thaw://` URLs, gated by a security whitelist. 
 
 | Key                                       | Type | Description                                  |
 | ----------------------------------------- | ---- | -------------------------------------------- |
-| `autoRehide`                              | Bool | Auto-rehide hidden items after interval      |
+| `autoRehide`                              | Bool | Hide shown items again; `false` is Never in Hide items again |
 | `showOnClick`                             | Bool | Show hidden items when clicking the menu bar |
 | `showOnDoubleClick`                       | Bool | Show hidden items on double-click            |
 | `showOnHover`                             | Bool | Show hidden items on hover                   |
@@ -125,7 +125,8 @@ Read and write Thaw settings via `thaw://` URLs, gated by a security whitelist. 
 
 | Key                      | Type | Range | Description |
 | ------------------------ | ---- | ----- | ----------- |
-| `rehideInterval`         | Double | 1-300 seconds | Time before auto-rehide (default: 15) |
+| `rehideInterval`         | Double | 1-300 seconds | The delay for After N seconds in Hide items again (default: 15) |
+| `tempShowInterval`       | Double | 0-30 seconds | Keep opened items in the menu bar for: how long an item opened from search or the Thaw Bar stays (default: 15) |
 | `showOnHoverDelay`       | Double | 0-5 seconds | Delay before hover reveals items (default: 0.2) |
 | `tooltipDelay`           | Double | 0-5 seconds | Delay before showing tooltips (default: 0.5) |
 | `iconRefreshInterval`    | Double | 0-1 seconds | Interval between icon refreshes in panels; `0` means Off; positive values snap to `1/n` seconds for integer `n` in 1–30 (default: 0.25 ≈ 4 fps) |

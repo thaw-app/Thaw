@@ -103,18 +103,7 @@ nonisolated enum HotkeyAction: String, Codable, CaseIterable {
         case .toggleApplicationMenus:
             appState.menuBarManager.toggleApplicationMenus()
         case .toggleAutoRehide:
-            let general = appState.settings.general
-            general.autoRehide.toggle()
-            // The toggle has no visible effect until the next reveal, so
-            // confirm the new state with a notification.
-            appState.userNotificationManager.requestAuthorization()
-            appState.userNotificationManager.addRequest(
-                with: .hotkeyToggleFeedback,
-                title: general.autoRehide
-                    ? String(localized: "Automatic rehiding is on")
-                    : String(localized: "Automatic rehiding is off"),
-                body: ""
-            )
+            toggleRehiding(appState: appState)
         case .toggleZenMode:
             guard appState.menuBarManager.toggleZenMode() else {
                 return
@@ -149,5 +138,26 @@ nonisolated enum HotkeyAction: String, Codable, CaseIterable {
             // Handled externally by MenuBarManager's per-item registration.
             break
         }
+    }
+
+    /// Switches "Hide items again" between Never and the last other choice,
+    /// which Never keeps stored.
+    @MainActor
+    private func toggleRehiding(appState: AppState) {
+        let general = appState.settings.general
+        general.autoRehide.toggle()
+        let choice = SimpleRehideChoice(
+            autoRehide: general.autoRehide,
+            strategy: general.rehideStrategy,
+            interval: general.rehideInterval
+        )
+        // The toggle has no visible effect until the next reveal, so
+        // confirm the new state with a notification.
+        appState.userNotificationManager.requestAuthorization()
+        appState.userNotificationManager.addRequest(
+            with: .hotkeyToggleFeedback,
+            title: choice.summaryLine,
+            body: ""
+        )
     }
 }

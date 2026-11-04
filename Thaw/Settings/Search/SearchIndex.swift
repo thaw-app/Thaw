@@ -194,9 +194,10 @@ nonisolated enum SearchIndex {
         // Experimental toggles with no Settings UI.
         .advanced("enableExperimentalOverflowPrevention"),
         .advanced("enableTimerTakeover"),
-        // Tuning kept out of Settings on purpose; settings URIs still reach it.
+        // Set by Hide items again, indexed under general.autoRehide.
         .general("rehideStrategy"),
         .general("rehideInterval"),
+        // Tuning kept out of Settings on purpose; settings URIs still reach it.
         .advanced("swapOnThawIconClick"),
         .advanced("showAllSectionsOnUserDrag"),
         .advanced("showOnHoverDelay"),

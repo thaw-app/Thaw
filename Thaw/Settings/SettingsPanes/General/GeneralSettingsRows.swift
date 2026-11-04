@@ -153,13 +153,32 @@ struct ToggleButtonRow<Toggles: View>: View {
     }
 }
 
-// MARK: - AutoRehideRow
+// MARK: - RehideChoiceRow
 
-/// Whether revealed items hide themselves again.
-struct AutoRehideRow: View {
+/// When revealed items hide themselves again, as one menu over the three stored settings.
+struct RehideChoiceRow: View {
     @Bindable var settings: GeneralSettings
 
+    private var choice: SimpleRehideChoice {
+        SimpleRehideChoice(autoRehide: settings.autoRehide, strategy: settings.rehideStrategy, interval: settings.rehideInterval)
+    }
+
     var body: some View {
-        Toggle("Automatically rehide", isOn: $settings.autoRehide)
+        ThawPicker("Hide items again", selection: Binding(
+            get: { choice },
+            set: { newChoice in
+                let saved = newChoice.settings(keepingInterval: settings.rehideInterval)
+                settings.autoRehide = saved.autoRehide
+                if let strategy = saved.strategy {
+                    settings.rehideStrategy = strategy
+                }
+                settings.rehideInterval = saved.interval
+            }
+        )) {
+            ForEach(SimpleRehideChoice.options(including: choice)) { option in
+                Text(option.title).tag(option)
+            }
+        }
+        .annotation(choice.explanation)
     }
 }

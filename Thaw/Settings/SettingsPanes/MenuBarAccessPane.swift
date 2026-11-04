@@ -23,8 +23,7 @@ struct MenuBarAccessPane: View {
             .thawAnimation(ThawMotion.settle, value: advancedSettings.isAlwaysHiddenSectionEnabled)
 
             ThawSection("After revealing") {
-                AutoRehideRow(settings: settings)
-                    .annotation("Hidden items go away again when you click elsewhere or switch apps.")
+                RehideChoiceRow(settings: settings)
                 tempShowIntervalRow
             }
 
@@ -68,12 +67,12 @@ struct MenuBarAccessPane: View {
 
     private var tempShowIntervalRow: some View {
         SecondsSliderRow(
-            "Hide again after",
+            "Keep opened items in the menu bar for",
             value: $settings.tempShowInterval,
             in: 0 ... 30,
             step: 1
         )
-        .annotation("How long a hidden menu bar item you open from search or the Thaw Bar stays in the menu bar.")
+        .annotation("How long a hidden menu bar item you open from search or the Thaw Bar stays in the menu bar before it hides again.")
     }
 
     // MARK: - Always Hidden gestures

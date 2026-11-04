@@ -18,7 +18,7 @@ Thaw ships with no shortcuts set. You choose the keys.
 | Apply a profile | Yes | Yes |
 | Open one item's menu | Yes | Yes |
 | Swap shown and hidden items | | Yes |
-| Toggle automatic rehiding | | Yes |
+| Turn "Hide items again" on or off | | Yes |
 | Toggle Zen Mode | | Yes |
 | Open an item by letter | | Yes |
 | Show Thaw Bar Only items | | Yes |
