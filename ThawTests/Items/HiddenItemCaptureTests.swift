@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import Testing
 @testable import Thaw
 
@@ -22,6 +23,25 @@ struct HiddenItemCaptureTests {
         #expect(result.captured == 1)
         #expect(result.total == 4)
         #expect(result.missing == ["OneDrive", "Tailscale"])
+    }
+
+    @Test("Items left alone for already having a good picture are counted apart, not as missing")
+    func keptPicturesAreCountedApart() {
+        let result = HiddenItemCaptureResult.tally([(name: "Tailscale", hasImage: true)], kept: 3)
+        #expect(result.captured == 1)
+        #expect(result.total == 1)
+        #expect(result.kept == 3)
+        #expect(result.missing.isEmpty)
+        #expect(HiddenItemCaptureButton.message(for: result).contains("3"))
+        #expect(HiddenItemCaptureButton.message(for: .tally([(name: "Tailscale", hasImage: true)])).contains("kept") == false)
+    }
+
+    @Test("Option-click retakes every picture; a plain click only the missing and weak ones")
+    func optionRetakesAll() {
+        #expect(HiddenItemCaptureButton.retakesAll(modifierFlags: [.option]))
+        #expect(HiddenItemCaptureButton.retakesAll(modifierFlags: [.option, .shift]))
+        #expect(!HiddenItemCaptureButton.retakesAll(modifierFlags: []))
+        #expect(!HiddenItemCaptureButton.retakesAll(modifierFlags: [.command]))
     }
 
     @Test("Each outcome gets a message, naming what's missing")

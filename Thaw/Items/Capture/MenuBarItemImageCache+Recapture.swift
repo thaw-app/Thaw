@@ -898,7 +898,7 @@ extension MenuBarItemImageCache {
 
         // Only a pass the user asked for (onlyMissingImages false) retries failed items at
         // once. Automatic passes wait out the cooldown, so they don't rewrite the bar on every open.
-        if let itemManager = appState?.itemManager, !onlyMissingImages {
+        if let itemManager = appState?.itemManager, !onlyMissingImages || tally != nil {
             let tags = sections.reduce(into: Set<MenuBarItemTag>()) { result, section in
                 result.formUnion(itemManager.itemCache[section].map(\.tag))
             }

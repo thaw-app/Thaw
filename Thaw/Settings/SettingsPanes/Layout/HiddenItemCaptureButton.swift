@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import SwiftUI
 import ThawUI
 
@@ -21,7 +22,7 @@ struct HiddenItemCaptureButton: View {
         }
         .buttonStyle(.settingsGlass)
         .disabled(isCapturing)
-        .help("Takes new pictures of your Hidden and Always Hidden items. They may appear in the menu bar for a moment, and with the Native hiding method other icons can move.")
+        .help("Takes pictures of your Hidden and Always Hidden items that have none or a poor one. Hold Option to retake every picture. They may appear in the menu bar for a moment, and with the Native hiding method other icons can move.")
         .popover(isPresented: isShowingResult) {
             Text(result ?? "")
                 .font(ThawType.detail)
@@ -38,8 +39,9 @@ struct HiddenItemCaptureButton: View {
     private func capture() {
         isCapturing = true
         result = nil
+        let retakingAll = Self.retakesAll(modifierFlags: NSEvent.modifierFlags)
         Task {
-            let outcome = await appState.imageCache.captureHiddenItems()
+            let outcome = await appState.imageCache.captureHiddenItems(retakingAll: retakingAll)
             let message = Self.message(for: outcome)
             result = message
             isCapturing = false
@@ -47,14 +49,20 @@ struct HiddenItemCaptureButton: View {
         }
     }
 
+    /// Option-click retakes every picture; a plain click leaves good ones alone.
+    static func retakesAll(modifierFlags: NSEvent.ModifierFlags) -> Bool {
+        modifierFlags.contains(.option)
+    }
+
     static func message(for result: HiddenItemCaptureResult?) -> String {
         guard let result else {
             return String(localized: "Thaw needs Screen Recording permission to capture items.")
         }
+        let kept = result.kept > 0 ? " " + String(localized: "Left \(result.kept) good pictures as they were.") : ""
         guard !result.missing.isEmpty else {
-            return String(localized: "Captured \(result.captured) of \(result.total) items.")
+            return String(localized: "Captured \(result.captured) of \(result.total) items.") + kept
         }
         let names = result.missing.formatted(.list(type: .and))
-        return String(localized: "Captured \(result.captured) of \(result.total) items. No new picture for: \(names).")
+        return String(localized: "Captured \(result.captured) of \(result.total) items. No new picture for: \(names).") + kept
     }
 }
