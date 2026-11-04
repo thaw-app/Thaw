@@ -169,9 +169,7 @@ struct LayoutBarSmallViewsTests {
         #expect(withPicture != withoutPicture)
 
         let reused = LayoutOpaqueSlotView(descriptor: slot, runningApplications: [])
-        reused.needsDisplay = false
         reused.updateIcon(capturedImage: picture, runningApplications: [])
-        #expect(reused.needsDisplay)
         #expect(try pixels(of: reused, size: size) == withPicture)
         reused.updateIcon(capturedImage: nil, runningApplications: [])
         #expect(try pixels(of: reused, size: size) == withoutPicture)

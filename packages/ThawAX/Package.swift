@@ -10,8 +10,7 @@ let package = Package(
         .macOS(.v27),
     ],
     products: [
-        // Static: the helper has no rpath, so a dynamic build aborts it in dyld.
-        .library(name: "ThawAXCore", type: .static, targets: ["ThawAXCore"]),
+        .library(name: "ThawAXCore", targets: ["ThawAXCore"]),
         .library(name: "ThawAXClient", targets: ["ThawAXClient"]),
         .executable(name: "ThawAXHelper", targets: ["ThawAXHelper"]),
     ],
@@ -29,7 +28,7 @@ let package = Package(
             name: "ThawAXHelper",
             dependencies: ["ThawAXCore"],
             swiftSettings: [.swiftLanguageMode(.v6)],
-            // Xcode 27.0 wraps static ThawAXCore in a framework, so the Contents/Helpers executable needs this rpath.
+            // Xcode builds ThawAXCore as a framework in Contents/Frameworks, so the Contents/Helpers executable needs this rpath.
             linkerSettings: [
                 .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"]),
             ]

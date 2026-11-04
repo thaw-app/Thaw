@@ -33,6 +33,14 @@ public final class DiagnosticLogger: Sendable {
 
     /// The directory where log files are stored.
     public var logDirectory: URL {
+        Self.logDirectory(environment: ProcessInfo.processInfo.environment)
+    }
+
+    /// Test runs log to a temporary folder, so they never rotate a person's own logs out of ~/Library/Logs/Thaw.
+    public static func logDirectory(environment: [String: String]) -> URL {
+        if TestHostEnvironment.isActive(environment) {
+            return FileManager.default.temporaryDirectory.appendingPathComponent("ThawTestLogs", isDirectory: true)
+        }
         let home = FileManager.default.homeDirectoryForCurrentUser
         return home
             .appendingPathComponent("Library", isDirectory: true)
