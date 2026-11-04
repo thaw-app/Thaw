@@ -176,11 +176,21 @@ nonisolated struct MenuBarAppearancePartialConfiguration: Hashable {
     var backgroundUsesAccentColor = false
     /// Whether tintColor follows the system accent color, as above.
     var tintUsesAccentColor = false
-    /// Sync background glass with System Settings: Regular for Tinted, Clear for Clear.
-    var backgroundGlassFollowsSystem = false
-    /// Whether tintGlassStyle follows the system's Liquid Glass setting.
-    var tintGlassFollowsSystem = false
+    /// Whether plain background glass takes a tint; see MenuBarGlassFinish.
+    var backgroundGlassIsTinted = false
+    /// Whether plain shape-fill glass takes a tint.
+    var tintGlassIsTinted = false
     var borderStyle: MenuBarBorderStyle = .solid
+
+    var backgroundGlassFinish: MenuBarGlassFinish {
+        get { MenuBarGlassFinish(style: backgroundGlassStyle, isTinted: backgroundGlassIsTinted) }
+        set { (backgroundGlassStyle, backgroundGlassIsTinted) = (newValue.style, newValue.isTinted) }
+    }
+
+    var tintGlassFinish: MenuBarGlassFinish {
+        get { MenuBarGlassFinish(style: tintGlassStyle, isTinted: tintGlassIsTinted) }
+        set { (tintGlassStyle, tintGlassIsTinted) = (newValue.style, newValue.isTinted) }
+    }
 }
 
 // MARK: Default Partial Configuration
@@ -238,6 +248,9 @@ nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
         case tintGlassIsColored
         case backgroundUsesAccentColor
         case tintUsesAccentColor
+        case backgroundGlassIsTinted
+        case tintGlassIsTinted
+        /// Only read, with the next key, to move Match System, which older builds wrote, to plain glass.
         case backgroundGlassFollowsSystem
         case tintGlassFollowsSystem
         case borderStyle
@@ -246,6 +259,7 @@ nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
     init(from decoder: any Decoder) throws {
         let stored = try decoder.container(keyedBy: CodingKeys.self)
         let fallback = Self.defaultConfiguration
+        let (backgroundGlass, tintGlass) = try MenuBarGlassFinish.decodeSurfaces(from: stored, fallback: fallback)
 
         try self.init(
             hasShadow: stored.value(forKey: .hasShadow, or: fallback.hasShadow),
@@ -264,14 +278,14 @@ nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
             backgroundHasBorder: stored.value(forKey: .backgroundHasBorder, or: fallback.backgroundHasBorder),
             backgroundBorderColor: stored.color(forKey: .backgroundBorderColor, or: fallback.backgroundBorderColor),
             backgroundBorderWidth: stored.value(forKey: .backgroundBorderWidth, or: fallback.backgroundBorderWidth),
-            backgroundGlassStyle: stored.value(forKey: .backgroundGlassStyle, or: fallback.backgroundGlassStyle),
-            tintGlassStyle: stored.value(forKey: .tintGlassStyle, or: fallback.tintGlassStyle),
+            backgroundGlassStyle: backgroundGlass.style,
+            tintGlassStyle: tintGlass.style,
             backgroundGlassIsColored: stored.value(forKey: .backgroundGlassIsColored, or: fallback.backgroundGlassIsColored),
             tintGlassIsColored: stored.value(forKey: .tintGlassIsColored, or: fallback.tintGlassIsColored),
             backgroundUsesAccentColor: stored.value(forKey: .backgroundUsesAccentColor, or: fallback.backgroundUsesAccentColor),
             tintUsesAccentColor: stored.value(forKey: .tintUsesAccentColor, or: fallback.tintUsesAccentColor),
-            backgroundGlassFollowsSystem: stored.value(forKey: .backgroundGlassFollowsSystem, or: fallback.backgroundGlassFollowsSystem),
-            tintGlassFollowsSystem: stored.value(forKey: .tintGlassFollowsSystem, or: fallback.tintGlassFollowsSystem),
+            backgroundGlassIsTinted: backgroundGlass.isTinted,
+            tintGlassIsTinted: tintGlass.isTinted,
             borderStyle: stored.value(forKey: .borderStyle, or: fallback.borderStyle)
         )
     }
@@ -300,8 +314,8 @@ nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
         try values.encode(tintGlassIsColored, forKey: .tintGlassIsColored)
         try values.encode(backgroundUsesAccentColor, forKey: .backgroundUsesAccentColor)
         try values.encode(tintUsesAccentColor, forKey: .tintUsesAccentColor)
-        try values.encode(backgroundGlassFollowsSystem, forKey: .backgroundGlassFollowsSystem)
-        try values.encode(tintGlassFollowsSystem, forKey: .tintGlassFollowsSystem)
+        try values.encode(backgroundGlassIsTinted, forKey: .backgroundGlassIsTinted)
+        try values.encode(tintGlassIsTinted, forKey: .tintGlassIsTinted)
         try values.encode(borderStyle, forKey: .borderStyle)
     }
 
@@ -313,19 +327,6 @@ nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
         }
         if copy.tintUsesAccentColor {
             copy.tintColor = accent
-        }
-        return copy
-    }
-
-    /// Sets system-following glass to Regular for Tinted or Clear for Clear.
-    func withSystemGlass(tinted: Bool) -> Self {
-        var copy = self
-        let style: MenuBarGlassStyle = tinted ? .regular : .clear
-        if copy.backgroundGlassFollowsSystem {
-            copy.backgroundGlassStyle = style
-        }
-        if copy.tintGlassFollowsSystem {
-            copy.tintGlassStyle = style
         }
         return copy
     }
@@ -424,12 +425,12 @@ nonisolated struct ResolvedThawBarAppearance: Hashable {
         fillConfiguration.backgroundBorderWidth
     }
 
-    var backgroundGlassStyle: MenuBarGlassStyle {
-        fillConfiguration.backgroundGlassStyle
+    var backgroundGlassFinish: MenuBarGlassFinish {
+        fillConfiguration.backgroundGlassFinish
     }
 
-    var tintGlassStyle: MenuBarGlassStyle {
-        fillConfiguration.tintGlassStyle
+    var tintGlassFinish: MenuBarGlassFinish {
+        fillConfiguration.tintGlassFinish
     }
 
     var backgroundGlassIsColored: Bool {
@@ -469,8 +470,8 @@ nonisolated struct ThawBarAppearance: Hashable {
     var tintGlassIsColored: Bool
     var backgroundUsesAccentColor = false
     var tintUsesAccentColor = false
-    var backgroundGlassFollowsSystem = false
-    var tintGlassFollowsSystem = false
+    var backgroundGlassIsTinted = false
+    var tintGlassIsTinted = false
 
     var fillConfiguration: MenuBarAppearancePartialConfiguration {
         get {
@@ -497,8 +498,8 @@ nonisolated struct ThawBarAppearance: Hashable {
                 tintGlassIsColored: tintGlassIsColored,
                 backgroundUsesAccentColor: backgroundUsesAccentColor,
                 tintUsesAccentColor: tintUsesAccentColor,
-                backgroundGlassFollowsSystem: backgroundGlassFollowsSystem,
-                tintGlassFollowsSystem: tintGlassFollowsSystem
+                backgroundGlassIsTinted: backgroundGlassIsTinted,
+                tintGlassIsTinted: tintGlassIsTinted
             )
         }
         set {
@@ -524,8 +525,8 @@ nonisolated struct ThawBarAppearance: Hashable {
             tintGlassIsColored = newValue.tintGlassIsColored
             backgroundUsesAccentColor = newValue.backgroundUsesAccentColor
             tintUsesAccentColor = newValue.tintUsesAccentColor
-            backgroundGlassFollowsSystem = newValue.backgroundGlassFollowsSystem
-            tintGlassFollowsSystem = newValue.tintGlassFollowsSystem
+            backgroundGlassIsTinted = newValue.backgroundGlassIsTinted
+            tintGlassIsTinted = newValue.tintGlassIsTinted
         }
     }
 }
@@ -539,17 +540,6 @@ nonisolated extension MenuBarAppearanceConfigurationV2 {
         copy.lightModeConfiguration = copy.lightModeConfiguration.withAccentColor(accent)
         copy.darkModeConfiguration = copy.darkModeConfiguration.withAccentColor(accent)
         copy.thawBarAppearance.fillConfiguration = copy.thawBarAppearance.fillConfiguration.withAccentColor(accent)
-        return copy
-    }
-
-    /// This configuration with every system-following glass style, in every
-    /// mode and in the Thaw Bar's own look, set for the system setting.
-    func withSystemGlass(tinted: Bool) -> Self {
-        var copy = self
-        copy.staticConfiguration = copy.staticConfiguration.withSystemGlass(tinted: tinted)
-        copy.lightModeConfiguration = copy.lightModeConfiguration.withSystemGlass(tinted: tinted)
-        copy.darkModeConfiguration = copy.darkModeConfiguration.withSystemGlass(tinted: tinted)
-        copy.thawBarAppearance.fillConfiguration = copy.thawBarAppearance.fillConfiguration.withSystemGlass(tinted: tinted)
         return copy
     }
 }
@@ -614,6 +604,9 @@ nonisolated extension ThawBarAppearance: Codable {
         case tintGlassIsColored
         case backgroundUsesAccentColor
         case tintUsesAccentColor
+        case backgroundGlassIsTinted
+        case tintGlassIsTinted
+        /// Only read, with the next key, to move Match System, which older builds wrote, to plain glass.
         case backgroundGlassFollowsSystem
         case tintGlassFollowsSystem
     }
@@ -621,6 +614,7 @@ nonisolated extension ThawBarAppearance: Codable {
     init(from decoder: any Decoder) throws {
         let stored = try decoder.container(keyedBy: CodingKeys.self)
         let fallback = Self.defaultConfiguration
+        let (backgroundGlass, tintGlass) = try MenuBarGlassFinish.decodeSurfaces(from: stored, fallback: fallback.fillConfiguration)
         try self.init(
             overridesMenuBar: stored.decodeIfPresent(Bool.self, forKey: .overridesMenuBar) ?? fallback.overridesMenuBar,
             cornerRoundness: ThawBarCornerRoundness.decode(from: decoder),
@@ -640,14 +634,14 @@ nonisolated extension ThawBarAppearance: Codable {
             backgroundHasBorder: stored.value(forKey: .backgroundHasBorder, or: fallback.backgroundHasBorder),
             backgroundBorderColor: stored.color(forKey: .backgroundBorderColor, or: fallback.backgroundBorderColor),
             backgroundBorderWidth: stored.value(forKey: .backgroundBorderWidth, or: fallback.backgroundBorderWidth),
-            backgroundGlassStyle: stored.value(forKey: .backgroundGlassStyle, or: fallback.backgroundGlassStyle),
-            tintGlassStyle: stored.value(forKey: .tintGlassStyle, or: fallback.tintGlassStyle),
+            backgroundGlassStyle: backgroundGlass.style,
+            tintGlassStyle: tintGlass.style,
             backgroundGlassIsColored: stored.value(forKey: .backgroundGlassIsColored, or: fallback.backgroundGlassIsColored),
             tintGlassIsColored: stored.value(forKey: .tintGlassIsColored, or: fallback.tintGlassIsColored),
             backgroundUsesAccentColor: stored.value(forKey: .backgroundUsesAccentColor, or: fallback.backgroundUsesAccentColor),
             tintUsesAccentColor: stored.value(forKey: .tintUsesAccentColor, or: fallback.tintUsesAccentColor),
-            backgroundGlassFollowsSystem: stored.value(forKey: .backgroundGlassFollowsSystem, or: fallback.backgroundGlassFollowsSystem),
-            tintGlassFollowsSystem: stored.value(forKey: .tintGlassFollowsSystem, or: fallback.tintGlassFollowsSystem)
+            backgroundGlassIsTinted: backgroundGlass.isTinted,
+            tintGlassIsTinted: tintGlass.isTinted
         )
     }
 
@@ -677,7 +671,7 @@ nonisolated extension ThawBarAppearance: Codable {
         try values.encode(tintGlassIsColored, forKey: .tintGlassIsColored)
         try values.encode(backgroundUsesAccentColor, forKey: .backgroundUsesAccentColor)
         try values.encode(tintUsesAccentColor, forKey: .tintUsesAccentColor)
-        try values.encode(backgroundGlassFollowsSystem, forKey: .backgroundGlassFollowsSystem)
-        try values.encode(tintGlassFollowsSystem, forKey: .tintGlassFollowsSystem)
+        try values.encode(backgroundGlassIsTinted, forKey: .backgroundGlassIsTinted)
+        try values.encode(tintGlassIsTinted, forKey: .tintGlassIsTinted)
     }
 }

@@ -22,9 +22,7 @@ final class MenuBarAppearanceManager {
     var configuration = Defaults.DefaultValue.menuBarAppearanceConfigurationV2 {
         didSet {
             // Switching a surface to accent color must update it before the next system accent change.
-            let synced = configuration
-                .withAccentColor(Self.accentColor)
-                .withSystemGlass(tinted: Self.systemGlassIsTinted)
+            let synced = configuration.withAccentColor(Self.accentColor)
             if synced != configuration {
                 configuration = synced
                 return
@@ -32,11 +30,6 @@ final class MenuBarAppearanceManager {
             guard oldValue != configuration else { return }
             persist(configuration, forKey: .menuBarAppearanceConfigurationV2, label: "menu bar appearance configuration")
         }
-    }
-
-    /// NSGlassTintAmount is 0 for Clear, 1 for Tinted, and intermediate during animation.
-    static var systemGlassIsTinted: Bool {
-        UserDefaults.standard.double(forKey: "NSGlassTintAmount") >= 0.5
     }
 
     /// The system accent color, in the color space the look is stored in.
@@ -177,7 +170,6 @@ final class MenuBarAppearanceManager {
             observeScreenParameters(invalidations: displayInvalidations, settlements: displaySettlements),
             observeActiveSpace(),
             observeAccentColor(),
-            observeSystemGlass(),
         ]
 
         panelRequirementsTask?.cancel()
@@ -257,19 +249,6 @@ final class MenuBarAppearanceManager {
             }
     }
 
-    /// No notification announces Liquid Glass changes; observe the preference directly.
-    private func observeSystemGlass() -> AnyCancellable {
-        UserDefaults.standard
-            .publisher(for: \.NSGlassTintAmount)
-            .map { $0 >= 0.5 }
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] tinted in
-                guard let self else { return }
-                configuration = configuration.withSystemGlass(tinted: tinted)
-            }
-    }
-
     private func observeActiveSpace() -> AnyCancellable {
         NSWorkspace.shared.notificationCenter
             .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
@@ -339,13 +318,5 @@ final class MenuBarAppearanceManager {
             return panel
         })
         lastConfiguredScreenLayout = Self.currentScreenLayout()
-    }
-}
-
-private extension UserDefaults {
-    /// The system's Liquid Glass tint, observable with key-value observing.
-    /// The name has to match the preference key.
-    @objc dynamic var NSGlassTintAmount: Double {
-        double(forKey: "NSGlassTintAmount")
     }
 }

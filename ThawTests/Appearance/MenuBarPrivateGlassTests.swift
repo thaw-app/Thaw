@@ -19,7 +19,7 @@ struct MenuBarPrivateGlassTests {
         #expect(MenuBarGlassStyle.dim.privateVariant == 18)
         #expect(!MenuBarGlassStyle.solid.followsIconShade, "Invert turns bright when dark and would hide light icons")
         #expect(MenuBarGlassStyle.edge.followsIconShade)
-        for style in [MenuBarGlassStyle.regular, .clear, .liquid, .dynamic] {
+        for style in [MenuBarGlassStyle.regular, .dynamic] {
             #expect(style.privateVariant == nil)
             #expect(!style.isExperimental)
         }
@@ -54,8 +54,8 @@ struct MenuBarPrivateGlassTests {
 
     @Test
     func `Floe is told the nearest public style for a finish`() {
-        #expect(MenuBarGlassStyle.solid.nsGlassStyle == .regular)
-        #expect(MenuBarGlassStyle.sheer.nsGlassStyle == .clear)
+        #expect(MenuBarGlassFinish(style: .solid, isTinted: false).nsGlassStyle == .regular)
+        #expect(MenuBarGlassFinish(style: .sheer, isTinted: false).nsGlassStyle == .clear)
     }
 
     @Test

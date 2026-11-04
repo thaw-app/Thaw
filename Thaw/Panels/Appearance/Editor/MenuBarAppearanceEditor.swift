@@ -386,7 +386,7 @@ private struct FillSurfaceFields {
     let glassStyle: WritableKeyPath<Configuration, MenuBarGlassStyle>
     let glassIsColored: WritableKeyPath<Configuration, Bool>
     let usesAccentColor: WritableKeyPath<Configuration, Bool>
-    let glassFollowsSystem: WritableKeyPath<Configuration, Bool>
+    let glassIsTinted: WritableKeyPath<Configuration, Bool>
     let color: WritableKeyPath<Configuration, CGColor>
     let gradient: WritableKeyPath<Configuration, ThawGradient>
     let hasShadow: WritableKeyPath<Configuration, Bool>
@@ -417,7 +417,7 @@ private struct UnlabeledAppearanceFillEditor: View {
             gradientAngleSlider
         }
         if style == .glass {
-            glassStylePicker
+            GlassFinishPicker(style: binding(fields.glassStyle), isTinted: binding(fields.glassIsTinted))
         }
         if showsGlassColor {
             glassTintControls
@@ -501,48 +501,9 @@ private struct UnlabeledAppearanceFillEditor: View {
         }
     }
 
-    private var glassStylePicker: some View {
-        LabeledContent("Effect") {
-            ThawPicker("Glass Style", selection: glassChoice) {
-                Text("Match System").tag(GlassChoice.matchSystem)
-                ForEach(MenuBarGlassStyle.allCases, id: \.self) { style in
-                    Text(style.localized).tag(GlassChoice.style(style))
-                }
-            }
-            .labelsHidden()
-            .help("Match System follows Liquid Glass in System Settings \(Constants.menuArrow) Appearance: Regular while it's Tinted, Clear while it's Clear.")
-        }
-    }
-
-    /// Store system-following as a separate flag so builds without that choice can still read the style.
-    private enum GlassChoice: Hashable {
-        case matchSystem
-        case style(MenuBarGlassStyle)
-    }
-
-    private var glassChoice: Binding<GlassChoice> {
-        Binding(
-            get: {
-                configuration[keyPath: fields.glassFollowsSystem]
-                    ? .matchSystem
-                    : .style(configuration[keyPath: fields.glassStyle])
-            },
-            set: { choice in
-                switch choice {
-                case .matchSystem:
-                    configuration[keyPath: fields.glassFollowsSystem] = true
-                    configuration[keyPath: fields.glassStyle] = MenuBarAppearanceManager.systemGlassIsTinted ? .regular : .clear
-                case let .style(style):
-                    configuration[keyPath: fields.glassFollowsSystem] = false
-                    configuration[keyPath: fields.glassStyle] = style
-                }
-            }
-        )
-    }
-
     @ViewBuilder
     private var glassTintControls: some View {
-        Toggle("Tint the glass", isOn: binding(fields.glassIsColored))
+        Toggle("Add color", isOn: binding(fields.glassIsColored))
         if configuration[keyPath: fields.glassIsColored] {
             LabeledContent("Tint color") {
                 accentAwareColorPicker("Tint color")
@@ -601,7 +562,7 @@ private struct UnlabeledAppearanceFillEditor: View {
                 glassStyle: \.backgroundGlassStyle,
                 glassIsColored: \.backgroundGlassIsColored,
                 usesAccentColor: \.backgroundUsesAccentColor,
-                glassFollowsSystem: \.backgroundGlassFollowsSystem,
+                glassIsTinted: \.backgroundGlassIsTinted,
                 color: \.backgroundColor,
                 gradient: \.backgroundGradient,
                 hasShadow: \.backgroundHasShadow,
@@ -616,7 +577,7 @@ private struct UnlabeledAppearanceFillEditor: View {
                 glassStyle: \.tintGlassStyle,
                 glassIsColored: \.tintGlassIsColored,
                 usesAccentColor: \.tintUsesAccentColor,
-                glassFollowsSystem: \.tintGlassFollowsSystem,
+                glassIsTinted: \.tintGlassIsTinted,
                 color: \.tintColor,
                 gradient: \.tintGradient,
                 hasShadow: \.hasShadow,
@@ -660,7 +621,10 @@ private struct UnlabeledAppearanceFillEditor: View {
     }
 
     private var showsGlassColor: Bool {
-        style == .glass && configuration[keyPath: fields.glassStyle].usesTint
+        style == .glass && MenuBarGlassFinish(
+            style: configuration[keyPath: fields.glassStyle],
+            isTinted: configuration[keyPath: fields.glassIsTinted]
+        ).usesTint
     }
 
     private func binding<Value>(

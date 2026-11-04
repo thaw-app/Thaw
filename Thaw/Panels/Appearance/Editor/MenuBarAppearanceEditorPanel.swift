@@ -189,7 +189,10 @@ private final class MenuBarAppearanceEditorHostingController: NSHostingControlle
         }
         if partial.tintKind == .glass {
             height += 40 // glass effect
-            if partial.tintGlassStyle.usesTint {
+            if partial.tintGlassStyle == .regular {
+                height += 40 // Tint switch
+            }
+            if partial.tintGlassFinish.usesTint {
                 height += 80 // color control + tint opacity
             }
         }
@@ -202,7 +205,10 @@ private final class MenuBarAppearanceEditorHostingController: NSHostingControlle
     private static func backgroundExtraHeight(for partial: MenuBarAppearancePartialConfiguration) -> CGFloat {
         guard partial.backgroundKind != .none else { return 0 }
         var height: CGFloat = 45 // opacity/effect + shadow
-        if partial.backgroundKind == .glass, partial.backgroundGlassStyle.usesTint {
+        if partial.backgroundKind == .glass, partial.backgroundGlassStyle == .regular {
+            height += 40 // Tint switch
+        }
+        if partial.backgroundKind == .glass, partial.backgroundGlassFinish.usesTint {
             height += 80 // color control + tint opacity
         }
         if partial.backgroundHasBorder {

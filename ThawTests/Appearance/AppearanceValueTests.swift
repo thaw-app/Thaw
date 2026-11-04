@@ -68,17 +68,6 @@ struct AppearanceValueTests {
         }
     }
 
-    @Test("Background glass that follows the system takes Regular while Tinted and Clear while Clear")
-    func backgroundSystemGlass() {
-        var config = MenuBarAppearancePartialConfiguration.defaultConfiguration
-        config.backgroundGlassStyle = .liquid
-        config.tintGlassStyle = .liquid
-        config.backgroundGlassFollowsSystem = true
-        #expect(config.withSystemGlass(tinted: true).backgroundGlassStyle == .regular)
-        #expect(config.withSystemGlass(tinted: false).backgroundGlassStyle == .clear)
-        #expect(config.withSystemGlass(tinted: false).tintGlassStyle == .liquid)
-    }
-
     @Test("A dynamic appearance picks the configuration for the current system appearance")
     func dynamicConfigurationFollowsTheSystem() {
         var config = MenuBarAppearanceConfigurationV2.defaultConfiguration

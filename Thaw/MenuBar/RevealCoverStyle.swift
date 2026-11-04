@@ -45,7 +45,7 @@ enum RevealCoverStyle {
                 color: configuration.backgroundColor,
                 gradientAverage: configuration.backgroundGradient.averageColor(),
                 opacity: configuration.backgroundOpacity,
-                glassStyle: configuration.backgroundGlassStyle,
+                glassFinish: configuration.backgroundGlassFinish,
                 glassIsColored: configuration.backgroundGlassIsColored
             ),
             adaptiveColor: adaptiveColor,
@@ -58,7 +58,7 @@ enum RevealCoverStyle {
                     color: configuration.tintColor,
                     gradientAverage: configuration.tintGradient.averageColor(),
                     opacity: configuration.tintOpacity,
-                    glassStyle: configuration.tintGlassStyle,
+                    glassFinish: configuration.tintGlassFinish,
                     glassIsColored: configuration.tintGlassIsColored
                 ),
                 adaptiveColor: adaptiveColor,
@@ -78,7 +78,7 @@ enum RevealCoverStyle {
         let color: CGColor
         let gradientAverage: CGColor?
         let opacity: Double
-        let glassStyle: MenuBarGlassStyle
+        let glassFinish: MenuBarGlassFinish
         let glassIsColored: Bool
     }
 
@@ -119,10 +119,10 @@ enum RevealCoverStyle {
             }
         case .glass:
             style.blursWallpaper = true
-            if layer.glassStyle.usesTint, layer.glassIsColored {
-                style.washes.append(Wash(color: layer.color, opacity: opacity * layer.glassStyle.effectOpacity))
+            if layer.glassFinish.usesTint, layer.glassIsColored {
+                style.washes.append(Wash(color: layer.color, opacity: opacity * layer.glassFinish.effectOpacity))
             }
-            if layer.glassStyle.usesDarkFade {
+            if layer.glassFinish.usesDarkFade {
                 style.washes.append(Wash(color: CGColor(gray: 0, alpha: 1), opacity: darkFadeOpacity))
             }
         }

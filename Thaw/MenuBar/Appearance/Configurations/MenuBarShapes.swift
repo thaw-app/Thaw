@@ -199,15 +199,14 @@ nonisolated extension MenuBarBackgroundKind {
     static let appDefault = MenuBarBackgroundKind.none
 }
 
-/// A type that specifies which glass style to use for glass backgrounds and tints.
-nonisolated enum MenuBarGlassStyle: Int, CaseIterable, Codable, Hashable {
-    /// Standard glass effect.
+/// The glass finish of a glass background or shape fill. Whether plain glass
+/// takes a tint is stored beside it; MenuBarGlassFinish puts the two together.
+/// Raw values 1 (Clear) and 2 (Liquid Glass) are no longer finishes of their
+/// own: MenuBarGlassFinish.decode reads them as plain glass.
+nonisolated enum MenuBarGlassStyle: Int, CaseIterable, Hashable {
+    /// Plain glass, shown as Glass.
     case regular = 0
-    /// Clear glass effect.
-    case clear = 1
-    /// Clear Liquid Glass without a color wash.
-    case liquid = 2
-    /// Clear Liquid Glass with a dark-to-clear vertical fade.
+    /// Tinted clear glass with a dark-to-clear vertical fade.
     case dynamic = 3
     /// Experimental: glass that inverts what's behind it, from the private variant 6.
     /// Shown as Invert. The case keeps solid, the name it first had.
@@ -219,18 +218,10 @@ nonisolated enum MenuBarGlassStyle: Int, CaseIterable, Codable, Hashable {
     /// Experimental: a haze in light mode and smoky glass in dark mode, from the private variant 18.
     case dim = 7
 
-    @MainActor
-    var nsGlassStyle: NSGlassEffectView.Style {
-        switch self {
-        case .regular, .solid, .dim: .regular
-        case .clear, .liquid, .dynamic, .edge, .sheer: .clear
-        }
-    }
-
     /// The private _variant the finish needs, or nil for the public styles.
     var privateVariant: Int? {
         switch self {
-        case .regular, .clear, .liquid, .dynamic: nil
+        case .regular, .dynamic: nil
         case .solid: 6
         case .edge: 11
         case .sheer: 15
@@ -238,10 +229,16 @@ nonisolated enum MenuBarGlassStyle: Int, CaseIterable, Codable, Hashable {
         }
     }
 
-    /// The finishes built on private settings, marked experimental in Settings.
+    /// The finishes built on private settings, marked Alpha in the appearance editor.
     var isExperimental: Bool {
         privateVariant != nil
     }
+
+    /// The Effect menu's Glass section.
+    static let glassFinishes: [MenuBarGlassStyle] = [.regular]
+
+    /// The Effect menu's Liquid Glass section, in menu order.
+    static let liquidGlassFinishes: [MenuBarGlassStyle] = [.edge, .sheer, .dim, .solid, .dynamic]
 
     /// Whether the finish takes the icons' light or dark. Invert doesn't: dark,
     /// it turns bright and would hide light icons.
@@ -254,35 +251,18 @@ nonisolated enum MenuBarGlassStyle: Int, CaseIterable, Codable, Hashable {
         self == .dim ? 0.5 : 0
     }
 
-    var usesTint: Bool {
-        self == .liquid || self == .dynamic
-    }
-
-    var usesShapeAwareSurface: Bool {
-        self == .liquid || self == .dynamic
-    }
-
     var usesDarkFade: Bool {
         self == .dynamic
     }
 
-    var effectOpacity: Double {
-        switch self {
-        case .regular, .clear, .solid, .edge, .sheer, .dim: 1
-        case .liquid, .dynamic: 0.45
-        }
-    }
-
     var localized: LocalizedStringResource {
         switch self {
-        case .regular: "Regular"
-        case .clear: "Clear"
-        case .liquid: "Liquid Glass"
+        case .regular: "Glass"
         case .dynamic: "Dynamic Glass"
-        case .solid: "Invert (Experimental)"
-        case .edge: "Edge (Experimental)"
-        case .sheer: "Sheer (Experimental)"
-        case .dim: "Dim (Experimental)"
+        case .solid: "Invert"
+        case .edge: "Edge"
+        case .sheer: "Sheer"
+        case .dim: "Dim"
         }
     }
 }

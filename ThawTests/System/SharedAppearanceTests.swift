@@ -84,7 +84,7 @@ struct SharedAppearanceTests {
     func glassCarriesStyle() {
         var configuration = MenuBarAppearancePartialConfiguration.defaultConfiguration
         configuration.backgroundKind = .glass
-        configuration.backgroundGlassStyle = .clear
+        configuration.backgroundGlassStyle = .sheer
         configuration.backgroundGlassIsColored = false
         #expect(shared(configuration).background.glassStyle == "clear")
         #expect(shared(configuration).background.color == nil)
@@ -92,6 +92,18 @@ struct SharedAppearanceTests {
         configuration.backgroundGlassIsColored = true
         #expect(shared(configuration).background.glassIsColored == true)
         #expect(shared(configuration).background.color != nil)
+    }
+
+    @Test("Glass reports the names Floe knows: tinted glass as liquid, as before", arguments: [
+        (MenuBarGlassStyle.regular, false, "regular"), (.regular, true, "liquid"),
+        (.dynamic, false, "dynamic"), (.dynamic, true, "dynamic"),
+        (.solid, true, "regular"), (.dim, false, "regular"), (.edge, true, "clear"), (.sheer, false, "clear"),
+    ])
+    func glassStyleNames(style: MenuBarGlassStyle, tinted: Bool, name: String) {
+        var configuration = MenuBarAppearancePartialConfiguration.defaultConfiguration
+        configuration.backgroundKind = .glass
+        configuration.backgroundGlassFinish = MenuBarGlassFinish(style: style, isTinted: tinted)
+        #expect(shared(configuration).background.glassStyle == name)
     }
 
     @Test("A border that is off is left out")

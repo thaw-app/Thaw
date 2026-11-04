@@ -1211,7 +1211,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
     }
 
     private func updateBackgroundGlassSurface(_ glassView: NSGlassEffectView) {
-        let style = configuration.backgroundGlassStyle
+        let style = configuration.backgroundGlassFinish
         if style.usesShapeAwareSurface {
             glassView.isHidden = true
             let glassBounds = CGRect(
@@ -1241,7 +1241,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
     private func configureGlassView(
         _ glassView: NSGlassEffectView,
-        style: MenuBarGlassStyle,
+        style: MenuBarGlassFinish,
         isColored: Bool,
         tintColor: CGColor,
         opacity: Double
@@ -1292,7 +1292,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
             return
         }
 
-        let style = configuration.tintGlassStyle
+        let style = configuration.tintGlassFinish
         if style.usesShapeAwareSurface {
             if tintLiquidGlassView.superview == nil {
                 addSubview(tintLiquidGlassView, positioned: .above, relativeTo: nil)

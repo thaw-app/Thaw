@@ -36,7 +36,7 @@ enum ThawBarAppearanceForeground {
         case .glass:
             result = glassSample(
                 result,
-                style: appearance.backgroundGlassStyle,
+                style: appearance.backgroundGlassFinish,
                 colored: appearance.backgroundGlassIsColored,
                 color: appearance.backgroundColor,
                 opacity: appearance.backgroundOpacity
@@ -60,7 +60,7 @@ enum ThawBarAppearanceForeground {
         case .glass:
             result = glassSample(
                 result,
-                style: appearance.tintGlassStyle,
+                style: appearance.tintGlassFinish,
                 colored: appearance.tintGlassIsColored,
                 color: appearance.tintColor,
                 opacity: appearance.tintOpacity
@@ -83,7 +83,7 @@ enum ThawBarAppearanceForeground {
 
     private static func glassSample(
         _ sample: MenuBarAverageColorInfo,
-        style: MenuBarGlassStyle,
+        style: MenuBarGlassFinish,
         colored: Bool,
         color: CGColor,
         opacity: Double
