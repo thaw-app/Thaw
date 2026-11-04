@@ -32,6 +32,8 @@ struct ModuleHostTests {
         var launchGate: AsyncStream<Void>?
         /// Launches begun, counted before the gate.
         var launchesBegun = 0
+        /// When set, a restart's wait lasts until it finishes.
+        var waitGate: AsyncStream<Void>?
         var nextPID: pid_t = 100
         var clock = Date(timeIntervalSinceReferenceDate: 0)
         /// Nil until the host saves a choice, like a fresh install.
@@ -77,7 +79,12 @@ struct ModuleHostTests {
                 },
                 terminate: { [unowned self] in terminated.append($0) },
                 now: { [unowned self] in clock },
-                wait: { [unowned self] in waits.append($0) },
+                wait: { [unowned self] in
+                    waits.append($0)
+                    if let waitGate {
+                        for await _ in waitGate {}
+                    }
+                },
                 loadEnabled: { [unowned self] in savedEnabled },
                 saveEnabled: { [unowned self] in savedEnabled = $0 },
                 enabledByDefault: { [unowned self] in onByDefault.contains($0) }
@@ -385,6 +392,47 @@ struct ModuleHostTests {
 
         #expect(host.modules[url]?.state == .stopped)
         #expect(system.terminated == [101])
+    }
+
+    @Test("Quitting while a module launches ends the launched process")
+    func stopAllDuringLaunch() async {
+        let system = FakeSystem()
+        let url = system.addModule("automation")
+        let (gate, finishLaunch) = AsyncStream<Void>.makeStream()
+        system.launchGate = gate
+        let host = makeHost(system)
+        let launching = Task { await host.start(url) }
+        while system.launchesBegun == 0 {
+            await Task.yield()
+        }
+
+        host.stopAll()
+        finishLaunch.finish()
+        await launching.value
+
+        #expect(system.terminated == [101])
+        #expect(host.modules[url]?.state == .idle, "It never became running")
+    }
+
+    @Test("Quitting while a crashed module waits to restart keeps it from restarting")
+    func stopAllDuringRestartWait() async {
+        let system = FakeSystem()
+        let url = system.addModule("automation")
+        let host = makeHost(system)
+        await host.start(url)
+        let (gate, endWait) = AsyncStream<Void>.makeStream()
+        system.waitGate = gate
+        let crashed = Task { await host.moduleDidTerminate(pid: 101) }
+        while system.waits.isEmpty {
+            await Task.yield()
+        }
+
+        host.stopAll()
+        endWait.finish()
+        await crashed.value
+
+        #expect(system.launched == [url], "No second launch after quitting")
+        #expect(host.modules[url]?.state == .stopped)
     }
 
     @Test("A launch that fails after its module was switched off leaves it stopped, not failed")

@@ -241,10 +241,15 @@ final class ModuleHost {
         }
     }
 
+    /// Stops running modules and disarms pending restarts at quit. Every other module's stop count
+    /// moves too, so a launch still in flight ends its process instead of leaving it behind.
     func stopAll() {
         for url in modules.keys {
-            if case .running = modules[url]?.state {
+            switch modules[url]?.state {
+            case .running, .restarting:
                 stop(url)
+            default:
+                stopCounts[url, default: 0] += 1
             }
         }
     }
