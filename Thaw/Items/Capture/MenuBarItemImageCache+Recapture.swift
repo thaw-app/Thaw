@@ -87,7 +87,7 @@ extension MenuBarItemImageCache {
     ) async -> Bool {
         // False backs the live loop off toward its 1 Hz floor while locked; the
         // first tick after the unlock captures again.
-        guard !skipCaptureWhileScreenLocked("recaptureNow") else {
+        guard !skipCaptureWhileScreenLocked("recaptureNow"), !standsDownForConcealedPrewarm("recaptureNow") else {
             return false
         }
         guard let appState else {
