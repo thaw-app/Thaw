@@ -8,17 +8,17 @@
 extension MenuBarItemImageCache {
     /// Settles a revealed batch where it ends up. Under Native hiding the reveal rebuilds the
     /// bar, so an item can reach its slot after its first read; settling and cropping at that
-    /// stale frame watches pixels that never change and cuts the wrong ones. Reads the batch
-    /// again after the settle, and settles once more at the new frames when any moved.
+    /// stale frame watches pixels that never change and cuts the wrong ones. Reads the items
+    /// that appeared again after the settle, and settles once more at the new frames when any moved.
     @MainActor
     func settleAtFinalFrames(
         _ firstRead: [(requested: MenuBarItem, live: MenuBarItem)],
-        batch: [MenuBarItem],
         using sources: RevealCaptureSources
     ) async -> [(requested: MenuBarItem, live: MenuBarItem)] {
         await sources.renderSettle(firstRead.map(\.live))
         guard !Task.isCancelled else { return firstRead }
-        let reread = await sources.settledItems(batch)
+        // Only what appeared: an item that never drew would cost another full wait.
+        let reread = await sources.settledItems(firstRead.map(\.requested))
         guard Self.anyRevealMoved(from: firstRead, to: reread) else { return firstRead }
         MenuBarItemImageCache.diagLog.debug("grouped reveal capture: items moved after their first read; settling again where they ended up")
         await sources.renderSettle(reread.map(\.live))

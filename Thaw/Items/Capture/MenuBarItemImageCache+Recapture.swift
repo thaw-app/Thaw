@@ -747,7 +747,7 @@ extension MenuBarItemImageCache {
             // the revealed glyphs; wait for them to settle so the screenshot
             // captures fully-rendered icons. One settle for the group, since
             // they were revealed together.
-            let revealed = await settleAtFinalFrames(firstRead, batch: batch, using: sources)
+            let revealed = await settleAtFinalFrames(firstRead, using: sources)
             guard !Task.isCancelled, !skipCaptureWhileScreenLocked("settled capture batch") else { return }
 
             // Admitted here, after the reveal and its settle, with nothing

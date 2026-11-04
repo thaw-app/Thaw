@@ -583,6 +583,29 @@ struct GroupedRevealPublicationTests {
         #expect(world.cache.capturesByTag[world.fresh.tag] != nil)
     }
 
+    @Test("The second read asks only for the items that appeared the first time")
+    func secondReadSkipsItemsThatNeverAppeared() async throws {
+        let (world, controller) = try makeWorld(gated: false)
+        var asked: [[MenuBarItemTag]] = []
+        await world.cache.captureRevealBatches(
+            [[world.fresh, world.retried]],
+            controller: controller,
+            target: .init(displayID: CaptureWorld.display, admittedDisplayID: world.appState.itemManager.itemDisplayID, scale: 2),
+            missPolicy: .dropUntrustedEntries,
+            appState: world.appState,
+            sources: .init(
+                settledItems: { batch in
+                    asked.append(batch.map(\.tag))
+                    // Retried never draws, like a module that stays switched off.
+                    return batch.filter { $0.tag != world.retried.tag }.map { (requested: $0, live: $0) }
+                },
+                renderSettle: { _ in },
+                reader: world.reader
+            )
+        )
+        #expect(asked == [[world.fresh.tag, world.retried.tag], [world.fresh.tag]])
+    }
+
     @Test("An item that stays put is settled once")
     func stillItemIsSettledOnce() async throws {
         let (world, controller) = try makeWorld(gated: false)
