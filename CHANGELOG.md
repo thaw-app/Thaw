@@ -56,6 +56,7 @@ the items under New and Fixed.
 - **A page that isn't the changelog can't replace your saved release notes.** A Wi-Fi sign-in page, for example, now counts as a failed fetch, so What's New keeps the last good copy.
 - **Recording a shortcut stops when its page goes away,** and Shift-Escape cancels it. The keyboard also works in the warning about a shortcut macOS already uses.
 - **The Settings window no longer shrinks right after it opens.** It snapped to its smallest size, moving down as it did. It now opens at its usual or last size and stays there.
+- **App icons in the Thaw Bar are as large as the item pictures beside them.** An item without a picture shows its app's icon, which stayed smaller than the pictures at every item size. It now matches them and grows and shrinks with the Item size slider.
 
 ## [3.0.0-beta.6] - 2026-11-03
 
