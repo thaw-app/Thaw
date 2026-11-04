@@ -317,8 +317,10 @@ To offer a stable or beta update to every Mac at once, uncheck **Staged
 rollout** when dispatching **Release**, or answer no to the staging question in
 `scripts/release.sh`. Release then runs
 [`prepare_appcasts_unstaged.py`](../.github/actions/prepare-appcasts/prepare_appcasts_unstaged.py),
-which leaves the interval off the released item; older items keep theirs. Macs
-still get it at their next automatic check, so the last ones can take a day.
+which leaves the interval off the released item; older items keep theirs. Later
+releases keep it unstaged too, since the live feed shows it has no interval. Macs
+still get it at their next automatic check, so the last ones can take a day. A
+dry run asks the same question, so its feed diff shows the choice.
 
 [`prepare_appcasts.py`](../.github/actions/prepare-appcasts/prepare_appcasts.py)
 adds the interval to stable and beta items that don't have one. Later runs keep

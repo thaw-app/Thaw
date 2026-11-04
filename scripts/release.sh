@@ -50,10 +50,11 @@ if [[ "$dry_run" == false ]]; then
     if [[ "$publish_release" == true ]]; then
         publish_appcast=true
         ask "Push the signed appcast to thaw-app/updates?" y || publish_appcast=false
-        if [[ "$publish_appcast" == true ]]; then
-            ask "Stage the update over a day (otherwise every Mac gets it at once)?" y || staged_rollout=false
-        fi
     fi
+fi
+# A dry run reports the appcast it would push, so the rollout choice shows there too.
+if [[ "$dry_run" == true || "$publish_appcast" == true ]]; then
+    ask "Stage the update over a day (otherwise every Mac gets it at once)?" y || staged_rollout=false
 fi
 
 cat <<SUMMARY

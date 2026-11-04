@@ -21,7 +21,8 @@ def sparkle_elements(item, name):
 
 
 # The release tag in an enclosure file name: Thaw_2.1.0-rc.1.zip, or a bare 2.1.0-rc.1.zip.
-ENCLOSURE_TAG = re.compile(r"(?:^|_)(\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?)\.zip$")
+# Release accepts underscores after the hyphen too (2.1.1-rc_1).
+ENCLOSURE_TAG = re.compile(r"(?:^|_)(\d+\.\d+\.\d+(?:-[0-9A-Za-z._]+)?)\.zip$")
 
 
 def text(element):
@@ -79,10 +80,36 @@ def previous_descriptions(xml: bytes | None):
         }
 
 
+def is_alpha_item(item, version):
+    # A channel on the item wins, because Release can override the one a tag implies.
+    channels = [text(channel) for channel in sparkle_elements(item, "channel")]
+    return "alpha" in channels if channels else bool(re.search(r"-(alpha|nightly)(\.|$)", version, re.IGNORECASE))
+
+
+def item_key(item, version):
+    return build_number(item) or version
+
+
+def unstaged_items(xml: bytes | None):
+    """Stable and beta items the live feed offers without a rollout interval. Release left them
+    unstaged on purpose, and every other one has an interval, so a later release keeps them that way."""
+    if not xml:
+        return set()
+    with minidom.parseString(xml) as document:
+        return {
+            item_key(item, text(versions[0]))
+            for item in document.getElementsByTagName("item")
+            if (versions := sparkle_elements(item, "shortVersionString"))
+            and not is_alpha_item(item, text(versions[0]))
+            and not sparkle_elements(item, "phasedRolloutInterval")
+        }
+
+
 def prepare_appcasts(
     xml: bytes, release_tag: str, previous_xml: bytes | None = None, staged: bool = True
 ) -> tuple[bytes, bytes | None]:
     descriptions = previous_descriptions(previous_xml)
+    released_unstaged = unstaged_items(previous_xml)
     # DOM serialization preserves CDATA, namespace prefixes, and enclosure signatures.
     with minidom.parseString(xml) as document:
         legacy_exclusions = []
@@ -134,11 +161,9 @@ def prepare_appcasts(
 
             # Stage everything but alpha, and an unstaged release's own item, which reaches every Mac at once.
             # Older items are past their last group, so the tag changes nothing for them.
-            channels = [text(channel) for channel in sparkle_elements(item, "channel")]
-            # A channel on the item wins, because Release can override the one a tag implies.
-            is_alpha = "alpha" in channels if channels else re.search(r"-(alpha|nightly)(\.|$)", version, re.IGNORECASE)
+            is_alpha = is_alpha_item(item, version)
             # By the enclosure tag first: an item built with its final version shows 2.1.1 for 2.1.1-rc.1.
-            unstaged = not staged and release_tag in (tag, text(versions[0]))
+            unstaged = (not staged and release_tag in (tag, version)) or item_key(item, version) in released_unstaged
             if not is_alpha and not unstaged and not sparkle_elements(item, "phasedRolloutInterval"):
                 insert_sparkle_element_after(
                     document, versions[0], "phasedRolloutInterval", PHASED_ROLLOUT_INTERVAL_SECONDS

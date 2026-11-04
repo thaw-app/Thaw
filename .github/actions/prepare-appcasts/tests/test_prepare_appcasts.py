@@ -185,6 +185,28 @@ class PrepareAppcastsTests(unittest.TestCase):
         canonical, _ = prepare_appcasts(xml, "2.1.1-rc.1", staged=False)
         self.assertNotIn(b"phasedRolloutInterval", canonical)
 
+    def test_an_unstaged_release_with_an_underscore_in_its_tag_is_found(self):
+        xml = feed("2.1.1").replace(b"https://example.org/2.1.1.zip", b"https://example.org/Thaw_2.1.1-rc_1.zip")
+        canonical, _ = prepare_appcasts(xml, "2.1.1-rc_1", staged=False)
+        self.assertNotIn(b"phasedRolloutInterval", canonical)
+
+    def test_an_item_released_unstaged_stays_unstaged_in_later_releases(self):
+        previous, _ = prepare_appcasts(feed("3.0.0-beta.6", "3.0.0-beta.5"), "3.0.0-beta.6", staged=False)
+        canonical, _ = prepare_appcasts(feed("3.0.0-beta.7", "3.0.0-beta.6", "3.0.0-beta.5"), "3.0.0-beta.7", previous)
+        with minidom.parseString(canonical) as document:
+            intervals = {
+                item.getElementsByTagNameNS(SPARKLE_NS, "shortVersionString")[0].firstChild.data:
+                    [node.firstChild.data for node in item.getElementsByTagNameNS(SPARKLE_NS, "phasedRolloutInterval")]
+                for item in document.getElementsByTagName("item")
+            }
+        self.assertEqual(intervals, {"3.0.0-beta.7": ["14400"], "3.0.0-beta.6": [], "3.0.0-beta.5": ["14400"]})
+
+    def test_an_alpha_build_without_an_interval_is_staged_once_promoted(self):
+        previous = feed("3.0.0-alpha.13").replace(b"</item>", b"<sparkle:channel>alpha</sparkle:channel></item>")
+        promoted = feed("3.0.0-alpha.13").replace(b"</item>", b"<sparkle:channel>beta</sparkle:channel></item>")
+        canonical, _ = prepare_appcasts(promoted, "3.0.0-alpha.13", previous)
+        self.assertIn(b">14400<", canonical)
+
     def test_the_unstaged_entry_point_leaves_the_released_item_unstaged(self):
         with tempfile.TemporaryDirectory() as directory:
             directory = Path(directory)
