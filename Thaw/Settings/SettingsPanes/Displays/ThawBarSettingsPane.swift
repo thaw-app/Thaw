@@ -8,44 +8,33 @@
 import SwiftUI
 import ThawUI
 
-/// The dedicated Thaw Bar destination: the canonical home for
-/// the per-display / template fields ThawBarConfigurationControls edits,
-/// plus the app-wide extras (position lock, open-at-pointer-on-hotkey, where
-/// hidden items open, Thaw Bar Only).
+/// The Thaw Bar page: per-display fields, where a shortcut opens the bar, and the app-wide options.
 ///
-/// Menu bar item spacing stays on the Displays pane (it owns the relaunch-
-/// guarded apply flow). Item order, groups, names and shortcuts stay on the
-/// Menu Bar editor. Background, shape and icon design are Appearance.
-///
-/// The editing context is one display or the new-display template
-/// (globalConfiguration). A template edit does not broadcast; the Displays
-/// pane's "Apply template to all displays" remains the whole-template broadcast.
+/// Spacing and the template for new displays live on the Displays pane, which owns the relaunch-guarded apply.
 struct ThawBarSettingsPane: View {
     @Environment(AppState.self) private var appState
     @Bindable var displaySettings: DisplaySettingsManager
 
-    /// What the controls below bind to: a specific display, or the
-    /// new-display template. Defaults to the first connected display so the
-    /// page opens on something real the user can act on.
-    @State private var editingContext: EditingContext = .template
+    /// The display the controls below edit. Nil until the page first appears,
+    /// and whenever the chosen display drops out of the known displays.
+    @State private var selectedDisplayUUID: String?
 
     @State private var tab = ThawBarTab.display
-
-    @State private var hasChosenContext = false
 
     var body: some View {
         ThawForm {
             ThawSection {
                 Text("Preview")
             } content: {
+                let configuration = displaySettings.configuration(for: previewTarget)
                 ThawBarPreview(
                     itemManager: appState.itemManager,
-                    layout: layoutBindingValue,
-                    gridColumns: gridColumnsBindingValue,
-                    useThawBar: useThawBarValue,
-                    displayID: displayIDValue,
-                    itemSpacingOffset: itemSpacingOffsetValue,
-                    itemScale: itemScaleValue
+                    layout: configuration.thawBarLayout,
+                    gridColumns: configuration.gridColumns,
+                    useThawBar: configuration.useThawBar,
+                    displayID: previewDisplayID,
+                    itemSpacingOffset: configuration.itemSpacingOffset,
+                    itemScale: configuration.thawBarItemScale
                 )
             }
 
@@ -57,8 +46,10 @@ struct ThawBarSettingsPane: View {
 
             switch tab {
             case .display:
-                contextPicker
-                configurationControls(for: editingContext)
+                displayPicker
+                if let uuid = editedDisplayUUID {
+                    configurationControls(for: uuid)
+                }
             case .look:
                 // The look sits under the preview it changes; it applies on every display.
                 ThawBarAppearanceEditor(configuration: Bindable(appState.appearanceManager).configuration)
@@ -69,166 +60,97 @@ struct ThawBarSettingsPane: View {
             }
         }
         .onAppear {
-            // Default to the first connected display on the first appear, so
-            // the page opens on something the user can act on. After that the
-            // choice sticks: a user who picked the template keeps it.
-            if !hasChosenContext,
-               editingContext == .template,
-               let first = displaySettings.displays.first(where: { $0.isConnected })
-            {
-                editingContext = .display(first.id)
+            // Open on the first connected display, so the page shows something the user can act on.
+            if selectedDisplayUUID == nil {
+                selectedDisplayUUID = displaySettings.displays.first(where: { $0.isConnected })?.id
             }
-            hasChosenContext = true
         }
     }
 
-    // MARK: - Editing context
+    // MARK: - Display choice
 
-    /// Either a specific display's configuration, or the new-display template.
-    enum EditingContext: Hashable {
-        case display(String)
-        case template
+    /// The chosen display, or the first known one when the choice is unset or no longer known.
+    private var editedDisplayUUID: String? {
+        let displays = displaySettings.displays
+        if let selectedDisplayUUID, displays.contains(where: { $0.id == selectedDisplayUUID }) {
+            return selectedDisplayUUID
+        }
+        return displays.first?.id
     }
 
-    /// The scope picker: which display the controls below edit, or the
-    /// new-display template.
+    /// With no display known yet, the preview shows the template new displays start from.
+    private var previewTarget: DisplaySettingsManager.ConfigurationTarget {
+        editedDisplayUUID.map { .display($0) } ?? .template
+    }
+
+    /// The display ID for the previewed display when it is connected; nil otherwise.
+    private var previewDisplayID: CGDirectDisplayID? {
+        displaySettings.displays.first { $0.id == editedDisplayUUID && $0.isConnected }?.displayID
+    }
+
+    /// Which display the controls below edit.
     @ViewBuilder
-    private var contextPicker: some View {
+    private var displayPicker: some View {
         let displays = displaySettings.displays
 
         ThawSection {
             Text("Applies to")
         } content: {
             if displays.isEmpty {
-                Text("No displays are known yet. Edit the template for new displays instead.")
+                Text("No displays are known yet. Settings for new displays are in Displays, under Template.")
                     .font(.callout)
                     .foregroundStyle(ThawInk.supporting)
-                Button("Edit Template for New Displays") {
-                    editingContext = .template
-                }
-                .buttonStyle(.settingsGlass)
-                .disabled(editingContext == .template)
             } else {
-                ThawPicker(selection: contextSelectionBinding(displays: displays)) {
+                ThawPicker(selection: Binding(
+                    get: { editedDisplayUUID ?? displays[0].id },
+                    set: { selectedDisplayUUID = $0 }
+                )) {
                     ForEach(displays) { display in
-                        Text(verbatim: display.name).tag(EditingContext.display(display.id))
+                        Text(verbatim: display.name).tag(display.id)
                     }
-                    Divider()
-                    Text("Template for new displays").tag(EditingContext.template)
                 } label: {
                     Text("Display")
                 }
-                .annotation { contextAnnotation }
+                .annotation { displayAnnotation }
             }
         }
-    }
-
-    private func contextSelectionBinding(displays: [DisplaySettingsManager.DisplayInfo]) -> Binding<EditingContext> {
-        Binding(
-            get: {
-                // If the selected context no longer names a known display
-                // (it disconnected and dropped out of displays), fall back to
-                // the first display so the controls always bind to something.
-                switch editingContext {
-                case let .display(uuid) where displays.contains(where: { $0.id == uuid }):
-                    return editingContext
-                case .template:
-                    return .template
-                default:
-                    return .display(displays[0].id)
-                }
-            },
-            set: { editingContext = $0 }
-        )
     }
 
     @ViewBuilder
-    private var contextAnnotation: some View {
-        switch editingContext {
-        case let .display(uuid):
-            if let display = displaySettings.displays.first(where: { $0.id == uuid }),
-               !display.isConnected
-            {
-                Text("\(display.name) is disconnected. You can still edit its saved configuration; it applies when this display reconnects.")
-            }
-        case .template:
-            Text("Edits the template applied to displays the next time they connect. Existing displays keep their current settings.")
+    private var displayAnnotation: some View {
+        if let display = displaySettings.displays.first(where: { $0.id == editedDisplayUUID }),
+           !display.isConnected
+        {
+            Text("\(display.name) is disconnected. You can still edit its saved configuration; it applies when this display reconnects.")
         }
     }
 
-    // MARK: - Per-context controls
+    // MARK: - Per-display controls
 
-    /// The layout for the current editing context, for the preview.
-    private var layoutBindingValue: ThawBarLayout {
-        switch editingContext {
-        case let .display(uuid): displaySettings.configuration(forUUID: uuid).thawBarLayout
-        case .template: displaySettings.globalConfiguration.thawBarLayout
-        }
-    }
-
-    /// The grid column count for the current editing context, for the preview.
-    private var gridColumnsBindingValue: Int {
-        switch editingContext {
-        case let .display(uuid): displaySettings.configuration(forUUID: uuid).gridColumns
-        case .template: displaySettings.globalConfiguration.gridColumns
-        }
-    }
-
-    /// Whether the Thaw Bar is enabled on the context being previewed.
-    private var useThawBarValue: Bool {
-        switch editingContext {
-        case let .display(uuid): displaySettings.configuration(forUUID: uuid).useThawBar
-        case .template: displaySettings.globalConfiguration.useThawBar
-        }
-    }
-
-    /// The display ID for the context being previewed, when it is a real
-    /// connected screen. nil for the template or a disconnected display.
-    private var displayIDValue: CGDirectDisplayID? {
-        switch editingContext {
-        case let .display(uuid):
-            displaySettings.displays.first { $0.id == uuid && $0.isConnected }?.displayID
-        case .template:
-            nil
-        }
-    }
-
-    /// The item spacing offset saved for the context being previewed.
-    private var itemSpacingOffsetValue: Double {
-        switch editingContext {
-        case let .display(uuid): displaySettings.configuration(forUUID: uuid).itemSpacingOffset
-        case .template: displaySettings.globalConfiguration.itemSpacingOffset
-        }
-    }
-
-    /// The Thaw Bar item size saved for the context being previewed.
-    private var itemScaleValue: Double {
-        switch editingContext {
-        case let .display(uuid): displaySettings.configuration(forUUID: uuid).thawBarItemScale
-        case .template: displaySettings.globalConfiguration.thawBarItemScale
-        }
-    }
-
-    private func configurationControls(for context: EditingContext) -> some View {
-        ThawSection {
+    private func configurationControls(for uuid: String) -> some View {
+        let target = DisplaySettingsManager.ConfigurationTarget.display(uuid)
+        return ThawSection {
             Text("Behavior")
         } content: {
             ThawBarConfigurationControls(
-                alwaysShowHiddenItems: alwaysShowHiddenItemsBinding(for: context),
-                useThawBar: useThawBarBinding(for: context),
-                location: locationBinding(for: context),
-                layout: layoutBinding(for: context),
-                gridColumns: gridColumnsBinding(for: context),
-                itemScale: itemScaleBinding(for: context),
-                context: context == .template ? .globalTemplate : .display
+                alwaysShowHiddenItems: displaySettings.binding(for: target, \.alwaysShowHiddenItems) { $0.withAlwaysShowHiddenItems($1) },
+                useThawBar: displaySettings.binding(for: target, \.useThawBar) { $0.withUseThawBar($1) },
+                location: displaySettings.binding(for: target, \.thawBarLocation) { $0.withThawBarLocation($1) },
+                layout: displaySettings.binding(for: target, \.thawBarLayout) { $0.withThawBarLayout($1) },
+                gridColumns: displaySettings.binding(for: target, \.gridColumns) { $0.withGridColumns($1) },
+                itemScale: displaySettings.binding(for: target, \.thawBarItemScale) { $0.withThawBarItemScale($1) },
+                shortcutPlacement: Binding(
+                    get: { ThawBarShortcutPlacement(opensAtPointer: appState.settings.general.thawBarLocationOnHotkey) },
+                    set: { appState.settings.general.thawBarLocationOnHotkey = $0.opensAtPointer }
+                ),
+                context: .display
             )
         }
     }
 
     // MARK: - App-wide options
 
-    /// The app-wide toggles: position lock, open-at-pointer-when-summoned-by-
-    /// hotkey, and where hidden items open.
+    /// The app-wide toggles: position lock and where clicked items open.
     @ViewBuilder
     private var appWideOptions: some View {
         Toggle(
@@ -238,25 +160,16 @@ struct ThawBarSettingsPane: View {
                 set: { appState.settings.general.lockThawBarPosition = $0 }
             )
         )
-        .annotation("Keep the \(Constants.displayName) Bar pinned in place. Turn off to move it by dragging its background.")
+        .annotation("Keeps the \(Constants.displayName) Bar where it opens. Turn off to drag it by its background; it opens in its usual place again next time.")
 
         Toggle(
-            "Show at mouse pointer from a keyboard shortcut",
-            isOn: Binding(
-                get: { appState.settings.general.thawBarLocationOnHotkey },
-                set: { appState.settings.general.thawBarLocationOnHotkey = $0 }
-            )
-        )
-        .annotation("Always show the \(Constants.displayName) Bar at the mouse pointer when a keyboard shortcut opens it.")
-
-        Toggle(
-            "Open hidden items in the menu bar",
+            "Show clicked items in the menu bar",
             isOn: Binding(
                 get: { appState.settings.general.openHiddenItemsInMenuBar },
                 set: { appState.settings.general.openHiddenItemsInMenuBar = $0 }
             )
         )
-        .annotation("Clicking a hidden item shows it in the menu bar and opens its menu under the icon. Turn off to open the menu without showing the icon.")
+        .annotation("When you open a hidden item from the \(Constants.displayName) Bar or search, \(Constants.displayName) shows it in the menu bar and opens its menu under its icon. Turn off to open the menu without showing the item.")
     }
 }
 

@@ -52,9 +52,8 @@ struct DisplaySettingsPane: View {
 
             switch tab {
             case .spacing:
-                // The relaunch confirmation sits with spacing, since it decides when spacing edits apply.
+                // The relaunch notice and choice sit with spacing, since they decide when spacing edits apply.
                 ThawSection("Menu bar item spacing") {
-                    globalSection()
                     confirmSpacingRelaunchControls
                 }
                 if selectedDisplay != nil {
@@ -63,6 +62,12 @@ struct DisplaySettingsPane: View {
                     } content: {
                         perDisplayControls
                     }
+                }
+            case .template:
+                // Editing the template and copying it onto every display live together.
+                ThawSection("Template for new displays") {
+                    templateThawBarControls
+                    globalSection()
                 }
             case .spaces:
                 // Spaces belong to displays in macOS, so their controls follow the display's.
@@ -88,18 +93,24 @@ struct DisplaySettingsPane: View {
 
     @ViewBuilder
     private var confirmSpacingRelaunchControls: some View {
+        // The pane's one full relaunch warning; other spacing controls keep short notes.
+        let notice = spacingApplyChoice.wrappedValue.relaunchNotice
+        SettingsWarningPill(
+            title: notice.title,
+            message: notice.message,
+            systemImage: spacingApplyChoice.wrappedValue == .waitForRestart ? "info.circle.fill" : "exclamationmark.triangle.fill",
+            tint: spacingApplyChoice.wrappedValue == .waitForRestart ? .accentColor : .orange
+        )
+
         ThawPicker("When spacing changes", selection: spacingApplyChoice) {
             Text("Ask before restarting menu bar apps").tag(SpacingApplyChoice.askFirst)
             Text("Restart menu bar apps right away").tag(SpacingApplyChoice.relaunchNow)
             Text("Wait until the apps restart").tag(SpacingApplyChoice.waitForRestart)
         }
-        .annotation(
-            "macOS only reads the spacing when an app with a menu bar item starts.",
-            more: "Restarting apps applies the change now; waiting leaves every app running and the new spacing appears the next time each app starts (after a restart, or when you reopen it)."
-        )
 
         // Without a question to ask, the change needs to know which profiles it is saved to.
-        if spacingApplyChoice.wrappedValue == .relaunchNow {
+        // Waiting asks nothing for one display either, so it needs the choice too.
+        if spacingApplyChoice.wrappedValue != .askFirst {
             Toggle("Save spacing to every profile", isOn: Binding(
                 get: { displaySettings.unconfirmedSpacingProfileScope == .allProfiles },
                 set: { displaySettings.unconfirmedSpacingProfileScope = $0 ? .allProfiles : .activeProfile }
@@ -146,6 +157,7 @@ private struct WideDisplayRuleSection: View {
 
 nonisolated enum DisplaysTab: CaseIterable, ThawTab {
     case spacing
+    case template
     case spaces
     case wideDisplays
 
@@ -153,6 +165,7 @@ nonisolated enum DisplaysTab: CaseIterable, ThawTab {
     init?(section: String) {
         switch section {
         case "Menu bar item spacing": self = .spacing
+        case "Template for new displays": self = .template
         case "This Space", "All Spaces": self = .spaces
         case "Wide displays": self = .wideDisplays
         default: return nil
@@ -162,6 +175,7 @@ nonisolated enum DisplaysTab: CaseIterable, ThawTab {
     var title: LocalizedStringResource {
         switch self {
         case .spacing: "Spacing"
+        case .template: "Template"
         case .spaces: "Spaces"
         case .wideDisplays: "Wide Displays"
         }
@@ -170,6 +184,7 @@ nonisolated enum DisplaysTab: CaseIterable, ThawTab {
     var systemImage: String {
         switch self {
         case .spacing: "arrow.left.and.right.text.vertical"
+        case .template: "rectangle.on.rectangle.angled"
         case .spaces: "rectangle.split.3x1"
         case .wideDisplays: "display"
         }

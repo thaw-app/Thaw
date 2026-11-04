@@ -56,7 +56,7 @@ extension DisplaySettingsPane {
             }
             if differsFromTemplate(display) {
                 ThawBadge("Customized", tone: .tinted(.accentColor))
-                    .help(Text("This display’s settings differ from the global template"))
+                    .help(Text("This display’s settings differ from the template for new displays"))
             }
 
             Spacer(minLength: 8)
@@ -67,7 +67,7 @@ extension DisplaySettingsPane {
                 }
                 .buttonStyle(.settingsGlass)
                 .controlSize(.small)
-                .help(Text("Copy the global template’s settings onto this display"))
+                .help(Text("Copy the template’s settings onto this display"))
             }
         }
     }
@@ -158,7 +158,7 @@ extension DisplaySettingsPane {
             } label: {
                 Text("Spacing hasn’t updated?")
             }
-            .annotation("Relaunches menu bar apps to reload the saved spacing.")
+            .annotation("Restarts menu bar apps so they load the saved spacing.")
         }
         if let failure = displaySettings.lastSpacingApplyFailure {
             SettingsWarningPill(
@@ -170,11 +170,12 @@ extension DisplaySettingsPane {
     }
 
     /// Write-only mode restarts nothing, so the copy must not promise a relaunch.
+    /// The full warning is the notice at the top of the Spacing tab.
     private var spacingRowAnnotation: LocalizedStringResource {
         if displaySettings.spacingApplyMode == .writeOnly {
-            "Takes effect when this display is the active menu bar display. Applying it writes the new value without restarting apps; each app picks it up the next time it starts, and each app can add its own padding, so gaps are not always identical."
+            "Used while this display has the menu bar. Apps show a change the next time they start, and each app can add its own padding."
         } else {
-            "Takes effect when this display is the active menu bar display. Applying it restarts menu bar apps so they load the new value, and each app can add its own padding, so gaps are not always identical."
+            "Used while this display has the menu bar. Applying a change restarts menu bar apps, and each app can add its own padding."
         }
     }
 

@@ -8,8 +8,8 @@
 import SwiftUI
 import ThawUI
 
-/// The "Global" half of DisplaySettingsPane: a template of the same
-/// controls every display has, plus the Apply-to-All broadcast.
+/// The Template tab of DisplaySettingsPane: the template new displays start
+/// from (Thaw Bar settings and spacing), plus the Apply-to-All broadcast.
 ///
 /// Editing the template writes only displaySettings.globalConfiguration, so
 /// the section binds directly without a draft dictionary. The exception is
@@ -35,8 +35,21 @@ extension DisplaySettingsPane {
         let activeProfileName: String?
     }
 
-    /// Renders the spacing controls at the top of the Displays pane. Edits
-    /// stage on displaySettings.globalConfiguration; Apply broadcasts it.
+    /// The template's Thaw Bar settings. The shortcut placement is app-wide, so it stays on the Thaw Bar page.
+    var templateThawBarControls: some View {
+        ThawBarConfigurationControls(
+            alwaysShowHiddenItems: displaySettings.binding(for: .template, \.alwaysShowHiddenItems) { $0.withAlwaysShowHiddenItems($1) },
+            useThawBar: displaySettings.binding(for: .template, \.useThawBar) { $0.withUseThawBar($1) },
+            location: displaySettings.binding(for: .template, \.thawBarLocation) { $0.withThawBarLocation($1) },
+            layout: displaySettings.binding(for: .template, \.thawBarLayout) { $0.withThawBarLayout($1) },
+            gridColumns: displaySettings.binding(for: .template, \.gridColumns) { $0.withGridColumns($1) },
+            itemScale: displaySettings.binding(for: .template, \.thawBarItemScale) { $0.withThawBarItemScale($1) },
+            context: .globalTemplate
+        )
+    }
+
+    /// The template's spacing and the Apply-to-All button. Edits stage on
+    /// displaySettings.globalConfiguration; Apply broadcasts it.
     @ViewBuilder
     func globalSection() -> some View {
         globalSpacingRow()
@@ -52,10 +65,16 @@ extension DisplaySettingsPane {
         } label: {
             Text("All displays")
         }
-        .annotation(
-            "Apply the global template above to every connected and previously-seen display.",
-            more: "Newly connected displays are also seeded from this template."
-        )
+        .annotation(applyAllAnnotation)
+    }
+
+    /// The full relaunch warning is on the Spacing tab; this only says when it applies.
+    private var applyAllAnnotation: LocalizedStringResource {
+        if displaySettings.spacingApplyMode == .writeOnly {
+            "Replaces the settings of every display Thaw knows with this template. If the spacing in use changes, apps show it the next time they start."
+        } else {
+            "Replaces the settings of every display Thaw knows with this template. If the spacing in use changes, apps with menu bar items restart, as described under Spacing."
+        }
     }
 
     /// Spacing slider for the Global template. Uses a sentinel draft key so
@@ -100,11 +119,7 @@ extension DisplaySettingsPane {
     }
 
     private var globalSpacingAnnotation: LocalizedStringResource {
-        if displaySettings.spacingApplyMode == .writeOnly {
-            "Applying writes the new spacing without restarting apps; the new spacing appears the next time each menu bar app starts."
-        } else {
-            "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."
-        }
+        "The spacing new displays start with. To use it on the displays you have, apply the template."
     }
 
     /// Returns true when the Apply-to-All button should be enabled. The

@@ -8,8 +8,10 @@
 import SwiftUI
 
 /// Locations where the Thaw Bar can appear.
+/// Raw values and case names are stored and used by thaw:// links, so only the labels may change.
 nonisolated enum ThawBarLocation: Int, CaseIterable, Codable, Identifiable {
-    /// The Thaw Bar will appear in different locations based on context.
+    /// Under the pointer when it is on an empty part of the menu bar as the bar opens,
+    /// otherwise under the Thaw icon.
     case dynamic = 0
 
     /// The Thaw Bar will appear centered below the mouse pointer.
@@ -30,11 +32,11 @@ nonisolated enum ThawBarLocation: Int, CaseIterable, Codable, Identifiable {
 
     var localized: LocalizedStringKey {
         switch self {
-        case .dynamic: "Dynamic"
-        case .mousePointer: "Mouse pointer"
-        case .thawIcon: "\(Constants.displayName) icon"
-        case .leftAligned: "Left aligned"
-        case .rightAligned: "Right aligned"
+        case .dynamic: "Pointer or \(Constants.displayName) icon"
+        case .mousePointer: "Under the pointer"
+        case .thawIcon: "Under the \(Constants.displayName) icon"
+        case .leftAligned: "Left edge"
+        case .rightAligned: "Right edge"
         }
     }
 
@@ -54,6 +56,34 @@ nonisolated enum ThawBarLocation: Int, CaseIterable, Codable, Identifiable {
             return .rightAligned
         default:
             return nil
+        }
+    }
+}
+
+/// Where a shortcut opens the Thaw Bar. Stored as the thawBarLocationOnHotkey switch,
+/// which profiles and thaw:// links also read, so both values keep their meaning.
+nonisolated enum ThawBarShortcutPlacement: CaseIterable, Hashable, Identifiable {
+    /// The shortcut opens the bar where the display's Location says.
+    case location
+    /// The shortcut opens the bar centered on the pointer, wherever it is on the screen.
+    case pointer
+
+    init(opensAtPointer: Bool) {
+        self = opensAtPointer ? .pointer : .location
+    }
+
+    var opensAtPointer: Bool {
+        self == .pointer
+    }
+
+    var id: Self {
+        self
+    }
+
+    var localized: LocalizedStringKey {
+        switch self {
+        case .location: "Use Location"
+        case .pointer: "Centered on the pointer"
         }
     }
 }

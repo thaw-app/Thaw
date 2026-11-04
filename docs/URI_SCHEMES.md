@@ -113,7 +113,7 @@ Read and write Thaw settings via `thaw://` URLs, gated by a security whitelist. 
 | `customIceIconIsTemplate`                 | Bool | Custom icon renders as template              |
 | `showIceIcon`                             | Bool | Show the Thaw icon in menu bar               |
 | `hideDockIconWhenToggling`                | Bool | Hide Dock icon on menu-bar toggle; overflow uses Thaw Bar |
-| `iceBarLocationOnHotkey`                  | Bool | Thaw Bar appears at mouse location on hotkey     |
+| `iceBarLocationOnHotkey`                  | Bool | When opened by a shortcut: `true` is "Centered on the pointer", `false` is "Use Location" |
 | `enableMenuBarItemOverflow`                | Bool | Eject items that would fall behind the notch |
 | `useThawBarOnNotchOverflow`                | Bool | Send ejected overflow items to the Thaw Bar  |
 | `moveCursorToRevealedItem`                 | Bool | Move the cursor onto an item once revealed   |
@@ -150,7 +150,7 @@ These settings affect specific displays based on context. The **Scope** column i
 | ------------------------ | ---- | ----- | ----------- |
 | `useIceBar`              | Bool | Active display only | Enable/disable Thaw Bar on the display with the active menu bar |
 | `useThawBarForAlwaysHidden` | Bool | All displays without IceBar | Open only the always-hidden section in the Thaw Bar, leaving hidden items to expand inline |
-| `iceBarLocation`         | String | All displays with IceBar enabled | Thaw Bar position: `dynamic`, `mousePointer`, `iceIcon`, `leftAligned`, or `rightAligned` |
+| `iceBarLocation`         | String | All displays with IceBar enabled | Where the Thaw Bar opens: `dynamic` (Pointer or Thaw icon), `mousePointer` (Under the pointer), `thawIcon` or `iceIcon` (Under the Thaw icon), `leftAligned` (Left edge) or `rightAligned` (Right edge). Numbers 0 to 4 work too |
 | `alwaysShowHiddenItems`  | Bool | All displays without IceBar | Show hidden items inline when IceBar is disabled |
 | `iceBarLayout`           | String | All displays with IceBar enabled | Thaw Bar layout: `horizontal`, `vertical`, or `grid` |
 | `gridColumns`            | Int | All displays with IceBar enabled | Maximum items per row in grid layout (2–10) |
