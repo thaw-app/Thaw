@@ -229,24 +229,46 @@ final class TimeMachineExtra: NSObject {
 
     // MARK: tmutil
 
-    /// Runs `tmutil status` off the main thread. A failure reads as idle.
+    /// How long tmutil gets to answer. A hung one would otherwise stop status checks for good.
+    static let statusTimeout = Duration.seconds(5)
+
+    /// Runs `tmutil status` off the main thread. A failure, or no answer in time, reads as idle.
     private static nonisolated func readStatus() async -> String {
+        await output(of: URL(filePath: "/usr/bin/tmutil"), arguments: ["status"], timeout: statusTimeout)
+    }
+
+    /// The command's standard output, or "" when it can't start or is ended for running past timeout.
+    static nonisolated func output(of executable: URL, arguments: [String], timeout: Duration) async -> String {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
                 let process = Process()
-                process.executableURL = URL(filePath: "/usr/bin/tmutil")
-                process.arguments = ["status"]
+                process.executableURL = executable
+                process.arguments = arguments
                 let pipe = Pipe()
                 process.standardOutput = pipe
                 process.standardError = FileHandle.nullDevice
                 do {
                     try process.run()
-                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                    process.waitUntilExit()
-                    continuation.resume(returning: String(bytes: data, encoding: .utf8) ?? "")
                 } catch {
                     continuation.resume(returning: "")
+                    return
                 }
+                let deadline = DispatchWorkItem {
+                    if process.isRunning {
+                        process.terminate()
+                    }
+                }
+                let (seconds, attoseconds) = timeout.components
+                let nanoseconds = Int(seconds) * 1_000_000_000 + Int(attoseconds / 1_000_000_000)
+                DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .nanoseconds(nanoseconds), execute: deadline)
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                process.waitUntilExit()
+                deadline.cancel()
+                guard process.terminationReason == .exit else {
+                    continuation.resume(returning: "")
+                    return
+                }
+                continuation.resume(returning: String(bytes: data, encoding: .utf8) ?? "")
             }
         }
     }
