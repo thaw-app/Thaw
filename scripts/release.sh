@@ -69,6 +69,18 @@ cat <<SUMMARY
 SUMMARY
 ask "Dispatch?" n || { echo "aborted"; exit 1; }
 
+# The run uses the tag's own workflow, which may predate the staged_rollout
+# input; send it only to turn staging off, and only when the tag declares it.
+rollout_input=()
+if [[ "$staged_rollout" == false ]]; then
+    if ! gh api "repos/$REPO/contents/.github/workflows/$WORKFLOW?ref=$tag" --jq .content \
+        | base64 --decode | grep -q '^      staged_rollout:'; then
+        echo "error: $tag's $WORKFLOW has no staged_rollout input; move the tag to a commit that has it" >&2
+        exit 1
+    fi
+    rollout_input=(-f staged_rollout=false)
+fi
+
 # Run on the tag itself: the build in org-ci attests the commit the run was
 # dispatched from, and fails when the tag names another one.
 gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$tag" \
@@ -77,6 +89,6 @@ gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$tag" \
     -f dry_run="$dry_run" \
     -f publish_release="$publish_release" \
     -f publish_appcast="$publish_appcast" \
-    -f staged_rollout="$staged_rollout"
+    ${rollout_input[@]+"${rollout_input[@]}"}
 
 echo "dispatched; watch with: gh run list --repo $REPO --workflow $WORKFLOW"

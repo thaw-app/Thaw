@@ -137,7 +137,8 @@ def prepare_appcasts(
             channels = [text(channel) for channel in sparkle_elements(item, "channel")]
             # A channel on the item wins, because Release can override the one a tag implies.
             is_alpha = "alpha" in channels if channels else re.search(r"-(alpha|nightly)(\.|$)", version, re.IGNORECASE)
-            unstaged = not staged and text(versions[0]) == release_tag
+            # By the enclosure tag first: an item built with its final version shows 2.1.1 for 2.1.1-rc.1.
+            unstaged = not staged and release_tag in (tag, text(versions[0]))
             if not is_alpha and not unstaged and not sparkle_elements(item, "phasedRolloutInterval"):
                 insert_sparkle_element_after(
                     document, versions[0], "phasedRolloutInterval", PHASED_ROLLOUT_INTERVAL_SECONDS

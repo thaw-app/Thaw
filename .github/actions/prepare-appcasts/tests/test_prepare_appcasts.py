@@ -180,6 +180,11 @@ class PrepareAppcastsTests(unittest.TestCase):
             }
         self.assertEqual(intervals, {"3.0.0-beta.6": [], "3.0.0-beta.5": ["14400"]})
 
+    def test_an_unstaged_release_built_with_its_final_version_is_found_by_its_tag(self):
+        xml = feed("2.1.1").replace(b"https://example.org/2.1.1.zip", b"https://example.org/Thaw_2.1.1-rc.1.zip")
+        canonical, _ = prepare_appcasts(xml, "2.1.1-rc.1", staged=False)
+        self.assertNotIn(b"phasedRolloutInterval", canonical)
+
     def test_the_unstaged_entry_point_leaves_the_released_item_unstaged(self):
         with tempfile.TemporaryDirectory() as directory:
             directory = Path(directory)
@@ -188,7 +193,8 @@ class PrepareAppcastsTests(unittest.TestCase):
             output = directory / "outputs"
             output.write_text("")
             result = subprocess.run(
-                [sys.executable, str(ACTION_PATH / "prepare_appcasts_unstaged.py")],
+                # Isolated, as org-ci runs it: the script's own directory is not on sys.path.
+                [sys.executable, "-I", str(ACTION_PATH / "prepare_appcasts_unstaged.py")],
                 env=dict(os.environ, APPCAST_PATH=str(source), RELEASE_TAG="3.0.0-beta.6",
                          RUNNER_TEMP=str(directory), GITHUB_OUTPUT=str(output)),
                 capture_output=True, text=True,
