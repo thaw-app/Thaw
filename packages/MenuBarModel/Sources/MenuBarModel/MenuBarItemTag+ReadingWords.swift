@@ -6,9 +6,9 @@
 //  Licensed under the GNU GPLv3
 
 extension MenuBarItemTag {
-    /// Apps whose title ends in a countdown, such as Cron's "Standup · 13 m left". The
-    /// number rule keeps one identity per event, so only a new event changes it.
-    static let countdownSuffixTitleBundleMatchers: [(prefix: String, suffix: String)] = [
+    /// Notion Calendar, still under Cron's bundle ID, has one item titled by the next event and
+    /// its countdown, and untitled between events. No part of the title is stable.
+    static let singleItemCalendarBundleMatchers: [(prefix: String, suffix: String)] = [
         (prefix: "com.cron.electron", suffix: ""),
     ]
 

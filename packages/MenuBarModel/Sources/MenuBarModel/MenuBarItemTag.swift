@@ -152,7 +152,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
 
     /// Live metric titles need stable identities; prefix/suffix matching covers multiple builds, including iStat Menus Setapp.
     /// - Important: Add only apps with live values; digit replacement would collapse ordinal titles such as "Fan 1" and "Fan 2".
-    private static let dynamicMetricTitleBundleMatchers: [(prefix: String, suffix: String)] = countdownSuffixTitleBundleMatchers + [
+    private static let dynamicMetricTitleBundleMatchers: [(prefix: String, suffix: String)] = [
         (prefix: "com.bjango.istatmenus", suffix: ".status"),
         (prefix: "eu.exelban.Stats", suffix: ""),
         // OpenUsage service names contain letters, so neutralizing quota digits keeps items distinct.
@@ -185,7 +185,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
 
     /// Wholly volatile titles, such as Dato's date and event countdown, have no stable fragment; use sibling position instead.
     /// - Important: Add only apps with volatile titles in every item; instanceIndex alone distinguishes siblings, so reordering swaps identities.
-    private static let volatileTitleBundleMatchers: [(prefix: String, suffix: String)] = [
+    private static let volatileTitleBundleMatchers: [(prefix: String, suffix: String)] = singleItemCalendarBundleMatchers + [
         (prefix: "com.sindresorhus.Dato", suffix: ""),
         // ThermalForge's single temperature item uses instanceIndex to avoid migration shuffles.
         // Its startup "Item-0" fallback maps to the same placeholder, preserving identity across launch.
