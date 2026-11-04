@@ -12,13 +12,13 @@ extension MenuBarItemTag {
         (prefix: "com.cron.electron", suffix: ""),
     ]
 
-    /// Drops the words that still change once a reading's numbers are #: the weather
-    /// conditions after "Currently #°", and a date's month and AM/PM.
+    /// Drops the words that still change once a reading's numbers are #: the weather conditions
+    /// after "Currently #°", and a date's AM/PM and month, whether the month comes before or after the day.
     static func collapsingReadingWords(_ neutralized: String) -> String {
         if neutralized.hasPrefix("Currently #°") {
             return "Currently"
         }
-        let month = /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?(?= #)/
+        let month = /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?(?= #| at\b)/
         return neutralized
             .replacing(month, with: "#")
             .replacing(/(#:#)\s*[AaPp]\.?\s?[Mm]\.?$/) { $0.output.1 }
