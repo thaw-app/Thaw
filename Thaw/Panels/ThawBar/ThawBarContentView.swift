@@ -154,7 +154,7 @@ struct ThawBarContentView: View {
     }
 
     private var clipShape: ThawBarBorderShape {
-        ThawBarBorderShape.thawBarClip(height: contentHeight, hasRoundedShape: thawBarAppearance.hasRoundedShape)
+        ThawBarBorderShape.thawBarClip(height: contentHeight, roundness: thawBarAppearance.cornerRoundness)
     }
 
     private func itemView(for item: MenuBarItem, image: MenuBarItemDisplayImage?, at index: Int) -> ThawBarItemView {
@@ -224,7 +224,7 @@ struct ThawBarContentView: View {
                 // Trace the clip; omit the square-corner top edge to avoid the display's rounded-corner clipping.
                 ThawBarBorderShape.thawBarBorder(
                     height: contentHeight,
-                    hasRoundedShape: thawBarAppearance.hasRoundedShape,
+                    roundness: thawBarAppearance.cornerRoundness,
                     borderWidth: CGFloat(thawBarAppearance.borderWidth)
                 )
                 .stroke(lineWidth: CGFloat(thawBarAppearance.borderWidth))

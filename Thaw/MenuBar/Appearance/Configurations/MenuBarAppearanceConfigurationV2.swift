@@ -53,7 +53,7 @@ nonisolated struct MenuBarAppearanceConfigurationV2: Hashable {
     var resolvedThawBarAppearance: ResolvedThawBarAppearance {
         if thawBarAppearance.overridesMenuBar {
             return ResolvedThawBarAppearance(
-                hasRoundedShape: thawBarAppearance.hasRoundedShape,
+                cornerRoundness: thawBarAppearance.cornerRoundness,
                 fillConfiguration: thawBarAppearance.fillConfiguration
             )
         }
@@ -63,7 +63,7 @@ nonisolated struct MenuBarAppearanceConfigurationV2: Hashable {
         if shapeKind == .noShape {
             fill.hasBorder = false
         }
-        return ResolvedThawBarAppearance(hasRoundedShape: hasRoundedShape, fillConfiguration: fill)
+        return ResolvedThawBarAppearance(cornerRoundness: shapeRoundness, fillConfiguration: fill)
     }
 }
 
@@ -357,7 +357,7 @@ private nonisolated extension KeyedEncodingContainer {
 
 /// Resolves inheritance once so the renderer uses one consistent appearance.
 nonisolated struct ResolvedThawBarAppearance: Hashable {
-    var hasRoundedShape: Bool
+    var cornerRoundness: Double
     var fillConfiguration: MenuBarAppearancePartialConfiguration
 
     var hasShadow: Bool {
@@ -446,7 +446,7 @@ nonisolated struct ResolvedThawBarAppearance: Hashable {
 /// An optional, independently stored appearance for the floating bar.
 nonisolated struct ThawBarAppearance: Hashable {
     var overridesMenuBar: Bool
-    var hasRoundedShape: Bool
+    var cornerRoundness: Double
     var hasShadow: Bool
     var hasBorder: Bool
     var borderColor: CGColor
@@ -557,7 +557,7 @@ nonisolated extension MenuBarAppearanceConfigurationV2 {
 nonisolated extension ThawBarAppearance {
     static let defaultConfiguration = ThawBarAppearance(
         overridesMenuBar: false,
-        hasRoundedShape: false,
+        cornerRoundness: 0,
         hasShadow: MenuBarAppearancePartialConfiguration.defaultConfiguration.hasShadow,
         hasBorder: MenuBarAppearancePartialConfiguration.defaultConfiguration.hasBorder,
         borderColor: MenuBarAppearancePartialConfiguration.defaultConfiguration.borderColor,
@@ -583,7 +583,7 @@ nonisolated extension ThawBarAppearance {
     init(seededFrom resolved: ResolvedThawBarAppearance) {
         self = .defaultConfiguration
         overridesMenuBar = true
-        hasRoundedShape = resolved.hasRoundedShape
+        cornerRoundness = resolved.cornerRoundness
         fillConfiguration = resolved.fillConfiguration
     }
 }
@@ -623,7 +623,7 @@ nonisolated extension ThawBarAppearance: Codable {
         let fallback = Self.defaultConfiguration
         try self.init(
             overridesMenuBar: stored.decodeIfPresent(Bool.self, forKey: .overridesMenuBar) ?? fallback.overridesMenuBar,
-            hasRoundedShape: stored.decodeIfPresent(Bool.self, forKey: .hasRoundedShape) ?? fallback.hasRoundedShape,
+            cornerRoundness: ThawBarCornerRoundness.decode(from: decoder),
             hasShadow: stored.value(forKey: .hasShadow, or: fallback.hasShadow),
             hasBorder: stored.value(forKey: .hasBorder, or: fallback.hasBorder),
             borderColor: stored.color(forKey: .borderColor, or: fallback.borderColor),
@@ -654,7 +654,7 @@ nonisolated extension ThawBarAppearance: Codable {
     func encode(to encoder: any Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(overridesMenuBar, forKey: .overridesMenuBar)
-        try values.encode(hasRoundedShape, forKey: .hasRoundedShape)
+        try ThawBarCornerRoundness.encode(cornerRoundness, to: encoder)
         try values.encode(hasShadow, forKey: .hasShadow)
         try values.encode(hasBorder, forKey: .hasBorder)
         try values.encode(borderColor, forKey: .borderColor)

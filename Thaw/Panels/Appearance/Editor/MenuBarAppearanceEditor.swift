@@ -751,7 +751,7 @@ struct ThawBarAppearanceEditor: View {
                 .annotation("Off, the \(Constants.displayName) Bar uses the menu bar's look from the Appearance pane.")
 
             if configuration.thawBarAppearance.overridesMenuBar {
-                Toggle("Rounded corners", isOn: $configuration.thawBarAppearance.hasRoundedShape)
+                ThawBarCornersSlider(roundness: $configuration.thawBarAppearance.cornerRoundness)
             }
         }
         if configuration.thawBarAppearance.overridesMenuBar {

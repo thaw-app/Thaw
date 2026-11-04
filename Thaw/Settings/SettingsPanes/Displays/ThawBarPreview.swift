@@ -108,7 +108,7 @@ struct ThawBarPreview: View {
         let sample = screen.flatMap { appState.menuBarManager.averageColors[$0.displayID] }
         let clipShape = ThawBarBorderShape.thawBarClip(
             height: contentHeight,
-            hasRoundedShape: appearance.hasRoundedShape
+            roundness: appearance.cornerRoundness
         )
 
         Group {
@@ -163,7 +163,7 @@ struct ThawBarPreview: View {
             if appearance.hasBorder {
                 ThawBarBorderShape.thawBarBorder(
                     height: contentHeight,
-                    hasRoundedShape: appearance.hasRoundedShape,
+                    roundness: appearance.cornerRoundness,
                     borderWidth: CGFloat(appearance.borderWidth)
                 )
                 .stroke(lineWidth: CGFloat(appearance.borderWidth))
@@ -174,7 +174,7 @@ struct ThawBarPreview: View {
         .thawAnimation(ThawMotion.settle, value: layout)
         .thawAnimation(ThawMotion.settle, value: gridColumns)
         .thawAnimation(ThawMotion.settle, value: itemScale)
-        .thawAnimation(ThawMotion.settle, value: appearance.hasRoundedShape)
+        .thawAnimation(ThawMotion.settle, value: appearance.cornerRoundness)
         .thawAnimation(ThawMotion.settle, value: appearance.hasBorder)
     }
 

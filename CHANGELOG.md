@@ -24,6 +24,12 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+## [3.0.0-alpha.13] - 2026-11-04
+
+**macOS 27 only · Build 124**
+
+Scripts, Triggers and Widgets become modules you can switch on and off, and Settings is rebuilt on ThawUI.
+
 ### New
 
 - **Modules in Settings.** A new Extras page switches optional parts of Thaw on and off, and a module that's off doesn't run at all. Scripts, Triggers and Widgets are the first ones, and each starts switched on if you already used what it does. Each module also has its switch on its own page, such as Settings › Widgets. A module that's off leaves the sidebar. By @diazdesandi.
@@ -47,6 +53,7 @@ the items under New and Fixed.
 - **Experiments is gone.** The panel that can replace Thaw's menu is on Widgets, and the other experiments joined the rows below. They keep their Alpha and Beta badges. The camera and microphone alerts are put away for now and stay off. Saved links to Experiments open General. By @diazdesandi.
 - **The left and right arrow keys step through What's New and Acknowledgements,** and the text fades under the title bar as it does on the settings pages.
 - **Permission icons line up.** Each permission's icon sits in the same box as the sidebar's, so the names start in the same place.
+- **The Thaw Bar's own look has a Corners slider,** from square to round, like the menu bar's shape. It replaces the Rounded corners switch, and a look saved with the switch opens fully round or square. When it follows the menu bar, the Thaw Bar now matches the menu bar's Corners setting instead of only round or square.
 
 ### Fixed
 
