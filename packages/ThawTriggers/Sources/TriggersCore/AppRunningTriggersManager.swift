@@ -15,6 +15,8 @@ public final class AppRunningTriggersManager {
     /// The key the rules are stored under, in the module's defaults and in
     /// Thaw's, where they lived before triggers became a module.
     public static let storageKey = "AppRunningTriggersV1"
+    /// Set once Thaw's own triggers were looked at, so a reset, which removes storageKey, isn't undone.
+    static let importedFromThawKey = "AppRunningTriggersImportedFromThaw"
 
     private struct SavedRules: Codable {
         var version = 1
@@ -140,11 +142,14 @@ public final class AppRunningTriggersManager {
         reconcile()
     }
 
-    /// Copies the rules Thaw saved before triggers became a module, once:
-    /// only when this store has none of its own.
+    /// Copies the rules Thaw saved before triggers became a module, once: only when this store
+    /// has none of its own, and never again after that. A launch that can't read Thaw's settings
+    /// doesn't count, so a later one still imports them.
     public static func importFromThaw(into store: UserDefaults, hostDefaults: UserDefaults?) {
+        guard !store.bool(forKey: importedFromThawKey), let hostDefaults else { return }
+        store.set(true, forKey: importedFromThawKey)
         guard store.object(forKey: storageKey) == nil,
-              let data = hostDefaults?.data(forKey: storageKey)
+              let data = hostDefaults.data(forKey: storageKey)
         else { return }
         store.set(data, forKey: storageKey)
     }

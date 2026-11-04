@@ -170,6 +170,38 @@ struct AppRunningTriggersTests {
         }
     }
 
+    @Test("A reset after importing Thaw's old triggers stays reset after a relaunch")
+    func resetSurvivesRelaunch() throws {
+        let hostSuite = ScratchSuites.name("AppRunningTriggersTests.host")
+        let host = try #require(UserDefaults(suiteName: hostSuite))
+        defer { ScratchSuites.remove(hostSuite) }
+        host.set(Data("not json".utf8), forKey: AppRunningTriggersManager.storageKey)
+        try withManager { _, store in
+            AppRunningTriggersManager.importFromThaw(into: store, hostDefaults: host)
+            let imported = AppRunningTriggersManager(store: store)
+            #expect(!imported.canEdit)
+            imported.reset()
+
+            AppRunningTriggersManager.importFromThaw(into: store, hostDefaults: host)
+            #expect(store.object(forKey: AppRunningTriggersManager.storageKey) == nil)
+            #expect(AppRunningTriggersManager(store: store).canEdit)
+        }
+    }
+
+    @Test("A launch that can't read Thaw's settings still imports them on a later one")
+    func importWaitsForReadableHost() throws {
+        let hostSuite = ScratchSuites.name("AppRunningTriggersTests.host")
+        let host = try #require(UserDefaults(suiteName: hostSuite))
+        defer { ScratchSuites.remove(hostSuite) }
+        let data = try JSONEncoder().encode(["version": 1])
+        host.set(data, forKey: AppRunningTriggersManager.storageKey)
+        try withManager { _, store in
+            AppRunningTriggersManager.importFromThaw(into: store, hostDefaults: nil)
+            AppRunningTriggersManager.importFromThaw(into: store, hostDefaults: host)
+            #expect(store.data(forKey: AppRunningTriggersManager.storageKey) == data)
+        }
+    }
+
     @Test("Reset releases holds and removes only the triggers")
     func reset() throws {
         try withManager { manager, store in
