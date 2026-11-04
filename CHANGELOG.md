@@ -79,6 +79,8 @@ Scripts, Triggers and Widgets become modules you can switch on and off, and Sett
 - **Recording a shortcut stops when its page goes away,** and Shift-Escape cancels it. The keyboard also works in the warning about a shortcut macOS already uses.
 - **The Settings window no longer shrinks right after it opens.** It snapped to its smallest size, moving down as it did. It now opens at its usual or last size and stays there.
 - **App icons in the Thaw Bar are as large as the item pictures beside them.** An item without a picture shows its app's icon, which stayed smaller than the pictures at every item size. It now matches them and grows and shrinks with the Item size slider.
+- **A click Thaw calls off stops waiting for the pointer.** Before clicking an item, Thaw waits until you stop moving the mouse. If the click was called off during that wait, Thaw kept waiting until the pointer stood still.
+- **Items whose app gives them a blank name get their picture taken.** When an app named its item with only spaces, Thaw couldn't find where the item sat while taking pictures, so Layout and Search kept an old picture or showed a placeholder.
 
 ## [3.0.0-beta.6] - 2026-11-03
 

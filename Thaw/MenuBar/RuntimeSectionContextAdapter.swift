@@ -342,11 +342,11 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
 
     private func resolvedAXIdentifier(for element: AXElement) -> String? {
         let attributes = AXHelpers.menuBarChildAttributes(for: element)
-        return attributes.identifier?.runtimeNonEmpty
+        return attributes.identifier?.nonEmpty
             ?? attributes.children
-            .compactMap { AXHelpers.descendantAttributes(for: $0).identifier?.runtimeNonEmpty }
+            .compactMap { AXHelpers.descendantAttributes(for: $0).identifier?.nonEmpty }
             .first
-            ?? attributes.title?.runtimeNonEmpty
+            ?? attributes.title?.nonEmpty
     }
 }
 
@@ -380,12 +380,6 @@ extension RuntimeSectionContextAdapter {
             return await menuOpenMonitor.isAnyMenuOpen()
         }
         return await menuOpenMonitor.isMenuOpen(ownedBy: item.reactionPIDs)
-    }
-}
-
-private extension String {
-    var runtimeNonEmpty: String? {
-        trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : self
     }
 }
 

@@ -1245,11 +1245,8 @@ nonisolated enum MenuBarItemAXProvider {
         let needsIdentifier = stableAXIdentifier(directIdentifier) == nil
         let needsDescription = directDescription == nil
         guard needsIdentifier || needsDescription else { return (nil, nil) }
-        let descendants = attributes.children.map { AXHelpers.descendantAttributes(for: $0) }
-        return (
-            needsIdentifier ? descendants.compactMap { stableAXIdentifier($0.identifier?.nonEmpty) }.first : nil,
-            needsDescription ? descendants.compactMap { $0.accessibilityDescription?.nonEmpty }.first : nil
-        )
+        let found = AXItemLabels.childLabels(in: attributes.children.map { AXHelpers.descendantAttributes(for: $0) })
+        return (needsIdentifier ? found.identifier : nil, needsDescription ? found.description : nil)
     }
 
     /// The identifier when it is one worth keying identity on.
@@ -1384,11 +1381,7 @@ nonisolated enum MenuBarItemAXProvider {
         bounds: CGRect,
         ownerPID: pid_t
     ) -> (item: RawItem?, identityTitle: String, fallbackIndex: Int) {
-        let identifier = stableAXIdentifier(labels.identifier?.nonEmpty)
-            ?? stableAXIdentifier(labels.childIdentifier?.nonEmpty)
-        let accessibilityDescription = labels.accessibilityDescription?.nonEmpty
-            ?? labels.childDescription?.nonEmpty
-        let axTitle = labels.axTitle?.nonEmpty
+        let (identifier, accessibilityDescription, axTitle) = labels.resolved
         let fallbackTitle = "Item-\(fallbackIndex)"
         let displayTitle = axTitle ?? accessibilityDescription ?? identifier ?? fallbackTitle
         let nextFallbackIndex = axTitle == nil && accessibilityDescription == nil && identifier == nil
@@ -1506,12 +1499,5 @@ nonisolated enum MenuBarItemAXProvider {
             hash = hash &* 0x0100_0193
         }
         return CGWindowID(0x8000_0000 | (hash & 0x7FFF_FFFF))
-    }
-}
-
-private extension String {
-    /// Returns self when it contains non-whitespace characters, otherwise nil.
-    nonisolated var nonEmpty: String? {
-        trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : self
     }
 }

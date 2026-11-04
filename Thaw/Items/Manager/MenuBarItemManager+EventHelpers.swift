@@ -184,39 +184,27 @@ extension MenuBarItemManager {
             !MouseHelpers.lastScrollWheelOccurred(within: duration)
     }
 
-    /// Blocks until the user stops touching the pointer.
+    /// Waits until the user stops touching the pointer, with no bound.
     ///
-    /// The poll window and the poll interval are deliberately the same length:
-    /// checking more often than the window it inspects only re-reads history
-    /// that cannot have changed its answer yet.
+    /// - Throws: EventError.cannotComplete when the calling task is cancelled.
     nonisolated func waitForUserToPauseInput() async throws {
-        let pollWindow = Self.inputPauseThreshold
-        let poll = Task {
-            while !Task.isCancelled {
-                if hasUserPausedInput(for: Self.inputPauseThreshold) {
-                    return
-                }
-                try await Task.sleep(for: pollWindow)
-            }
-        }
-        do {
-            try await poll.value
-        } catch {
-            // Cancelled or interrupted; callers only ever need to know that
-            // the wait did not finish.
+        guard await waitForUserToPauseInput(timeout: nil) else {
             throw EventError.cannotComplete
         }
     }
 
-    /// Bounded variant of waitForUserToPauseInput() for paths that must
-    /// proceed even when the user never goes idle: a pane-edit pass the user
-    /// is actively waiting on cannot stall behind a hand that never stops
-    /// moving. Past the bound the warp happens anyway: briefly taking a moving
-    /// cursor is better than hanging the user's edit.
+    /// Waits until the user stops touching the pointer, polling every 20 ms.
+    ///
+    /// Paths that must proceed even when the user never goes idle pass a
+    /// bound: a pane-edit pass the user is actively waiting on cannot stall
+    /// behind a hand that never stops moving. Past the bound the warp happens
+    /// anyway: briefly taking a moving cursor is better than hanging the
+    /// user's edit.
     ///
     /// - Parameter timeout: How long to wait for the pause before giving up;
     ///   nil waits unboundedly (cancellation ends the wait).
-    /// - Returns: Whether the user actually paused within the bound.
+    /// - Returns: Whether the user actually paused within the bound; false
+    ///   when the calling task is cancelled.
     nonisolated func waitForUserToPauseInput(timeout: Duration?) async -> Bool {
         let deadline = timeout.map { ContinuousClock.now + $0 }
         while !Task.isCancelled {
