@@ -57,6 +57,8 @@ Scripts, Triggers and Widgets become modules you can switch on and off, and Sett
 
 ### Fixed
 
+- **Bluetooth and other system items show their own symbol in Layout and Search too.** A module Thaw switched off to hide it has no picture, and Layout and Search showed a placeholder for it instead of its symbol.
+- **One placeholder for menu bar items Thaw can't identify.** Search, Layout and the Thaw Bar preview each drew a different placeholder for such an item. They now all show the same grey box with a menu bar symbol.
 - **Screenshots no longer show the Finder menus you hid.** With the option to hide them on the desktop, a screenshot showed the menus under the cover.
 - **A note in the layout editor's right-click menu looks like a note.** The line that says an item can't be grouped, and the one about an app's split items, are now dimmed so they don't look like commands.
 - **Links in the release notes open only over https.** Any other link stays plain text.

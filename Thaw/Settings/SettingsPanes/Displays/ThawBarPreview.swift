@@ -239,11 +239,7 @@ struct ThawBarPreview: View {
                 .resizable()
                 .frame(width: size.width, height: size.height)
         } else {
-            Image(systemName: "app.dashed")
-                .resizable()
-                .scaledToFit()
-                .frame(height: itemSizing.rowHeight(fitting: itemMaxHeight ?? fallbackMenuBarHeight))
-                .foregroundStyle(.secondary)
+            MenuBarItemPlaceholderIcon(length: itemSizing.rowHeight(fitting: itemMaxHeight ?? fallbackMenuBarHeight))
         }
     }
 

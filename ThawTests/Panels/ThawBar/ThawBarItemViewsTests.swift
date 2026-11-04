@@ -146,16 +146,16 @@ struct ThawBarItemViewsTests {
     func appIconMatchesPictures(barHeight: Double) {
         let icon = NSImage(size: NSSize(width: 32, height: 32))
         // Pictures are crops of a 24 pt status item, on a plain and a notched bar alike.
-        #expect(ThawBarItemSize(fittingHeight: barHeight).glyphSize(for: .appIcon(icon)) == CGSize(width: 24, height: 24))
+        #expect(ThawBarItemSize(fittingHeight: barHeight).glyphSize(for: .icon(icon)) == CGSize(width: 24, height: 24))
         let small = ThawBarItemSize(fittingHeight: barHeight, scale: 0.6, displayScale: 2)
         // 60% of 24 pt is 14.4 pt, which lands on 29 pixels at 2x: 14.5 pt.
-        #expect(small.glyphSize(for: .appIcon(icon)) == CGSize(width: 14.5, height: 14.5))
+        #expect(small.glyphSize(for: .icon(icon)) == CGSize(width: 14.5, height: 14.5))
     }
 
     @Test("An app icon never grows past a shorter row")
     func appIconFitsAShortRow() {
         let icon = NSImage(size: NSSize(width: 32, height: 32))
-        #expect(ThawBarItemSize(fittingHeight: 20).glyphSize(for: .appIcon(icon)) == CGSize(width: 20, height: 20))
+        #expect(ThawBarItemSize(fittingHeight: 20).glyphSize(for: .icon(icon)) == CGSize(width: 20, height: 20))
     }
 
     @Test("The glyph view draws an item with an image and nothing without one")
@@ -182,8 +182,8 @@ struct ThawBarItemViewsTests {
             .frame(width: 40, height: 30)
         }
         let size = CGSize(width: 40, height: 30)
-        let drawn = try OffscreenRender(view(.appIcon(image), focused: false), size: size).pixels()
-        let focused = try OffscreenRender(view(.appIcon(image), focused: true), size: size).pixels()
+        let drawn = try OffscreenRender(view(.icon(image), focused: false), size: size).pixels()
+        let focused = try OffscreenRender(view(.icon(image), focused: true), size: size).pixels()
         let empty = try OffscreenRender(view(nil, focused: false), size: size).pixels()
         #expect(drawn.contains { $0 != 0 })
         #expect(!empty.contains { $0 != 0 })

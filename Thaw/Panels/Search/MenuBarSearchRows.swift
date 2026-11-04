@@ -71,63 +71,25 @@ enum MenuBarSearchListContent: View {
 
 /// The icon of the app a menu bar item belongs to.
 ///
-/// System agents show Control Center's icon; an unresolved owner gets a
-/// placeholder.
+/// The same icon the Thaw Bar and Layout fall back to, so a system module such as
+/// Bluetooth shows its own symbol. An unresolved owner gets a placeholder.
 private struct MenuBarItemSourceIcon: View {
+    /// Inset for a symbol, so it doesn't look larger than the app icons beside it.
+    private static let symbolInset: CGFloat = 4
+
     let item: MenuBarItem
     let length: CGFloat
 
-    private var sourceAppIcon: NSImage? {
-        switch item.tag.namespace {
-        case .controlCenter, .systemUIServer, .textInputMenuAgent:
-            return ControlCenterIcon.image
-        default:
-            guard let sourcePID = item.sourcePID else {
-                return nil
-            }
-            return OverflowFallbackIcon.cachedAppIcon(forPID: sourcePID)
-        }
-    }
-
     var body: some View {
-        if let sourceAppIcon {
+        if let sourceAppIcon = OverflowFallbackIcon.itemIcon(for: item) {
             Image(nsImage: sourceAppIcon)
                 .resizable()
                 .scaledToFit()
+                .padding(sourceAppIcon.isTemplate ? Self.symbolInset : 0)
                 .frame(width: length, height: length)
         } else {
             MenuBarItemPlaceholderIcon(length: length)
         }
-    }
-}
-
-/// The stand-in tile for an item whose owning app cannot be resolved.
-///
-/// Its own view so the environment read below stays off the common path.
-/// No shadow, because the real icons beside it carry none.
-private struct MenuBarItemPlaceholderIcon: View {
-    @Environment(\.self) private var environment
-
-    let length: CGFloat
-
-    /// Measured against the accent: white on Thaw's light amber is only 2.1:1.
-    private var glyphColor: Color {
-        ThawAccentInk.color(on: .accentColor, in: environment)
-    }
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: 5)
-            .fill(Color.accentColor.gradient)
-            .strokeBorder(Color.primary.gradient.quaternary)
-            .overlay {
-                Image(systemName: "rectangle.topthird.inset.filled")
-                    .resizable()
-                    .scaledToFit()
-                    .foregroundStyle(glyphColor)
-                    .padding(ThawSpacing.capsuleInset)
-            }
-            .padding(2.5)
-            .frame(width: length, height: length)
     }
 }
 

@@ -66,13 +66,18 @@ nonisolated struct LayoutOpaqueSlotDescriptor: Equatable {
         applications.first { $0.bundleIdentifier == bundleIdentifier }?.icon
     }
 
+    /// A kept picture, else the module's own symbol (such a module is never drawn, so it
+    /// may have no picture), else the owning app's icon.
     @MainActor
     static func preferredIcon(
         capturedImage: NSImage?,
+        captureTag: MenuBarItemTag?,
         bundleIdentifier: String,
         applications: [some LayoutOpaqueSlotApplication]
     ) -> NSImage? {
-        capturedImage ?? appIcon(bundleIdentifier: bundleIdentifier, applications: applications)
+        capturedImage
+            ?? captureTag.flatMap { SystemModuleGlyph.image(forItemTitle: $0.title) }
+            ?? appIcon(bundleIdentifier: bundleIdentifier, applications: applications)
     }
 }
 
@@ -84,7 +89,7 @@ final class LayoutOpaqueSlotView: LayoutBarArrangedView {
     }
 
     let descriptor: LayoutOpaqueSlotDescriptor
-    private let displayIcon: NSImage?
+    private var displayIcon: NSImage?
     private lazy var tooltipController = CustomTooltipController(text: descriptor.tooltip, view: self)
     private var tooltipTrackingArea: NSTrackingArea?
 
@@ -98,10 +103,10 @@ final class LayoutOpaqueSlotView: LayoutBarArrangedView {
         capturedImage: NSImage? = nil
     ) {
         self.descriptor = descriptor
-        self.displayIcon = LayoutOpaqueSlotDescriptor.preferredIcon(
+        self.displayIcon = Self.icon(
+            for: descriptor,
             capturedImage: capturedImage,
-            bundleIdentifier: descriptor.bundleIdentifier,
-            applications: runningApplications
+            runningApplications: runningApplications
         )
         super.init(frame: CGRect(origin: .zero, size: Metrics.size))
         isEnabled = false
@@ -115,6 +120,30 @@ final class LayoutOpaqueSlotView: LayoutBarArrangedView {
     @available(*, unavailable)
     required init?(coder _: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    /// Picks the icon again from the current picture and apps, for a slot Layout
+    /// reuses across reloads, so a new or dropped picture shows without reopening Layout.
+    func updateIcon(capturedImage: NSImage?, runningApplications: [NSRunningApplication]) {
+        displayIcon = Self.icon(
+            for: descriptor,
+            capturedImage: capturedImage,
+            runningApplications: runningApplications
+        )
+        needsDisplay = true
+    }
+
+    private static func icon(
+        for descriptor: LayoutOpaqueSlotDescriptor,
+        capturedImage: NSImage?,
+        runningApplications: [NSRunningApplication]
+    ) -> NSImage? {
+        LayoutOpaqueSlotDescriptor.preferredIcon(
+            capturedImage: capturedImage,
+            captureTag: descriptor.captureTag,
+            bundleIdentifier: descriptor.bundleIdentifier,
+            applications: runningApplications
+        )
     }
 
     override func updateTrackingAreas() {
@@ -145,12 +174,15 @@ final class LayoutOpaqueSlotView: LayoutBarArrangedView {
     override func draw(_: NSRect) {
         let iconRect = bounds.insetBy(dx: Metrics.iconInset, dy: Metrics.iconInset)
         if let displayIcon {
-            displayIcon.draw(in: iconRect)
-        } else if let fallback = NSImage(
-            systemSymbolName: "app.dashed",
-            accessibilityDescription: descriptor.title
-        ) {
-            fallback.draw(in: iconRect)
+            // A template symbol draws black unless inked, like the Layout's placeholder tiles.
+            if displayIcon.isTemplate {
+                displayIcon.tinted(with: .secondaryLabelColor)
+                    .draw(in: iconRect.centeredRect(forNaturalSize: displayIcon.size))
+            } else {
+                displayIcon.draw(in: iconRect)
+            }
+        } else {
+            drawUnidentifiedPlaceholder()
         }
 
         let badgeRect = CGRect(
@@ -167,5 +199,19 @@ final class LayoutOpaqueSlotView: LayoutBarArrangedView {
         ) {
             badge.draw(in: badgeRect, from: .zero, operation: .sourceOver, fraction: 0.7)
         }
+    }
+
+    /// The same grey box and generic menu bar symbol as a Layout tile Thaw can't identify.
+    private func drawUnidentifiedPlaceholder() {
+        guard let symbolRect = LayoutBarItemView.drawPlaceholderBox(in: bounds),
+              let symbol = NSImage(systemSymbolName: MenuBarItemPlaceholderStyle.symbolName, accessibilityDescription: descriptor.title)
+        else { return }
+        // The slot is disabled only so it can't be dragged, so it inks like an enabled tile.
+        symbol.tinted(with: .secondaryLabelColor).draw(
+            in: symbolRect,
+            from: .zero,
+            operation: .sourceOver,
+            fraction: LayoutBarCaptureInk.placeholderFraction(isEnabled: true, isTemplate: true)
+        )
     }
 }

@@ -22,10 +22,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         /// wide the item is on the bar.
         static let fallbackMaxWidth: CGFloat = 32
         static let minHeight: CGFloat = 18
-        static let placeholderCornerRadius: CGFloat = 6
-        static let placeholderHorizontalInset: CGFloat = 2
-        static let placeholderVerticalInset: CGFloat = 2
-        static let iconInset: CGFloat = 2
+        static let placeholderCornerRadius = MenuBarItemPlaceholderStyle.cornerRadius
+        static let placeholderHorizontalInset = MenuBarItemPlaceholderStyle.inset
+        static let placeholderVerticalInset = MenuBarItemPlaceholderStyle.inset
+        static let iconInset = MenuBarItemPlaceholderStyle.inset
         static let unresponsiveBadgeWidth: CGFloat = 15
         static let defaultSystemItemHorizontalPadding: CGFloat = 16
     }
@@ -668,7 +668,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         } else if let capturedImage = cachedDrawImage {
             draw(
                 capturedImage,
-                in: capturedImageDrawRect(for: capturedImage),
+                in: bounds.centeredRect(forNaturalSize: capturedImage.size),
                 fraction: isEnabled ? 1.0 : 0.67,
                 templateTint: menuBarForegroundColor
             )
@@ -753,18 +753,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         guard bounds.width > 0, bounds.height > 0 else { return .zero }
 
         if item.tag.matchesVisibleControlItem || ThawExtraGlyph.isStandIn(item.tag), imageSize.width > 0, imageSize.height > 0 {
-            let scale = min(
-                1,
-                bounds.width / imageSize.width,
-                bounds.height / imageSize.height
-            )
-            let size = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
-            return CGRect(
-                x: bounds.midX - (size.width / 2),
-                y: bounds.midY - (size.height / 2),
-                width: size.width,
-                height: size.height
-            )
+            return bounds.centeredRect(forNaturalSize: imageSize)
         }
 
         let side = min(bounds.width, bounds.height)
@@ -827,7 +816,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             if let tileCapture {
                 let image = NSImage(cgImage: tileCapture.cgImage, size: tileCapture.pointSize)
                 image.draw(
-                    in: capturedImageDrawRect(imageSize: image.size, in: bounds),
+                    in: bounds.centeredRect(forNaturalSize: image.size),
                     from: .zero,
                     operation: .sourceOver,
                     fraction: 1
@@ -934,28 +923,6 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         return max(0, desiredPadding - capturedPadding)
     }
 
-    /// Centers a capture at its natural size inside the padded tile instead of
-    /// stretching the glyph and its existing transparent margins edge-to-edge.
-    private func capturedImageDrawRect(for image: NSImage) -> CGRect {
-        Self.capturedImageDrawRect(imageSize: image.size, in: bounds)
-    }
-
-    private static func capturedImageDrawRect(imageSize: CGSize, in bounds: CGRect) -> CGRect {
-        guard imageSize.width > 0, imageSize.height > 0 else { return bounds }
-        let scale = min(
-            1,
-            bounds.width / imageSize.width,
-            bounds.height / imageSize.height
-        )
-        let size = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
-        return CGRect(
-            x: bounds.midX - (size.width / 2),
-            y: bounds.midY - (size.height / 2),
-            width: size.width,
-            height: size.height
-        )
-    }
-
     /// The picture for a tile with no capture, such as an app Native hiding keeps off the bar:
     /// Thaw's chosen icon for its own item, else the app's icon, else the generic menu bar glyph.
     static func makePlaceholderImage(for item: MenuBarItem, appState: AppState) -> NSImage? {
@@ -963,6 +930,22 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     private func drawPlaceholder() {
+        let iconRect = Self.drawPlaceholderBox(in: bounds)
+        guard let image = resolvedPlaceholderImage(), let iconRect else {
+            return
+        }
+
+        draw(
+            image,
+            in: iconRect,
+            fraction: LayoutBarCaptureInk.placeholderFraction(isEnabled: isEnabled, isTemplate: image.isTemplate),
+            templateTint: item.tag.matchesVisibleControlItem ? menuBarForegroundColor : .secondaryLabelColor
+        )
+    }
+
+    /// Draws the grey box Layout shows for a tile with no picture, and returns the
+    /// square its icon goes in, or nil when the box is too small to hold one.
+    static func drawPlaceholderBox(in bounds: CGRect) -> CGRect? {
         let placeholderRect = bounds.insetBy(
             dx: Metrics.placeholderHorizontalInset,
             dy: Metrics.placeholderVerticalInset
@@ -972,16 +955,12 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             xRadius: Metrics.placeholderCornerRadius,
             yRadius: Metrics.placeholderCornerRadius
         )
-        NSColor.quaternaryLabelColor.withAlphaComponent(0.35).setFill()
+        NSColor.quaternaryLabelColor.withAlphaComponent(MenuBarItemPlaceholderStyle.fillOpacity).setFill()
         backgroundPath.fill()
 
-        NSColor.separatorColor.withAlphaComponent(0.6).setStroke()
+        NSColor.separatorColor.withAlphaComponent(MenuBarItemPlaceholderStyle.borderOpacity).setStroke()
         backgroundPath.lineWidth = 1
         backgroundPath.stroke()
-
-        guard let image = resolvedPlaceholderImage() else {
-            return
-        }
 
         let iconBounds = placeholderRect.insetBy(
             dx: Metrics.iconInset,
@@ -989,21 +968,14 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         )
         let iconSide = min(iconBounds.width, iconBounds.height)
         guard iconSide > 0 else {
-            return
+            return nil
         }
 
-        let iconRect = CGRect(
+        return CGRect(
             x: placeholderRect.midX - (iconSide / 2),
             y: placeholderRect.midY - (iconSide / 2),
             width: iconSide,
             height: iconSide
-        )
-
-        draw(
-            image,
-            in: iconRect,
-            fraction: LayoutBarCaptureInk.placeholderFraction(isEnabled: isEnabled, isTemplate: image.isTemplate),
-            templateTint: item.tag.matchesVisibleControlItem ? menuBarForegroundColor : .secondaryLabelColor
         )
     }
 
@@ -1087,19 +1059,4 @@ extension LayoutBarItemView: NSPopoverDelegate {
 
 extension NSPasteboard.PasteboardType {
     static let layoutBarItem = Self("\(Constants.bundleIdentifier).layout-bar-item")
-}
-
-private extension NSImage {
-    /// Resolves a template image into a concrete color for direct AppKit
-    /// drawing, matching the automatic tinting performed by an NSStatusItem.
-    func tinted(with color: NSColor) -> NSImage {
-        let tinted = NSImage(size: size, flipped: false) { bounds in
-            self.draw(in: bounds)
-            color.setFill()
-            bounds.fill(using: .sourceIn)
-            return true
-        }
-        tinted.isTemplate = false
-        return tinted
-    }
 }
