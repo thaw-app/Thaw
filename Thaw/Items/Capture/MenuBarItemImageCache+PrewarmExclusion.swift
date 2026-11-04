@@ -14,4 +14,10 @@ extension MenuBarItemImageCache {
         MenuBarItemImageCache.diagLog.debug("\(pass): hidden items are being captured; skipping this pass")
         return true
     }
+
+    /// Opens the tally once a prewarm holds the slot, and makes any pass admitted before it go stale.
+    func markConcealedPrewarmStarted(tally: RequestedCaptureTally?) {
+        Self.requestedCaptureTally = tally
+        appState?.itemManager.layoutPublication.invalidate()
+    }
 }

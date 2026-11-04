@@ -87,7 +87,7 @@ extension MenuBarItemImageCache {
     ) async -> Bool {
         // False backs the live loop off toward its 1 Hz floor while locked; the
         // first tick after the unlock captures again.
-        guard !skipCaptureWhileScreenLocked("recaptureNow"), !standsDownForConcealedPrewarm("recaptureNow") else {
+        guard !skipCaptureWhileScreenLocked("recaptureNow") else {
             return false
         }
         guard let appState else {
@@ -165,8 +165,8 @@ extension MenuBarItemImageCache {
         appState: AppState,
         captureSection: @MainActor (MenuBarSection.Name) async -> CapturePass
     ) async -> Bool {
-        // Before the first await: what this pass publishes must still describe
-        // the layout it started from. See publicationRejection(of:).
+        guard !standsDownForConcealedPrewarm("recaptureNow") else { return false }
+        // Before the first await: what this pass publishes must still describe the layout it started from. See publicationRejection(of:).
         let admission = CapturePublicationPolicy.admit(
             layout: appState.itemManager.layoutPublication,
             displayID: displayID
@@ -979,7 +979,7 @@ extension MenuBarItemImageCache {
     /// tally, so a queued request can't touch a running one's. Waiters are resumed in arrival order.
     @MainActor
     func beginConcealedPrewarm(tally: RequestedCaptureTally? = nil) async {
-        defer { Self.requestedCaptureTally = tally }
+        defer { markConcealedPrewarmStarted(tally: tally) }
         guard isConcealedPrewarmRunning else {
             isConcealedPrewarmRunning = true
             return

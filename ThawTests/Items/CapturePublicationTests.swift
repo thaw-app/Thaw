@@ -622,3 +622,46 @@ struct GroupedRevealPublicationTests {
         #expect(controller.concealed == [world.fresh.uniqueIdentifier])
     }
 }
+
+/// Capture Hidden Items reveals hidden items one at a time; a recapture pass would crop them as they slide in.
+@MainActor
+@Suite("Recapture during Capture Hidden Items", .serialized, .timeLimit(.minutes(1)))
+struct RecaptureDuringHiddenItemCaptureTests {
+    @Test("A pass while hidden items are being captured takes no screenshot and changes nothing", arguments: [false, true])
+    func passStandsDown(forced: Bool) async throws {
+        let world = try CaptureWorld(gated: false)
+        await world.cache.beginConcealedPrewarm()
+        defer { world.cache.endConcealedPrewarm() }
+        let before = world.state
+
+        #expect(await world.recapture(forced: forced) == false)
+        #expect(world.state == before)
+        #expect(await world.reader.captures.isEmpty)
+    }
+
+    @Test("A pass already taking its screenshot when the hidden-item capture starts publishes nothing", arguments: [false, true])
+    func inFlightPassIsDiscarded(forced: Bool) async throws {
+        let world = try CaptureWorld(gated: true)
+        let before = world.state
+
+        let pass = Task { await world.recapture(forced: forced) }
+        await world.gate.waitUntilArrived()
+        await world.cache.beginConcealedPrewarm()
+        await world.gate.release()
+
+        #expect(await pass.value == false)
+        #expect(world.state == before)
+        #expect(await world.reader.captures.contains(.strip), "The pass was rejected after it took pixels")
+        world.cache.endConcealedPrewarm()
+    }
+
+    @Test("Passes publish again once the hidden-item capture ends")
+    func passesResumeAfterwards() async throws {
+        let world = try CaptureWorld(gated: false)
+        await world.cache.beginConcealedPrewarm()
+        world.cache.endConcealedPrewarm()
+
+        #expect(await world.recapture(forced: false))
+        #expect(world.cache.capturesByTag[world.fresh.tag] != nil)
+    }
+}
