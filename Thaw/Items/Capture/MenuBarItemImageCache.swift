@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AsyncAlgorithms
 import Cocoa
 import Combine
 import MenuBarModel
@@ -333,16 +334,9 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             let itemCacheChangeSubject = PassthroughSubject<Void, Never>()
             let itemCacheTask = Task { @MainActor [weak self, itemManager = appState.itemManager] in
                 let changes = Observations { Self.captureInvalidationKey(itemManager.itemCache) }
-                var previous: CaptureInvalidationKey?
-                var isFirst = true
-                for await key in changes {
+                for await _ in changes.removeDuplicates().dropFirst() {
                     guard self != nil else { return }
-                    defer { isFirst = false }
-                    guard key != previous else { continue }
-                    previous = key
-                    if !isFirst {
-                        itemCacheChangeSubject.send(())
-                    }
+                    itemCacheChangeSubject.send(())
                 }
             }
             AnyCancellable { itemCacheTask.cancel() }

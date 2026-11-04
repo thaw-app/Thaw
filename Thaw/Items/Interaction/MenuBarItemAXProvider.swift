@@ -351,19 +351,10 @@ nonisolated enum MenuBarItemAXProvider {
                     formerHosts: formerHosts
                 ).raw
             }
-            let collectedResult = await withTaskGroup(
-                of: CollectAppResult?.self
-            ) { group in
-                // Awaiting collected.value directly ignores cancelAll(), so the
-                // group would wait for the hung AX call and defeat the deadline.
-                group.addTask { await Self.valueOrCancelled(of: collected) }
-                group.addTask {
-                    try? await Task.sleep(for: Self.perAppWalkBudget)
-                    return nil
-                }
-                let first = await group.next() ?? nil
-                group.cancelAll()
-                return first
+            // Abandons, not awaits, a hung AX call. A timeout and a cancellation both
+            // yield nil here; Task.isCancelled tells them apart below.
+            let collectedResult = try? await withAbandoningTimeout(Self.perAppWalkBudget) {
+                await collected.value
             }
             switch collectedResult {
             case .none where Task.isCancelled:
@@ -482,31 +473,6 @@ nonisolated enum MenuBarItemAXProvider {
         }
         return answers.values.contains(.keepPrior)
     }
-
-    /// Awaits task's value, or nil if the waiter is cancelled first.
-    /// Task.value on a non-throwing task ignores cancellation.
-    private static func valueOrCancelled<T: Sendable>(of task: Task<T, Never>) async -> T? {
-        if Task.isCancelled {
-            return nil
-        }
-        // Whichever lands first settles it, exactly once. A cancellation that lands before the
-        // continuation is registered is kept and answered on registration.
-        let outcome = OneShotContinuation<T?, Never>()
-        return await withTaskCancellationHandler(operation: {
-            await withCheckedContinuation { continuation in
-                outcome.setContinuation(continuation)
-                // Spawned after registration. The watcher lives only as long
-                // as the blocked call does.
-                Task.detached(priority: .utility) {
-                    await outcome.settle(.success(task.value))
-                }
-            }
-        }, onCancel: {
-            outcome.settle(.success(nil))
-        })
-    }
-
-    private typealias CollectAppResult = [RawItem]
 
     /// The per-app enumeration body shared by both walks. Returns the app's
     /// raw items; an app with no extras bar or no children contributes an

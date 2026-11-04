@@ -589,26 +589,24 @@ extension MenuBarItemManager {
 
         // Every repetition gets the full timeout: a run of count events must
         // not be cut short by the budget meant for a single one.
-        let timeoutTask = Task(timeout: timeout * count) {
-            var eventTaps = [EventTap]()
-            defer {
-                for tap in eventTaps {
-                    tap.invalidate()
+        let timeoutTask = Task {
+            try await Task<Void, any Error>.withTimeout(timeout * count) {
+                var eventTaps = [EventTap]()
+                defer { eventTaps.forEach { $0.invalidate() } }
+                try await withTaskCancellationHandler {
+                    try await self.awaitEventContinuation(
+                        context: context,
+                        state: state,
+                        eventTaps: &eventTaps
+                    )
+                } onCancel: {
+                    state.innerTaskHolder.withLock { $0 }?.cancel()
+                    // Settle here as well. Cancellation routinely arrives after the
+                    // inner task has already finished, and cancelling a task that
+                    // is already done wakes nobody. Settling before the body has
+                    // registered is fine: the result waits for it.
+                    state.outcome.settle(.failure(CancellationError()))
                 }
-            }
-            try await withTaskCancellationHandler {
-                try await awaitEventContinuation(
-                    context: context,
-                    state: state,
-                    eventTaps: &eventTaps
-                )
-            } onCancel: {
-                state.innerTaskHolder.withLock { $0 }?.cancel()
-                // Settle here as well. Cancellation routinely arrives after the
-                // inner task has already finished, and cancelling a task that
-                // is already done wakes nobody. Settling before the body has
-                // registered is fine: the result waits for it.
-                state.outcome.settle(.failure(CancellationError()))
             }
         }
 
