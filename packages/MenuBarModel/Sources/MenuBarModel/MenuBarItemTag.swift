@@ -605,7 +605,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
         guard case let .string(bundleID) = namespace else {
             return title
         }
-        return migratedAppKitPlaceholderTitle(bundleID: bundleID, title: title)
+        return migratedAppKitPlaceholderTitle(bundleID: bundleID, title: title) ?? migratedWidgetTitle(bundleID: bundleID, title: title)
             ?? titleCanonicalizer(for: bundleID)?(title)
             ?? title
     }
@@ -638,7 +638,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
             return "\(prefix)\(title)\(instance)"
         }
         guard let canonicalize = titleCanonicalizer(for: bundleID) else {
-            return identifier
+            return migratedWidgetTitle(bundleID: bundleID, title: suffix).map { "\(prefix)\($0)" } ?? identifier
         }
 
         // A clock's trailing minutes are not an instance index; splitting them would churn identity every minute.

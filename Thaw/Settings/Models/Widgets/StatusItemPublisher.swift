@@ -9,6 +9,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import MenuBarModel
 import SwiftUI
 
 /// Publishes a composed status icon as a real menu bar item, independent from
@@ -22,6 +23,7 @@ import SwiftUI
 final class StatusItemPublisher: NSObject {
     static let shared = StatusItemPublisher()
 
+    static let autosaveName = MenuBarItemTag.thawWidgetIdentifier
     private var statusItem: NSStatusItem?
 
     /// Whether a preview item is currently on the bar.
@@ -36,26 +38,31 @@ final class StatusItemPublisher: NSObject {
             hide()
             return
         }
-        let image = Self.render(
-            CompositeStatusIcon(composition: state.composition, samples: state.samples),
-            size: 22
-        )
         if statusItem == nil {
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-            item.autosaveName = "Thaw.Widget.Preview"
+            item.autosaveName = Self.autosaveName
             item.behavior = []
             item.isVisible = false
             item.button?.imagePosition = .imageOnly
             item.button?.imageScaling = .scaleProportionallyDown
             statusItem = item
         }
-        statusItem?.button?.image = image
-        statusItem?.button?.setAccessibilityLabel(state.accessibilityDescription)
-        statusItem?.button?.toolTip = state.accessibilityDescription
+        if let button = statusItem?.button {
+            Self.configure(button, for: state)
+        }
         statusItem?.menu = makeMenu(for: state)
         if statusItem?.isVisible != true {
             statusItem?.isVisible = true
         }
+    }
+
+    /// Draws the readings and describes them to VoiceOver. The identifier stays fixed, because
+    /// Thaw names its own items by it and the label changes with every reading.
+    static func configure(_ button: NSButton, for state: StatusIconPreviewState) {
+        button.image = render(CompositeStatusIcon(composition: state.composition, samples: state.samples), size: 22)
+        button.setAccessibilityIdentifier(autosaveName)
+        button.setAccessibilityLabel(state.accessibilityDescription)
+        button.toolTip = state.accessibilityDescription
     }
 
     /// Also used by tests to verify that a click exposes the same snapshot as the image.
