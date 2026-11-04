@@ -739,15 +739,15 @@ extension MenuBarItemImageCache {
                 sources.uncover()
             }
 
-            let revealed = await sources.settledItems(batch)
+            let firstRead = await sources.settledItems(batch)
             guard !skipCaptureWhileScreenLocked("capture reveal completed") else { return }
-            guard !revealed.isEmpty else { continue }
+            guard !firstRead.isEmpty else { continue }
 
             // AX bounds stabilize before MenuBarAgent finishes recompositing
             // the revealed glyphs; wait for them to settle so the screenshot
             // captures fully-rendered icons. One settle for the group, since
             // they were revealed together.
-            await sources.renderSettle(revealed.map(\.live))
+            let revealed = await settleAtFinalFrames(firstRead, batch: batch, using: sources)
             guard !Task.isCancelled, !skipCaptureWhileScreenLocked("settled capture batch") else { return }
 
             // Admitted here, after the reveal and its settle, with nothing
