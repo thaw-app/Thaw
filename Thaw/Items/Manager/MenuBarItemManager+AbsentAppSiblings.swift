@@ -9,8 +9,8 @@ import MenuBarModel
 
 @MainActor
 extension MenuBarItemManager {
-    /// Runs a section change's commit, then under Native hiding moves the items'
-    /// apps' undrawn items to the same section, so none left behind keeps an app on the bar.
+    /// Runs a section change's commit, then under Native hiding moves the same apps'
+    /// undrawn items to that section, so none left behind keeps an app on the bar.
     func commitKeepingAppsTogether(_ items: [MenuBarItem], to section: MenuBarSection.Name, _ commit: () -> Void) {
         commit()
         guard let menuBarManager = appState?.menuBarManager, menuBarManager.nativeAppHidingExperiment.isActive else { return }
