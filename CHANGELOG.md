@@ -54,9 +54,11 @@ Scripts, Triggers and Widgets become modules you can switch on and off, and Sett
 - **The left and right arrow keys step through What's New and Acknowledgements,** and the text fades under the title bar as it does on the settings pages.
 - **Permission icons line up.** Each permission's icon sits in the same box as the sidebar's, so the names start in the same place.
 - **The Thaw Bar's own look has a Corners slider,** from square to round, like the menu bar's shape. It replaces the Rounded corners switch, and a look saved with the switch opens fully round or square. When it follows the menu bar, the Thaw Bar now matches the menu bar's Corners setting instead of only round or square.
+- **Choose System, Light, Dark or Black for Thaw's settings.** Theme, in the new Language and theme section of General, replaces "Black background in dark mode" and also sets the look of onboarding. Black is dark on pure black, which suits OLED displays. After the update, settings look as they did before: Black if you had the black background on, otherwise System, which follows macOS. The Thaw Bar, Search and menus still match your menu bar.
 
 ### Fixed
 
+- **App language shows System Default when you haven't picked a language.** It showed no choice, because it read the system's language list instead of Thaw's own setting. It now sits with Theme in Language and theme.
 - **Bluetooth and other system items show their own symbol in Layout and Search too.** A module Thaw switched off to hide it has no picture, and Layout and Search showed a placeholder for it instead of its symbol.
 - **One placeholder for menu bar items Thaw can't identify.** Search, Layout and the Thaw Bar preview each drew a different placeholder for such an item. They now all show the same grey box with a menu bar symbol.
 - **Screenshots no longer show the Finder menus you hid.** With the option to hide them on the desktop, a screenshot showed the menus under the cover.

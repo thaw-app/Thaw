@@ -146,6 +146,7 @@ nonisolated extension SearchIndex {
             title: "App language",
             descriptionText: String(localized: "Use the app in a different language than the system."),
             pane: .general,
+            section: "Language and theme",
             keywords: ["language", "locale", "translation", "localization", "override"],
             property: nil
         ),

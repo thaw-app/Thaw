@@ -43,16 +43,18 @@ nonisolated extension SearchIndex {
             title: "Show setting descriptions",
             descriptionText: String(localized: "Explains what a setting does directly beneath it."),
             pane: .general,
+            section: "Language and theme",
             keywords: ["descriptions", "captions", "details", "help", "annotations", "explanations"],
             property: .general("showSettingDescriptions")
         ),
         SearchEntry(
-            id: "general.blackSettingsBackground",
-            title: "Black background in dark mode",
-            descriptionText: String(localized: "Draws this window on pure black for OLED displays. Light mode is unchanged."),
+            id: "general.settingsAppearance",
+            title: "Settings theme",
+            descriptionText: String(localized: "Applies to Settings and onboarding. Black suits OLED displays."),
             pane: .general,
-            keywords: ["black", "oled", "dark", "dark mode", "background", "theme", "appearance"],
-            property: .general("blackSettingsBackground")
+            section: "Language and theme",
+            keywords: ["appearance", "theme", "system", "match", "macos", "automatic", "light", "dark", "dark mode", "black", "oled", "background"],
+            property: .general("settingsAppearance")
         ),
         SearchEntry(
             id: "general.showThawIcon",

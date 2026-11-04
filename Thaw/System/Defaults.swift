@@ -121,7 +121,7 @@ nonisolated enum Defaults {
             .customThawIconIsTemplate: DefaultValue.customThawIconIsTemplate,
             .simpleMode: DefaultValue.simpleMode,
             .showSettingDescriptions: DefaultValue.showSettingDescriptions,
-            .blackSettingsBackground: DefaultValue.blackSettingsBackground,
+            // .settingsAppearance: unregistered, so its first read can tell it is unset and migrate.
             .simpleModeShowsPreview: DefaultValue.simpleModeShowsPreview,
             .lockThawBarPosition: DefaultValue.lockThawBarPosition,
             .openHiddenItemsInMenuBar: DefaultValue.openHiddenItemsInMenuBar,
@@ -225,7 +225,6 @@ extension Defaults {
         static let customThawIconIsTemplate = false
         static let simpleMode = false
         static let showSettingDescriptions = true
-        static let blackSettingsBackground = false
         static let simpleModeShowsPreview = true
         static let lockThawBarPosition = true
         static let openHiddenItemsInMenuBar = false
@@ -359,6 +358,7 @@ extension Defaults {
         case profilesEnabled = "ProfilesEnabled"
         case showSettingDescriptions = "ShowSettingDescriptions"
         case blackSettingsBackground = "BlackSettingsBackground"
+        case settingsAppearance = "SettingsAppearance"
         case simpleModeShowsPreview = "SimpleModeShowsPreview"
         case lastSettingsPane = "LastSettingsPane"
         case hiddenSidebarPanes = "HiddenSidebarPanes"

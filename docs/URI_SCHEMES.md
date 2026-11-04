@@ -136,7 +136,10 @@ Values outside the valid range are clamped to the nearest boundary. `iconRefresh
 
 | Key            | Type | Valid Values | Description |
 | -------------- | ---- | ------------ | ----------- |
-| `rehideStrategy` | String/Int | `smart` (0), `timed` (1), `focusedApp`/`focused_app` (2) | Strategy for auto-rehiding items (default: smart) |
+| `rehideStrategy` | String/Int | `smart` (0), `timed` (1), `focusedApp`/`focused_app` (2) | Hide items again: When I click elsewhere (`smart`), After N seconds (`timed`) or When I switch apps (`focusedApp`) (default: smart) |
+| `settingsAppearance` | String/Int | `system` (3), `light` (0), `dark` (1), `black` (2) | How Settings and onboarding look. `system` follows macOS. Black is dark on pure black, for OLED displays |
+
+The older `blackSettingsBackground` boolean still works: `true` chooses Black, and `false` changes Black to Dark and leaves Light and Dark alone.
 
 #### Per-Display Settings
 

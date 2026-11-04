@@ -20,6 +20,10 @@ struct GeneralSettingsPane: View {
             ThawSection("App") {
                 appOptions
             }
+            ThawSection("Language and theme") {
+                languageRow
+                settingsAppearanceOptions
+            }
             ThawSection("\(Constants.displayName) icon") {
                 thawIconOptions
             }
@@ -40,31 +44,51 @@ struct GeneralSettingsPane: View {
     @ViewBuilder
     private var appOptions: some View {
         LaunchAtLoginRow()
-        languageRow
         Toggle("Simple Mode", isOn: $settings.simpleMode)
             .annotation("Shows only the essential settings, with a preview of your sections. Everything else keeps working as you set it.")
+    }
+
+    // MARK: Theme
+
+    @ViewBuilder
+    private var settingsAppearanceOptions: some View {
+        ThawPillPicker("Theme", selection: $settings.settingsAppearance, values: SettingsAppearance.allCases, title: \.localized)
+            .annotation("Applies to Settings and onboarding. Black suits OLED displays.")
         Toggle("Show setting descriptions", isOn: $settings.showSettingDescriptions)
             .annotation("Explains what a setting does directly beneath it, like this text.")
-        Toggle("Black background in dark mode", isOn: $settings.blackSettingsBackground)
-            .annotation("Draws this window on pure black for OLED displays. Light mode is unchanged.")
     }
 
     // MARK: Language
 
     /// Sentinel for following the system language (no override).
-    private static let systemLanguageTag = "system"
+    static let systemLanguageTag = "system"
 
-    /// The app's per-app language override, via the standard AppleLanguages
-    /// mechanism. Not a Defaults.Key, the key name is owned by macOS.
+    /// The localizations Thaw ships, without Base.
+    private static var availableLanguages: [String] {
+        Bundle.main.localizations.filter { $0 != "Base" }
+    }
+
+    /// The picker's tag for the app's own AppleLanguages override. Only Thaw's domain counts:
+    /// UserDefaults.standard falls back to the system list, whose "en-US" matches no tag.
     private var currentLanguageOverride: String {
-        (UserDefaults.standard.array(forKey: "AppleLanguages") as? [String])?.first
-            ?? Self.systemLanguageTag
+        let domain = Bundle.main.bundleIdentifier.flatMap { UserDefaults.standard.persistentDomain(forName: $0) }
+        return Self.languageTag(forOverride: domain?["AppleLanguages"] as? [String], available: Self.availableLanguages)
+    }
+
+    /// Maps an override such as "en-US" onto a shipped localization, or System Default when none matches.
+    static func languageTag(forOverride override: [String]?, available: [String]) -> String {
+        guard let preferred = override?.first else { return systemLanguageTag }
+        if available.contains(preferred) { return preferred }
+        let language = Locale(identifier: preferred).language.languageCode?.identifier
+        let match = available
+            .filter { Locale(identifier: $0).language.languageCode?.identifier == language }
+            .min { $0.count < $1.count }
+        return match ?? systemLanguageTag
     }
 
     @ViewBuilder
     private var languageRow: some View {
-        let localizations = Bundle.main.localizations
-            .filter { $0 != "Base" }
+        let localizations = Self.availableLanguages
             .sorted { lhs, rhs in
                 displayName(forLanguage: lhs) < displayName(forLanguage: rhs)
             }
@@ -88,7 +112,7 @@ struct GeneralSettingsPane: View {
                 Text(displayName(forLanguage: code)).tag(code)
             }
         }
-        .annotation("Use \(Constants.displayName) in a different language than the system. Takes effect after a relaunch.")
+        .annotation("Use \(Constants.displayName) in a different language than the system.")
 
         if languageOverrideChanged {
             HStack {

@@ -44,6 +44,9 @@ private struct PermissionsFlowView: View {
             idealHeight: ThawOnboardingWindowMetrics.height
         )
         .onAppear(perform: resolveStage)
+        // Takes Light or Dark from the Settings choice. Black's background is for Settings, so
+        // onboarding keeps its own and only draws dark.
+        .settingsAppearance(appState.settings.general.settingsAppearance, drawsBackground: false)
     }
 
     /// Consume replay once per opening so later permission recovery does not repeat the tour.

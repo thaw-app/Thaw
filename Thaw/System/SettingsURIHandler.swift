@@ -39,8 +39,8 @@ enum SettingsURIHandler {
             case boolean
             case double(min: Double, max: Double)
             case integer(min: Int, max: Int)
-            /// An integer-backed enum validated by name, currently only
-            /// RehideStrategy.
+            /// An integer-backed enum validated by name: RehideStrategy
+            /// or SettingsAppearance.
             case enumeration
             case string
         }
@@ -77,6 +77,7 @@ enum SettingsURIHandler {
         "rehideInterval": SettingURIEntry(defaultsKey: .rehideInterval, kind: .double(min: 1, max: 300), isWritable: true),
         "tempShowInterval": SettingURIEntry(defaultsKey: .tempShowInterval, kind: .double(min: 0, max: 30), isWritable: true),
         "rehideStrategy": SettingURIEntry(defaultsKey: .rehideStrategy, kind: .enumeration, isWritable: true),
+        "settingsAppearance": SettingURIEntry(defaultsKey: .settingsAppearance, kind: .enumeration, isWritable: true),
 
         // MARK: - Advanced
 
@@ -465,19 +466,13 @@ enum SettingsURIHandler {
             return handleDoubleSet(key: key, value: value, entry: entry)
 
         case .enumeration:
-            return handleEnumSet(key: key, value: value, entry: entry)
+            return key == "settingsAppearance" ? handleAppearanceSet(value) : handleEnumSet(key: key, value: value, entry: entry)
 
         case .integer, .string:
             // No global integer or string setting is published yet.
             diagLog.warning("Settings URI: Key '\(key)' has an unsupported kind")
             return false
         }
-    }
-
-    private static func applyBooleanSetting(_ value: Bool, key: String, entry: SettingURIEntry) -> Bool {
-        Defaults.set(value, forKey: entry.defaultsKey)
-        postSettingsDidChangeNotification(key: key, value: value)
-        return true
     }
 
     /// Handles setting a double/numeric value with range validation.
@@ -700,7 +695,7 @@ enum SettingsURIHandler {
     }
 
     /// Posts a notification that a setting was changed externally via Settings URI.
-    private static func postSettingsDidChangeNotification(key: String, value: Bool) {
+    static func postSettingsDidChangeNotification(key: String, value: Bool) {
         settingsChangeNotificationCenter.post(
             name: .settingsDidChangeViaURI,
             object: nil,
@@ -722,7 +717,7 @@ enum SettingsURIHandler {
         )
     }
 
-    private static func postSettingsDidChangeNotification(key: String, rawEnumValue: Int) {
+    static func postSettingsDidChangeNotification(key: String, rawEnumValue: Int) {
         settingsChangeNotificationCenter.post(
             name: .settingsDidChangeViaURI,
             object: nil,
@@ -957,7 +952,7 @@ enum SettingsURIHandler {
                 ]
             }
 
-            return [
+            return key == "settingsAppearance" ? SettingsAppearance.stored().uriValue : [
                 "rawValue": rawValue,
                 "type": "enum",
             ]
