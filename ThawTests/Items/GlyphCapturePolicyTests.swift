@@ -15,12 +15,13 @@ import Testing
 @MainActor
 @Suite("Glyph capture policy")
 struct GlyphCapturePolicyTests {
-    /// A crop of the given point width. Opaque white unless blank, which
-    /// leaves every pixel transparent.
+    /// A crop of the given point width, 16 points tall. Opaque white unless blank, which
+    /// leaves every pixel transparent; inkHeight centres a shorter band of ink in it.
     private static func capture(
         width: CGFloat,
         scale: CGFloat = 1,
-        blank: Bool = false
+        blank: Bool = false,
+        inkHeight: CGFloat? = nil
     ) throws -> MenuBarItemGlyphCapture {
         let pixelWidth = Int(width * scale)
         let pixelHeight = Int(16 * scale)
@@ -35,7 +36,8 @@ struct GlyphCapturePolicyTests {
         ))
         if !blank {
             context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-            context.fill(CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight))
+            let ink = inkHeight.map { Int($0 * scale) } ?? pixelHeight
+            context.fill(CGRect(x: 0, y: (pixelHeight - ink) / 2, width: pixelWidth, height: ink))
         }
         return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: scale)
     }
@@ -85,6 +87,33 @@ struct GlyphCapturePolicyTests {
         let candidate = try Self.capture(width: 24, blank: true)
 
         #expect(MenuBarItemImageCache.preferredCachedImage(existing: existing, candidate: candidate) == existing)
+    }
+
+    @Test("A revealed item's picture drawn much shorter, as while it scales in, loses to the one it has")
+    func shrunkenRevealLoses() throws {
+        let existing = try Self.capture(width: 24, scale: 2, inkHeight: 16)
+        let candidate = try Self.capture(width: 24, scale: 2, inkHeight: 10)
+
+        #expect(MenuBarItemImageCache.preferredRevealedImage(existing: existing, candidate: candidate) == existing)
+        #expect(MenuBarItemImageCache.preferredCachedImage(existing: existing, candidate: candidate) == candidate,
+                "A live item's glyph may really get shorter, like a graph or a level")
+    }
+
+    @Test("A revealed item's picture about as tall as the one it has wins")
+    func sameHeightRevealWins() throws {
+        let existing = try Self.capture(width: 24, scale: 2, inkHeight: 16)
+        let candidate = try Self.capture(width: 24, scale: 2, inkHeight: 14)
+
+        #expect(MenuBarItemImageCache.preferredRevealedImage(existing: existing, candidate: candidate) == candidate)
+    }
+
+    @Test("A revealed item's picture still follows the blank and width rules")
+    func revealedFollowsTheCachedRules() throws {
+        let existing = try Self.capture(width: 20)
+        let blank = try Self.capture(width: 24, blank: true)
+        let narrow = try Self.capture(width: 14)
+        #expect(MenuBarItemImageCache.preferredRevealedImage(existing: existing, candidate: blank) == existing)
+        #expect(MenuBarItemImageCache.preferredRevealedImage(existing: existing, candidate: narrow) == existing)
     }
 
     @Test("A candidate under three quarters of the existing width loses")

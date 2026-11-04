@@ -43,7 +43,7 @@ extension MenuBarItemImageCache {
         if let tally = Self.requestedCaptureTally {
             for pair in revealed {
                 guard let image = captureResult.captured[pair.live.tag] else { continue }
-                let kept = capturesByTag[pair.requested.tag].map { Self.preferredCachedImage(existing: $0, candidate: image) }
+                let kept = capturesByTag[pair.requested.tag].map { Self.preferredRevealedImage(existing: $0, candidate: image) }
                 if kept == nil || kept == image {
                     tally.tags.insert(pair.requested.tag)
                 }

@@ -856,7 +856,7 @@ extension MenuBarItemImageCache {
                 continue
             }
             if let cachedImage = capturesByTag[tag] {
-                let preferred = Self.preferredCachedImage(existing: cachedImage, candidate: image)
+                let preferred = Self.preferredRevealedImage(existing: cachedImage, candidate: image)
                 if MenuBarItemGlyphCapture.isVisuallyEqual(preferred, cachedImage) {
                     continue
                 }
