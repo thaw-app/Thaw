@@ -29,19 +29,13 @@ on:
         required: false
         type: boolean
         default: false
-      discussion_category:
+      staged_rollout:
         description: >-
-          Open a release discussion in this category. Only takes effect when
-          Publish release is checked, because the discussion is created on the
-          draft-to-published transition.
+          Stage a stable or beta update over a day. Uncheck to offer it to every
+          Mac at once. Alpha and nightly updates are never staged.
         required: false
-        type: choice
-        default: none
-        options:
-          - none
-          - Announcements
-          - General
-          - Ideas
+        type: boolean
+        default: true
       publish_appcast:
         description: Push signed appcast.xml to thaw-app/updates gh-pages
         required: false
@@ -204,7 +198,8 @@ jobs:
       appcast-repository: thaw-app/updates
       appcast-branch: gh-pages
       appcast-url: https://thaw-app.github.io/updates/appcast.xml
-      appcast-script: .github/actions/prepare-appcasts/prepare_appcasts.py
+      # org-ci runs the script with a fixed environment, so the choice is which script to run.
+      appcast-script: ${{ inputs.staged_rollout && '.github/actions/prepare-appcasts/prepare_appcasts.py' || '.github/actions/prepare-appcasts/prepare_appcasts_unstaged.py' }}
       # Keep historical 1.x entries and the 2.x line, never 3.x or newer; the
       # script returns no legacy feed for other release lines.
       legacy-appcast-repository: stonerl/Thaw
@@ -215,6 +210,5 @@ jobs:
       runner: xcode-27
       publish-release: ${{ inputs.publish_release }}
       publish-appcast: ${{ inputs.publish_appcast }}
-      discussion-category: ${{ inputs.discussion_category != 'none' && inputs.discussion_category || '' }}
       dry-run: ${{ inputs.dry_run }}
     secrets: inherit

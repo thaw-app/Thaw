@@ -40,23 +40,21 @@ ask() { # ask <prompt> <default-y|default-n>
     [[ "$reply" =~ ^[Yy] ]]
 }
 
-dry_run=false; publish_release=false; publish_appcast=false
-discussion_category=none
+dry_run=false; publish_release=false; publish_appcast=false; staged_rollout=true
 
 ask "Dry run (build and report, publish nothing)?" n && dry_run=true
 if [[ "$dry_run" == false ]]; then
     ask "Publish the GitHub Release (otherwise it stays a draft)?" n && publish_release=true
-    # The appcast and the discussion both require a published release: the
-    # workflow gates them on publish_release, so asking otherwise collects an
-    # answer it discards and prints it in the summary below.
+    # The appcast requires a published release: the workflow gates it on
+    # publish_release, so asking otherwise collects an answer it discards.
     if [[ "$publish_release" == true ]]; then
         publish_appcast=true
         ask "Push the signed appcast to thaw-app/updates?" y || publish_appcast=false
-        PS3="discussion category> "
-        select discussion_category in none Announcements General Ideas; do
-            [[ -n "$discussion_category" ]] && break
-        done
     fi
+fi
+# A dry run reports the appcast it would push, so the rollout choice shows there too.
+if [[ "$dry_run" == true || "$publish_appcast" == true ]]; then
+    ask "Stage the update over a day (otherwise every Mac gets it at once)?" y || staged_rollout=false
 fi
 
 cat <<SUMMARY
@@ -67,10 +65,22 @@ cat <<SUMMARY
   dry run    $dry_run
   publish    $publish_release
   appcast    $publish_appcast
-  discussion $discussion_category
+  staged     $staged_rollout
 
 SUMMARY
 ask "Dispatch?" n || { echo "aborted"; exit 1; }
+
+# The run uses the tag's own workflow, which may predate the staged_rollout
+# input; send it only to turn staging off, and only when the tag declares it.
+rollout_input=()
+if [[ "$staged_rollout" == false ]]; then
+    if ! gh api "repos/$REPO/contents/.github/workflows/$WORKFLOW?ref=$tag" --jq .content \
+        | base64 --decode | grep -q '^      staged_rollout:'; then
+        echo "error: $tag's $WORKFLOW has no staged_rollout input; move the tag to a commit that has it" >&2
+        exit 1
+    fi
+    rollout_input=(-f staged_rollout=false)
+fi
 
 # Run on the tag itself: the build in org-ci attests the commit the run was
 # dispatched from, and fails when the tag names another one.
@@ -80,6 +90,6 @@ gh workflow run "$WORKFLOW" --repo "$REPO" --ref "$tag" \
     -f dry_run="$dry_run" \
     -f publish_release="$publish_release" \
     -f publish_appcast="$publish_appcast" \
-    -f discussion_category="$discussion_category"
+    ${rollout_input[@]+"${rollout_input[@]}"}
 
 echo "dispatched; watch with: gh run list --repo $REPO --workflow $WORKFLOW"
