@@ -73,7 +73,8 @@ struct SettingsWindow: Scene {
                 presentRestoreOfferIfDue()
             }
         }
-        .windowResizability(.contentSize)
+        // Content sets only the minimum; .contentSize would also snap the window to it right after it opens.
+        .windowResizability(.contentMinSize)
         .defaultSize(
             width: SettingsWindowMetrics.fullDefault.width,
             height: SettingsWindowMetrics.fullDefault.height

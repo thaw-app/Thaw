@@ -41,7 +41,7 @@ struct SettingsView: View {
             }
         }
         // Applied here rather than on the Scene so it can follow the mode: with
-        // .windowResizability(.contentSize) this minimum is the window's, and
+        // .windowResizability(.contentMinSize) this minimum is the window's, and
         // the full layout's would otherwise hold Simple Mode open at a sidebar's
         // width forever.
         .frame(

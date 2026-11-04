@@ -55,6 +55,7 @@ the items under New and Fixed.
 - **Links in the release notes open only over https.** Any other link stays plain text.
 - **A page that isn't the changelog can't replace your saved release notes.** A Wi-Fi sign-in page, for example, now counts as a failed fetch, so What's New keeps the last good copy.
 - **Recording a shortcut stops when its page goes away,** and Shift-Escape cancels it. The keyboard also works in the warning about a shortcut macOS already uses.
+- **The Settings window no longer shrinks right after it opens.** It snapped to its smallest size, moving down as it did. It now opens at its usual or last size and stays there.
 
 ## [3.0.0-beta.6] - 2026-11-03
 
