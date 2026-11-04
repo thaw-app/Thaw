@@ -30,6 +30,11 @@ the items under New and Fixed.
 
 Fixes for beta 5, two small additions and an alpha setting for the Thaw Bar.
 
+> [!NOTE]
+> **On a macOS version before 27.2?**
+>
+> This beta may have problems there. Some are already known, such as the macOS 27.0.1 full-screen bug; see [Known macOS 27 limitations](https://github.com/thaw-app/Thaw/blob/development/FREQUENT_ISSUES.md#known-macos-27-limitations). If Thaw got slower or less responsive after you updated and it isn't listed there, please [open an issue](https://github.com/thaw-app/Thaw/issues/new/choose) with your macOS version and a diagnostic log.
+
 ### New
 
 - **Show on hover works on Thaw's icon too.** Rest the pointer on Thaw's icon and your hidden items appear, as they do over an empty part of the menu bar. A click on the icon right after they appear keeps them open. Suggested by @daniilsys in [#1431](https://github.com/thaw-app/Thaw/issues/1431).
