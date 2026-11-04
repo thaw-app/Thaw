@@ -27,22 +27,27 @@ extension ModuleHost {
     }
 }
 
+extension ModuleHost {
+    /// The visible .app bundles in each folder, in folder order. A folder that doesn't exist adds none.
+    static nonisolated func appBundles(in directories: [URL]) -> [URL] {
+        directories.flatMap { directory in
+            let contents = (try? FileManager.default.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: nil,
+                options: .skipsHiddenFiles
+            )) ?? []
+            return contents.filter { $0.pathExtension == "app" }
+        }
+    }
+}
+
 extension ModuleHost.Environment {
     /// The real system: the Modules folders on disk, code signatures and NSWorkspace.
     static func live(
         directories: [URL] = [ModuleHost.modulesDirectory(), ModuleHost.bundledModulesDirectory()]
     ) -> Self {
         Self(
-            listBundles: {
-                directories.flatMap { directory in
-                    let contents = (try? FileManager.default.contentsOfDirectory(
-                        at: directory,
-                        includingPropertiesForKeys: nil,
-                        options: .skipsHiddenFiles
-                    )) ?? []
-                    return contents.filter { $0.pathExtension == "app" }
-                }
-            },
+            listBundles: { ModuleHost.appBundles(in: directories) },
             readInfo: { Bundle(url: $0)?.infoDictionary },
             teamID: validTeamID(ofAppAt:),
             ownTeamID: { SettingsURIHandler.teamIdentifier(ofAppAt: Bundle.main.bundleURL, logName: "this app") },

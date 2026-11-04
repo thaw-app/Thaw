@@ -19,7 +19,13 @@ nonisolated enum MenuBarHidingScope: CaseIterable, Hashable, Sendable {
 
     /// Every Space wins when both overrides are on, since it covers this one.
     init(hiddenInSpace: Bool, hiddenEverywhere: Bool) {
-        self = hiddenEverywhere ? .everySpace : hiddenInSpace ? .thisSpace : .never
+        if hiddenEverywhere {
+            self = .everySpace
+        } else if hiddenInSpace {
+            self = .thisSpace
+        } else {
+            self = .never
+        }
     }
 
     var hidesInSpace: Bool {
