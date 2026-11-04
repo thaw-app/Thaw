@@ -68,6 +68,25 @@ struct ProfileSwitchRunnerTests {
         #expect(recorder.runs.allSatisfy { $0.context.phase == .post })
     }
 
+    @Test("A new switch cancels the last one's before-switch scripts, even once its after-switch step is waiting")
+    func newSwitchCancelsWaitingPreHooks() async {
+        let next = ProfileSwitch(profileID: UUID(), profileName: "Home", previousProfileID: event.profileID, previousProfileName: "Work")
+        var firstPreWasCancelled: Bool?
+        let runner = ProfileSwitchRunner(configuration: configuration) { _, context in
+            guard context.phase == .pre, context.profileName == "Work", firstPreWasCancelled == nil else { return }
+            try? await Task.sleep(for: .seconds(5))
+            firstPreWasCancelled = Task.isCancelled
+        }
+
+        let firstPre = runner.handle(.willApply, event)
+        await Task.yield()
+        runner.handle(.didApply, event)
+        runner.handle(.willApply, next)
+        await firstPre.value
+
+        #expect(firstPreWasCancelled == true)
+    }
+
     @Test("After-switch scripts wait for the before-switch scripts still running")
     func postWaitsForPre() async {
         let recorder = Recorder()

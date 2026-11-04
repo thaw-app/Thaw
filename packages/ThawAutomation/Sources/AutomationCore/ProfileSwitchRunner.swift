@@ -16,7 +16,9 @@ public final class ProfileSwitchRunner {
 
     private let configuration: @MainActor () -> HookConfiguration
     private let run: Run
-    private var current: Task<Void, Never>?
+    /// The tasks of the switch in progress: its before-switch scripts, then the after-switch
+    /// ones waiting on them. Cancelling only the last would leave the first running.
+    private var switchTasks: [Task<Void, Never>] = []
 
     public init(configuration: @escaping @MainActor () -> HookConfiguration, run: @escaping Run) {
         self.configuration = configuration
@@ -33,9 +35,10 @@ public final class ProfileSwitchRunner {
         case .didApply: [(profileHooks?.postHook, .profile), (hooks.globalPostHook, .global)]
         }
         let hookPhase: HookPhase = phase == .willApply ? .pre : .post
-        let previous = current
+        let previous = switchTasks.last
         if phase == .willApply {
-            previous?.cancel()
+            switchTasks.forEach { $0.cancel() }
+            switchTasks = []
         }
         let run = run
         let task = Task { @MainActor in
@@ -54,7 +57,7 @@ public final class ProfileSwitchRunner {
                 ))
             }
         }
-        current = task
+        switchTasks.append(task)
         return task
     }
 }
