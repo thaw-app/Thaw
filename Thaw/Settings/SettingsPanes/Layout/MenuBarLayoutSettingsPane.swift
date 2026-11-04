@@ -188,7 +188,7 @@ private struct LayoutDetailTabs: View {
             ControlCenterReplacementsSection(settings: settings)
         case .options:
             LayoutSectionOptions(settings: settings, isHidingUnavailable: isHidingUnavailable)
-            HidingMethodSection(settings: settings, offersAppleItems: canArrangeLayout)
+            HidingMethodSection(settings: settings)
             LayoutOverflowSection(settings: settings)
             if canArrangeLayout {
                 LayoutResetControls(

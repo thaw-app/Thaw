@@ -41,13 +41,14 @@ nonisolated enum HidingMethod: Int, CaseIterable, Identifiable {
         }
     }
 
-    /// What the method keeps or hides, then what it costs. One short line each.
+    /// One short sentence on what the method hides and keeps. The costs are spelled out
+    /// once, in the Known macOS 27 limitations popover beside the picker.
     var explanation: LocalizedStringResource {
         switch self {
         case .native:
-            "Keeps Live Activities, the camera indicator and Apple’s own items on the menu bar.\nCan’t hide Clock, Control Center or Siri. macOS may show the screen recording indicator."
+            "Hides apps’ items and leaves Apple’s items, Live Activities and the camera indicator on the menu bar."
         case .standard:
-            "Hides any app’s items, and Clock, Control Center and Siri too.\nWhile they’re hidden, macOS also removes Live Activities and the camera indicator."
+            "Hides any item, including Clock, Control Center and Siri, and macOS removes Live Activities and the camera indicator while it does."
         }
     }
 }

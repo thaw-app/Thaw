@@ -13,8 +13,6 @@ import ThawUI
 /// Native rewrites another app's settings, so it stays opt-in.
 struct HidingMethodSection: View {
     @Bindable var settings: AdvancedSettings
-    /// False when the layout cannot be arranged, so the note on moving Apple's pinned items does not apply.
-    let offersAppleItems: Bool
     @Environment(AppState.self) private var appState
     @State private var confirmsSetAside = false
     @State private var setAsideError: String?
@@ -63,16 +61,6 @@ struct HidingMethodSection: View {
                 }
 
             PlatformLimitationsNotice()
-
-            if method.hidesAppleItems, offersAppleItems {
-                // Blue denotes a limitation, not a failure.
-                SettingsWarningPill(
-                    title: "Apple's items move differently",
-                    message: "macOS 27 draws them itself instead of letting each one place its own icon, so \(Constants.displayName) has to ask macOS to move them rather than moving them directly. Some refuse to move, some return to Visible on their own, and Clock and Control Center can only be hidden together with Siri.",
-                    systemImage: "flask.fill",
-                    tint: .blue
-                )
-            }
 
             if experiment.journalNeedsAttention {
                 unreadableRecordNotice
