@@ -12,6 +12,12 @@ extension MenuBarItemTag {
         (prefix: "com.cron.electron", suffix: ""),
     ]
 
+    /// Whether bundleID is such a calendar. Its one item has no instance index, so a
+    /// trailing ":<number>" in a saved identifier belongs to the event title.
+    static func isSingleItemCalendar(_ bundleID: String) -> Bool {
+        singleItemCalendarBundleMatchers.contains { bundleID.hasPrefix($0.prefix) && bundleID.hasSuffix($0.suffix) }
+    }
+
     /// Drops the words that still change once a reading's numbers are #: the weather conditions
     /// after "Currently #°", and a date's AM/PM and month, whether the month comes before or after the day.
     static func collapsingReadingWords(_ neutralized: String) -> String {

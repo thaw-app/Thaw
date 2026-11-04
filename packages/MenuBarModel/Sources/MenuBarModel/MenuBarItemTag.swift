@@ -643,7 +643,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
 
         // A clock's trailing minutes are not an instance index; splitting them would churn identity every minute.
         // Distinguish times by digits before the colon and two digits after it.
-        if !suffix.contains(/\d{1,2}:\d{2}(?::\d{2})?$/),
+        if !suffix.contains(/\d{1,2}:\d{2}(?::\d{2})?$/), !isSingleItemCalendar(bundleID),
            let separator = suffix.lastIndex(of: ":")
         {
             let title = String(suffix[..<separator])

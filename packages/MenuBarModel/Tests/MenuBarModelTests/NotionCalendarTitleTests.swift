@@ -20,4 +20,11 @@ struct NotionCalendarTitleTests {
         #expect(MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):\(title)") == "\(bundle):Item")
         #expect(MenuBarItemTag(namespace: .string(bundle), title: title).tagIdentifier == "\(bundle):Item")
     }
+
+    @Test("A saved event title ending in a colon and a number isn't read as a second item")
+    func trailingNumberIsPartOfTheTitle() {
+        let bundle = "com.cron.electron"
+        #expect(MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):Sync:2") == "\(bundle):Item")
+        #expect(MenuBarItemTag.canonicalPersistentIdentifier("com.if.Amphetamine:𝗧:1") == "com.if.Amphetamine:Item:1")
+    }
 }
