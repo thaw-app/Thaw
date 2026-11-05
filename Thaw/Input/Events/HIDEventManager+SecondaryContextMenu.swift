@@ -188,8 +188,10 @@ extension HIDEventManager {
 
     func handleSecondaryContextMenu(
         appState: AppState,
-        screen: NSScreen
+        screen: NSScreen,
+        modifierFlags: NSEvent.ModifierFlags
     ) {
+        let ignoredMenuOwners = SecondaryMenuOwnership.ignoredMenuOwners(modifierFlags: modifierFlags)
         pendingSecondaryContextMenuTask = Task { [weak self] in
             guard let self else { return }
             // Suppress phantom clicks in an auto-hidden fullscreen bar's y-band.
@@ -216,7 +218,7 @@ extension HIDEventManager {
             // Probe open menus rather than wide notch-overlay bounds, since only their icons respond to clicks.
             try await Task.sleep(for: .milliseconds(100))
             try Task.checkCancellation()
-            if isForeignPopUpMenuOpen() {
+            if isForeignPopUpMenuOpen(ignoring: ignoredMenuOwners) {
                 Self.diagLog.debug("handleSecondaryContextMenu: suppressing, foreign pop-up menu is open")
                 return
             }
@@ -248,7 +250,7 @@ extension HIDEventManager {
 
     /// Exact kCGPopUpMenuWindowLevel filtering distinguishes foreign menus from idle notch overlays one level below.
     /// Avoid showing Thaw's context menu over a foreign widget's own menu.
-    private func isForeignPopUpMenuOpen() -> Bool {
-        WindowLevelPredicates.isForeignPopUpMenuOpen(in: WindowInfo.createWindows(option: .onScreen))
+    private func isForeignPopUpMenuOpen(ignoring ignoredOwners: Set<pid_t>) -> Bool {
+        WindowLevelPredicates.isForeignPopUpMenuOpen(in: WindowInfo.createWindows(option: .onScreen), ignoring: ignoredOwners)
     }
 }

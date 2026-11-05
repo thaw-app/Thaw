@@ -122,7 +122,7 @@ nonisolated extension SearchIndex {
             id: "advanced.enableSecondaryContextMenu",
             titleKey: "Right-click the menu bar for the \(Constants.displayName) menu",
             titleText: "Right-click the menu bar for the \(Constants.displayName) menu",
-            descriptionText: String(localized: "Right-click in an empty area of the menu bar to display a minimal version of \(Constants.displayName)'s menu."),
+            descriptionText: String(localized: "Right-click an empty area of the menu bar to open a minimal version of \(Constants.displayName)'s menu. If macOS opens its own menu instead, hold Option as you right-click."),
             pane: .general,
             sectionKey: "Menu bar behavior",
             sectionText: "Menu bar behavior",

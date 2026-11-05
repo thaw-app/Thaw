@@ -29,11 +29,11 @@ nonisolated enum WindowLevelPredicates {
     }
 
     /// Whether any window in windows is an open pop-up menu owned by another
-    /// process. Thaw's own menus are excluded.
-    static func isForeignPopUpMenuOpen(in windows: [WindowInfo]) -> Bool {
+    /// process. Thaw's own menus and the menus of ignoredOwners are excluded.
+    static func isForeignPopUpMenuOpen(in windows: [WindowInfo], ignoring ignoredOwners: Set<pid_t> = []) -> Bool {
         let ownPID = ProcessInfo.processInfo.processIdentifier
         return windows.contains { window in
-            window.ownerPID != ownPID && isPopUpMenu(layer: window.layer)
+            window.ownerPID != ownPID && !ignoredOwners.contains(window.ownerPID) && isPopUpMenu(layer: window.layer)
         }
     }
 }

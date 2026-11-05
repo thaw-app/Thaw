@@ -259,7 +259,7 @@ final class HIDEventManager {
         case .leftMouseDown:
             receiveLeftMouseDown(event, appState: appState, screen: screen)
         case .rightMouseDown:
-            receiveRightMouseDown(appState: appState, screen: screen)
+            receiveRightMouseDown(event, appState: appState, screen: screen)
         default:
             // Not a press we subscribed to; nothing below applies.
             return
@@ -328,13 +328,13 @@ final class HIDEventManager {
 
     /// The right-press pipeline: the control item claims the press first, and
     /// only otherwise does the empty-space context menu get a chance.
-    private func receiveRightMouseDown(appState: AppState, screen: NSScreen) {
+    private func receiveRightMouseDown(_ event: NSEvent, appState: AppState, screen: NSScreen) {
         pendingControlItemContextMenu = nil
         let clickLocation = NSEvent.mouseLocation
         guard !armControlItemContextMenu(appState: appState, clickLocation: clickLocation) else {
             return
         }
-        handleSecondaryContextMenu(appState: appState, screen: screen)
+        handleSecondaryContextMenu(appState: appState, screen: screen, modifierFlags: event.modifierFlags)
     }
 
     /// Watches for the left button coming back up, which ends any item drag and
