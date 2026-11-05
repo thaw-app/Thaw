@@ -174,8 +174,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appState.menuBarManager.tearDownControlItemsForTermination()
             return .terminateNow
         }
-        guard !isPreparingForTermination else {
-            return .terminateLater
+        guard !isPreparingForTermination, !AppIntentsIdleQuit.refusesCurrentRequest() else {
+            return isPreparingForTermination ? .terminateLater : .terminateCancel
         }
 
         let attemptID = UUID()

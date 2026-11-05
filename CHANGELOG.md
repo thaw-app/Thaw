@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A copy of Thaw you build yourself no longer quits a minute after you log in.** macOS doesn't accept App Intents from a copy signed without a team, and after a restart it asked such a copy to quit once Thaw's Focus filter had run. It looked like a crash.
+
 ## [3.0.0-alpha.13] - 2026-11-05
 
 **macOS 27 only · Build 124**
