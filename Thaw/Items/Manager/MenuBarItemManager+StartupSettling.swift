@@ -25,12 +25,13 @@ extension MenuBarItemManager {
         maxDuration: Duration = .seconds(60)
     ) {
         let mergedExpected = settlingExpectedBundleIDs.union(expectedBundleIDs)
-        let incomingKind: SettlingKind = if !mergedExpected.isEmpty {
-            .expectedSet
-        } else if reason == "performSetup" {
+        // An app launch names its bundle too, but only a relaunch wait may
+        // replace the boot's: a launch at login would end it once that one
+        // app is back, long before the rest of the login items.
+        let incomingKind: SettlingKind = if reason == "performSetup" {
             .cold
         } else if reason.hasPrefix("spacingRelaunch") {
-            .preflight
+            mergedExpected.isEmpty ? .preflight : .expectedSet
         } else {
             .event
         }
