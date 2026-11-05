@@ -40,6 +40,12 @@ public struct ProfileSwitch: Equatable, Sendable {
         Notification.Name("\(hostBundleIdentifier).module.profile.listening")
     }
 
+    /// Posted by Thaw as it starts, so a Scripts module still running from before answers
+    /// with listeningNotificationName(hostBundleIdentifier:) again.
+    public static func listeningQueryNotificationName(hostBundleIdentifier: String) -> Notification.Name {
+        Notification.Name("\(hostBundleIdentifier).module.profile.listeningQuery")
+    }
+
     private enum Key {
         static let profileID = "profileID"
         static let profileName = "profileName"

@@ -74,8 +74,8 @@ final class ModuleHost {
     @ObservationIgnored private var stopCounts: [URL: Int] = [:]
     @ObservationIgnored private var terminationObserver: (any NSObjectProtocol)?
     @ObservationIgnored private var hasLoadedEnabled = false
-    /// Replaced modules' processes, each with the copy that starts once it exits.
-    @ObservationIgnored private var handovers: [pid_t: URL] = [:]
+    /// Replaced modules' processes, each with the identifier of the module to start once it exits.
+    @ObservationIgnored private var handovers: [pid_t: String] = [:]
 
     init(environment: Environment, restartPolicy: ModuleRestartPolicy = ModuleRestartPolicy()) {
         self.environment = environment
@@ -130,7 +130,7 @@ final class ModuleHost {
             switch module.state {
             // The copy with the same bundle ID starts once the old process is gone, or
             // macOS could bring the old one forward instead.
-            case let .running(pid): handovers[pid] = replacement
+            case let .running(pid): handovers[pid] = identifier
             case .restarting: Task { await start(replacement) }
             default: break
             }
@@ -281,9 +281,9 @@ final class ModuleHost {
     /// Called when any app quits. A module that quits while still marked
     /// running did so on its own, and the restart policy decides what's next.
     func moduleDidTerminate(pid: pid_t) async {
-        if let replacement = handovers.removeValue(forKey: pid) {
-            // Still switched on: it may have been turned off while the old copy quit.
-            if let identifier = modules[replacement]?.manifest?.identifier, isEnabled(identifier) {
+        if let identifier = handovers.removeValue(forKey: pid) {
+            // Looked up now: the list may have changed, or the module been switched off, while the old copy quit.
+            if isEnabled(identifier), let replacement = url(ofModule: identifier) {
                 await start(replacement)
             }
             return

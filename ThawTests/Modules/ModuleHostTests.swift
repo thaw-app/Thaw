@@ -560,6 +560,19 @@ struct ModuleHostTests {
         #expect(host.modules[downloaded]?.state == .running(102))
     }
 
+    @Test("The copy installed when the old process quits is the one that starts")
+    func handoverFollowsTheCurrentList() async {
+        let (system, host, bundled, _) = await replacingRunningModule()
+        host.refresh()
+        // The downloaded copy goes away again before the old process has quit.
+        system.bundles = [bundled]
+        host.refresh()
+
+        await host.moduleDidTerminate(pid: 101)
+        #expect(system.launched == [bundled, bundled])
+        #expect(host.modules[bundled]?.state == .running(102))
+    }
+
     @Test("A replacement switched off while the old copy quits stays off")
     func replacementSwitchedOffStaysOff() async {
         let (system, host, bundled, _) = await replacingRunningModule()

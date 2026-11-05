@@ -32,7 +32,8 @@ enum ProfileSwitchAnnouncer {
     }
 
     /// Waits for the Scripts module to say it listens, and sends it the switch held until then.
-    /// Call before modules start, so the first answer isn't missed.
+    /// Call before modules start, so the first answer isn't missed. A Scripts module still running
+    /// from before Thaw started announced itself already, so it is asked to say so again.
     static func startListeningForScripts() {
         guard listeningObserver == nil, let host = Bundle.main.bundleIdentifier else { return }
         listeningObserver = DistributedNotificationCenter.default().addObserver(
@@ -42,6 +43,7 @@ enum ProfileSwitchAnnouncer {
         ) { _ in
             MainActor.assumeIsolated { scriptsListening() }
         }
+        deliver(ProfileSwitch.listeningQueryNotificationName(hostBundleIdentifier: host), [:])
     }
 
     /// The Scripts module listens now: sends the switch held until then.
