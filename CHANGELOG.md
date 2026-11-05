@@ -77,6 +77,7 @@ Scripts, Triggers and Widgets become modules you can switch on and off, and Sett
 - **Layout picks up new items when macOS leaves out Thaw's own icon,** and QQ and WeChat keep one item each as their unread count changes. Reported by @Mujun05 in [#1449](https://github.com/thaw-app/Thaw/issues/1449) and fixed in [#1450](https://github.com/thaw-app/Thaw/pull/1450).
 - **Applying a profile keeps your menu bar spacing,** at startup and when you change Space or Focus. Fixed by @Omoeba in [#1451](https://github.com/thaw-app/Thaw/pull/1451).
 - **Thaw waits for the menu bar to settle before moving items,** while you log in and when the menu bar moves to another display. Fixed by @camguillory in [#1452](https://github.com/thaw-app/Thaw/pull/1452).
+- **Capture Hidden Items no longer lists a kept picture as missing** when macOS rebuilds the menu bar. Fixed by @Belligerently in [#1448](https://github.com/thaw-app/Thaw/pull/1448).
 
 ## [3.0.0-beta.6] - 2026-11-03
 
