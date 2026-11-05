@@ -19,6 +19,9 @@ nonisolated enum WriteHold {
         case layoutPublicationStale
         case sectionRevealed
         case revealTransitionActive
+        /// macOS moved the bar to a display the cache has not followed yet,
+        /// so frames read now mix two bars.
+        case barOnUncachedDisplay
     }
 
     /// Which checks hold at one point in time, built by the calling pass.
@@ -32,6 +35,7 @@ nonisolated enum WriteHold {
         var layoutPublicationStale = false
         var sectionRevealed = false
         var revealTransitionActive = false
+        var barOnUncachedDisplay = false
 
         /// Each condition paired with the check named after it.
         private var conditions: [(holds: Bool, check: Check)] {
@@ -45,6 +49,7 @@ nonisolated enum WriteHold {
                 (layoutPublicationStale, .layoutPublicationStale),
                 (sectionRevealed, .sectionRevealed),
                 (revealTransitionActive, .revealTransitionActive),
+                (barOnUncachedDisplay, .barOnUncachedDisplay),
             ]
         }
 
@@ -71,5 +76,6 @@ nonisolated enum StructuralNormalizationHolds {
         .layoutPublicationStale,
         .sectionRevealed,
         .revealTransitionActive,
+        .barOnUncachedDisplay,
     ]
 }

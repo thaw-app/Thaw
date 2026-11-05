@@ -25,12 +25,15 @@ extension MenuBarItemManager {
         maxDuration: Duration = .seconds(60)
     ) {
         let mergedExpected = settlingExpectedBundleIDs.union(expectedBundleIDs)
-        let incomingKind: SettlingKind = if !mergedExpected.isEmpty {
-            .expectedSet
-        } else if reason == "performSetup" {
+        // An app launch names its bundle too, but only a relaunch wait may
+        // replace the boot's: a launch at login would end it once that one
+        // app is back, long before the rest of the login items.
+        let incomingKind: SettlingKind = if reason == "performSetup" {
             .cold
         } else if reason.hasPrefix("spacingRelaunch") {
-            .preflight
+            // Its own IDs, not the shared set: a launch that yielded leaves its ID there,
+            // and a preflight counting it would replace the boot settling.
+            expectedBundleIDs.isEmpty ? .preflight : .expectedSet
         } else {
             .event
         }
@@ -68,12 +71,11 @@ extension MenuBarItemManager {
             let stableTarget = 3
             var lastSeenCount = -1
             var stablePolls = 0
-            let waitingFor = mergedExpected
-            let useExpectedSet = !waitingFor.isEmpty
+            let useExpectedSet = !mergedExpected.isEmpty
             let settlingStartedAt = ContinuousClock.now
             if useExpectedSet {
                 MenuBarItemManager.diagLog.debug(
-                    "\(reason): waiting for \(waitingFor.count) expected bundle ID(s) to reattach"
+                    "\(reason): waiting for \(mergedExpected.count) expected bundle ID(s) to reattach"
                 )
             }
 
@@ -96,6 +98,8 @@ extension MenuBarItemManager {
                 let barQuiet = !reason.hasPrefix("display") || savedOrderMirrorGate.isQuiet()
 
                 if useExpectedSet {
+                    // Read on every poll: an app launch that yielded to this wait adds its ID later.
+                    let waitingFor = settlingExpectedBundleIDs
                     let presentBundleIDs: Set<String> = Set(
                         itemCache.managedItems.compactMap { item in
                             if case let .string(bid) = item.tag.namespace {

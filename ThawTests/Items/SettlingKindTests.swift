@@ -35,6 +35,43 @@ struct SettlingKindTests {
         #expect(!manager.isInStartupSettling)
     }
 
+    /// 2026-11-05: an app opening at login ended the boot settling 4 s in,
+    /// and the structural pass then moved items whose apps were still starting.
+    @Test("An app launch at login leaves the boot settling running")
+    func appLaunchKeepsColdSettling() {
+        let manager = MenuBarItemManager()
+        defer { manager.startupSettlingTask?.cancel() }
+
+        manager.startSettlingPeriod(reason: "performSetup")
+        manager.startSettlingPeriod(reason: "appLaunch", expectedBundleIDs: ["com.example.app"], maxDuration: .seconds(8))
+
+        #expect(manager.settlingKind == .cold)
+    }
+
+    @Test("A spacing preflight at login doesn't take an app launch's ID as its own")
+    func preflightKeepsColdSettlingAfterLaunch() {
+        let manager = MenuBarItemManager()
+        defer { manager.startupSettlingTask?.cancel() }
+
+        manager.startSettlingPeriod(reason: "performSetup")
+        manager.startSettlingPeriod(reason: "appLaunch", expectedBundleIDs: ["com.example.app"], maxDuration: .seconds(8))
+        manager.startSettlingPeriod(reason: "spacingRelaunch:preflight")
+
+        #expect(manager.settlingKind == .cold)
+        #expect(manager.settlingExpectedBundleIDs == ["com.example.app"], "the launch's ID stays for the boot settling")
+    }
+
+    @Test("A spacing relaunch still waits for the apps it relaunched")
+    func relaunchReplacesColdSettling() {
+        let manager = MenuBarItemManager()
+        defer { manager.startupSettlingTask?.cancel() }
+
+        manager.startSettlingPeriod(reason: "performSetup")
+        manager.startSettlingPeriod(reason: "spacingRelaunch", expectedBundleIDs: ["com.example.app"])
+
+        #expect(manager.settlingKind == .expectedSet)
+    }
+
     @Test("Weaker settlings yield to stronger ones")
     func yieldOrder() {
         #expect(MenuBarItemManager.settlingYields(incoming: .preflight, to: .event))
