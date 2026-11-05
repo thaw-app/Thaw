@@ -9,6 +9,7 @@ import Carbon.HIToolbox
 import Cocoa
 import Combine
 import MenuBarModel
+import ThawUI
 
 /// Registers global hotkeys with Carbon and routes IDs to closures through one shared dispatcher handler.
 final class HotkeyRegistry {

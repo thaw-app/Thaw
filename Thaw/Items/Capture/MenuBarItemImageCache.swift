@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AsyncAlgorithms
 import Cocoa
 import Combine
 import MenuBarModel
@@ -71,7 +72,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     @ObservationIgnored var isConcealedPrewarmRunning = false
     /// When recapture last asked for a fresh inventory walk; see requestInventoryRefresh(reason:).
     @ObservationIgnored var lastInventoryRefreshRequest: ContinuousClock.Instant?
-    @ObservationIgnored var concealedPrewarmWaiters = [CheckedContinuation<Void, Never>]()
+    @ObservationIgnored var concealedPrewarmWaiters = ConcealedPrewarmWaiters()
 
     /// Shares one recapture pass among overlapping requests. Main actor only.
     @ObservationIgnored let recaptureCoalescer = RecaptureCoalescer()
@@ -333,16 +334,9 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             let itemCacheChangeSubject = PassthroughSubject<Void, Never>()
             let itemCacheTask = Task { @MainActor [weak self, itemManager = appState.itemManager] in
                 let changes = Observations { Self.captureInvalidationKey(itemManager.itemCache) }
-                var previous: CaptureInvalidationKey?
-                var isFirst = true
-                for await key in changes {
+                for await _ in changes.removeDuplicates().dropFirst() {
                     guard self != nil else { return }
-                    defer { isFirst = false }
-                    guard key != previous else { continue }
-                    previous = key
-                    if !isFirst {
-                        itemCacheChangeSubject.send(())
-                    }
+                    itemCacheChangeSubject.send(())
                 }
             }
             AnyCancellable { itemCacheTask.cancel() }

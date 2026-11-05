@@ -9,6 +9,7 @@ import CoreGraphics
 import Foundation
 import Testing
 @testable import Thaw
+import ThawUI
 
 @MainActor
 @Suite("Clock bridge cover style")
@@ -19,6 +20,7 @@ struct RevealCoverStyleTests {
         background: MenuBarBackgroundKind = .none,
         tint: MenuBarTintKind = .noTint,
         glass: MenuBarGlassStyle = .regular,
+        tinted: Bool = false,
         colored: Bool = false
     ) -> MenuBarAppearancePartialConfiguration {
         var config = MenuBarAppearancePartialConfiguration.defaultConfiguration
@@ -29,6 +31,7 @@ struct RevealCoverStyleTests {
         config.tintColor = red
         config.tintOpacity = 0.4
         config.tintGlassStyle = glass
+        config.tintGlassIsTinted = tinted
         config.tintGlassIsColored = colored
         return config
     }
@@ -67,15 +70,16 @@ struct RevealCoverStyleTests {
         #expect(adaptive.washes.isEmpty)
     }
 
-    @Test("Colored liquid glass frosts the wallpaper and adds its tint at the glass strength")
-    func coloredLiquidGlass() {
+    @Test("Tinted, colored glass frosts the wallpaper and adds its color at the glass strength")
+    func coloredTintedGlass() {
+        let config = configuration(tint: .glass, tinted: true, colored: true)
         let style = RevealCoverStyle.style(
-            for: configuration(tint: .glass, glass: .liquid, colored: true),
+            for: config,
             shapeKind: .full,
             adaptiveColor: nil
         )
         #expect(style.blursWallpaper)
-        #expect(style.washes == [.init(color: red, opacity: 0.4 * MenuBarGlassStyle.liquid.effectOpacity)])
+        #expect(style.washes == [.init(color: red, opacity: 0.4 * config.tintGlassFinish.effectOpacity)])
     }
 
     @Test("A gradient fill washes its average color, and an empty gradient washes nothing")
@@ -137,28 +141,17 @@ struct AccentColorFollowTests {
         #expect(synced.thawBarAppearance.backgroundUsesAccentColor)
     }
 
-    @Test("Glass that follows the system is Regular while Tinted and Clear while Clear")
-    func systemGlass() {
-        var config = MenuBarAppearancePartialConfiguration.defaultConfiguration
-        config.tintGlassStyle = .liquid
-        config.backgroundGlassStyle = .liquid
-        config.tintGlassFollowsSystem = true
-        #expect(config.withSystemGlass(tinted: true).tintGlassStyle == .regular)
-        #expect(config.withSystemGlass(tinted: false).tintGlassStyle == .clear)
-        #expect(config.withSystemGlass(tinted: true).backgroundGlassStyle == .liquid)
-    }
-
-    @Test("A saved look without the new keys decodes with accent off")
+    @Test("A saved look without the new keys decodes with accent and Tint off")
     func olderSavedLookDecodes() throws {
         let data = try JSONEncoder().encode(MenuBarAppearancePartialConfiguration.defaultConfiguration)
         var object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         object.removeValue(forKey: "backgroundUsesAccentColor")
         object.removeValue(forKey: "tintUsesAccentColor")
-        object.removeValue(forKey: "backgroundGlassFollowsSystem")
-        object.removeValue(forKey: "tintGlassFollowsSystem")
+        object.removeValue(forKey: "backgroundGlassIsTinted")
+        object.removeValue(forKey: "tintGlassIsTinted")
         let stripped = try JSONSerialization.data(withJSONObject: object)
         let decoded = try JSONDecoder().decode(MenuBarAppearancePartialConfiguration.self, from: stripped)
         #expect(!decoded.backgroundUsesAccentColor && !decoded.tintUsesAccentColor)
-        #expect(!decoded.backgroundGlassFollowsSystem && !decoded.tintGlassFollowsSystem)
+        #expect(!decoded.backgroundGlassIsTinted && !decoded.tintGlassIsTinted)
     }
 }

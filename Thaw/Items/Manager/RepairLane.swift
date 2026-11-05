@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import DequeModule
 import Foundation
 
 /// Makes the automatic repair passes follow one another.
@@ -50,7 +51,7 @@ final class RepairLane {
 
     private var holder: Hold?
     private var heldSince: ContinuousClock.Instant?
-    private var waiters: [Waiter] = [] // user work first, each kind in the order it asked
+    private var waiters: Deque<Waiter> = [] // user work first, each kind in the order it asked
     private var nextToken: UInt64 = 0
     private(set) var takeovers = 0
 

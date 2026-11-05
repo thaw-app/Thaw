@@ -77,13 +77,13 @@ macOS Settings URLs Thaw opens:
 | `x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility` | Accessibility settings    |
 | `x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture` | Screen Recording settings |
 
-## Settings URI (Automation)
+## Settings URI
 
 Read and write Thaw settings via `thaw://` URLs, gated by a security whitelist. Automation tools like Droppy use this to control Thaw settings.
 
 ### Security Model
 
-1. Feature toggle: Settings URI is disabled by default (enable in Settings → Automation)
+1. Feature toggle: Settings URI is disabled by default (enable in Settings → Privacy)
 2. Whitelist: only approved apps can modify settings
 3. First-time authorization: new apps trigger a confirmation dialog with app name and permissions. Apps can proactively request authorization via `thaw://authorize` without reading or writing settings
 4. Silent failures: unauthorized requests fail without user interruption
@@ -96,7 +96,7 @@ Read and write Thaw settings via `thaw://` URLs, gated by a security whitelist. 
 
 | Key                                       | Type | Description                                  |
 | ----------------------------------------- | ---- | -------------------------------------------- |
-| `autoRehide`                              | Bool | Auto-rehide hidden items after interval      |
+| `autoRehide`                              | Bool | Hide shown items again; `false` is Never in Hide items again |
 | `showOnClick`                             | Bool | Show hidden items when clicking the menu bar |
 | `showOnDoubleClick`                       | Bool | Show hidden items on double-click            |
 | `showOnHover`                             | Bool | Show hidden items on hover                   |
@@ -113,7 +113,7 @@ Read and write Thaw settings via `thaw://` URLs, gated by a security whitelist. 
 | `customIceIconIsTemplate`                 | Bool | Custom icon renders as template              |
 | `showIceIcon`                             | Bool | Show the Thaw icon in menu bar               |
 | `hideDockIconWhenToggling`                | Bool | Hide Dock icon on menu-bar toggle; overflow uses Thaw Bar |
-| `iceBarLocationOnHotkey`                  | Bool | Thaw Bar appears at mouse location on hotkey     |
+| `iceBarLocationOnHotkey`                  | Bool | When opened by a shortcut: `true` is "Centered on the pointer", `false` is "Use Location" |
 | `enableMenuBarItemOverflow`                | Bool | Eject items that would fall behind the notch |
 | `useThawBarOnNotchOverflow`                | Bool | Send ejected overflow items to the Thaw Bar  |
 | `moveCursorToRevealedItem`                 | Bool | Move the cursor onto an item once revealed   |
@@ -125,7 +125,8 @@ Read and write Thaw settings via `thaw://` URLs, gated by a security whitelist. 
 
 | Key                      | Type | Range | Description |
 | ------------------------ | ---- | ----- | ----------- |
-| `rehideInterval`         | Double | 1-300 seconds | Time before auto-rehide (default: 15) |
+| `rehideInterval`         | Double | 1-300 seconds | The delay for After N seconds in Hide items again (default: 15) |
+| `tempShowInterval`       | Double | 0-30 seconds | Keep opened items in the menu bar for: how long an item opened from search or the Thaw Bar stays (default: 15) |
 | `showOnHoverDelay`       | Double | 0-5 seconds | Delay before hover reveals items (default: 0.2) |
 | `tooltipDelay`           | Double | 0-5 seconds | Delay before showing tooltips (default: 0.5) |
 | `iconRefreshInterval`    | Double | 0-1 seconds | Interval between icon refreshes in panels; `0` means Off; positive values snap to `1/n` seconds for integer `n` in 1–30 (default: 0.25 ≈ 4 fps) |
@@ -136,7 +137,10 @@ Values outside the valid range are clamped to the nearest boundary. `iconRefresh
 
 | Key            | Type | Valid Values | Description |
 | -------------- | ---- | ------------ | ----------- |
-| `rehideStrategy` | String/Int | `smart` (0), `timed` (1), `focusedApp`/`focused_app` (2) | Strategy for auto-rehiding items (default: smart) |
+| `rehideStrategy` | String/Int | `smart` (0), `timed` (1), `focusedApp`/`focused_app` (2) | Hide items again: When I click elsewhere (`smart`), After N seconds (`timed`) or When I switch apps (`focusedApp`) (default: smart) |
+| `settingsAppearance` | String/Int | `system` (3), `light` (0), `dark` (1), `black` (2) | How Settings and onboarding look. `system` follows macOS. Black is dark on pure black, for OLED displays |
+
+The older `blackSettingsBackground` boolean still works: `true` chooses Black, and `false` changes Black to Dark and leaves Light and Dark alone.
 
 #### Per-Display Settings
 
@@ -146,7 +150,7 @@ These settings affect specific displays based on context. The **Scope** column i
 | ------------------------ | ---- | ----- | ----------- |
 | `useIceBar`              | Bool | Active display only | Enable/disable Thaw Bar on the display with the active menu bar |
 | `useThawBarForAlwaysHidden` | Bool | All displays without IceBar | Open only the always-hidden section in the Thaw Bar, leaving hidden items to expand inline |
-| `iceBarLocation`         | String | All displays with IceBar enabled | Thaw Bar position: `dynamic`, `mousePointer`, `iceIcon`, `leftAligned`, or `rightAligned` |
+| `iceBarLocation`         | String | All displays with IceBar enabled | Where the Thaw Bar opens: `dynamic` (Pointer or Thaw icon), `mousePointer` (Under the pointer), `thawIcon` or `iceIcon` (Under the Thaw icon), `leftAligned` (Left edge) or `rightAligned` (Right edge). Numbers 0 to 4 work too |
 | `alwaysShowHiddenItems`  | Bool | All displays without IceBar | Show hidden items inline when IceBar is disabled |
 | `iceBarLayout`           | String | All displays with IceBar enabled | Thaw Bar layout: `horizontal`, `vertical`, or `grid` |
 | `gridColumns`            | Int | All displays with IceBar enabled | Maximum items per row in grid layout (2–10) |
@@ -334,7 +338,7 @@ The `bundleId` parameter is stripped/ignored in release builds. Remove it in pro
 
 Five operations let a launcher list, drive and arrange menu bar items and profiles. The launcher queries, ranks, and picks an identifier; Thaw resolves it, acts, and reports the outcome. They pass the same feature toggle and whitelist as the settings URLs, and take the same `callback`, `broadcast`, and `requestId` parameters as `thaw://get`.
 
-Floe (`com.thaw.floe`) is trusted without the authorization prompt and works while the Settings URI feature is off, provided it is signed by the same team as Thaw. Any other sender needs the feature enabled and an approved entry in Automation.
+Floe (`com.thaw.floe`) and Thaw's own modules (bundle IDs that start with Thaw's bundle ID followed by `.module.`) are trusted without the authorization prompt and work while the Settings URI feature is off, provided they are signed by the same team as Thaw. Any other sender needs the feature enabled and an approved app in Privacy.
 
 | URL | Parameters | Description |
 | --- | ---------- | ----------- |
@@ -476,6 +480,19 @@ Thaw checks every item before it moves any. If one is unknown, is one of Thaw's 
 
 A callback is a response, not a command. Any app can open your callback URL, so accept one only when its `requestId` and `operation` match a request you sent and are still waiting on, and never act on a callback beyond completing that request.
 
+### Showing One Item
+
+`thaw://reveal-item` shows one hidden item without opening its section. Pass exactly one of `item-id` (an `id` from `list-items`) or `bundle` (an app with a single item). The item hides again on its own after a short delay, the same way an item opened from the Thaw Bar does.
+
+With `hold=true` (only the literal `true` counts), the item stays shown until the same app sends `thaw://release-item` with the same `item-id` or `bundle`. A bundle in `release-item` is matched against the items that app holds. Several apps can hold one item; it hides once the last of them releases it. Clicking the item, or Thaw showing it for another reason, leaves it shown while it is held. Holds end when Thaw quits, and a module's holds end when the module stops running. The Triggers module uses this to show items while an app runs.
+
+Both URLs pass the same feature toggle and whitelist as the settings URLs, need macOS 27, and send no callback.
+
+```bash
+open "thaw://reveal-item?item-id=com.example.app%3AItem-0&hold=true"
+open "thaw://release-item?item-id=com.example.app%3AItem-0"
+```
+
 ### Raycast Settings Integration
 
 ```bash
@@ -491,7 +508,7 @@ open "thaw://toggle?key=${1}"
 
 ### Whitelist Management
 
-Manage authorized apps in **Settings → Automation**:
+Manage authorized apps in **Settings → Privacy**:
 
 - View all whitelisted applications with icons and names
 - Remove apps to revoke their access

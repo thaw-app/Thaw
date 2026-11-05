@@ -7,6 +7,7 @@
 
 import AppKit
 import CoreGraphics
+import DequeModule
 import Foundation
 
 @MainActor
@@ -36,7 +37,7 @@ final class NotificationCenterActivation {
     private let panelPresenting: () -> Bool
     private let report: (Outcome) -> Void
     private let now: () -> ContinuousClock.Instant
-    private var pending: [Request] = []
+    private var pending: Deque<Request> = []
     private var worker: Task<Void, Never>?
     private let restoreSlot = TaskSlot()
     private var restoreLease: (() -> Void)?

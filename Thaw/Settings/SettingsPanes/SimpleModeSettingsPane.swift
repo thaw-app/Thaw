@@ -32,7 +32,7 @@ struct SimpleModeSettingsPane: View {
             ThawSection {
                 LaunchAtLoginRow()
                 arrangementPicker
-                rehidePicker
+                RehideChoiceRow(settings: settings)
                 alwaysHiddenToggle
                 previewToggle
                 hiddenSectionHotkeyRow
@@ -86,28 +86,6 @@ struct SimpleModeSettingsPane: View {
     }
 
     // MARK: Settings
-
-    private var rehideChoice: SimpleRehideChoice {
-        SimpleRehideChoice(autoRehide: settings.autoRehide, strategy: settings.rehideStrategy, interval: settings.rehideInterval)
-    }
-
-    private var rehidePicker: some View {
-        ThawPicker("Hide items again", selection: Binding(
-            get: { rehideChoice },
-            set: { choice in
-                let saved = choice.settings(keepingInterval: settings.rehideInterval)
-                settings.autoRehide = saved.autoRehide
-                if let strategy = saved.strategy {
-                    settings.rehideStrategy = strategy
-                }
-                settings.rehideInterval = saved.interval
-            }
-        )) {
-            ForEach(SimpleRehideChoice.options(including: rehideChoice)) { choice in
-                Text(choice.title).tag(choice)
-            }
-        }
-    }
 
     /// The same choice as on Layout, so Simple Mode doesn't decide it for you.
     private var arrangementPicker: some View {

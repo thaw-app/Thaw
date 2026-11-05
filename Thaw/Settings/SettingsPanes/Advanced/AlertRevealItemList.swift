@@ -10,7 +10,7 @@ import MenuBarModel
 import SwiftUI
 import ThawUI
 
-/// Keyboard-accessible counterpart to the layout bar's "Reveal When Its Icon
+/// Keyboard-accessible counterpart to the layout bar's "Show When Its Icon
 /// Changes" menu entry.
 ///
 /// Lists only concealed items, since the watcher skips the visible section.

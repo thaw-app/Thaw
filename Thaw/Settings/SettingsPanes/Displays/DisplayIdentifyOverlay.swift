@@ -106,7 +106,7 @@ private struct DisplayIdentifyCard: View {
     @ScaledMetric(relativeTo: .largeTitle) private var numberSize: CGFloat = 56
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: ThawSpacing.compact) {
             if let number {
                 Text(verbatim: "\(number)")
                     .font(.system(size: numberSize, weight: .semibold).monospacedDigit())
@@ -119,7 +119,7 @@ private struct DisplayIdentifyCard: View {
                 .truncationMode(.middle)
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.vertical, ThawSpacing.gutter)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .thawGlass(.panel, in: RoundedRectangle(cornerRadius: ThawRadius.panel, style: .continuous))
         .accessibilityHidden(true)

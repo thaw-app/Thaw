@@ -225,9 +225,12 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     private static let restartWindow: Duration = .seconds(30)
     private static let restartQuitTimeout: Duration = .seconds(3)
     private let system: StandInSystem
+    /// The clock the restart window is measured on; tests pass one that only moves when they say.
+    private let now: () -> ContinuousClock.Instant
 
-    init(system: StandInSystem = StandInSystem()) {
+    init(system: StandInSystem = StandInSystem(), now: @escaping () -> ContinuousClock.Instant = { .now }) {
         self.system = system
+        self.now = now
     }
 
     func publish(item: SystemExtraItem, canonicalIdentifier: String, section: MenuBarSectionName) async throws {
@@ -324,13 +327,13 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
         guard let entry = watched[standIn], entry.app.processIdentifier == pid else { return }
         entry.stopWatching()
         watched[standIn] = nil
-        let now = ContinuousClock.now
-        let recent = (restarts[standIn] ?? []).filter { $0.duration(to: now) < Self.restartWindow }
+        let exitedAt = now()
+        let recent = (restarts[standIn] ?? []).filter { $0.duration(to: exitedAt) < Self.restartWindow }
         guard recent.count < Self.restartLimit else {
             log.error("\(standIn.rawValue) stand-in keeps exiting; not starting it again")
             return
         }
-        restarts[standIn] = recent + [now]
+        restarts[standIn] = recent + [exitedAt]
         log.info("\(standIn.rawValue) stand-in (pid \(pid)) exited; starting it again")
         Task { [weak self] in
             do {

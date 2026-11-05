@@ -55,7 +55,7 @@ struct ThawBarAppearanceBackground: View {
             adaptive.opacity(appearance.backgroundOpacity)
         case .glass:
             glass(
-                style: appearance.backgroundGlassStyle,
+                style: appearance.backgroundGlassFinish,
                 colored: appearance.backgroundGlassIsColored,
                 color: appearance.backgroundColor,
                 opacity: appearance.backgroundOpacity
@@ -89,7 +89,7 @@ struct ThawBarAppearanceBackground: View {
             }
         case .glass:
             glass(
-                style: appearance.tintGlassStyle,
+                style: appearance.tintGlassFinish,
                 colored: appearance.tintGlassIsColored,
                 color: appearance.tintColor,
                 opacity: appearance.tintOpacity
@@ -97,13 +97,13 @@ struct ThawBarAppearanceBackground: View {
         }
     }
 
-    private func glass(style: MenuBarGlassStyle, colored: Bool, color: CGColor, opacity: Double) -> some View {
+    private func glass(style: MenuBarGlassFinish, colored: Bool, color: CGColor, opacity: Double) -> some View {
         ThawBarGlassSurface(style: style, colored: colored, color: color, opacity: opacity, shape: shape)
     }
 }
 
 private struct ThawBarGlassSurface: NSViewRepresentable, Equatable {
-    let style: MenuBarGlassStyle
+    let style: MenuBarGlassFinish
     let colored: Bool
     let color: CGColor
     let opacity: Double

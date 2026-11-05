@@ -77,6 +77,6 @@ nonisolated struct NewIconArrivals {
 
     /// The bundle ID in front of an identifier's first colon.
     private static func app(of identifier: String) -> String? {
-        identifier.firstIndex(of: ":").map { String(identifier[..<$0]) }
+        MenuBarItemTag.persistentIdentifierParts(identifier)?.namespace
     }
 }

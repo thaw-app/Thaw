@@ -146,11 +146,8 @@ extension MenuBarItemManager {
             guard case let .itemNotMovable(_, refusal) = self else {
                 return "Try again. If this keeps happening, please file a bug report."
             }
-            // For every reason but one there is nothing to retry: the item is pinned by the
-            // system, and trying again will land in exactly the same place. The gate-dependent
-            // refusal is the exception, the user can lift it in Settings, but the suggestion
-            // deliberately stops short of promising the move will then succeed, because the
-            // assertion path behind the gate is experimental.
+            // Any other refusal means the system pinned the item, so a retry changes nothing. Settings can lift this one, but
+            // the suggestion doesn't promise the move: the assertion path behind the gate is experimental.
             guard refusal == .requiresExperimentalHiding else { return nil }
             return String(localized: "Turning on “Allow hiding macOS system items” in Layout settings may let this item move; macOS may still refuse it.")
         }
@@ -187,39 +184,22 @@ extension MenuBarItemManager {
             !MouseHelpers.lastScrollWheelOccurred(within: duration)
     }
 
-    /// Blocks until the user stops touching the pointer.
+    /// Waits until the user stops touching the pointer, with no bound.
     ///
-    /// The poll window and the poll interval are deliberately the same length:
-    /// checking more often than the window it inspects only re-reads history
-    /// that cannot have changed its answer yet.
+    /// - Throws: EventError.cannotComplete when the calling task is cancelled.
     nonisolated func waitForUserToPauseInput() async throws {
-        let pollWindow = Self.inputPauseThreshold
-        let poll = Task {
-            while !Task.isCancelled {
-                if hasUserPausedInput(for: Self.inputPauseThreshold) {
-                    return
-                }
-                try await Task.sleep(for: pollWindow)
-            }
-        }
-        do {
-            try await poll.value
-        } catch {
-            // Cancelled or interrupted; callers only ever need to know that
-            // the wait did not finish.
+        guard await waitForUserToPauseInput(timeout: nil) else {
             throw EventError.cannotComplete
         }
     }
 
-    /// Bounded variant of waitForUserToPauseInput() for paths that must
-    /// proceed even when the user never goes idle: a pane-edit pass the user
-    /// is actively waiting on cannot stall behind a hand that never stops
-    /// moving. Past the bound the warp happens anyway: briefly taking a moving
-    /// cursor is better than hanging the user's edit.
+    /// Waits until the user stops touching the pointer, polling every 20 ms.
+    /// A bound lets an edit the user is waiting on proceed past a hand that never stops moving.
     ///
     /// - Parameter timeout: How long to wait for the pause before giving up;
     ///   nil waits unboundedly (cancellation ends the wait).
-    /// - Returns: Whether the user actually paused within the bound.
+    /// - Returns: Whether the user actually paused within the bound; false
+    ///   when the calling task is cancelled.
     nonisolated func waitForUserToPauseInput(timeout: Duration?) async -> Bool {
         let deadline = timeout.map { ContinuousClock.now + $0 }
         while !Task.isCancelled {
@@ -604,26 +584,21 @@ extension MenuBarItemManager {
 
         // Every repetition gets the full timeout: a run of count events must
         // not be cut short by the budget meant for a single one.
-        let timeoutTask = Task(timeout: timeout * count) {
-            var eventTaps = [EventTap]()
-            defer {
-                for tap in eventTaps {
-                    tap.invalidate()
+        let timeoutTask = Task {
+            try await Task<Void, any Error>.withTimeout(timeout * count) {
+                var eventTaps = [EventTap]()
+                defer { eventTaps.forEach { $0.invalidate() } }
+                try await withTaskCancellationHandler {
+                    try await self.awaitEventContinuation(
+                        context: context,
+                        state: state,
+                        eventTaps: &eventTaps
+                    )
+                } onCancel: {
+                    state.innerTaskHolder.withLock { $0 }?.cancel()
+                    // Settle here too: cancelling an inner task that already finished wakes nobody.
+                    state.outcome.settle(.failure(CancellationError()))
                 }
-            }
-            try await withTaskCancellationHandler {
-                try await awaitEventContinuation(
-                    context: context,
-                    state: state,
-                    eventTaps: &eventTaps
-                )
-            } onCancel: {
-                state.innerTaskHolder.withLock { $0 }?.cancel()
-                // Settle here as well. Cancellation routinely arrives after the
-                // inner task has already finished, and cancelling a task that
-                // is already done wakes nobody. Settling before the body has
-                // registered is fine: the result waits for it.
-                state.outcome.settle(.failure(CancellationError()))
             }
         }
 

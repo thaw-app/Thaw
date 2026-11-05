@@ -192,6 +192,10 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
         (prefix: "com.thermalforge.app", suffix: ""),
         // MacThrottle's single status item displays a live temperature.
         (prefix: "com.macthrottle.app", suffix: ""),
+        // WeChat's single status item shows its unread count as the whole title.
+        (prefix: "com.tencent.xinWeChat", suffix: ""),
+        // QQ's single status item shows either Item-0 or an unread badge such as 99+.
+        (prefix: "com.tencent.qq", suffix: ""),
     ]
 
     /// Whether bundleID belongs to an app whose status-item titles are live
@@ -622,14 +626,10 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     }
 
     public static func canonicalPersistentIdentifier(_ identifier: String) -> String {
-        // An identifier is namespace:title[:instance], and a bundle ID never
-        // contains a colon, so the first one separates the namespace.
-        guard let separator = identifier.firstIndex(of: ":") else {
+        guard let (bundleID, suffix) = persistentIdentifierParts(identifier) else {
             return identifier
         }
-        let bundleID = String(identifier[..<separator])
         let prefix = "\(bundleID):"
-        let suffix = String(identifier[identifier.index(after: separator)...])
         // The first number belongs to AppKit's title, not to our instance index.
         if let match = suffix.wholeMatch(of: /(_NS:\d+)(?::(\d+))?/),
            let title = migratedAppKitPlaceholderTitle(bundleID: bundleID, title: String(match.1))

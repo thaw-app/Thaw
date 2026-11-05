@@ -77,3 +77,27 @@ struct AbandoningTimeoutTests {
         #expect(ContinuousClock.now - start < .seconds(2))
     }
 }
+
+@Suite("Task timeout", .timeLimit(.minutes(1)))
+struct TaskTimeoutTests {
+    @Test func valueBeforeTimeoutIsReturned() async throws {
+        let value = try await Task<Int, any Error>.withTimeout(.seconds(30)) { 42 }
+        #expect(value == 42)
+    }
+
+    @Test func deadlineThrowsTimeout() async {
+        await #expect(throws: TaskTimeoutError.self) {
+            try await Task<Int, any Error>.withTimeout(.milliseconds(20)) {
+                try await Task.sleep(for: .seconds(30))
+                return 1
+            }
+        }
+    }
+
+    @Test func operationErrorPassesThrough() async {
+        struct Failure: Error {}
+        await #expect(throws: Failure.self) {
+            try await Task<Int, any Error>.withTimeout(.seconds(30)) { throw Failure() }
+        }
+    }
+}

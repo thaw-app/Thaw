@@ -40,18 +40,8 @@ nonisolated enum AXGeometryCatalog {
         attributes: AXHelpers.MenuBarChildAttributes,
         descendants: [AXHelpers.MenuBarChildAttributes]
     ) -> String? {
-        func nonEmpty(_ value: String?) -> String? {
-            value.flatMap { $0.isEmpty ? nil : $0 }
-        }
-        func stableIdentifier(_ value: String?) -> String? {
-            guard let value = nonEmpty(value), !value.contains(/^_NS:\d+$/) else { return nil }
-            return value
-        }
-        let identifier = stableIdentifier(attributes.identifier)
-            ?? descendants.compactMap { stableIdentifier($0.identifier) }.first
-        let description = nonEmpty(attributes.accessibilityDescription)
-            ?? descendants.compactMap { nonEmpty($0.accessibilityDescription) }.first
-        let title = nonEmpty(attributes.title)
+        // The inventory's rules, so a match finds the identity the inventory assigned.
+        let (identifier, description, title) = AXItemLabels(attributes: attributes, descendants: descendants).resolved
         if let legacyIdentity = MenuBarItemTag.legacySystemUIServerIdentity(
             namespace: namespace,
             identifier: identifier,

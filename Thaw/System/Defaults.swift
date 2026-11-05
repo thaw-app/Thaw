@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import ThawUI
 
 /// Typed access to the app's UserDefaults domain.
 ///
@@ -120,7 +121,7 @@ nonisolated enum Defaults {
             .customThawIconIsTemplate: DefaultValue.customThawIconIsTemplate,
             .simpleMode: DefaultValue.simpleMode,
             .showSettingDescriptions: DefaultValue.showSettingDescriptions,
-            .blackSettingsBackground: DefaultValue.blackSettingsBackground,
+            // .settingsAppearance: unregistered, so its first read can tell it is unset and migrate.
             .simpleModeShowsPreview: DefaultValue.simpleModeShowsPreview,
             .lockThawBarPosition: DefaultValue.lockThawBarPosition,
             .openHiddenItemsInMenuBar: DefaultValue.openHiddenItemsInMenuBar,
@@ -224,7 +225,6 @@ extension Defaults {
         static let customThawIconIsTemplate = false
         static let simpleMode = false
         static let showSettingDescriptions = true
-        static let blackSettingsBackground = false
         static let simpleModeShowsPreview = true
         static let lockThawBarPosition = true
         static let openHiddenItemsInMenuBar = false
@@ -355,8 +355,10 @@ extension Defaults {
         case thawIcon = "IceIcon"
         case customThawIconIsTemplate = "CustomIceIconIsTemplate"
         case simpleMode = "SimpleMode"
+        case profilesEnabled = "ProfilesEnabled"
         case showSettingDescriptions = "ShowSettingDescriptions"
         case blackSettingsBackground = "BlackSettingsBackground"
+        case settingsAppearance = "SettingsAppearance"
         case simpleModeShowsPreview = "SimpleModeShowsPreview"
         case lastSettingsPane = "LastSettingsPane"
         case hiddenSidebarPanes = "HiddenSidebarPanes"
@@ -393,6 +395,8 @@ extension Defaults {
 
         case hotkeys = "Hotkeys"
         case profileHotkeys = "ProfileHotkeys"
+        /// Triggers saved before they moved to the Triggers module. Thaw only
+        /// checks whether any exist, to start that module switched on.
         case appRunningTriggers = "AppRunningTriggersV1"
         case menuBarItemHotkeys = "MenuBarItemHotkeys"
 
@@ -626,11 +630,18 @@ extension Defaults {
         case settingsURISigningIdentities = "SettingsURISigningIdentities"
         case settingsURICodeHashes = "SettingsURICodeHashes"
 
-        // MARK: Profile Hooks
+        // MARK: Profiles
 
+        case lastSettledProfileID = "LastSettledProfileID"
+
+        // MARK: Modules
+
+        case enabledModules = "EnabledModules"
+        /// Settings left from before their features became modules. Thaw only
+        /// checks whether they exist, to start each module switched on.
         case globalPreProfileHook = "GlobalPreProfileHook"
         case globalPostProfileHook = "GlobalPostProfileHook"
-        case lastSettledProfileID = "LastSettledProfileID"
         case lastActiveProfileID = "LastActiveProfileID"
+        case widgetIconPublished = "StatusIconPrototype.published"
     }
 }

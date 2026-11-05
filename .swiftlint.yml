@@ -3,18 +3,31 @@ included:
   - Thaw
   - packages/ThawCapture
   - packages/ThawCtl
-  - ThawUI
+  - packages/ThawAutomation
+  - packages/ThawModuleKit
+  - packages/ThawTriggers
+  - packages/ThawWidgets
 
 excluded:
   - packages/MenuBarModel/.build
   - packages/ThawCapture/.build
   - packages/ThawCtl/.build
-  - ThawUI/.build
+  - packages/ThawAutomation/.build
+  - packages/ThawModuleKit/.build
+  - packages/ThawTriggers/.build
+  - packages/ThawWidgets/.build
   - ThawTests
+  - packages/ThawAutomation/Tests
+  - packages/ThawModuleKit/Tests
+  - packages/ThawTriggers/Tests
+  - packages/ThawWidgets/Tests
   - packages/MenuBarModel/Package.swift
   - packages/ThawCapture/Package.swift
   - packages/ThawCtl/Package.swift
-  - ThawUI/Package.swift
+  - packages/ThawAutomation/Package.swift
+  - packages/ThawModuleKit/Package.swift
+  - packages/ThawTriggers/Package.swift
+  - packages/ThawWidgets/Package.swift
 
 disabled_rules:
   - function_parameter_count
@@ -86,7 +99,7 @@ file_header:
     //  SWIFTLINT_CURRENT_FILENAME
     //  Project: Thaw
     //
-    //  Copyright \(Thaw\) © 2026 Toni Förster
+    //  Copyright \(Thaw\) © 2026 (Toni Förster|René Jiménez|Thaw)
     //  Licensed under the GNU GPLv3
 
 modifier_order:

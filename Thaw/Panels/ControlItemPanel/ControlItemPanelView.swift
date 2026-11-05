@@ -83,7 +83,9 @@ struct ControlItemPanelView: View {
             Divider().padding(.vertical, ThawSpacing.hairline)
 
             group("Bar")
-            profileRow
+            if appState.profilesFeature.isOn {
+                profileRow
+            }
             swapBarToggle
 
             Divider().padding(.vertical, ThawSpacing.hairline)

@@ -40,15 +40,7 @@ nonisolated extension SearchIndex {
             title: "Widgets",
             descriptionText: nil,
             pane: .widgets,
-            keywords: ["widgets", "widget", "control center", "notification center", "glance", "icon builder", "custom icon", "combined icon", "arc", "ring", "dots", "sample readings"],
-            property: nil
-        ),
-        SearchEntry(
-            id: "pane.theLab",
-            title: "Experiments",
-            descriptionText: nil,
-            pane: .theLab,
-            keywords: ["lab", "experiments", "experimental", "alpha", "beta", "preview", "try"],
+            keywords: ["widgets", "widget", "glance", "custom icon", "combined icon", "battery", "wi-fi", "panel", "status menu"],
             property: nil
         ),
         SearchEntry(
@@ -75,7 +67,7 @@ nonisolated extension SearchIndex {
             title: "Spaces",
             descriptionText: nil,
             pane: .displays,
-            keywords: ["spaces", "space", "per-space", "desktop", "fullscreen", "mission control", "hide", "reveal", "strip"],
+            keywords: ["spaces", "space", "per-space", "desktop", "desktops", "fullscreen", "mission control", "hide", "reveal", "strip"],
             property: nil
         ),
         SearchEntry(
@@ -121,27 +113,43 @@ nonisolated extension SearchIndex {
             property: nil
         ),
         SearchEntry(
-            id: "pane.automation",
-            title: "Rules",
-            descriptionText: nil,
-            pane: .automation,
-            keywords: ["rules", "automation", "url", "scheme", "scripting", "xpc"],
+            id: "pane.scripts",
+            title: "Scripts",
+            descriptionText: String(localized: "Run scripts before and after a profile switches."),
+            pane: .scripts,
+            keywords: ["scripts", "scripting", "shell", "applescript", "hook", "automation", "profile switch"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "privacy.otherApps",
+            title: "Apps that change settings",
+            descriptionText: String(localized: "Apps you approve can change settings with thaw:// links."),
+            pane: .privacy,
+            keywords: ["url", "scheme", "thaw://", "other apps", "allow", "approve", "xpc"],
             property: nil
         ),
         SearchEntry(
             id: "pane.triggers",
             title: "Triggers",
             descriptionText: String(localized: "Show menu bar items while an app is running."),
-            pane: .automation,
-            keywords: ["trigger", "app running", "launch", "quit", "conditional", "show", "reveal"],
+            pane: .triggers,
+            keywords: ["trigger", "app running", "launch", "quit", "conditional", "show", "reveal", "rules", "automation"],
             property: nil
         ),
         SearchEntry(
             id: "pane.tools",
-            title: "Tools",
+            title: "Troubleshooting",
             descriptionText: nil,
             pane: .tools,
             keywords: ["tools", "diagnostics", "logging", "logs", "reset", "cache", "permissions", "control center", "troubleshoot"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "pane.modules",
+            title: "Extras",
+            descriptionText: "Optional parts of Thaw that run as their own apps.",
+            pane: .modules,
+            keywords: ["extras", "module", "modules", "extension", "add-on", "plugin", "automation", "scripts", "optional"],
             property: nil
         ),
         SearchEntry(

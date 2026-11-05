@@ -119,3 +119,36 @@ struct SettingsURIBuiltInTrustTests {
         }
     }
 }
+
+@MainActor
+@Suite("Module senders")
+struct ModuleSenderTrustTests {
+    @Test("Thaw's own modules are built-in senders when signed by the same team")
+    func modulesAreBuiltIn() {
+        #expect(SettingsURIHandler.isBuiltInTrusted(
+            bundleId: "com.stonerl.Thaw.module.triggers",
+            senderTeamID: "TEAM",
+            ownTeamID: "TEAM",
+            ownBundleID: "com.stonerl.Thaw"
+        ))
+        #expect(!SettingsURIHandler.isBuiltInTrusted(
+            bundleId: "com.stonerl.Thaw.module.triggers",
+            senderTeamID: "OTHER",
+            ownTeamID: "TEAM",
+            ownBundleID: "com.stonerl.Thaw"
+        ))
+    }
+
+    @Test(
+        "Only an app named after this Thaw's bundle ID counts as its module",
+        arguments: ["com.stonerl.Thaw.debug.module.triggers", "com.stonerl.Thaw.module.", "com.stonerl.Thawmodule.x", "com.other.module.triggers"]
+    )
+    func otherBundlesAreNotModules(bundleId: String) {
+        #expect(!SettingsURIHandler.isBuiltInTrusted(
+            bundleId: bundleId,
+            senderTeamID: "TEAM",
+            ownTeamID: "TEAM",
+            ownBundleID: "com.stonerl.Thaw"
+        ))
+    }
+}

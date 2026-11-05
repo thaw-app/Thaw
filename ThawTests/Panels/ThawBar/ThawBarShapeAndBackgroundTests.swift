@@ -131,6 +131,7 @@ struct ThawBarShapeAndBackgroundTests {
         background: MenuBarBackgroundKind,
         tint: MenuBarTintKind,
         glass: MenuBarGlassStyle = .regular,
+        tinted: Bool = false,
         border: Bool = false
     ) -> ResolvedThawBarAppearance {
         var fill = MenuBarAppearancePartialConfiguration.defaultConfiguration
@@ -142,6 +143,8 @@ struct ThawBarShapeAndBackgroundTests {
         fill.tintColor = CGColor(red: 0.9, green: 0.2, blue: 0.1, alpha: 1)
         fill.backgroundGlassStyle = glass
         fill.tintGlassStyle = glass
+        fill.backgroundGlassIsTinted = tinted
+        fill.tintGlassIsTinted = tinted
         fill.backgroundHasBorder = border
         return ResolvedThawBarAppearance(hasRoundedShape: true, fillConfiguration: fill)
     }
@@ -180,11 +183,11 @@ struct ThawBarShapeAndBackgroundTests {
         #expect(withPalette != drawn[4], "the palette replaces the plain adaptive colour")
     }
 
-    @Test("Glass backgrounds and tints lay out in both glass styles, and a border is stroked")
+    @Test("Glass backgrounds and tints lay out with and without Tint, and a border is stroked")
     func glassAndBorder() throws {
-        for style in [MenuBarGlassStyle.regular, .liquid] {
-            #expect(try !render(appearance(background: .glass, tint: .noTint, glass: style)).isEmpty)
-            #expect(try !render(appearance(background: .none, tint: .glass, glass: style)).isEmpty)
+        for tinted in [false, true] {
+            #expect(try !render(appearance(background: .glass, tint: .noTint, tinted: tinted)).isEmpty)
+            #expect(try !render(appearance(background: .none, tint: .glass, tinted: tinted)).isEmpty)
         }
         let plain = try render(appearance(background: .solid, tint: .noTint))
         let bordered = try render(appearance(background: .solid, tint: .noTint, border: true))

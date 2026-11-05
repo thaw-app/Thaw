@@ -264,11 +264,13 @@ struct SwapBarView: View {
                 .frame(height: 18)
                 .padding(.horizontal, ThawSpacing.tight)
 
-            profileMenu
+            if appState.profilesFeature.isOn {
+                profileMenu
 
-            Divider()
-                .frame(height: 18)
-                .padding(.horizontal, ThawSpacing.tight)
+                Divider()
+                    .frame(height: 18)
+                    .padding(.horizontal, ThawSpacing.tight)
+            }
 
             closeButton
         }

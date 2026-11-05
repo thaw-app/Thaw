@@ -8,6 +8,7 @@
 import AppKit
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// The show-on-click guard's swallow and disarm rules, without a live event tap.
 @Suite("Show-on-click guard")

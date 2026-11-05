@@ -88,12 +88,11 @@ final class GeneralSettings {
         }
     }
 
-    /// A Boolean value that indicates whether the settings window draws its
-    /// panes on pure black, for OLED displays.
-    var blackSettingsBackground = Defaults.DefaultValue.blackSettingsBackground {
+    /// System, Light, Dark or Black for Thaw's own windows.
+    var settingsAppearance = SettingsAppearance.system {
         didSet {
-            guard oldValue != blackSettingsBackground else { return }
-            Defaults.set(blackSettingsBackground, forKey: .blackSettingsBackground)
+            guard oldValue != settingsAppearance else { return }
+            Defaults.set(settingsAppearance.rawValue, forKey: .settingsAppearance)
         }
     }
 
@@ -276,7 +275,7 @@ final class GeneralSettings {
         Defaults.ifPresent(key: .customThawIconIsTemplate, assign: &customThawIconIsTemplate)
         Defaults.ifPresent(key: .simpleMode, assign: &simpleMode)
         Defaults.ifPresent(key: .showSettingDescriptions, assign: &showSettingDescriptions)
-        Defaults.ifPresent(key: .blackSettingsBackground, assign: &blackSettingsBackground)
+        settingsAppearance = SettingsAppearance.stored()
         Defaults.ifPresent(key: .simpleModeShowsPreview, assign: &simpleModeShowsPreview)
         Defaults.ifPresent(key: .lockThawBarPosition, assign: &lockThawBarPosition)
         Defaults.ifPresent(key: .openHiddenItemsInMenuBar, assign: &openHiddenItemsInMenuBar)
@@ -351,8 +350,6 @@ final class GeneralSettings {
                 simpleMode = boolValue
             case "showSettingDescriptions" where showSettingDescriptions != boolValue:
                 showSettingDescriptions = boolValue
-            case "blackSettingsBackground" where blackSettingsBackground != boolValue:
-                blackSettingsBackground = boolValue
             case "lockThawBarPosition" where lockThawBarPosition != boolValue:
                 lockThawBarPosition = boolValue
             case "openHiddenItemsInMenuBar" where openHiddenItemsInMenuBar != boolValue:
@@ -394,6 +391,8 @@ final class GeneralSettings {
                rehideStrategy != strategy
             {
                 rehideStrategy = strategy
+            } else if key == "settingsAppearance", let appearance = SettingsAppearance(rawValue: rawEnumValue) {
+                settingsAppearance = appearance
             }
         }
     }

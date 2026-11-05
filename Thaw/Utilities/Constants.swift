@@ -60,14 +60,6 @@ nonisolated enum Constants {
     /// version 0, so version 2 welcomes them once.
     static let currentOnboardingVersion = 2
 
-    // MARK: - Thaw-owned menu bar identity
-
-    /// Whether a bundle identifier belongs to Thaw. The list lives in
-    /// ThawMenuBarIdentity so the app and the runtime kit agree.
-    static func isThawOwnedBundleIdentifier(_ bundleIdentifier: String?) -> Bool {
-        ThawMenuBarIdentity.owns(bundleIdentifier: bundleIdentifier)
-    }
-
     /// Tuned values for the macOS 27 MenuBarAgent/assertion implementation.
     /// Keeping them together makes capture and overlay behavior auditable as a
     /// single operating-system compatibility policy.

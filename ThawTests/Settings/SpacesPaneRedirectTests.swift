@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Spaces is a section of Displays & Spaces, so anything that opens Spaces lands there.
+/// Spaces is a section of Displays, so anything that opens Spaces lands there.
 @Suite("Spaces pane redirect", .serialized)
 @MainActor
 struct SpacesPaneRedirectTests {

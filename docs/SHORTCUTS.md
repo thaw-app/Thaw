@@ -10,15 +10,15 @@ Thaw ships with no shortcuts set. You choose the keys.
 
 | Action | Thaw 2 | Thaw 3 |
 |---|---|---|
-| Toggle the Hidden section | Yes | Yes |
-| Toggle the Always Hidden section | Yes | Yes |
+| Show or hide hidden items | Yes | Yes |
+| Show or hide Always Hidden items | Yes | Yes |
 | Search menu bar items | Yes | Yes |
 | Turn the Thaw Bar on or off | Yes | Yes |
-| Toggle application menus | Yes | Yes |
+| Hide or show app menus | Yes | Yes |
 | Apply a profile | Yes | Yes |
 | Open one item's menu | Yes | Yes |
 | Swap shown and hidden items | | Yes |
-| Toggle automatic rehiding | | Yes |
+| Turn "Hide items again" on or off | | Yes |
 | Toggle Zen Mode | | Yes |
 | Open an item by letter | | Yes |
 | Show Thaw Bar Only items | | Yes |

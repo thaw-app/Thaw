@@ -9,6 +9,7 @@ import Foundation
 import MenuBarModel
 import Testing
 @testable import Thaw
+import ThawModuleKit
 
 /// Saving, editing and exporting profiles on disk. Profiles live in a throwaway
 /// directory and settings in a throwaway suite, and nothing here applies a profile.
@@ -289,24 +290,6 @@ struct ProfileManagerStorageTests {
 
             try manager.updateAllProfilesGlobalConfiguration(config, propagateToDisplays: true)
             #expect(try manager.loadProfile(id: id).displayConfigurations["X"] == config)
-        }
-    }
-
-    @Test("Hooks are saved per phase, and clearing both drops the automation")
-    func profileHooks() throws {
-        try ProfileTestDirectory.withManager(seeding: ["A"]) { manager, _ in
-            let id = manager.profiles[0].id
-            #expect(manager.hooks(forProfileID: id).isEmpty)
-            #expect(manager.hooks(forProfileID: UUID()).isEmpty, "a missing profile has no hooks")
-
-            try manager.setHook(HookScript(path: "/bin/true"), phase: .pre, forProfileID: id)
-            try manager.setHook(HookScript(path: "/bin/echo", timeoutSeconds: 2), phase: .post, forProfileID: id)
-            #expect(manager.hooks(forProfileID: id).preHook?.path == "/bin/true")
-            #expect(manager.hooks(forProfileID: id).postHook?.timeoutSeconds == 2)
-
-            try manager.setHook(nil, phase: .pre, forProfileID: id)
-            try manager.setHook(nil, phase: .post, forProfileID: id)
-            #expect(try manager.loadProfile(id: id).automation == nil)
         }
     }
 

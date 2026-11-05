@@ -9,6 +9,9 @@ import Foundation
 import MenuBarModel
 
 extension MenuBarItemManager {
+    /// Keeps each app's last fresh scan between refreshes.
+    private static var freshVolatileTitleLearner = FreshVolatileTitleLearner()
+
     private static let learnedVolatileTitleOwnersKey = "MenuBarItemManager.learnedVolatileTitleOwners"
 
     /// Restore learned owners before canonicalization so known and saved-order identifiers load collapsed.
@@ -29,41 +32,24 @@ extension MenuBarItemManager {
     }
 
     /// Collapse retitled single-item owners so changing counts or dates do not trigger new-arrival sorting.
-    /// Siblings are ambiguous; transitions to or from Item-N indicate launch completion, not retitling.
-    func learnVolatileTitleOwners(previous: [MenuBarItem], current: inout [MenuBarItem]) {
-        let previousByOwner = Self.singleItemsByOwner(previous)
-        let currentByOwner = Self.singleItemsByOwner(current)
-        var learned = [String: MenuBarItem]()
-        for (bundleID, item) in currentByOwner {
-            guard !Self.isThawBundle(bundleID),
-                  let before = previousByOwner[bundleID],
-                  before.tag.title != item.tag.title,
-                  !before.tag.title.isEmpty,
-                  !item.tag.title.isEmpty,
-                  !MenuBarItemTag.isGenericItemTitle(before.tag.title),
-                  !MenuBarItemTag.isGenericItemTitle(item.tag.title),
-                  MenuBarItemTag.learnVolatileTitleOwner(bundleID)
-            else {
-                continue
-            }
-            learned[bundleID] = before
-        }
+    /// Takes complete fresh scans only: the cache keeps old titles, which look like extra items.
+    func learnVolatileTitleOwners(fresh: [MenuBarItem], current: inout [MenuBarItem]) {
+        let learned = Self.freshVolatileTitleLearner.observe(fresh)
+            .filter { !Self.isThawBundle($0) }
+            .filter(MenuBarItemTag.learnVolatileTitleOwner)
         guard !learned.isEmpty else { return }
 
-        MenuBarItemManager.diagLog.info("Learned retitling owners: \(learned.keys.sorted())")
+        MenuBarItemManager.diagLog.info("Learned retitling owners: \(learned.sorted())")
         UserDefaults.standard.set(
             MenuBarItemTag.learnedVolatileTitleOwners.sorted(),
             forKey: Self.learnedVolatileTitleOwnersKey
         )
         // Canonicalize known and current identities now so this walk does not report a new arrival.
-        for item in learned.values {
-            knownItemIdentifiers.insert(item.uniqueIdentifier)
-        }
         knownItemIdentifiers = Set(knownItemIdentifiers.map(MenuBarItemTag.canonicalPersistentIdentifier))
         persistKnownItemIdentifiers()
         persistSavedSectionOrder()
         for (index, item) in current.enumerated() {
-            guard case let .string(bundleID) = item.tag.namespace, learned[bundleID] != nil else { continue }
+            guard case let .string(bundleID) = item.tag.namespace, learned.contains(bundleID) else { continue }
             let tag = MenuBarItemTag(
                 namespace: item.tag.namespace,
                 title: MenuBarItemTag.canonicalTitle(namespace: item.tag.namespace, title: item.tag.title),
@@ -80,18 +66,5 @@ extension MenuBarItemManager {
                 isOnScreen: item.isOnScreen
             )
         }
-    }
-
-    private static func singleItemsByOwner(_ items: [MenuBarItem]) -> [String: MenuBarItem] {
-        var byOwner = [String: [MenuBarItem]]()
-        for item in items where !item.isControlItem && !item.isSystemClone && item.sourcePID != nil {
-            guard case let .string(bundleID) = item.tag.namespace,
-                  !MenuBarItemTag.hasCanonicalizableTitles(bundleID)
-            else {
-                continue
-            }
-            byOwner[bundleID, default: []].append(item)
-        }
-        return byOwner.compactMapValues { $0.count == 1 ? $0[0] : nil }
     }
 }

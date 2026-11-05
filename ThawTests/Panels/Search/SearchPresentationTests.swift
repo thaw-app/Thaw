@@ -21,13 +21,15 @@ struct SearchPresentationTests {
         #expect(SearchPresentation(rawValue: "spotlight") == nil)
     }
 
-    @Test("Each face names where it opens, and the names differ")
+    @Test("Each face has its own name and its own picker annotation")
     func localizedNamesDiffer() {
         let names = SearchPresentation.allCases.map { "\($0.localized)" }
         #expect(Set(names).count == 3)
+        let summaries = SearchPresentation.allCases.map { "\($0.summary)" }
+        #expect(Set(summaries).count == 3)
     }
 
-    @Test("Only the inspector remembers, previews, renames and manages items")
+    @Test("Only the inspector remembers its spot, previews items and highlights them in the menu bar")
     func inspectorOnlyTraits() {
         for presentation in SearchPresentation.allCases {
             let isInspector = presentation == .inspector
@@ -35,9 +37,6 @@ struct SearchPresentationTests {
             #expect(presentation.warmsCachesOnShow == isInspector)
             #expect(presentation.samplesMenuBarColor == isInspector)
             #expect(presentation.spotlightsSelection == isInspector)
-            #expect(presentation.allowsRename == isInspector)
-            #expect(presentation.allowsItemManagement == isInspector)
-            #expect(presentation.honorsKeepSearchToggle == isInspector)
         }
     }
 

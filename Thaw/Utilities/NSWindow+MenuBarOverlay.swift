@@ -38,7 +38,12 @@ extension NSWindow {
 extension NSPanel {
     /// Sits above the menu bar on every Space without stealing focus or appearing in Thaw's captures.
     /// absorbsClicks controls whether clicks pass through to the bar.
-    static func menuBarOverlay(opaque: Bool, absorbsClicks: Bool) -> NSPanel {
+    /// sharingType is set here because a window made .none stays hidden from capture.
+    static func menuBarOverlay(
+        opaque: Bool,
+        absorbsClicks: Bool,
+        sharingType: NSWindow.SharingType = .none
+    ) -> NSPanel {
         let panel = NSPanel(
             contentRect: .zero,
             styleMask: [.nonactivatingPanel, .borderless],
@@ -57,7 +62,7 @@ extension NSPanel {
         panel.hidesOnDeactivate = false
         panel.canHide = false
         panel.ignoresMouseEvents = !absorbsClicks
-        panel.sharingType = .none
+        panel.sharingType = sharingType
         return panel
     }
 }

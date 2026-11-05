@@ -50,9 +50,9 @@ struct HidingMethodTests {
         #expect(Set(methods.map { "\($0.explanation)" }).count == methods.count)
     }
 
-    @Test("Each explanation is two lines: what it does, then what it costs", arguments: HidingMethod.allCases)
-    func explanationHasTwoLines(method: HidingMethod) {
+    @Test("Each explanation is one line, with the costs left to the limitations popover", arguments: HidingMethod.allCases)
+    func explanationIsOneLine(method: HidingMethod) {
         let text = "\(method.explanation)"
-        #expect(text.contains("\\n") || text.contains("\n"))
+        #expect(!text.contains("\\n") && !text.contains("\n"))
     }
 }

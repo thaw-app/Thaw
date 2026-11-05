@@ -61,6 +61,14 @@ struct SystemModuleGlyphTests {
         #expect(fallback.tiffRepresentation != generic.tiffRepresentation)
     }
 
+    @Test("Search's row icon for a Bluetooth item is its own symbol, and nothing for an unknown module")
+    func searchIconUsesModuleSymbol() throws {
+        let icon = try #require(OverflowFallbackIcon.itemIcon(for: agentItem("com.apple.menuextra.bluetooth")))
+        let module = try #require(SystemModuleGlyph.image(forItemTitle: "com.apple.menuextra.bluetooth"))
+        #expect(icon.tiffRepresentation == module.tiffRepresentation)
+        #expect(OverflowFallbackIcon.itemIcon(for: agentItem("live-activity-pill-x")) == nil)
+    }
+
     @Test("A MenuBarAgent item that is no known module keeps the generic glyph")
     func unknownAgentItemKeepsGeneric() throws {
         let fallback = try #require(OverflowFallbackIcon.image(for: agentItem("live-activity-pill-x")))

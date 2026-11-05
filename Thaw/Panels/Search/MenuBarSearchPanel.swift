@@ -26,8 +26,8 @@ final class MenuBarSearchPanel: NSPanel {
     /// Must match the glass effect the hosted view draws.
     static let cornerRadius: CGFloat = ThawRadius.panel
 
-    /// Written only at the top of show(on:), so a preference flipped while
-    /// the panel is up cannot make close() save the wrong face's frame.
+    /// Written only by adopt(_:), so a preference flipped while the panel is
+    /// up cannot make close() save the wrong face's frame.
     private(set) var presentation: SearchPresentation = .inspector
 
     private weak var appState: AppState?
@@ -65,10 +65,9 @@ final class MenuBarSearchPanel: NSPanel {
     /// dismiss the panel from under it.
     private var isPresentingItemActions = false
 
-    /// Only the inspector's "Remember last search" toggle can keep the query;
-    /// the launcher always opens empty.
+    /// Every face has the action bar, so its "Remember last search" applies to all.
     private var keepsQuery: Bool {
-        presentation.honorsKeepSearchToggle && Defaults.bool(forKey: .rememberSearchQuery)
+        Defaults.bool(forKey: .rememberSearchQuery)
     }
 
     private lazy var outsideClickMonitor = EventMonitor.universal(for: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] event in
@@ -94,13 +93,12 @@ final class MenuBarSearchPanel: NSPanel {
             appState?.openWindow(.settings)
             return nil
         }
-        if keyCode == .e, presentation.allowsRename {
+        if keyCode == .e {
             beginRenamingSelection()
             return nil
         }
         // With no highlighted row these keys pass through.
         guard
-            presentation.allowsItemManagement,
             model.renameSession == nil,
             let appState,
             selectedItem != nil
@@ -300,12 +298,7 @@ final class MenuBarSearchPanel: NSPanel {
     /// A menu, not buttons, because group destinations have unknown length;
     /// it also matches the layout editor's right-click menu.
     func presentItemActions() {
-        guard
-            presentation.allowsItemManagement,
-            let appState,
-            let anchor = itemActionsAnchor,
-            let item = selectedItem
-        else {
+        guard let appState, let anchor = itemActionsAnchor, let item = selectedItem else {
             return
         }
 
@@ -321,11 +314,7 @@ final class MenuBarSearchPanel: NSPanel {
     /// ⌘1 to ⌘3. A disabled section's number does nothing rather than
     /// renumbering the others.
     func moveSelection(toDestinationAt index: Int) {
-        guard
-            presentation.allowsItemManagement,
-            let appState,
-            let item = selectedItem
-        else {
+        guard let appState, let item = selectedItem else {
             return
         }
         let destinations = MenuBarSearchItemActions.moveDestinations(appState: appState)
@@ -339,7 +328,6 @@ final class MenuBarSearchPanel: NSPanel {
 
     func beginRenamingSelection() {
         guard
-            presentation.allowsRename,
             case let .item(tag, windowID)? = model.selection,
             let item = cachedItem(withTag: tag, windowID: windowID)
         else {
@@ -369,6 +357,8 @@ final class MenuBarSearchPanel: NSPanel {
             names[item.uniqueIdentifier] = newName
         }
         Defaults.set(names, forKey: .menuBarItemCustomNames)
+        // The launchers rank by names captured with their inventory; rebuild it.
+        model.launcherCandidates = []
         // A Defaults write is not observed. Reassigning displayedItems is,
         // since the @Observable setter has no equality check, so rows re-render.
         // Routed through a local so it does not read as a typo'd x = x.
@@ -388,11 +378,7 @@ final class MenuBarSearchPanel: NSPanel {
             return
         }
 
-        // The one place the mode is adopted.
-        let mode = appState.settings.advanced.menuBarSearchPresentation
-        let modeChanged = mode != presentation
-        presentation = mode
-        updateMenuBarColorSampling()
+        let modeChanged = adopt(appState.settings.advanced.menuBarSearchPresentation)
 
         if !keepsQuery {
             model.searchText = ""
@@ -446,6 +432,14 @@ final class MenuBarSearchPanel: NSPanel {
             await appState.imageCache.recaptureIfWarranted()
             appState.imageCache.logCacheStatus("Search panel opened")
         }
+    }
+
+    /// The one place the mode is adopted, from show(on:); true when it changed.
+    func adopt(_ mode: SearchPresentation) -> Bool {
+        let changed = mode != presentation
+        presentation = mode
+        updateMenuBarColorSampling()
+        return changed
     }
 
     func toggle() {

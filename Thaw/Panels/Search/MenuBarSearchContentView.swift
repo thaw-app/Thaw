@@ -47,11 +47,11 @@ final class MenuBarSearchHostingView: NSHostingView<MenuBarSearchRootView> {
 
 // MARK: - Content
 
-/// The search interface itself: a query field, the matching rows, and, in the
-/// inspector presentation, a bar of actions for whichever row is highlighted.
+/// The search interface itself: a query field, the matching rows, and a bar
+/// of actions for whichever row is highlighted.
 ///
-/// One view for both surfaces. The row list, keyboard navigation, query field
-/// focus, recents and activation are shared; SearchPresentation decides the
+/// One view for every face. Rows, keyboard navigation, focus, recents, rename,
+/// the action bar and activation are shared; SearchPresentation decides the
 /// chrome and which row-building policy fills the list.
 private struct MenuBarSearchContentView: View {
     private typealias ListItem = SectionedListItem<MenuBarSearchModel.ItemID, MenuBarSearchListContent>
@@ -89,12 +89,7 @@ private struct MenuBarSearchContentView: View {
     var body: some View {
         chrome
             .environment(\.menuBarSearchPanel, panel)
-            .transaction { transaction in
-                if reduceMotion {
-                    transaction.animation = nil
-                    transaction.disablesAnimations = true
-                }
-            }
+            .disablesAnimations(when: reduceMotion)
             .onChange(of: appState.navigationState.isSearchPresented, initial: true) { _, isPresented in
                 // The panel keeps this view between showings, so onAppear runs once.
                 guard isPresented else { return }
@@ -126,8 +121,8 @@ private struct MenuBarSearchContentView: View {
     ///
     /// The inspector is a window: a glass panel with the field floating in a
     /// capsule above the list and an action bar below it. The launcher is a
-    /// slab, headline field, hairline, results, because everything else is
-    /// something to read on a surface you are about to dismiss.
+    /// slab, headline field, hairline, results, hairline, the same action bar,
+    /// so its rows can be renamed and moved without switching modes.
     @ViewBuilder
     private var chrome: some View {
         let panelShape = RoundedRectangle(cornerRadius: MenuBarSearchPanel.cornerRadius, style: .continuous)
@@ -151,6 +146,9 @@ private struct MenuBarSearchContentView: View {
                 Divider()
                     .opacity(0.4)
                 contentArea
+                Divider()
+                    .opacity(0.4)
+                bottomBar
             }
             .frame(width: presentation.contentSize.width, height: presentation.contentSize.height)
             .thawGlass(.panel, in: panelShape)
@@ -176,7 +174,7 @@ private struct MenuBarSearchContentView: View {
     private var queryFieldRow: some View {
         @Bindable var model = model
         let metrics = presentation.queryFieldMetrics
-        let prompt = self.prompt
+        let prompt = Text("Search menu bar items…")
 
         return HStack(spacing: ThawSpacing.row) {
             // Sized by the field's own text style, so it scales with the
@@ -217,16 +215,6 @@ private struct MenuBarSearchContentView: View {
                 .padding(.bottom, ThawSpacing.row)
         } else {
             field
-        }
-    }
-
-    /// What the empty field asks for, which is the clearest statement of what
-    /// each surface is: one searches an inventory, the other opens a thing.
-    private var prompt: Text {
-        switch presentation {
-        case .inspector: Text("Search menu bar items…")
-        case .launcher: Text("Open a menu bar item…")
-        case .assisted: Text("Find a menu bar item…")
         }
     }
 
@@ -347,15 +335,15 @@ private struct MenuBarSearchContentView: View {
     private var refusalNotice: some View {
         if let refusal = appState.layoutFeedback.refusal {
             SettingsWarningPill(
-                title: LocalizedStringKey(refusal.title),
-                message: LocalizedStringKey(refusal.message),
+                title: LocalizedStringResource(String.LocalizationValue(refusal.title)),
+                message: LocalizedStringResource(String.LocalizationValue(refusal.message)),
                 systemImage: "exclamationmark.triangle.fill",
                 tint: .orange,
                 actionTitle: "Dismiss"
             ) {
                 appState.layoutFeedback.clear()
             }
-            .transition(reduceMotion ? .identity : .opacity)
+            .transition(.fade(reduceMotion: reduceMotion))
         }
     }
 
@@ -382,7 +370,7 @@ private struct MenuBarSearchContentView: View {
 
             if let selection = model.selection, let item = panel.cachedItem(for: selection) {
                 if model.renameSession == nil {
-                    ShortcutHintButton(title: String(localized: "Edit Name")) {
+                    ShortcutHintButton(title: String(localized: "Rename…")) {
                         panel.beginRenamingSelection()
                     } hint: {
                         KeyCapView(text: "⌘")
@@ -642,22 +630,6 @@ private struct MenuBarSearchContentView: View {
 
 /// A bottom bar action labeled with the key combination that also
 /// triggers it.
-private struct ShortcutHintButton<Hint: View>: View {
-    let title: String
-    let action: () -> Void
-    @ViewBuilder let hint: () -> Hint
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Text(title)
-                    .padding(.leading, 5)
-                hint()
-            }
-        }
-    }
-}
-
 /// An empty AppKit view behind the actions button, there so the panel has
 /// something to position the actions menu against.
 ///
@@ -678,16 +650,5 @@ private struct ItemActionsMenuAnchor: NSViewRepresentable {
         // subtree whenever the selection comes and goes, and the panel would
         // otherwise keep a reference to a view that is no longer on screen.
         panel.itemActionsAnchor = nsView
-    }
-}
-
-/// Compact, uniformly sized styling shared by every bottom bar button.
-private struct SearchPanelButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .frame(height: 22)
-            .frame(minWidth: 22)
-            .padding(3)
-            .opacity(configuration.isPressed ? 0.7 : 1.0)
     }
 }

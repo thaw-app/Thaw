@@ -29,4 +29,26 @@ struct SpacingApplyChoiceTests {
         #expect(SpacingApplyChoice.waitForRestart.confirms == nil)
         #expect(SpacingApplyChoice.waitForRestart.mode == .writeOnly)
     }
+
+    @Test("The restarting choices warn that unsaved work may be lost", arguments: [SpacingApplyChoice.askFirst, .relaunchNow])
+    func restartingNoticeWarns(choice: SpacingApplyChoice) {
+        let message = String(localized: choice.relaunchNotice.message)
+        #expect(message.contains("every app with a menu bar item"))
+        #expect(message.contains("unsaved work"))
+        #expect(message.contains("Connecting or disconnecting a display only saves"))
+    }
+
+    @Test("Restarting right away says it doesn't ask and can happen again with each profile")
+    func relaunchNowNoticeSaysItRepeats() {
+        let message = String(localized: SpacingApplyChoice.relaunchNow.relaunchNotice.message)
+        #expect(message.contains("doesn’t ask first"))
+        #expect(message.contains("each time a profile with different spacing is applied"))
+    }
+
+    @Test("Waiting promises no restart")
+    func waitingNoticeRestartsNothing() {
+        let notice = SpacingApplyChoice.waitForRestart.relaunchNotice
+        #expect(String(localized: notice.message).contains("without restarting any app"))
+        #expect(!String(localized: notice.message).contains("unsaved"))
+    }
 }

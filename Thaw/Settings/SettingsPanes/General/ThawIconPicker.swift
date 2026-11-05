@@ -19,7 +19,7 @@ struct ThawIconPicker: View {
     @State private var presentedError: LocalizedErrorWrapper?
 
     var body: some View {
-        let labelKey: LocalizedStringKey = "\(Constants.displayName) icon"
+        let labelKey: LocalizedStringResource = "\(Constants.displayName) icon"
 
         ThawMenu(labelKey) {
             ForEach(ControlItemImageSet.userSelectableThawIcons) { imageSet in

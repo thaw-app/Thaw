@@ -18,8 +18,9 @@ extension ProfileManager {
     /// the live layout. The apply's layout task is in place on return, so a settle that ends meanwhile
     /// finds it pending instead of applying the profile again.
     /// A display-driven switch writes the profile's spacing without relaunching apps, so docking never restarts them.
+    /// Every automatic path ends here, so this is where Profiles being off stops them.
     func switchAutomatically(to meta: ProfileMetadata, on appState: AppState, trigger: String, relaunchesApps: Bool = true) {
-        guard !keepsLiveLayoutAtLaunch(meta) else { return }
+        guard ProfilesFeature.isOnInDefaults, !keepsLiveLayoutAtLaunch(meta) else { return }
         diagLog.info("Auto-switching to profile \(meta.name) for \(trigger)")
         do {
             let profile = try loadProfile(id: meta.id)

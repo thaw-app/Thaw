@@ -82,7 +82,7 @@ struct MenuBarShapePicker: View {
         }
     }
 
-    private func margin(_ label: LocalizedStringKey, value: Binding<Double>, reversed: Bool = false) -> some View {
+    private func margin(_ label: LocalizedStringResource, value: Binding<Double>, reversed: Bool = false) -> some View {
         ThawSlider(label, value: value, in: 0 ... 15, step: 1, reversed: reversed, showsValue: true, unit: "pt")
     }
 }
@@ -106,7 +106,7 @@ nonisolated enum MenuBarShapeRoundness {
 
 /// The shape kinds as tabs in the strip, each named with a symbol for its outline.
 extension MenuBarShapeKind: ThawTab {
-    var title: LocalizedStringKey {
+    var title: LocalizedStringResource {
         localized
     }
 

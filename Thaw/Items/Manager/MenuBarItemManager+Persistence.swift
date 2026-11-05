@@ -202,10 +202,9 @@ extension MenuBarItemManager {
         var removed: [String] = []
         savedSectionOrder = savedSectionOrder.mapValues { identifiers in
             identifiers.filter { identifier in
-                guard let separator = identifier.firstIndex(of: ":") else {
+                guard let title = MenuBarItemTag.persistentIdentifierParts(identifier)?.title else {
                     return true
                 }
-                let title = identifier[identifier.index(after: separator)...]
                 if title.contains(/^_NS:\d+$/) {
                     removed.append(identifier)
                     return false

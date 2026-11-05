@@ -9,6 +9,7 @@ import AppKit
 import MenuBarModel
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// A drag of the selection as the destination sees it, at a fixed spot in the window.
 @MainActor

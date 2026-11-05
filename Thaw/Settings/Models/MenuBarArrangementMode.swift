@@ -20,14 +20,14 @@ nonisolated enum MenuBarArrangementMode: Int, CaseIterable, Identifiable {
         rawValue
     }
 
-    var localized: LocalizedStringKey {
+    var localized: LocalizedStringResource {
         switch self {
         case .automatic: "Automatic"
         case .manual: "Manual"
         }
     }
 
-    var explanation: LocalizedStringKey {
+    var explanation: LocalizedStringResource {
         switch self {
         case .automatic:
             "Thaw keeps items in the order you set in Layout. To move another app’s item it sometimes has to drag it for you, and your mouse is briefly unavailable while it does."

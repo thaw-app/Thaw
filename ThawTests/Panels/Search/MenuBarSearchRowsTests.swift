@@ -79,6 +79,23 @@ struct MenuBarSearchRowsTests {
         #expect(plain != renaming)
     }
 
+    @Test("Launcher and assisted rows swap their name for a rename field while being renamed")
+    func paletteRowsRename() throws {
+        let world = World()
+        let alpha = World.item("Alpha")
+        world.seat([alpha])
+        let panel = MenuBarSearchPanel()
+        panel.performSetup(with: world.appState, displayInvalidations: PassthroughSubject<Void, Never>())
+        let model = panel.model
+        for row in [MenuBarSearchListContent.launcherItem(alpha, ownerName: nil), .assistedItem(alpha, ownerName: nil)] {
+            model.renameSession = nil
+            let (plain, _) = try render(row, world: world, model: model, panel: panel)
+            model.renameSession = .init(tag: alpha.tag, windowID: alpha.windowID, draft: "Draft name")
+            let (renaming, _) = try render(row, world: world, model: model, panel: panel)
+            #expect(plain != renaming)
+        }
+    }
+
     @Test("Detaching or hiding the panel leaves no sampled colour, and a display change clears it")
     func attachAndDetach() {
         let model = MenuBarSearchModel()

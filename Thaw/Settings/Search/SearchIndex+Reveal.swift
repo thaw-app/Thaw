@@ -51,17 +51,20 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "general.autoRehide",
-            title: "Automatically rehide",
-            descriptionText: nil,
+            title: "Hide items again",
+            descriptionText: String(localized: "Choose when hidden items you showed go away again: never, when you click elsewhere, when you switch apps, or after a delay."),
             pane: .visibility,
             section: "After revealing",
-            keywords: ["rehide", "auto", "automatic", "hide"],
+            keywords: [
+                "rehide", "auto", "automatic", "automatically rehide", "hide", "never", "click elsewhere",
+                "switch apps", "focus", "timed", "delay", "seconds", "minute", "strategy", "interval",
+            ],
             property: .general("autoRehide")
         ),
         SearchEntry(
             id: "general.tempShowInterval",
-            title: "Hide again after",
-            descriptionText: String(localized: "How long a hidden menu bar item you open from search or the Thaw Bar stays in the menu bar."),
+            title: "Keep opened items in the menu bar for",
+            descriptionText: String(localized: "How long a hidden menu bar item you open from search or the Thaw Bar stays in the menu bar before it hides again."),
             pane: .visibility,
             section: "After revealing",
             keywords: ["temp", "temporary", "temporarily shown", "show", "delay", "seconds", "hide again"],

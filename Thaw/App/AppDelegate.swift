@@ -9,6 +9,7 @@ import MenuBarModel
 import PlatformRuntimeKit
 import SwiftUI
 import ThawAXCore
+import ThawUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -19,6 +20,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var terminationTimeoutTask: Task<Void, Never>?
     /// Per-item descenders; inert unless the setting is turned on.
     private let notchPanelController = NotchPanelController()
+    /// Items modules keep shown with thaw://reveal-item?hold=true; a module's
+    /// holds go when it stops running.
+    private lazy var heldItemReveals: HeldItemReveals = {
+        let holds = HeldItemReveals(
+            reveal: { [unowned self] in appState.menuBarManager.sectionController.revealItemTemporarily($0) },
+            conceal: { [unowned self] in appState.menuBarManager.sectionController.concealTemporarilyRevealedItem($0) }
+        )
+        appState.moduleHost.onModuleQuit = { [weak holds] in holds?.releaseAll(for: $0) }
+        holds.makeCurrent()
+        return holds
+    }()
 
     #if DEBUG
         /// Check both Xcode flags because previews may use either the preview or playground environment.
@@ -32,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillFinishLaunching(_: Notification) {
         LiveApp.register(self)
+        ThawHUD.menuBarHeight = { $0.getMenuBarHeightEstimate() }
         #if DEBUG
             // Don't perform setup if running as a preview.
             if isRunningForPreviews {
@@ -171,7 +184,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isPreparingForTermination = true
         hasRepliedToTerminationRequest = false
         appState.diagLog.info("Application asked to terminate \(QuitRequestSource.current()) - restoring blocked items asynchronously")
-        appState.appRunningTriggers.stop()
 
         Task { @MainActor in
             _ = await appState.itemManager.restoreBlockedItemsToVisible()
@@ -217,6 +229,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             appState.menuBarManager.nativeAppHidingExperiment.prepareForTermination()
         }
         appState.menuBarManager.systemExtraTakeover.prepareForTermination()
+        appState.moduleHost.stopAll()
         // Balance the layout-table security scope before exit.
         MenuBarLayoutTableAccess.shared.release()
     }
@@ -351,8 +364,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             handleToggleRequest(key: key, displayUUID: displayUUID, sender: identity.bundleIdentifier)
         case let .get(query):
             handleGetRequest(query, sender: identity)
-        case let .revealItem(bundle, itemID):
-            handleRevealItemRequest(bundle: bundle, itemID: itemID, sender: identity.bundleIdentifier)
+        case let .revealItem(bundle, itemID, hold):
+            handleRevealItemRequest(bundle: bundle, itemID: itemID, hold: hold, sender: identity.bundleIdentifier)
+        case let .releaseItem(bundle, itemID):
+            handleReleaseItemRequest(bundle: bundle, itemID: itemID, sender: identity.bundleIdentifier)
         case let .launcher(operation, query):
             handleLauncherRequest(LauncherURIRequest(operation: operation, query: query), sender: identity)
         case let .proxyPress(bundle):
@@ -435,8 +450,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// thaw://reveal-item?bundle=X or ?item-id=Y reveals one item without its section.
-    /// Reconceals with the Thaw Bar click path's menu-open-aware delay.
-    private func handleRevealItemRequest(bundle: String?, itemID: String?, sender: String) {
+    /// Reconceals with the Thaw Bar click path's menu-open-aware delay, unless
+    /// hold=true asks to keep it shown until thaw://release-item.
+    private func handleRevealItemRequest(bundle: String?, itemID: String?, hold: Bool, sender: String) {
         let sectionController = appState.menuBarManager.sectionController
         guard sectionController.isOperational else {
             appState.diagLog.warning("Settings URI reveal-item: per-item reveal is unavailable on this OS")
@@ -452,9 +468,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        if hold {
+            heldItemReveals.hold(identifier, for: sender)
+            appState.diagLog.info("Settings URI reveal-item: holding \(identifier) for sender \(sender)")
+            return
+        }
         sectionController.revealItemTemporarily(identifier)
-        sectionController.scheduleTemporaryItemConceal(identifier)
+        sectionController.scheduleTemporaryItemConcealUnlessHeld(identifier)
         appState.diagLog.info("Settings URI reveal-item: revealed \(identifier) for sender \(sender)")
+    }
+
+    /// thaw://release-item?bundle=X or ?item-id=Y lets go of a hold; the item hides once nobody holds it.
+    /// A bundle matches every held item of that app, since its items may have changed since the hold.
+    private func handleReleaseItemRequest(bundle: String?, itemID: String?, sender: String) {
+        guard let identifier = SettingsURIHandler.resolveRevealItemIdentifier(
+            bundle: bundle,
+            itemID: itemID,
+            candidates: heldItemReveals.heldIdentifiers
+        ) else {
+            appState.diagLog.warning("Settings URI release-item: missing, ambiguous or not held bundle/item-id")
+            return
+        }
+        heldItemReveals.release(identifier, for: sender)
+        appState.diagLog.info("Settings URI release-item: released \(identifier) for sender \(sender)")
     }
 
     /// Handles the launcher operations, including get-appearance.

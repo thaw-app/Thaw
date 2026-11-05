@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import MenuBarModel
 import SwiftUI
 import ThawUI
 
@@ -34,13 +35,7 @@ nonisolated enum ProfilePreviewModel {
     /// savedSectionOrder (older profiles) are bare bundle IDs without a
     /// colon; those parse as namespace-only with the bundle ID as title.
     static func split(_ uniqueIdentifier: String) -> (namespace: String, title: String) {
-        guard let colon = uniqueIdentifier.firstIndex(of: ":") else {
-            return (uniqueIdentifier, uniqueIdentifier)
-        }
-        return (
-            String(uniqueIdentifier[..<colon]),
-            String(uniqueIdentifier[uniqueIdentifier.index(after: colon)...])
-        )
+        MenuBarItemTag.persistentIdentifierParts(uniqueIdentifier) ?? (uniqueIdentifier, uniqueIdentifier)
     }
 
     /// Assembles the preview sections from a layout snapshot, preferring the
@@ -211,7 +206,7 @@ struct ProfilePreviewView: View {
                             .font(.caption2.weight(.medium).monospacedDigit())
                             .foregroundStyle(ThawInk.supporting)
                             .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
+                            .padding(.vertical, ThawSpacing.hairline)
                             .background(Capsule().fill(.quaternary))
                     }
                 }
@@ -238,10 +233,13 @@ struct ProfilePreviewView: View {
 
     private var settingsSummary: String {
         var parts: [String] = []
+        let general = profile.generalSettings
         parts.append(
-            profile.generalSettings.autoRehide
-                ? String(localized: "Auto-rehide on")
-                : String(localized: "Auto-rehide off")
+            SimpleRehideChoice(
+                autoRehide: general.autoRehide,
+                strategy: RehideStrategy(rawValue: general.rehideStrategyRawValue) ?? Defaults.DefaultValue.rehideStrategy,
+                interval: general.rehideInterval
+            ).summaryLine
         )
         parts.append(
             profile.generalSettings.useThawBar
@@ -274,7 +272,7 @@ private struct ItemIcon: View {
                 Image(systemName: "app.dashed")
                     .resizable()
                     .foregroundStyle(ThawInk.supporting)
-                    .padding(2)
+                    .padding(ThawSpacing.hairline)
             }
         }
         .frame(width: 18, height: 18)

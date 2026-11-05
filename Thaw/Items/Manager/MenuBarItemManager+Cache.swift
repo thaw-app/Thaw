@@ -714,7 +714,7 @@ extension MenuBarItemManager {
 
         // Partial scans can mistake alternating siblings for retitles; learn single-item owners only from complete, fresh inventory.
         if inventory.completed, inventory.hasFreshKnownInventory {
-            learnVolatileTitleOwners(previous: itemCache.managedItems, current: &items)
+            learnVolatileTitleOwners(fresh: inventory.freshItems, current: &items)
         }
 
         // Seed corrected source-PID identities for known windows so relocation does not treat them as arrivals.
@@ -751,21 +751,12 @@ extension MenuBarItemManager {
         // Strip clone IDs from the bridging list to match filtered items; the items-based fallback is already clone-free.
         let itemWindowIDs = (currentItemWindowIDs ?? items.reversed().map(\.windowID))
             .filter { !cloneWindowIDs.contains($0) }
-        if MenuBarBackendProvider.current.shouldRetainLastGoodCache(
+        let isPartialMerge = MenuBarBackendProvider.current.shouldRetainLastGoodCache(
             snapshotItems: items,
             previousCachedItems: itemCache.managedItems
-        ) {
-            if isInStartupSettling {
-                MenuBarItemManager.diagLog.debug(
-                    "cacheItemsRegardless: Thaw control items not yet in AX snapshot (startup settling); retaining last-good cache silently. Items remaining: \(items.count), windowIDs: \(itemWindowIDs.count)"
-                )
-            } else {
-                MenuBarItemManager.diagLog.warning(
-                    "cacheItemsRegardless: Thaw visible control item missing from AX snapshot; retaining last-good cache. Items remaining: \(items.count), windowIDs: \(itemWindowIDs.count)"
-                )
-                await MainActor.run { self.areControlItemsMissing = true }
-            }
-            return
+        )
+        if isPartialMerge {
+            guard await recoverPartialCacheSnapshot(&items, itemWindowIDs: itemWindowIDs) else { return }
         }
         cacheCycleState.cachedItemWindowIDs = itemWindowIDs
         cacheCycleState.cachedCloneWindowIDs = cloneWindowIDs
@@ -800,10 +791,10 @@ extension MenuBarItemManager {
             return
         }
 
-        // Partial inventory can populate the editor, but cannot authorize
-        // boundary repairs or replace saved order with retained geometry.
+        // Partial inventory, or one merged with cached items, can populate the editor, but cannot
+        // authorize boundary repairs or replace saved order with retained geometry.
         lastKnownControlItems = CacheDividers.live(controlItems)
-        if !inventory.hasFreshKnownInventory {
+        if isPartialMerge || !inventory.hasFreshKnownInventory {
             await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID, publicationGeneration: publicationGeneration, observationOnly: true)
             return
         }
@@ -881,6 +872,43 @@ extension MenuBarItemManager {
         await MainActor.run {
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: finished, cache now has \(self.itemCache.managedItems.count) managed items")
         }
+    }
+
+    /// Keeps the last-good cache during startup, then merges a partial AX
+    /// snapshot with cached items whose owners are still running.
+    private func recoverPartialCacheSnapshot(
+        _ items: inout [MenuBarItem],
+        itemWindowIDs: [CGWindowID]
+    ) async -> Bool {
+        if isInStartupSettling {
+            MenuBarItemManager.diagLog.debug(
+                "cacheItemsRegardless: Thaw control items not yet in AX snapshot (startup settling); retaining last-good cache silently. Items remaining: \(items.count), windowIDs: \(itemWindowIDs.count)"
+            )
+            return false
+        }
+
+        let snapshotItemCount = items.count
+        let runningApplications = NSWorkspace.shared.runningApplications.filter { !$0.isTerminated }
+        let mergedItems = MenuBarItemCache.mergingLiveCachedItems(
+            snapshotItems: items,
+            previousCachedItems: itemCache.managedItems,
+            processIDs: Set(runningApplications.map(\.processIdentifier)),
+            bundleIdentifiers: Set(runningApplications.compactMap(\.bundleIdentifier))
+        )
+        // Publish only when the cache gave back Thaw's icon; without it the pass can't place any item.
+        guard mergedItems.contains(where: { $0.tag == .visibleControlItem }) else {
+            MenuBarItemManager.diagLog.warning(
+                "cacheItemsRegardless: Thaw visible control item missing from AX snapshot; retaining last-good cache. Items remaining: \(snapshotItemCount), windowIDs: \(itemWindowIDs.count)"
+            )
+            await MainActor.run { self.areControlItemsMissing = true }
+            return false
+        }
+
+        items = mergedItems
+        MenuBarItemManager.diagLog.warning(
+            "cacheItemsRegardless: Thaw visible control item missing from AX snapshot; merging \(items.count - snapshotItemCount) still-running cached item(s) with fresh inventory. Items remaining: \(items.count), windowIDs: \(itemWindowIDs.count)"
+        )
+        return true
     }
 
     /// Gate expensive AX walks with a cheap window-list comparison, then require a stable identity difference before rebuilding.

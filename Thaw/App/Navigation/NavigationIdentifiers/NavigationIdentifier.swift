@@ -13,7 +13,7 @@ protocol NavigationIdentifier: CaseIterable, Hashable, Identifiable, RawRepresen
     var iconResource: IconResource { get }
 
     /// A localized description for the identifier's navigation destination.
-    var localized: LocalizedStringKey { get }
+    var localized: LocalizedStringResource { get }
 }
 
 extension NavigationIdentifier where ID == Int {
@@ -23,7 +23,7 @@ extension NavigationIdentifier where ID == Int {
 }
 
 extension NavigationIdentifier where RawValue == String {
-    var localized: LocalizedStringKey {
-        LocalizedStringKey(rawValue)
+    var localized: LocalizedStringResource {
+        LocalizedStringResource(String.LocalizationValue(rawValue))
     }
 }

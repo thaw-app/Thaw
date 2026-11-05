@@ -68,17 +68,6 @@ struct AppearanceValueTests {
         }
     }
 
-    @Test("Background glass that follows the system takes Regular while Tinted and Clear while Clear")
-    func backgroundSystemGlass() {
-        var config = MenuBarAppearancePartialConfiguration.defaultConfiguration
-        config.backgroundGlassStyle = .liquid
-        config.tintGlassStyle = .liquid
-        config.backgroundGlassFollowsSystem = true
-        #expect(config.withSystemGlass(tinted: true).backgroundGlassStyle == .regular)
-        #expect(config.withSystemGlass(tinted: false).backgroundGlassStyle == .clear)
-        #expect(config.withSystemGlass(tinted: false).tintGlassStyle == .liquid)
-    }
-
     @Test("A dynamic appearance picks the configuration for the current system appearance")
     func dynamicConfigurationFollowsTheSystem() {
         var config = MenuBarAppearanceConfigurationV2.defaultConfiguration
@@ -94,8 +83,8 @@ struct AppearanceValueTests {
 
     @Test("A string navigation identifier is labelled and identified by its raw value")
     func navigationIdentifierDefaults() {
-        #expect(ProbeDestination.alpha.localized == LocalizedStringKey("Alpha"))
-        #expect(ProbeDestination.beta.localized == LocalizedStringKey("Beta"))
+        #expect(String(localized: ProbeDestination.alpha.localized) == "Alpha")
+        #expect(String(localized: ProbeDestination.beta.localized) == "Beta")
         #expect(ProbeDestination.alpha.id == ProbeDestination.alpha.hashValue)
         #expect(ProbeDestination.alpha.id != ProbeDestination.beta.id)
     }

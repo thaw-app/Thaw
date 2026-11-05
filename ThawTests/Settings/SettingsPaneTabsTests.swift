@@ -32,10 +32,22 @@ struct SettingsPaneTabsTests {
     func thawBarOptions() {
         #expect(ThawBarTab(section: "Options for all displays") == .allDisplays)
         #expect(ThawBarTab(section: "Preview") == nil)
-        for id in ["general.lockThawBarPosition", "general.thawBarLocationOnHotkey", "general.openHiddenItemsInMenuBar"] {
+        for id in ["general.lockThawBarPosition", "general.openHiddenItemsInMenuBar"] {
             let section = SearchIndex.entries.first { $0.id == id }?.sectionText
             #expect(section.flatMap(ThawBarTab.init(section:)) == .allDisplays, "\(id) opens All Displays")
         }
+        // The shortcut choice sits beside Location on the Display tab, which a result opens by default.
+        let shortcut = SearchIndex.entries.first { $0.id == "general.thawBarLocationOnHotkey" }
+        #expect(shortcut?.pane == .thawBar)
+        #expect(shortcut?.sectionText == nil)
+    }
+
+    @Test("The template for new displays is searched on the Displays Template tab")
+    func templateTab() {
+        #expect(DisplaysTab(section: "Template for new displays") == .template)
+        let entry = SearchIndex.entries.first { $0.id == "displays.template" }
+        #expect(entry?.pane == .displays)
+        #expect(entry?.sectionText.flatMap(DisplaysTab.init(section:)) == .template)
     }
 
     @Test("Profile shortcuts are searched on Profiles, and the welcome screens are found on About")

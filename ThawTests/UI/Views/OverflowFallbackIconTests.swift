@@ -114,7 +114,7 @@ struct OverflowFallbackIconTests {
             appState: appState,
             capturedImage: nil
         )
-        guard case .appIcon = image else {
+        guard case .icon = image else {
             Issue.record("expected an app icon, got \(String(describing: image))")
             return
         }
@@ -137,7 +137,7 @@ struct OverflowFallbackIconTests {
             appState: appState,
             capturedImage: Self.capture(width: 20, filled: false)
         )
-        guard case let .appIcon(icon) = image else {
+        guard case let .icon(icon) = image else {
             Issue.record("expected the host icon, got \(String(describing: image))")
             return
         }
@@ -174,7 +174,7 @@ struct OverflowFallbackIconTests {
         #expect(!OverflowFallbackIcon.shouldPreferAppIcon(for: quit, in: .visible, appState: appState, hasUsableCapture: true))
 
         let image = try OverflowFallbackIcon.resolvedImage(for: item, section: .visible, appState: appState, capturedImage: Self.capture(width: 20))
-        guard case .appIcon = image else {
+        guard case .icon = image else {
             Issue.record("expected an app icon, got \(String(describing: image))")
             return
         }
@@ -257,24 +257,24 @@ struct MenuBarItemGlyphTests {
     func appIconSizing() {
         let icon = NSImage(size: CGSize(width: 18, height: 18))
         icon.isTemplate = true
-        let image = MenuBarItemDisplayImage.appIcon(icon)
+        let image = MenuBarItemDisplayImage.icon(icon)
         #expect(image.pointSize == CGSize(width: 18, height: 18))
         #expect(image.isTemplate)
         #expect(image.isReinkable)
-        let empty = MenuBarItemDisplayImage.appIcon(NSImage(size: .zero))
+        let empty = MenuBarItemDisplayImage.icon(NSImage(size: .zero))
         #expect(empty.targetSize(fittingHeight: 10) == .zero)
     }
 
     @Test("An app icon standing in for a capture is drawn no taller than a menu bar glyph, whatever the row")
     func appIconCappedToGlyphHeight() {
-        let image = MenuBarItemDisplayImage.appIcon(NSImage(size: CGSize(width: 32, height: 32)))
+        let image = MenuBarItemDisplayImage.icon(NSImage(size: CGSize(width: 32, height: 32)))
         let glyph = MenuBarItemDisplayImage.appIconHeight
         #expect(image.targetSize(fittingHeight: 37) == CGSize(width: glyph, height: glyph), "a notched menu bar's row height")
         #expect(image.targetSize(fittingHeight: nil) == CGSize(width: glyph, height: glyph))
         #expect(image.targetSize(fittingHeight: 0) == CGSize(width: glyph, height: glyph))
         #expect(image.targetSize(fittingHeight: 12) == CGSize(width: 12, height: 12), "a shorter row still wins")
 
-        let small = MenuBarItemDisplayImage.appIcon(NSImage(size: CGSize(width: 16, height: 16)))
+        let small = MenuBarItemDisplayImage.icon(NSImage(size: CGSize(width: 16, height: 16)))
         #expect(small.targetSize(fittingHeight: 37) == CGSize(width: 16, height: 16), "a smaller icon isn't scaled up")
     }
 
@@ -304,5 +304,14 @@ struct MenuBarItemGlyphTests {
         #expect(host.fittingSize == CGSize(width: 10, height: 8))
         let render = OffscreenRender(glyph, size: CGSize(width: 10, height: 8))
         #expect(try render.pixels().contains { $0 != 0 })
+    }
+
+    @Test("An item Thaw can't identify draws the placeholder tile at the length it's given")
+    func placeholderTileDraws() throws {
+        let tile = MenuBarItemPlaceholderIcon(length: 26)
+        let host = NSHostingView(rootView: tile)
+        host.layoutSubtreeIfNeeded()
+        #expect(host.fittingSize == CGSize(width: 26, height: 26))
+        #expect(try OffscreenRender(tile, size: CGSize(width: 26, height: 26)).pixels().contains { $0 != 0 })
     }
 }

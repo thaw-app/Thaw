@@ -109,7 +109,7 @@ struct SettingsURIKeyTableTests {
 
         for (uriKey, entry) in SettingsURIHandler.keyTable {
             let caseName = String(describing: entry.defaultsKey)
-            if uriKey == "enableSwapBar" {
+            if uriKey == "enableSwapBar" || uriKey == "settingsAppearance" {
                 #expect(
                     !registered.contains(caseName),
                     "\(uriKey) must stay unregistered so its legacy-key migration still runs"

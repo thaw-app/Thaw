@@ -126,7 +126,7 @@ struct CaptureInspectorSection: View {
 
     private var controls: some View {
         LabeledContent {
-            HStack(spacing: 8) {
+            HStack(spacing: ThawSpacing.base) {
                 if isCapturing {
                     ProgressView()
                         .controlSize(.small)
@@ -189,7 +189,7 @@ struct CaptureInspectorSection: View {
     /// hidden items missing from the capture look like the inspector failing to
     /// show them rather than Thaw genuinely not reading them.
     private var concealedItemsNote: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
             if concealedItemCount > 0 {
                 // Explicit forms: automatic agreement inflected the verb but not
                 // the noun, and read "9 hidden item are not captured".
@@ -220,7 +220,7 @@ struct CaptureInspectorSection: View {
         title: LocalizedStringKey,
         subtitle: String
     ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: ThawSpacing.tight) {
             Text(title)
                 .font(ThawType.heading)
             CaptureFrameView(
@@ -367,7 +367,7 @@ private struct CaptureFrameView: View {
         // A checkerboard would be noise; a plain backing makes a transparent
         // composite legible without implying its background is a colour.
         .background(.quaternary)
-        .clipShape(RoundedRectangle(cornerRadius: 5))
+        .clipShape(RoundedRectangle(cornerRadius: ThawRadius.small))
         .frame(maxWidth: .infinity)
     }
 }

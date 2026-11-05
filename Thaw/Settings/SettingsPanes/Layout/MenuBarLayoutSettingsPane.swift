@@ -28,7 +28,7 @@ struct MenuBarLayoutSettingsPane: View {
     }
 
     /// Format warning names as a localized list with singular/plural sentences for subject agreement.
-    private static func outOfReachMessage(for bundleIDs: Set<String>) -> LocalizedStringKey {
+    private static func outOfReachMessage(for bundleIDs: Set<String>) -> LocalizedStringResource {
         let names = appNames(for: bundleIDs)
         return bundleIDs.count == 1
             ? "\(names) is running, but \(Constants.displayName) can't see its menu bar items, so it can't hide or arrange them. If its icon is missing from the menu bar too, quit and reopen \(names). Otherwise, relaunch \(Constants.displayName)."
@@ -188,7 +188,7 @@ private struct LayoutDetailTabs: View {
             ControlCenterReplacementsSection(settings: settings)
         case .options:
             LayoutSectionOptions(settings: settings, isHidingUnavailable: isHidingUnavailable)
-            HidingMethodSection(settings: settings, offersAppleItems: canArrangeLayout)
+            HidingMethodSection(settings: settings)
             LayoutOverflowSection(settings: settings)
             if canArrangeLayout {
                 LayoutResetControls(
@@ -283,7 +283,7 @@ private struct LayoutSpacersRows: View {
 
         ForEach(spacerManager.spacers) { spacer in
             LabeledContent {
-                HStack(spacing: 12) {
+                HStack(spacing: ThawSpacing.inset) {
                     ColorPicker(
                         "Spacer color",
                         selection: Binding(
@@ -379,7 +379,7 @@ struct LayoutBarsSection: View {
             }
         }
         .buttonStyle(.settingsGlass)
-        .help("Opens the experimental reorder editor in its own window.")
+        .help("Opens the reorder editor in its own window.")
     }
 
     /// A refused group move snaps back with no other explanation, so the
@@ -387,14 +387,14 @@ struct LayoutBarsSection: View {
     @ViewBuilder
     private var layoutRefusalNotice: some View {
         if let refusal = appState.layoutFeedback.refusal {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: ThawSpacing.inset) {
                 Text("macOS 27 does not let \(Constants.displayName) hide some system items.")
                     .font(ThawType.footnote)
                     .foregroundStyle(ThawInk.supporting)
                     .fixedSize(horizontal: false, vertical: true)
                 SettingsWarningPill(
-                    title: LocalizedStringKey(refusal.title),
-                    message: LocalizedStringKey(refusal.message),
+                    title: LocalizedStringResource(String.LocalizationValue(refusal.title)),
+                    message: LocalizedStringResource(String.LocalizationValue(refusal.message)),
                     systemImage: "exclamationmark.triangle.fill",
                     tint: .orange,
                     actionTitle: "Dismiss"
@@ -403,7 +403,7 @@ struct LayoutBarsSection: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .transition(reduceMotion ? .identity : .opacity)
+            .transition(.fade(reduceMotion: reduceMotion))
         }
     }
 }
@@ -438,8 +438,8 @@ struct LayoutResetFlow: View {
     @State private var status: ResetStatus?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: ThawSpacing.inset) {
+            HStack(alignment: .top, spacing: ThawSpacing.inset) {
                 Text("Moves every movable item except the \(Constants.displayName) icon to the selected section, just like a fresh install.")
                     .font(ThawType.footnote)
                     .foregroundStyle(ThawInk.supporting)
@@ -449,7 +449,7 @@ struct LayoutResetFlow: View {
             }
 
             if let status {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                HStack(alignment: .firstTextBaseline, spacing: ThawSpacing.compact) {
                     if status.isError {
                         Image(systemName: "exclamationmark.triangle")
                             .foregroundStyle(.orange)
@@ -491,7 +491,7 @@ struct LayoutResetFlow: View {
     }
 
     private var resetTransition: AnyTransition {
-        reduceMotion ? .identity : .opacity.animation(ThawMotion.settle)
+        .fade(reduceMotion: reduceMotion, animation: ThawMotion.settle)
     }
 
     private func reset(to target: ResetTarget) {
@@ -559,7 +559,7 @@ struct LayoutResetFlow: View {
             switch self {
             case .success(.hidden): String(localized: "Layout reset. Items were moved to the Hidden section.")
             case .success(.alwaysHidden): String(localized: "Layout reset. Items were moved to the Always Hidden section.")
-            case .success(.visible): String(localized: "Items were moved to the Visible section.")
+            case .success(.visible): String(localized: "Layout reset. Items were moved to the Visible section.")
             case .notRun: String(localized: "Nothing was moved: \(Constants.displayName) is not managing the menu bar yet. Try again once your menu bar items appear.")
             case let .partialFailure(count): String(localized: "Reset completed with \(count) items that could not be moved. Check the menu bar and try again if needed.")
             case let .failure(message): String(localized: "Reset failed: \(message)")

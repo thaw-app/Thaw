@@ -685,21 +685,21 @@ final class LayoutBarContainer: NSView {
                     "[\(placeholders.map(\.title).joined(separator: ", "))]"
             )
             for descriptor in placeholders {
-                let view = arrangedViews.first(where: {
-                    if case let .opaqueSlot(existing) = $0.kind {
-                        return existing == descriptor
+                let capturedImage = descriptor.captureTag.flatMap { tag -> NSImage? in
+                    appState.imageCache.image(for: tag).map {
+                        NSImage(cgImage: $0.cgImage, size: $0.pointSize)
                     }
-                    return false
-                }) ?? LayoutOpaqueSlotView(
+                }
+                let existing = arrangedViews.lazy
+                    .compactMap { $0 as? LayoutOpaqueSlotView }
+                    .first { $0.descriptor == descriptor }
+                // A reused slot takes the current picture, which may be new or gone since it was made.
+                existing?.updateIcon(capturedImage: capturedImage, runningApplications: runningApplications)
+                newViews.append(existing ?? LayoutOpaqueSlotView(
                     descriptor: descriptor,
                     runningApplications: runningApplications,
-                    capturedImage: descriptor.captureTag.flatMap { tag -> NSImage? in
-                        appState.imageCache.image(for: tag).map {
-                            NSImage(cgImage: $0.cgImage, size: $0.pointSize)
-                        }
-                    }
-                )
-                newViews.append(view)
+                    capturedImage: capturedImage
+                ))
             }
         }
 

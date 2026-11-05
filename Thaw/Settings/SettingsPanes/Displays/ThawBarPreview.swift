@@ -84,7 +84,7 @@ struct ThawBarPreview: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: ThawSpacing.base) {
             ThawBarPreviewStage(displayID: displayID) {
                 previewBar
             }
@@ -108,7 +108,7 @@ struct ThawBarPreview: View {
         let sample = screen.flatMap { appState.menuBarManager.averageColors[$0.displayID] }
         let clipShape = ThawBarBorderShape.thawBarClip(
             height: contentHeight,
-            hasRoundedShape: appearance.hasRoundedShape
+            roundness: appearance.cornerRoundness
         )
 
         Group {
@@ -129,7 +129,7 @@ struct ThawBarPreview: View {
                     .buttonStyle(.settingsGlass)
                     .controlSize(.small)
                 }
-                .padding(.vertical, 12)
+                .padding(.vertical, ThawSpacing.inset)
                 .frame(maxWidth: 320)
             } else if layout == .horizontal {
                 // Match the real panel: menu-bar-height row, base end gaps, and vertical padding only at a notch.
@@ -163,7 +163,7 @@ struct ThawBarPreview: View {
             if appearance.hasBorder {
                 ThawBarBorderShape.thawBarBorder(
                     height: contentHeight,
-                    hasRoundedShape: appearance.hasRoundedShape,
+                    roundness: appearance.cornerRoundness,
                     borderWidth: CGFloat(appearance.borderWidth)
                 )
                 .stroke(lineWidth: CGFloat(appearance.borderWidth))
@@ -174,7 +174,7 @@ struct ThawBarPreview: View {
         .thawAnimation(ThawMotion.settle, value: layout)
         .thawAnimation(ThawMotion.settle, value: gridColumns)
         .thawAnimation(ThawMotion.settle, value: itemScale)
-        .thawAnimation(ThawMotion.settle, value: appearance.hasRoundedShape)
+        .thawAnimation(ThawMotion.settle, value: appearance.cornerRoundness)
         .thawAnimation(ThawMotion.settle, value: appearance.hasBorder)
     }
 
@@ -239,11 +239,7 @@ struct ThawBarPreview: View {
                 .resizable()
                 .frame(width: size.width, height: size.height)
         } else {
-            Image(systemName: "app.dashed")
-                .resizable()
-                .scaledToFit()
-                .frame(height: itemSizing.rowHeight(fitting: itemMaxHeight ?? fallbackMenuBarHeight))
-                .foregroundStyle(.secondary)
+            MenuBarItemPlaceholderIcon(length: itemSizing.rowHeight(fitting: itemMaxHeight ?? fallbackMenuBarHeight))
         }
     }
 

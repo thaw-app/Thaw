@@ -17,9 +17,16 @@ struct SystemExtraStandInLauncherTests {
     private let fake = FakeStandInSystem()
     private let sections = FakeStandInSections()
     private let original = "com.apple.menuextra.timer"
+    /// The launcher's clock, which only moves when a test moves it, so a slow
+    /// machine can't push restarts out of the window.
+    private let clock = Clock()
+
+    final class Clock {
+        var now = ContinuousClock.now
+    }
 
     private func makeLauncher() -> (SystemExtraStandInLauncher, Box) {
-        let launcher = SystemExtraStandInLauncher(system: fake.system)
+        let launcher = SystemExtraStandInLauncher(system: fake.system, now: { [clock] in clock.now })
         let known = Box()
         launcher.controller = sections
         launcher.markKnown = { known.identifiers.append($0) }
@@ -198,6 +205,22 @@ struct SystemExtraStandInLauncherTests {
         await settle { fake.startedProcesses.count == 5 }
 
         #expect(fake.startedProcesses.count == 4)
+    }
+
+    @Test("Restarts older than the window stop counting, so a stand-in that exits rarely keeps coming back")
+    func oldRestartsAgeOut() async throws {
+        let (launcher, _) = makeLauncher()
+        try await launcher.launch(.timer, replacing: original, in: .hidden)
+        for expected in 2 ... 4 {
+            try #require(fake.startedProcesses.last).exit()
+            await settle { fake.startedProcesses.count == expected }
+        }
+
+        clock.now += .seconds(31)
+        try #require(fake.startedProcesses.last).exit()
+        await settle { fake.startedProcesses.count == 5 }
+
+        #expect(fake.startedProcesses.count == 5)
     }
 
     @Test("A stand-in that is already gone when opened is started again")

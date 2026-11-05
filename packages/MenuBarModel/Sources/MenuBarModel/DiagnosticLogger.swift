@@ -33,6 +33,14 @@ public final class DiagnosticLogger: Sendable {
 
     /// The directory where log files are stored.
     public var logDirectory: URL {
+        Self.logDirectory(environment: ProcessInfo.processInfo.environment)
+    }
+
+    /// Test runs log to a temporary folder, so they never rotate a person's own logs out of ~/Library/Logs/Thaw.
+    public static func logDirectory(environment: [String: String]) -> URL {
+        if TestHostEnvironment.isActive(environment) {
+            return FileManager.default.temporaryDirectory.appendingPathComponent("ThawTestLogs", isDirectory: true)
+        }
         let home = FileManager.default.homeDirectoryForCurrentUser
         return home
             .appendingPathComponent("Library", isDirectory: true)
@@ -169,8 +177,8 @@ public final class DiagnosticLogger: Sendable {
         // Each process writes its own header into the shared file. The
         // Process line distinguishes them; the per-line timestamps keep
         // chronological order.
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
+        let version = Bundle.main.versionString ?? "unknown"
+        let build = Bundle.main.buildString ?? "unknown"
         // GitCommitSHA is stamped into Info.plist by a build phase and reads
         // "unknown" when that phase is not wired up.
         let sha = Bundle.main.infoDictionary?["GitCommitSHA"] as? String ?? "unknown"

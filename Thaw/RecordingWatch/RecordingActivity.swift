@@ -64,6 +64,21 @@ nonisolated enum RecordingWatchAnnouncement: Equatable, Sendable {
 /// saying out loud, kept apart from the manager so the edge handling is
 /// unit-testable without CoreAudio.
 nonisolated enum RecordingWatchPolicy {
+    /// The camera and microphone alerts are hidden for now: their settings
+    /// left Settings and they stay off whatever was saved. The reading
+    /// itself stays, for Zen Mode while the camera or microphone is on.
+    static let alertsAvailable = false
+
+    /// Whether the alerts run, given the saved switch.
+    static func alertsOn(saved: Bool, available: Bool = alertsAvailable) -> Bool {
+        available && saved
+    }
+
+    /// Whether the devices are read at all: for the alerts, or for Zen Mode.
+    static func shouldSample(alerts: Bool, zenMode: Bool) -> Bool {
+        alerts || zenMode
+    }
+
     /// The announcements owed for a move from old to new.
     ///
     /// Rising edges only. A device switching on is the event the user cannot

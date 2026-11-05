@@ -9,12 +9,13 @@ import AppKit
 import SwiftUI
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// The settings sidebar: its rows, how it opens pages, and how it draws them.
 @Suite("Settings sidebar list", .serialized, .scratchDefaults)
 @MainActor
 struct SettingsSidebarPaneListTests {
-    private let size = CGSize(width: SettingsSidebarPaneList.listWidth, height: 900)
+    private let size = CGSize(width: ThawSidebar<SettingsNavigationIdentifier, EmptyView>.width, height: 900)
 
     private func render(
         _ navigation: AppNavigationState,
@@ -28,14 +29,9 @@ struct SettingsSidebarPaneListTests {
         )
     }
 
-    @Test("Each row has its own identity, and a group is known by its first page")
+    @Test("A group is known by its first page, and only a page row selects a page")
     func rowIdentities() {
-        let ids = SettingsSidebarPanes.rows.map(\.id)
-        #expect(Set(ids).count == ids.count)
-        #expect(ids.contains("heading:Modules"))
-        #expect(ids.contains("gap"))
-        #expect(ids.contains(SettingsNavigationIdentifier.privacy.rawValue))
-        #expect(SettingsSidebarPanes.groups.map(\.id) == [.general, .profiles, .privacy, .about])
+        #expect(SettingsSidebarPanes.groups.map(\.id) == [.general, .profiles, .modules, .about])
         #expect(SettingsSidebarRow.heading("Manage").page == nil)
         #expect(SettingsSidebarRow.gap.page == nil)
         #expect(SettingsSidebarRow.page(.tools).page == .tools)
@@ -69,22 +65,18 @@ struct SettingsSidebarPaneListTests {
         #expect(navigation.requestedSettingsSection == nil)
     }
 
-    @Test("The arrow keys move through the pages past the headings and stop at either end")
-    func arrowKeys() {
+    @Test("An arrow key lands where the rows say, and opening it clears the search; a move that goes nowhere keeps it")
+    func arrowKeys() throws {
         let navigation = AppNavigationState()
         let searchModel = SearchModel()
-        navigation.settingsNavigationIdentifier = .hotkeys
-        SettingsSidebarPanes.move(.down, searchModel: searchModel, navigationState: navigation)
-        #expect(navigation.settingsNavigationIdentifier == .profiles)
-        SettingsSidebarPanes.move(.up, searchModel: searchModel, navigationState: navigation)
-        #expect(navigation.settingsNavigationIdentifier == .hotkeys)
-        navigation.settingsNavigationIdentifier = .about
         searchModel.searchText = "hide"
-        SettingsSidebarPanes.move(.down, searchModel: searchModel, navigationState: navigation)
-        #expect(navigation.settingsNavigationIdentifier == .about)
-        #expect(searchModel.searchText == "hide", "a move that goes nowhere keeps the search")
-        SettingsSidebarPanes.move(.left, searchModel: searchModel, navigationState: navigation)
-        #expect(navigation.settingsNavigationIdentifier == .about)
+        navigation.settingsNavigationIdentifier = .about
+        #expect(SettingsSidebarRow.page(moving: .down, from: .about, in: SettingsSidebarPanes.rows) == nil)
+        #expect(searchModel.searchText == "hide")
+        let next = try #require(SettingsSidebarRow.page(moving: .up, from: .about, in: SettingsSidebarPanes.rows))
+        SettingsSidebarPanes.open(next, searchModel: searchModel, navigationState: navigation)
+        #expect(navigation.settingsNavigationIdentifier == .tools)
+        #expect(searchModel.searchText.isEmpty)
     }
 
     @Test("The selection fill follows the open page, and no row is filled while searching")

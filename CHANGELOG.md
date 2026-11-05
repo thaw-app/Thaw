@@ -24,9 +24,60 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+## [3.0.0-alpha.13] - 2026-11-05
+
+**macOS 27 only · Build 124**
+
+Scripts, Triggers and Widgets become modules you can switch on and off, and Settings is rebuilt on [ThawUI](https://github.com/thaw-app/ThawUI). Your settings, triggers, scripts and widget design carry over. By @diazdesandi.
+
+### New
+
+- **Modules.** Settings › Extras switches optional parts of Thaw on and off. A module that's off doesn't run and leaves the sidebar. Scripts, Triggers and Widgets come first, and each starts on if you already used it.
+
+### Changed
+
+#### Modules
+
+- **Triggers, Scripts and Widgets run as small apps next to Thaw.** Open each from its page in Settings. The widget icon moved there from Experiments.
+- **Profile switches don't wait for a "before switching" script** to finish before the layout changes. Scripts also run for the profile Thaw applies as it starts, and go with a profile you export or copy.
+
+#### Thaw's icon
+
+- **The cube in Thaw's icon is even.** Its top face no longer looks paler than its sides, and the shapes inside it share one flat cream.
+
+#### Settings
+
+- **A new sidebar.** Everyday pages come first, then your modules, then Extras, Privacy and Tools, with About last. The arrow keys move between pages.
+- **Extras is a grid of cards,** each with the part's icon, what it does and its switch. Profiles can be turned off there too, and your saved profiles are kept.
+- **Some pages moved.** Displays & Spaces is now Displays. Automation became Triggers and Scripts, with thaw:// app permissions on Privacy and switching profiles by display or Space on Profiles. Experiments is gone, and its features sit on the pages they belong to with an Alpha or Beta badge. Old links to these pages still open.
+- **Theme: System, Light, Dark or Black,** for Settings and onboarding, in General › Language and theme. Black suits OLED displays and replaces "Black background in dark mode".
+- **Fewer glass finishes.** The Effect menu has Glass, with a Tint switch, and a Liquid Glass section with Edge, Sheer, Dim, Invert and Dynamic Glass. Saved looks keep how they looked.
+- **The Thaw Bar's own look has a Corners slider,** from square to round, instead of the Rounded corners switch.
+- **Every Search style can rename and move items.** The styles are now Detailed, Compact and Large, and all three share the bottom bar: ⌘E renames, ⌘K shows actions and ⌘1 to ⌘3 move an item.
+- **Hide items again is one menu** in Simple Mode and Visibility: Never, When I click elsewhere, When I switch apps or a delay.
+- **One name for each thing.** Settings and menus now agree, and Alpha and Beta features carry a badge. Reset Positions is now Rebuild Saved Layout, Hide again after is Keep opened items in the menu bar for, and Open hidden items in the menu bar is Show clicked items in the menu bar.
+- **The Thaw Bar's Location choices say where it opens,** and shortcuts have their own choice, When opened by a shortcut.
+- **Displays has a Template tab** with the Thaw Bar and spacing settings for new displays.
+- **Spacing has one warning at the top,** and Layout explains Apple's items in Known macOS 27 limitations.
+- **The arrow keys step through What's New and Acknowledgements,** and permission icons line up.
+
 ### Fixed
 
-- Capture Hidden Items no longer reports a kept picture as missing when macOS rebuilds the menu bar.
+- **App language shows System Default** when you haven't picked a language.
+- **Layout and Search show the symbol of Bluetooth and other system items** that Thaw switched off, and one grey placeholder for items Thaw can't identify.
+- **Screenshots no longer show the Finder menus you hid** on the desktop.
+- **Notes in the layout editor's right-click menu are dimmed,** so they don't look like commands.
+- **Links in the release notes open only over https,** and a Wi-Fi sign-in page can't replace your saved release notes.
+- **Recording a shortcut stops when you leave its page,** and Shift-Escape cancels it.
+- **The Settings window no longer shrinks** right after it opens.
+- **App icons in the Thaw Bar match the size** of the item pictures beside them.
+- **A cancelled click no longer waits** for the pointer to stop.
+- **Items with a blank name get their picture taken.**
+- **Thaw's Time Machine icon keeps updating** when Time Machine stops answering.
+- **Layout picks up new items when macOS leaves out Thaw's own icon,** and QQ and WeChat keep one item each as their unread count changes. Reported by @Mujun05 in [#1449](https://github.com/thaw-app/Thaw/issues/1449) and fixed in [#1450](https://github.com/thaw-app/Thaw/pull/1450).
+- **Applying a profile keeps your menu bar spacing,** at startup and when you change Space or Focus. Fixed by @Omoeba in [#1451](https://github.com/thaw-app/Thaw/pull/1451).
+- **Thaw waits for the menu bar to settle before moving items,** while you log in and when the menu bar moves to another display. Fixed by @camguillory in [#1452](https://github.com/thaw-app/Thaw/pull/1452).
+- **Capture Hidden Items no longer lists a kept picture as missing** when macOS rebuilds the menu bar. Fixed by @Belligerently in [#1448](https://github.com/thaw-app/Thaw/pull/1448).
 
 ## [3.0.0-beta.6] - 2026-11-03
 
@@ -581,6 +632,7 @@ After you update:
 - **Thaw Bar Only is gone.** Items you kept there are now ordinary Hidden items. By @diazdesandi.
 - **Troubleshooting no longer has Reset Control Center or Quit and Clear Cache.** On macOS 27, Reset Control Center also erased your choices in System Settings > Menu Bar. Restore Missing Items brings items back without deleting anything. Thaw now clears its saved item pictures after every update, which is what Quit and Clear Cache did. By @diazdesandi.
 
+
 ### Changed
 
 - **The last welcome screen shows its cards two to a row,** so each demo and caption has room. By @diazdesandi.
@@ -655,6 +707,7 @@ After you update:
 - **Home and other items pinned from Control Center leave the menu bar while Hidden is closed**, if you use Standard or Everything. Layout marks them. Thaw can't keep them on the bar.
 - **Siri doesn't run Thaw's actions when you ask by voice.** The same actions work from Shortcuts and Spotlight.
 - **On some Macs, clicks in Settings land below the control.** Reported in [#1265](https://github.com/thaw-app/Thaw/issues/1265) and [#1244](https://github.com/thaw-app/Thaw/issues/1244). If it happens to you, [send us a log](https://www.getthaw.app/docs/thaw/frequent-issues#before-you-file-a-bug).
+
 
 ## [3.0.0-alpha.10] - 2026-10-18
 

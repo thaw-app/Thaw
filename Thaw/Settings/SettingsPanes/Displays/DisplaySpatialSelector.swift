@@ -100,7 +100,7 @@ struct DisplaySpatialSelector: View {
     var body: some View {
         let numbers = DisplayIdentifyOverlay.displayNumbers()
 
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: ThawSpacing.base) {
             HStack(alignment: .center, spacing: 14) {
                 arrangement(numbers: numbers)
 
