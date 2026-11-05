@@ -12,6 +12,7 @@ import Testing
 
 @Suite("Fresh volatile title learner")
 struct FreshVolatileTitleLearnerTests {
+    /// A menu bar item for these tests.
     private func item(
         bundle: String = "com.example.chat",
         title: String,

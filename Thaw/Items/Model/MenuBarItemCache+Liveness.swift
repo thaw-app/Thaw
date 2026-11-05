@@ -36,4 +36,21 @@ extension MenuBarItemCache {
         }
         return cache
     }
+
+    /// Fresh items plus the cached ones a partial AX walk missed whose apps still run. macOS 27.2
+    /// can leave out Thaw's own AXExtrasMenuBar while every other app answers.
+    static func mergingLiveCachedItems(
+        snapshotItems: [MenuBarItem],
+        previousCachedItems: [MenuBarItem],
+        processIDs: Set<pid_t>,
+        bundleIdentifiers: Set<String>
+    ) -> [MenuBarItem] {
+        var previousCache = MenuBarItemCache(displayID: nil)
+        previousCache[.visible] = previousCachedItems
+        let liveCachedItems = previousCache.retainingRunningOwners(
+            processIDs: processIDs,
+            bundleIdentifiers: bundleIdentifiers
+        ).managedItems
+        return MenuBarItemCache.merging(snapshotItems, withCachedItems: liveCachedItems)
+    }
 }

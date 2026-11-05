@@ -10,15 +10,15 @@ import Foundation
 
 /// Learns which single-item apps use their whole title as a live status.
 ///
-/// Only complete, fresh AX inventories belong here. Cached conceal snapshots
-/// can contain several historical titles from one app, which is exactly the
-/// condition that prevents a title-changing owner from being recognized.
+/// Only complete, fresh AX inventories belong here. A cached snapshot can hold several old
+/// titles of one app, so its one item looks like many and the rename goes unseen.
 public struct FreshVolatileTitleLearner: Sendable {
     private struct Observation: Sendable {
         let title: String
         let slotX: CGFloat
         let sourcePID: pid_t
 
+        /// The observation for an item with a title and a frame on the bar, or nil.
         static func make(for item: MenuBarItem, sourcePID: pid_t) -> Self? {
             guard !item.tag.title.isEmpty, item.bounds.width > 0, item.bounds.midX >= 0
             else {
@@ -34,6 +34,7 @@ public struct FreshVolatileTitleLearner: Sendable {
 
     private var lastObservationByOwner = [String: Observation]()
 
+    /// A learner that has seen no inventory yet.
     public init() {}
 
     /// Returns owners whose title changed while their single menu bar slot

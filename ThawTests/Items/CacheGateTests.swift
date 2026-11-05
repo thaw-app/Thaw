@@ -30,6 +30,7 @@ struct CacheGateTests {
 @Suite("Partial AX cache merge")
 @MainActor
 struct PartialAXCacheMergeTests {
+    /// A menu bar item for these tests.
     private func item(
         namespace: MenuBarItemTag.Namespace,
         title: String,
@@ -54,7 +55,7 @@ struct PartialAXCacheMergeTests {
         let fresh = item(namespace: .string("com.example.fresh"), title: "Fresh", windowID: 3, ownerPID: 30)
         let quit = item(namespace: .string("com.example.quit"), title: "Quit", windowID: 4, ownerPID: 40)
 
-        let merged = MenuBarItemManager.mergingLiveCachedItems(
+        let merged = MenuBarItemCache.mergingLiveCachedItems(
             snapshotItems: [fresh],
             previousCachedItems: [control, hidden, quit],
             processIDs: [10, 20, 30],
@@ -69,7 +70,7 @@ struct PartialAXCacheMergeTests {
         let cached = item(namespace: .string("com.example.app"), title: "Menu", windowID: 2, ownerPID: 30)
         let fresh = item(namespace: .string("com.example.app"), title: "Menu", windowID: 99, ownerPID: 30)
 
-        let merged = MenuBarItemManager.mergingLiveCachedItems(
+        let merged = MenuBarItemCache.mergingLiveCachedItems(
             snapshotItems: [fresh],
             previousCachedItems: [cached],
             processIDs: [30],

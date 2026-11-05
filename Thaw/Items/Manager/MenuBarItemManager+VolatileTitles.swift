@@ -9,6 +9,9 @@ import Foundation
 import MenuBarModel
 
 extension MenuBarItemManager {
+    /// Keeps each app's last fresh scan between refreshes.
+    private static var freshVolatileTitleLearner = FreshVolatileTitleLearner()
+
     private static let learnedVolatileTitleOwnersKey = "MenuBarItemManager.learnedVolatileTitleOwners"
 
     /// Restore learned owners before canonicalization so known and saved-order identifiers load collapsed.
@@ -29,9 +32,9 @@ extension MenuBarItemManager {
     }
 
     /// Collapse retitled single-item owners so changing counts or dates do not trigger new-arrival sorting.
-    /// The learner only receives complete fresh inventories; cache snapshots can retain old titles as phantom siblings.
+    /// Takes complete fresh scans only: the cache keeps old titles, which look like extra items.
     func learnVolatileTitleOwners(fresh: [MenuBarItem], current: inout [MenuBarItem]) {
-        let learned = freshVolatileTitleLearner.observe(fresh)
+        let learned = Self.freshVolatileTitleLearner.observe(fresh)
             .filter { !Self.isThawBundle($0) }
             .filter(MenuBarItemTag.learnVolatileTitleOwner)
         guard !learned.isEmpty else { return }

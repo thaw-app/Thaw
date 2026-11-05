@@ -11,6 +11,7 @@ import Testing
 
 @Suite("Menu bar item cache merge")
 struct MenuBarItemCacheMergeTests {
+    /// A menu bar item for these tests.
     private func item(
         namespace: MenuBarItemTag.Namespace,
         title: String,

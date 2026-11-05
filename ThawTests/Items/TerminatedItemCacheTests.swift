@@ -13,6 +13,7 @@ import Testing
 
 @MainActor
 struct TerminatedItemCacheTests {
+    /// A menu bar item for these tests.
     private func item(
         pid: pid_t,
         sourcePID explicitSourcePID: pid_t? = nil,

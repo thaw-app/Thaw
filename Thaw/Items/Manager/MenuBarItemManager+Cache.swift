@@ -888,13 +888,14 @@ extension MenuBarItemManager {
 
         let snapshotItemCount = items.count
         let runningApplications = NSWorkspace.shared.runningApplications.filter { !$0.isTerminated }
-        let mergedItems = Self.mergingLiveCachedItems(
+        let mergedItems = MenuBarItemCache.mergingLiveCachedItems(
             snapshotItems: items,
             previousCachedItems: itemCache.managedItems,
             processIDs: Set(runningApplications.map(\.processIdentifier)),
             bundleIdentifiers: Set(runningApplications.compactMap(\.bundleIdentifier))
         )
-        guard mergedItems.count > snapshotItemCount else {
+        // Publish only when the cache gave back Thaw's icon; without it the pass can't place any item.
+        guard mergedItems.contains(where: { $0.tag == .visibleControlItem }) else {
             MenuBarItemManager.diagLog.warning(
                 "cacheItemsRegardless: Thaw visible control item missing from AX snapshot; retaining last-good cache. Items remaining: \(snapshotItemCount), windowIDs: \(itemWindowIDs.count)"
             )
@@ -907,26 +908,6 @@ extension MenuBarItemManager {
             "cacheItemsRegardless: Thaw visible control item missing from AX snapshot; merging \(items.count - snapshotItemCount) still-running cached item(s) with fresh inventory. Items remaining: \(items.count), windowIDs: \(itemWindowIDs.count)"
         )
         return true
-    }
-
-    /// Keeps still-running cached items that a partial AX walk could not see.
-    ///
-    /// macOS 27.2 can omit Thaw's own AXExtrasMenuBar while other apps answer
-    /// normally. The fresh items are valid, so retaining the whole old cache
-    /// would also block newly opened apps from appearing in Layout.
-    static func mergingLiveCachedItems(
-        snapshotItems: [MenuBarItem],
-        previousCachedItems: [MenuBarItem],
-        processIDs: Set<pid_t>,
-        bundleIdentifiers: Set<String>
-    ) -> [MenuBarItem] {
-        var previousCache = MenuBarItemCache(displayID: nil)
-        previousCache[.visible] = previousCachedItems
-        let liveCachedItems = previousCache.retainingRunningOwners(
-            processIDs: processIDs,
-            bundleIdentifiers: bundleIdentifiers
-        ).managedItems
-        return MenuBarItemCache.merging(snapshotItems, withCachedItems: liveCachedItems)
     }
 
     /// Gate expensive AX walks with a cheap window-list comparison, then require a stable identity difference before rebuilding.
