@@ -511,6 +511,59 @@ struct ModuleHostTests {
         #expect(host.modules[bundled] == nil)
     }
 
+    /// A host running the bundled automation module as pid 101, then given a downloaded copy of it.
+    private func replacingRunningModule() async -> (FakeSystem, ModuleHost, bundled: URL, downloaded: URL) {
+        let system = FakeSystem()
+        let bundled = system.addModule("automation")
+        let host = makeHost(system)
+        await host.start(bundled)
+        let downloaded = URL(filePath: "/Downloaded/automation.app")
+        system.bundles.insert(downloaded, at: 0)
+        system.infos[downloaded] = system.infos[bundled]
+        system.teams[downloaded] = "TEAM"
+        return (system, host, bundled, downloaded)
+    }
+
+    @Test("A running module a downloaded copy replaces stops, and the copy starts once it has quit")
+    func replacedModuleHandsOver() async {
+        let (system, host, bundled, downloaded) = await replacingRunningModule()
+        var quits: [String] = []
+        host.onModuleQuit = { quits.append($0) }
+
+        host.refresh()
+        #expect(system.terminated == [101])
+        #expect(quits == ["com.thaw.module.automation"])
+        #expect(host.modules[bundled] == nil)
+        #expect(system.launched == [bundled], "waits for the old process to go")
+
+        await host.moduleDidTerminate(pid: 101)
+        #expect(system.launched == [bundled, downloaded])
+        #expect(host.modules[downloaded]?.state == .running(102))
+    }
+
+    @Test("A replacement switched off while the old copy quits stays off")
+    func replacementSwitchedOffStaysOff() async {
+        let (system, host, bundled, _) = await replacingRunningModule()
+        host.refresh()
+        await host.setEnabled(false, identifier: "automation")
+
+        await host.moduleDidTerminate(pid: 101)
+        #expect(system.launched == [bundled])
+    }
+
+    @Test("A running module whose bundle is removed stops")
+    func removedModuleStops() async {
+        let system = FakeSystem()
+        let url = system.addModule("automation")
+        let host = makeHost(system)
+        await host.start(url)
+
+        system.bundles = []
+        host.refresh()
+        #expect(system.terminated == [101])
+        #expect(host.modules[url] == nil)
+    }
+
     @Test("A module is found by its identifier")
     func findsAModuleByIdentifier() {
         let system = FakeSystem()

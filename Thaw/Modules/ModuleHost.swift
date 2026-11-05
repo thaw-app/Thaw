@@ -72,6 +72,8 @@ final class ModuleHost {
     @ObservationIgnored private var stopCounts: [URL: Int] = [:]
     @ObservationIgnored private var terminationObserver: (any NSObjectProtocol)?
     @ObservationIgnored private var hasLoadedEnabled = false
+    /// Replaced modules' processes, each with the copy that starts once it exits.
+    @ObservationIgnored private var handovers: [pid_t: URL] = [:]
 
     init(environment: Environment, restartPolicy: ModuleRestartPolicy = ModuleRestartPolicy()) {
         self.environment = environment
@@ -114,8 +116,23 @@ final class ModuleHost {
             let state: State = verdict == .launch || known != .idle ? known : .refused(verdict)
             found[url] = Module(manifest: manifest, verdict: verdict, state: state)
         }
+        let departed = modules.filter { found[$0.key] == nil }
+        // A module removed or replaced by a downloaded copy stops before it leaves the list,
+        // so no process or launch in flight is left that nothing tracks.
+        departed.keys.forEach(stop)
         modules = found
         loadEnabledIfNeeded()
+        for module in departed.values {
+            guard let identifier = module.manifest?.identifier, isEnabled(identifier), let replacement = url(ofModule: identifier)
+            else { continue }
+            switch module.state {
+            // The copy with the same bundle ID starts once the old process is gone, or
+            // macOS could bring the old one forward instead.
+            case let .running(pid): handovers[pid] = replacement
+            case .restarting: Task { await start(replacement) }
+            default: break
+            }
+        }
     }
 
     func isEnabled(_ identifier: String) -> Bool {
@@ -257,6 +274,13 @@ final class ModuleHost {
     /// Called when any app quits. A module that quits while still marked
     /// running did so on its own, and the restart policy decides what's next.
     func moduleDidTerminate(pid: pid_t) async {
+        if let replacement = handovers.removeValue(forKey: pid) {
+            // Still switched on: it may have been turned off while the old copy quit.
+            if let identifier = modules[replacement]?.manifest?.identifier, isEnabled(identifier) {
+                await start(replacement)
+            }
+            return
+        }
         guard let url = modules.first(where: { $0.value.state == .running(pid) })?.key else { return }
         reportQuit(url)
         let now = environment.now()
