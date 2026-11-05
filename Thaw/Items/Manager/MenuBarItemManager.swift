@@ -397,6 +397,11 @@ final class MenuBarItemManager {
     /// the first gated tick.
     var periodicWindowListSignature: [CGWindowID]?
 
+    /// Observes complete fresh AX inventories across refreshes. Comparing
+    /// against the live cache lets historical titles masquerade as siblings.
+    @ObservationIgnored
+    var freshVolatileTitleLearner = FreshVolatileTitleLearner()
+
     /// Persisted identifiers of menu bar items we've already seen.
     var knownItemIdentifiers = Set<String>()
     /// Suppresses the next automatic relocation of newly seen leftmost items.

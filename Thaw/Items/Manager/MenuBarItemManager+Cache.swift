@@ -714,7 +714,7 @@ extension MenuBarItemManager {
 
         // Partial scans can mistake alternating siblings for retitles; learn single-item owners only from complete, fresh inventory.
         if inventory.completed, inventory.hasFreshKnownInventory {
-            learnVolatileTitleOwners(previous: itemCache.managedItems, current: &items)
+            learnVolatileTitleOwners(fresh: inventory.freshItems, current: &items)
         }
 
         // Seed corrected source-PID identities for known windows so relocation does not treat them as arrivals.
