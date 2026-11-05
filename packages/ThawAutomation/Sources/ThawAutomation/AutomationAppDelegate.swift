@@ -56,6 +56,13 @@ final class AutomationAppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+        // Thaw holds a switch made before this point and sends it now.
+        center.postNotificationName(
+            ProfileSwitch.listeningNotificationName(hostBundleIdentifier: host),
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
     }
 
     private func profileDidSwitch(_ phase: ProfileSwitch.Phase, _ event: ProfileSwitch) {

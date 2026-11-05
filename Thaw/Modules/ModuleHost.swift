@@ -254,6 +254,7 @@ final class ModuleHost {
 
     private func reportQuit(_ url: URL) {
         if let bundleIdentifier = modules[url]?.manifest?.bundleIdentifier {
+            ProfileSwitchAnnouncer.moduleQuit(bundleIdentifier: bundleIdentifier)
             onModuleQuit?(bundleIdentifier)
         }
     }
@@ -297,9 +298,12 @@ final class ModuleHost {
         }
     }
 
-    /// Watches for module processes quitting. Call once after creating the live host.
+    /// Watches for module processes quitting, and for the Scripts module to say it listens.
+    /// Call once after creating the live host, before modules start.
     func startObservingTerminations() {
         guard terminationObserver == nil else { return }
+        // Before any module starts, so the Scripts module's first "listening" is heard.
+        ProfileSwitchAnnouncer.startListeningForScripts()
         terminationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didTerminateApplicationNotification,
             object: nil,
