@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Layout no longer keeps a stale item list when macOS omits Thaw's own menu bar accessibility element.** Thaw kept the whole previous cache, so items that appeared later could be missing from Layout. It now combines the fresh items with cached items whose apps are still running. Reported by @Mujun05 in [#1449](https://github.com/thaw-app/Thaw/issues/1449).
+
 ## [3.0.0-alpha.13] - 2026-11-04
 
 **macOS 27 only · Build 124**
