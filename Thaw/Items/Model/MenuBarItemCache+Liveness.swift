@@ -20,10 +20,11 @@ extension MenuBarItemCache {
         var cache = self
         for section in MenuBarSectionName.allCases {
             cache[section] = cache[section].filter { item in
-                if item.ownerPID > 0 {
+                let livenessPID = item.sourcePID ?? item.ownerPID
+                if livenessPID > 0 {
                     // A relaunch has a new PID; its old snapshot must not stand
                     // in for the new process's still-unobserved status item.
-                    return processIDs.contains(item.ownerPID)
+                    return processIDs.contains(livenessPID)
                 }
                 // Persisted conceal snapshots deliberately have no PID. Keep
                 // those only while their publishing bundle is actually running.
@@ -34,5 +35,22 @@ extension MenuBarItemCache {
             }
         }
         return cache
+    }
+
+    /// Fresh items plus the cached ones a partial AX walk missed whose apps still run. macOS 27.2
+    /// can leave out Thaw's own AXExtrasMenuBar while every other app answers.
+    static func mergingLiveCachedItems(
+        snapshotItems: [MenuBarItem],
+        previousCachedItems: [MenuBarItem],
+        processIDs: Set<pid_t>,
+        bundleIdentifiers: Set<String>
+    ) -> [MenuBarItem] {
+        var previousCache = MenuBarItemCache(displayID: nil)
+        previousCache[.visible] = previousCachedItems
+        let liveCachedItems = previousCache.retainingRunningOwners(
+            processIDs: processIDs,
+            bundleIdentifiers: bundleIdentifiers
+        ).managedItems
+        return MenuBarItemCache.merging(snapshotItems, withCachedItems: liveCachedItems)
     }
 }

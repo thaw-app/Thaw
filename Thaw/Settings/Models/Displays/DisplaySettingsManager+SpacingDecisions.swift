@@ -41,10 +41,14 @@ extension DisplaySettingsManager {
     }
 
     /// Takes a profile's configurations; write-only when a display change switched to the profile.
+    /// Also sets the spacing manager's offset to the active display's, which the profile apply writes next.
     func assignConfigurations(_ newConfigurations: [String: DisplayThawBarConfiguration], writeOnly: Bool) {
         writeOnlyConfigurationsReason = writeOnly ? Self.displayProfileSwitchReason : nil
         defer { writeOnlyConfigurationsReason = nil }
         configurations = newConfigurations
+        // didSet skips configurations that match the loaded ones, and the offset is 0 until something
+        // applies spacing, so without this the profile apply writes the default spacing over the saved one.
+        spacingHost?.spacingManager.offset = Int(configurationForActiveDisplay().itemSpacingOffset.rounded())
     }
 
     /// Write-only mode relaunches nothing, so it never asks.
