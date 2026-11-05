@@ -53,6 +53,18 @@ struct VolatileTitleTests {
         #expect(MenuBarItemTag.hasVolatileTitles("com.thermalforge.app"))
     }
 
+    @Test("WeChat's unread count does not create new layout items")
+    func weChatUnreadCountKeepsOneIdentity() {
+        let bundle = "com.tencent.xinWeChat"
+        #expect(MenuBarItemTag.hasVolatileTitles(bundle))
+        #expect(MenuBarItemTag.canonicalPersistentIdentifiers([
+            "\(bundle):Item-0",
+            "\(bundle): 3",
+            "\(bundle): 5",
+            "\(bundle): 10",
+        ]) == ["\(bundle):Item"])
+    }
+
     @Test("Another app from the same developer is untouched")
     func doesNotMatchSiblingApps() {
         // A developer-wide match would collapse Googly Eyes' stable title too.

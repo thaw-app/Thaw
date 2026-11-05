@@ -192,6 +192,8 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
         (prefix: "com.thermalforge.app", suffix: ""),
         // MacThrottle's single status item displays a live temperature.
         (prefix: "com.macthrottle.app", suffix: ""),
+        // WeChat's single status item shows its unread count as the whole title.
+        (prefix: "com.tencent.xinWeChat", suffix: ""),
     ]
 
     /// Whether bundleID belongs to an app whose status-item titles are live
