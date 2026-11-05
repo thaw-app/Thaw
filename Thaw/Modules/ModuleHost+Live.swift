@@ -58,6 +58,7 @@ extension ModuleHost.Environment {
                 ).processIdentifier
             },
             terminate: { pid in NSRunningApplication(processIdentifier: pid)?.terminate() },
+            isRunning: { pid in NSRunningApplication(processIdentifier: pid)?.isTerminated == false },
             now: { .now },
             wait: { seconds in try? await Task.sleep(for: .seconds(seconds)) },
             loadEnabled: { Defaults.stringArray(forKey: .enabledModules).map(Set.init) },

@@ -24,6 +24,8 @@ struct ModuleHostTests {
         var launched: [URL] = []
         var windowsShown: [URL] = []
         var terminated: [pid_t] = []
+        /// Processes that quit before their launch returned.
+        var exitedAtLaunch: Set<pid_t> = []
         var waits: [TimeInterval] = []
         var failLaunch = false
         /// Launches that return no process, like an app that quits as it starts.
@@ -78,6 +80,7 @@ struct ModuleHostTests {
                     return nextPID
                 },
                 terminate: { [unowned self] in terminated.append($0) },
+                isRunning: { [unowned self] in !exitedAtLaunch.contains($0) },
                 now: { [unowned self] in clock },
                 wait: { [unowned self] in
                     waits.append($0)
@@ -237,6 +240,22 @@ struct ModuleHostTests {
 
         #expect(system.launched == [url, url])
         #expect(host.modules[url]?.state == .gaveUp)
+    }
+
+    @Test("A module that quits before its launch returns is treated as a quit, and restarted")
+    func quitDuringLaunchIsHeard() async {
+        let system = FakeSystem()
+        let url = system.addModule("automation")
+        let host = makeHost(system)
+        var quits: [String] = []
+        host.onModuleQuit = { quits.append($0) }
+        system.exitedAtLaunch = [101]
+
+        await host.start(url)
+
+        #expect(quits == ["com.thaw.module.automation"])
+        #expect(system.launched == [url, url], "restarted after the policy's delay")
+        #expect(host.modules[url]?.state == .running(102))
     }
 
     @Test("Thaw hears when a module stops running, however it stopped")

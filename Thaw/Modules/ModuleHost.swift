@@ -27,6 +27,8 @@ final class ModuleHost {
         /// its process. With showWindow the module opens its window.
         var launch: (_ url: URL, _ showWindow: Bool) async throws -> pid_t
         var terminate: (pid_t) -> Void
+        /// Whether the process is still running.
+        var isRunning: (pid_t) -> Bool
         var now: () -> Date
         var wait: (TimeInterval) async -> Void
         /// The identifiers of the modules switched on, or nil before the first choice is saved.
@@ -233,6 +235,10 @@ final class ModuleHost {
             }
             Self.diagLog.info("Module at \(url.lastPathComponent) running as pid \(pid)")
             modules[url]?.state = .running(pid)
+            // An exit reported while the launch was still under way found no running module.
+            if !environment.isRunning(pid) {
+                await moduleDidTerminate(pid: pid)
+            }
         } catch {
             Self.diagLog.error("Module at \(url.path) failed to launch: \(error)")
             if stopCounts[url, default: 0] == stopCount {

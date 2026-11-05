@@ -60,12 +60,14 @@ enum ProfileSwitchAnnouncer {
         backlog.moduleStopped()
     }
 
+    /// Announces one phase of a switch, or holds it while the Scripts module isn't listening.
     static func post(_ phase: ProfileSwitch.Phase, _ event: ProfileSwitch) {
         if backlog.shouldSend(phase, event, at: .now) {
             send(phase, event)
         }
     }
 
+    /// Posts the phase's notification under Thaw's bundle ID.
     private static func send(_ phase: ProfileSwitch.Phase, _ event: ProfileSwitch) {
         guard let notification = notification(phase, event, hostBundleIdentifier: Bundle.main.bundleIdentifier) else { return }
         deliver(notification.name, notification.userInfo)

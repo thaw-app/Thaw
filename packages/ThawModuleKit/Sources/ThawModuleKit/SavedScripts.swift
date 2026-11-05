@@ -14,6 +14,7 @@ public struct HookConfiguration: Codable, Equatable, Sendable {
     public var globalPostHook: HookScript?
     public var profileHooks: [UUID: ProfileAutomation]
 
+    /// A configuration with the given scripts, none by default.
     public init(
         globalPreHook: HookScript? = nil,
         globalPostHook: HookScript? = nil,
