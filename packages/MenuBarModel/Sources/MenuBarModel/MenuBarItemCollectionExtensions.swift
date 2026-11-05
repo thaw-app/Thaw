@@ -39,6 +39,29 @@ public extension Sequence<MenuBarItem> {
     }
 }
 
+// MARK: - MenuBarItemCache merging
+
+public extension MenuBarItemCache {
+    /// Combines fresh items with cached items that are still valid, keeping
+    /// fresh representations when both use the same persistent identity.
+    static func merging(
+        _ snapshotItems: [MenuBarItem],
+        withCachedItems cachedItems: [MenuBarItem]
+    ) -> [MenuBarItem] {
+        var identifiers = Set(snapshotItems.map {
+            MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier)
+        })
+        var mergedItems = snapshotItems
+        for item in cachedItems {
+            let identifier = MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
+            if identifiers.insert(identifier).inserted {
+                mergedItems.append(item)
+            }
+        }
+        return mergedItems
+    }
+}
+
 // MARK: - Comparable
 
 public extension Comparable {
