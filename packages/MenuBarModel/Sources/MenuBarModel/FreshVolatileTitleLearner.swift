@@ -56,12 +56,19 @@ public struct FreshVolatileTitleLearner: Sendable {
             else {
                 continue
             }
-            if let previous = lastObservationByOwner[bundleID], previous.sourcePID == observation.sourcePID, previous.title != observation.title, abs(previous.slotX - observation.slotX) <= 4 {
+            if let previous = lastObservationByOwner[bundleID], Self.isRename(from: previous, to: observation) {
                 learned.insert(bundleID)
             }
             nextObservations[bundleID] = observation
         }
         lastObservationByOwner = nextObservations
         return learned
+    }
+
+    /// Whether the same process renamed its item in place. A change to or from a placeholder
+    /// such as Item-0 is the app finishing its launch, so it doesn't count.
+    private static func isRename(from old: Observation, to new: Observation) -> Bool {
+        old.sourcePID == new.sourcePID && old.title != new.title && abs(old.slotX - new.slotX) <= 4
+            && !MenuBarItemTag.isGenericItemTitle(old.title) && !MenuBarItemTag.isGenericItemTitle(new.title)
     }
 }

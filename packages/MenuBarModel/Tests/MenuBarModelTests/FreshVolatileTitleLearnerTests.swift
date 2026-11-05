@@ -38,22 +38,30 @@ struct FreshVolatileTitleLearnerTests {
     @Test("A changing title on one stable process slot is learned")
     func learnsStableSingleItemTitleChange() {
         var learner = FreshVolatileTitleLearner()
-        #expect(learner.observe([item(title: "Item-0")]).isEmpty)
-        #expect(learner.observe([item(title: "99+")]) == ["com.example.chat"])
+        #expect(learner.observe([item(title: " 3")]).isEmpty)
+        #expect(learner.observe([item(title: " 5")]) == ["com.example.chat"])
+    }
+
+    @Test("An app finishing its launch, from Item-0 to its name, is not learned")
+    func skipsLaunchPlaceholder() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([item(title: "Item-0")])
+        #expect(learner.observe([item(title: "Sync")]).isEmpty)
+        #expect(learner.observe([item(title: "Item-0")]).isEmpty, "nor back to it")
     }
 
     @Test("A moved slot, changed process, or second item is not learned")
     func refusesAmbiguousObservations() {
         var moved = FreshVolatileTitleLearner()
-        _ = moved.observe([item(title: "Item-0", x: 100)])
+        _ = moved.observe([item(title: "3", x: 100)])
         #expect(moved.observe([item(title: "99+", x: 110)]).isEmpty)
 
         var relaunched = FreshVolatileTitleLearner()
-        _ = relaunched.observe([item(title: "Item-0", sourcePID: 1)])
+        _ = relaunched.observe([item(title: "3", sourcePID: 1)])
         #expect(relaunched.observe([item(title: "99+", sourcePID: 2)]).isEmpty)
 
         var siblings = FreshVolatileTitleLearner()
-        _ = siblings.observe([item(title: "Item-0", windowID: 1)])
+        _ = siblings.observe([item(title: "3", windowID: 1)])
         #expect(siblings.observe([
             item(title: "99+", windowID: 1),
             item(title: "Status", x: 1120, windowID: 2),
@@ -63,7 +71,7 @@ struct FreshVolatileTitleLearnerTests {
     @Test("An existing canonicalizer is left to the static rule")
     func skipsKnownVolatileOwners() {
         var learner = FreshVolatileTitleLearner()
-        _ = learner.observe([item(bundle: "com.tencent.qq", title: "Item-0")])
+        _ = learner.observe([item(bundle: "com.tencent.qq", title: "3")])
         #expect(learner.observe([item(bundle: "com.tencent.qq", title: "99+")]).isEmpty)
     }
 }

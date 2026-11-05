@@ -751,10 +751,11 @@ extension MenuBarItemManager {
         // Strip clone IDs from the bridging list to match filtered items; the items-based fallback is already clone-free.
         let itemWindowIDs = (currentItemWindowIDs ?? items.reversed().map(\.windowID))
             .filter { !cloneWindowIDs.contains($0) }
-        if MenuBarBackendProvider.current.shouldRetainLastGoodCache(
+        let isPartialMerge = MenuBarBackendProvider.current.shouldRetainLastGoodCache(
             snapshotItems: items,
             previousCachedItems: itemCache.managedItems
-        ) {
+        )
+        if isPartialMerge {
             guard await recoverPartialCacheSnapshot(&items, itemWindowIDs: itemWindowIDs) else { return }
         }
         cacheCycleState.cachedItemWindowIDs = itemWindowIDs
@@ -790,10 +791,10 @@ extension MenuBarItemManager {
             return
         }
 
-        // Partial inventory can populate the editor, but cannot authorize
-        // boundary repairs or replace saved order with retained geometry.
+        // Partial inventory, or one merged with cached items, can populate the editor, but cannot
+        // authorize boundary repairs or replace saved order with retained geometry.
         lastKnownControlItems = CacheDividers.live(controlItems)
-        if !inventory.hasFreshKnownInventory {
+        if isPartialMerge || !inventory.hasFreshKnownInventory {
             await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID, publicationGeneration: publicationGeneration, observationOnly: true)
             return
         }
