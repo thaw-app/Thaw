@@ -65,6 +65,16 @@ struct VolatileTitleTests {
         ]) == ["\(bundle):Item"])
     }
 
+    @Test("QQ's unread badge does not create a second item")
+    func qqUnreadBadgeKeepsOneIdentity() {
+        let bundle = "com.tencent.qq"
+        #expect(MenuBarItemTag.hasVolatileTitles(bundle))
+        #expect(MenuBarItemTag.canonicalPersistentIdentifiers([
+            "\(bundle):Item-0",
+            "\(bundle):99+",
+        ]) == ["\(bundle):Item"])
+    }
+
     @Test("Another app from the same developer is untouched")
     func doesNotMatchSiblingApps() {
         // A developer-wide match would collapse Googly Eyes' stable title too.

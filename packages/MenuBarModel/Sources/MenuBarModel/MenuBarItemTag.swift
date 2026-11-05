@@ -194,6 +194,8 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
         (prefix: "com.macthrottle.app", suffix: ""),
         // WeChat's single status item shows its unread count as the whole title.
         (prefix: "com.tencent.xinWeChat", suffix: ""),
+        // QQ's single status item shows either Item-0 or an unread badge such as 99+.
+        (prefix: "com.tencent.qq", suffix: ""),
     ]
 
     /// Whether bundleID belongs to an app whose status-item titles are live

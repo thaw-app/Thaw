@@ -26,7 +26,7 @@ the items under New and Fixed.
 
 ### Fixed
 
-- **Layout no longer keeps a stale item list when macOS omits Thaw's own menu bar accessibility element.** Thaw kept the whole previous cache, so items that appeared later could be missing from Layout. It now combines the fresh items with cached items whose apps are still running. WeChat's unread count no longer creates a separate Layout item for every count. Reported by @Mujun05 in [#1449](https://github.com/thaw-app/Thaw/issues/1449).
+- **Layout no longer keeps a stale item list when macOS omits Thaw's own menu bar accessibility element.** Thaw kept the whole previous cache, so items that appeared later could be missing from Layout. It now combines the fresh items with cached items whose apps are still running. QQ and WeChat unread badges no longer create separate Layout items. Reported by @Mujun05 in [#1449](https://github.com/thaw-app/Thaw/issues/1449).
 
 ## [3.0.0-alpha.13] - 2026-11-04
 
