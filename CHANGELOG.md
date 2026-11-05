@@ -24,7 +24,7 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
-## [3.0.0-alpha.13] - 2026-11-04
+## [3.0.0-alpha.13] - 2026-11-05
 
 **macOS 27 only · Build 124**
 
@@ -39,7 +39,11 @@ Scripts, Triggers and Widgets become modules you can switch on and off, and Sett
 #### Modules
 
 - **Triggers, Scripts and Widgets run as small apps next to Thaw.** Open each from its page in Settings. The widget icon moved there from Experiments.
-- **Profile switches don't wait for a "before switching" script** to finish before the layout changes.
+- **Profile switches don't wait for a "before switching" script** to finish before the layout changes. Scripts also run for the profile Thaw applies as it starts, and go with a profile you export or copy.
+
+#### Thaw's icon
+
+- **The cube in Thaw's icon is even.** Its top face no longer looks paler than its sides, and the shapes inside it share one flat cream.
 
 #### Settings
 
