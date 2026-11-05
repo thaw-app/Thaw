@@ -14,6 +14,13 @@ enum ProfileSwitchAnnouncer {
     private static var backlog = ProfileSwitchBacklog()
     private static var listeningObserver: NSObjectProtocol?
 
+    /// Posts one phase to the modules. Under unit tests it posts nothing, so a running Scripts
+    /// module can't run the user's scripts; tests replace it to see what would be sent.
+    static var deliver: (Notification.Name, [String: String]) -> Void = { name, userInfo in
+        guard !TestHosting.isActive(environment: ProcessInfo.processInfo.environment) else { return }
+        DistributedNotificationCenter.default().postNotificationName(name, object: nil, userInfo: userInfo, deliverImmediately: true)
+    }
+
     /// The notification for one phase of a switch, or nil without a bundle ID to scope it to.
     static func notification(
         _ phase: ProfileSwitch.Phase,
@@ -33,11 +40,14 @@ enum ProfileSwitchAnnouncer {
             object: nil,
             queue: .main
         ) { _ in
-            MainActor.assumeIsolated {
-                for (phase, event) in backlog.moduleListening(at: .now) {
-                    send(phase, event)
-                }
-            }
+            MainActor.assumeIsolated { scriptsListening() }
+        }
+    }
+
+    /// The Scripts module listens now: sends the switch held until then.
+    static func scriptsListening(at now: ContinuousClock.Instant = .now) {
+        for (phase, event) in backlog.moduleListening(at: now) {
+            send(phase, event)
         }
     }
 
@@ -58,11 +68,6 @@ enum ProfileSwitchAnnouncer {
 
     private static func send(_ phase: ProfileSwitch.Phase, _ event: ProfileSwitch) {
         guard let notification = notification(phase, event, hostBundleIdentifier: Bundle.main.bundleIdentifier) else { return }
-        DistributedNotificationCenter.default().postNotificationName(
-            notification.name,
-            object: nil,
-            userInfo: notification.userInfo,
-            deliverImmediately: true
-        )
+        deliver(notification.name, notification.userInfo)
     }
 }
