@@ -26,6 +26,8 @@ the items under New and Fixed.
 
 ### Fixed
 
+- **Layout shows new items when macOS leaves out Thaw's own icon.** On macOS 27.2 Thaw then kept its whole earlier list, so an item that appeared later stayed missing from Layout. Thaw now adds the items it found and keeps the earlier ones whose apps still run. QQ and WeChat no longer get a new Layout item for each unread count. Reported by @Mujun05 in [#1449](https://github.com/thaw-app/Thaw/issues/1449).
+- **Profiles no longer reset your menu bar spacing.** Applying a profile, at startup or when you changed Space or Focus, could put the menu bar back to its default spacing instead of the spacing you chose.
 - **Thaw no longer moves items while you log in or switch to another display.** An app opening at login ended Thaw's wait for the menu bar a few seconds in, and when the menu bar moved to another display Thaw read item positions from both bars. Either way it could move an item out of the place you gave it.
 
 ## [3.0.0-alpha.13] - 2026-11-04

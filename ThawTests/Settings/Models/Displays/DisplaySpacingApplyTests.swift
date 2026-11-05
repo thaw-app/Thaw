@@ -149,6 +149,23 @@ struct DisplaySpacingApplyTests {
         #expect(spacingManager.offset == 4)
     }
 
+    @Test("A profile with the display settings already loaded still sets the offset the profile apply writes", arguments: [false, true])
+    func unchangedProfileSetsOffset(writeOnly: Bool) throws {
+        let uuid = try activeUUID()
+        let manager = try makeManager()
+        let configurations = [uuid: DisplayThawBarConfiguration.defaultConfiguration.withItemSpacingOffset(-14)]
+        // Startup loads the saved display settings before the spacing host is attached.
+        let host = manager.spacingHost
+        manager.spacingHost = nil
+        manager.configurations = configurations
+        manager.spacingHost = host
+
+        manager.assignConfigurations(configurations, writeOnly: writeOnly)
+
+        #expect(spacingManager.offset == -14, "an offset of 0 would write the default spacing over the saved one")
+        #expect(recorder.applies.isEmpty, "nothing changed, so the display settings apply nothing themselves")
+    }
+
     @Test("A display change for the display spacing was last applied to does nothing; another display only writes")
     func displayChangeApply() async throws {
         let uuid = try activeUUID()
