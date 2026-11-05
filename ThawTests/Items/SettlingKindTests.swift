@@ -48,6 +48,19 @@ struct SettlingKindTests {
         #expect(manager.settlingKind == .cold)
     }
 
+    @Test("A spacing preflight at login doesn't take an app launch's ID as its own")
+    func preflightKeepsColdSettlingAfterLaunch() {
+        let manager = MenuBarItemManager()
+        defer { manager.startupSettlingTask?.cancel() }
+
+        manager.startSettlingPeriod(reason: "performSetup")
+        manager.startSettlingPeriod(reason: "appLaunch", expectedBundleIDs: ["com.example.app"], maxDuration: .seconds(8))
+        manager.startSettlingPeriod(reason: "spacingRelaunch:preflight")
+
+        #expect(manager.settlingKind == .cold)
+        #expect(manager.settlingExpectedBundleIDs == ["com.example.app"], "the launch's ID stays for the boot settling")
+    }
+
     @Test("A spacing relaunch still waits for the apps it relaunched")
     func relaunchReplacesColdSettling() {
         let manager = MenuBarItemManager()

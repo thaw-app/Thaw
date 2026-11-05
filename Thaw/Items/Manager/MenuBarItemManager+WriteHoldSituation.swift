@@ -35,4 +35,11 @@ extension MenuBarItemManager {
         situation.barOnUncachedDisplay = itemDisplayID.map { $0 != barDisplayID } ?? false
         return situation
     }
+
+    /// Reads the bar in full when it moved to a display the cache hasn't followed: only a full
+    /// read moves the cache, and an unchanged window list never asks for one.
+    func readBarIfItMoved(_ situation: WriteHold.Situation) {
+        guard situation.barOnUncachedDisplay else { return }
+        Task { await cacheItemsRegardless() }
+    }
 }
