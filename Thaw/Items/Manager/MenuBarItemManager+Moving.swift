@@ -1869,7 +1869,7 @@ extension MenuBarItemManager {
         var updatedOrder = desiredOrder
         let missing = RepublishAbsenceMemo.absentees(wanted: wantedIDs, live: liveIDs)
         if !missing.isEmpty {
-            missingRepublishMemo.noteMissing(missing, at: .now)
+            LeftOutMemberWatch.noteLeftOut(missing, by: self)
             // Members of apps that are not running were already named at debug above.
             let lagging = RepublishAbsenceMemo.reportable(missing, liveNamespaces: liveNamespaces, runningBundleIDs: runningBundleIDs)
             if !lagging.isEmpty {

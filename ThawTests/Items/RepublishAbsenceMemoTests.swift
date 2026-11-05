@@ -98,6 +98,80 @@ struct RepublishAbsenceMemoTests {
         #expect(RepublishAbsenceMemo.memory == .seconds(10))
     }
 
+    @Test("A left-out member is still watched for after the ten-second memory lapses")
+    func leftOutOutlastsTheMemory() {
+        var memo = RepublishAbsenceMemo()
+        memo.noteMissing(["istat"], at: start)
+        let later = start + .seconds(30)
+
+        memo.expire(now: later)
+
+        #expect(!memo.isKnownAbsent("istat"), "Passes stop waiting for it")
+        #expect(memo.hasLeftOutMembers(now: later))
+        #expect(memo.leftOutMembers(amongLive: ["istat", "battery"], now: later) == ["istat"])
+    }
+
+    @Test("A member left out two minutes ago is no longer watched for")
+    func leftOutExpires() {
+        var memo = RepublishAbsenceMemo()
+        memo.noteMissing(["a"], at: start)
+        let lapsed = start + RepublishAbsenceMemo.leftOutMemory
+
+        #expect(memo.hasLeftOutMembers(now: lapsed - .milliseconds(1)))
+        #expect(!memo.hasLeftOutMembers(now: lapsed))
+        #expect(memo.leftOutMembers(amongLive: ["a"], now: lapsed).isEmpty)
+
+        memo.expire(now: lapsed)
+        #expect(!memo.hasLeftOutMembers(now: start))
+    }
+
+    @Test("Only the left-out members that are live are named")
+    func onlyLiveLeftOutMembersAreNamed() {
+        var memo = RepublishAbsenceMemo()
+        memo.noteMissing(["a", "b"], at: start)
+
+        #expect(memo.leftOutMembers(amongLive: ["a", "c"], now: start) == ["a"])
+        #expect(memo.leftOutMembers(amongLive: [], now: start).isEmpty)
+    }
+
+    @Test("A pass that sees a left-out member live places it, so it is no longer watched for")
+    func arrivalClearsLeftOut() {
+        var memo = RepublishAbsenceMemo()
+        memo.noteMissing(["a", "b"], at: start)
+
+        memo.noteArrived(["a"])
+
+        #expect(memo.leftOutMembers(amongLive: ["a", "b"], now: start) == ["b"])
+        memo.noteArrived(["b"])
+        #expect(!memo.hasLeftOutMembers(now: start))
+    }
+
+    @Test("Forgetting the absences keeps left-out members watched")
+    func forgetKeepsLeftOut() {
+        var memo = RepublishAbsenceMemo()
+        memo.noteMissing(["a"], at: start)
+
+        memo.forget()
+
+        #expect(memo.isEmpty)
+        #expect(memo.hasLeftOutMembers(now: start))
+    }
+
+    @Test("Each watch gets its own generation")
+    func watchGenerationsCount() {
+        var memo = RepublishAbsenceMemo()
+
+        #expect(memo.watchGeneration == 0)
+        #expect(memo.startWatch() == 1)
+        #expect(memo.startWatch() == 2)
+        #expect(memo.watchGeneration == 2)
+    }
+
+    @Test("A left-out member is watched for two minutes")
+    func leftOutWindow() {
+        #expect(RepublishAbsenceMemo.leftOutMemory == .seconds(120))
+    }
+
     @Test
     func anEmptyReadNamesNoAbsentees() {
         #expect(RepublishAbsenceMemo.absentees(wanted: ["a", "b"], live: []).isEmpty)
