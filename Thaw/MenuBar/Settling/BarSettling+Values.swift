@@ -32,6 +32,28 @@ extension BarSettling {
         case appsRelaunched(expecting: Set<String>, cause: String?)
         /// The wave relaunched nothing, failed or was cancelled, so its preflight may be called off.
         case spacingWaveEnded(cause: String?, outcome: WaveOutcome)
+        /// The screens woke, and MenuBarAgent re-lays the bar after that.
+        case screensWoke
+        /// The display environment dropped its snapshot.
+        case displaysInvalidated
+        /// A read of the bar found items arriving or leaving, a frame mid-layout or a section revealed.
+        case barLayoutShifted
+        /// The revealed section changed, so the bar reflows for a moment.
+        case revealedSectionChanged
+        /// The kit started or finished laying out a reveal or hide.
+        case revealTransition(active: Bool)
+    }
+
+    /// What a caller is about to do that a disturbed bar should hold off.
+    nonisolated enum Purpose: Equatable, Sendable {
+        /// Nudging MenuBarAgent to re-read item widths, which flickers while the bar is already reflowing.
+        case agentNudge
+    }
+
+    /// Why a purpose is held off.
+    nonisolated enum Hold: Equatable, Sendable {
+        case revealReflow
+        case revealTransition
     }
 
     nonisolated enum WaveOutcome: String, Sendable {
@@ -47,8 +69,6 @@ extension BarSettling {
         /// Whether MenuBarAgent or BentoBox items are cached yet.
         var hostReady = false
         var bundleIDs: Set<String> = []
-        /// Whether the saved-order mirror's quiet clock has run out.
-        var barQuiet = true
     }
 
     /// How a settle ended, for the work owed afterwards.
@@ -111,17 +131,24 @@ nonisolated extension BarSettling.Disturbance {
         case let .spacingWaveStarted(cause): Self.spacingLabel(cause) + ":preflight"
         case let .appsRelaunched(_, cause): Self.spacingLabel(cause)
         case let .spacingWaveEnded(cause, outcome): Self.spacingLabel(cause) + ":\(outcome.rawValue)"
+        case .screensWoke: "screensWoke"
+        case .displaysInvalidated: "displaysInvalidated"
+        case .barLayoutShifted: "barLayoutShifted"
+        case .revealedSectionChanged: "revealedSectionChanged"
+        case let .revealTransition(active): active ? "revealTransitionBegan" : "revealTransitionEnded"
         }
     }
 
-    var kind: BarSettling.Kind {
+    /// The settle this disturbance starts, or nil when it only moves a clock or ends a wave.
+    var kind: BarSettling.Kind? {
         switch self {
         case .thawLaunched: .cold
         case .appLaunched, .displayChanged: .event
-        case .spacingWaveStarted, .spacingWaveEnded: .preflight
+        case .spacingWaveStarted: .preflight
         // Its own IDs, not the shared set: a launch that yielded leaves its ID there,
         // and a preflight counting it would replace the launch settle.
         case let .appsRelaunched(expecting, _): expecting.isEmpty ? .preflight : .expectedSet
+        case .spacingWaveEnded, .screensWoke, .displaysInvalidated, .barLayoutShifted, .revealedSectionChanged, .revealTransition: nil
         }
     }
 
@@ -129,7 +156,7 @@ nonisolated extension BarSettling.Disturbance {
         switch self {
         case let .appLaunched(bundleID): [bundleID]
         case let .appsRelaunched(expecting, _): expecting
-        case .thawLaunched, .displayChanged, .spacingWaveStarted, .spacingWaveEnded: []
+        default: []
         }
     }
 

@@ -43,8 +43,13 @@ final class AppState {
 
     // Menu bar stack. Set up in dependency order; see bootstrapTask.
 
+    /// Whether the bar is settling or was disturbed recently, shared by the menu bar and item managers.
+    let barSettling: BarSettling
+    /// Reports wakes, display invalidations and reveals to barSettling.
+    private let barSettlingObservers: BarSettlingObservers
+
     /// The sections, their control items, and the show/hide state machine.
-    let menuBarManager = MenuBarManager()
+    let menuBarManager: MenuBarManager
 
     /// Shared by the menu bar manager, which acts on a display move, and the
     /// event taps, which ask for a check.
@@ -67,7 +72,7 @@ final class AppState {
 
     /// The item inventory, what sits in the menu bar, where, and the moves
     /// that put it there. Everything below queries it.
-    let itemManager = MenuBarItemManager()
+    let itemManager: MenuBarItemManager
 
     /// Rendered pictures of the items, shared by the layout editor and the
     /// Thaw bar. Fed from itemManager, so it is set up after it.
@@ -193,6 +198,14 @@ final class AppState {
     /// Prevent repeated restart attempts.
     private var isRestarting = false
 
+    init() {
+        let settling = BarSettling()
+        barSettling = settling
+        barSettlingObservers = BarSettlingObservers(settling: settling)
+        menuBarManager = MenuBarManager(barSettling: settling)
+        itemManager = MenuBarItemManager(barSettling: settling)
+    }
+
     // MARK: - Bootstrap
 
     /// Callers await the same lazy task so bootstrap runs once.
@@ -219,6 +232,7 @@ final class AppState {
         displayEnvironment.start()
         settings.performSetup(with: self)
         menuBarManager.performSetup(with: self, activeDisplayWatcher: activeDisplayWatcher, displays: displayEnvironment)
+        barSettlingObservers.observe(revealedSections: menuBarManager.revealedSectionChanges)
         // A refused preferences watcher stays stopped; recreate it after either a table-file grant or Full Disk Access.
         permissions.onPermissionTransition = { [weak self] permission, granted in
             guard let self, granted, permission === permissions.fullDiskAccess else { return }
@@ -252,7 +266,7 @@ final class AppState {
         userNotificationManager.performSetup(with: self)
         profileManager.performSetup(with: self)
         itemManager.repairs.onUserLayoutChange = { [weak self] in self?.profileLayoutKeeper.noteUserLayoutChange() }
-        itemManager.savedOrderMirrorGate.observe(displayInvalidations: displayEnvironment.invalidations)
+        barSettlingObservers.observe(displayInvalidations: displayEnvironment.invalidations)
         profilesFeature.onChange = { [weak profileManager] in profileManager?.rebuildProfileHotkeys() }
         controlCommandObserver.performSetup(with: self)
         controlStatePublisher.performSetup(with: self)

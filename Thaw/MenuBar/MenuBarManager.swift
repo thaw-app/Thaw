@@ -181,8 +181,13 @@ final class MenuBarManager {
     let newIconFollower = NewIconSectionFollower()
     /// Who opened the current reveal, so Thaw's own reveals are not counted as the user's.
     let revealAttribution = RevealAttribution()
-    /// Block nudges only during reveal reflow, not a settled reveal, so hidden moves retain their cursor-free path.
-    let revealReflow = RevealReflowWindow()
+    /// Holds nudges off during reveal reflow and the kit's transition, not a settled reveal, so hidden moves
+    /// retain their cursor-free path. Shared with the item manager.
+    @ObservationIgnored let barSettling: BarSettling
+
+    init(barSettling: BarSettling = BarSettling()) {
+        self.barSettling = barSettling
+    }
 
     /// Panels observe reveals without holding a platform type; emits nothing without an engine.
     var revealedSectionChanges: AnyPublisher<MenuBarSectionName?, Never> {
@@ -304,7 +309,6 @@ final class MenuBarManager {
         sectionController = controller
         runtimeSectionController = controller
         revealAttribution.observe(revealedSectionChanges)
-        revealReflow.observe(revealedSectionChanges)
         nativeAppHidingExperiment.start(controller: controller, settings: appState.settings.advanced)
         systemExtraTakeover.start(controller: controller, settings: appState.settings.advanced) { [weak appState] identifier in
             guard let itemManager = appState?.itemManager,
@@ -1491,24 +1495,20 @@ final class MenuBarManager {
     }
 
     /// The kit suppresses nudges during assertion recompositing, which already lays out the bar; extra resizing flickers.
-    /// It clears this before position-restoring writes; revealReflow guards new transitions during suspended restores.
-    @ObservationIgnored
-    private var revealHideTransitionActive = false
-
-    /// Exposed for the nudge gate.
+    /// It clears this before position-restoring writes; the reveal reflow window guards new transitions during suspended restores.
     var isRevealHideTransitionActive: Bool {
-        revealHideTransitionActive
+        barSettling.isRevealTransitionActive
     }
 
     func setRevealHideTransitionActive(_ active: Bool) {
-        revealHideTransitionActive = active
+        barSettling.note(.revealTransition(active: active))
         // Either edge of the transition moves the items, so the pill should follow closely.
         leadingEdgeWatcher.expectChange()
     }
 
     /// Suppress width nudges and structural normalization during the transition or fixed settling window.
     var shouldSuppressMenuBarAgentNudge: Bool {
-        revealReflow.isSettling || revealHideTransitionActive
+        barSettling.hold(for: .agentNudge) != nil
     }
 
     /// Cursor-free invalidation after position writes; suppress during reflow to avoid missed rehide clicks, but allow settled reveals.

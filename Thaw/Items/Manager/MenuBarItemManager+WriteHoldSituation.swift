@@ -30,7 +30,7 @@ extension MenuBarItemManager {
         situation.membershipReadPending = manualMembershipTask != nil
         situation.layoutPublicationStale = !layoutPublication.canPublish(generation: layoutPublication.generation)
         situation.sectionRevealed = appState?.menuBarManager.sectionController.revealedSection != nil
-        situation.revealTransitionActive = appState?.menuBarManager.isRevealHideTransitionActive ?? false
+        situation.revealTransitionActive = barSettling.isRevealTransitionActive
         let barDisplayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
         situation.barOnUncachedDisplay = itemDisplayID.map { $0 != barDisplayID } ?? false
         return situation

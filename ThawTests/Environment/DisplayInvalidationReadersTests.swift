@@ -35,8 +35,11 @@ struct DisplayInvalidationReadersTests {
     @Test("The saved-order mirror is held from the posting turn of an invalidation, and not before the environment relays one")
     func mirrorGateFollowsInvalidations() {
         let (environment, center) = Self.makeEnvironment()
-        let gate = SavedOrderMirrorGate(observesSystem: false)
-        gate.observe(displayInvalidations: environment.invalidations)
+        var now = ContinuousClock.now
+        let settling = BarSettling(now: { now })
+        let observers = BarSettlingObservers(settling: settling, observesScreenWakes: false)
+        observers.observe(displayInvalidations: environment.invalidations)
+        let gate = SavedOrderMirrorGate(settling: settling)
         let identifiers: Set = ["com.example.one"]
 
         Self.postScreenParametersChange(on: center)
@@ -46,7 +49,8 @@ struct DisplayInvalidationReadersTests {
         defer { environment.stop() }
         Self.postScreenParametersChange(on: center)
         #expect(!gate.allowsMirror(identifiers: identifiers, restrictionChange: nil))
-        #expect(gate.allowsMirror(identifiers: identifiers, restrictionChange: nil, now: .now + SavedOrderMirrorGate.quietPeriod))
+        now += BarSettling.quietPeriod
+        #expect(gate.allowsMirror(identifiers: identifiers, restrictionChange: nil))
     }
 
     @Test("A spent re-publish budget is restored in the posting turn of an invalidation, and not before the environment relays one")

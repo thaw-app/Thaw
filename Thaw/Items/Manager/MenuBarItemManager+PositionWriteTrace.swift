@@ -61,7 +61,7 @@ extension MenuBarItemManager {
                     "\(item.uniqueIdentifier)=\(controller?.authoredSection(for: item.uniqueIdentifier).rawValue ?? "unknown")"
                 }
                 return "revealed=\(controller?.revealedSection?.rawValue ?? "none"); " +
-                    "transition=\(appState?.menuBarManager.isRevealHideTransitionActive ?? false); " +
+                    "transition=\(barSettling.isRevealTransitionActive); " +
                     "cancelled=\(Task.isCancelled); sections=\(sections)"
             }()
         )

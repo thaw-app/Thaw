@@ -92,7 +92,7 @@ final class MenuBarItemManager {
 
     @ObservationIgnored var lastVisibleControlDiagnosticState: String?
     /// Holds the saved-order mirror while the bar settles after a wake, display, hiding or item change.
-    @ObservationIgnored let savedOrderMirrorGate = SavedOrderMirrorGate()
+    @ObservationIgnored lazy var savedOrderMirrorGate = SavedOrderMirrorGate(settling: barSettling)
 
     /// Whether the bar is still settling. Restores and section-order saves wait for it, and this manager
     /// supplies its samples and the work owed afterwards.

@@ -355,7 +355,7 @@ extension MenuBarItemManager {
         // A reveal or hide re-lays the bar natively; re-permuting weights now
         // churns the store and flickers Thaw's icon. The settled normalization
         // restores order once the bar is quiet.
-        if appState?.menuBarManager.isRevealHideTransitionActive == true {
+        if barSettling.isRevealTransitionActive {
             MenuBarItemManager.diagLog.debug(
                 "Skipping structural position rewrite: reveal/hide transition in flight"
             )
