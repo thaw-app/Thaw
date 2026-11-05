@@ -45,91 +45,7 @@
   ],
   "groups": [
     {
-      "name": "Innards Sides",
-      "layers": [
-        {
-          "name": "innards-sides",
-          "image-name": "innards.svg",
-          "hidden": false,
-          "opacity": 0.94,
-          "glass-specializations": [
-            {
-              "value": true
-            }
-          ],
-          "fill-specializations": [
-            {
-              "value": {
-                "linear-gradient": [
-                  "display-p3:1.00000,0.98000,0.86000,1.00000",
-                  "display-p3:1.00000,0.87000,0.50000,1.00000"
-                ],
-                "orientation": {
-                  "start": {
-                    "x": 0.5,
-                    "y": 0
-                  },
-                  "stop": {
-                    "x": 0.5,
-                    "y": 1
-                  }
-                }
-              }
-            },
-            {
-              "appearance": "tinted",
-              "value": "automatic"
-            }
-          ],
-          "position": {
-            "scale": 1,
-            "translation-in-points": [
-              0,
-              0
-            ]
-          }
-        }
-      ],
-      "hidden": false,
-      "opacity": 1,
-      "lighting": "individual",
-      "blur-material": 0.25,
-      "refractivity": {
-        "enabled": true,
-        "strength": 0.45,
-        "depth": 0.55
-      },
-      "shadow-specializations": [
-        {
-          "value": {
-            "kind": "layer-color",
-            "opacity": 0.25
-          }
-        },
-        {
-          "appearance": "dark",
-          "value": {
-            "kind": "layer-color",
-            "opacity": 0.25
-          }
-        }
-      ],
-      "specular-specializations": [
-        {
-          "value": "inside"
-        }
-      ],
-      "translucency-specializations": [
-        {
-          "value": {
-            "enabled": false,
-            "value": 0.5
-          }
-        }
-      ]
-    },
-    {
-      "name": "Innards Top",
+      "name": "Innards",
       "layers": [
         {
           "name": "innards-top",
@@ -144,20 +60,36 @@
           "fill-specializations": [
             {
               "value": {
-                "linear-gradient": [
-                  "display-p3:1.00000,0.98000,0.86000,1.00000",
-                  "display-p3:1.00000,0.87000,0.50000,1.00000"
-                ],
-                "orientation": {
-                  "start": {
-                    "x": 0.5,
-                    "y": 0
-                  },
-                  "stop": {
-                    "x": 0.5,
-                    "y": 1
-                  }
-                }
+                "solid": "display-p3:1.00000,0.92500,0.68000,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": "automatic"
+            }
+          ],
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "name": "innards-sides",
+          "image-name": "innards.svg",
+          "hidden": false,
+          "opacity": 0.94,
+          "glass-specializations": [
+            {
+              "value": true
+            }
+          ],
+          "fill-specializations": [
+            {
+              "value": {
+                "solid": "display-p3:1.00000,0.92500,0.68000,1.00000"
               }
             },
             {
@@ -176,7 +108,7 @@
       ],
       "hidden": false,
       "opacity": 1,
-      "lighting": "individual",
+      "lighting": "combined",
       "blur-material": 0.25,
       "refractivity": {
         "enabled": true,
@@ -303,7 +235,7 @@
           "name": "face-top",
           "image-name": "face-top.svg",
           "hidden": false,
-          "opacity": 0.62,
+          "opacity": 0.4,
           "glass-specializations": [
             {
               "value": true

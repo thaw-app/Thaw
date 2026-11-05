@@ -9,24 +9,6 @@ import Foundation
 import Observation
 import ThawModuleKit
 
-/// Every script the user chose: one before and one after any switch, and a
-/// pair for each profile.
-public struct HookConfiguration: Codable, Equatable, Sendable {
-    public var globalPreHook: HookScript?
-    public var globalPostHook: HookScript?
-    public var profileHooks: [UUID: ProfileAutomation]
-
-    public init(
-        globalPreHook: HookScript? = nil,
-        globalPostHook: HookScript? = nil,
-        profileHooks: [UUID: ProfileAutomation] = [:]
-    ) {
-        self.globalPreHook = globalPreHook
-        self.globalPostHook = globalPostHook
-        self.profileHooks = profileHooks
-    }
-}
-
 /// Keeps the module's scripts in its own defaults, and takes over the
 /// scripts Thaw stored before they moved into the module.
 @MainActor
@@ -37,9 +19,9 @@ public final class HookStore {
     public static let thawGlobalPostKey = "GlobalPostProfileHook"
 
     private enum Key {
-        static let configuration = "HookConfiguration"
+        static let configuration = SavedScripts.configurationKey
         static let importedGlobals = "ImportedThawGlobalHooks"
-        static let knownProfiles = "KnownProfileIDs"
+        static let knownProfiles = SavedScripts.knownProfilesKey
     }
 
     public private(set) var configuration: HookConfiguration

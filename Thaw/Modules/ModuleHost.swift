@@ -27,6 +27,8 @@ final class ModuleHost {
         /// its process. With showWindow the module opens its window.
         var launch: (_ url: URL, _ showWindow: Bool) async throws -> pid_t
         var terminate: (pid_t) -> Void
+        /// Whether the process is still running.
+        var isRunning: (pid_t) -> Bool
         var now: () -> Date
         var wait: (TimeInterval) async -> Void
         /// The identifiers of the modules switched on, or nil before the first choice is saved.
@@ -72,6 +74,8 @@ final class ModuleHost {
     @ObservationIgnored private var stopCounts: [URL: Int] = [:]
     @ObservationIgnored private var terminationObserver: (any NSObjectProtocol)?
     @ObservationIgnored private var hasLoadedEnabled = false
+    /// Replaced modules' processes, each with the identifier of the module to start once it exits.
+    @ObservationIgnored private var handovers: [pid_t: String] = [:]
 
     init(environment: Environment, restartPolicy: ModuleRestartPolicy = ModuleRestartPolicy()) {
         self.environment = environment
@@ -114,8 +118,23 @@ final class ModuleHost {
             let state: State = verdict == .launch || known != .idle ? known : .refused(verdict)
             found[url] = Module(manifest: manifest, verdict: verdict, state: state)
         }
+        let departed = modules.filter { found[$0.key] == nil }
+        // A module removed or replaced by a downloaded copy stops before it leaves the list,
+        // so no process or launch in flight is left that nothing tracks.
+        departed.keys.forEach(stop)
         modules = found
         loadEnabledIfNeeded()
+        for module in departed.values {
+            guard let identifier = module.manifest?.identifier, isEnabled(identifier), let replacement = url(ofModule: identifier)
+            else { continue }
+            switch module.state {
+            // The copy with the same bundle ID starts once the old process is gone, or
+            // macOS could bring the old one forward instead.
+            case let .running(pid): handovers[pid] = identifier
+            case .restarting: Task { await start(replacement) }
+            default: break
+            }
+        }
     }
 
     func isEnabled(_ identifier: String) -> Bool {
@@ -216,6 +235,10 @@ final class ModuleHost {
             }
             Self.diagLog.info("Module at \(url.lastPathComponent) running as pid \(pid)")
             modules[url]?.state = .running(pid)
+            // An exit reported while the launch was still under way found no running module.
+            if !environment.isRunning(pid) {
+                await moduleDidTerminate(pid: pid)
+            }
         } catch {
             Self.diagLog.error("Module at \(url.path) failed to launch: \(error)")
             if stopCounts[url, default: 0] == stopCount {
@@ -237,6 +260,7 @@ final class ModuleHost {
 
     private func reportQuit(_ url: URL) {
         if let bundleIdentifier = modules[url]?.manifest?.bundleIdentifier {
+            ProfileSwitchAnnouncer.moduleQuit(bundleIdentifier: bundleIdentifier)
             onModuleQuit?(bundleIdentifier)
         }
     }
@@ -257,6 +281,13 @@ final class ModuleHost {
     /// Called when any app quits. A module that quits while still marked
     /// running did so on its own, and the restart policy decides what's next.
     func moduleDidTerminate(pid: pid_t) async {
+        if let identifier = handovers.removeValue(forKey: pid) {
+            // Looked up now: the list may have changed, or the module been switched off, while the old copy quit.
+            if isEnabled(identifier), let replacement = url(ofModule: identifier) {
+                await start(replacement)
+            }
+            return
+        }
         guard let url = modules.first(where: { $0.value.state == .running(pid) })?.key else { return }
         reportQuit(url)
         let now = environment.now()
@@ -273,9 +304,12 @@ final class ModuleHost {
         }
     }
 
-    /// Watches for module processes quitting. Call once after creating the live host.
+    /// Watches for module processes quitting, and for the Scripts module to say it listens.
+    /// Call once after creating the live host, before modules start.
     func startObservingTerminations() {
         guard terminationObserver == nil else { return }
+        // Before any module starts, so the Scripts module's first "listening" is heard.
+        ProfileSwitchAnnouncer.startListeningForScripts()
         terminationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didTerminateApplicationNotification,
             object: nil,

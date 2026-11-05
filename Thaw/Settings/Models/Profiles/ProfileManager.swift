@@ -498,7 +498,7 @@ final class ProfileManager {
 
     /// Duplicates an existing profile with a new name.
     func duplicateProfile(id: UUID, newName: String) throws {
-        let original = try loadProfile(id: id)
+        let original = try loadProfile(id: id).withCurrentScripts(moduleDefaults: .scriptsModule)
         let duplicate = Profile(
             name: newName,
             content: original.content
@@ -522,7 +522,7 @@ final class ProfileManager {
 
     /// Exports a profile to a file, including display associations.
     func exportProfile(id: UUID, to url: URL) throws {
-        let profile = try loadProfile(id: id)
+        let profile = try loadProfile(id: id).withCurrentScripts(moduleDefaults: .scriptsModule)
         let meta = profiles.first { $0.id == id }
         let entry = ProfileExportEntry(
             profile: profile,

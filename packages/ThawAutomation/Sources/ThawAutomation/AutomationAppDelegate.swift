@@ -56,6 +56,26 @@ final class AutomationAppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+        // A Thaw that started after this module asks again, or it would hold every switch.
+        center.addObserver(
+            forName: ProfileSwitch.listeningQueryNotificationName(hostBundleIdentifier: host),
+            object: nil,
+            queue: .main
+        ) { _ in
+            Self.announceListening(to: host)
+        }
+        // Thaw holds a switch made before this point and sends it now.
+        Self.announceListening(to: host)
+    }
+
+    /// Tells Thaw this module hears its profile switches.
+    private static nonisolated func announceListening(to host: String) {
+        DistributedNotificationCenter.default().postNotificationName(
+            ProfileSwitch.listeningNotificationName(hostBundleIdentifier: host),
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
     }
 
     private func profileDidSwitch(_ phase: ProfileSwitch.Phase, _ event: ProfileSwitch) {

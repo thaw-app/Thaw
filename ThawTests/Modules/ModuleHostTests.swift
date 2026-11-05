@@ -24,6 +24,8 @@ struct ModuleHostTests {
         var launched: [URL] = []
         var windowsShown: [URL] = []
         var terminated: [pid_t] = []
+        /// Processes that quit before their launch returned.
+        var exitedAtLaunch: Set<pid_t> = []
         var waits: [TimeInterval] = []
         var failLaunch = false
         /// Launches that return no process, like an app that quits as it starts.
@@ -78,6 +80,7 @@ struct ModuleHostTests {
                     return nextPID
                 },
                 terminate: { [unowned self] in terminated.append($0) },
+                isRunning: { [unowned self] in !exitedAtLaunch.contains($0) },
                 now: { [unowned self] in clock },
                 wait: { [unowned self] in
                     waits.append($0)
@@ -237,6 +240,22 @@ struct ModuleHostTests {
 
         #expect(system.launched == [url, url])
         #expect(host.modules[url]?.state == .gaveUp)
+    }
+
+    @Test("A module that quits before its launch returns is treated as a quit, and restarted")
+    func quitDuringLaunchIsHeard() async {
+        let system = FakeSystem()
+        let url = system.addModule("automation")
+        let host = makeHost(system)
+        var quits: [String] = []
+        host.onModuleQuit = { quits.append($0) }
+        system.exitedAtLaunch = [101]
+
+        await host.start(url)
+
+        #expect(quits == ["com.thaw.module.automation"])
+        #expect(system.launched == [url, url], "restarted after the policy's delay")
+        #expect(host.modules[url]?.state == .running(102))
     }
 
     @Test("Thaw hears when a module stops running, however it stopped")
@@ -509,6 +528,72 @@ struct ModuleHostTests {
 
         #expect(host.modules[downloaded] != nil)
         #expect(host.modules[bundled] == nil)
+    }
+
+    /// A host running the bundled automation module as pid 101, then given a downloaded copy of it.
+    private func replacingRunningModule() async -> (FakeSystem, ModuleHost, bundled: URL, downloaded: URL) {
+        let system = FakeSystem()
+        let bundled = system.addModule("automation")
+        let host = makeHost(system)
+        await host.start(bundled)
+        let downloaded = URL(filePath: "/Downloaded/automation.app")
+        system.bundles.insert(downloaded, at: 0)
+        system.infos[downloaded] = system.infos[bundled]
+        system.teams[downloaded] = "TEAM"
+        return (system, host, bundled, downloaded)
+    }
+
+    @Test("A running module a downloaded copy replaces stops, and the copy starts once it has quit")
+    func replacedModuleHandsOver() async {
+        let (system, host, bundled, downloaded) = await replacingRunningModule()
+        var quits: [String] = []
+        host.onModuleQuit = { quits.append($0) }
+
+        host.refresh()
+        #expect(system.terminated == [101])
+        #expect(quits == ["com.thaw.module.automation"])
+        #expect(host.modules[bundled] == nil)
+        #expect(system.launched == [bundled], "waits for the old process to go")
+
+        await host.moduleDidTerminate(pid: 101)
+        #expect(system.launched == [bundled, downloaded])
+        #expect(host.modules[downloaded]?.state == .running(102))
+    }
+
+    @Test("The copy installed when the old process quits is the one that starts")
+    func handoverFollowsTheCurrentList() async {
+        let (system, host, bundled, _) = await replacingRunningModule()
+        host.refresh()
+        // The downloaded copy goes away again before the old process has quit.
+        system.bundles = [bundled]
+        host.refresh()
+
+        await host.moduleDidTerminate(pid: 101)
+        #expect(system.launched == [bundled, bundled])
+        #expect(host.modules[bundled]?.state == .running(102))
+    }
+
+    @Test("A replacement switched off while the old copy quits stays off")
+    func replacementSwitchedOffStaysOff() async {
+        let (system, host, bundled, _) = await replacingRunningModule()
+        host.refresh()
+        await host.setEnabled(false, identifier: "automation")
+
+        await host.moduleDidTerminate(pid: 101)
+        #expect(system.launched == [bundled])
+    }
+
+    @Test("A running module whose bundle is removed stops")
+    func removedModuleStops() async {
+        let system = FakeSystem()
+        let url = system.addModule("automation")
+        let host = makeHost(system)
+        await host.start(url)
+
+        system.bundles = []
+        host.refresh()
+        #expect(system.terminated == [101])
+        #expect(host.modules[url] == nil)
     }
 
     @Test("A module is found by its identifier")
