@@ -61,7 +61,7 @@ final class AlwaysShowHiddenItemsController {
     }
 
     func observeDisplaySettings(
-        _ readConfigurations: @escaping () -> [String: DisplayThawBarConfiguration],
+        _ readConfigurations: @escaping () -> some Sendable,
         refreshControls: @escaping () -> Void
     ) {
         observationTask?.cancel()

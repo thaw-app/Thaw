@@ -35,7 +35,7 @@ final class MenuBarItemFailureLedger {
 
     /// The build string persisted marks are valid for; a change drops them.
     private static var currentBuildVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        Bundle.main.buildString ?? "unknown"
     }
 
     /// Confirmed always-cannotComplete owners bound effort without per-user rediscovery.

@@ -12,6 +12,7 @@ import AppIntents
 import AppKit
 import MenuBarModel
 import SwiftUI
+import ThawUI
 
 // MARK: - Row model
 
@@ -40,7 +41,7 @@ struct HiddenMenuBarItemsSnippetView: View {
     let canRevealIndividually: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: ThawSpacing.row) {
             Label("Hidden Menu Bar Items", systemImage: "menubar.dock.rectangle")
                 .font(.headline)
 
@@ -49,7 +50,7 @@ struct HiddenMenuBarItemsSnippetView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: ThawSpacing.compact) {
                     ForEach(rows) { row in
                         itemRow(row)
                     }
@@ -63,7 +64,7 @@ struct HiddenMenuBarItemsSnippetView: View {
 
             Divider()
 
-            HStack(spacing: 8) {
+            HStack(spacing: ThawSpacing.base) {
                 Button(intent: RevealHiddenSectionIntent()) {
                     Label("Reveal All", systemImage: "eye")
                 }
@@ -73,12 +74,12 @@ struct HiddenMenuBarItemsSnippetView: View {
             }
             .font(.callout)
         }
-        .padding(16)
+        .padding(ThawSpacing.gutter)
         .frame(maxWidth: 360, alignment: .leading)
     }
 
     private func itemRow(_ row: HiddenMenuBarItemRow) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: ThawSpacing.row) {
             Group {
                 if let glyph = row.glyph {
                     glyph
@@ -231,7 +232,7 @@ struct RevealMenuBarItemIntent: AppIntent {
         let controller = appState.menuBarManager.sectionController
         if controller.isOperational {
             controller.revealItemTemporarily(itemIdentifier)
-            controller.scheduleTemporaryItemConceal(itemIdentifier)
+            controller.scheduleTemporaryItemConcealUnlessHeld(itemIdentifier)
         } else {
             // Fall back to whole-section reveal when per-item reveal is unavailable.
             appState.menuBarManager.section(withName: .hidden)?.show()

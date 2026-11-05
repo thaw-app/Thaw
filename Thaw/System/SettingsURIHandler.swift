@@ -9,6 +9,7 @@ import AppKit
 import Foundation
 import MenuBarModel
 import Security
+import ThawModuleKit
 
 /// Handles settings manipulation via thaw:// URLs with whitelist-based security.
 @MainActor
@@ -38,8 +39,8 @@ enum SettingsURIHandler {
             case boolean
             case double(min: Double, max: Double)
             case integer(min: Int, max: Int)
-            /// An integer-backed enum validated by name, currently only
-            /// RehideStrategy.
+            /// An integer-backed enum validated by name: RehideStrategy
+            /// or SettingsAppearance.
             case enumeration
             case string
         }
@@ -59,6 +60,7 @@ enum SettingsURIHandler {
     /// Unset keys read registered Defaults values; SettingsURIKeyTableTests ensures every global table key is registered.
     static let keyTable: [String: SettingURIEntry] = [
         // MARK: - General
+
         "showThawIcon": SettingURIEntry(defaultsKey: .showThawIcon, kind: .boolean, isWritable: true),
         "customThawIconIsTemplate": SettingURIEntry(defaultsKey: .customThawIconIsTemplate, kind: .boolean, isWritable: true),
         "simpleMode": SettingURIEntry(defaultsKey: .simpleMode, kind: .boolean, isWritable: true),
@@ -75,8 +77,10 @@ enum SettingsURIHandler {
         "rehideInterval": SettingURIEntry(defaultsKey: .rehideInterval, kind: .double(min: 1, max: 300), isWritable: true),
         "tempShowInterval": SettingURIEntry(defaultsKey: .tempShowInterval, kind: .double(min: 0, max: 30), isWritable: true),
         "rehideStrategy": SettingURIEntry(defaultsKey: .rehideStrategy, kind: .enumeration, isWritable: true),
+        "settingsAppearance": SettingURIEntry(defaultsKey: .settingsAppearance, kind: .enumeration, isWritable: true),
 
         // MARK: - Advanced
+
         "enableAlwaysHiddenSection": SettingURIEntry(defaultsKey: .enableAlwaysHiddenSection, kind: .boolean, isWritable: true),
         "showAllSectionsOnUserDrag": SettingURIEntry(defaultsKey: .showAllSectionsOnUserDrag, kind: .boolean, isWritable: true),
         "hideApplicationMenus": SettingURIEntry(defaultsKey: .hideApplicationMenus, kind: .boolean, isWritable: true),
@@ -144,11 +148,28 @@ enum SettingsURIHandler {
 
     /// Whether a sender is trusted without asking: a built-in bundle ID signed by this app's team.
     /// An unsigned build of either side has no team and is never trusted this way.
-    static func isBuiltInTrusted(bundleId: String, senderTeamID: String?, ownTeamID: String?) -> Bool {
-        guard builtInTrustedBundleIDs.contains(bundleId),
+    static func isBuiltInTrusted(
+        bundleId: String,
+        senderTeamID: String?,
+        ownTeamID: String?,
+        ownBundleID: String? = Bundle.main.bundleIdentifier
+    ) -> Bool {
+        guard isBuiltInBundleID(bundleId, ownBundleID: ownBundleID),
               let senderTeamID, let ownTeamID
         else { return false }
         return senderTeamID == ownTeamID
+    }
+
+    /// A partner app from the list, or one of this Thaw's own modules, which
+    /// are named after its bundle ID: com.stonerl.Thaw.module.triggers.
+    static func isBuiltInBundleID(_ bundleId: String, ownBundleID: String?) -> Bool {
+        if builtInTrustedBundleIDs.contains(bundleId) {
+            return true
+        }
+        guard let ownBundleID else { return false }
+        let prefix = ownBundleID + ModuleLaunchEnvironment.moduleBundleSeparator
+        let name = bundleId.dropFirst(prefix.count)
+        return bundleId.hasPrefix(prefix) && !name.isEmpty && !name.contains(".")
     }
 
     /// Whether the sender is a built-in trusted sender, judged by its own signature.
@@ -158,7 +179,9 @@ enum SettingsURIHandler {
         _ sender: SettingsURISender?,
         ownTeamID: () -> String? = { teamIdentifier(ofAppAt: Bundle.main.bundleURL, logName: "this app") }
     ) -> Bool {
-        guard let sender, builtInTrustedBundleIDs.contains(sender.bundleIdentifier) else { return false }
+        guard let sender, isBuiltInBundleID(sender.bundleIdentifier, ownBundleID: Bundle.main.bundleIdentifier) else {
+            return false
+        }
         return isBuiltInTrusted(
             bundleId: sender.bundleIdentifier,
             senderTeamID: sender.teamIdentifier,
@@ -443,19 +466,13 @@ enum SettingsURIHandler {
             return handleDoubleSet(key: key, value: value, entry: entry)
 
         case .enumeration:
-            return handleEnumSet(key: key, value: value, entry: entry)
+            return key == "settingsAppearance" ? handleAppearanceSet(value) : handleEnumSet(key: key, value: value, entry: entry)
 
         case .integer, .string:
             // No global integer or string setting is published yet.
             diagLog.warning("Settings URI: Key '\(key)' has an unsupported kind")
             return false
         }
-    }
-
-    private static func applyBooleanSetting(_ value: Bool, key: String, entry: SettingURIEntry) -> Bool {
-        Defaults.set(value, forKey: entry.defaultsKey)
-        postSettingsDidChangeNotification(key: key, value: value)
-        return true
     }
 
     /// Handles setting a double/numeric value with range validation.
@@ -511,6 +528,12 @@ enum SettingsURIHandler {
         itemID: String?,
         sectionAssignment: [String: MenuBarSection.Name]
     ) -> String? {
+        resolveRevealItemIdentifier(bundle: bundle, itemID: itemID, candidates: Array(sectionAssignment.keys))
+    }
+
+    /// Resolves bundle or item-id against the given item identifiers, such as
+    /// the assigned items for a reveal or the held ones for a release.
+    static func resolveRevealItemIdentifier(bundle: String?, itemID: String?, candidates: [String]) -> String? {
         let hasBundle = !(bundle?.isEmpty ?? true)
         let hasItemID = !(itemID?.isEmpty ?? true)
 
@@ -528,7 +551,7 @@ enum SettingsURIHandler {
         guard let bundle else { return nil }
 
         let prefix = "\(bundle):"
-        let matches = sectionAssignment.keys.filter { $0.hasPrefix(prefix) }
+        let matches = candidates.filter { $0.hasPrefix(prefix) }
         guard let match = matches.first, matches.count == 1 else {
             diagLog.warning(
                 "Settings URI reveal-item: bundle '\(bundle)' matched \(matches.count) assigned item(s), expected exactly 1"
@@ -672,7 +695,7 @@ enum SettingsURIHandler {
     }
 
     /// Posts a notification that a setting was changed externally via Settings URI.
-    private static func postSettingsDidChangeNotification(key: String, value: Bool) {
+    static func postSettingsDidChangeNotification(key: String, value: Bool) {
         settingsChangeNotificationCenter.post(
             name: .settingsDidChangeViaURI,
             object: nil,
@@ -694,7 +717,7 @@ enum SettingsURIHandler {
         )
     }
 
-    private static func postSettingsDidChangeNotification(key: String, rawEnumValue: Int) {
+    static func postSettingsDidChangeNotification(key: String, rawEnumValue: Int) {
         settingsChangeNotificationCenter.post(
             name: .settingsDidChangeViaURI,
             object: nil,
@@ -831,8 +854,8 @@ enum SettingsURIHandler {
                 return createErrorResponse(requestId: requestId, error: "Display UUID required", details: "Provide display=<uuid> when key=display")
             }
         case "version":
-            let shortVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
-            let buildVersion = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
+            let shortVersion = Bundle.main.versionString ?? "unknown"
+            let buildVersion = Bundle.main.buildString ?? "unknown"
             return [
                 "requestId": requestId,
                 "status": "success",
@@ -929,7 +952,7 @@ enum SettingsURIHandler {
                 ]
             }
 
-            return [
+            return key == "settingsAppearance" ? SettingsAppearance.stored().uriValue : [
                 "rawValue": rawValue,
                 "type": "enum",
             ]
@@ -967,8 +990,8 @@ enum SettingsURIHandler {
             displaysData[uuid] = getDisplayInfo(screen: screen, uuid: uuid)
         }
 
-        let shortVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
-        let buildVersion = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
+        let shortVersion = Bundle.main.versionString ?? "unknown"
+        let buildVersion = Bundle.main.buildString ?? "unknown"
 
         return [
             "requestId": requestId,
@@ -1068,7 +1091,7 @@ enum SettingsURIHandler {
         // Check if we have config for disconnected display
         if let configs = Defaults.data(forKey: .displayThawBarConfigurations)
             .flatMap({ try? JSONDecoder().decode([String: DisplayThawBarConfiguration].self, from: $0) }),
-            let config = configs[uuid]
+           let config = configs[uuid]
         {
             return [
                 "requestId": requestId,

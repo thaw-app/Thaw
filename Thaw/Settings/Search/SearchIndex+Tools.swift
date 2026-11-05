@@ -10,7 +10,7 @@ import SwiftUI
 nonisolated extension SearchIndex {
     // MARK: Tools
 
-    /// Rows in the Tools pane, in the pane's own order. Mostly one-shot
+    /// Rows in the Troubleshooting pane, in the pane's own order. Mostly one-shot
     /// maintenance actions with no persisted settings property; the diagnostic
     /// logging toggle is the exception and keeps its property link so the
     /// drift guard covers it.
@@ -53,7 +53,7 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "tools.resetMenuBarLayoutPositions",
-            title: "Reset menu bar layout positions",
+            title: "Rebuild macOS's saved menu bar layout",
             descriptionText: String(localized: "Deletes every saved item position and restarts the system's menu bar service, so the layout rebuilds from scratch. Thaw saves a backup first. Use this when items won't return to the menu bar after you rearrange."),
             pane: .tools,
             section: "Repair",

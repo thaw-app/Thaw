@@ -9,6 +9,7 @@ import Combine
 import Foundation
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// The General and Advanced settings models on their own, with settings in a
 /// throwaway suite. None is wired to an AppState, so no change reaches the menu bar.
@@ -30,7 +31,7 @@ struct PreferenceModelsTests {
         settings.customThawIconIsTemplate = !Defaults.DefaultValue.customThawIconIsTemplate
         settings.simpleMode = !Defaults.DefaultValue.simpleMode
         settings.showSettingDescriptions = !Defaults.DefaultValue.showSettingDescriptions
-        settings.blackSettingsBackground = !Defaults.DefaultValue.blackSettingsBackground
+        settings.settingsAppearance = .black
         settings.simpleModeShowsPreview = !Defaults.DefaultValue.simpleModeShowsPreview
         settings.lockThawBarPosition = !Defaults.DefaultValue.lockThawBarPosition
         settings.roundScreenCorners = !Defaults.DefaultValue.roundScreenCorners
@@ -61,7 +62,7 @@ struct PreferenceModelsTests {
         #expect(reloaded.customThawIconIsTemplate == settings.customThawIconIsTemplate)
         #expect(reloaded.simpleMode == settings.simpleMode)
         #expect(reloaded.showSettingDescriptions == settings.showSettingDescriptions)
-        #expect(reloaded.blackSettingsBackground == settings.blackSettingsBackground)
+        #expect(reloaded.settingsAppearance == .black)
         #expect(reloaded.simpleModeShowsPreview == settings.simpleModeShowsPreview)
         #expect(reloaded.lockThawBarPosition == settings.lockThawBarPosition)
         #expect(reloaded.roundScreenCorners == settings.roundScreenCorners)
@@ -114,7 +115,6 @@ struct PreferenceModelsTests {
         let paths: [String: ReferenceWritableKeyPath<GeneralSettings, Bool>] = [
             "showThawIcon": \.showThawIcon, "customThawIconIsTemplate": \.customThawIconIsTemplate,
             "simpleMode": \.simpleMode, "showSettingDescriptions": \.showSettingDescriptions,
-            "blackSettingsBackground": \.blackSettingsBackground,
             "lockThawBarPosition": \.lockThawBarPosition, "openHiddenItemsInMenuBar": \.openHiddenItemsInMenuBar,
             "useThawBarOnlyOnNotchedDisplay": \.useThawBarOnlyOnNotchedDisplay,
             "thawBarLocationOnHotkey": \.thawBarLocationOnHotkey, "showOnClick": \.showOnClick,
@@ -130,17 +130,21 @@ struct PreferenceModelsTests {
         NotificationCenter.default.post(uriChange("rehideInterval", ["doubleValue": 99.0]))
         NotificationCenter.default.post(uriChange("tempShowInterval", ["doubleValue": 3.0]))
         NotificationCenter.default.post(uriChange("rehideStrategy", ["rawEnumValue": RehideStrategy.timed.rawValue]))
-        await waitUntil { settings.rehideStrategy == .timed }
+        NotificationCenter.default.post(uriChange("settingsAppearance", ["rawEnumValue": SettingsAppearance.black.rawValue]))
+        await waitUntil { settings.rehideStrategy == .timed && settings.settingsAppearance == .black }
+        #expect(settings.settingsAppearance == .black)
         #expect(settings.rehideInterval == 99)
         #expect(settings.tempShowInterval == 3)
         #expect(settings.rehideStrategy == .timed)
 
         NotificationCenter.default.post(uriChange("rehideStrategy", ["rawEnumValue": 42]))
+        NotificationCenter.default.post(uriChange("settingsAppearance", ["rawEnumValue": 42]))
         NotificationCenter.default.post(uriChange("unknown", ["value": true, "doubleValue": 1.0]))
         NotificationCenter.default.post(Notification(name: .settingsDidChangeViaURI, userInfo: ["value": true]))
         NotificationCenter.default.post(uriChange("tempShowInterval", ["doubleValue": 4.0]))
         await waitUntil { settings.tempShowInterval == 4 }
         #expect(settings.rehideStrategy == .timed, "an unknown raw value changes nothing")
+        #expect(settings.settingsAppearance == .black, "an unknown raw value changes nothing")
         #expect(settings.rehideInterval == 99)
     }
 
@@ -364,6 +368,7 @@ struct PreferenceModelsTests {
         #expect(RehideStrategy.fromString("smart") == .smart)
         #expect(RehideStrategy.fromString("1") == .timed)
         #expect(RehideStrategy.fromString("focusedApp") == .focusedApp)
+        #expect(RehideStrategy.fromString("focused_app") == .focusedApp)
         #expect(RehideStrategy.fromString("2") == .focusedApp)
         #expect(RehideStrategy.fromString("0") == .smart)
         #expect(RehideStrategy.fromString("timed") == .timed)

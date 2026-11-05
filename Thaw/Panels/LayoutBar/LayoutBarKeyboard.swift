@@ -7,6 +7,7 @@
 
 import AppKit
 import MenuBarModel
+import ThawUI
 
 /// Keyboard moves share the drop/sort order-commit path and mirror VoiceOver custom actions.
 @MainActor

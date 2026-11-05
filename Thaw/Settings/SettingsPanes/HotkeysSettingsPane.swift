@@ -82,9 +82,9 @@ struct HotkeysSettingsPane: View {
             HotkeyRecorder(hotkey: hotkey) {
                 switch action {
                 case .toggleHiddenSection:
-                    Text("Toggle the Hidden section")
+                    Text("Show or hide hidden items")
                 case .toggleAlwaysHiddenSection:
-                    Text("Toggle the Always Hidden section")
+                    Text("Show or hide Always Hidden items")
                 case .toggleSwap:
                     Text("Swap shown and hidden items")
                 case .searchMenuBarItems:
@@ -96,9 +96,9 @@ struct HotkeysSettingsPane: View {
                 case .enableThawBar:
                     Text("Turn \(Constants.displayName) Bar on or off")
                 case .toggleApplicationMenus:
-                    Text("Toggle application menus")
+                    Text("Hide or show app menus")
                 case .toggleAutoRehide:
-                    Text("Toggle automatic rehiding")
+                    Text("Turn “Hide items again” on or off")
                 case .toggleZenMode:
                     Text("Toggle Zen Mode")
                 case .toggleLayoutEditor:
@@ -151,7 +151,7 @@ private struct MenuBarItemHotkeyList: View {
                 Text("No menu bar items available")
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 6)
+                    .padding(.top, ThawSpacing.compact)
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 10) {
                     ForEach(rows, id: \.id) { row in
@@ -177,7 +177,7 @@ private struct MenuBarItemHotkeyList: View {
                         }
                     }
                 }
-                .padding(.top, 6)
+                .padding(.top, ThawSpacing.compact)
             }
         } label: {
             Text("Open menu bar items")
@@ -312,7 +312,7 @@ enum ShortcutsTab: CaseIterable, @MainActor ThawTab {
         }
     }
 
-    var title: LocalizedStringKey {
+    var title: LocalizedStringResource {
         switch self {
         case .visibility: SettingsNavigationIdentifier.visibility.localized
         case .menuBarItems: "Menu Bar Items"

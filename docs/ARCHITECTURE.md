@@ -64,7 +64,6 @@ where new code goes instead.
 | `packages/ThawConcurrency/` | Timeouts and one-shot continuations | Nothing |
 | `packages/ThawAX/` | Accessibility reading: `ThawAXCore`, `ThawAXClient` and the `ThawAXHelper` process | No other package; client and helper use `ThawAXCore` |
 | `packages/ThawExtras/` | `ThawExtraHelper`, stand-ins for Apple items Thaw hides (Focus, AirDrop and others) | Nothing |
-| `ThawUI/` | Settings form and control components, with no knowledge of app state | CompactSlider |
 | `targets/ThawControls/` | Control Center controls that show hidden items or toggle Zen Mode | |
 | `packages/ThawCtl/` | A command-line tool that turns commands into `thaw://` URLs | |
 | `targets/MenuBarCaptureService/` | The XPC service that hosts capture | `ThawCapture` |
@@ -79,7 +78,8 @@ target relationship. `Package.swift` files and the Xcode project are the source
 of truth for the build graph.
 
 Local packages do not depend on the app. `ThawLayout` and `ThawCapture` depend
-on other local packages; `ThawUI` uses the external CompactSlider package.
+on other local packages. The controls, settings pages and onboarding pieces shared
+with Floe come from [ThawUI](https://github.com/thaw-app/ThawUI), pinned to a tag.
 Keep app state out of packages. `ThawAX` and `ThawExtras` have no external
 package dependencies. Helper packaging and library search paths matter:
 `ThawAX` declares a static core product and an Xcode helper rpath in its
@@ -87,9 +87,9 @@ package dependencies. Helper packaging and library search paths matter:
 
 Outside packages are declared with Swift Package Manager and locked in
 `Thaw.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`:
-PlatformRuntimeKit (as the prebuilt `thaw-app/prk-bin`), Sparkle,
-CompactSlider, Ifrit, swift-algorithms, swift-async-algorithms and
-swift-subprocess.
+PlatformRuntimeKit (as the prebuilt `thaw-app/prk-bin`), Sparkle, Ifrit,
+ThawUI, swift-algorithms, swift-async-algorithms and swift-subprocess.
+CompactSlider is locked there too, as a dependency of ThawUI.
 
 ### Inside `Thaw/`
 

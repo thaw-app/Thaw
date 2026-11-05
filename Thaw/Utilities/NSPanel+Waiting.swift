@@ -24,21 +24,9 @@ extension NSPanel {
 
     @MainActor
     private func waitForInvisibleWithKVO() async {
-        var bag = Set<AnyCancellable>()
-        let oneShot = OneShotContinuation<Void, Never>()
-        await withTaskCancellationHandler {
-            await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
-                oneShot.setContinuation(cont)
-                self.publisher(for: \.isVisible)
-                    .filter { !$0 }
-                    .first()
-                    .sink { _ in
-                        oneShot.settle(.success(()))
-                    }
-                    .store(in: &bag)
-            }
-        } onCancel: {
-            oneShot.settle(.success(()))
+        // The values iterator ends when the task is cancelled.
+        for await visible in publisher(for: \.isVisible).values where !visible {
+            return
         }
     }
 }

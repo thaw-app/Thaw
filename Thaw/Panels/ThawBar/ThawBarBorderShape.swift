@@ -30,30 +30,41 @@ nonisolated struct ThawBarBorderShape: InsettableShape {
     /// inset(by:) rather than set directly.
     var insetAmount: CGFloat = 0
 
-    /// The Thaw Bar's clip for a given content height: fully rounded ends get
-    /// a circular half-height radius, square corners a continuous
-    /// quarter-height one.
-    static func thawBarClip(height: CGFloat, hasRoundedShape: Bool) -> ThawBarBorderShape {
-        ThawBarBorderShape(
-            cornerRadius: hasRoundedShape ? height / 2 : height / 4,
-            cornerStyle: hasRoundedShape ? .circular : .continuous,
+    /// The Thaw Bar's clip for a given content height and a roundness from 0 to 1, the Corners
+    /// slider: square corners get a continuous quarter-height radius, fully round ends a circular
+    /// half-height one, and the values between them a radius between the two.
+    static func thawBarClip(height: CGFloat, roundness: Double) -> ThawBarBorderShape {
+        let roundness = CGFloat(roundness.isFinite ? min(max(roundness, 0), 1) : 0)
+        return ThawBarBorderShape(
+            cornerRadius: height / 4 * (1 + roundness),
+            cornerStyle: roundness >= 1 ? .circular : .continuous,
             omitTopEdge: false
         )
     }
 
-    /// The border that traces thawBarClip(height:hasRoundedShape:).
+    /// thawBarClip(height:roundness:) with square or fully round corners.
+    static func thawBarClip(height: CGFloat, hasRoundedShape: Bool) -> ThawBarBorderShape {
+        thawBarClip(height: height, roundness: hasRoundedShape ? 1 : 0)
+    }
+
+    /// The border that traces thawBarClip(height:roundness:).
     ///
     /// Derived from the clip so the two cannot drift apart, inset by half the
     /// stroke width so the stroke sits centred on the clip edge, and opened at
     /// the top on square corners.
     static func thawBarBorder(
         height: CGFloat,
-        hasRoundedShape: Bool,
+        roundness: Double,
         borderWidth: CGFloat
     ) -> ThawBarBorderShape {
-        var shape = thawBarClip(height: height, hasRoundedShape: hasRoundedShape)
-        shape.omitTopEdge = !hasRoundedShape
+        var shape = thawBarClip(height: height, roundness: roundness)
+        shape.omitTopEdge = roundness <= 0
         return shape.inset(by: borderWidth / 2)
+    }
+
+    /// thawBarBorder(height:roundness:borderWidth:) with square or fully round corners.
+    static func thawBarBorder(height: CGFloat, hasRoundedShape: Bool, borderWidth: CGFloat) -> ThawBarBorderShape {
+        thawBarBorder(height: height, roundness: hasRoundedShape ? 1 : 0, borderWidth: borderWidth)
     }
 
     func inset(by amount: CGFloat) -> ThawBarBorderShape {

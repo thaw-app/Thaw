@@ -46,7 +46,7 @@ struct ShowThawIconRow: View {
 
     /// Names only the gestures that currently do something: double-click needs
     /// Always Hidden, and the swap option changes what a click does.
-    private var gestureSummary: LocalizedStringKey {
+    private var gestureSummary: LocalizedStringResource {
         let advanced = appState.settings.advanced
         let doubleClickOpensAlwaysHidden = advanced.isAlwaysHiddenSectionEnabled
         switch (advanced.swapOnThawIconClick, doubleClickOpensAlwaysHidden) {
@@ -92,11 +92,11 @@ struct ThawPlacementWarning: View {
     let block: ControlItem.PlacementBlock
 
     var body: some View {
-        let title: LocalizedStringKey = switch block {
+        let title: LocalizedStringResource = switch block {
         case .deniedBySystem: "macOS isn't allowing \(Constants.displayName) in the menu bar"
         case .unknown: "The \(Constants.displayName) icon isn't in the menu bar"
         }
-        let message: LocalizedStringKey = switch block {
+        let message: LocalizedStringResource = switch block {
         case .deniedBySystem: "\(Constants.displayName) can't hide or arrange anything until it is switched back on in System Settings > Menu Bar."
         case .unknown: "macOS may be blocking it. Check that \(Constants.displayName) is switched on in System Settings > Menu Bar."
         }
@@ -118,28 +118,67 @@ struct ShowHiddenItemsOnRow: View {
     @Bindable var settings: GeneralSettings
 
     var body: some View {
-        LabeledContent("Show hidden items on") {
-            ThawTogglePills {
-                Toggle("Click", isOn: $settings.showOnClick)
-                    .help("Click an empty area of the menu bar to show hidden menu bar items.")
-                Toggle("Hover", isOn: $settings.showOnHover)
-                    .help("Hover over an empty area of the menu bar or the \(Constants.displayName) icon to show hidden menu bar items.")
-                Toggle("Scroll", isOn: $settings.showOnScroll)
-                    .help("Scroll or swipe in the menu bar to show hidden menu bar items.")
-            }
-            .fixedSize()
+        ToggleButtonRow("Show hidden items on") {
+            Toggle("Click", isOn: $settings.showOnClick)
+                .help("Click an empty area of the menu bar to show hidden menu bar items.")
+            Toggle("Hover", isOn: $settings.showOnHover)
+                .help("Hover over an empty area of the menu bar or the \(Constants.displayName) icon to show hidden menu bar items.")
+            Toggle("Scroll", isOn: $settings.showOnScroll)
+                .help("Scroll or swipe in the menu bar to show hidden menu bar items.")
         }
         .annotation("Show hidden menu bar items by clicking, hovering, or scrolling in an empty area of the menu bar.")
     }
 }
 
-// MARK: - AutoRehideRow
+// MARK: - ToggleButtonRow
 
-/// Whether revealed items hide themselves again.
-struct AutoRehideRow: View {
-    @Bindable var settings: GeneralSettings
+/// One setting that can apply at several times, as a row of buttons that
+/// switch on separately, such as Show hidden items on Click, Hover and Scroll.
+struct ToggleButtonRow<Toggles: View>: View {
+    private let label: LocalizedStringResource
+    private let toggles: Toggles
+
+    init(_ label: LocalizedStringResource, @ViewBuilder toggles: () -> Toggles) {
+        self.label = label
+        self.toggles = toggles()
+    }
 
     var body: some View {
-        Toggle("Automatically rehide", isOn: $settings.autoRehide)
+        LabeledContent(label) {
+            ThawTogglePills {
+                toggles
+            }
+            .fixedSize()
+        }
+    }
+}
+
+// MARK: - RehideChoiceRow
+
+/// When revealed items hide themselves again, as one menu over the three stored settings.
+struct RehideChoiceRow: View {
+    @Bindable var settings: GeneralSettings
+
+    private var choice: SimpleRehideChoice {
+        SimpleRehideChoice(autoRehide: settings.autoRehide, strategy: settings.rehideStrategy, interval: settings.rehideInterval)
+    }
+
+    var body: some View {
+        ThawPicker("Hide items again", selection: Binding(
+            get: { choice },
+            set: { newChoice in
+                let saved = newChoice.settings(keepingInterval: settings.rehideInterval)
+                settings.autoRehide = saved.autoRehide
+                if let strategy = saved.strategy {
+                    settings.rehideStrategy = strategy
+                }
+                settings.rehideInterval = saved.interval
+            }
+        )) {
+            ForEach(SimpleRehideChoice.options(including: choice)) { option in
+                Text(option.title).tag(option)
+            }
+        }
+        .annotation(choice.explanation)
     }
 }

@@ -184,7 +184,7 @@ struct LayoutBarItemInspector: View {
     /// Share the menu's alert-reveal setter; other actions remain in the full menu.
     private var actions: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.base) {
-            Toggle("Reveal when its icon changes", isOn: $revealsOnIconChange)
+            Toggle("Show when its icon changes", isOn: $revealsOnIconChange)
                 .font(ThawType.body)
                 .onChange(of: revealsOnIconChange) { _, isOn in
                     MenuBarItemAlertReveals.setEnabled(isOn, for: item.tag.tagIdentifier)

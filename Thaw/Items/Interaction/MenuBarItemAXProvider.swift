@@ -351,19 +351,10 @@ nonisolated enum MenuBarItemAXProvider {
                     formerHosts: formerHosts
                 ).raw
             }
-            let collectedResult = await withTaskGroup(
-                of: CollectAppResult?.self
-            ) { group in
-                // Awaiting collected.value directly ignores cancelAll(), so the
-                // group would wait for the hung AX call and defeat the deadline.
-                group.addTask { await Self.valueOrCancelled(of: collected) }
-                group.addTask {
-                    try? await Task.sleep(for: Self.perAppWalkBudget)
-                    return nil
-                }
-                let first = await group.next() ?? nil
-                group.cancelAll()
-                return first
+            // Abandons, not awaits, a hung AX call. A timeout and a cancellation both
+            // yield nil here; Task.isCancelled tells them apart below.
+            let collectedResult = try? await withAbandoningTimeout(Self.perAppWalkBudget) {
+                await collected.value
             }
             switch collectedResult {
             case .none where Task.isCancelled:
@@ -482,31 +473,6 @@ nonisolated enum MenuBarItemAXProvider {
         }
         return answers.values.contains(.keepPrior)
     }
-
-    /// Awaits task's value, or nil if the waiter is cancelled first.
-    /// Task.value on a non-throwing task ignores cancellation.
-    private static func valueOrCancelled<T: Sendable>(of task: Task<T, Never>) async -> T? {
-        if Task.isCancelled {
-            return nil
-        }
-        // Whichever lands first settles it, exactly once. A cancellation that lands before the
-        // continuation is registered is kept and answered on registration.
-        let outcome = OneShotContinuation<T?, Never>()
-        return await withTaskCancellationHandler(operation: {
-            await withCheckedContinuation { continuation in
-                outcome.setContinuation(continuation)
-                // Spawned after registration. The watcher lives only as long
-                // as the blocked call does.
-                Task.detached(priority: .utility) {
-                    await outcome.settle(.success(task.value))
-                }
-            }
-        }, onCancel: {
-            outcome.settle(.success(nil))
-        })
-    }
-
-    private typealias CollectAppResult = [RawItem]
 
     /// The per-app enumeration body shared by both walks. Returns the app's
     /// raw items; an app with no extras bar or no children contributes an
@@ -1226,7 +1192,7 @@ nonisolated enum MenuBarItemAXProvider {
         switch bundleID {
         case SharedConstants.menuBarHostingBundleID:
             return .menuBarAgent
-        case _ where Constants.isThawOwnedBundleIdentifier(bundleID):
+        case _ where ThawMenuBarIdentity.owns(bundleIdentifier: bundleID):
             return .thaw
         default:
             return .string(bundleID)
@@ -1235,8 +1201,8 @@ nonisolated enum MenuBarItemAXProvider {
 
     /// The identifier and description an item publishes one level down, on
     /// its button or menu, for an item that did not publish them on itself.
-    /// Eager on purpose: a lazy compactMap runs its transform twice for the
-    /// first match, and a live read can change between the two and trap.
+    /// The descendants are read into values first: a lazy chain would repeat
+    /// live reads, which can change between two passes and trap.
     static func descendantIdentity(
         of attributes: AXHelpers.MenuBarChildAttributes,
         directIdentifier: String?,
@@ -1245,11 +1211,8 @@ nonisolated enum MenuBarItemAXProvider {
         let needsIdentifier = stableAXIdentifier(directIdentifier) == nil
         let needsDescription = directDescription == nil
         guard needsIdentifier || needsDescription else { return (nil, nil) }
-        let descendants = attributes.children.map { AXHelpers.descendantAttributes(for: $0) }
-        return (
-            needsIdentifier ? descendants.compactMap { stableAXIdentifier($0.identifier?.nonEmpty) }.first : nil,
-            needsDescription ? descendants.compactMap { $0.accessibilityDescription?.nonEmpty }.first : nil
-        )
+        let found = AXItemLabels.childLabels(in: attributes.children.map { AXHelpers.descendantAttributes(for: $0) })
+        return (needsIdentifier ? found.identifier : nil, needsDescription ? found.description : nil)
     }
 
     /// The identifier when it is one worth keying identity on.
@@ -1384,11 +1347,7 @@ nonisolated enum MenuBarItemAXProvider {
         bounds: CGRect,
         ownerPID: pid_t
     ) -> (item: RawItem?, identityTitle: String, fallbackIndex: Int) {
-        let identifier = stableAXIdentifier(labels.identifier?.nonEmpty)
-            ?? stableAXIdentifier(labels.childIdentifier?.nonEmpty)
-        let accessibilityDescription = labels.accessibilityDescription?.nonEmpty
-            ?? labels.childDescription?.nonEmpty
-        let axTitle = labels.axTitle?.nonEmpty
+        let (identifier, accessibilityDescription, axTitle) = labels.resolved
         let fallbackTitle = "Item-\(fallbackIndex)"
         let displayTitle = axTitle ?? accessibilityDescription ?? identifier ?? fallbackTitle
         let nextFallbackIndex = axTitle == nil && accessibilityDescription == nil && identifier == nil
@@ -1506,12 +1465,5 @@ nonisolated enum MenuBarItemAXProvider {
             hash = hash &* 0x0100_0193
         }
         return CGWindowID(0x8000_0000 | (hash & 0x7FFF_FFFF))
-    }
-}
-
-private extension String {
-    /// Returns self when it contains non-whitespace characters, otherwise nil.
-    nonisolated var nonEmpty: String? {
-        trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : self
     }
 }

@@ -9,6 +9,7 @@ import AppKit
 import MenuBarModel
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// The layout editor menu's group entries, chosen and read back through the group manager.
 /// Only entries that change stored groups run here; none of them moves an item.

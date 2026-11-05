@@ -142,7 +142,6 @@ jobs:
             compilation-cache-${{ runner.os }}-${{ github.ref_name }}-
             compilation-cache-${{ runner.os }}-
 
-      # ThawAXCore is a static product linked by both the app and its hosted tests; the runner's Xcode rejects that unless told otherwise.
       # The Thaw target's lint build phase requires the pinned SwiftLint on PATH.
       - name: Install pinned SwiftLint
         if: needs.changes.outputs.code == 'true'
@@ -159,7 +158,6 @@ jobs:
             -derivedDataPath Build/ \
             -destination 'platform=macOS' \
             -enableCodeCoverage YES \
-            DISABLE_DIAMOND_PROBLEM_DIAGNOSTIC=YES \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO

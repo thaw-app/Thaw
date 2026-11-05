@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import Foundation
 import Testing
 @testable import Thaw
@@ -13,6 +14,13 @@ import Testing
 /// Screenshots cannot verify these focus and geometry decisions after the fact.
 @Suite("Application menu cover policy")
 struct ApplicationMenuCoverPolicyTests {
+    /// A screenshot would otherwise show the Finder menus the cover is there to hide.
+    @MainActor
+    @Test("Screenshots see the cover")
+    func screenshotsSeeTheCover() {
+        #expect(ApplicationMenuCover.makePanel().sharingType == .readOnly)
+    }
+
     // MARK: Fixtures
 
     /// Live frame shape: top-left origin, 30 pt height, with adjacent titles overlapping by 1 pt.

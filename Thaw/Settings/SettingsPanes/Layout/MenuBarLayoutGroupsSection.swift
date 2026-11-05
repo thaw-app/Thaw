@@ -122,7 +122,7 @@ struct MenuBarLayoutGroupsSection: View {
             }
             Spacer()
         }
-        .padding(.leading, 12)
+        .padding(.leading, ThawSpacing.inset)
     }
 
     private func toggleFolder(_ group: MenuBarItemGroup) {
@@ -135,7 +135,7 @@ struct MenuBarLayoutGroupsSection: View {
     }
 
     private func groupRow(_ group: MenuBarItemGroup) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: ThawSpacing.base) {
             HStack {
                 TextField(
                     "Group name",
@@ -173,7 +173,7 @@ struct MenuBarLayoutGroupsSection: View {
             }
 
             ForEach(group.memberIdentifiers, id: \.self) { identifier in
-                HStack(spacing: 8) {
+                HStack(spacing: ThawSpacing.base) {
                     Text(memberName(identifier))
                         .font(.callout)
                         .foregroundStyle(liveItem(identifier) == nil ? .secondary : .primary)
@@ -191,7 +191,7 @@ struct MenuBarLayoutGroupsSection: View {
                     .help("Remove from group")
                     .accessibilityLabel("Remove \(memberName(identifier)) from group")
                 }
-                .padding(.leading, 12)
+                .padding(.leading, ThawSpacing.inset)
                 .contextMenu {
                     Button("Remove from Group", role: .destructive) {
                         removeMember(identifier)
@@ -199,7 +199,7 @@ struct MenuBarLayoutGroupsSection: View {
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, ThawSpacing.tight)
     }
 
     // MARK: Helpers

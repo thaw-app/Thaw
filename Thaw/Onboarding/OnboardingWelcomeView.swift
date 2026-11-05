@@ -15,10 +15,7 @@ struct OnboardingWelcomeView: View {
     var onContinue: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Matched spacers center content; minimum spacing handles Larger Text with no spare height.
-            Spacer(minLength: ThawSpacing.gutter)
-
+        OnboardingWelcomeLayout(continueTitle: Text("Continue"), onContinue: onContinue) {
             // VoiceOver skips the decorative icon because the title identifies the app.
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
@@ -26,70 +23,50 @@ struct OnboardingWelcomeView: View {
                 .frame(width: 116, height: 116)
                 .thawShadow(.hero)
                 .accessibilityHidden(true)
-
+        } copy: {
             copyBlock
-                .padding(.top, ThawSpacing.inset)
-
-            OnboardingPrimaryButton(action: onContinue) {
-                Text("Continue")
-            }
-            .padding(.top, ThawSpacing.section)
-
-            Spacer(minLength: ThawSpacing.gutter)
-        }
-        .padding(.horizontal, ThawSpacing.section)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // Offer a quiet exit before permissions so accidental launches need no setup or menu-bar search.
-        .overlay(alignment: .bottomTrailing) {
-            Button {
+        } exit: {
+            // Offer a quiet exit before permissions so accidental launches need no setup or menu-bar search.
+            OnboardingQuietButton(
+                title: Text("Quit \(Constants.displayName)"),
+                help: Text("Quit \(Constants.displayName) without setting it up"),
+                shortcut: KeyboardShortcut("q")
+            ) {
                 NSApp.terminate(nil)
-            } label: {
-                Text("Quit \(Constants.displayName)")
-                    .font(ThawType.caption)
-                    .foregroundStyle(.secondary)
             }
-            .buttonStyle(.plain)
-            .keyboardShortcut("q")
-            .help("Quit \(Constants.displayName) without setting it up")
-            .accessibilityLabel(Text("Quit \(Constants.displayName)"))
-            .padding(.trailing, ThawSpacing.gutter)
-            .padding(.bottom, ThawSpacing.inset)
         }
-        .background(VisualEffectBackground())
     }
 
-    /// Keep the reading sequence together so centering spacers move it as one block.
+    @ViewBuilder
     private var copyBlock: some View {
-        VStack(spacing: 0) {
-            Text("Welcome to the new \(Constants.displayName)")
-                .font(ThawType.display)
-                .multilineTextAlignment(.center)
+        Text("Welcome to the new \(Constants.displayName)")
+            .font(ThawType.display)
+            .multilineTextAlignment(.center)
 
-            Text("\(Constants.displayName) hides the icons you don't need and brings them back with a click on its menu bar icon.")
-                .font(ThawType.heading)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: 440)
-                .padding(.top, ThawSpacing.compact)
+        Text("\(Constants.displayName) hides the icons you don't need and brings them back with a click on its menu bar icon.")
+            .font(ThawType.heading)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: 440)
+            .padding(.top, ThawSpacing.compact)
 
-            // Give the longest passage more width to avoid many short lines.
-            Text("\(Constants.displayName) 3 is rebuilt for macOS 27: a new settings window, keyboard search across your menu bar, and rules that bring an item back when you need it.")
-                .font(ThawType.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: 540)
-                .padding(.top, ThawSpacing.inset)
+        // Give the longest passage more width to avoid many short lines.
+        Text("\(Constants.displayName) 3 is rebuilt for macOS 27: a new settings window, keyboard search across your menu bar, and rules that bring an item back when you need it.")
+            .font(ThawType.body)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: 540)
+            .padding(.top, ThawSpacing.inset)
 
-            factsRow
-                .padding(.top, ThawSpacing.gutter)
-        }
+        factsRow
+            .padding(.top, ThawSpacing.gutter)
     }
 
     /// Present pre-permission facts in one glanceable row.
     private var factsRow: some View {
-        HStack(spacing: ThawSpacing.base) {
+        OnboardingFactRow {
             OnboardingFactCapsule(
                 symbol: "lock.open",
                 label: Text("Open source"),
@@ -112,6 +89,5 @@ struct OnboardingWelcomeView: View {
                 spoken: Text("Speaks 20 languages")
             )
         }
-        .frame(maxWidth: 560)
     }
 }

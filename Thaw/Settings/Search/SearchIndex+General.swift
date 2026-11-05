@@ -31,7 +31,7 @@ nonisolated extension SearchIndex {
             id: "general.lockThawBarPosition",
             titleKey: "Lock \(Constants.displayName) Bar position",
             titleText: "Lock \(Constants.displayName) Bar position",
-            descriptionText: String(localized: "Keep the \(Constants.displayName) Bar pinned in place instead of draggable."),
+            descriptionText: String(localized: "Keeps the \(Constants.displayName) Bar where it opens. Turn off to drag it by its background."),
             pane: .thawBar,
             sectionKey: "Options for all displays",
             sectionText: "Options for all displays",
@@ -43,16 +43,18 @@ nonisolated extension SearchIndex {
             title: "Show setting descriptions",
             descriptionText: String(localized: "Explains what a setting does directly beneath it."),
             pane: .general,
+            section: "Language and theme",
             keywords: ["descriptions", "captions", "details", "help", "annotations", "explanations"],
             property: .general("showSettingDescriptions")
         ),
         SearchEntry(
-            id: "general.blackSettingsBackground",
-            title: "Black background in dark mode",
-            descriptionText: String(localized: "Draws this window on pure black for OLED displays. Light mode is unchanged."),
+            id: "general.settingsAppearance",
+            title: "Settings theme",
+            descriptionText: String(localized: "Applies to Settings and onboarding. Black suits OLED displays."),
             pane: .general,
-            keywords: ["black", "oled", "dark", "dark mode", "background", "theme", "appearance"],
-            property: .general("blackSettingsBackground")
+            section: "Language and theme",
+            keywords: ["appearance", "theme", "system", "match", "macos", "automatic", "light", "dark", "dark mode", "black", "oled", "background"],
+            property: .general("settingsAppearance")
         ),
         SearchEntry(
             id: "general.showThawIcon",
@@ -86,20 +88,19 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "general.thawBarLocationOnHotkey",
-            title: "Show at mouse pointer from a keyboard shortcut",
-            descriptionText: String(localized: "Always show the \(Constants.displayName) Bar at the mouse pointer when a keyboard shortcut opens it."),
+            title: "When opened by a shortcut",
+            descriptionText: String(localized: "Choose whether a shortcut opens the \(Constants.displayName) Bar where Location says or centered on the pointer."),
             pane: .thawBar,
-            section: "Options for all displays",
-            keywords: ["ice bar", "thaw bar", "mouse", "pointer", "hotkey", "location"],
+            keywords: ["ice bar", "thaw bar", "mouse", "pointer", "hotkey", "shortcut", "keyboard", "location", "show at mouse pointer"],
             property: .general("thawBarLocationOnHotkey")
         ),
         SearchEntry(
             id: "general.openHiddenItemsInMenuBar",
-            title: "Open hidden items in the menu bar",
-            descriptionText: String(localized: "Clicking a hidden item shows it in the menu bar and opens its menu under the icon. Turn off to open the menu without showing the icon."),
+            title: "Show clicked items in the menu bar",
+            descriptionText: String(localized: "When you open a hidden item from the \(Constants.displayName) Bar or search, \(Constants.displayName) shows it in the menu bar and opens its menu under its icon."),
             pane: .thawBar,
             section: "Options for all displays",
-            keywords: ["ice bar", "thaw bar", "click", "open", "menu", "reveal", "show", "hidden"],
+            keywords: ["ice bar", "thaw bar", "click", "open", "menu", "reveal", "show", "hidden", "open hidden items in the menu bar"],
             property: .general("openHiddenItemsInMenuBar")
         ),
     ]

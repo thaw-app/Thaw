@@ -41,7 +41,7 @@ enum BentoDemo: CaseIterable {
         case .triggers: .triggers
         case .profiles: .profiles
         case .zen: .hotkeys
-        case .integrations: .automation
+        case .integrations: .privacy
         }
     }
 
@@ -51,7 +51,7 @@ enum BentoDemo: CaseIterable {
         case .style: "Style the bar"
         case .reveal: "Reveal"
         case .thawBar: "Thaw Bar"
-        case .triggers: "Rules"
+        case .triggers: "Triggers"
         case .profiles: "Profiles"
         case .zen: "Zen Mode"
         case .integrations: "Control it from other apps"

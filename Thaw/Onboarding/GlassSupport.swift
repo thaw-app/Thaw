@@ -9,39 +9,6 @@ import AppKit
 import SwiftUI
 import ThawUI
 
-/// A behind-window blend that also makes its window non-opaque, used as the
-/// onboarding ground. SwiftUI has no behind-window blend, so this is not a
-/// ThawGlass tier; content drawn over it uses .thawGlass(_:in:).
-struct VisualEffectBackground: NSViewRepresentable {
-    func makeNSView(context _: Context) -> NSVisualEffectView {
-        let view = NSVisualEffectView()
-        configure(view)
-        makeWindowTransparent(view)
-        return view
-    }
-
-    func updateNSView(_ nsView: NSVisualEffectView, context _: Context) {
-        configure(nsView)
-        makeWindowTransparent(nsView)
-    }
-
-    private func configure(_ view: NSVisualEffectView) {
-        view.blendingMode = .behindWindow
-        view.material = .hudWindow
-        view.state = .active
-        view.isEmphasized = false
-    }
-
-    private func makeWindowTransparent(_ view: NSView) {
-        // The view joins its window after this update pass, so the read waits for the next main-actor turn.
-        Task { @MainActor in
-            guard let window = view.window else { return }
-            window.isOpaque = false
-            window.backgroundColor = .clear
-        }
-    }
-}
-
 /// A plain monochrome SF Symbol, drawn like a real status item so the mockup
 /// bars read as a menu bar rather than a row of buttons.
 struct GlassIconBubble: View {

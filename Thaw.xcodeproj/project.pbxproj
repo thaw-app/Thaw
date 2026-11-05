@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		71373D1685FEE5815708C9A6 /* DequeModule in Frameworks */ = {isa = PBXBuildFile; productRef = 147F2F5E062E0539138D611C /* DequeModule */; };
 		170423D92B56DE78004A2549 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 170423D82B56DE78004A2549 /* Sparkle */; };
-		17F71BB52B880B4500905CBA /* CompactSlider in Frameworks */ = {isa = PBXBuildFile; productRef = 17F71BB42B880B4500905CBA /* CompactSlider */; };
 		7127A9FF2C4886D100D99DEF /* IfritStatic in Frameworks */ = {isa = PBXBuildFile; productRef = 7127A9FE2C4886D100D99DEF /* IfritStatic */; };
 		7188A6882E27F9ED008F131D /* ThawCapture in Frameworks */ = {isa = PBXBuildFile; productRef = 7188A6872E27F9ED008F131D /* ThawCapture */; };
 		7188A6892E27F9ED008F131D /* MenuBarCaptureService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = 7188A6842E27F9ED008F131D /* MenuBarCaptureService.xpc */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -30,9 +30,16 @@
 		A1A1A1A1A1A1A1A1A1A1A106 /* ThawAXClient in Frameworks */ = {isa = PBXBuildFile; productRef = A1A1A1A1A1A1A1A1A1A1A103 /* ThawAXClient */; };
 		A1A1A1A1A1A1A1A1A1A1A107 /* ThawAXHelper in Embed AX Helper */ = {isa = PBXBuildFile; productRef = A1A1A1A1A1A1A1A1A1A1A104 /* ThawAXHelper */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		E1E1E1E1E1E1E1E1E1E1E103 /* ThawExtraHelper in Embed Extra Helper */ = {isa = PBXBuildFile; productRef = E1E1E1E1E1E1E1E1E1E1E102 /* ThawExtraHelper */; };
+		D4D4D4D4D4D4D4D4D4D4D403 /* ThawAutomation in Embed Modules */ = {isa = PBXBuildFile; productRef = D4D4D4D4D4D4D4D4D4D4D402 /* ThawAutomation */; };
+		D5D5D5D5D5D5D5D5D5D5D503 /* ThawTriggers in Embed Modules */ = {isa = PBXBuildFile; productRef = D5D5D5D5D5D5D5D5D5D5D502 /* ThawTriggers */; };
+		D6D6D6D6D6D6D6D6D6D6D603 /* ThawWidgets in Embed Modules */ = {isa = PBXBuildFile; productRef = D6D6D6D6D6D6D6D6D6D6D602 /* ThawWidgets */; };
 		A1A1A1A1A1A1A1A1A1A1A10A /* ThawAXCore in Frameworks */ = {isa = PBXBuildFile; productRef = A1A1A1A1A1A1A1A1A1A1A109 /* ThawAXCore */; };
+		C0C0C0C0C0C0C0C0C0C0C003 /* ThawConcurrency in Frameworks */ = {isa = PBXBuildFile; productRef = C0C0C0C0C0C0C0C0C0C0C002 /* ThawConcurrency */; };
 		B1B1B1B1B1B1B1B1B1B1B104 /* ThawLayout in Frameworks */ = {isa = PBXBuildFile; productRef = B1B1B1B1B1B1B1B1B1B1B102 /* ThawLayout */; };
 		B1B1B1B1B1B1B1B1B1B1B105 /* ThawLayout in Frameworks */ = {isa = PBXBuildFile; productRef = B1B1B1B1B1B1B1B1B1B1B103 /* ThawLayout */; };
+		C3C3C3C3C3C3C3C3C3C3C304 /* ThawModuleKit in Frameworks */ = {isa = PBXBuildFile; productRef = C3C3C3C3C3C3C3C3C3C3C302 /* ThawModuleKit */; };
+		A9E1F0042F70000000000004 /* ThawUI in Frameworks */ = {isa = PBXBuildFile; productRef = A9E1F0052F70000000000005 /* ThawUI */; };
+		C3C3C3C3C3C3C3C3C3C3C305 /* ThawModuleKit in Frameworks */ = {isa = PBXBuildFile; productRef = C3C3C3C3C3C3C3C3C3C3C303 /* ThawModuleKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -114,6 +121,17 @@
 			);
 			name = "Embed Extra Helper";
 		};
+		D4D4D4D4D4D4D4D4D4D4D404 /* Embed Modules */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Library/Modules";
+			dstSubfolder = Product;
+			files = (
+				D4D4D4D4D4D4D4D4D4D4D403 /* ThawAutomation in Embed Modules */,
+				D5D5D5D5D5D5D5D5D5D5D503 /* ThawTriggers in Embed Modules */,
+				D6D6D6D6D6D6D6D6D6D6D603 /* ThawWidgets in Embed Modules */,
+			);
+			name = "Embed Modules";
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -189,8 +207,8 @@
 				7127A9FF2C4886D100D99DEF /* IfritStatic in Frameworks */,
 				9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */,
 				8A9B3C0882A8086D09565228 /* Algorithms in Frameworks */,
+				71373D1685FEE5815708C9A6 /* DequeModule in Frameworks */,
 				C9858DF951474BBA89EEC700 /* Subprocess in Frameworks */,
-				17F71BB52B880B4500905CBA /* CompactSlider in Frameworks */,
 				D85602169B8B4308ACEB30A0 /* MenuBarModel in Frameworks */,
 				A7C4F0012F60000000000001 /* ThawCapture in Frameworks */,
 				A9E1F0032F70000000000003 /* ThawUI in Frameworks */,
@@ -198,6 +216,8 @@
 				A1A1A1A1A1A1A1A1A1A1A105 /* ThawAXCore in Frameworks */,
 				A1A1A1A1A1A1A1A1A1A1A106 /* ThawAXClient in Frameworks */,
 				B1B1B1B1B1B1B1B1B1B1B104 /* ThawLayout in Frameworks */,
+				C3C3C3C3C3C3C3C3C3C3C304 /* ThawModuleKit in Frameworks */,
+				C0C0C0C0C0C0C0C0C0C0C003 /* ThawConcurrency in Frameworks */,
 			);
 		};
 		7188A6802E27F9ED008F131D /* Frameworks */ = {
@@ -214,7 +234,9 @@
 				A7C4F0022F60000000000002 /* ThawCapture in Frameworks */,
 				A1A1A1A1A1A1A1A1A1A1A10A /* ThawAXCore in Frameworks */,
 				B1B1B1B1B1B1B1B1B1B1B105 /* ThawLayout in Frameworks */,
+				C3C3C3C3C3C3C3C3C3C3C305 /* ThawModuleKit in Frameworks */,
 				D27A00022F40000000000002 /* PlatformRuntimeKit in Frameworks */,
+				A9E1F0042F70000000000004 /* ThawUI in Frameworks */,
 			);
 		};
 		CC01A0002F80000000000005 /* Frameworks */ = {
@@ -263,6 +285,8 @@
 				A1A1A1A1A1A1A1A1A1A1A108 /* Embed AX Helper */,
 				E1E1E1E1E1E1E1E1E1E1E104 /* Embed Extra Helper */,
 				E1E1E1E1E1E1E1E1E1E1E105 /* Wrap Extra Helpers */,
+				D4D4D4D4D4D4D4D4D4D4D404 /* Embed Modules */,
+				D4D4D4D4D4D4D4D4D4D4D405 /* Wrap Modules */,
 				CC01A0002F8000000000000C /* Embed Foundation Extensions */,
 				170AD05A2BB9B60500A7AC63 /* Stamp Git SHA */,
 			);
@@ -278,10 +302,10 @@
 			name = Thaw;
 			packageProductDependencies = (
 				170423D82B56DE78004A2549 /* Sparkle */,
-				17F71BB42B880B4500905CBA /* CompactSlider */,
 				7127A9FE2C4886D100D99DEF /* IfritStatic */,
 				43C5F05D006747974015EBD9 /* AsyncAlgorithms */,
 				DBEECB5D91402D78F32DF659 /* Algorithms */,
+				147F2F5E062E0539138D611C /* DequeModule */,
 				D578D4A98E514566A18944B0 /* MenuBarModel */,
 				A7C4F0032F60000000000003 /* ThawCapture */,
 				A9E1F0022F70000000000002 /* ThawUI */,
@@ -291,7 +315,12 @@
 				A1A1A1A1A1A1A1A1A1A1A103 /* ThawAXClient */,
 				A1A1A1A1A1A1A1A1A1A1A104 /* ThawAXHelper */,
 				B1B1B1B1B1B1B1B1B1B1B102 /* ThawLayout */,
+				C3C3C3C3C3C3C3C3C3C3C302 /* ThawModuleKit */,
+				C0C0C0C0C0C0C0C0C0C0C002 /* ThawConcurrency */,
 				E1E1E1E1E1E1E1E1E1E1E102 /* ThawExtraHelper */,
+				D4D4D4D4D4D4D4D4D4D4D402 /* ThawAutomation */,
+				D5D5D5D5D5D5D5D5D5D5D502 /* ThawTriggers */,
+				D6D6D6D6D6D6D6D6D6D6D602 /* ThawWidgets */,
 			);
 			productName = Thaw;
 			productReference = 7166832A2A767E6A006ABF84 /* Thaw.app */;
@@ -345,7 +374,9 @@
 				A7C4F0042F60000000000004 /* ThawCapture */,
 				A1A1A1A1A1A1A1A1A1A1A109 /* ThawAXCore */,
 				B1B1B1B1B1B1B1B1B1B1B103 /* ThawLayout */,
+				C3C3C3C3C3C3C3C3C3C3C303 /* ThawModuleKit */,
 				D27A00042F40000000000004 /* PlatformRuntimeKit */,
+				A9E1F0052F70000000000005 /* ThawUI */,
 			);
 			productName = ThawTests;
 			productReference = E2TESTS0012F2C000000001 /* ThawTests.xctest */;
@@ -425,18 +456,23 @@
 			mainGroup = 716683212A767E6A006ABF84;
 			packageReferences = (
 				170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */,
-				17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */,
 				7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */,
 				1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */,
 				6299E164B288ACBB011AC6B1 /* XCRemoteSwiftPackageReference "swift-algorithms" */,
+				65065A74755C38D642D99302 /* XCRemoteSwiftPackageReference "swift-collections" */,
 				7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */,
 				D27A00002F40000000000000 /* XCRemoteSwiftPackageReference "prk-bin" */,
+				A9E1F0012F70000000000001 /* XCRemoteSwiftPackageReference "ThawUI" */,
 				A4E38A6A423944089D70B9BB /* XCLocalSwiftPackageReference "MenuBarModel" */,
 				A7C4F0052F60000000000005 /* XCLocalSwiftPackageReference "ThawCapture" */,
-				A9E1F0012F70000000000001 /* XCLocalSwiftPackageReference "ThawUI" */,
 				A1A1A1A1A1A1A1A1A1A1A101 /* XCLocalSwiftPackageReference "ThawAX" */,
 				B1B1B1B1B1B1B1B1B1B1B101 /* XCLocalSwiftPackageReference "ThawLayout" */,
+				C3C3C3C3C3C3C3C3C3C3C301 /* XCLocalSwiftPackageReference "ThawModuleKit" */,
+				C0C0C0C0C0C0C0C0C0C0C001 /* XCLocalSwiftPackageReference "ThawConcurrency" */,
 				E1E1E1E1E1E1E1E1E1E1E101 /* XCLocalSwiftPackageReference "ThawExtras" */,
+				D4D4D4D4D4D4D4D4D4D4D401 /* XCLocalSwiftPackageReference "ThawAutomation" */,
+				D5D5D5D5D5D5D5D5D5D5D501 /* XCLocalSwiftPackageReference "ThawTriggers" */,
+				D6D6D6D6D6D6D6D6D6D6D601 /* XCLocalSwiftPackageReference "ThawWidgets" */,
 			);
 			preferredProjectObjectVersion = 100;
 			productRefGroup = 7166832B2A767E6A006ABF84 /* Products */;
@@ -475,6 +511,18 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		D4D4D4D4D4D4D4D4D4D4D405 /* Wrap Modules */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Library/Modules/ThawAutomation",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Library/Modules/ThawTriggers",
+				"$(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Library/Modules/ThawWidgets",
+			);
+			name = "Wrap Modules";
+			shellPath = /bin/zsh;
+			shellScript = "\"${SRCROOT}/scripts/wrap-modules.sh\"\n";
+		};
 		E1E1E1E1E1E1E1E1E1E1E105 /* Wrap Extra Helpers */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -752,7 +800,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 123;
+				CURRENT_PROJECT_VERSION = 124;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = A7CKWF99ML;
@@ -771,7 +819,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.6";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX)";
 				INFOPLIST_KEY_CFBundleDisplayName = "Thaw$(THAW_PRODUCT_NAME_SUFFIX)";
 				PRODUCT_MODULE_NAME = Thaw;
@@ -798,7 +846,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 123;
+				CURRENT_PROJECT_VERSION = 124;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = A7CKWF99ML;
@@ -817,7 +865,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.6";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX)";
 				INFOPLIST_KEY_CFBundleDisplayName = "Thaw$(THAW_PRODUCT_NAME_SUFFIX)";
 				PRODUCT_MODULE_NAME = Thaw;
@@ -838,7 +886,7 @@
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 123;
+				CURRENT_PROJECT_VERSION = 124;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -850,7 +898,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.6";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).MenuBarCaptureService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -866,7 +914,7 @@
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 123;
+				CURRENT_PROJECT_VERSION = 124;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -878,7 +926,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.6";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).MenuBarCaptureService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -894,12 +942,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 123;
+				CURRENT_PROJECT_VERSION = 124;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.6";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -915,12 +963,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 123;
+				CURRENT_PROJECT_VERSION = 124;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.6";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = com.stonerl.Thaw.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -937,7 +985,7 @@
 				CODE_SIGN_ENTITLEMENTS = targets/ThawControls/ThawControls.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 123;
+				CURRENT_PROJECT_VERSION = 124;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				ENABLE_APP_SANDBOX = YES;
@@ -951,7 +999,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.6";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).ThawControls";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -969,7 +1017,7 @@
 				CODE_SIGN_ENTITLEMENTS = targets/ThawControls/ThawControls.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 123;
+				CURRENT_PROJECT_VERSION = 124;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = A7CKWF99ML;
 				ENABLE_APP_SANDBOX = YES;
@@ -983,7 +1031,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = "3.0.0-beta.6";
+				MARKETING_VERSION = "3.0.0-alpha.13";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.stonerl.Thaw$(THAW_BUNDLE_ID_SUFFIX).ThawControls";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1049,10 +1097,6 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = packages/ThawCapture;
 		};
-		A9E1F0012F70000000000001 /* XCLocalSwiftPackageReference "ThawUI" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ThawUI;
-		};
 		A1A1A1A1A1A1A1A1A1A1A101 /* XCLocalSwiftPackageReference "ThawAX" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = packages/ThawAX;
@@ -1065,23 +1109,51 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = packages/ThawLayout;
 		};
+		C3C3C3C3C3C3C3C3C3C3C301 /* XCLocalSwiftPackageReference "ThawModuleKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = packages/ThawModuleKit;
+		};
+		D4D4D4D4D4D4D4D4D4D4D401 /* XCLocalSwiftPackageReference "ThawAutomation" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = packages/ThawAutomation;
+		};
+		D5D5D5D5D5D5D5D5D5D5D501 /* XCLocalSwiftPackageReference "ThawTriggers" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = packages/ThawTriggers;
+		};
+		D6D6D6D6D6D6D6D6D6D6D601 /* XCLocalSwiftPackageReference "ThawWidgets" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = packages/ThawWidgets;
+		};
+		C0C0C0C0C0C0C0C0C0C0C001 /* XCLocalSwiftPackageReference "ThawConcurrency" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = packages/ThawConcurrency;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		65065A74755C38D642D99302 /* XCRemoteSwiftPackageReference "swift-collections" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-collections";
+			requirement = {
+				kind = exactVersion;
+				version = 1.7.5;
+			};
+		};
+		A9E1F0012F70000000000001 /* XCRemoteSwiftPackageReference "ThawUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/thaw-app/ThawUI";
+			requirement = {
+				kind = exactVersion;
+				version = 1.2.1;
+			};
+		};
 		170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 2.10.0;
-			};
-		};
-		17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/buh/CompactSlider";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.1.0;
+				minimumVersion = 2.10.1;
 			};
 		};
 		1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */ = {
@@ -1127,15 +1199,15 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		147F2F5E062E0539138D611C /* DequeModule */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 65065A74755C38D642D99302 /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = DequeModule;
+		};
 		170423D82B56DE78004A2549 /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
-		};
-		17F71BB42B880B4500905CBA /* CompactSlider */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */;
-			productName = CompactSlider;
 		};
 		43C5F05D006747974015EBD9 /* AsyncAlgorithms */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -1162,9 +1234,14 @@
 			package = A7C4F0052F60000000000005 /* XCLocalSwiftPackageReference "ThawCapture" */;
 			productName = ThawCapture;
 		};
+		A9E1F0052F70000000000005 /* ThawUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A9E1F0012F70000000000001 /* XCRemoteSwiftPackageReference "ThawUI" */;
+			productName = ThawUI;
+		};
 		A9E1F0022F70000000000002 /* ThawUI */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = A9E1F0012F70000000000001 /* XCLocalSwiftPackageReference "ThawUI" */;
+			package = A9E1F0012F70000000000001 /* XCRemoteSwiftPackageReference "ThawUI" */;
 			productName = ThawUI;
 		};
 		C2D4E6A8B0C2D4E6A8B0C2D4 /* MenuBarModel */ = {
@@ -1222,6 +1299,11 @@
 			package = A1A1A1A1A1A1A1A1A1A1A101 /* XCLocalSwiftPackageReference "ThawAX" */;
 			productName = ThawAXCore;
 		};
+		C0C0C0C0C0C0C0C0C0C0C002 /* ThawConcurrency */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0C0C0C0C0C0C0C0C0C0C001 /* XCLocalSwiftPackageReference "ThawConcurrency" */;
+			productName = ThawConcurrency;
+		};
 		B1B1B1B1B1B1B1B1B1B1B102 /* ThawLayout */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B1B1B1B1B1B1B1B1B1B1B101 /* XCLocalSwiftPackageReference "ThawLayout" */;
@@ -1236,6 +1318,31 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6299E164B288ACBB011AC6B1 /* XCRemoteSwiftPackageReference "swift-algorithms" */;
 			productName = Algorithms;
+		};
+		C3C3C3C3C3C3C3C3C3C3C302 /* ThawModuleKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C3C3C3C3C3C3C3C3C3C3C301 /* XCLocalSwiftPackageReference "ThawModuleKit" */;
+			productName = ThawModuleKit;
+		};
+		C3C3C3C3C3C3C3C3C3C3C303 /* ThawModuleKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C3C3C3C3C3C3C3C3C3C3C301 /* XCLocalSwiftPackageReference "ThawModuleKit" */;
+			productName = ThawModuleKit;
+		};
+		D4D4D4D4D4D4D4D4D4D4D402 /* ThawAutomation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D4D4D4D4D4D4D4D4D4D4D401 /* XCLocalSwiftPackageReference "ThawAutomation" */;
+			productName = ThawAutomation;
+		};
+		D5D5D5D5D5D5D5D5D5D5D502 /* ThawTriggers */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D5D5D5D5D5D5D5D5D5D5D501 /* XCLocalSwiftPackageReference "ThawTriggers" */;
+			productName = ThawTriggers;
+		};
+		D6D6D6D6D6D6D6D6D6D6D602 /* ThawWidgets */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D6D6D6D6D6D6D6D6D6D6D601 /* XCLocalSwiftPackageReference "ThawWidgets" */;
+			productName = ThawWidgets;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

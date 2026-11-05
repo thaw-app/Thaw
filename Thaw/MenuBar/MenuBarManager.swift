@@ -467,14 +467,12 @@ final class MenuBarManager {
             }
         )
         alwaysShowHiddenItemsController?.observeDisplaySettings { [settings = appState.settings.displaySettings] in
-            // Reading the wide display rule here makes its changes re-check too.
-            _ = (settings.wideDisplayRule.isEnabled, settings.wideDisplayRule.minimumWidth)
-            return settings.configurations
+            settings.alwaysShowInputs
         } refreshControls: { [weak self] in
             self?.updateControlItemStates()
         }
         activeDisplayWatcher?.isNeeded = { [settings = appState.settings.displaySettings] in
-            settings.wideDisplayRule.isEnabled || settings.isAlwaysShowEnabledOnAnyDisplay
+            settings.isAlwaysShowEnabledOnAnyDisplay
         }
         activeDisplayWatcher?.onChange = { [weak self] in
             self?.synchronizeAlwaysShowHiddenItems()
@@ -908,9 +906,9 @@ final class MenuBarManager {
         needsPalette: Bool
     ) async -> (CGDirectDisplayID, MenuBarAverageColorInfo, PaletteCapture?)? {
         guard let sample = await ScreenCapture.withOneshotCaptureTicket({
-            await MenuBarColorSampler.captureStrip(for: displayID, from: windows)
-        }),
-            let color = sample.image.averageColor(option: .ignoreAlpha)
+                  await MenuBarColorSampler.captureStrip(for: displayID, from: windows)
+              }),
+              let color = sample.image.averageColor(option: .ignoreAlpha)
         else {
             return nil
         }
@@ -1080,7 +1078,7 @@ final class MenuBarManager {
 
     /// Checks the active profile; returns nil when no profiles exist.
     private func makeProfilesMenuItem() -> NSMenuItem? {
-        guard let appState, !appState.profileManager.profiles.isEmpty else {
+        guard let appState, appState.profilesFeature.isOn, !appState.profileManager.profiles.isEmpty else {
             return nil
         }
 

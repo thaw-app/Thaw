@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
+import ThawUI
 
 /// Resolve the stage once per opening in onAppear; init cannot read the environment and would retain launch-time state.
 /// Holding it in state prevents the "seen" write from switching to recovery before dismissal.
@@ -43,6 +44,9 @@ private struct PermissionsFlowView: View {
             idealHeight: ThawOnboardingWindowMetrics.height
         )
         .onAppear(perform: resolveStage)
+        // Takes Light or Dark from the Settings choice. Black's background is for Settings, so
+        // onboarding keeps its own and only draws dark.
+        .settingsTheme(appState.settings.general.settingsAppearance, drawsBackground: false)
     }
 
     /// Consume replay once per opening so later permission recovery does not repeat the tour.

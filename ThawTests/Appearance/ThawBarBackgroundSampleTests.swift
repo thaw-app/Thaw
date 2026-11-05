@@ -97,6 +97,7 @@ struct ThawBarBackgroundSampleTests {
     private func inkOverWhite(
         asTint: Bool,
         style: MenuBarGlassStyle,
+        tinted: Bool = false,
         colored: Bool,
         color: NSColor = .black
     ) -> Color {
@@ -106,6 +107,8 @@ struct ThawBarBackgroundSampleTests {
         configuration.thawBarAppearance.tintKind = asTint ? .glass : .noTint
         configuration.thawBarAppearance.backgroundGlassStyle = style
         configuration.thawBarAppearance.tintGlassStyle = style
+        configuration.thawBarAppearance.backgroundGlassIsTinted = tinted
+        configuration.thawBarAppearance.tintGlassIsTinted = tinted
         configuration.thawBarAppearance.backgroundGlassIsColored = colored
         configuration.thawBarAppearance.tintGlassIsColored = colored
         configuration.thawBarAppearance.backgroundColor = color.cgColor
@@ -122,11 +125,11 @@ struct ThawBarBackgroundSampleTests {
     }
 
     @Test("Plain glass leaves the ink to the sample beneath it, colored or not", arguments: [
-        (false, MenuBarGlassStyle.regular, false), (false, .clear, true), (false, .liquid, false),
-        (true, .regular, true), (true, .clear, false), (true, .liquid, false),
+        (false, false, false), (false, false, true), (false, true, false),
+        (true, false, true), (true, false, false), (true, true, false),
     ])
-    func plainGlassKeepsTheSampleInk(asTint: Bool, style: MenuBarGlassStyle, colored: Bool) {
-        #expect(inkOverWhite(asTint: asTint, style: style, colored: colored) == .black)
+    func plainGlassKeepsTheSampleInk(asTint: Bool, tinted: Bool, colored: Bool) {
+        #expect(inkOverWhite(asTint: asTint, style: .regular, tinted: tinted, colored: colored) == .black)
     }
 
     @Test("Dynamic glass darkens the bar enough to flip the ink to white", arguments: [false, true])
@@ -134,9 +137,9 @@ struct ThawBarBackgroundSampleTests {
         #expect(inkOverWhite(asTint: asTint, style: .dynamic, colored: false) == .white)
     }
 
-    @Test("Colored Liquid Glass washes at reduced strength: black over white still reads as light", arguments: [false, true])
-    func coloredLiquidGlassIsAPartialWash(asTint: Bool) {
-        #expect(inkOverWhite(asTint: asTint, style: .liquid, colored: true) == .black)
+    @Test("Tinted, colored glass washes at reduced strength: black over white still reads as light", arguments: [false, true])
+    func coloredTintedGlassIsAPartialWash(asTint: Bool) {
+        #expect(inkOverWhite(asTint: asTint, style: .regular, tinted: true, colored: true) == .black)
         #expect(inkOverWhite(asTint: asTint, style: .dynamic, colored: true) == .white, "The wash and the fade add up")
     }
 }

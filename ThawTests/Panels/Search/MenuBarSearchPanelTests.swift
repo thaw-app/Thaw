@@ -47,7 +47,7 @@ struct MenuBarSearchPanelTests {
         #expect(panel.presentation == .inspector)
     }
 
-    @Test("Edit Name starts a rename seeded with the item's custom name")
+    @Test("Rename… starts a rename seeded with the item's custom name")
     func beginRenameSeedsDraft() throws {
         let world = World()
         var alpha = World.item("Alpha")
@@ -163,6 +163,51 @@ struct MenuBarSearchPanelTests {
 
         panel.moveSelection(toDestinationAt: 1)
         #expect(world.appState.layoutFeedback.refusal != nil)
+    }
+
+    @Test("Rename and section moves work in the launcher faces too", arguments: [SearchPresentation.launcher, .assisted])
+    func launcherFacesRenameAndMove(presentation: SearchPresentation) throws {
+        let world = World()
+        var alpha = World.item("Alpha")
+        alpha.customName = "My Alpha"
+        let control = World.item(.visibleControlItem)
+        world.seat([alpha, control])
+        let panel = panel(world)
+        #expect(panel.adopt(presentation))
+        #expect(panel.presentation == presentation)
+        #expect(!panel.adopt(presentation), "adopting the same face again changes nothing")
+
+        panel.model.selection = .item(alpha.tag, windowID: alpha.windowID)
+        panel.beginRenamingSelection()
+        let session = try #require(panel.model.renameSession)
+        #expect(session.draft == "My Alpha")
+        panel.model.renameSession?.draft = "Renamed"
+        panel.model.launcherCandidates = [
+            PaletteCandidate(item: alpha, displayName: "My Alpha", ownerName: "", identityKey: alpha.uniqueIdentifier),
+        ]
+        panel.commitRename()
+        #expect(alpha.customName == "Renamed")
+        #expect(panel.model.launcherCandidates.isEmpty, "a rename drops the inventory ranked by the old name")
+
+        // A refusal shows the move was attempted rather than ignored by the face.
+        try #require(!MenuBarBackendProvider.current.canAssign(control, to: .hidden, experimentalSystemItemHiding: false))
+        panel.model.selection = .item(control.tag, windowID: control.windowID)
+        panel.moveSelection(toDestinationAt: 1)
+        #expect(world.appState.layoutFeedback.refusal != nil)
+    }
+
+    @Test("Remember last search keeps the query in the launcher faces too", arguments: [SearchPresentation.launcher, .assisted])
+    func launcherFacesKeepRememberedQuery(presentation: SearchPresentation) {
+        let world = World()
+        let panel = panel(world)
+        _ = panel.adopt(presentation)
+        Defaults.set(true, forKey: .rememberSearchQuery)
+        panel.model.searchText = "Kept"
+        panel.close()
+        #expect(panel.model.searchText == "Kept")
+        Defaults.set(false, forKey: .rememberSearchQuery)
+        panel.close()
+        #expect(panel.model.searchText.isEmpty)
     }
 
     @Test("The actions menu tracking keeps the panel up and closes it once it ends without key")

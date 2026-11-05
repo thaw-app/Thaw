@@ -16,8 +16,9 @@ import ThawCapture
 /// matching the bar. Unlike hideApplicationMenus(manual:), it neither steals
 /// focus nor puts Thaw in the Dock.
 ///
-/// The panel sits at .mainMenu + 1, eats clicks, and has sharingType = .none so
-/// Thaw's capture loop never re-ingests it. Its fill is MenuBarBackdrop's
+/// The panel sits at .mainMenu + 1 and eats clicks. Screenshots see it; Thaw's
+/// captures don't, since they stop below that level or exclude its own windows.
+/// Its fill is MenuBarBackdrop's
 /// composite of what is behind the transparent bar, since a solid average
 /// reads as a patch; the average is only the fallback until a capture lands.
 @MainActor
@@ -85,26 +86,12 @@ final class ApplicationMenuCover {
     }
 
     private func observeActivation() -> AnyCancellable {
-        let (stream, continuation) = AsyncStream<Void>.makeStream()
-        let center = NSWorkspace.shared.notificationCenter
-        let observer = center.addObserver(
-            forName: NSWorkspace.didActivateApplicationNotification,
-            object: nil,
-            queue: .main
-        ) { _ in
-            continuation.yield()
+        let task = NSWorkspace.shared.notificationCenter.eventsTask(
+            named: NSWorkspace.didActivateApplicationNotification
+        ) { [weak self] in
+            self?.update()
         }
-
-        let task = Task { @MainActor [weak self] in
-            defer { center.removeObserver(observer) }
-            for await _ in stream {
-                self?.update()
-            }
-        }
-        return AnyCancellable {
-            continuation.finish()
-            task.cancel()
-        }
+        return AnyCancellable { task.cancel() }
     }
 
     // MARK: Reconciliation
@@ -195,7 +182,7 @@ final class ApplicationMenuCover {
             return
         }
         let isNew = panel == nil
-        let panel = panel ?? makePanel()
+        let panel = panel ?? Self.makePanel()
         self.panel = panel
 
         if panel.frame != rect {
@@ -264,9 +251,10 @@ final class ApplicationMenuCover {
         return color
     }
 
-    private func makePanel() -> NSPanel {
+    static func makePanel() -> NSPanel {
         // Absorbs clicks so a covered title cannot be opened blind.
-        let panel = NSPanel.menuBarOverlay(opaque: true, absorbsClicks: true)
+        // Screenshots see it, or they would show the menus this hides. Thaw's own captures leave it out.
+        let panel = NSPanel.menuBarOverlay(opaque: true, absorbsClicks: true, sharingType: .readOnly)
         let content = NSView()
         content.wantsLayer = true
         panel.contentView = content

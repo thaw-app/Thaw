@@ -7,6 +7,7 @@
 
 import AppKit
 import MenuBarModel
+import ThawUI
 
 // MARK: - ControlItemMenuController
 
@@ -95,8 +96,8 @@ final class ControlItemMenuController: NSObject {
         return item
     }
 
-    /// What is listening or watching right now; empty unless the Experiments
-    /// toggle is on. Only the microphone names an app: no public API says who
+    /// What is listening or watching right now; empty while the camera and
+    /// microphone alerts are off (see RecordingWatchPolicy.alertsAvailable). Only the microphone names an app: no public API says who
     /// holds a camera.
     private func recordingWatchItems(appState: AppState) -> [NSMenuItem] {
         let activity = appState.recordingWatchManager.activity
@@ -204,7 +205,7 @@ final class ControlItemMenuController: NSObject {
 
     private func profilesItem(appState: AppState, profileManager: ProfileManager?) -> NSMenuItem? {
         let profileManager = profileManager ?? appState.profileManager
-        guard !profileManager.profiles.isEmpty else {
+        guard appState.profilesFeature.isOn, !profileManager.profiles.isEmpty else {
             return nil
         }
 

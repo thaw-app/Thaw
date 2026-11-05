@@ -1454,35 +1454,18 @@ final class MenuBarItemManager {
         //
         // Debounced because a multi-step edit (materialize, then rename) lands
         // as several mutations, and each re-order costs a plist write plus an
-        // agent re-sort. MenuBarItemGroupManager is @Observable; an
-        // Observations task dedupes and skips the initial element, then feeds
-        // a subject so the Combine debounce keeps its semantics.
-        let groupSetChangeSubject = PassthroughSubject<Void, Never>()
+        // agent re-sort. Each run is spawned rather than awaited so a later
+        // edit queues for the repair lane at user priority straight away.
         let groupOrderTask = Task { @MainActor [weak self, itemGroupManager] in
             let changes = Observations { itemGroupManager.groupSet }
-            var previous: MenuBarItemGroupSet?
-            var isFirst = true
-            for await groupSet in changes {
+            for await _ in changes.removeDuplicates().dropFirst().debounce(for: .milliseconds(250)) {
                 guard self != nil else { return }
-                defer { isFirst = false }
-                guard !isFirst, groupSet != previous else {
-                    previous = groupSet
-                    continue
-                }
-                previous = groupSet
-                groupSetChangeSubject.send(())
-            }
-        }
-        AnyCancellable { groupOrderTask.cancel() }
-            .store(in: &registered)
-        groupSetChangeSubject
-            .debounce(for: .milliseconds(250), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self else { return }
                 Task { @MainActor [weak self] in
                     await self?.applyGroupOrderToLiveSections()
                 }
             }
+        }
+        AnyCancellable { groupOrderTask.cancel() }
             .store(in: &registered)
 
         // When any app launches, refresh the cache to detect new menu bar items

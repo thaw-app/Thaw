@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import AppKit
 import Ifrit
 import MenuBarModel
@@ -41,15 +42,8 @@ struct PaletteCandidate: Searchable {
     static func matchableIdentityKey(_ key: String) -> String? {
         guard !key.isEmpty else { return nil }
         let title = key.split(separator: ":").last.map(String.init) ?? key
-        guard !isPlaceholderTitle(title) else { return nil }
+        guard !MenuBarItemTag.isGenericItemTitle(title) else { return nil }
         return key
-    }
-
-    /// Item-<digits>, the AX provider's stand-in for a nameless child.
-    private static func isPlaceholderTitle(_ title: String) -> Bool {
-        guard title.hasPrefix("Item-") else { return false }
-        let suffix = title.dropFirst("Item-".count)
-        return !suffix.isEmpty && suffix.allSatisfy(\.isNumber)
     }
 }
 
@@ -93,16 +87,9 @@ extension PaletteCandidate {
         let scored = matches.map { (item: candidates[$0.index], diffScore: $0.diffScore) }
 
         let needle = query.lowercased()
-        var prefixed = [(item: PaletteCandidate, diffScore: Double)]()
-        var rest = [(item: PaletteCandidate, diffScore: Double)]()
-        for entry in scored {
-            if entry.item.displayName.lowercased().hasPrefix(needle)
-                || entry.item.ownerName.lowercased().hasPrefix(needle)
-            {
-                prefixed.append(entry)
-            } else {
-                rest.append(entry)
-            }
+        let (rest, prefixed) = scored.partitioned {
+            $0.item.displayName.lowercased().hasPrefix(needle)
+                || $0.item.ownerName.lowercased().hasPrefix(needle)
         }
 
         return SearchRanker.sortedByRelevance(prefixed) + SearchRanker.sortedByRelevance(rest)

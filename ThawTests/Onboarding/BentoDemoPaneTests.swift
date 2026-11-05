@@ -20,7 +20,7 @@ struct BentoDemoPaneTests {
         (BentoDemo.triggers, SettingsNavigationIdentifier.triggers),
         (BentoDemo.profiles, SettingsNavigationIdentifier.profiles),
         (BentoDemo.zen, SettingsNavigationIdentifier.hotkeys),
-        (BentoDemo.integrations, SettingsNavigationIdentifier.automation),
+        (BentoDemo.integrations, SettingsNavigationIdentifier.privacy),
     ])
     func cardOpensItsPane(demo: BentoDemo, pane: SettingsNavigationIdentifier) {
         #expect(demo.pane == pane)

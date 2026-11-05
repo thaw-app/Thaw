@@ -117,7 +117,7 @@ struct ProfileLayoutDiffTests {
         profile.tempShowInterval = 99
         let changes = ProfileLayoutDiff.settingChanges(current: GeneralSettingsSnapshot.defaults, profile: profile)
         #expect(changes.map(\.key) == ["showOnHover", "tempShowInterval"])
-        #expect(changes.map(\.label) == ["Show on hover", "Temp show interval"])
+        #expect(changes.map(\.label) == ["Show on hover", "Keep opened items in the menu bar for"])
         #expect(changes.first?.id == "showOnHover")
         #expect(ProfileLayoutDiff.settingChanges(current: profile, profile: profile).isEmpty)
     }

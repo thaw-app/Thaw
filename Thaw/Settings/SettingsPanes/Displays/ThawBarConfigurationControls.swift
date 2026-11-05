@@ -23,6 +23,8 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
     @Binding var gridColumns: Int
     @Binding var itemScale: Double
 
+    /// App-wide, so only the Thaw Bar page passes it; the template for new displays has no row for it.
+    private let shortcutPlacement: Binding<ThawBarShortcutPlacement>?
     private let context: Context
     private let extraControls: () -> ExtraControls
 
@@ -33,6 +35,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
         layout: Binding<ThawBarLayout>,
         gridColumns: Binding<Int>,
         itemScale: Binding<Double>,
+        shortcutPlacement: Binding<ThawBarShortcutPlacement>? = nil,
         context: Context,
         @ViewBuilder extraControls: @escaping () -> ExtraControls
     ) {
@@ -42,6 +45,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
         _layout = layout
         _gridColumns = gridColumns
         _itemScale = itemScale
+        self.shortcutPlacement = shortcutPlacement
         self.context = context
         self.extraControls = extraControls
     }
@@ -65,6 +69,15 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
                 }
             }
             .annotation { locationAnnotation }
+
+            if let shortcutPlacement {
+                ThawPicker("When opened by a shortcut", selection: shortcutPlacement) {
+                    ForEach(ThawBarShortcutPlacement.allCases) { placement in
+                        Text(placement.localized).tag(placement)
+                    }
+                }
+                .annotation { shortcutPlacementAnnotation(shortcutPlacement.wrappedValue) }
+            }
 
             ThawPillPicker(
                 "Arrangement",
@@ -122,15 +135,25 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
     private var locationAnnotation: some View {
         switch location {
         case .dynamic:
-            Text("Below the pointer when it is in the menu bar, otherwise below the \(Constants.displayName) icon.")
+            Text("If the pointer is on an empty part of the menu bar when the \(Constants.displayName) Bar opens, it opens under the pointer. Otherwise it opens under the \(Constants.displayName) icon, or at the right edge when the icon is hidden.")
         case .mousePointer:
-            Text("The \(Constants.displayName) Bar is centered below the mouse pointer.")
+            Text("Opens under the menu bar, centered on the pointer.")
         case .thawIcon:
-            Text("The \(Constants.displayName) Bar is centered below the \(Constants.displayName) icon.")
+            Text("Opens under the \(Constants.displayName) icon. When the icon is hidden, it opens at the right edge.")
         case .leftAligned:
-            Text("The \(Constants.displayName) Bar is aligned to the left edge of the display.")
+            Text("Opens under the menu bar at the left edge of the display.")
         case .rightAligned:
-            Text("The \(Constants.displayName) Bar is aligned to the right edge of the display.")
+            Text("Opens under the menu bar at the right edge of the display.")
+        }
+    }
+
+    @ViewBuilder
+    private func shortcutPlacementAnnotation(_ placement: ThawBarShortcutPlacement) -> some View {
+        switch placement {
+        case .location:
+            Text("Keyboard shortcuts, the Shortcuts app and Control Center open the \(Constants.displayName) Bar where Location says. This applies on every display.")
+        case .pointer:
+            Text("Keyboard shortcuts, the Shortcuts app and Control Center open the \(Constants.displayName) Bar centered on the pointer, wherever it is on the screen. This applies on every display.")
         }
     }
 
@@ -155,6 +178,7 @@ extension ThawBarConfigurationControls where ExtraControls == EmptyView {
         layout: Binding<ThawBarLayout>,
         gridColumns: Binding<Int>,
         itemScale: Binding<Double>,
+        shortcutPlacement: Binding<ThawBarShortcutPlacement>? = nil,
         context: Context
     ) {
         self.init(
@@ -164,6 +188,7 @@ extension ThawBarConfigurationControls where ExtraControls == EmptyView {
             layout: layout,
             gridColumns: gridColumns,
             itemScale: itemScale,
+            shortcutPlacement: shortcutPlacement,
             context: context
         ) {
             EmptyView()

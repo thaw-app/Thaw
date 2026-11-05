@@ -23,8 +23,6 @@ nonisolated struct OnboardingOutcome: Equatable, Sendable {
 /// Ask for access after explaining its benefits; earlier screens need no grants and cannot fail for missing permissions.
 /// Hold choices through access and let the host apply them together, so quitting leaves no partial settings.
 struct ThawOnboardingView: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     enum Step {
         case welcome
         case bento
@@ -103,18 +101,12 @@ struct ThawOnboardingView: View {
         }
         .overlay(alignment: .top) {
             if let indicatorStep {
-                OnboardingStepIndicator(step: indicatorStep, total: indicatorTotal)
+                OnboardingStepIndicator(step: indicatorStep, total: indicatorTotal, label: "Step \(indicatorStep) of \(indicatorTotal)")
                     .padding(.top, ThawSpacing.inset)
                     .transition(.opacity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .thawAnimation(ThawMotion.settle, value: step)
-        .transaction { transaction in
-            if reduceMotion {
-                transaction.animation = nil
-                transaction.disablesAnimations = true
-            }
-        }
+        .onboardingStepAnimation(value: step)
     }
 }

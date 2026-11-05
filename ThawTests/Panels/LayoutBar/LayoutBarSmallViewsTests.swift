@@ -126,9 +126,66 @@ struct LayoutBarSmallViewsTests {
         let captured = NSImage(size: NSSize(width: 1, height: 1))
         let appIcon = NSImage(size: NSSize(width: 2, height: 2))
         let apps = [FakeApplication(bundleIdentifier: "com.example.other", icon: nil), FakeApplication(bundleIdentifier: "com.example.app", icon: appIcon)]
-        #expect(LayoutOpaqueSlotDescriptor.preferredIcon(capturedImage: captured, bundleIdentifier: "com.example.app", applications: apps) === captured)
-        #expect(LayoutOpaqueSlotDescriptor.preferredIcon(capturedImage: nil, bundleIdentifier: "com.example.app", applications: apps) === appIcon)
+        #expect(LayoutOpaqueSlotDescriptor.preferredIcon(capturedImage: captured, captureTag: nil, bundleIdentifier: "com.example.app", applications: apps) === captured)
+        #expect(LayoutOpaqueSlotDescriptor.preferredIcon(capturedImage: nil, captureTag: nil, bundleIdentifier: "com.example.app", applications: apps) === appIcon)
         #expect(LayoutOpaqueSlotDescriptor.appIcon(bundleIdentifier: "com.example.missing", applications: apps) == nil)
+    }
+
+    @Test("A switched-off module with no picture shows its own symbol, not its app's icon")
+    func preferredIconUsesModuleSymbol() throws {
+        let appIcon = NSImage(size: NSSize(width: 2, height: 2))
+        let apps = [FakeApplication(bundleIdentifier: "com.apple.controlcenter", icon: appIcon)]
+        let slot = LayoutOpaqueSlotDescriptor.governableExtra(menuExtraTitle: "com.apple.menuextra.bluetooth", displayName: "Bluetooth")
+        let icon = try #require(LayoutOpaqueSlotDescriptor.preferredIcon(
+            capturedImage: nil,
+            captureTag: slot.captureTag,
+            bundleIdentifier: slot.bundleIdentifier,
+            applications: apps
+        ))
+        let symbol = try #require(SystemModuleGlyph.image(forItemTitle: "com.apple.menuextra.bluetooth"))
+        #expect(icon.isTemplate)
+        #expect(icon.tiffRepresentation == symbol.tiffRepresentation)
+
+        let captured = NSImage(size: NSSize(width: 1, height: 1))
+        #expect(LayoutOpaqueSlotDescriptor.preferredIcon(
+            capturedImage: captured,
+            captureTag: slot.captureTag,
+            bundleIdentifier: slot.bundleIdentifier,
+            applications: apps
+        ) === captured)
+    }
+
+    @Test("A reused opaque slot shows a picture taken or dropped since it was made")
+    func opaqueSlotTakesNewPicture() throws {
+        let slot = LayoutOpaqueSlotDescriptor.governableExtra(menuExtraTitle: "com.apple.menuextra.bluetooth", displayName: "Bluetooth")
+        let picture = NSImage(size: NSSize(width: 16, height: 16), flipped: false) { rect in
+            NSColor.systemRed.setFill()
+            rect.fill()
+            return true
+        }
+        let size = CGSize(width: 32, height: 32)
+        let withPicture = try pixels(of: LayoutOpaqueSlotView(descriptor: slot, runningApplications: [], capturedImage: picture), size: size)
+        let withoutPicture = try pixels(of: LayoutOpaqueSlotView(descriptor: slot, runningApplications: []), size: size)
+        #expect(withPicture != withoutPicture)
+
+        let reused = LayoutOpaqueSlotView(descriptor: slot, runningApplications: [])
+        reused.updateIcon(capturedImage: picture, runningApplications: [])
+        #expect(try pixels(of: reused, size: size) == withPicture)
+        reused.updateIcon(capturedImage: nil, runningApplications: [])
+        #expect(try pixels(of: reused, size: size) == withoutPicture)
+    }
+
+    @Test("An opaque slot Thaw can't put an icon to draws Layout's generic placeholder")
+    func opaqueSlotUnidentifiedPlaceholder() throws {
+        let slot = LayoutOpaqueSlotDescriptor.governableExtra(menuExtraTitle: "com.example.unknown", displayName: "Unknown")
+        #expect(LayoutOpaqueSlotDescriptor.preferredIcon(
+            capturedImage: nil,
+            captureTag: slot.captureTag,
+            bundleIdentifier: slot.bundleIdentifier,
+            applications: [FakeApplication]()
+        ) == nil)
+        let drawn = try pixels(of: LayoutOpaqueSlotView(descriptor: slot, runningApplications: []), size: CGSize(width: 32, height: 32))
+        #expect(drawn.contains { $0 != 0 })
     }
 
     @Test("An opaque slot is a disabled image that draws an icon and a badge")

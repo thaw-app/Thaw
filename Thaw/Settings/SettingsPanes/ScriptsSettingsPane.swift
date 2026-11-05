@@ -6,19 +6,25 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
+import ThawModuleKit
 import ThawUI
 
-/// Placeholder for the upcoming script-driven bar modules surface.
-///
-/// The identifier and pane are kept for the feature; nothing in the window
-/// routes here until it lands, and it holds no settings yet.
+/// Scripts that run before and after a profile switch. They live in the
+/// Scripts module; this pane switches it on or off and opens it.
 struct ScriptsSettingsPane: View {
     var body: some View {
-        ThawEmptyState(
-            systemImage: "curlybraces",
-            title: "In development",
-            caption: "Script-driven bar modules are not built yet. There is nothing to configure here."
-        )
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ThawForm {
+            scriptsSection
+        }
+    }
+
+    private var scriptsSection: some View {
+        ThawSection {
+            ModuleOpenRow(
+                module: .scripts,
+                title: "Before and after a profile switches",
+                detail: "Scripts run in the Scripts module, which comes with \(Constants.displayName)."
+            )
+        }
     }
 }

@@ -97,7 +97,7 @@ nonisolated extension SharedAppearance {
             opacity: configuration.tintOpacity,
             color: configuration.tintColor,
             gradient: configuration.tintGradient,
-            glassStyle: configuration.tintGlassStyle,
+            glassFinish: configuration.tintGlassFinish,
             glassIsColored: configuration.tintGlassIsColored
         )
         self.background = Self.fill(
@@ -105,7 +105,7 @@ nonisolated extension SharedAppearance {
             opacity: configuration.backgroundOpacity,
             color: configuration.backgroundColor,
             gradient: configuration.backgroundGradient,
-            glassStyle: configuration.backgroundGlassStyle,
+            glassFinish: configuration.backgroundGlassFinish,
             glassIsColored: configuration.backgroundGlassIsColored
         )
     }
@@ -115,7 +115,7 @@ nonisolated extension SharedAppearance {
         opacity: Double,
         color: CGColor,
         gradient: ThawGradient,
-        glassStyle: MenuBarGlassStyle,
+        glassFinish: MenuBarGlassFinish,
         glassIsColored: Bool
     ) -> Fill {
         let isGlass = kind == "glass"
@@ -131,7 +131,7 @@ nonisolated extension SharedAppearance {
                 }
                 : nil,
             angle: kind == "gradient" ? gradient.angle : nil,
-            glassStyle: isGlass ? name(of: glassStyle) : nil,
+            glassStyle: isGlass ? name(of: glassFinish) : nil,
             glassIsColored: isGlass ? glassIsColored : nil
         )
     }
@@ -166,11 +166,11 @@ nonisolated extension SharedAppearance {
         }
     }
 
-    private static func name(of style: MenuBarGlassStyle) -> String {
-        switch style {
-        case .regular: "regular"
-        case .clear: "clear"
-        case .liquid: "liquid"
+    /// Keeps the names Floe already knows: tinted glass is drawn as Liquid
+    /// Glass was, so it still reports liquid.
+    private static func name(of finish: MenuBarGlassFinish) -> String {
+        switch finish.style {
+        case .regular: finish.isTinted ? "liquid" : "regular"
         case .dynamic: "dynamic"
         // Floe only knows the public styles, so the experimental finishes share their nearest one.
         case .solid, .dim: "regular"

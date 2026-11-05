@@ -86,6 +86,33 @@ struct AXGeometryCatalogTests {
         ) == nil)
     }
 
+    @Test("Whitespace-only labels resolve to the inventory's identity")
+    func whitespaceLabelsMatchInventory() {
+        let namespace = MenuBarItemTag.Namespace.string("com.example.app")
+        let catalog = AXGeometryCatalog.identityTitle(
+            namespace: namespace,
+            attributes: .init(identifier: " ", title: "\t", accessibilityDescription: " \n"),
+            descendants: [.init(identifier: "_NS:12"), .init(accessibilityDescription: "Battery")]
+        )
+        let inventory = MenuBarItemAXProvider.rawItem(
+            namespace: namespace,
+            labels: AXItemLabels(
+                identifier: " ",
+                childIdentifier: "_NS:12",
+                accessibilityDescription: " \n",
+                childDescription: "Battery",
+                axTitle: "\t"
+            ),
+            fallbackIndex: 0,
+            bounds: .zero,
+            ownerPID: 1
+        ).identityTitle
+        #expect(catalog == inventory)
+        #expect(catalog == MenuBarItemAXProvider.identityTitle(
+            namespace: namespace, identifier: nil, accessibilityDescription: "Battery", displayTitle: "Battery"
+        ))
+    }
+
     @Test("A neighbour cannot validate another process's stale crop")
     func crossOwnerReplacementIsRejected() {
         let rect = CGRect(x: 851, y: 4.5, width: 24, height: 24)

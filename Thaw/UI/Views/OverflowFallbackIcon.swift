@@ -10,24 +10,25 @@ import SwiftUI
 
 // MARK: - MenuBarItemDisplayImage
 
-/// Keep engine captures CoreGraphics-only; the view layer can substitute NSImage app icons.
+/// Keep engine captures CoreGraphics-only; the view layer can substitute an NSImage icon:
+/// an app icon, a system module's symbol, a stand-in's glyph or a generic placeholder.
 enum MenuBarItemDisplayImage {
     case capture(MenuBarItemGlyphCapture)
-    case appIcon(NSImage)
+    case icon(NSImage)
 
     /// Intrinsic point size: capture pixels divided by scale, or the AppKit image size.
     var pointSize: CGSize {
         switch self {
         case let .capture(capture): capture.pointSize
-        case let .appIcon(image): image.size
+        case let .icon(image): image.size
         }
     }
 
-    /// App icons may be template images; pixel captures never are.
+    /// Icons may be template images; pixel captures never are.
     var isTemplate: Bool {
         switch self {
         case .capture: false
-        case let .appIcon(image): image.isTemplate
+        case let .icon(image): image.isTemplate
         }
     }
 
@@ -36,28 +37,28 @@ enum MenuBarItemDisplayImage {
     var isReinkable: Bool {
         switch self {
         case let .capture(capture): capture.isSingleInkGlyph
-        case let .appIcon(image): image.isTemplate
+        case let .icon(image): image.isTemplate
         }
     }
 
     var swiftUIImage: Image {
         switch self {
         case let .capture(capture): Image(decorative: capture.cgImage, scale: capture.scale)
-        case let .appIcon(image): Image(nsImage: image)
+        case let .icon(image): Image(nsImage: image)
         }
     }
 
-    /// The tallest an app icon standing in for a capture is drawn, about a menu bar glyph's height,
+    /// The tallest an icon standing in for a capture is drawn, about a menu bar glyph's height,
     /// so it doesn't tower over captures in a row as tall as a notched menu bar.
     static let appIconHeight: CGFloat = 18
 
     /// Fit downward only; upscaling native raster glyphs blurs them in taller rows.
-    /// Nil or non-positive row/image heights leave intrinsic size unchanged, except that an app icon
+    /// Nil or non-positive row/image heights leave intrinsic size unchanged, except that an icon
     /// is never drawn taller than appIconHeight.
     func targetSize(fittingHeight rowHeight: CGFloat?) -> CGSize {
         let intrinsic = pointSize
         var limit = rowHeight.flatMap { $0 > 0 ? $0 : nil }
-        if case .appIcon = self {
+        if case .icon = self {
             limit = min(limit ?? Self.appIconHeight, Self.appIconHeight)
         }
         guard intrinsic.height > 0, let limit else {
@@ -94,6 +95,44 @@ struct MenuBarItemGlyph: View {
             .antialiased(true)
             .resizable()
             .frame(width: size.width, height: size.height)
+    }
+}
+
+// MARK: - MenuBarItemPlaceholderStyle
+
+/// One look for an item Thaw can't identify, shared by Layout's AppKit tiles and SwiftUI surfaces.
+enum MenuBarItemPlaceholderStyle {
+    static let symbolName = "menubar.rectangle"
+    static let cornerRadius: CGFloat = 6
+    /// Space around the box, and between the box and the symbol.
+    static let inset: CGFloat = 2
+    static let fillOpacity: CGFloat = 0.35
+    static let borderOpacity: CGFloat = 0.6
+}
+
+// MARK: - MenuBarItemPlaceholderIcon
+
+/// The tile for an item Thaw can't identify: the grey box and generic menu bar symbol
+/// that Layout draws in LayoutBarItemView.drawPlaceholderBox, for SwiftUI surfaces.
+struct MenuBarItemPlaceholderIcon: View {
+    private typealias Style = MenuBarItemPlaceholderStyle
+
+    let length: CGFloat
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: Style.cornerRadius)
+            .fill(Color(nsColor: .quaternaryLabelColor).opacity(Style.fillOpacity))
+            .strokeBorder(Color(nsColor: .separatorColor).opacity(Style.borderOpacity), lineWidth: 1)
+            .overlay {
+                Image(systemName: Style.symbolName)
+                    .resizable()
+                    .foregroundStyle(Color(nsColor: .secondaryLabelColor))
+                    .opacity(LayoutBarCaptureInk.placeholderFraction(isEnabled: true, isTemplate: true))
+                    .aspectRatio(1, contentMode: .fit)
+                    .padding(Style.inset)
+            }
+            .padding(Style.inset)
+            .frame(width: length, height: length)
     }
 }
 
@@ -159,7 +198,7 @@ enum OverflowFallbackIcon {
         // The app-icon override lets users avoid native-overflow capture bleed even with populated captures.
         if appState.settings.alwaysUseAppIconForMenuBarItems {
             // Without a live app icon, preserve missing-capture behavior rather than replacing a quit app with a placeholder.
-            return selectedThawIcon(for: item, appState: appState) != nil || appIcon(for: item) != nil
+            return selectedThawIcon(for: item, appState: appState) != nil || itemIcon(for: item) != nil
         }
         return !hasUsableCapture
     }
@@ -204,7 +243,7 @@ enum OverflowFallbackIcon {
                 for: item,
                 appState: appState,
                 visibleControlItemState: visibleControlItemState
-            ).map { .appIcon($0) }
+            ).map { .icon($0) }
         }
         if let capturedImage, isUsableCapture(capturedImage, for: item) {
             return .capture(capturedImage)
@@ -214,7 +253,7 @@ enum OverflowFallbackIcon {
             for: item,
             appState: appState,
             visibleControlItemState: visibleControlItemState
-        ).map { .appIcon($0) }
+        ).map { .icon($0) }
     }
 
     /// Share one image pass between layout measurement and rendering.
@@ -276,15 +315,16 @@ enum OverflowFallbackIcon {
     /// MenuBarItemDisplayName avoids allocating process wrappers for accessibility text on every body read.
     @MainActor
     static func image(for item: MenuBarItem) -> NSImage? {
-        appIcon(for: item) ?? NSImage(
-            systemSymbolName: "menubar.rectangle",
+        itemIcon(for: item) ?? NSImage(
+            systemSymbolName: MenuBarItemPlaceholderStyle.symbolName,
             accessibilityDescription: MenuBarItemDisplayName.displayName(for: item)
         )
     }
 
-    /// No generic fallback, so app-icon overrides can distinguish quit apps from live ones.
+    /// A system module's symbol, Control Center's icon, a stand-in's glyph or the owning app's icon.
+    /// No generic fallback, so callers can tell a quit app apart and draw their own placeholder.
     @MainActor
-    private static func appIcon(for item: MenuBarItem) -> NSImage? {
+    static func itemIcon(for item: MenuBarItem) -> NSImage? {
         switch item.tag.namespace {
         case .menuBarAgent:
             return SystemModuleGlyph.image(forItemTitle: item.tag.title)

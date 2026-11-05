@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import Thaw
+import ThawUI
 
 @MainActor
 @Suite("Resetting every setting", .serialized, .scratchDefaults)
@@ -23,6 +24,7 @@ struct SettingsResetterTests {
         general.showThawIcon = !Defaults.DefaultValue.showThawIcon
         general.simpleMode = !Defaults.DefaultValue.simpleMode
         general.showSettingDescriptions = !Defaults.DefaultValue.showSettingDescriptions
+        general.settingsAppearance = .black
         general.lockThawBarPosition = !Defaults.DefaultValue.lockThawBarPosition
         general.screenCornerRadius = Defaults.DefaultValue.screenCornerRadius + 3
         general.showOnHover = !Defaults.DefaultValue.showOnHover
@@ -36,6 +38,7 @@ struct SettingsResetterTests {
         #expect(general.showThawIcon == Defaults.DefaultValue.showThawIcon)
         #expect(general.simpleMode == Defaults.DefaultValue.simpleMode)
         #expect(general.showSettingDescriptions == Defaults.DefaultValue.showSettingDescriptions)
+        #expect(general.settingsAppearance == .system)
         #expect(general.lockThawBarPosition == Defaults.DefaultValue.lockThawBarPosition)
         #expect(general.screenCornerRadius == Defaults.DefaultValue.screenCornerRadius)
         #expect(general.showOnHover == Defaults.DefaultValue.showOnHover)

@@ -30,11 +30,11 @@ nonisolated extension SearchIndex {
             id: "displays.thawBarLocation",
             titleKey: "Location",
             titleText: "\(Constants.displayName) Bar location",
-            descriptionText: String(localized: "The \(Constants.displayName) Bar's location changes based on context."),
+            descriptionText: String(localized: "Where the \(Constants.displayName) Bar opens: under the pointer, under the \(Constants.displayName) icon, or at the left or right edge of the display."),
             pane: .thawBar,
             sectionKey: nil,
             sectionText: nil,
-            keywords: ["ice bar", "thaw bar", "location", "mouse", "aligned"],
+            keywords: ["ice bar", "thaw bar", "location", "mouse", "pointer", "aligned", "edge", "dynamic", "icon"],
             property: nil
         ),
         SearchEntry(
@@ -62,7 +62,7 @@ nonisolated extension SearchIndex {
         SearchEntry(
             id: "displays.itemSpacing",
             title: "Menu bar item spacing",
-            descriptionText: String(localized: "Applying briefly relaunches apps with menu bar items so they pick up the new spacing."),
+            descriptionText: String(localized: "The space between menu bar items on each display. Applying a change can restart apps with menu bar items."),
             pane: .displays,
             section: "Menu bar item spacing",
             keywords: ["spacing", "padding", "menu bar", "items", "gap"],
@@ -75,6 +75,15 @@ nonisolated extension SearchIndex {
             pane: .displays,
             section: "Menu bar item spacing",
             keywords: ["spacing", "confirm", "relaunch", "restart", "apps", "without", "immediate", "next restart", "when applying spacing"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "displays.template",
+            title: "Template for new displays",
+            descriptionText: String(localized: "The \(Constants.displayName) Bar settings and spacing new displays start with, and a button that applies them to every display."),
+            pane: .displays,
+            section: "Template for new displays",
+            keywords: ["template", "global", "new displays", "all displays", "apply to all", "default", "customized", "use template"],
             property: nil
         ),
         SearchEntry(

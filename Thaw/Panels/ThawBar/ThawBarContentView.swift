@@ -154,7 +154,7 @@ struct ThawBarContentView: View {
     }
 
     private var clipShape: ThawBarBorderShape {
-        ThawBarBorderShape.thawBarClip(height: contentHeight, hasRoundedShape: thawBarAppearance.hasRoundedShape)
+        ThawBarBorderShape.thawBarClip(height: contentHeight, roundness: thawBarAppearance.cornerRoundness)
     }
 
     private func itemView(for item: MenuBarItem, image: MenuBarItemDisplayImage?, at index: Int) -> ThawBarItemView {
@@ -224,7 +224,7 @@ struct ThawBarContentView: View {
                 // Trace the clip; omit the square-corner top edge to avoid the display's rounded-corner clipping.
                 ThawBarBorderShape.thawBarBorder(
                     height: contentHeight,
-                    hasRoundedShape: thawBarAppearance.hasRoundedShape,
+                    roundness: thawBarAppearance.cornerRoundness,
                     borderWidth: CGFloat(thawBarAppearance.borderWidth)
                 )
                 .stroke(lineWidth: CGFloat(thawBarAppearance.borderWidth))
@@ -341,7 +341,7 @@ struct ThawBarContentView: View {
                 }
             }
             .thawAnimation(ThawMotion.quick, value: cacheGracePeriodActive)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, ThawSpacing.row)
             .onChange(of: cacheGracePeriodActive) {
                 Self.diagLog.debug("ThawBar content: grace period changed to \(self.cacheGracePeriodActive) for section \(self.section.logString), items still empty: \(items.isEmpty)")
             }
@@ -361,7 +361,7 @@ struct ThawBarContentView: View {
                 }
             }
             .thawAnimation(ThawMotion.quick, value: loadingTimedOut)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, ThawSpacing.row)
             .onChange(of: loadingTimedOut) {
                 Self.diagLog.warning("ThawBar content: loading timeout changed to \(self.loadingTimedOut), itemCache.managedItems is still EMPTY")
             }
@@ -379,7 +379,7 @@ struct ThawBarContentView: View {
             }
             .thawAnimation(ThawMotion.quick, value: cacheGracePeriodActive)
             .thawAnimation(ThawMotion.quick, value: loadingTimedOut)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, ThawSpacing.row)
             .onChange(of: loadingTimedOut) {
                 Self.diagLog.warning("ThawBar content: hasNoRenderableItems timeout changed to \(self.loadingTimedOut) for section \(self.section.logString)")
             }

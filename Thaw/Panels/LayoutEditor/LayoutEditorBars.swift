@@ -44,8 +44,8 @@ struct LayoutEditorBars: View {
             }
             if let refusal = appState.layoutFeedback.refusal {
                 SettingsWarningPill(
-                    title: LocalizedStringKey(refusal.title),
-                    message: LocalizedStringKey(refusal.message),
+                    title: LocalizedStringResource(String.LocalizationValue(refusal.title)),
+                    message: LocalizedStringResource(String.LocalizationValue(refusal.message)),
                     systemImage: "exclamationmark.triangle.fill",
                     tint: .orange,
                     actionTitle: "Dismiss"
@@ -122,7 +122,7 @@ private struct LayoutEditorTile: View {
                     }
                 }
                 .frame(height: Metrics.glyphHeight)
-                .padding(.horizontal, 3)
+                .padding(.horizontal, ThawSpacing.capsuleInset)
             }
         }
         .padding(.horizontal, unit.isGroup ? 4 : 0)

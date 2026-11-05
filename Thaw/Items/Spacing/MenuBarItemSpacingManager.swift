@@ -97,10 +97,7 @@ final class MenuBarItemSpacingManager {
         }
 
         guard terminationStatus.isSuccess else {
-            let exitStatus: Int32 = switch terminationStatus {
-            case let .exited(code): code
-            case let .signaled(code): code
-            }
+            let exitStatus = terminationStatus.code
             throw MenuBarItemSpacingError(
                 kind: .nonZeroExitStatus(exitStatus),
                 command: command,

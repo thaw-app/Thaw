@@ -28,6 +28,7 @@ final class RecordingSectionController: MenuBarSectionControlling, ObservedOrder
     private(set) var sectionOrderCalls = [(MenuBarSectionName, [String])]()
     private(set) var temporaryReveals = [String]()
     private(set) var scheduledConceals = [String]()
+    private(set) var immediateConceals = [String]()
 
     init(order: [MenuBarSectionName: [String]] = [:]) {
         sectionItemOrder = order
@@ -178,7 +179,10 @@ final class RecordingSectionController: MenuBarSectionControlling, ObservedOrder
         sectionAssignments.append((section, item.uniqueIdentifier))
     }
 
-    func concealTemporarilyRevealedItem(_: String) {}
+    func concealTemporarilyRevealedItem(_ identifier: String) {
+        immediateConceals.append(identifier)
+    }
+
     func concealItemTemporarily(_: String) {}
     func revealTransientlyConcealedItem(_: String) {}
     func regatherGroups() {}

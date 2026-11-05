@@ -19,10 +19,10 @@ struct ControlCenterReplacements: Equatable {
     var skipped: Set<SystemExtraStandIn> = []
 
     /// The four Control Center modules one switch used to cover.
-    static let modules: [SystemExtraStandIn] = [.focus, .airDrop, .nowPlaying, .userSwitcher]
+    static let moduleItems: [SystemExtraStandIn] = [.focus, .airDrop, .nowPlaying, .userSwitcher]
 
     /// Every item the list offers, in the order it shows them.
-    static let listed: [SystemExtraStandIn] = modules + [.timeMachine, .textInput]
+    static let listed: [SystemExtraStandIn] = moduleItems + [.timeMachine, .textInput]
 
     var isOn: Bool {
         get { Self.listed.contains { isReplaced($0) } }
@@ -58,13 +58,13 @@ struct ControlCenterReplacements: Equatable {
             if replaced {
                 if !modules {
                     modules = true
-                    skipped = Set(Self.modules)
+                    skipped = Set(Self.moduleItems)
                 }
                 skipped.remove(item)
             } else {
                 skipped.insert(item)
             }
-            if skipped.isSuperset(of: Self.modules) {
+            if skipped.isSuperset(of: Self.moduleItems) {
                 modules = false
                 skipped = []
             }
@@ -115,11 +115,9 @@ struct ControlCenterReplacementsSection: View {
                 VStack(alignment: .leading, spacing: ThawSpacing.tight) {
                     Text(
                         """
-                        macOS hides Focus, AirDrop, Now Playing and Fast User Switching whenever any \
-                        other item is hidden, and never hides Time Machine or the Input menu. This puts a \
-                        \(Constants.displayName) icon in each one’s place that does the same things, and \
-                        you can move or hide it like any other item. Choose which ones below; turn this off \
-                        to bring the originals back.
+                        Puts a \(Constants.displayName) icon in place of each item you choose below. It does \
+                        the same things as the original, and you can move or hide it like any other item. \
+                        Turn this off to bring the originals back.
                         """
                     )
                     // Only a failure shows, so a replacement that cannot run never reads as working.
