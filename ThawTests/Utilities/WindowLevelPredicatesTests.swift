@@ -39,4 +39,15 @@ struct WindowLevelPredicatesTests {
         #expect(!WindowLevelPredicates.isForeignPopUpMenuOpen(in: [window(pid: ownPID, layer: menuLevel)]))
         #expect(!WindowLevelPredicates.isForeignPopUpMenuOpen(in: [window(pid: ownPID + 1, layer: menuLevel - 1)]))
     }
+
+    @Test("An ignored process's menu does not count, another process's still does")
+    func ignoredOwners() {
+        let agent = ownPID + 1
+        let other = ownPID + 2
+        #expect(!WindowLevelPredicates.isForeignPopUpMenuOpen(in: [window(pid: agent, layer: menuLevel)], ignoring: [agent]))
+        #expect(WindowLevelPredicates.isForeignPopUpMenuOpen(
+            in: [window(pid: agent, layer: menuLevel), window(pid: other, layer: menuLevel)],
+            ignoring: [agent]
+        ))
+    }
 }

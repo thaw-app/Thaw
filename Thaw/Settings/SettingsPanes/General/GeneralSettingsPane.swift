@@ -31,7 +31,7 @@ struct GeneralSettingsPane: View {
                 AppMenuHidingRow(settings: advancedSettings)
                 Toggle("Right-click the menu bar for the \(Constants.displayName) menu", isOn: $advancedSettings.enableSecondaryContextMenu)
                     .annotation(
-                        "Right-click an empty area of the menu bar to open a minimal version of \(Constants.displayName)'s menu.",
+                        "Right-click an empty area of the menu bar to open a minimal version of \(Constants.displayName)'s menu. If macOS opens its own menu instead, hold Option as you right-click.",
                         more: "Turn this off if another app also uses right-clicks on the menu bar."
                     )
             }

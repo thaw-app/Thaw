@@ -78,6 +78,7 @@ Scripts, Triggers and Widgets become modules you can switch on and off, and Sett
 - **Applying a profile keeps your menu bar spacing,** at startup and when you change Space or Focus. Fixed by @Omoeba in [#1451](https://github.com/thaw-app/Thaw/pull/1451).
 - **Thaw waits for the menu bar to settle before moving items,** while you log in and when the menu bar moves to another display. Fixed by @camguillory in [#1452](https://github.com/thaw-app/Thaw/pull/1452).
 - **Capture Hidden Items no longer lists a kept picture as missing** when macOS rebuilds the menu bar. Fixed by @Belligerently in [#1448](https://github.com/thaw-app/Thaw/pull/1448).
+- **Option-right-click on empty menu bar space opens Thaw's menu.** On macOS 27.2 a plain right-click there opens Apple's menu instead.
 
 ## [3.0.0-beta.6] - 2026-11-03
 

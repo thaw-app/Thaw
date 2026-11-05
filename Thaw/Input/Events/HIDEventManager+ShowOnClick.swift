@@ -115,7 +115,7 @@ extension HIDEventManager {
         if modifierFlags.contains(.control) {
             cancelPendingMenuBarClick()
             disarmShowOnClickGuard()
-            handleSecondaryContextMenu(appState: appState, screen: screen)
+            handleSecondaryContextMenu(appState: appState, screen: screen, modifierFlags: modifierFlags)
             return
         }
 
