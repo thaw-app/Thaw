@@ -6,7 +6,6 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
-import Combine
 import SwiftUI
 import ThawUI
 
@@ -52,8 +51,8 @@ nonisolated enum SettingsAppearance: Int, CaseIterable, Identifiable {
     }
 
     /// The appearance the window is held to, matching colorScheme(macOSIsDark:).
-    func appearanceName(macOSIsDark: Bool) -> NSAppearance.Name {
-        colorScheme(macOSIsDark: macOSIsDark) == .dark ? .darkAqua : .aqua
+    func windowAppearance(macOSIsDark: Bool) -> SettingsWindowAppearance {
+        colorScheme(macOSIsDark: macOSIsDark) == .dark ? .dark : .light
     }
 
     /// What the settings window draws behind its panes.
@@ -87,13 +86,6 @@ nonisolated enum SettingsAppearance: Int, CaseIterable, Identifiable {
 
 @MainActor
 extension SettingsAppearance {
-    /// Whether macOS itself is in dark mode, from its own setting. A window held to Light or
-    /// Dark doesn't change it, unlike the app's effective appearance.
-    static var macOSIsDark: Bool {
-        CFPreferencesAppSynchronize(kCFPreferencesAnyApplication)
-        return CFPreferencesCopyAppValue("AppleInterfaceStyle" as CFString, kCFPreferencesAnyApplication) as? String == "Dark"
-    }
-
     /// The saved choice. The first read, after an update or on a new install, works one out
     /// with migrated(legacyBlackBackground:) and saves it.
     static func stored() -> SettingsAppearance {
@@ -105,65 +97,5 @@ extension SettingsAppearance {
         let chosen = migrated(legacyBlackBackground: Defaults.bool(forKey: .blackSettingsBackground))
         Defaults.set(chosen.rawValue, forKey: .settingsAppearance)
         return chosen
-    }
-}
-
-extension View {
-    /// Holds this view's window to the appearance and draws its background. Settings draws pure
-    /// black behind its panes when the choice is Black; other windows only take the appearance.
-    func settingsAppearance(_ appearance: SettingsAppearance, drawsBackground: Bool = true) -> some View {
-        modifier(SettingsAppearanceModifier(appearance: appearance, drawsBackground: drawsBackground))
-    }
-}
-
-private struct SettingsAppearanceModifier: ViewModifier {
-    let appearance: SettingsAppearance
-    let drawsBackground: Bool
-    @State private var window: NSWindow?
-    @State private var macOSIsDark = SettingsAppearance.macOSIsDark
-
-    private static let themeChanged = DistributedNotificationCenter.default()
-        .publisher(for: Notification.Name("AppleInterfaceThemeChangedNotification"))
-        .receive(on: DispatchQueue.main)
-
-    private var background: SettingsWindowBackground {
-        drawsBackground ? appearance.windowBackground : .system
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .background {
-                if background == .black {
-                    Color.black.ignoresSafeArea()
-                }
-            }
-            // Panes that draw their own backdrop read this, as they would from ThawUI's modifier.
-            .environment(\.settingsWindowBackground, background)
-            .onWindowChange { window in
-                // Use the window handed in: @State written here may not read back until the next update.
-                self.window = window
-                apply(to: window)
-            }
-            .onChange(of: appearance) {
-                apply(to: window)
-            }
-            .onChange(of: macOSIsDark) {
-                apply(to: window)
-            }
-            // SwiftUI resets an appearance set on its own windows, so it gets the same value.
-            .preferredColorScheme(appearance.colorScheme(macOSIsDark: macOSIsDark))
-            .onReceive(Self.themeChanged) { _ in
-                macOSIsDark = SettingsAppearance.macOSIsDark
-            }
-    }
-
-    /// The window's appearance sets the color scheme inside it, sheets included.
-    /// Setting the AppKit background too stops a resize flashing another color at the edges.
-    private func apply(to window: NSWindow?) {
-        guard let window else { return }
-        window.appearance = NSAppearance(named: appearance.appearanceName(macOSIsDark: macOSIsDark))
-        if drawsBackground {
-            window.backgroundColor = background == .black ? .black : .windowBackgroundColor
-        }
     }
 }

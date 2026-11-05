@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		71373D1685FEE5815708C9A6 /* DequeModule in Frameworks */ = {isa = PBXBuildFile; productRef = 147F2F5E062E0539138D611C /* DequeModule */; };
 		170423D92B56DE78004A2549 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 170423D82B56DE78004A2549 /* Sparkle */; };
-		17F71BB52B880B4500905CBA /* CompactSlider in Frameworks */ = {isa = PBXBuildFile; productRef = 17F71BB42B880B4500905CBA /* CompactSlider */; };
 		7127A9FF2C4886D100D99DEF /* IfritStatic in Frameworks */ = {isa = PBXBuildFile; productRef = 7127A9FE2C4886D100D99DEF /* IfritStatic */; };
 		7188A6882E27F9ED008F131D /* ThawCapture in Frameworks */ = {isa = PBXBuildFile; productRef = 7188A6872E27F9ED008F131D /* ThawCapture */; };
 		7188A6892E27F9ED008F131D /* MenuBarCaptureService.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = 7188A6842E27F9ED008F131D /* MenuBarCaptureService.xpc */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -207,8 +207,8 @@
 				7127A9FF2C4886D100D99DEF /* IfritStatic in Frameworks */,
 				9570E4A96CDEC0BEBAA5573F /* AsyncAlgorithms in Frameworks */,
 				8A9B3C0882A8086D09565228 /* Algorithms in Frameworks */,
+				71373D1685FEE5815708C9A6 /* DequeModule in Frameworks */,
 				C9858DF951474BBA89EEC700 /* Subprocess in Frameworks */,
-				17F71BB52B880B4500905CBA /* CompactSlider in Frameworks */,
 				D85602169B8B4308ACEB30A0 /* MenuBarModel in Frameworks */,
 				A7C4F0012F60000000000001 /* ThawCapture in Frameworks */,
 				A9E1F0032F70000000000003 /* ThawUI in Frameworks */,
@@ -302,10 +302,10 @@
 			name = Thaw;
 			packageProductDependencies = (
 				170423D82B56DE78004A2549 /* Sparkle */,
-				17F71BB42B880B4500905CBA /* CompactSlider */,
 				7127A9FE2C4886D100D99DEF /* IfritStatic */,
 				43C5F05D006747974015EBD9 /* AsyncAlgorithms */,
 				DBEECB5D91402D78F32DF659 /* Algorithms */,
+				147F2F5E062E0539138D611C /* DequeModule */,
 				D578D4A98E514566A18944B0 /* MenuBarModel */,
 				A7C4F0032F60000000000003 /* ThawCapture */,
 				A9E1F0022F70000000000002 /* ThawUI */,
@@ -456,10 +456,10 @@
 			mainGroup = 716683212A767E6A006ABF84;
 			packageReferences = (
 				170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */,
-				17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */,
 				7127A9FB2C4881BC00D99DEF /* XCRemoteSwiftPackageReference "Ifrit" */,
 				1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */,
 				6299E164B288ACBB011AC6B1 /* XCRemoteSwiftPackageReference "swift-algorithms" */,
+				65065A74755C38D642D99302 /* XCRemoteSwiftPackageReference "swift-collections" */,
 				7A0DF10D46BE41C9B7301DBB /* XCRemoteSwiftPackageReference "swift-subprocess" */,
 				D27A00002F40000000000000 /* XCRemoteSwiftPackageReference "prk-bin" */,
 				A9E1F0012F70000000000001 /* XCRemoteSwiftPackageReference "ThawUI" */,
@@ -1132,12 +1132,20 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		65065A74755C38D642D99302 /* XCRemoteSwiftPackageReference "swift-collections" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-collections";
+			requirement = {
+				kind = exactVersion;
+				version = 1.7.5;
+			};
+		};
 		A9E1F0012F70000000000001 /* XCRemoteSwiftPackageReference "ThawUI" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/thaw-app/ThawUI";
 			requirement = {
 				kind = exactVersion;
-				version = 1.2.0;
+				version = 1.2.1;
 			};
 		};
 		170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
@@ -1146,14 +1154,6 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 2.10.1;
-			};
-		};
-		17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/buh/CompactSlider";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.1.0;
 			};
 		};
 		1ADDA61D49BE1BA7CA5EA059 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */ = {
@@ -1199,15 +1199,15 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		147F2F5E062E0539138D611C /* DequeModule */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 65065A74755C38D642D99302 /* XCRemoteSwiftPackageReference "swift-collections" */;
+			productName = DequeModule;
+		};
 		170423D82B56DE78004A2549 /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 170423D72B56DE78004A2549 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
-		};
-		17F71BB42B880B4500905CBA /* CompactSlider */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 17F71BB32B880B4500905CBA /* XCRemoteSwiftPackageReference "CompactSlider" */;
-			productName = CompactSlider;
 		};
 		43C5F05D006747974015EBD9 /* AsyncAlgorithms */ = {
 			isa = XCSwiftPackageProductDependency;

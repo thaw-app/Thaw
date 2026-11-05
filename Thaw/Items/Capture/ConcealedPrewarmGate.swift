@@ -5,6 +5,11 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import DequeModule
+
+/// Prewarms waiting for the running one to finish, first in line first.
+typealias ConcealedPrewarmWaiters = Deque<CheckedContinuation<Void, Never>>
+
 /// Decides whether a prewarm may reveal hidden items to photograph them.
 nonisolated enum ConcealedPrewarmGate {
     /// The decision for the app as it is now.

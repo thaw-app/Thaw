@@ -87,9 +87,9 @@ package dependencies. Helper packaging and library search paths matter:
 
 Outside packages are declared with Swift Package Manager and locked in
 `Thaw.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`:
-PlatformRuntimeKit (as the prebuilt `thaw-app/prk-bin`), Sparkle,
-CompactSlider, Ifrit, swift-algorithms, swift-async-algorithms and
-swift-subprocess.
+PlatformRuntimeKit (as the prebuilt `thaw-app/prk-bin`), Sparkle, Ifrit,
+ThawUI, swift-algorithms, swift-async-algorithms and swift-subprocess.
+CompactSlider is locked there too, as a dependency of ThawUI.
 
 ### Inside `Thaw/`
 

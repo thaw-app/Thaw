@@ -72,7 +72,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     @ObservationIgnored var isConcealedPrewarmRunning = false
     /// When recapture last asked for a fresh inventory walk; see requestInventoryRefresh(reason:).
     @ObservationIgnored var lastInventoryRefreshRequest: ContinuousClock.Instant?
-    @ObservationIgnored var concealedPrewarmWaiters = [CheckedContinuation<Void, Never>]()
+    @ObservationIgnored var concealedPrewarmWaiters = ConcealedPrewarmWaiters()
 
     /// Shares one recapture pass among overlapping requests. Main actor only.
     @ObservationIgnored let recaptureCoalescer = RecaptureCoalescer()

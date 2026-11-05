@@ -20,15 +20,15 @@ struct SettingsAppearanceTests {
     // MARK: What each choice draws
 
     @Test("System takes macOS's look; Light holds light, Dark and Black hold dark", arguments: [
-        (SettingsAppearance.system, false, NSAppearance.Name.aqua),
-        (.system, true, .darkAqua),
-        (.light, true, .aqua),
-        (.dark, false, .darkAqua),
-        (.black, false, .darkAqua),
+        (SettingsAppearance.system, false, SettingsWindowAppearance.light),
+        (.system, true, .dark),
+        (.light, true, .light),
+        (.dark, false, .dark),
+        (.black, false, .dark),
     ])
-    func appearanceName(choice: SettingsAppearance, macOSIsDark: Bool, expected: NSAppearance.Name) {
-        #expect(choice.appearanceName(macOSIsDark: macOSIsDark) == expected)
-        #expect(choice.colorScheme(macOSIsDark: macOSIsDark) == (expected == .darkAqua ? .dark : .light))
+    func windowAppearance(choice: SettingsAppearance, macOSIsDark: Bool, expected: SettingsWindowAppearance) {
+        #expect(choice.windowAppearance(macOSIsDark: macOSIsDark) == expected)
+        #expect(choice.colorScheme(macOSIsDark: macOSIsDark) == (expected == .dark ? .dark : .light))
     }
 
     @Test("Only Black draws the settings window on black")

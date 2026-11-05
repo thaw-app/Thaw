@@ -18,4 +18,12 @@ enum SystemAppearance: Hashable {
     static var current: SystemAppearance {
         NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? .dark : .light
     }
+
+    /// The look macOS itself uses, from its own setting. Unlike current, a window held
+    /// to Light or Dark doesn't change it.
+    static var macOS: SystemAppearance {
+        CFPreferencesAppSynchronize(kCFPreferencesAnyApplication)
+        let style = CFPreferencesCopyAppValue("AppleInterfaceStyle" as CFString, kCFPreferencesAnyApplication) as? String
+        return style == "Dark" ? .dark : .light
+    }
 }
