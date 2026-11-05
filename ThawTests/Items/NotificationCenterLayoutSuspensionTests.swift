@@ -14,7 +14,6 @@ struct NotificationCenterLayoutSuspensionTests {
     @Test("Assertion changes cannot schedule repair or publish temporary geometry")
     func suspensionBlocksRepairAndPublication() async {
         let manager = MenuBarItemManager()
-        manager.isInStartupSettling = false
         defer { manager.postRestrictionRepairTask?.cancel() }
         manager.noteRestrictionChange()
         #expect(manager.postRestrictionRepairTask != nil)

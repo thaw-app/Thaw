@@ -569,39 +569,6 @@ extension MenuBarItemManager {
         return try await executeReset(for: .allVisible)
     }
 
-    /// Cancels preflight settling after a no-op spacing apply so restores are not needlessly suppressed.
-    /// Refuses expected-set settling: concurrent no-op applies must not release a relaunch wait into a partial cache.
-    func cancelSettlingPeriod(reason: String) {
-        guard isInStartupSettling || startupSettlingTask != nil else { return }
-        if !settlingExpectedBundleIDs.isEmpty {
-            MenuBarItemManager.diagLog.debug(
-                "\(reason): settling cancel ignored; \(settlingExpectedBundleIDs.count) expected bundle ID(s) still pending"
-            )
-            return
-        }
-        // A boot-time no-op applyOffset must not cancel cold settling while apps are still reattaching.
-        // A partial cache would falsely report that all items are in place.
-        if settlingKind == .cold {
-            MenuBarItemManager.diagLog.debug(
-                "\(reason): settling cancel ignored; performSetup settling in flight"
-            )
-            return
-        }
-        // The preflight joined a display or launch settling; that one owns its end.
-        if settlingKind == .event {
-            MenuBarItemManager.diagLog.debug(
-                "\(reason): settling cancel ignored; display or launch settling in flight"
-            )
-            return
-        }
-        startupSettlingTask?.cancel()
-        startupSettlingTask = nil
-        isInStartupSettling = false
-        settlingDeadline = nil
-        settlingKind = nil
-        MenuBarItemManager.diagLog.debug("\(reason): settling period cancelled")
-    }
-
     func clearActiveProfileLayout() {
         activeProfileLayout = nil
         isApplyingProfileLayout = false
@@ -708,10 +675,10 @@ extension MenuBarItemManager {
 
         // cacheItemsRegardless skips restore during settling, which would silently shadow these moves.
         // performSetup re-entry can replace the settling task, so the wait follows the replacement.
-        if isInStartupSettling {
+        if barSettling.isSettling {
             MenuBarItemManager.diagLog.debug("applyProfileLayout: waiting for startup settling to end")
         }
-        await SettlingWait.follow(isSettling: { isInStartupSettling }, currentTask: { startupSettlingTask })
+        await barSettling.settled()
 
         // A newer apply may cancel us during settling; do not arm the superseded profile's state.
         if Task.isCancelled {

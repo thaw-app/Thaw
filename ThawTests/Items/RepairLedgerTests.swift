@@ -87,11 +87,11 @@ struct RepairLedgerTests {
         let manager = MenuBarItemManager()
         defer { manager.structuralNormalizationTask?.cancel() }
 
-        manager.isInStartupSettling = true
+        manager.barSettling.holdForTesting()
         manager.scheduleStructuralNormalization(cause: .userDragEnded)
         #expect(manager.repairs.ledger.causesWaiting(for: .structuralNormalization).isEmpty)
 
-        manager.isInStartupSettling = false
+        manager.barSettling.releaseForTesting()
         manager.scheduleStructuralNormalization(cause: .userDragEnded)
         manager.scheduleStructuralNormalization(cause: .moveFulfilled)
         #expect(manager.repairs.ledger.causesWaiting(for: .structuralNormalization) == [.userDragEnded, .moveFulfilled])

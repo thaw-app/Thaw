@@ -222,28 +222,28 @@ struct MenuBarDisplayChangeEffectsTests {
 
         await effects.awaitSettle()
 
-        #expect(!manager.isInStartupSettling)
+        #expect(!manager.barSettling.isSettling)
     }
 
-    @Test("Waiting for the settle follows a replaced settling task to the end")
-    func awaitFollowsReplacedSettle() async {
-        let manager = MenuBarItemManager()
+    @Test("A display change starts a settle that waiting for the settle sees through to its end")
+    func displaySettleIsAwaited() async {
+        let settling = BarSettling(sleep: { _ in await Task.yield() }, minimumDuration: .zero)
+        let manager = MenuBarItemManager(barSettling: settling)
         let effects = MenuBarDisplayChangeEffects(itemManager: manager, repairs: manager.repairs, imageCache: MenuBarItemImageCache(), displaySettings: DisplaySettingsManager(), profiles: ProfileManager(), presentationMonitor: PresentationMonitor(), menuBarManager: MenuBarManager())
         let finished = Flag()
-        let replacement = Task { @MainActor in
-            await Task.yield()
-            finished.value = true
-            manager.isInStartupSettling = false
-        }
-        manager.isInStartupSettling = true
-        manager.startupSettlingTask = Task { @MainActor in
-            await Task.yield()
-            manager.startupSettlingTask = replacement
-        }
+        settling.attach(BarSettling.Host(
+            awaitInitialRead: { /* Nothing cached to wait for. */ },
+            sample: { BarSettling.Sample(managedCount: 2, hostReady: true) },
+            didStart: { /* Nothing to call off. */ },
+            didSettle: { _ in finished.value = true }
+        ))
 
+        effects.startSettle(reason: "displayConnect")
+        #expect(settling.kind == .event)
         await effects.awaitSettle()
 
         #expect(finished.value)
+        #expect(!settling.isSettling)
     }
 }
 

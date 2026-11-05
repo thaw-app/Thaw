@@ -22,7 +22,7 @@ extension MenuBarItemManager {
     /// normalization pass checks.
     func structuralNormalizationSituation() -> WriteHold.Situation {
         var situation = WriteHold.Situation()
-        situation.startupSettling = isInStartupSettling
+        situation.startupSettling = barSettling.isSettling
         situation.circuitBreakerOpen = moveCircuitBreaker.isOpen
         situation.notificationCenterSuspended = isNotificationCenterLayoutSuspended
         situation.userDragging = appState?.isDraggingMenuBarItem ?? false

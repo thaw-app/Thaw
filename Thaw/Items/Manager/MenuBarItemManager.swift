@@ -94,6 +94,15 @@ final class MenuBarItemManager {
     /// Holds the saved-order mirror while the bar settles after a wake, display, hiding or item change.
     @ObservationIgnored let savedOrderMirrorGate = SavedOrderMirrorGate()
 
+    /// Whether the bar is still settling. Restores and section-order saves wait for it, and this manager
+    /// supplies its samples and the work owed afterwards.
+    @ObservationIgnored let barSettling: BarSettling
+
+    init(barSettling: BarSettling = BarSettling()) {
+        self.barSettling = barSettling
+        barSettling.attach(makeSettlingHost())
+    }
+
     /// Whether Thaw manages no items at all.
     ///
     /// Stored rather than derived: a derived answer depends on the whole
@@ -433,51 +442,10 @@ final class MenuBarItemManager {
     var isRestoringItemOrder = false
     /// When isRestoringItemOrder was set (for timeout detection).
     var isRestoringItemOrderTimestamp: ContinuousClock.Instant?
-    /// True during the startup settling period, during which restore operations
-    /// and section-order saves are suppressed. This prevents cascading icon moves
-    /// when many apps launch at login (login item boot) or restart in quick succession
-    /// (e.g. app update checks). Cleared after a fixed delay, then one final
-    /// restore runs to enforce the user's saved layout.
-    var isInStartupSettling = false
     var didRunPositionStoreHygiene = false
-    /// Handle to the in-flight startup settling Task. Retained so that a
-    /// subsequent performSetup() call can cancel the previous settling period
-    /// before starting a new one, preventing multiple concurrent settling tasks.
-    var startupSettlingTask: Task<Void, Never>?
     /// Handle to the initial cache warm-up task. The first full cache can be
     /// expensive on dense menu bars, so it runs off the startup critical path.
     var initialCacheTask: Task<Void, Never>?
-    /// Absolute deadline for the current startup settling period. Stored so
-    /// that a re-entry of performSetup() (e.g. permission re-grant) can
-    /// preserve any remaining time from the original period rather than
-    /// resetting to a shorter delay based on current systemUptime.
-    var settlingDeadline: ContinuousClock.Instant?
-    /// Bundle IDs the current settling period is waiting on. Empty for a
-    /// preflight (count-stability) settling. Promoted to non-empty when
-    /// startSettlingPeriod is called with expectedBundleIDs after a real
-    /// relaunch wave; cancelSettlingPeriod refuses to tear down a promoted
-    /// settling so a concurrent no-op apply cannot clobber an in-flight
-    /// wait for relaunched apps to reattach.
-    var settlingExpectedBundleIDs = Set<String>()
-
-    /// How authoritative the current settling period is, so a preflight
-    /// cannot tear down a stronger settling already in flight.
-    enum SettlingKind {
-        /// The cold-boot wait from performSetup. Only another cold start or an
-        /// expected-set relaunch can replace it.
-        case cold
-        /// Suppresses restore while an applyOffset wave runs. The matching
-        /// no-op path can cancel it.
-        case preflight
-        /// Waits out a display change or app launch. A spacing preflight joins
-        /// it rather than replacing it, so a no-op apply cannot skip its
-        /// post-settle restore.
-        case event
-        /// Waits for specific relaunched bundle IDs to reattach.
-        case expectedSet
-    }
-
-    var settlingKind: SettlingKind?
     /// Persisted bundle identifiers explicitly placed in hidden section.
     var pinnedHiddenBundleIDs = Set<String>()
     /// Persisted bundle identifiers explicitly placed in always-hidden section.
@@ -1436,7 +1404,7 @@ final class MenuBarItemManager {
         // that conflicts with the next, producing the "icon parade" effect.
         // After the settling period ends, one final cacheItemsRegardless() enforces the
         // user's saved layout against whatever macOS placed items.
-        startSettlingPeriod(reason: "performSetup")
+        barSettling.note(.thawLaunched)
         MenuBarItemManager.diagLog.debug("performSetup: MenuBarItemManager setup complete")
     }
 
@@ -1494,7 +1462,7 @@ final class MenuBarItemManager {
                 // (an in-app update, say), and its status item is about to
                 // re-register and churn the bar. Settle on its bundle ID so the
                 // move pass (applyProfileLayout waits on
-                // waitForStartupSettlingToEnd) holds off until the item
+                // barSettling.settled()) holds off until the item
                 // re-pairs; otherwise the bulk apply runs on the transient
                 // layout and sweeps hidden items into Visible. Settling ends as
                 // soon as the bundle ID reappears with a resolved PID. Apps with
@@ -1502,11 +1470,7 @@ final class MenuBarItemManager {
                 if let launchedBundleID,
                    MenuBarItemManager.tracksMenuBarItem(bundleID: launchedBundleID, in: self.knownItemIdentifiers)
                 {
-                    self.startSettlingPeriod(
-                        reason: "appLaunch",
-                        expectedBundleIDs: [launchedBundleID],
-                        maxDuration: .seconds(8)
-                    )
+                    self.barSettling.note(.appLaunched(bundleID: launchedBundleID))
                 }
                 Task { [weak self] in
                     await self?.cacheItemsRegardless()
