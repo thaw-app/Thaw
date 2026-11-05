@@ -28,60 +28,48 @@ the items under New and Fixed.
 
 **macOS 27 only · Build 124**
 
-Scripts, Triggers and Widgets become modules you can switch on and off, and Settings is rebuilt on ThawUI.
+Scripts, Triggers and Widgets become modules you can switch on and off, and Settings is rebuilt on [ThawUI](https://github.com/thaw-app/ThawUI). Your settings, triggers, scripts and widget design carry over. By @diazdesandi.
 
 ### New
 
-- **Modules in Settings.** A new Extras page switches optional parts of Thaw on and off, and a module that's off doesn't run at all. Scripts, Triggers and Widgets are the first ones, and each starts switched on if you already used what it does. Each module also has its switch on its own page, such as Settings › Widgets. A module that's off leaves the sidebar. By @diazdesandi.
+- **Modules.** Settings › Extras switches optional parts of Thaw on and off. A module that's off doesn't run and leaves the sidebar. Scripts, Triggers and Widgets come first, and each starts on if you already used it.
 
 ### Changed
 
 #### Modules
 
-- **App triggers run in their own app.** Triggers that show items while an app runs moved to the Triggers module, a small app that comes with Thaw and runs next to it. Your triggers move over by themselves. Open them from Settings › Triggers. By @diazdesandi.
-- **Profile scripts run in their own app.** The scripts that run when a profile switches moved to the Scripts module, a small app that comes with Thaw and runs next to it. Your scripts move over by themselves. Open them from Settings › Scripts. Thaw no longer waits for a "before switching" script to finish before it changes the layout. By @diazdesandi.
-- **The widget icon runs in its own app.** The icon that combines battery, Wi-Fi and other readings left Experiments and is now the Widgets module. Turn it on in Settings › Extras and design it from Settings › Widgets. Your design moves over by itself. By @diazdesandi.
+- **Triggers, Scripts and Widgets run as small apps next to Thaw.** Open each from its page in Settings. The widget icon moved there from Experiments.
+- **Profile switches don't wait for a "before switching" script** to finish before the layout changes.
 
 #### Settings
 
-- **Extras is a grid of cards,** like the extension store in Floe. Each card has the part's icon, what it does and its switch. By @diazdesandi.
-- **The sidebar is laid out like Floe's.** Thaw's everyday pages come first, from General to Shortcuts, then the modules you have on under a small Modules heading, then Extras, Privacy and Tools under Manage, and About last. The selected page has a see-through gold fill, and the arrow keys move between pages. A part that's off leaves the sidebar until you switch it on in Extras. While search results show, no page is selected, so clicking any page, the one you were on included, ends the search. By @diazdesandi.
-- **Profiles can be turned off.** Profiles has a switch in Extras. Off, no profile switches on its own, the profile shortcuts do nothing, and profiles leave the Thaw menu, the panel and the Swap Bar. Your saved profiles are kept. By @diazdesandi.
-- **Show an item when its icon changes is on Triggers.** It sits with the app triggers, the other way an item shows on its own, and it works while Triggers is on in Extras. By @diazdesandi.
-- **Displays & Spaces is now called Displays.** It holds menu bar item spacing for each display, the wide displays rule and the Spaces controls. By @diazdesandi.
-- **Automation is now two pages, Triggers and Scripts.** The apps allowed to change settings with thaw:// links are on Privacy, and switching profiles by display or Space is on Profiles. Saved links to Automation open Triggers. By @diazdesandi.
-- **Experiments is gone.** The panel that can replace Thaw's menu is on Widgets, and the other experiments joined the rows below. They keep their Alpha and Beta badges. The camera and microphone alerts are put away for now and stay off. Saved links to Experiments open General. By @diazdesandi.
-- **The left and right arrow keys step through What's New and Acknowledgements,** and the text fades under the title bar as it does on the settings pages.
-- **Permission icons line up.** Each permission's icon sits in the same box as the sidebar's, so the names start in the same place.
-- **The Thaw Bar's own look has a Corners slider,** from square to round, like the menu bar's shape. It replaces the Rounded corners switch, and a look saved with the switch opens fully round or square. When it follows the menu bar, the Thaw Bar now matches the menu bar's Corners setting instead of only round or square.
-- **The glass Effect menu has two sections.** In the appearance editor, Glass holds plain glass, and a Tint switch under the menu makes it lighter so a color can show through. Liquid Glass holds Edge, Sheer, Dim, Invert and Dynamic Glass. While Edge, Sheer, Dim or Invert is chosen, an Alpha badge shows next to the menu, and their names no longer end in "(Experimental)". Regular and Clear looked the same and are now one Glass finish, the old Liquid Glass finish is now Glass with Tint on, and Match System is gone. Saved looks, the Thaw Bar's own look and profiles keep how they looked: Regular, Clear and Match System open as Glass, and the old Liquid Glass as Glass with Tint on.
-- **Choose System, Light, Dark or Black for Thaw's settings.** Theme, in the new Language and theme section of General, replaces "Black background in dark mode" and also sets the look of onboarding. Black is dark on pure black, which suits OLED displays. After the update, settings look as they did before: Black if you had the black background on, otherwise System, which follows macOS. The Thaw Bar, Search and menus still match your menu bar.
-- **Settings and menus use one name for each thing.** The sidebar heading over your modules is now Extras, like the page that turns them on, and shortcuts, Search, onboarding and the item menu now use the names found elsewhere in Thaw. Alpha and Beta features have a badge instead of a note in their description. In Troubleshooting, Reset Positions is now Rebuild Saved Layout, so it no longer reads like Reset Layout on the Layout page.
-- **Every Search style can rename and move items.** Search's styles are now called Detailed, Compact (centered) and Large (at the pointer), and all three have the bar along the bottom: rename an item with ⌘E, open its actions with ⌘K, move it to another section with ⌘1 to ⌘3, and keep your last search between openings. The search field asks for the same thing in each style. Only Detailed shows a picture of each item and highlights it in the menu bar, and the setting in Visibility now says so.
-- **Hide items again is the same menu in Simple Mode and in Visibility.** Visibility used to have only an Automatically rehide switch, so a choice like After 30 seconds made in Simple Mode couldn't be seen or changed there. Now both show Never, When I click elsewhere, When I switch apps or a delay, with a line saying what the choice does. The rehide shortcut is now called Turn "Hide items again" on or off. It switches between Never and your last other choice, and its notification names the choice. Your setting is kept.
-- **Hide again after is now Keep opened items in the menu bar for.** It sets how long an item you open from Search or the Thaw Bar stays in the menu bar, which the old name didn't make clear.
-- **Layout explains Apple's items in one place.** Each hiding method has one short line, and the rest is in Known macOS 27 limitations, including what used to be in the blue "Apple's items move differently" note. The Replace Control Center items note now only says what the switch does.
-- **The Thaw Bar's Location choices say where it opens.** They are now Pointer or Thaw icon (the old Dynamic), Under the pointer, Under the Thaw icon, Left edge and Right edge, and the line under each says what happens, including that the bar opens at the right edge when the Thaw icon is hidden. Your choice is kept, so the bar opens where it did before.
-- **Shortcuts have their own Location choice.** "Show at mouse pointer from a keyboard shortcut" is now When opened by a shortcut, right under Location, with Use Location or Centered on the pointer. It also covers the Shortcuts app and Control Center. Your setting is kept.
-- **Open hidden items in the menu bar is now Show clicked items in the menu bar,** so it no longer reads like the Show hidden items choice.
-- **The template for new displays is on the Displays page.** Its Thaw Bar settings, its spacing and Apply template to all displays are together on the new Template tab, and the Thaw Bar page now only edits your displays. Customized and Use Template work as before.
-- **Spacing has one clear warning.** The top of the Spacing tab says what applying spacing does under your choice in When spacing changes: every app with a menu bar item restarts and can lose unsaved work, and plugging in a display only saves its spacing. The other spacing notes are shorter. Save spacing to every profile now also shows when you choose to wait until apps restart, where it already applied.
+- **A new sidebar.** Everyday pages come first, then your modules, then Extras, Privacy and Tools, with About last. The arrow keys move between pages.
+- **Extras is a grid of cards,** each with the part's icon, what it does and its switch. Profiles can be turned off there too, and your saved profiles are kept.
+- **Some pages moved.** Displays & Spaces is now Displays. Automation became Triggers and Scripts, with thaw:// app permissions on Privacy and switching profiles by display or Space on Profiles. Experiments is gone, and its features sit on the pages they belong to with an Alpha or Beta badge. Old links to these pages still open.
+- **Theme: System, Light, Dark or Black,** for Settings and onboarding, in General › Language and theme. Black suits OLED displays and replaces "Black background in dark mode".
+- **Fewer glass finishes.** The Effect menu has Glass, with a Tint switch, and a Liquid Glass section with Edge, Sheer, Dim, Invert and Dynamic Glass. Saved looks keep how they looked.
+- **The Thaw Bar's own look has a Corners slider,** from square to round, instead of the Rounded corners switch.
+- **Every Search style can rename and move items.** The styles are now Detailed, Compact and Large, and all three share the bottom bar: ⌘E renames, ⌘K shows actions and ⌘1 to ⌘3 move an item.
+- **Hide items again is one menu** in Simple Mode and Visibility: Never, When I click elsewhere, When I switch apps or a delay.
+- **One name for each thing.** Settings and menus now agree, and Alpha and Beta features carry a badge. Reset Positions is now Rebuild Saved Layout, Hide again after is Keep opened items in the menu bar for, and Open hidden items in the menu bar is Show clicked items in the menu bar.
+- **The Thaw Bar's Location choices say where it opens,** and shortcuts have their own choice, When opened by a shortcut.
+- **Displays has a Template tab** with the Thaw Bar and spacing settings for new displays.
+- **Spacing has one warning at the top,** and Layout explains Apple's items in Known macOS 27 limitations.
+- **The arrow keys step through What's New and Acknowledgements,** and permission icons line up.
 
 ### Fixed
 
-- **App language shows System Default when you haven't picked a language.** It showed no choice, because it read the system's language list instead of Thaw's own setting. It now sits with Theme in Language and theme.
-- **Bluetooth and other system items show their own symbol in Layout and Search too.** A module Thaw switched off to hide it has no picture, and Layout and Search showed a placeholder for it instead of its symbol.
-- **One placeholder for menu bar items Thaw can't identify.** Search, Layout and the Thaw Bar preview each drew a different placeholder for such an item. They now all show the same grey box with a menu bar symbol.
-- **Screenshots no longer show the Finder menus you hid.** With the option to hide them on the desktop, a screenshot showed the menus under the cover.
-- **A note in the layout editor's right-click menu looks like a note.** The line that says an item can't be grouped, and the one about an app's split items, are now dimmed so they don't look like commands.
-- **Links in the release notes open only over https.** Any other link stays plain text.
-- **A page that isn't the changelog can't replace your saved release notes.** A Wi-Fi sign-in page, for example, now counts as a failed fetch, so What's New keeps the last good copy.
-- **Recording a shortcut stops when its page goes away,** and Shift-Escape cancels it. The keyboard also works in the warning about a shortcut macOS already uses.
-- **The Settings window no longer shrinks right after it opens.** It snapped to its smallest size, moving down as it did. It now opens at its usual or last size and stays there.
-- **App icons in the Thaw Bar are as large as the item pictures beside them.** An item without a picture shows its app's icon, which stayed smaller than the pictures at every item size. It now matches them and grows and shrinks with the Item size slider.
-- **A click Thaw calls off stops waiting for the pointer.** Before clicking an item, Thaw waits until you stop moving the mouse. If the click was called off during that wait, Thaw kept waiting until the pointer stood still.
-- **Items whose app gives them a blank name get their picture taken.** When an app named its item with only spaces, Thaw couldn't find where the item sat while taking pictures, so Layout and Search kept an old picture or showed a placeholder.
-- **Thaw's Time Machine icon keeps up when Time Machine stops answering.** If Time Machine's status check hung, the icon stopped updating until Thaw restarted. Thaw now gives up on a check after 5 seconds, counts it as no backup running and asks again later.
+- **App language shows System Default** when you haven't picked a language.
+- **Layout and Search show the symbol of Bluetooth and other system items** that Thaw switched off, and one grey placeholder for items Thaw can't identify.
+- **Screenshots no longer show the Finder menus you hid** on the desktop.
+- **Notes in the layout editor's right-click menu are dimmed,** so they don't look like commands.
+- **Links in the release notes open only over https,** and a Wi-Fi sign-in page can't replace your saved release notes.
+- **Recording a shortcut stops when you leave its page,** and Shift-Escape cancels it.
+- **The Settings window no longer shrinks** right after it opens.
+- **App icons in the Thaw Bar match the size** of the item pictures beside them.
+- **A cancelled click no longer waits** for the pointer to stop.
+- **Items with a blank name get their picture taken.**
+- **Thaw's Time Machine icon keeps updating** when Time Machine stops answering.
 
 ## [3.0.0-beta.6] - 2026-11-03
 
