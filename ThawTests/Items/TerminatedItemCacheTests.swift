@@ -13,12 +13,16 @@ import Testing
 
 @MainActor
 struct TerminatedItemCacheTests {
-    private func item(pid: pid_t, bundle: String = "com.henrikruscon.Alcove") -> MenuBarItem {
+    private func item(
+        pid: pid_t,
+        sourcePID explicitSourcePID: pid_t? = nil,
+        bundle: String = "com.henrikruscon.Alcove"
+    ) -> MenuBarItem {
         MenuBarItem(
             tag: MenuBarItemTag(namespace: .string(bundle), title: "Alcove", instanceIndex: 0),
             windowID: 1,
             ownerPID: pid,
-            sourcePID: pid > 0 ? pid : nil,
+            sourcePID: explicitSourcePID ?? (pid > 0 ? pid : nil),
             bounds: CGRect(x: 100, y: 0, width: 24, height: 24),
             title: "Alcove",
             isOnScreen: false
@@ -77,6 +81,22 @@ struct TerminatedItemCacheTests {
         #expect(cache.retainingRunningOwners(processIDs: [456], bundleIdentifiers: ["com.henrikruscon.Alcove"]).isEmpty)
         cache[.hidden] = [item(pid: 456)]
         #expect(cache.retainingRunningOwners(processIDs: [456], bundleIdentifiers: ["com.henrikruscon.Alcove"])[.hidden].count == 1)
+    }
+
+    @Test("A cached item follows its source app rather than the hosting process")
+    func livenessUsesSourcePID() {
+        let cached = item(pid: 100, sourcePID: 200)
+        var cache = MenuBarItemCache(displayID: nil)
+        cache[.hidden] = [cached]
+
+        #expect(cache.retainingRunningOwners(
+            processIDs: [100],
+            bundleIdentifiers: ["com.henrikruscon.Alcove"]
+        ).isEmpty)
+        #expect(cache.retainingRunningOwners(
+            processIDs: [200],
+            bundleIdentifiers: ["com.henrikruscon.Alcove"]
+        )[.hidden] == [cached])
     }
 
     @Test("The tick's liveness sweep publishes a cache without the departed owner",
