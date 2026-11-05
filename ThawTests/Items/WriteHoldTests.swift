@@ -49,6 +49,7 @@ struct WriteHoldTests {
         all.layoutPublicationStale = true
         all.sectionRevealed = true
         all.revealTransitionActive = true
+        all.barOnUncachedDisplay = true
         #expect(all.heldChecks == Set(WriteHold.Check.allCases))
     }
 }
@@ -61,5 +62,14 @@ struct StructuralNormalizationHoldsTests {
     func checksCoverRevealState() {
         #expect(StructuralNormalizationHolds.checks.contains(.sectionRevealed))
         #expect(StructuralNormalizationHolds.checks.contains(.revealTransitionActive))
+    }
+
+    /// 2026-11-05: the bar moved to another display and the pass, reading
+    /// frames from both bars, moved an item that was in place.
+    @Test("The pass waits while the cache is on another display than the bar")
+    func checksCoverDisplayMove() {
+        var situation = WriteHold.Situation()
+        situation.barOnUncachedDisplay = true
+        #expect(WriteHold.first(StructuralNormalizationHolds.checks, in: situation) == .barOnUncachedDisplay)
     }
 }

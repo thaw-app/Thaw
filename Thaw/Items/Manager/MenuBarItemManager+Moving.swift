@@ -548,6 +548,7 @@ extension MenuBarItemManager {
             // reading schedules this pass again once it is done.
             guard manualMembershipTask == nil else { return }
             guard WriteHold.first(StructuralNormalizationHolds.checks, in: situation) == nil else {
+                readBarIfItMoved(situation)
                 rearm()
                 return
             }

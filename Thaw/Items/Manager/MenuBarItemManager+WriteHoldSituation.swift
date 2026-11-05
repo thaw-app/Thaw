@@ -5,7 +5,9 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import CoreGraphics
 import Foundation
+import MenuBarModel
 
 extension MenuBarItemManager {
     /// Manual arrangement turns the pass off, except to re-lay a stranded
@@ -29,6 +31,15 @@ extension MenuBarItemManager {
         situation.layoutPublicationStale = !layoutPublication.canPublish(generation: layoutPublication.generation)
         situation.sectionRevealed = appState?.menuBarManager.sectionController.revealedSection != nil
         situation.revealTransitionActive = appState?.menuBarManager.isRevealHideTransitionActive ?? false
+        let barDisplayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+        situation.barOnUncachedDisplay = itemDisplayID.map { $0 != barDisplayID } ?? false
         return situation
+    }
+
+    /// Reads the bar in full when it moved to a display the cache hasn't followed: only a full
+    /// read moves the cache, and an unchanged window list never asks for one.
+    func readBarIfItMoved(_ situation: WriteHold.Situation) {
+        guard situation.barOnUncachedDisplay else { return }
+        Task { await cacheItemsRegardless() }
     }
 }
