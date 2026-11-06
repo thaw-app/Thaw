@@ -40,6 +40,14 @@ nonisolated enum MenuBarItemDirectPresser {
             )
             return nil
         }
+        // A revealed item's reported position can lag where MenuBarAgent draws it, and the element
+        // there then belongs to a neighbour; pressing it would open the wrong app.
+        var elementPID: pid_t = 0
+        AXUIElementGetPid(element, &elementPID)
+        guard isPressable(elementPID: elementPID, for: item.reactionPIDs) else {
+            diagLog.info("press: the element at (\(Int(point.x)), \(Int(point.y))) belongs to pid \(elementPID), not \(item.logString)")
+            return nil
+        }
 
         let target = MenuBarItemPressTarget(element: element, ownerPID: item.ownerPID)
         let snapshot = ClickReactionVerifier.snapshot(for: item)
@@ -67,6 +75,13 @@ nonisolated enum MenuBarItemDirectPresser {
         at point: CGPoint
     ) -> CGPoint? {
         item.owningApplication?.bundleIdentifier == SharedConstants.menuBarHostingBundleID ? point : nil
+    }
+
+    /// Whether an element of elementPID may be pressed for an item whose reaction can come from
+    /// reactionPIDs. An item with no known process can't be checked, so it is pressed as before.
+    static func isPressable(elementPID: pid_t, for reactionPIDs: Set<pid_t>) -> Bool {
+        let known = reactionPIDs.filter { $0 > 0 }
+        return known.isEmpty || known.contains(elementPID)
     }
 
     /// The accessibility element at a screen point.
