@@ -593,14 +593,14 @@ nonisolated enum SearchIndex {
     /// `@Published` toggles, so the drift guard doesn't cover them.
     private static let displayEntries: [SearchEntry] = [
         SearchEntry(
-            id: "displays.useIceBar",
-            titleKey: "Use \(Constants.displayName) Bar",
-            titleText: "Use \(Constants.displayName) Bar",
+            id: "displays.hiddenItemsPresentation",
+            titleKey: "Show hidden items",
+            titleText: "Show hidden items",
             descriptionText: "Show hidden menu bar items in a separate bar below the menu bar.",
             pane: .displays,
             sectionKey: "Global",
             sectionText: "Global",
-            keywords: ["ice bar", "thaw bar", "hidden", "separate bar"],
+            keywords: ["ice bar", "thaw bar", "hidden", "separate bar", "always", "show", "visible", "always show hidden items", "use thaw bar"],
             property: nil
         ),
         SearchEntry(
@@ -612,17 +612,6 @@ nonisolated enum SearchIndex {
             sectionKey: "Global",
             sectionText: "Global",
             keywords: ["ice bar", "thaw bar", "always-hidden", "always hidden", "only"],
-            property: nil
-        ),
-        SearchEntry(
-            id: "displays.alwaysShowHiddenItems",
-            titleKey: "Always show hidden items",
-            titleText: "Always show hidden items",
-            descriptionText: "Always show hidden menu bar items in the menu bar.",
-            pane: .displays,
-            sectionKey: "Global",
-            sectionText: "Global",
-            keywords: ["always", "show", "hidden", "visible"],
             property: nil
         ),
         SearchEntry(

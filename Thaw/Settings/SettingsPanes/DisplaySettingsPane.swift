@@ -871,49 +871,50 @@ private struct IceBarConfigurationControls<ExtraControls: View>: View {
         self.extraControls = extraControls
     }
 
+    /// Reads and writes the two switches as one choice.
+    var presentation: Binding<HiddenItemsPresentation> {
+        Binding(
+            get: { HiddenItemsPresentation(useThawBar: useIceBar, alwaysShowHiddenItems: alwaysShowHiddenItems) },
+            set: { choice in
+                useIceBar = choice.switches.useThawBar
+                alwaysShowHiddenItems = choice.switches.alwaysShowHiddenItems
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var presentationAnnotation: some View {
+        switch (presentation.wrappedValue, context) {
+        case (.onClick, _):
+            EmptyView()
+        case (.thawBar, .display):
+            Text("Show hidden menu bar items in a separate bar below the menu bar.")
+        case (.thawBar, .globalTemplate):
+            Text("Show hidden menu bar items in a separate bar below the menu bar. This edits the global template, which displays with no custom settings follow; apply it with \"Apply to All Displays\" below, since displays with custom settings keep theirs until then.")
+        case (.alwaysShown, .display):
+            Text("Always show hidden menu bar items in the menu bar on this display.")
+        case (.alwaysShown, .globalTemplate):
+            Text("Always show hidden menu bar items in the menu bar.")
+        }
+    }
+
     var body: some View {
-        Toggle("Always show hidden items", isOn: $alwaysShowHiddenItems)
-            .disabled(useIceBar)
-            .annotation {
-                if useIceBar {
-                    switch context {
-                    case .display:
-                        Text("Not available because the \(Constants.displayName) Bar is enabled for this display.")
-                    case .globalTemplate:
-                        Text("Not available because the \(Constants.displayName) Bar is enabled in the global template.")
-                    }
-                } else {
-                    switch context {
-                    case .display:
-                        Text("Always show hidden menu bar items in the menu bar on this display.")
-                    case .globalTemplate:
-                        Text("Always show hidden menu bar items in the menu bar.")
-                    }
-                }
+        IcePicker("Show hidden items", selection: presentation) {
+            ForEach(HiddenItemsPresentation.allCases) { choice in
+                Text(choice.localized).tag(choice)
             }
+        }
+        .annotation { presentationAnnotation }
 
-        Toggle("Use \(Constants.displayName) Bar", isOn: $useIceBar)
-            .annotation {
-                switch context {
-                case .display:
-                    Text("Show hidden menu bar items in a separate bar below the menu bar.")
-                case .globalTemplate:
-                    Text("Show hidden menu bar items in a separate bar below the menu bar. This edits the global template, which displays with no custom settings follow; apply it with \"Apply to All Displays\" below, since displays with custom settings keep theirs until then.")
-                }
-            }
-
-        Toggle("Always-hidden items only", isOn: $useThawBarForAlwaysHidden)
-            .disabled(useIceBar)
-            .annotation {
-                if useIceBar {
-                    Text("Not available because every section already opens in the \(Constants.displayName) Bar.")
-                } else {
+        if presentation.wrappedValue != .thawBar {
+            Toggle("Always-hidden items only", isOn: $useThawBarForAlwaysHidden)
+                .annotation {
                     Text("""
                     Show always-hidden menu bar items in the \(Constants.displayName) Bar, \
                     while hidden items keep expanding in the menu bar.
                     """)
                 }
-            }
+        }
 
         extraControls()
 
