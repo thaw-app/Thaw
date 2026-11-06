@@ -30,6 +30,9 @@ extension MenuBarItemManager {
         /// Ordered owner/title identities for macOS 27, where synthetic AX window IDs churn without movement.
         /// Stable identities prevent a recache loop while detecting real additions, removals, and reorders.
         fileprivate(set) var cachedItemSignature = [String]()
+
+        /// Whether the cache's last read saw the whole bar, which settling and the structural pass check.
+        fileprivate(set) var lastRead = BarReadRecord()
     }
 
     /// Defined in MenuBarModel so backends can use section buckets without linking the orchestrator.
@@ -612,9 +615,12 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: serial cache operation already in progress, coalescing (will rerun)")
             return
         }
+        // Noted as the pass ends, so a caller that coalesced into it never sees the read before its cache.
+        var thisRead: BarReadRecord.Read?
         // Await gate release to avoid refusing callers after this pass returns.
         // end() has no cancellation check, so cancelled tasks still release the gate.
         defer {
+            cacheCycleState.lastRead.note(thisRead)
             let needsRerun = await cacheGate.end()
             // Rerun coalesced drags or resets so layout bars reflect the latest assignments.
             if needsRerun {
@@ -646,6 +652,7 @@ extension MenuBarItemManager {
             return
         }
         onScreenItemSnapshot.update(inventory.freshItems.filter(\.isOnScreen), fromCompleteWalk: inventory.completed)
+        thisRead = BarReadRecord.Read(walkCompleted: inventory.completed, hasFreshKnownInventory: inventory.hasFreshKnownInventory)
 
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: getMenuBarItems returned \(items.count) items")
 
@@ -756,6 +763,7 @@ extension MenuBarItemManager {
             previousCachedItems: itemCache.managedItems
         )
         if isPartialMerge {
+            thisRead?.mergedWithOlderItems = true
             guard await recoverPartialCacheSnapshot(&items, itemWindowIDs: itemWindowIDs) else { return }
         }
         cacheCycleState.cachedItemWindowIDs = itemWindowIDs

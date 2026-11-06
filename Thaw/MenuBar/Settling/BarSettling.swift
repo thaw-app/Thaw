@@ -140,7 +140,7 @@ final class BarSettling {
     }
 
     /// A count-stable settle also needs barQuiet: after a display change macOS keeps re-laying the bar
-    /// past a stable count, and a restore read from those frames scrambles it.
+    /// past a stable count, and a restore read from those frames scrambles it. Only new, complete reads count.
     static nonisolated func verdict(
         for sample: Sample,
         expecting: Set<String>?,
@@ -157,6 +157,16 @@ final class BarSettling {
             return .waiting(.missing(missing))
         }
 
+        // A poll that coalesced into a running read sees that read again, so only a new read counts.
+        if let read = sample.readGeneration {
+            guard read != streak.lastReadGeneration else { return .waiting(.sameRead) }
+            streak.lastReadGeneration = read
+        }
+        guard sample.readComplete else {
+            streak.stablePolls = 0
+            streak.lastSeenCount = -1
+            return .waiting(.readIncomplete)
+        }
         if pidsOK, sample.managedCount == streak.lastSeenCount, minimumElapsed, sample.hostReady, barQuiet {
             streak.stablePolls += 1
             return streak.stablePolls >= stableTarget ? .settled : .waiting(.counting)
@@ -280,6 +290,8 @@ final class BarSettling {
             Self.diagLog.debug("\(label): waiting for menu bar host modules (MenuBarAgent / BentoBox)")
         case .barNotQuiet:
             Self.diagLog.debug("\(label): waiting for the bar to go quiet after the display change")
+        case .sameRead, .readIncomplete:
+            Self.diagLog.debug("\(label): \(wait == .sameRead ? "poll skipped: same read" : "read incomplete, resetting stability")")
         case .counting, .pidsUnresolved:
             break
         }
