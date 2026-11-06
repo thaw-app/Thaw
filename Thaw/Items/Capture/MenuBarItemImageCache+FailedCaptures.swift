@@ -125,6 +125,24 @@ extension MenuBarItemImageCache {
         }
     }
 
+    /// Commits the ledger after noting which revealed items got a new picture: a
+    /// crop the cache keeps over the one it has.
+    func commitCaptureLedger(
+        of captureResult: CapturePass,
+        notingRevealed revealed: [(requested: MenuBarItem, live: MenuBarItem)]
+    ) {
+        if let tally = prewarmSlot.tally {
+            for pair in revealed {
+                guard let image = captureResult.captured[pair.live.tag] else { continue }
+                let kept = capturesByTag[pair.requested.tag].map { Self.preferredRevealedImage(existing: $0, candidate: image) }
+                if kept == nil || kept == image {
+                    tally.tags.insert(pair.requested.tag)
+                }
+            }
+        }
+        commitCaptureLedger(of: captureResult)
+    }
+
     func handleMemoryPressure() {
         if !capturesByTag.isEmpty {
             let targetSize = capturesByTag.count / 2
