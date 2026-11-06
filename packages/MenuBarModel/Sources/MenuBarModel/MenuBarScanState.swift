@@ -40,6 +40,7 @@ public struct MenuBarScanState<Observation: Sendable>: Sendable {
     public mutating func begin(
         owners: [Int32],
         priorityOwners: Set<Int32>,
+        deferredOwners: Set<Int32> = [],
         scope: MenuBarScanScope = .discovery,
         now: ContinuousClock.Instant = .now
     ) -> Pass {
@@ -57,8 +58,11 @@ public struct MenuBarScanState<Observation: Sendable>: Sendable {
         queue.insert(contentsOf: owners.filter { !queued.contains($0) }, at: 0)
         // Empty answers are only a short-lived discovery hint. Known item
         // owners never receive this exemption from fresh geometry collection.
+        // Deferred owners, such as background-only apps that can't show items, go last but still go.
+        let rotation = queue.filter { !priorityOwners.contains($0) }
         let scheduled = owners.filter { priorityOwners.contains($0) }
-            + queue.filter { !priorityOwners.contains($0) }
+            + rotation.filter { !deferredOwners.contains($0) }
+            + rotation.filter { deferredOwners.contains($0) }
         return Pass(
             generation: generation,
             owners: scheduled.filter { owner in

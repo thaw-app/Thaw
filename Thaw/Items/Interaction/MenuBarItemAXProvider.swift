@@ -208,12 +208,13 @@ nonisolated enum MenuBarItemAXProvider {
     ///
     /// A timed-out app is skipped but its detached task keeps running.
     /// Skipped bundles are memoized with an expiry so a slow-once app is retried.
-    private static func enumerateMenuBarItemsResilient(
+    static func enumerateMenuBarItemsResilient(
         state previousState: MenuBarScanState<RawItem>,
         scope: MenuBarScanScope,
-        priorityPIDs: Set<pid_t>
+        priorityPIDs: Set<pid_t>,
+        reader: WalkReader = WalkReader()
     ) async -> (snapshot: InventorySnapshot, state: MenuBarScanState<RawItem>) {
-        guard AXHelpers.isProcessTrusted() else {
+        guard reader.isTrusted() else {
             diagLog.warning("menuBarItems: accessibility permission missing; cannot enumerate")
             return (.unavailable, MenuBarScanState())
         }
@@ -221,7 +222,7 @@ nonisolated enum MenuBarItemAXProvider {
         let ourBundleID = Bundle.main.bundleIdentifier
         // Read once per walk: the walk asks about nearly every app that answers empty.
         let formerHosts = UnseenMenuBarHosts.formerHosts()
-        let runningApps = NSWorkspace.shared.runningApplications.filter { !$0.isTerminated }
+        let runningApps = reader.runningApps()
         let appsByPID = Dictionary(runningApps.map { ($0.processIdentifier, $0) }, uniquingKeysWith: { first, _ in first })
         let controlPIDs = controlPIDs(among: runningApps, ourBundleID: ourBundleID)
         var state = previousState
@@ -229,6 +230,7 @@ nonisolated enum MenuBarItemAXProvider {
         let pass = state.begin(
             owners: runningApps.map(\.processIdentifier),
             priorityOwners: requiredOwners,
+            deferredOwners: backgroundOnlyPIDs(among: runningApps),
             scope: scope
         )
         // A chronically slow app must not refuse every move, so slow owners
@@ -279,8 +281,11 @@ nonisolated enum MenuBarItemAXProvider {
             )
         }
 
-        for ownerPID in pass.owners {
-            guard !Task.isCancelled else { truncated = true; break }
+        await BoundedWalk.run(pass.owners, limit: Self.walkConcurrency) { ownerPID -> BoundedWalkStep<ProbeOutcome> in
+            guard !Task.isCancelled else {
+                truncated = true
+                return .stop
+            }
             if ContinuousClock.now >= globalDeadline {
                 // Logged so a machine that never completes a walk leaves
                 // evidence of how far it got.
@@ -291,9 +296,9 @@ nonisolated enum MenuBarItemAXProvider {
                     """
                 )
                 truncated = true
-                break
+                return .stop
             }
-            guard let runningApp = appsByPID[ownerPID] else { continue }
+            guard let runningApp = appsByPID[ownerPID] else { return .skip }
             appsProbed += 1
             let appBundleID = runningApp.bundleIdentifier
                 ?? runningApp.localizedName
@@ -320,7 +325,7 @@ nonisolated enum MenuBarItemAXProvider {
                 // answer would read its icon as departed until the cooldown ends.
                 truncated = true
                 slowOwners[ownerPID] = appBundleID
-                continue
+                return .skip
             }
 
             state.didAttempt(owner: ownerPID, generation: pass.generation)
@@ -328,41 +333,32 @@ nonisolated enum MenuBarItemAXProvider {
             // thread-safe. In-process answers cannot hang, so no deadline applies.
             if AXPrimitives.isOwnProcess(ownerPID) {
                 let own = await MainActor.run {
-                    Self.collectApp(
-                        runningApp: runningApp,
-                        appBundleID: appBundleID,
-                        display: nil,
-                        displayBounds: nil,
-                        ourBundleID: ourBundleID,
-                        formerHosts: formerHosts
-                    ).raw
+                    reader.read(runningApp, appBundleID, ourBundleID, formerHosts)
                 }
                 appsWithExtrasBar += own.isEmpty ? 0 : 1
                 state.record(own, owner: ownerPID, generation: pass.generation)
-                continue
+                return .skip
             }
-            let collected = Task.detached(priority: .userInitiated) {
-                Self.collectApp(
-                    runningApp: runningApp,
-                    appBundleID: appBundleID,
-                    display: nil,
-                    displayBounds: nil,
-                    ourBundleID: ourBundleID,
-                    formerHosts: formerHosts
-                ).raw
+            return .run {
+                let collected = Task.detached(priority: .userInitiated) {
+                    await Self.onReadQueue { reader.read(runningApp, appBundleID, ourBundleID, formerHosts) }
+                }
+                // Abandons, not awaits, a hung AX call. A timeout and a cancellation both
+                // yield nil here; Task.isCancelled tells them apart when it is collected.
+                let result = try? await withAbandoningTimeout(Self.perAppWalkBudget) {
+                    await collected.value
+                }
+                return ProbeOutcome(ownerPID: ownerPID, appBundleID: appBundleID, result: result, collected: collected)
             }
-            // Abandons, not awaits, a hung AX call. A timeout and a cancellation both
-            // yield nil here; Task.isCancelled tells them apart below.
-            let collectedResult = try? await withAbandoningTimeout(Self.perAppWalkBudget) {
-                await collected.value
-            }
-            switch collectedResult {
+        } collect: { outcome in
+            let ownerPID = outcome.ownerPID
+            switch outcome.result {
             case .none where Task.isCancelled:
                 // Foreground geometry can interrupt discovery. Keep this answer
                 // when it arrives, but do not label the owner a slow responder.
                 truncated = true
                 Task {
-                    let late = await collected.value
+                    let late = await outcome.collected.value
                     await Self.lateAnswers.send(LateAnswer(ownerPID: ownerPID, generation: pass.generation, raw: late))
                 }
             case .none:
@@ -370,14 +366,14 @@ nonisolated enum MenuBarItemAXProvider {
                     ($0.timedOut(ownerPID), $0.strikes(for: ownerPID))
                 }
                 diagLog.warning(
-                    "menuBarItems: \(appBundleID) exceeded its per-app deadline (miss \(strikes)); skipping it for \(cooldown)"
+                    "menuBarItems: \(outcome.appBundleID) exceeded its per-app deadline (miss \(strikes)); skipping it for \(cooldown)"
                 )
                 truncated = true
-                slowOwners[ownerPID] = appBundleID
+                slowOwners[ownerPID] = outcome.appBundleID
                 // Publish the late answer for the next walk; until then the
                 // ledger holds off another probe of the owner.
                 Task {
-                    let late = await collected.value
+                    let late = await outcome.collected.value
                     slowResponders.withLock { $0.lateAnswerArrived(ownerPID) }
                     await Self.lateAnswers.send(LateAnswer(ownerPID: ownerPID, generation: pass.generation, raw: late))
                 }
@@ -386,7 +382,7 @@ nonisolated enum MenuBarItemAXProvider {
                 if result.isEmpty {
                     answeredEmpty.insert(ownerPID)
                     // Waits for the drawn read after the loop. See DrawnOnlyItems.
-                    guard !drawnOnlyCandidates.contains(ownerPID) else { continue }
+                    guard !drawnOnlyCandidates.contains(ownerPID) else { return }
                 } else {
                     appsWithExtrasBar += 1
                 }
@@ -478,7 +474,7 @@ nonisolated enum MenuBarItemAXProvider {
     /// raw items; an app with no extras bar or no children contributes an
     /// empty array. completed is false when isOutOfTime stopped it between
     /// children, with the items read so far.
-    private static func collectApp(
+    static func collectApp(
         runningApp: NSRunningApplication,
         appBundleID: String,
         display: CGDirectDisplayID?,
@@ -494,8 +490,7 @@ nonisolated enum MenuBarItemAXProvider {
             noteMissingExtrasBar(of: runningApp, appBundleID: appBundleID, ourBundleID: ourBundleID, formerHosts: formerHosts)
             return ([], true)
         }
-
-        let children = AXHelpers.children(for: bar)
+        let children = walkChildren(of: bar)
         guard !children.isEmpty else {
             logEmptyExtrasBarReadOnce(for: runningApp, appBundleID: appBundleID, hasBar: true, formerHosts: formerHosts)
             return ([], true)
