@@ -361,7 +361,7 @@ struct BarSettlingRestrictionHoldTests {
     @Test("A restriction change reported to the item manager holds the resort signal")
     func managerRestrictionSignal() {
         let manager = MenuBarItemManager(barSettling: makeSettling())
-        defer { manager.postRestrictionRepairTask?.cancel() }
+        defer { manager.restrictionRepairSchedule.task?.cancel() }
 
         manager.noteRestrictionChange()
 

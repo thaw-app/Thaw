@@ -37,42 +37,8 @@ extension MenuBarItemManager {
             return
         }
         repairs.request(.postRestrictionRepair, cause: cause)
-        // A repair pass re-applies the restriction and lands back here.
-        // Cancelling it would escalate its in-flight write to a racing drag,
-        // so coalesce into one more pass instead.
-        if isRunningPostRestrictionRepair {
-            postRestrictionRepairNeedsRerun = true
-            return
-        }
-        postRestrictionRepairTask?.cancel()
-        postRestrictionRepairNeedsRerun = false
-        postRestrictionRepairTask = Task { @MainActor [weak self] in
-            // Nudging MenuBarAgent mid-reflow parks collateral items at y≈1413;
-            // the wait also absorbs multi-hide bursts.
-            do {
-                try await Task.sleep(for: .milliseconds(1200))
-            } catch {
-                return
-            }
-            guard let self else { return }
-            self.isRunningPostRestrictionRepair = true
-            defer {
-                self.isRunningPostRestrictionRepair = false
-                self.postRestrictionRepairNeedsRerun = false
-            }
-            guard var stillParked = await self.repairVisibleLayoutInRepairLane() else { return }
-            var poll = 0
-            while poll < 4, stillParked || self.postRestrictionRepairNeedsRerun {
-                self.postRestrictionRepairNeedsRerun = false
-                do {
-                    try await Task.sleep(for: .seconds(1))
-                } catch {
-                    return
-                }
-                guard let parked = await self.repairVisibleLayoutInRepairLane() else { return }
-                stillParked = parked
-                poll += 1
-            }
+        restrictionRepairSchedule.schedule { [weak self] in
+            await self?.repairVisibleLayoutInRepairLane()
         }
     }
 

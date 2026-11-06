@@ -27,7 +27,7 @@ struct RestrictionReflowLayoutTests {
     @Test("The saved layout stands down inside the reflow window and asks to be tried again")
     func savedLayoutWaitsOutTheReflow() async {
         let manager = MenuBarItemManager()
-        defer { manager.postRestrictionRepairTask?.cancel() }
+        defer { manager.restrictionRepairSchedule.task?.cancel() }
         manager.savedSectionOrder = [MenuBarSectionName.visible.rawValue: ["com.example.one"]]
 
         manager.noteRestrictionChange()

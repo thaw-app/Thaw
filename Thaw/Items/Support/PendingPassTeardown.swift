@@ -54,8 +54,8 @@ extension PendingPassTeardown.Pass where Owner == MenuBarItemManager {
     static var postRestrictionRepair: Self {
         Self(
             work: .postRestrictionRepair,
-            task: \.postRestrictionRepairTask,
-            owedRerun: \.postRestrictionRepairNeedsRerun
+            task: \.restrictionRepairSchedule.task,
+            owedRerun: \.restrictionRepairSchedule.needsRerun
         )
     }
 

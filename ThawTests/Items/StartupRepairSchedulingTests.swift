@@ -8,13 +8,13 @@ struct StartupRepairSchedulingTests {
         manager.barSettling.holdForTesting()
         defer {
             manager.barSettling.releaseForTesting()
-            manager.postRestrictionRepairTask?.cancel()
+            manager.restrictionRepairSchedule.task?.cancel()
         }
 
         manager.noteRestrictionChange()
         manager.noteRestrictionChange()
 
-        #expect(manager.postRestrictionRepairTask == nil)
+        #expect(manager.restrictionRepairSchedule.task == nil)
     }
 
     @Test func startupNormalizationDoesNotQueueARewrite() {
@@ -36,14 +36,14 @@ struct StartupRepairSchedulingTests {
         manager.noteRestrictionChange()
         manager.barSettling.releaseForTesting()
         defer {
-            manager.postRestrictionRepairTask?.cancel()
+            manager.restrictionRepairSchedule.task?.cancel()
             manager.structuralNormalizationTask?.cancel()
         }
 
         manager.noteRestrictionChange()
         manager.scheduleStructuralNormalization(cause: .settled)
 
-        #expect(manager.postRestrictionRepairTask != nil)
+        #expect(manager.restrictionRepairSchedule.task != nil)
         #expect(manager.structuralNormalizationTask != nil)
     }
 }
