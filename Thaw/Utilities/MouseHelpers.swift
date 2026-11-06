@@ -306,28 +306,13 @@ nonisolated enum MouseHelpers {
             || lastPointerButtonEventOccurred(within: elapsed, stateID: .hidSystemState)
     }
 
-    /// Pure cursor-ownership decision used by move and batch restoration.
-    ///
-    /// - Parameters:
-    ///   - physicalPointerInputOccurred: Whether the user moved, clicked or
-    ///     scrolled after the operation saved the cursor position.
-    ///   - postedEventsOffEveryDisplay: Whether the operation posted an event
-    ///     at a point that lies on no display. The window server put the
-    ///     cursor on a display edge for it, so where the cursor is now is
-    ///     Thaw's doing and any movement since is relative to that edge
-    ///     (#318). The saved position wins even over physical input.
-    ///   - tookCursorOwnership: Whether the operation hid the cursor and
-    ///     promised to put it back. One that didn't still has to undo an
-    ///     event posted off every display.
+    /// Restores unless the user moved the cursor meanwhile. An event posted off every display
+    /// left it on a display edge, so the saved position wins even over the user's movement.
     static func shouldRestoreSavedCursorPosition(
         physicalPointerInputOccurred: Bool,
-        postedEventsOffEveryDisplay: Bool = false,
-        tookCursorOwnership: Bool = true
+        postedEventsOffEveryDisplay: Bool = false
     ) -> Bool {
-        if postedEventsOffEveryDisplay {
-            return true
-        }
-        return tookCursorOwnership && !physicalPointerInputOccurred
+        postedEventsOffEveryDisplay || !physicalPointerInputOccurred
     }
 
     /// Returns a Boolean value that indicates whether the last scroll
