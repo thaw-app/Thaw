@@ -12,7 +12,7 @@ A handful of types do too much, and we are breaking them up:
 |---|---|
 | `MenuBarItemManager` | Item cache, moves, section order, repair, startup, persistence, clicks and failure tracking, spread across extensions sharing state |
 | `MenuBarItemImageCache` | Captures and caches item images, schedules recaptures, and also reveals hidden items to capture them |
-| `MenuBarManager` | Showing and hiding sections, rehide timers, app-menu hiding, profile application, overlay state |
+| `MenuBarManager` | Showing and hiding sections, rehide timers, profile application, overlay state |
 | `HIDEventManager` | Every input path: click, hover, scroll, drag, Clock and Notification Center taps |
 | `ControlItem` | The status item, its look, its recovery and its length changes |
 | `ProfileManager` | Stores profiles, switches them by display, Space or Focus, applies layout and spacing |

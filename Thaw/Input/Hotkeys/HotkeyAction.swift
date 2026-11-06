@@ -101,7 +101,7 @@ nonisolated enum HotkeyAction: String, Codable, CaseIterable {
         case .enableThawBar:
             appState.settings.displaySettings.toggleThawBarForActiveDisplay()
         case .toggleApplicationMenus:
-            appState.menuBarManager.toggleApplicationMenus()
+            appState.menuBarManager.applicationMenuHider.toggleApplicationMenus()
         case .toggleAutoRehide:
             toggleRehiding(appState: appState)
         case .toggleZenMode:
