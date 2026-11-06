@@ -30,6 +30,24 @@ struct PrimaryActivationSequenceTests {
         #expect(counts == [1, 2, 1])
     }
 
+    /// 2026-11-06: with a slow double-click speed in macOS, clicks about a second apart paired up,
+    /// so every other click went to the always-hidden section and Hidden seemed to ignore it.
+    @Test func slowSystemDoubleClickSpeedDoesNotPairOrdinaryClicks() {
+        var sequence = ControlItem.PrimaryActivationSequence()
+        let times = [14.967, 15.802, 17.134, 18.128, 20.880, 22.668, 23.652]
+        let counts = times.map {
+            sequence.clickCount(at: $0, location: .zero, modifiers: [], interval: 3.0, enabled: true)
+        }
+        #expect(counts == Array(repeating: 1, count: times.count))
+        #expect(sequence.clickCount(at: 23.9, location: .zero, modifiers: [], interval: 3.0, enabled: true) == 2)
+    }
+
+    @Test func fasterSystemDoubleClickSpeedIsKept() {
+        var sequence = ControlItem.PrimaryActivationSequence()
+        #expect(sequence.clickCount(at: 0, location: .zero, modifiers: [], interval: 0.25, enabled: true) == 1)
+        #expect(sequence.clickCount(at: 0.3, location: .zero, modifiers: [], interval: 0.25, enabled: true) == 1)
+    }
+
     @Test func differentLocationOrModifiersStartsANewPair() {
         var sequence = ControlItem.PrimaryActivationSequence()
         #expect(sequence.clickCount(at: 0, location: .zero, modifiers: [], interval: 0.5, enabled: true) == 1)
