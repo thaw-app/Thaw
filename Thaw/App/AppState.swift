@@ -369,13 +369,8 @@ final class AppState {
     /// First launches and upgrades without changelog content record the version silently, leaving onboarding to handle new users.
     /// Record synchronously before the async repository fetch to avoid repeated prompts after failures.
     func presentWhatsNewForUpgradeIfNeeded() {
-        let current = Constants.versionString
-        guard let lastSeen = Defaults.string(forKey: .lastWhatsNewVersion) else {
-            Defaults.set(current, forKey: .lastWhatsNewVersion)
-            return
-        }
-        guard lastSeen != current else { return }
-        Defaults.set(current, forKey: .lastWhatsNewVersion)
+        let opensAfterUpdate = settings.advanced.showReleaseNotesAfterUpdate
+        guard WhatsNewUpgradeGate.recordVersion(Constants.versionString, opensAfterUpdate: opensAfterUpdate) else { return }
 
         Task {
             let allowFetch = settings.advanced.fetchReleaseNotes
