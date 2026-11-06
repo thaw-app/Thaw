@@ -108,8 +108,8 @@ enum MenuBarAppearanceItems {
             .eraseToAnyPublisher()
     }
 
-    /// Whether every owner the bar draws and the read asked has an item on a bar. A read taken while
-    /// the screen sleeps can answer with every frame off the bar, and the shape would come out empty.
+    /// Whether every owner the bar draws and the read asked has an item on a bar. A read taken
+    /// while the screen sleeps can put every frame off the bar.
     /// An empty bar can't vouch for any read.
     nonisolated static func matchesDrawnBar(
         _ items: [MenuBarItem],

@@ -19,9 +19,8 @@ public enum AXWalkSchedule {
         items.filter { !isDeferred($0) } + items.filter(isDeferred)
     }
 
-    /// Runs read for each index with at most limit running at once, on a queue of its own since
-    /// each read blocks on another app, and returns the results in index order. Blocks the caller,
-    /// which in the helper is the request's own thread.
+    /// Runs read for each index, at most limit at once on its own queue, and returns results in index
+    /// order. Blocks the caller, which in the helper is the request's own thread.
     public static func map<T: Sendable>(_ count: Int, limit: Int, _ read: @escaping @Sendable (Int) -> T) -> [T] {
         guard count > 0 else { return [] }
         let queue = DispatchQueue(label: "com.stonerl.Thaw.ax-helper-walk", qos: .userInitiated, attributes: .concurrent)
