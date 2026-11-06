@@ -365,6 +365,19 @@ private nonisolated struct AXGeometryWalkScope {
 }
 
 nonisolated extension AXGeometryCatalog {
+    /// The frame MenuBarAgent draws for an item whose app answers no AX, or nil when it isn't clear.
+    /// An entry spans the bar's height, so only its horizontal place is compared; an app may draw
+    /// several entries, and the one at the item's place is used. Another app's entry over it leaves it unplaced.
+    static func drawnFrame(ownerPID: pid_t, bounds: CGRect, in drawn: [MenuBarAgentWindow.Entry]) -> CGRect? {
+        func level(_ frame: CGRect) -> CGRect {
+            CGRect(x: frame.minX, y: bounds.minY, width: frame.width, height: bounds.height)
+        }
+        guard let own = drawn.first(where: { $0.ownerPID == ownerPID && matches(bounds, level($0.frame)) }),
+              !drawn.contains(where: { $0.ownerPID != ownerPID && significantlyOverlaps(bounds, level($0.frame)) })
+        else { return nil }
+        return level(own.frame)
+    }
+
     /// Why one root's entries do not vouch for bounds: no frame of its own, a frame elsewhere, or another root on top.
     fileprivate static func ownFrameReason(_ rootEntries: [Entry], bounds: CGRect) -> String {
         let frames = rootEntries.map(\.frame).filter { !$0.isEmpty }
