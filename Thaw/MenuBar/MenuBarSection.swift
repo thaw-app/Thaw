@@ -260,7 +260,7 @@ final class MenuBarSection {
             return
         }
 
-        menuBarManager.updateLastShowTimestamp()
+        menuBarManager.rehideController?.revealed()
 
         // ThawBarPanel captures glyphs during a brief reveal and forwards clicks through revealClickAndConceal.
         // Use it when requested or when inline items would be unreachable behind native overflow.

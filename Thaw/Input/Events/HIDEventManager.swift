@@ -135,10 +135,8 @@ final class HIDEventManager {
     /// Performs the pending hidden-section reveal once the window closes.
     var pendingMenuBarClickTask: Task<Void, Never>?
 
-    /// The pending smart-rehide task armed by a click outside the menu bar,
-    /// tracked so a later reveal can cancel it before it hides the section the
-    /// user just brought back.
-    var smartRehideTask: Task<Void, Never>?
+    /// Captured at setup; a later reveal tells it to drop a pending outside-click rehide.
+    var rehideController: RehideController?
 
     var guardMouseUpState: GuardMouseUpState = .idle
 
@@ -556,6 +554,7 @@ final class HIDEventManager {
         self.activeDisplayWatcher = activeDisplayWatcher
         configuration = appState.settings
         menuOpenMonitor = appState.itemManager.menuOpenMonitor
+        rehideController = appState.menuBarManager.rehideController
         onScreenItems = appState.itemManager.onScreenItemSnapshot
         startAll()
         synchronizeClockActivationTap()
