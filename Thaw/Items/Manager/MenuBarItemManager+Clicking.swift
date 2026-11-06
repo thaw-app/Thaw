@@ -121,11 +121,17 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.warning("postClickEvents: \(item.logString) frame \(resolvedBounds) is \(rejection.rawValue); not clicking")
             throw EventError.missingItemBounds(item)
         }
+        // A revealed item's frame can be a seat another app's item is drawn in: aim where it is drawn.
+        guard let aimedBounds = await DrawnItemFrame.clickFrame(for: resolvedBounds, ownerPID: item.ownerPID, sourcePID: item.sourcePID, in: MenuBarItemAXProvider.drawnBarConcurrent()) else {
+            MenuBarItemManager.diagLog.warning("postClickEvents: \(item.logString) frame \(resolvedBounds) sits on another app's item and it is not drawn; not clicking")
+            throw EventError.missingItemBounds(item)
+        }
+        MenuBarItemManager.diagLog.debug("postClickEvents: \(item.logString) frame \(resolvedBounds), aiming at \(aimedBounds)")
         guard SyntheticClickBudgetStore.shared.take() else {
             MenuBarItemManager.diagLog.error("postClickEvents: synthetic click budget spent; not clicking \(item.logString)")
             throw EventError.cannotComplete
         }
-        let clickPoint = Self.clickPoint(for: resolvedBounds)
+        let clickPoint = Self.clickPoint(for: aimedBounds)
         let restoreLocation = try getMouseLocation()
         let source = try getEventSource()
 
