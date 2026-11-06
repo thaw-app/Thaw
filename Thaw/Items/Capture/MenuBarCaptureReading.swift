@@ -8,6 +8,7 @@
 import Algorithms
 import Cocoa
 import MenuBarModel
+import ThawAXCore
 import ThawCapture
 
 /// Window-server, screen-capture and AX reads used by one thumbnail pass.
@@ -28,6 +29,9 @@ nonisolated protocol MenuBarCaptureReading: Sendable {
 nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
     /// The item owners a geometry read refreshes. Empty reads every running app.
     var geometryOwners: Set<pid_t> = []
+
+    /// MenuBarAgent's drawn bar, which places items whose app answers no AX. Tests pass their own.
+    var drawnBar: @Sendable () async -> [MenuBarAgentWindow.Entry]? = { await MenuBarItemAXProvider.drawnBarConcurrent() }
 
     func captureBand(displayID: CGDirectDisplayID) async -> (frame: CGRect, menuMaxX: CGFloat?) {
         await MainActor.run {
@@ -89,15 +93,16 @@ nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
         // The catalog's serial actor keeps bounded synchronous AX reads off
         // MainActor, including under Approachable Concurrency.
         let snapshot = await AXGeometryCatalog.snapshot(hostProcessIdentifiers: uniqueHostPIDs)
-        guard !snapshot.isEmpty else {
+        if snapshot.isEmpty {
             MenuBarItemImageCache.diagLog.debug("CaptureOwnershipTrace: no owner geometry read for \(candidates.count) item(s)")
-            return ([:], [])
         }
         var bounds = [String: CGRect]()
         var ambiguous = Set<String>()
+        var drawn: [MenuBarAgentWindow.Entry]??
         for candidate in candidates {
+            let owner = candidate.item.sourcePID ?? candidate.item.ownerPID
             let match = AXGeometryCatalog.match(
-                ownerPID: candidate.item.sourcePID ?? candidate.item.ownerPID,
+                ownerPID: owner,
                 identityTitle: candidate.item.tag.title,
                 bounds: candidate.bounds,
                 in: snapshot
@@ -109,10 +114,33 @@ nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
                 ambiguous.insert(candidate.item.uniqueIdentifier)
                 MenuBarItemImageCache.diagLog.debug(Self.ownershipTrace(of: candidate, match: match, in: snapshot))
             case .unavailable:
+                if let frame = await drawnFrame(for: candidate, owner: owner, snapshot: snapshot, drawn: &drawn) {
+                    bounds[candidate.item.uniqueIdentifier] = frame
+                    continue
+                }
                 MenuBarItemImageCache.diagLog.debug(Self.ownershipTrace(of: candidate, match: match, in: snapshot))
             }
         }
         return (bounds, ambiguous)
+    }
+
+    /// The frame MenuBarAgent draws for a candidate whose app gave the catalog no entries at all, as
+    /// f.lux does. The drawn bar is read once per call, on first need.
+    private func drawnFrame(
+        for candidate: (item: MenuBarItem, bounds: CGRect),
+        owner: pid_t,
+        snapshot: [AXGeometryCatalog.Entry],
+        drawn: inout [MenuBarAgentWindow.Entry]??
+    ) async -> CGRect? {
+        guard !snapshot.contains(where: { $0.ownerPID == owner }) else { return nil }
+        if drawn == nil { drawn = .some(await drawnBar()) }
+        guard let entries = drawn ?? nil,
+              let frame = AXGeometryCatalog.drawnFrame(ownerPID: owner, bounds: candidate.bounds, in: entries)
+        else { return nil }
+        MenuBarItemImageCache.diagLog.debug(
+            "CaptureOwnershipTrace: \(candidate.item.uniqueIdentifier) placed at \(frame) from MenuBarAgent's drawn bar"
+        )
+        return frame
     }
 
     /// Says why the catalog could not vouch for a candidate's frame.

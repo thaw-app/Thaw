@@ -9,6 +9,7 @@ import AppKit
 import MenuBarModel
 import Testing
 @testable import Thaw
+import ThawAXCore
 
 @Suite("Capture geometry reads pick their owners and fall back to a full walk")
 struct MenuBarCaptureReadingTests {
@@ -139,6 +140,24 @@ struct MenuBarCaptureReadingTests {
         #expect(window.windowID != 0)
         #expect(window.frame.width > 0)
         #expect(window.frame.width <= display.width + 1)
+    }
+
+    /// f.lux and Floe refuse AX for their extras bar, so the catalog never placed them and they never got a picture.
+    @Test("An item whose app answers no AX takes its frame from MenuBarAgent's drawn bar")
+    func drawnBarVouchesForAnAppWithoutAX() async {
+        let own = ProcessInfo.processInfo.processIdentifier
+        let item = Self.item("Item-0", owner: own)
+        let bounds = CGRect(x: 1600, y: 3, width: 38, height: 24)
+        var reader = LiveMenuBarCaptureReader()
+        reader.drawnBar = { [MenuBarAgentWindow.Entry(ownerPID: own, frame: CGRect(x: 1600, y: 0, width: 38, height: 30))] }
+
+        let read = await reader.liveBounds(for: [(item, bounds)])
+
+        #expect(read.bounds[item.uniqueIdentifier] == bounds)
+
+        // The same read without a drawn bar places nothing, so the frame above came from it.
+        reader.drawnBar = { nil }
+        #expect(await reader.liveBounds(for: [(item, bounds)]).bounds.isEmpty)
     }
 
     @Test("An item of a running app that no live frame places gets no bounds")
