@@ -40,6 +40,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- **Layout shows Bluetooth and other switched-off system items as their own symbol.** Items Thaw hides by switching their Control Center module off used to sit in a grey box.
 - **Hidden items no longer collapse right after you point at them or show them again.** A timed rehide that was already finishing could still hide the section you had just reopened.
 - **Diagnostic logs no longer warn on every layout pass about apps that aren't running.** Saved items whose app is closed, and Thaw extras you have turned off, are left out of that warning.
 - **One click on Thaw's icon shows or hides your items again when double-click opens Always Hidden.** With a slow double-click speed in macOS, ordinary clicks a second apart counted as double-clicks and went to Always Hidden instead.

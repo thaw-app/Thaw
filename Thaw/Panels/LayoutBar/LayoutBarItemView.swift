@@ -930,16 +930,15 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     private func drawPlaceholder() {
-        let iconRect = Self.drawPlaceholderBox(in: bounds)
-        guard let image = resolvedPlaceholderImage(), let iconRect else {
+        let bare = Self.drawsBareModuleGlyph(for: item)
+        guard let image = resolvedPlaceholderImage(), let iconRect = bare ? Self.bareGlyphRect(in: bounds) : Self.drawPlaceholderBox(in: bounds) else {
             return
         }
-
         draw(
             image,
             in: iconRect,
-            fraction: LayoutBarCaptureInk.placeholderFraction(isEnabled: isEnabled, isTemplate: image.isTemplate),
-            templateTint: item.tag.matchesVisibleControlItem ? menuBarForegroundColor : .secondaryLabelColor
+            fraction: bare ? (isEnabled ? 1 : 0.67) : LayoutBarCaptureInk.placeholderFraction(isEnabled: isEnabled, isTemplate: image.isTemplate),
+            templateTint: bare || item.tag.matchesVisibleControlItem ? menuBarForegroundColor : .secondaryLabelColor
         )
     }
 
