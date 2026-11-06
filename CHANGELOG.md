@@ -35,6 +35,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- **Items no longer move at launch when Thaw can't read the whole bar in time.** With many apps running, Thaw now waits for a full read before it treats the bar as settled or re-lays it.
 - **Your saved layout is put back once the menu bar settles at launch,** also when Thaw re-applies your profile then and its spacing hasn't changed. Before, that re-apply could stop the final layout pass.
 
 ## [3.0.0-alpha.13] - 2026-11-05
