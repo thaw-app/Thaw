@@ -27,6 +27,7 @@ the items under New and Fixed.
 ### New
 
 - **Layout warns when items don't fit.** When macOS hides items it has no room for, Layout names them until there's room again.
+- **Release notes can stay closed after an update.** Turn off Show release notes after an update in Privacy. What's New still opens from Thaw's menu and About.
 
 ### Fixed
 

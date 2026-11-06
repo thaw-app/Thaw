@@ -78,6 +78,7 @@ extension AppSettings {
         advanced.enableSwapBar = Defaults.DefaultValue.enableSwapBar
         advanced.swapOnThawIconClick = Defaults.DefaultValue.swapOnThawIconClick
         advanced.fetchReleaseNotes = Defaults.DefaultValue.fetchReleaseNotes
+        advanced.showReleaseNotesAfterUpdate = Defaults.DefaultValue.showReleaseNotesAfterUpdate
         advanced.enableNativeAppHiding = Defaults.DefaultValue.enableNativeAppHiding
         advanced.enableModuleStandIns = Defaults.DefaultValue.enableModuleStandIns
         advanced.skippedModuleStandIns = Set(Defaults.DefaultValue.skippedModuleStandIns)

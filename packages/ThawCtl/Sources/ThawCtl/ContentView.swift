@@ -175,7 +175,7 @@ struct ContentView: View {
             "enableMenuBarItemOverflow",
             "enableExperimentalOverflowPrevention", "alwaysUseAppIconForMenuBarItems",
             "enableMenuBarItemDescenders", "enableSwapBar", "enableControlItemPanel",
-            "fetchReleaseNotes", "enableRecordingWatch", "zenModeWhileRecording",
+            "fetchReleaseNotes", "showReleaseNotesAfterUpdate", "enableRecordingWatch", "zenModeWhileRecording",
             "enableDesktopMenuHiding",
             "searchIncludeVisible", "searchIncludeHidden", "searchIncludeAlwaysHidden",
         ]

@@ -101,6 +101,7 @@ enum SettingsURIHandler {
         "swapOnThawIconClick": SettingURIEntry(defaultsKey: .swapOnThawIconClick, kind: .boolean, isWritable: true),
         "enableControlItemPanel": SettingURIEntry(defaultsKey: .enableControlItemPanel, kind: .boolean, isWritable: true),
         "fetchReleaseNotes": SettingURIEntry(defaultsKey: .fetchReleaseNotes, kind: .boolean, isWritable: true),
+        "showReleaseNotesAfterUpdate": SettingURIEntry(defaultsKey: .showReleaseNotesAfterUpdate, kind: .boolean, isWritable: true),
         "enableRecordingWatch": SettingURIEntry(defaultsKey: .enableRecordingWatch, kind: .boolean, isWritable: true),
         "zenModeWhileRecording": SettingURIEntry(defaultsKey: .zenModeWhileRecording, kind: .boolean, isWritable: true),
         "enableDesktopMenuHiding": SettingURIEntry(defaultsKey: .enableDesktopMenuHiding, kind: .boolean, isWritable: true),

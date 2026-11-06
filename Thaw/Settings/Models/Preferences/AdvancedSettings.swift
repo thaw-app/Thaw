@@ -206,6 +206,14 @@ final class AdvancedSettings {
         }
     }
 
+    /// Whether What's New opens by itself after an update. The menu and About links work either way.
+    var showReleaseNotesAfterUpdate = Defaults.DefaultValue.showReleaseNotesAfterUpdate {
+        didSet {
+            guard oldValue != showReleaseNotesAfterUpdate else { return }
+            Defaults.set(showReleaseNotesAfterUpdate, forKey: .showReleaseNotesAfterUpdate)
+        }
+    }
+
     /// Opt-in alternative to the assessment assertion. Native app visibility
     /// persists outside Thaw, so the experiment journals and restores its writes.
     var enableNativeAppHiding = Defaults.DefaultValue.enableNativeAppHiding {
@@ -379,6 +387,7 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .swapOnThawIconClick, assign: &swapOnThawIconClick)
         Defaults.ifPresent(key: .enableControlItemPanel, assign: &enableControlItemPanel)
         Defaults.ifPresent(key: .fetchReleaseNotes, assign: &fetchReleaseNotes)
+        Defaults.ifPresent(key: .showReleaseNotesAfterUpdate, assign: &showReleaseNotesAfterUpdate)
         Defaults.ifPresent(key: .enableModuleStandIns, assign: &enableModuleStandIns)
         skippedModuleStandIns = Defaults.stringArray(forKey: .skippedModuleStandIns).map(Set.init) ?? skippedModuleStandIns
         Defaults.ifPresent(key: .enableTimeMachineTakeover, assign: &enableTimeMachineTakeover)
@@ -473,6 +482,8 @@ final class AdvancedSettings {
                 enableControlItemPanel = boolValue
             case "fetchReleaseNotes":
                 fetchReleaseNotes = boolValue
+            case "showReleaseNotesAfterUpdate":
+                showReleaseNotesAfterUpdate = boolValue
             case "enableRecordingWatch":
                 enableRecordingWatch = boolValue
             case "zenModeWhileRecording":
