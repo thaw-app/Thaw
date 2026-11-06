@@ -33,6 +33,7 @@ the items under New and Fixed.
 
 ### Changed
 
+- **Double-clicking Thaw's icon for Always Hidden has its own switch.** Turn off Double-click the Thaw icon to show Always Hidden in Menu Bar Access, and every click shows or hides your items.
 - **The Thaw Bar has its own switch again.** Show hidden items is now two switches, Thaw Bar and Always show hidden items. Your settings carry over.
 - **Profiles and menu bar looks follow a Space switch sooner.** Thaw hears about the switch as it starts, and a new Space can have its own profile right away.
 - **Spaces settings stay after Thaw quits.** Thaw saves what you set on the Spaces page and applies it again when it starts, when you add a Space and when macOS restarts the menu bar.
@@ -41,6 +42,7 @@ the items under New and Fixed.
 
 - **Hidden items no longer collapse right after you point at them or show them again.** A timed rehide that was already finishing could still hide the section you had just reopened.
 - **Diagnostic logs no longer warn on every layout pass about apps that aren't running.** Saved items whose app is closed, and Thaw extras you have turned off, are left out of that warning.
+- **One click on Thaw's icon shows or hides your items again when double-click opens Always Hidden.** With a slow double-click speed in macOS, ordinary clicks a second apart counted as double-clicks and went to Always Hidden instead.
 - **Items with a countdown or changing count no longer keep moving to Hidden.** Thaw now notices an item that changes its text even when many apps are running, instead of treating each new text as a new item.
 - **Items no longer move at launch when Thaw can't read the whole bar in time.** With many apps running, Thaw now waits for a full read before it treats the bar as settled or re-lays it.
 - **Your saved layout is put back once the menu bar settles at launch,** also when Thaw re-applies your profile then and its spacing hasn't changed. Before, that re-apply could stop the final layout pass.
