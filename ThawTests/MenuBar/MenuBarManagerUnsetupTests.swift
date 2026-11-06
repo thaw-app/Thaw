@@ -106,7 +106,7 @@ struct MenuBarManagerUnsetupTests {
         manager.openItem(withIdentifier: "com.example.missing")
         #expect(manager.lastUserRevealDate != nil)
         #expect(!manager.shouldAlwaysShowHiddenItems)
-        #expect(!manager.shouldDeferBarMutation)
+        #expect(manager.barSettling.hold(for: .barMutation) == nil)
         #expect(manager.hotkeyItemMap.isEmpty)
     }
 

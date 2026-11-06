@@ -1236,11 +1236,9 @@ extension ControlItem {
         return true
     }
 
-    /// Whether the width nudge must be held off: the fixed reflow-settle window
-    /// or an in-flight reveal/hide transition (see
-    /// MenuBarManager.shouldSuppressMenuBarAgentNudge).
+    /// Whether the width nudge must be held off: the reveal reflow window or an in-flight reveal/hide transition.
     private var shouldSuppressPositionNudge: Bool {
-        appState?.menuBarManager.shouldSuppressMenuBarAgentNudge == true
+        appState?.menuBarManager.barSettling.hold(for: .agentNudge) != nil
     }
 }
 
