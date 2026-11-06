@@ -296,7 +296,7 @@ struct ProfileFullTests {
     // MARK: - Initialization Tests
 
     /// The initializer defaults the timestamps to now. Fresh identifiers are
-    /// covered by ``profileInitGeneratesUniqueId()``.
+    /// covered by profileInitGeneratesUniqueId().
     @Test("A profile built from content takes its name and defaults its timestamps")
     func profileInitWithContent() {
         let content = makeTestProfileContent()
@@ -397,7 +397,7 @@ struct ProfileFullTests {
     }
 
     /// The forward-compatible decoder fills an absent settings block from
-    /// `Defaults.DefaultValue`.
+    /// Defaults.DefaultValue.
     @Test("A profile JSON missing everything but a name decodes with default settings")
     func decodeProfileWithMissingFields() throws {
         // Minimal JSON with only required fields
@@ -444,7 +444,7 @@ struct ProfileFullTests {
 
     // MARK: - Identifiable Tests
 
-    /// Binding `id` to a typed local checks `ID == UUID` at compile time;
+    /// Binding id to a typed local checks ID == UUID at compile time;
     /// matching the metadata identifier checks it at runtime.
     @Test("A profile is identifiable by a UUID")
     func profileIsIdentifiable() {

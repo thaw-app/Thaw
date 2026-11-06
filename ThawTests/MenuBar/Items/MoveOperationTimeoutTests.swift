@@ -10,9 +10,9 @@ import Testing
 
 /// How a move attempt's outcome sizes the next attempt's budget.
 ///
-/// `postMoveEvents` waits for the origin to change, not for arrival, so a miss
+/// postMoveEvents waits for the origin to change, not for arrival, so a miss
 /// still nudges the item a pixel or two. Treating that as a fast response let a
-/// run of misses starve the budget into an `itemResponseTimeout` cascade (#881).
+/// run of misses starve the budget into an itemResponseTimeout cascade (#881).
 @Suite("Move operation timeout")
 struct MoveOperationTimeoutTests {
     /// Landing the item is the only outcome that earns a shorter budget.
@@ -124,7 +124,7 @@ struct MoveOperationTimeoutTests {
         )
     }
 
-    /// Under 75ms leaves less than eight polls of margin, which started the `itemResponseTimeout` cascades.
+    /// Under 75ms leaves less than eight polls of margin, which started the itemResponseTimeout cascades.
     @Test("The budget never falls below the polling floor")
     func budgetNeverFallsBelowTheFloor() {
         #expect(
@@ -151,7 +151,7 @@ struct MoveOperationTimeoutTests {
     }
 }
 
-/// The cursor-hide watchdog must outlast the worst single `move`: each attempt
+/// The cursor-hide watchdog must outlast the worst single move: each attempt
 /// spends its budget four times (two posts, two waits), budgets escalate to the
 /// ceiling, and a failure posts one 100 ms fallback. Outlasting the watchdog
 /// force-shows the cursor mid-sequence, the flash this sizing prevents.

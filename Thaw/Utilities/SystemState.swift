@@ -72,8 +72,8 @@ struct SystemState: Equatable {
     /// (best-effort).
     var isFocusActive: Bool
 
-    /// The active Thaw profile name requested by ``ThawFocusFilter``, or
-    /// `nil` when no Thaw Focus Filter is currently applied. macOS does not
+    /// The active Thaw profile name requested by ThawFocusFilter, or
+    /// nil when no Thaw Focus Filter is currently applied. macOS does not
     /// expose the enclosing Focus's user-visible name through this API.
     var activeFocusModeName: String?
 
@@ -101,7 +101,7 @@ struct SystemState: Equatable {
     /// conditions, keyed by item tag identifier. Populated by the manager.
     var imageHashes: [String: UInt64]
 
-    /// Exact pixel hashes captured in the same pass as ``imageHashes``.
+    /// Exact pixel hashes captured in the same pass as imageHashes.
     var exactImageHashes: [String: UInt64]
 
     /// Identifiers of items currently blinking for attention.

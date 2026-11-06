@@ -12,7 +12,7 @@ import Foundation
 // MARK: - ThermalLevel
 
 /// A user-selectable thermal-pressure threshold, mapped to
-/// `ProcessInfo.ThermalState` raw values (nominal = 0).
+/// ProcessInfo.ThermalState raw values (nominal = 0).
 enum ThermalLevel: Int, Codable, Hashable, CaseIterable, Identifiable {
     case fair = 1
     case serious = 2
@@ -35,7 +35,7 @@ enum ThermalLevel: Int, Codable, Hashable, CaseIterable, Identifiable {
 
 /// A user-selectable Energy Mode predicate.
 ///
-/// macOS reports three mutually exclusive modes (``EnergyMode``), but the
+/// macOS reports three mutually exclusive modes (EnergyMode), but the
 /// question worth asking is often "not Low Power", which covers the two
 /// remaining modes at once. The predicate set is therefore deliberately
 /// wider than the state set.
@@ -80,7 +80,7 @@ enum EnergyModeMatch: String, Codable, Hashable, CaseIterable, Identifiable {
 
     /// The predicates offered in the settings picker.
     ///
-    /// ``high`` is dropped on Macs that don't offer High Power Mode, where
+    /// high is dropped on Macs that don't offer High Power Mode, where
     /// it could never be satisfied. An existing selection is not filtered
     /// here; the editor keeps a trigger's current value visible, as it does
     /// for a disabled feature flag.
@@ -92,7 +92,7 @@ enum EnergyModeMatch: String, Codable, Hashable, CaseIterable, Identifiable {
 // MARK: - ScheduleWeekday
 
 /// A calendar weekday, using the same numeric values as
-/// `Calendar.Component.weekday` (Sunday = 1).
+/// Calendar.Component.weekday (Sunday = 1).
 enum ScheduleWeekday: Int, Codable, Hashable, CaseIterable, Identifiable {
     case sunday = 1
     case monday
@@ -163,12 +163,12 @@ struct ImageComparisonReference: Codable, Hashable {
     let imageData: Data?
 }
 
-/// A condition that decides whether a ``MenuBarItemTrigger`` is currently
-/// satisfied, evaluated against a ``SystemState`` snapshot.
+/// A condition that decides whether a MenuBarItemTrigger is currently
+/// satisfied, evaluated against a SystemState snapshot.
 ///
 /// New condition kinds can be added as cases without changing the
 /// surrounding trigger plumbing; each is independently gated by a
-/// ``TriggerFeature`` flag (battery/power conditions are always available).
+/// TriggerFeature flag (battery/power conditions are always available).
 enum TriggerCondition: Codable, Hashable {
     // Power
     case batteryBelow(percentage: Double)
@@ -207,7 +207,7 @@ enum TriggerCondition: Codable, Hashable {
 
     /// System load
     case energyMode(EnergyModeMatch)
-    /// Legacy spelling of `.energyMode(.low)`, kept so triggers saved before
+    /// Legacy spelling of .energyMode(.low), kept so triggers saved before
     /// Energy Mode grew its Automatic and High Power options keep decoding.
     case lowPowerMode
     case thermalPressure(atLeast: ThermalLevel)
@@ -232,7 +232,7 @@ enum TriggerCondition: Codable, Hashable {
 
     /// Satisfied while a watched item is blinking for attention.
     ///
-    /// Distinct from ``imageChanged``, which fires on any difference from a
+    /// Distinct from imageChanged, which fires on any difference from a
     /// captured reference: a clock trips that on every tick. This fires only
     /// when an icon keeps returning to a state it already showed, which is
     /// what an app does when it wants to be noticed.
@@ -437,13 +437,13 @@ enum TriggerCondition: Codable, Hashable {
         return formatter.string(from: date)
     }
 
-    /// Whether `now` falls within the daily window `[start, end)`, handling
+    /// Whether now falls within the daily window [start, end), handling
     /// windows that wrap past midnight.
     static func isWithinSchedule(now: Date, startMinutes: Int, endMinutes: Int) -> Bool {
         isWithinSchedule(now: now, startMinutes: startMinutes, endMinutes: endMinutes, weekdays: ScheduleWeekday.everyDay)
     }
 
-    /// Whether `now` falls within a weekly schedule. For windows that wrap
+    /// Whether now falls within a weekly schedule. For windows that wrap
     /// past midnight, the selected weekday is the day the window starts.
     static func isWithinSchedule(
         now: Date,
@@ -488,7 +488,7 @@ enum TriggerCondition: Codable, Hashable {
 
 // MARK: - TriggerConditionKind
 
-/// The user-selectable kind of a ``TriggerCondition``, used to drive the
+/// The user-selectable kind of a TriggerCondition, used to drive the
 /// settings UI independently of any value the condition carries.
 enum TriggerConditionKind: String, CaseIterable, Identifiable {
     case batteryBelow
@@ -602,7 +602,7 @@ enum TriggerConditionKind: String, CaseIterable, Identifiable {
     }
 
     /// The feature flag that must be enabled for this kind to be available,
-    /// or `nil` for always-available power conditions.
+    /// or nil for always-available power conditions.
     var requiredFeature: TriggerFeature? {
         switch self {
         case .batteryBelow, .batteryAtOrAbove, .onACPower, .onBatteryPower, .charging:
@@ -1066,9 +1066,9 @@ struct TriggerTargetItem: Codable, Hashable {
 enum TriggerCombinator: String, Codable, Hashable, CaseIterable, Identifiable {
     case all
     case any
-    /// Satisfied only when no condition is. Spelled `noneOf` rather than
-    /// `none` so it can never be confused with `Optional.none` at a use site;
-    /// the raw value stays `"none"` for readability in stored triggers.
+    /// Satisfied only when no condition is. Spelled noneOf rather than
+    /// none so it can never be confused with Optional.none at a use site;
+    /// the raw value stays "none" for readability in stored triggers.
     case noneOf = "none"
 
     var id: String {
@@ -1104,11 +1104,11 @@ enum TriggerCombinator: String, Codable, Hashable, CaseIterable, Identifiable {
 // MARK: - MenuBarItemTrigger
 
 /// A user-defined rule that conditionally reveals or hides a single menu
-/// bar item based on a ``TriggerCondition``.
+/// bar item based on a TriggerCondition.
 ///
 /// When the condition becomes satisfied, the target item is moved into
-/// ``revealSection``; when it is no longer satisfied, the item is returned
-/// to ``hideSection``. When ``invert`` is `true`, the reveal/hide roles
+/// revealSection; when it is no longer satisfied, the item is returned
+/// to hideSection. When invert is true, the reveal/hide roles
 /// swap, so the item is hidden while the condition is met.
 struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
     var id: UUID
@@ -1128,22 +1128,22 @@ struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
     var hideSection: MenuBarSection.Name
     var condition: TriggerCondition
 
-    /// Extra conditions combined with ``condition`` via ``combinator``.
-    /// Gated by the `compoundConditions` feature flag in the UI.
+    /// Extra conditions combined with condition via combinator.
+    /// Gated by the compoundConditions feature flag in the UI.
     var additionalConditions: [TriggerCondition]
 
-    /// How ``condition`` and ``additionalConditions`` are combined.
+    /// How condition and additionalConditions are combined.
     var combinator: TriggerCombinator
 
-    /// When `true`, the item is hidden (not revealed) while the conditions
-    /// are satisfied. Gated by the `invertAction` feature flag in the UI.
+    /// When true, the item is hidden (not revealed) while the conditions
+    /// are satisfied. Gated by the invertAction feature flag in the UI.
     var invert: Bool
 
-    /// When `true`, posts a notification when this trigger reveals its item.
+    /// When true, posts a notification when this trigger reveals its item.
     var notifyOnReveal: Bool
 
     /// Overrides the debounce settle (seconds) before a flip is applied.
-    /// `nil` uses the per-condition default.
+    /// nil uses the per-condition default.
     var settleSecondsOverride: Double?
 
     init(
@@ -1188,8 +1188,8 @@ struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
         case additionalItems
     }
 
-    /// Forward-compatible decoding: `invert`, `additionalConditions`, and
-    /// `combinator` were added after earlier releases and are absent from
+    /// Forward-compatible decoding: invert, additionalConditions, and
+    /// combinator were added after earlier releases and are absent from
     /// triggers persisted before then.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -1233,7 +1233,7 @@ struct MenuBarItemTrigger: Codable, Hashable, Identifiable {
     }
 
     /// Evaluates whether the target item should be revealed, combining all
-    /// conditions per ``combinator`` and accounting for the invert flag.
+    /// conditions per combinator and accounting for the invert flag.
     func shouldReveal(state: SystemState, now: Date = Date()) -> Bool {
         let conditions = allConditions
         let satisfied: Bool = switch combinator {

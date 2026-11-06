@@ -13,12 +13,12 @@ import Synchronization
 /// An object that receives events from a defined point in
 /// the event stream.
 ///
-/// Invariant: `callback`, `runLoop`, and the `creation*` parameters are `let`s
-/// set once at init and never mutated. The only mutable state (`machPort`,
-/// `source`, `isInvalidated`) lives in `state`, an `OSAllocatedUnfairLock`, and
+/// Invariant: callback, runLoop, and the creation* parameters are lets
+/// set once at init and never mutated. The only mutable state (machPort,
+/// source, isInvalidated) lives in state, an OSAllocatedUnfairLock, and
 /// is only ever read or written under that lock — including from the
-/// `sharedCallback` C callback (which runs on `runLoop`, always the main run
-/// loop) and from `enable()`/`disable()` calls made off the main actor.
+/// sharedCallback C callback (which runs on runLoop, always the main run
+/// loop) and from enable()/disable() calls made off the main actor.
 final nonisolated class EventTap: @unchecked Sendable {
     /// Pool to limit concurrent EventTaps and prevent Mach port leaks
     private static let activeTaps = Mutex<Set<ObjectIdentifier>>([])
@@ -134,28 +134,23 @@ final nonisolated class EventTap: @unchecked Sendable {
 
     /// Creates a new event tap for the specified event types.
     ///
-    /// If the tap is an active filter, the callback can return
-    /// one of the following:
-    ///
-    ///   * The (possibly modified) received event to pass back to
-    ///     the event stream.
-    ///   * A new event to pass to the event stream in place of the
-    ///     received event.
-    ///   * `nil` to remove the received event from the event stream.
+    /// If the tap is an active filter, the callback can return the
+    /// (possibly modified) received event to pass back to the event
+    /// stream, a new event to pass on in its place, or nil to remove
+    /// the received event from the event stream.
     ///
     /// If the tap is a passive listener, the callback's return value
     /// does not affect the event stream.
     ///
-    /// - Parameters:
-    ///   - label: A string label that identifies the tap in logging
-    ///     and debugging contexts.
-    ///   - types: The event types monitored by the tap.
-    ///   - location: The point in the event stream to insert the tap.
-    ///   - placement: The tap's placement, relative to existing taps
-    ///     at `location`.
-    ///   - option: An option that specifies whether the tap is an
-    ///     active filter or a passive listener.
-    ///   - callback: A closure the tap calls to handle received events.
+    /// label: A string label that identifies the tap in logging
+    /// and debugging contexts.
+    /// types: The event types monitored by the tap.
+    /// location: The point in the event stream to insert the tap.
+    /// placement: The tap's placement, relative to existing taps
+    /// at location.
+    /// option: An option that specifies whether the tap is an
+    /// active filter or a passive listener.
+    /// callback: A closure the tap calls to handle received events.
     init(
         label: String = #function,
         types: [CGEventType],
@@ -196,8 +191,8 @@ final nonisolated class EventTap: @unchecked Sendable {
 
         Self.registerTap(self)
 
-        // `withLockUnchecked`: `CFMachPort`/`CFRunLoopSource` aren't `Sendable`.
-        // Safe, since these locals are handed to `state` and never touched again.
+        // withLockUnchecked: CFMachPort/CFRunLoopSource aren't Sendable.
+        // Safe, since these locals are handed to state and never touched again.
         state.withLockUnchecked { state in
             state.machPort = machPort
             state.source = source
@@ -206,28 +201,23 @@ final nonisolated class EventTap: @unchecked Sendable {
 
     /// Creates a new event tap for the specified event type.
     ///
-    /// If the tap is an active filter, the callback can return
-    /// one of the following:
-    ///
-    ///   * The (possibly modified) received event to pass back to
-    ///     the event stream.
-    ///   * A new event to pass to the event stream in place of the
-    ///     received event.
-    ///   * `nil` to remove the received event from the event stream.
+    /// If the tap is an active filter, the callback can return the
+    /// (possibly modified) received event to pass back to the event
+    /// stream, a new event to pass on in its place, or nil to remove
+    /// the received event from the event stream.
     ///
     /// If the tap is a passive listener, the callback's return value
     /// does not affect the event stream.
     ///
-    /// - Parameters:
-    ///   - label: A string label that identifies the tap in logging
-    ///     and debugging contexts.
-    ///   - type: The event type monitored by the tap.
-    ///   - location: The point in the event stream to insert the tap.
-    ///   - placement: The tap's placement, relative to existing taps
-    ///     at `location`.
-    ///   - option: An option that specifies whether the tap is an
-    ///     active filter or a passive listener.
-    ///   - callback: A closure the tap calls to handle received events.
+    /// label: A string label that identifies the tap in logging
+    /// and debugging contexts.
+    /// type: The event type monitored by the tap.
+    /// location: The point in the event stream to insert the tap.
+    /// placement: The tap's placement, relative to existing taps
+    /// at location.
+    /// option: An option that specifies whether the tap is an
+    /// active filter or a passive listener.
+    /// callback: A closure the tap calls to handle received events.
     convenience init(
         label: String = #function,
         type: CGEventType,
@@ -251,7 +241,7 @@ final nonisolated class EventTap: @unchecked Sendable {
     }
 
     /// Checks whether the tap is still valid and attempts to recreate
-    /// it if the Mach port has been invalidated. Returns `true` if the
+    /// it if the Mach port has been invalidated. Returns true if the
     /// tap is valid after this call (either already valid or successfully
     /// recreated).
     @discardableResult
@@ -277,14 +267,14 @@ final nonisolated class EventTap: @unchecked Sendable {
     }
 
     /// Tears down the current tap and creates a new one using the
-    /// original parameters. Returns `true` on success.
+    /// original parameters. Returns true on success.
     private func recreate() -> Bool {
         let tapLabel = self.label
         // Clean up the old tap without setting isInvalidated (we want to reuse this instance).
         Self.unregisterTap(self)
         // Record whether the mach port cleanup requires balancing the retain
         // taken at creation, but perform the release only after the lock
-        // scope exits (see the matching comment in `invalidate()`).
+        // scope exits (see the matching comment in invalidate()).
         let needsRelease = state.withLock { state -> Bool in
             if let source = state.source {
                 CFRunLoopRemoveSource(runLoop, source, .commonModes)
@@ -324,8 +314,8 @@ final nonisolated class EventTap: @unchecked Sendable {
         }
 
         Self.registerTap(self)
-        // `withLockUnchecked`: see the comment at the other `machPort`/
-        // `source` assignment above — same non-`Sendable` capture issue.
+        // withLockUnchecked: see the comment at the other machPort/
+        // source assignment above — same non-Sendable capture issue.
         state.withLockUnchecked { state in
             state.machPort = newMachPort
             state.source = newSource
@@ -348,7 +338,7 @@ final nonisolated class EventTap: @unchecked Sendable {
         }
         Self.unregisterTap(self)
         // Release the creation retain only after the lock exits: releasing
-        // `self` inside it could run `deinit` and re-enter the lock.
+        // self inside it could run deinit and re-enter the lock.
         let needsRelease = state.withLock { state -> Bool in
             if let source = state.source {
                 CFRunLoopRemoveSource(runLoop, source, .commonModes)

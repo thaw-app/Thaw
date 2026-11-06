@@ -424,7 +424,7 @@ struct DisplaySettingsPane: View {
     }
 
     /// Writes the new spacing to displaySettings.configurations, whose
-    /// `didSet` drives the relaunch wave. Write any profile file first.
+    /// didSet drives the relaunch wave. Write any profile file first.
     private func commitSpacing(displayID: String, offset: Double) {
         draftSpacing[displayID] = CGFloat(offset)
         displaySettings.performUserSpacingChange {
@@ -724,7 +724,7 @@ struct DisplaySettingsPane: View {
     }
 
     /// Pushes the global template to every known display. The configurations
-    /// `didSet` then drives the relaunch wave for the active display.
+    /// didSet then drives the relaunch wave for the active display.
     private func commitGlobalApply() {
         displaySettings.performUserSpacingChange {
             displaySettings.applyGlobalToAllKnownDisplays()
@@ -748,7 +748,7 @@ struct DisplaySettingsPane: View {
         }
     }
 
-    /// Broadcasts the global template, then persists it to `id`'s profile.
+    /// Broadcasts the global template, then persists it to id's profile.
     /// Snapshots the previous configurations so a save failure can roll the
     /// live state back.
     private func updateActiveProfile(id: UUID) {
@@ -770,7 +770,7 @@ struct DisplaySettingsPane: View {
     }
 
     /// Broadcasts the global template, then persists it to every profile.
-    /// Mirrors ``updateActiveProfile(id:)``'s rollback-on-failure behavior.
+    /// Mirrors updateActiveProfile(id:)'s rollback-on-failure behavior.
     private func updateAllProfiles() {
         let previousConfigurations = displaySettings.configurations
         commitGlobalApply()

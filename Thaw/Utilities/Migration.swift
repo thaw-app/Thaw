@@ -10,7 +10,7 @@ import Foundation
 
 /// Brings settings written by an earlier app version up to the current format.
 ///
-/// Ice-format settings arrive through ``IceSettingsImporter``, which converts
+/// Ice-format settings arrive through IceSettingsImporter, which converts
 /// them as it reads; Thaw's own domain never held the old Ice formats.
 @MainActor
 struct MigrationManager {

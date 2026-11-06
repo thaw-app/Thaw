@@ -11,13 +11,13 @@ import Foundation
 
 /// Decides when a control item's window counts as occluded.
 ///
-/// `NSWindow.occlusionState` is the only permission-free way to learn the menu
+/// NSWindow.occlusionState is the only permission-free way to learn the menu
 /// bar accepted a status item but isn't rendering it, as when macOS parks it
 /// in the notch dead zone.
 ///
 /// The window server publishes occlusion asynchronously, so a reading right
 /// after a reorder describes the old layout, and a lid or display change
-/// briefly reports everything occluded. ``Evaluator`` requires consecutive
+/// briefly reports everything occluded. Evaluator requires consecutive
 /// agreeing samples and discards readings while a display change settles.
 ///
 /// A false visible is expected (transparent regions count as visible); a
@@ -42,18 +42,18 @@ nonisolated enum ControlItemOcclusion {
         let secondsSinceDisplayChange: TimeInterval
     }
 
-    /// Folds a stream of ``Sample``s into a debounced verdict.
+    /// Folds a stream of Samples into a debounced verdict.
     struct Evaluator {
         private(set) var isOccluded = false
 
         /// The verdict awaiting confirmation.
         private var candidate: Bool?
 
-        /// How many consecutive samples have agreed with ``candidate``.
+        /// How many consecutive samples have agreed with candidate.
         private var agreementCount = 0
 
-        /// - Returns: The new verdict when it changes, or `nil` while the
-        ///   current verdict stands or the sample was discarded.
+        /// Returns the new verdict when it changes, or nil while the
+        /// current verdict stands or the sample was discarded.
         mutating func evaluate(_ sample: Sample) -> Bool? {
             guard sample.isInMenuBar else {
                 // A returning item earns its confirmations from scratch.

@@ -55,8 +55,8 @@ struct MenuBarItemGroupTests {
 
     // MARK: normalized()
 
-    /// `createGroup` / `add` are user intent and steal the identifier from
-    /// whichever group holds it. `normalized()` repairs decoded data, where the
+    /// createGroup / add are user intent and steal the identifier from
+    /// whichever group holds it. normalized() repairs decoded data, where the
     /// earlier group wins.
     @Test("normalized() resolves a contested identifier in favour of the earlier group")
     func normalizationBreaksTiesTowardTheEarlierGroup() {

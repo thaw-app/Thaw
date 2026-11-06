@@ -9,14 +9,14 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// How `SpacingApplyMode` changes what the spacing manager promises. Under
-/// `writeOnly` nothing restarts, so `willRelaunch` is `false` even when the
+/// How SpacingApplyMode changes what the spacing manager promises. Under
+/// writeOnly nothing restarts, so willRelaunch is false even when the
 /// on-disk preference would force a wave (#1075).
 @MainActor
 @Suite("Spacing apply mode — manager behaviour")
 struct SpacingApplyModeManagerTests {
-    /// Mirrors the manager's private `Key` enum so tests can plant a mismatch
-    /// without `defaults write`.
+    /// Mirrors the manager's private Key enum so tests can plant a mismatch
+    /// without defaults write.
     private static let spacingKey = "NSStatusItemSpacing" as CFString
     private static let paddingKey = "NSStatusItemSelectionPadding" as CFString
     private let anyApp = kCFPreferencesAnyApplication
@@ -24,7 +24,7 @@ struct SpacingApplyModeManagerTests {
     private let currentHost = kCFPreferencesCurrentHost
 
     /// Writes both spacing keys into the byHost global domain and flushes so
-    /// `CFPreferencesCopyValue` sees them.
+    /// CFPreferencesCopyValue sees them.
     private func plantOnDiskSpacing(_ value: Int) {
         for key in [Self.spacingKey, Self.paddingKey] {
             CFPreferencesSetValue(

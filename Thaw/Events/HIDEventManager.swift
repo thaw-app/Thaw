@@ -50,11 +50,11 @@ final class HIDEventManager {
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
-    /// Task observing `GeneralSettings.showOnHover`, `AdvancedSettings.
-    /// showMenuBarTooltips`, and `DisplaySettingsManager.configurations`.
+    /// Task observing GeneralSettings.showOnHover, `AdvancedSettings.
+    /// showMenuBarTooltips, and DisplaySettingsManager.configurations`.
     private var hoverSettingsObservationTask: Task<Void, Never>?
 
-    /// Task observing `itemManager.itemCache`.
+    /// Task observing itemManager.itemCache.
     private var itemCacheWindowBoundsObservationTask: Task<Void, Never>?
 
     /// Timer that periodically checks whether the event tap is still
@@ -121,7 +121,7 @@ final class HIDEventManager {
         case hide
     }
 
-    /// Timestamp of the last `stopAll()` call, used by the health check
+    /// Timestamp of the last stopAll() call, used by the health check
     /// to detect a stuck disabled state.
     private var lastStopTimestamp: ContinuousClock.Instant?
 
@@ -318,16 +318,16 @@ final class HIDEventManager {
 
     /// The minimum squared distance (in points) the cursor must move
     /// between processed mouse-moved events before the screen queries in
-    /// `mouseMovedTap` run again. Squared so the hot-path comparison can
+    /// mouseMovedTap run again. Squared so the hot-path comparison can
     /// avoid a square root.
     private static let mouseMovedLocationEpsilonSquared: CGFloat = 1.0 * 1.0
 
-    /// Determines whether a mouse-moved event observed at `now` should be
+    /// Determines whether a mouse-moved event observed at now should be
     /// processed, given the timestamp of the last processed event, and
-    /// atomically records `now` as the new last-processed time when it
+    /// atomically records now as the new last-processed time when it
     /// does.
     ///
-    /// Read-and-set under one lock so two callers can't both pass. Takes `now`
+    /// Read-and-set under one lock so two callers can't both pass. Takes now
     /// as a parameter so it's testable without an event tap.
     static nonisolated func shouldProcessMouseMoved(
         now: TimeInterval,
@@ -517,7 +517,7 @@ final class HIDEventManager {
 
             // Start or stop the mouse-moved tap when show-on-hover,
             // menu-bar-tooltips, or per-display configurations change.
-            // `continue`, not `return`, so an early-out doesn't end the observation.
+            // continue, not return, so an early-out doesn't end the observation.
             let generalSettings = appState.settings.general
             let advancedSettings = appState.settings.advanced
             let displaySettings = appState.settings.displaySettings
@@ -949,7 +949,7 @@ extension HIDEventManager {
     }
 
     /// Tears down the guard if its deadline has passed. Call this before
-    /// reading `isShowOnClickGuardActive` in contexts that need to react
+    /// reading isShowOnClickGuardActive in contexts that need to react
     /// to expiry (e.g. the tap callback, hit-test helpers).
     private func expireShowOnClickGuardIfNeeded() {
         guard let deadline = showOnClickGuardDeadline, deadline <= .now else {
@@ -959,7 +959,7 @@ extension HIDEventManager {
     }
 
     /// Pure read — returns whether the guard is currently armed and within its
-    /// deadline. Does not mutate state; call `expireShowOnClickGuardIfNeeded()`
+    /// deadline. Does not mutate state; call expireShowOnClickGuardIfNeeded()
     /// first if expiry should be applied.
     private var isShowOnClickGuardActive: Bool {
         guard let deadline = showOnClickGuardDeadline else {
@@ -1189,9 +1189,9 @@ extension HIDEventManager {
     /// the correct menu bar item, then posts a synthetic click directly to
     /// the owning application's PID.
     ///
-    /// - Returns: `true` if the click was on an application menu area (regardless
-    ///   of whether forwarding was needed), `false` otherwise. Callers should skip
-    ///   show-on-click behavior when this returns `true`.
+    /// Returns true if the click was on an application menu area (regardless
+    /// of whether forwarding was needed), false otherwise. Callers should skip
+    /// show-on-click behavior when this returns true.
     @discardableResult
     private func handleApplicationMenuClickThrough(
         appState: AppState,
@@ -1484,7 +1484,7 @@ extension HIDEventManager {
         appState: AppState,
         screen: NSScreen
     ) {
-        // `isMouseInsideEmptyMenuBarSpace` excludes the Thaw icon, but
+        // isMouseInsideEmptyMenuBarSpace excludes the Thaw icon, but
         // scrolling on the icon must reveal too. (#1073)
         let overEmptyMenuBarSpace = isMouseInsideEmptyMenuBarSpace(
             appState: appState,
@@ -1518,8 +1518,8 @@ extension HIDEventManager {
     /// Returns the best screen to use for hover, scroll, and tooltip calculations.
     ///
     /// Always the screen owning the active menu bar, since clicks on an
-    /// inactive menu bar do nothing. `mouseDownMonitor` uses
-    /// `NSScreen.screenWithMouse` instead.
+    /// inactive menu bar do nothing. mouseDownMonitor uses
+    /// NSScreen.screenWithMouse instead.
     func bestScreen(appState _: AppState) -> NSScreen? {
         NSScreen.screenWithActiveMenuBar ?? NSScreen.main
     }
@@ -1659,7 +1659,7 @@ extension HIDEventManager {
         return applicationMenuFrame.contains(mouseLocation)
     }
 
-    /// Returns `true` when the current mouse location hits a cached menu bar item
+    /// Returns true when the current mouse location hits a cached menu bar item
     /// bounds entry. This is the fast path used by hover/click hit testing.
     private func isMouseInsideCachedMenuBarItem() -> Bool {
         guard let mouseLocation = MouseHelpers.locationCoreGraphics else {
@@ -1713,7 +1713,7 @@ extension HIDEventManager {
     /// A Boolean value that indicates whether the mouse pointer is within
     /// the bounds of the screen's notch, if it has one.
     ///
-    /// If the screen does not have a notch, this property returns `false`.
+    /// If the screen does not have a notch, this property returns false.
     func isMouseInsideNotch(appState _: AppState, screen: NSScreen) -> Bool {
         guard
             let mouseLocation = MouseHelpers.locationAppKit,
@@ -1791,8 +1791,8 @@ extension HIDEventManager {
 
     /// Returns whether the cursor is inside the same application-menu region
     /// that the click-through path treats as belonging to the app menu.
-    /// Returns `nil` when the AX result is indeterminate (AX queries failed),
-    /// `true` when the cursor is inside a menu item, and `false` when AX
+    /// Returns nil when the AX result is indeterminate (AX queries failed),
+    /// true when the cursor is inside a menu item, and false when AX
     /// queries succeeded but no menu item contains the cursor.
     private func isMouseInsideApplicationMenuClickRegion(
         appState: AppState,
@@ -1830,7 +1830,7 @@ extension HIDEventManager {
 
     /// Classifies a click against the menu bar-owning app's AX menu items.
     ///
-    /// Returns nil unless every item overlaps `menuBarStrip`, since some apps
+    /// Returns nil unless every item overlaps menuBarStrip, since some apps
     /// (Firefox) report menus that aren't the ones on screen.
     static nonisolated func applicationMenuHitResult(
         childFrames: [CGRect],
@@ -1895,7 +1895,7 @@ extension HIDEventManager {
 private protocol EventMonitorProtocol {
     func start()
     func stop()
-    /// Checks validity and restarts if needed. Returns `true` if running after call.
+    /// Checks validity and restarts if needed. Returns true if running after call.
     @discardableResult
     func ensureRunning() -> Bool
 }

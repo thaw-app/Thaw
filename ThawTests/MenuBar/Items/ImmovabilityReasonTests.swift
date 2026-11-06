@@ -10,7 +10,7 @@ import Testing
 @testable import Thaw
 
 /// Characterizes the gate that refuses to move an item, and its agreement
-/// with `isMovable`.
+/// with isMovable.
 ///
 /// The refusal sites log the named reason and the alert copy branches on it,
 /// so a static macOS prohibition reads differently from a resolution failure (#905).
@@ -66,7 +66,7 @@ struct ImmovabilityReasonTests {
         #expect(item.isMovable)
     }
 
-    /// Only the `Item-N` shape marks a system-owned slot, even while the
+    /// Only the Item-N shape marks a system-owned slot, even while the
     /// source is unresolved.
     @Test("An unresolved named Control Center title is not parked")
     func unresolvedNamedTitleIsMovable() {

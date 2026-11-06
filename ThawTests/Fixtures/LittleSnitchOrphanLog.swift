@@ -6,17 +6,15 @@
 //  Licensed under the GNU GPLv3
 
 /// Verbatim excerpt from a field log where the Little Snitch agent kept
-/// moving on launch, kept to the lines the replay harness parses:
-///
-///   - the Missing sourcePID warning that proves the Little Snitch agent icon
-///     (windowID 64, namespaced com.apple.controlcenter:Item-0) had no
-///     resolved source process for most of the session;
-///   - one buggy applyProfileLayout cycle at 17:13:37 where the unresolved
-///     orphan is the sole item routed through planUnmanagedPlacement and then
-///     physically moved;
-///   - one clean applyProfileLayout cycle at 18:01:11, after marker-pair
-///     resolution renamed the same physical item to
-///     at.obdev.littlesnitch.agent:Item-0, where nothing is unmanaged.
+/// moving on launch, kept to the lines the replay harness parses: the
+/// Missing sourcePID warning that proves the Little Snitch agent icon
+/// (windowID 64, namespaced com.apple.controlcenter:Item-0) had no
+/// resolved source process for most of the session; one buggy
+/// applyProfileLayout cycle at 17:13:37 where the unresolved orphan is the
+/// sole item routed through planUnmanagedPlacement and then physically
+/// moved; and one clean applyProfileLayout cycle at 18:01:11, after marker-pair
+/// resolution renamed the same physical item to
+/// at.obdev.littlesnitch.agent:Item-0, where nothing is unmanaged.
 ///
 /// Thaw does not log the desired visible set, so the harness reconstructs it.
 enum LittleSnitchOrphanLog {

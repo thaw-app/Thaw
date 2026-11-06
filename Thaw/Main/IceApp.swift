@@ -10,8 +10,8 @@ import SwiftUI
 
 /// The process entry point.
 ///
-/// Wraps ``IceApp`` so command-line invocations can exit before AppKit starts.
-/// ``IceApp`` can't: its delegate adaptor builds the whole `AppState` on init.
+/// Wraps IceApp so command-line invocations can exit before AppKit starts.
+/// IceApp can't: its delegate adaptor builds the whole AppState on init.
 @main
 enum ThawMain {
     static func main() {

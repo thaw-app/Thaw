@@ -8,11 +8,11 @@
 import Combine
 import Foundation
 
-/// Owns the persisted ``MenuBarItemGroupSet`` and is the app-side entry point
+/// Owns the persisted MenuBarItemGroupSet and is the app-side entry point
 /// for resolving and editing menu bar item groups.
 ///
-/// The pure rules live in ``MenuBarItemGroupSet`` and
-/// ``MenuBarItemGroupResolver``; this adds persistence and publishing.
+/// The pure rules live in MenuBarItemGroupSet and
+/// MenuBarItemGroupResolver; this adds persistence and publishing.
 @MainActor
 @Observable
 final class MenuBarItemGroupManager {
@@ -24,8 +24,8 @@ final class MenuBarItemGroupManager {
     private let defaults: UserDefaults
     nonisolated private static let storageKey = "MenuBarItemGroups"
 
-    /// - Parameter defaults: injectable so tests can use an isolated suite
-    ///   instead of the app's real preferences.
+    /// defaults: injectable so tests can use an isolated suite
+    /// instead of the app's real preferences.
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         load()
@@ -90,8 +90,8 @@ final class MenuBarItemGroupManager {
         MenuBarItemGroupResolver.resolve(tags: items.map(\.tag), groupSet: groupSet)
     }
 
-    /// The items a drag starting on `item` moves as one block, in `items` order.
-    /// Returns just `item` when it belongs to no group.
+    /// The items a drag starting on item moves as one block, in items order.
+    /// Returns just item when it belongs to no group.
     func dragUnit(for item: MenuBarItem, in items: [MenuBarItem]) -> [MenuBarItem] {
         guard let index = items.firstIndex(where: { $0.tag == item.tag }) else { return [item] }
         let groups = resolvedGroups(for: items)
@@ -117,7 +117,7 @@ final class MenuBarItemGroupManager {
 
     // MARK: Editing
 
-    /// Creates a group from `items`. Returns `nil` when fewer than two distinct
+    /// Creates a group from items. Returns nil when fewer than two distinct
     /// groupable identifiers remain.
     @discardableResult
     func createGroup(name: String?, items: [MenuBarItem]) -> MenuBarItemGroup? {

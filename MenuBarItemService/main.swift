@@ -9,15 +9,15 @@
 import AXSwift6
 import Foundation
 
-// Bound AX messaging before any element exists (`UIElement.init` applies it),
+// Bound AX messaging before any element exists (UIElement.init applies it),
 // or one wedged app stalls the scan for the six-second system default.
-// Not user-overridable: the service can't read `Defaults`.
+// Not user-overridable: the service can't read Defaults.
 UIElement.defaultMessagingTimeout = Float(SharedConstants.axMessagingTimeout)
 
 // The app enables file logging via configureLogging so both processes share
 // one file. Earlier messages still reach OSLog.
 
-// SourcePIDCache is an actor; `start()` only wires up the Combine
+// SourcePIDCache is an actor; start() only wires up the Combine
 // observer pipeline used for periodic cache cleanup, so it does not
 // need to complete before the listener activates.
 Task {

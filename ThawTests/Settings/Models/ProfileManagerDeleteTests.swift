@@ -9,15 +9,15 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Regression lock for `ProfileManager.deleteProfile(id:)` when the
+/// Regression lock for ProfileManager.deleteProfile(id:) when the
 /// profile's on-disk JSON file is already missing.
 ///
-/// `FileManager.removeItem` throws when the file is already gone (out-of-band
+/// FileManager.removeItem throws when the file is already gone (out-of-band
 /// deletion, cloud-sync churn, a partial earlier delete). Removing the file
 /// before the manifest entry left the profile stuck in the UI for good.
 ///
-/// Serialized to match `ProfileManagerCRUDTests`: both drive a real
-/// `ProfileManager` over on-disk state.
+/// Serialized to match ProfileManagerCRUDTests: both drive a real
+/// ProfileManager over on-disk state.
 @MainActor
 @Suite("Profile manager delete", .serialized)
 final class ProfileManagerDeleteTests {
@@ -34,8 +34,8 @@ final class ProfileManagerDeleteTests {
         try? FileManager.default.removeItem(at: tmp)
     }
 
-    /// The JSON file is deleted out-of-band, then `deleteProfile(id:)` must not
-    /// throw and the manifest entry must be gone. The bare `try` is itself an
+    /// The JSON file is deleted out-of-band, then deleteProfile(id:) must not
+    /// throw and the manifest entry must be gone. The bare try is itself an
     /// assertion.
     @Test("Deleting a profile whose file already vanished still clears the manifest entry")
     func deleteProfileWithMissingFileDoesNotThrowAndRemovesManifestEntry() throws {
@@ -72,8 +72,8 @@ final class ProfileManagerDeleteTests {
         #expect(!profileManager.profiles.contains { $0.id == profile.id })
     }
 
-    /// Happy path: `deleteProfile(id:)` removes the file and the manifest
-    /// entry. The bare `try` asserts it doesn't throw.
+    /// Happy path: deleteProfile(id:) removes the file and the manifest
+    /// entry. The bare try asserts it doesn't throw.
     @Test("Deleting a profile removes both its file and its manifest entry")
     func deleteProfileHappyPathRemovesFileAndManifestEntry() throws {
         let profile = makeProfile()

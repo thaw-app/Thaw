@@ -12,7 +12,7 @@
 /// TTL outlasts every retry and the cache never converges, so early failures
 /// get short deadlines and repeats back off to the steady-state TTL.
 nonisolated enum SourcePIDNegativeCachePolicy {
-    /// The negative-cache deadline applied after `failures` consecutive
+    /// The negative-cache deadline applied after failures consecutive
     /// full scans have left a window unresolved (1 = the first failure).
     ///
     /// Values at or below 1 clamp to the first rung, so errors mean more scanning.

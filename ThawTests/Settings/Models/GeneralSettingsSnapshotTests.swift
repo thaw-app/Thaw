@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``GeneralSettingsSnapshot``'s value semantics and `Codable`
+/// Covers GeneralSettingsSnapshot's value semantics and Codable
 /// conformance. It's the on-disk shape of a profile's General pane, so icons,
 /// the Ice Bar location, and the rehide strategy must round-trip unchanged.
 @Suite("General settings snapshot")

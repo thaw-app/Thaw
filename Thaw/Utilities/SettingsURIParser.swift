@@ -7,9 +7,9 @@
 
 import Foundation
 
-/// A parameterless action reachable via `thaw://`.
+/// A parameterless action reachable via thaw://.
 ///
-/// Explicitly `nonisolated`: the Thaw target defaults to MainActor isolation,
+/// Explicitly nonisolated: the Thaw target defaults to MainActor isolation,
 /// but URI parsing is pure Foundation work (and is fuzzed off the main actor).
 nonisolated enum SettingsURIAction: String, CaseIterable, Equatable, Sendable {
     case toggleHidden = "toggle-hidden"
@@ -30,7 +30,7 @@ nonisolated enum SettingsURIAction: String, CaseIterable, Equatable, Sendable {
     }
 }
 
-/// The decoded intent of an incoming `thaw://` URL.
+/// The decoded intent of an incoming thaw:// URL.
 nonisolated enum SettingsURIRoute: Equatable, Sendable {
     case set(key: String, value: String, displayUUID: String?)
     case toggle(key: String, displayUUID: String?)
@@ -49,23 +49,23 @@ nonisolated enum SettingsURIRoute: Equatable, Sendable {
     case unrecognized(host: String)
 }
 
-/// A parsed `thaw://` URL.
+/// A parsed thaw:// URL.
 ///
 /// Parsing is total: every URL yields a request, and unroutable input is
-/// represented as ``SettingsURIRoute/malformed(host:)`` or
-/// ``SettingsURIRoute/unrecognized(host:)`` rather than being discarded. This
+/// represented as SettingsURIRoute/malformed(host:) or
+/// SettingsURIRoute/unrecognized(host:) rather than being discarded. This
 /// keeps the decision of *what to do* with bad input at the call site, where
 /// the diagnostic log and the authorization gate live.
 nonisolated struct SettingsURIRequest: Equatable, Sendable {
     let route: SettingsURIRoute
 
-    /// Manual sender override supplied via the `bundleId` query item.
+    /// Manual sender override supplied via the bundleId query item.
     ///
     /// Only honored by DEBUG builds; the parser always records it so that the
     /// release-build behavior of ignoring it is expressed at the call site.
     let bundleIdOverride: String?
 
-    /// `thaw://get?key=version` is read-only metadata and skips authorization.
+    /// thaw://get?key=version is read-only metadata and skips authorization.
     var isVersionQuery: Bool {
         if case let .get(key, _, _, _, _) = route {
             return key == "version"
@@ -84,7 +84,7 @@ nonisolated struct SettingsURIRequest: Equatable, Sendable {
     }
 }
 
-/// Decomposes `thaw://` URLs into ``SettingsURIRequest`` values.
+/// Decomposes thaw:// URLs into SettingsURIRequest values.
 ///
 /// This is deliberately free of AppKit, app state, and I/O so that the one
 /// parser handling attacker-reachable input can be unit tested and fuzzed.

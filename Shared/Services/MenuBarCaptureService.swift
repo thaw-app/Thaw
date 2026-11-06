@@ -10,8 +10,8 @@ import Foundation
 
 /// Offscreen menu-bar capture XPC vocabulary.
 ///
-/// SkyLight's `SLWindowListCreateImageFromArray` leaks a small dictionary in
-/// the calling process per successful call (commit `0e045faf`). This service
+/// SkyLight's SLWindowListCreateImageFromArray leaks a small dictionary in
+/// the calling process per successful call (commit 0e045faf). This service
 /// exists so that leak can be reclaimed by exiting the helper. Visible-section
 /// icons stay on ScreenCaptureKit in the app; Always Hidden stays at 1 fps.
 nonisolated enum MenuBarCaptureService {
@@ -19,7 +19,7 @@ nonisolated enum MenuBarCaptureService {
 
     /// Exit after this many successful SkyLight composites.
     ///
-    /// Commit `0e045faf` measured ~168 B per leaked dictionary. 1,800 calls is
+    /// Commit 0e045faf measured ~168 B per leaked dictionary. 1,800 calls is
     /// about 60 s at 30 fps and ~300 KB of helper growth before recycle.
     static let recycleAfterCaptureCount = 1_800
 
@@ -58,9 +58,9 @@ nonisolated extension MenuBarCaptureService {
 
     enum Request: Codable, Equatable {
         case start
-        /// Points the helper's diagnostic logger at `filePath`, or turns file
-        /// logging off when `nil`. Sent at startup, on a replaced session, and on
-        /// log rotation. `rotationPolicy` makes the helper prune by the app's rules.
+        /// Points the helper's diagnostic logger at filePath, or turns file
+        /// logging off when nil. Sent at startup, on a replaced session, and on
+        /// log rotation. rotationPolicy makes the helper prune by the app's rules.
         case configureLogging(filePath: String?, rotationPolicy: DiagnosticLogger.RotationPolicy?)
         case captureBatch(CaptureBatchRequest)
         case recycle
@@ -75,7 +75,7 @@ nonisolated extension MenuBarCaptureService {
 }
 
 nonisolated extension MenuBarCaptureService {
-    /// Drops zeros, duplicates, non-members, and anything past ``maxWindowCount``.
+    /// Drops zeros, duplicates, non-members, and anything past maxWindowCount.
     static func validatedWindowIDs(
         _ ids: [CGWindowID],
         allowed: Set<CGWindowID>

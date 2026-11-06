@@ -28,7 +28,7 @@ nonisolated enum PendingLedger {
             /// A normal pending relocation targeting a specific section.
             case section(MenuBarSection.Name)
             /// The rehide hit its retry cap; suppress moves until the windowID
-            /// changes. `setAt` lets an app that never relaunches age out; nil
+            /// changes. setAt lets an app that never relaunches age out; nil
             /// is the old untimestamped format, treated as stale.
             case waitForRelaunch(windowID: CGWindowID, section: MenuBarSection.Name, setAt: Date?)
         }
@@ -39,7 +39,7 @@ nonisolated enum PendingLedger {
         /// The orchestrator clears the pending entry on success.
         case move(item: MenuBarItem, destination: MenuBarItemManager.MoveDestination)
         /// Clear without moving, e.g. the item is already in its target
-        /// section, or the target was `.visible`.
+        /// section, or the target was .visible.
         case clearEntry
         /// The sentinel's windowID changed (app relaunched); promote it to a
         /// regular section entry.
@@ -56,8 +56,8 @@ nonisolated enum PendingLedger {
         }
     }
 
-    /// `destinations` is what temporarilyShow persisted at move time (a
-    /// neighbor and which side of it). `fallbackNeighbors` is rebuilt each
+    /// destinations is what temporarilyShow persisted at move time (a
+    /// neighbor and which side of it). fallbackNeighbors is rebuilt each
     /// cycle and used when the stored neighbor is gone.
     struct PendingReturnInfo: Equatable {
         let destinations: [String: [String: String]]

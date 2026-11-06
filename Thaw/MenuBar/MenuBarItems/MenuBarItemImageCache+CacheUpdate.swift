@@ -35,8 +35,8 @@ extension MenuBarItemImageCache {
 
     /// Updates the cache for the given sections unconditionally.
     ///
-    /// - Parameter preferredDisplayID: When set (e.g. the Thaw Bar's screen),
-    ///   capture from that display instead of the standing item-cache display.
+    /// preferredDisplayID: When set (e.g. the Thaw Bar's screen),
+    /// capture from that display instead of the standing item-cache display.
     @MainActor
     func updateCacheWithoutChecks(
         sections: [MenuBarSection.Name],

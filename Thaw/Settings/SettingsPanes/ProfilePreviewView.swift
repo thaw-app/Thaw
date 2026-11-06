@@ -13,7 +13,7 @@ import SwiftUI
 /// view so identifier parsing and section assembly are unit-testable.
 nonisolated enum ProfilePreviewModel {
     struct Item: Identifiable, Equatable {
-        /// The item's uniqueIdentifier (`namespace:title`) from the snapshot.
+        /// The item's uniqueIdentifier (namespace:title) from the snapshot.
         let id: String
         /// The namespace half of the identifier, effectively a bundle ID.
         let bundleID: String
@@ -29,8 +29,8 @@ nonisolated enum ProfilePreviewModel {
     /// The section keys a layout snapshot stores, in menu bar display order.
     static let sectionKeys = ["visible", "hidden", "alwaysHidden"]
 
-    /// Splits a `namespace:title` uniqueIdentifier. Identifiers written by
-    /// `savedSectionOrder` (older profiles) are bare bundle IDs without a
+    /// Splits a namespace:title uniqueIdentifier. Identifiers written by
+    /// savedSectionOrder (older profiles) are bare bundle IDs without a
     /// colon; those parse as namespace-only with the bundle ID as title.
     static func split(_ uniqueIdentifier: String) -> (namespace: String, title: String) {
         guard let colon = uniqueIdentifier.firstIndex(of: ":") else {
@@ -44,9 +44,9 @@ nonisolated enum ProfilePreviewModel {
 
     /// Assembles the preview sections from a layout snapshot.
     ///
-    /// Reads through ``MenuBarLayoutSnapshot/resolvedItemOrder`` so the
+    /// Reads through MenuBarLayoutSnapshot/resolvedItemOrder so the
     /// preview shows what an apply would do, including its legacy and
-    /// empty-`itemOrder` fallbacks.
+    /// empty-itemOrder fallbacks.
     static func sections(for layout: MenuBarLayoutSnapshot) -> [Section] {
         let order = layout.resolvedItemOrder
         return sectionKeys.map { key in
@@ -63,11 +63,11 @@ nonisolated enum ProfilePreviewModel {
     }
 
     struct SpacingRow: Identifiable, Equatable {
-        /// `"global"` for the profile-wide value, otherwise the display UUID.
+        /// "global" for the profile-wide value, otherwise the display UUID.
         let id: String
         /// The resolved display name; nil for the global row.
         let displayName: String?
-        /// The stored `itemSpacingOffset`, in points.
+        /// The stored itemSpacingOffset, in points.
         let offset: Double
     }
 

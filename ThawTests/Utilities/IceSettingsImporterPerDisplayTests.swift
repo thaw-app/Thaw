@@ -10,16 +10,16 @@ import Testing
 @testable import Thaw
 
 /// Covers the per-display half of the Ice import: when the source domain has
-/// `UseIceBar` enabled, the importer must synthesize a
-/// `DisplayIceBarConfiguration` for every connected display so the migrated
+/// UseIceBar enabled, the importer must synthesize a
+/// DisplayIceBarConfiguration for every connected display so the migrated
 /// setting actually takes effect in Thaw's per-display model.
 ///
-/// `buildConfigurations` walks the real `NSScreen` list, which hosted tests
+/// buildConfigurations walks the real NSScreen list, which hosted tests
 /// have at least one of, so the generated dictionary is asserted non-empty
 /// rather than against a fixed display count.
 ///
 /// Like the sibling importer suites, every case runs inside
-/// `withScratchDefaults` and the suite is `.serialized`: `Defaults.store` is
+/// withScratchDefaults and the suite is .serialized: Defaults.store is
 /// process-wide.
 @Suite("Ice settings importer: per-display generation", .serialized)
 @MainActor

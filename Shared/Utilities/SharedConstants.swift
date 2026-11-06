@@ -9,7 +9,7 @@ import Foundation
 
 /// Constants shared across all targets (main app and XPC services).
 /// Only values that are needed in every target belong here; app-only
-/// constants live in `Constants` (Thaw target).
+/// constants live in Constants (Thaw target).
 nonisolated enum SharedConstants {
     // MARK: - System Framework Paths
 
@@ -25,8 +25,8 @@ nonisolated enum SharedConstants {
     ///
     /// AX calls are synchronous IPC, so a stalled app blocks us for the
     /// six-second system default (#767). Healthy calls take well under 100 ms.
-    /// The app applies it in `applicationWillFinishLaunching` (overridable via
-    /// `axMessagingTimeout`); `MenuBarItemService` uses it directly.
+    /// The app applies it in applicationWillFinishLaunching (overridable via
+    /// axMessagingTimeout); MenuBarItemService uses it directly.
     static let axMessagingTimeout = 1.0
 
     // MARK: - Menu Bar Host

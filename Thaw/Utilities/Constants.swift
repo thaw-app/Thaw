@@ -9,7 +9,7 @@
 import Foundation
 
 /// App-specific constants for the main Thaw target.
-/// System-framework paths shared with XPC targets live in `SharedConstants`.
+/// System-framework paths shared with XPC targets live in SharedConstants.
 nonisolated enum Constants {
     // swiftlint:disable force_unwrapping
 
@@ -42,10 +42,10 @@ nonisolated enum Constants {
     static let donateURLInfoPlistKey = "ThawDonateURL"
 
     /// Info.plist key used to configure the executable URI for
-    /// `MenuBarItemSpacingManager` shell commands.
+    /// MenuBarItemSpacingManager shell commands.
     static let menuBarItemSpacingExecutableURIInfoPlistKey = "ThawMenuBarItemSpacingExecutableURI"
 
-    /// Info.plist key used to configure the executable URI for `launchctl`,
+    /// Info.plist key used to configure the executable URI for launchctl,
     /// which restarts LaunchAgent-owned menu bar items.
     static let launchctlExecutableURIInfoPlistKey = "ThawLaunchctlExecutableURI"
 
@@ -62,10 +62,10 @@ nonisolated enum Constants {
     /// The Crowdin project URL for community translations.
     static let translateURL = URL(string: "https://crowdin.com/project/thaw")!
 
-    /// The executable URL used by `MenuBarItemSpacingManager`.
+    /// The executable URL used by MenuBarItemSpacingManager.
     static let menuBarItemSpacingExecutableURL: URL = requiredInfoPlistURL(menuBarItemSpacingExecutableURIInfoPlistKey)
 
-    /// The `launchctl` executable used by `MenuBarItemSpacingManager`.
+    /// The launchctl executable used by MenuBarItemSpacingManager.
     static let launchctlExecutableURL: URL = requiredInfoPlistURL(launchctlExecutableURIInfoPlistKey)
 
     // MARK: - Helpers

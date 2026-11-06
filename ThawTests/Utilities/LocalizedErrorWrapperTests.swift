@@ -9,17 +9,17 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``LocalizedErrorWrapper``, which flattens an arbitrary error into a
+/// Covers LocalizedErrorWrapper, which flattens an arbitrary error into a
 /// value SwiftUI's alert presentation can read.
 ///
-/// An error that already conforms to `LocalizedError` has its four fields
-/// copied verbatim; anything else (a bridged `NSError`, a bare `enum`)
-/// contributes only `localizedDescription`. Getting that backwards would drop
+/// An error that already conforms to LocalizedError has its four fields
+/// copied verbatim; anything else (a bridged NSError, a bare enum)
+/// contributes only localizedDescription. Getting that backwards would drop
 /// a hand-written recovery suggestion or show Swift's generic "The operation
 /// couldn't be completed" text, and neither is visible without an alert.
 @Suite("Localized error wrapper")
 struct LocalizedErrorWrapperTests {
-    /// An error that fills in every `LocalizedError` field.
+    /// An error that fills in every LocalizedError field.
     private struct FullyDescribedError: LocalizedError {
         var errorDescription: String? {
             "description"
@@ -38,11 +38,11 @@ struct LocalizedErrorWrapperTests {
         }
     }
 
-    /// A `LocalizedError` that supplies nothing, which is the default
+    /// A LocalizedError that supplies nothing, which is the default
     /// conformance every protocol extension provides.
     private struct EmptyLocalizedError: LocalizedError {}
 
-    /// An error that does not conform to `LocalizedError`.
+    /// An error that does not conform to LocalizedError.
     private enum PlainError: Error {
         case failed
     }
@@ -59,8 +59,8 @@ struct LocalizedErrorWrapperTests {
         #expect(wrapper.recoverySuggestion == "suggestion")
     }
 
-    /// The default `LocalizedError` conformance returns nil for everything, and
-    /// the wrapper must not substitute `localizedDescription` for the missing
+    /// The default LocalizedError conformance returns nil for everything, and
+    /// the wrapper must not substitute localizedDescription for the missing
     /// values; that is the other branch's job.
     @Test("A localized error with no values wraps to all nil")
     func emptyLocalizedErrorWrapsToAllNil() {
@@ -72,7 +72,7 @@ struct LocalizedErrorWrapperTests {
         #expect(wrapper.recoverySuggestion == nil)
     }
 
-    /// Wrapping is idempotent, since the wrapper is itself a `LocalizedError`.
+    /// Wrapping is idempotent, since the wrapper is itself a LocalizedError.
     @Test("Wrapping a wrapper preserves the fields")
     func wrappingAWrapperPreservesTheFields() {
         let inner = LocalizedErrorWrapper(FullyDescribedError())
@@ -97,9 +97,9 @@ struct LocalizedErrorWrapperTests {
         #expect(wrapper.recoverySuggestion == nil)
     }
 
-    /// `NSError` does not conform to `LocalizedError`, so it takes the
-    /// non-localized branch and its `NSLocalizedDescriptionKey` value arrives
-    /// through `localizedDescription`.
+    /// NSError does not conform to LocalizedError, so it takes the
+    /// non-localized branch and its NSLocalizedDescriptionKey value arrives
+    /// through localizedDescription.
     @Test("An NSError's localized description survives the non-localized branch")
     func nsErrorDescriptionSurvives() {
         let error = NSError(
@@ -119,8 +119,8 @@ struct LocalizedErrorWrapperTests {
 
     // MARK: - LocalizedError Conformance
 
-    /// `localizedDescription` on a `LocalizedError` is derived from
-    /// `errorDescription`, which is what an alert title ends up showing.
+    /// localizedDescription on a LocalizedError is derived from
+    /// errorDescription, which is what an alert title ends up showing.
     @Test("The wrapper's localized description comes from the wrapped error")
     func localizedDescriptionComesFromTheWrappedError() {
         let wrapper = LocalizedErrorWrapper(FullyDescribedError())

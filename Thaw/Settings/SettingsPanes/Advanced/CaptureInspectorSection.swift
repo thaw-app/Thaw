@@ -11,7 +11,7 @@ import SwiftUI
 /// Shows the untreated frame Thaw captures, so granting Screen Recording comes
 /// with the ability to confirm the scope of what is observed.
 ///
-/// Drives the app's own `ScreenCapture` primitives, so it shows exactly the
+/// Drives the app's own ScreenCapture primitives, so it shows exactly the
 /// pipeline Thaw runs. Capture is manual, not on a timer, and nothing is
 /// written to disk.
 ///
@@ -115,14 +115,14 @@ struct CaptureInspectorSection: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Returns the menu bar band at the top of `displayBounds`.
+    /// Returns the menu bar band at the top of displayBounds.
     ///
     /// Both are in Core Graphics global coordinates (top-left origin), which
-    /// ``ScreenCapture/captureScreenBelowWindow(excludingWindowID:screenBounds:displayID:)``
-    /// passes to `SCStreamConfiguration.sourceRect`, so the band starts at
-    /// `minY` and grows down.
+    /// ScreenCapture/captureScreenBelowWindow(excludingWindowID:screenBounds:displayID:)
+    /// passes to SCStreamConfiguration.sourceRect, so the band starts at
+    /// minY and grows down.
     ///
-    /// Don't build it from `NSScreen.frame`: its bottom-left origin makes the
+    /// Don't build it from NSScreen.frame: its bottom-left origin makes the
     /// band land on the bottom of the display, at the right size, so nothing
     /// downstream notices.
     static func menuBarBand(inDisplayBounds displayBounds: CGRect, menuBarHeight: CGFloat) -> CGRect {

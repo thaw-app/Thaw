@@ -119,10 +119,10 @@ extension MenuBarItemManager {
 
     /// Decides which state an apply arms and clears; the body is the same.
     ///
-    /// - profile: the spec overwrites savedSectionOrder, pinning, and
-    ///   activeProfileLayout; isApplyingProfileLayout gates concurrent restores.
-    /// - savedOrder: savedSectionOrder is already the truth and pinning is
-    ///   kept. Only isRestoringItemOrder is armed.
+    /// For profile, the spec overwrites savedSectionOrder, pinning, and
+    /// activeProfileLayout, and isApplyingProfileLayout gates concurrent
+    /// restores. For savedOrder, savedSectionOrder is already the truth and
+    /// pinning is kept; only isRestoringItemOrder is armed.
     enum ApplySource {
         case profile
         case savedOrder

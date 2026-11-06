@@ -9,7 +9,7 @@ import AppKit
 import Testing
 @testable import Thaw
 
-/// Covers ``Predicates``, the namespace the app uses to name closures that
+/// Covers Predicates, the namespace the app uses to name closures that
 /// would otherwise be anonymous at the call site.
 ///
 /// Three of the four factories are pass-throughs, but as an overload set
@@ -17,9 +17,9 @@ import Testing
 /// so a mix-up would compile and ignore the value. Each test pins the result
 /// type to force a specific overload.
 ///
-/// ``Predicates/controlItemConstraint(button:)`` captures the button's
+/// Predicates/controlItemConstraint(button:) captures the button's
 /// superview at creation time, since the caller removes constraints while
-/// walking the view tree, and matches it against `secondItem`.
+/// walking the view tree, and matches it against secondItem.
 @MainActor
 @Suite("Predicates")
 struct PredicatesTests {

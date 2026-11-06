@@ -89,11 +89,11 @@ nonisolated enum SourcePIDSeedStore {
     /// Bounded so a recycled, same-shaped window ID can't look current forever.
     static let maximumSeedAge: TimeInterval = 5 * 60
 
-    /// Avoids rewriting defaults every pass. Well below ``maximumSeedAge``.
+    /// Avoids rewriting defaults every pass. Well below maximumSeedAge.
     static let seedRefreshInterval: TimeInterval = 60
 
     /// A launch handoff can briefly show two Control Center processes, and
-    /// `runningApplications` has no ordering contract, so pick the newest.
+    /// runningApplications has no ordering contract, so pick the newest.
     static func newestGeneration(in generations: [ProcessGeneration]) -> ProcessGeneration? {
         generations.max { lhs, rhs in
             if lhs.launchDate == rhs.launchDate {
@@ -211,7 +211,7 @@ nonisolated enum SourcePIDSeedStore {
     /// Restores only unresolved entries whose current host, window
     /// fingerprint, and source process match a recent seed exactly.
     ///
-    /// - Returns: The seed used for each restored window.
+    /// Returns the seed used for each restored window.
     static func apply(
         seeds: [CGWindowID: SourcePIDSeed],
         to pids: inout [pid_t?],

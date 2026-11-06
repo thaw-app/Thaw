@@ -86,7 +86,7 @@ struct MenuBarSectionNameTests {
 
     // MARK: - localized
 
-    // LocalizedStringKey is not Equatable, so compare `String(describing:)` against
+    // LocalizedStringKey is not Equatable, so compare String(describing:) against
     // a key built from the expected string.
 
     @Test("visible exposes the \"Visible\" localized key")

@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// `SpacingApplyMode`: whether a spacing change restarts menu bar apps or waits
+/// SpacingApplyMode: whether a spacing change restarts menu bar apps or waits
 /// for the next restart (#1075).
 @Suite("Spacing apply mode")
 struct SpacingApplyModeTests {
@@ -32,7 +32,7 @@ struct SpacingApplyModeTests {
             let decoded = try JSONDecoder().decode(SpacingApplyMode.self, from: data)
             #expect(decoded == mode)
             // Defaults stores the raw string, so the JSON must be a plain string for
-            // `Defaults.string -> init(rawValue:)` to read it back.
+            // Defaults.string -> init(rawValue:) to read it back.
             let asString = try #require(String(data: data, encoding: .utf8))
             #expect(asString.contains(mode.rawValue))
         }

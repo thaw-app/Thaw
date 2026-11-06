@@ -13,7 +13,7 @@ final class PopoverAnchorWindow {
     /// Created on first use.
     private var window: NSWindow?
 
-    /// Moves the window to the top center of `screen`, shows it, and
+    /// Moves the window to the top center of screen, shows it, and
     /// returns its content view to anchor a popover to.
     func anchorView(for screen: NSScreen) -> NSView? {
         let window: NSWindow

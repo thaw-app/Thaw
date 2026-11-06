@@ -8,7 +8,7 @@
 import Testing
 @testable import Thaw
 
-/// `LayoutSolver.shouldPersistSavedOrder`, the gate uncheckedCacheItems uses
+/// LayoutSolver.shouldPersistSavedOrder, the gate uncheckedCacheItems uses
 /// before writing savedSectionOrder. Each in-flight signal that blocks a save
 /// has its own test.
 @Suite("Should persist saved order")
@@ -83,7 +83,7 @@ struct ShouldPersistSavedOrderTests {
         ))
     }
 
-    /// Without that divider every always-hidden item degrades to `.hidden` (#849).
+    /// Without that divider every always-hidden item degrades to .hidden (#849).
     @Test("An unresolved always-hidden section blocks the save")
     func alwaysHiddenSectionUnresolvedBlocks() {
         #expect(!LayoutSolver.shouldPersistSavedOrder(
@@ -132,7 +132,7 @@ struct ShouldPersistSavedOrderTests {
         ))
     }
 
-    /// `applySavedLayout` declines to restore for five seconds after a move, so a
+    /// applySavedLayout declines to restore for five seconds after a move, so a
     /// save in that window would make the interrupted arrangement stick (#958).
     @Test("The move cooldown blocks the save")
     func moveCooldownBlocks() {

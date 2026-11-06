@@ -11,17 +11,17 @@ import Testing
 @testable import Thaw
 
 /// Regression locks for the always-hidden divider recovery in
-/// `ControlItemPair` (#991).
+/// ControlItemPair (#991).
 ///
 /// On macOS 26 the parked always-hidden divider intermittently drops out of
-/// the enumerated list after a restart. `alwaysHidden` then resolved nil, and
+/// the enumerated list after a restart. alwaysHidden then resolved nil, and
 /// profile applies skipped or abandoned mid-apply, so icons never converged.
 ///
-/// `resolveAlwaysHidden(in:authoritativeWindowID:recovery:)` recovers the
+/// resolveAlwaysHidden(in:authoritativeWindowID:recovery:) recovers the
 /// divider from its own authoritative window when it is absent from the list.
 ///
 /// The unit target owns no real windows, so the recovery leaf is injected and
-/// the full-init case can only confirm `alwaysHidden` stays nil here.
+/// the full-init case can only confirm alwaysHidden stays nil here.
 @MainActor
 @Suite("ControlItemPair always-hidden recovery")
 struct ControlItemPairAlwaysHiddenRecoveryTests {

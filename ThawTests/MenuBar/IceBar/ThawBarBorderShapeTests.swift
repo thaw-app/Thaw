@@ -12,9 +12,9 @@ import Testing
 /// Covers the geometry the Thaw Bar's clip and border share, and the path
 /// surgery that opens the top edge on square corners (#325).
 ///
-/// `path(in:)` introspects a closed `UnevenRoundedRectangle` path, so it
+/// path(in:) introspects a closed UnevenRoundedRectangle path, so it
 /// depends on how SwiftUI emits it: the starting element, and whether the
-/// top corners land exactly on `minY`. A change there shows up as a stray
+/// top corners land exactly on minY. A change there shows up as a stray
 /// line across the bar.
 @Suite("Thaw Bar border shape")
 struct ThawBarBorderShapeTests {
@@ -116,7 +116,7 @@ struct ThawBarBorderShapeTests {
 
     // MARK: - Inset accumulation
 
-    /// `InsettableShape` insets compose, so `.strokeBorder` and an explicit
+    /// InsettableShape insets compose, so .strokeBorder and an explicit
     /// inset do not overwrite one another.
     @Test("Insets accumulate")
     func insetsAccumulate() {
@@ -196,7 +196,7 @@ struct ThawBarBorderShapeTests {
 
 // MARK: - Path introspection
 
-/// A flattened view of a `Path`: its segment endpoints, in draw order.
+/// A flattened view of a Path: its segment endpoints, in draw order.
 private struct Outline {
     struct Segment {
         var from: CGPoint
@@ -244,7 +244,7 @@ private struct Outline {
         }
     }
 
-    /// Whether any segment runs horizontally along the top of `rect`.
+    /// Whether any segment runs horizontally along the top of rect.
     ///
     /// Uses a wider tolerance than the shape's own 0.5 so a top edge that
     /// merely drifted, rather than vanished, still counts as present.

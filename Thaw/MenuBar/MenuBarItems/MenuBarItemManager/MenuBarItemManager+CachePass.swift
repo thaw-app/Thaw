@@ -61,11 +61,11 @@ extension MenuBarItemManager {
     /// Records this enumeration's windowIDs and returns the set that counts as
     /// recently seen.
     ///
-    /// - Parameter items: The items enumerated this cycle, after clones and
-    ///   ghost control windows have been dropped.
+    /// items: The items enumerated this cycle, after clones and
+    /// ghost control windows have been dropped.
     ///
-    /// - Returns: Every windowID enumerated within the last
-    ///   recentWindowIDCycleWindow cycles, including this one.
+    /// Returns every windowID enumerated within the last
+    /// recentWindowIDCycleWindow cycles, including this one.
     private func recordRecentItemWindowIDs(_ items: [MenuBarItem]) -> Set<CGWindowID> {
         recentItemWindowIDCycles.append(Set(items.lazy.map(\.windowID)))
         while recentItemWindowIDCycles.count > MenuBarItemManager.recentWindowIDCycleWindow {

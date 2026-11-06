@@ -9,7 +9,7 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Pins ``MenuBarItemManager/MoveDestination/wouldLandOffScreen(screenFrames:)``
+/// Pins MenuBarItemManager/MoveDestination/wouldLandOffScreen(screenFrames:)
 /// and the desired-section rule the profile apply's LCS pass pairs it with.
 ///
 /// After a restart on three displays the hidden divider sat parked at -2422

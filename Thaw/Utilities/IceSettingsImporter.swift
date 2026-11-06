@@ -46,7 +46,7 @@ struct IceSettingsImporter {
     }
 
     /// Imports settings from Ice if available.
-    /// - Returns: A tuple indicating success and the number of settings imported.
+    /// Returns a tuple indicating success and the number of settings imported.
     func importIceSettings() -> (success: Bool, settingsImported: Int) {
         guard let iceUserDefaults else {
             diagLog.warning("Could not access Ice user defaults")
@@ -156,7 +156,7 @@ struct IceSettingsImporter {
     }
 
     private func importHotkeysSettings(from iceSettings: [String: Any]) -> Int {
-        // Ice stores hotkeys as a dictionary of action identifiers to encoded `KeyCombination` data.
+        // Ice stores hotkeys as a dictionary of action identifiers to encoded KeyCombination data.
         if let hotkeysDict = iceSettings["Hotkeys"] as? [String: Any] {
             let dataDict = hotkeysDict.compactMapValues { $0 as? Data }
             guard !dataDict.isEmpty else {
@@ -187,7 +187,7 @@ struct IceSettingsImporter {
             diagLog.debug("Imported appearance configuration V2")
         }
         // Fall back to V1, converting it here rather than leaving it for
-        // `MigrationManager`: migrations run at launch, before this import,
+        // MigrationManager: migrations run at launch, before this import,
         // so by the time the old data arrives their work is already done.
         else if let appearanceData = iceSettings["MenuBarAppearanceConfiguration"] as? Data {
             imported += importAppearanceConfigurationV1(appearanceData)
@@ -199,7 +199,7 @@ struct IceSettingsImporter {
     /// Converts a V1 appearance configuration from Ice to the current format
     /// and stores it.
     ///
-    /// - Returns: The number of settings imported.
+    /// Returns the number of settings imported.
     private func importAppearanceConfigurationV1(_ data: Data) -> Int {
         do {
             let oldConfiguration = try JSONDecoder().decode(MenuBarAppearanceConfigurationV1.self, from: data)

@@ -12,11 +12,11 @@ import Testing
 /// resolved-identities-only apply that runs during startup settling.
 ///
 /// Without it the bar keeps macOS's arrangement until every sourcePID
-/// resolves (~8 s on a dense bar). It is safe because `planLCSMoveSequence`
+/// resolves (~8 s on a dense bar). It is safe because planLCSMoveSequence
 /// leaves identifiers dropped here untouched rather than mispositioned.
 @Suite("Early saved-layout restriction")
 struct EarlySavedLayoutRestrictionTests {
-    // `applySavedLayout` needs a live `appState` and real window server
+    // applySavedLayout needs a live appState and real window server
     // items, so only the pure narrowing helper is covered.
 
     @Test("Unresolved identifiers are dropped from the desired order")
@@ -49,8 +49,8 @@ struct EarlySavedLayoutRestrictionTests {
         #expect(restricted["visible"] == ["com.a:One", "com.c:Three", "com.d:Four"])
     }
 
-    /// Matching on the base identifier would make `Item-0:2` a move target
-    /// because `Item-0:1` resolved.
+    /// Matching on the base identifier would make Item-0:2 a move target
+    /// because Item-0:1 resolved.
     @Test("A resolved sibling does not admit an unresolved instance")
     func resolvedSiblingDoesNotAdmitUnresolvedInstance() {
         let saved = [

@@ -125,11 +125,11 @@ enum AXIdentityCatalog {
         }
     }
 
-    /// Returns the best identity match for `windowBounds` among `snapshot`,
-    /// or `nil` when no candidate correlates confidently.
+    /// Returns the best identity match for windowBounds among snapshot,
+    /// or nil when no candidate correlates confidently.
     ///
-    /// Picks the largest intersection above `minOverlapFraction`. A tie for
-    /// first returns `nil`.
+    /// Picks the largest intersection above minOverlapFraction. A tie for
+    /// first returns nil.
     static nonisolated func identity(
         for windowBounds: CGRect,
         in snapshot: [AXItemIdentity]

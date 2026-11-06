@@ -14,7 +14,7 @@ import Testing
 struct CGImageDetachedCopyTests {
     // MARK: - Helpers
 
-    /// Creates an `width` x `height` bitmap where every pixel is `color`.
+    /// Creates an width x height bitmap where every pixel is color.
     private func makeSolidImage(width: Int, height: Int, color: (UInt8, UInt8, UInt8, UInt8)) throws -> CGImage {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
@@ -40,7 +40,7 @@ struct CGImageDetachedCopyTests {
         return try #require(context.makeImage(), "Could not snapshot the bitmap context")
     }
 
-    /// Reads the raw RGBA bytes of `image` into an array.
+    /// Reads the raw RGBA bytes of image into an array.
     private func pixelData(of image: CGImage) throws -> [UInt8] {
         let width = image.width
         let height = image.height
@@ -95,8 +95,8 @@ struct CGImageDetachedCopyTests {
         #expect(detached.bytesPerRow * detached.height == detached.dataProvider?.data.map(CFDataGetLength) ?? -1)
     }
 
-    /// Creates a `width` x `height` 8-bit mask. A mask has no color space,
-    /// which is the condition that sends `detachedCopy` down its fallback.
+    /// Creates a width x height 8-bit mask. A mask has no color space,
+    /// which is the condition that sends detachedCopy down its fallback.
     private func makeMaskImage(width: Int, height: Int) -> CGImage? {
         let bytes = [UInt8](repeating: 128, count: width * height)
         guard let provider = CGDataProvider(data: Data(bytes) as CFData) else {

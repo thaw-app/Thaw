@@ -189,7 +189,7 @@ extension MenuBarItemManager {
         /// so a duplicate Thaw instance's lookalike isn't adopted. Returns nil
         /// when WindowServer doesn't know the window either.
         ///
-        /// `recovery` is a parameter so tests can substitute a fixture.
+        /// recovery is a parameter so tests can substitute a fixture.
         ///
         /// Zero (kCGNullWindowID) counts as no ID; unbuilt status items convert to it.
         /// Without an ID, match our PID plus canonical title, then plain tag.

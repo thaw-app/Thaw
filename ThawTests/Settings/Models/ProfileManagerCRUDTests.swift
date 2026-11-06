@@ -9,10 +9,10 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the file and manifest side of ``ProfileManager``: rename, duplicate,
+/// Covers the file and manifest side of ProfileManager: rename, duplicate,
 /// import/export, display association, hooks, and the two broadcast writers.
 ///
-/// `applyProfile` and `performSetup` need a live `AppState`, so they aren't
+/// applyProfile and performSetup need a live AppState, so they aren't
 /// covered. Each case runs against a real manager in a temporary directory.
 ///
 /// Mutating cases assert against a reloaded manager, since an in-memory
@@ -86,9 +86,9 @@ struct ProfileManagerCRUDTests {
             let copyID = try #require(manager.profiles.first { $0.name == "Copy" }?.id)
             let copy = try manager.loadProfile(id: copyID)
 
-            // `duplicateProfile` rebuilds from the computed `original.content`,
+            // duplicateProfile rebuilds from the computed original.content,
             // so a field dropped in that round trip vanishes silently. Check a
-            // seeded value, since a `makeProfile` default would still pass.
+            // seeded value, since a makeProfile default would still pass.
             #expect(copy.displayConfigurations["UUID-A"]?.itemSpacingOffset == 7)
             #expect(copy.content.generalSettings.rehideInterval == 15)
         }
@@ -524,8 +524,8 @@ struct ProfileManagerCRUDTests {
 
     // MARK: - Helpers
 
-    /// Runs `body` against a `ProfileManager` pointed at a fresh temporary
-    /// directory seeded with `profiles`, and removes the directory after.
+    /// Runs body against a ProfileManager pointed at a fresh temporary
+    /// directory seeded with profiles, and removes the directory after.
     private func withManager(
         seeding profiles: [Profile],
         _ body: (ProfileManager, URL) throws -> Void

@@ -109,8 +109,8 @@ final class UpdatesManager: NSObject {
 
     /// A Boolean value that indicates whether to automatically check for updates.
     ///
-    /// Backed by Sparkle's `updater`, so Observation is registered by hand
-    /// with `access(keyPath:)`/`withMutation(keyPath:)`.
+    /// Backed by Sparkle's updater, so Observation is registered by hand
+    /// with access(keyPath:)/withMutation(keyPath:).
     var automaticallyChecksForUpdates: Bool {
         get {
             access(keyPath: \.automaticallyChecksForUpdates)
@@ -146,9 +146,9 @@ final class UpdatesManager: NSObject {
     func performSetup(with appState: AppState) {
         self.appState = appState
         _ = updaterController
-        // A `SUFeedURL` user-defaults entry would otherwise take precedence
+        // A SUFeedURL user-defaults entry would otherwise take precedence
         // over Info.plist and silently redirect update checks; the delegate's
-        // `feedURLString(for:)` already ignores it, this just scrubs the key.
+        // feedURLString(for:) already ignores it, this just scrubs the key.
         updater.clearFeedURLFromUserDefaults()
         configureCancellables()
     }
@@ -201,7 +201,7 @@ final class UpdatesManager: NSObject {
     /// Subscribes to the beta channel and looks for the build that supports
     /// the running macOS, falling back to the releases page.
     ///
-    /// Called from ``MacOSCompatibilityWarning`` once the user accepts. The
+    /// Called from MacOSCompatibilityWarning once the user accepts. The
     /// check runs in the background, so the user only sees the new build
     /// or the releases page.
     func checkForBetaUpdateAfterCompatibilityWarning() {
@@ -228,7 +228,7 @@ final class UpdatesManager: NSObject {
     /// Answers the compatibility alert's promise with the releases page, if
     /// the check it started is the one that just ended empty.
     ///
-    /// An empty check also aborts with `SUNoUpdateError`, so both endings call
+    /// An empty check also aborts with SUNoUpdateError, so both endings call
     /// this and the flag decides which arrived first.
     func resolveCompatibilityCheckWithReleasesPage() {
         guard isCheckingAfterCompatibilityWarning else {
@@ -276,7 +276,7 @@ extension UpdatesManager: SPUUpdaterDelegate {
 
     /// Pins the appcast feed to the URL declared in Info.plist.
     ///
-    /// Otherwise Sparkle prefers a `SUFeedURL` user default over Info.plist,
+    /// Otherwise Sparkle prefers a SUFeedURL user default over Info.plist,
     /// so anything writing the app's defaults could redirect update checks.
     func feedURLString(for _: SPUUpdater) -> String? {
         Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") as? String
@@ -344,8 +344,8 @@ extension UpdatesManager: @MainActor SPUStandardUserDriverDelegate {
 
 /// A stream of releases the user can subscribe to.
 ///
-/// All three share the `SUFeedURL` feed and differ only in the
-/// `sparkle:channel` tags they accept. Alpha is the rewrite for the next macOS.
+/// All three share the SUFeedURL feed and differ only in the
+/// sparkle:channel tags they accept. Alpha is the rewrite for the next macOS.
 ///
 /// Sparkle always allows the default (untagged, stable) channel, so every
 /// subscriber sees stable items; the alpha version line runs ahead, so stable
@@ -362,12 +362,12 @@ nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
         rawValue
     }
 
-    /// The channels that can be offered on a system running `version`.
+    /// The channels that can be offered on a system running version.
     static func availableCases(on version: OperatingSystemVersion) -> [UpdateChannel] {
         allCases.filter { $0.isAvailable(on: version) }
     }
 
-    /// Whether this channel can be offered on a system running `version`.
+    /// Whether this channel can be offered on a system running version.
     ///
     /// Alpha is offered only on the macOS this build doesn't support, since
     /// elsewhere its builds can't run.
@@ -380,7 +380,7 @@ nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
         }
     }
 
-    /// The `sparkle:channel` values an appcast item may carry and still be
+    /// The sparkle:channel values an appcast item may carry and still be
     /// offered to a subscriber of this channel.
     ///
     /// Sparkle always adds the untagged stable items too, which is harmless
@@ -393,7 +393,7 @@ nonisolated enum UpdateChannel: String, CaseIterable, Identifiable {
         }
     }
 
-    /// The tags to accept on a system running `version`.
+    /// The tags to accept on a system running version.
     ///
     /// On a macOS this build doesn't support, beta also takes alpha. Every
     /// 2.x beta there is a build that can't run, and the rewrite's items all

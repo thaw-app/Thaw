@@ -11,7 +11,7 @@ import Foundation
 ///
 /// A trigger targets an *item*, not a particular live instance of it, so its
 /// stored target must survive an instance-index change (which happens when a
-/// same-titled sibling comes or goes). ``tagIdentifier`` cannot serve that
+/// same-titled sibling comes or goes). tagIdentifier cannot serve that
 /// role because it folds the instance index into the string.
 nonisolated extension MenuBarItemTag {
     /// The exact namespace-and-title identity for this live tag. Unlike the
@@ -23,7 +23,7 @@ nonisolated extension MenuBarItemTag {
 
     /// Resolves a persisted identifier to a base only when live tag data makes
     /// the instance suffix unambiguous. String identifiers use the legacy
-    /// `namespace:title[:index]` form, and titles are free-form; blindly
+    /// namespace:title[:index] form, and titles are free-form; blindly
     /// stripping a numeric suffix could turn the title "Meeting:30" into the
     /// unrelated item "Meeting".
     static func resolvedBaseIdentifier(
@@ -37,7 +37,7 @@ nonisolated extension MenuBarItemTag {
             let suffixStart = uniqueIdentifier.lastIndex(of: ":"),
             let instanceIndex = Int(uniqueIdentifier[uniqueIdentifier.index(after: suffixStart)...]),
             // Current tags omit the zero suffix, but older persisted layouts
-            // may contain an explicit `:0`. Once the live namespace/title
+            // may contain an explicit :0. Once the live namespace/title
             // base is known, both forms identify that same first instance.
             instanceIndex >= 0,
             knownBaseIdentifiers.contains(String(uniqueIdentifier[..<suffixStart]))

@@ -8,7 +8,7 @@
 import Testing
 @testable import Thaw
 
-/// `LayoutSolver.pendingRehideTagIdentifiers`, which saveSectionOrder uses to
+/// LayoutSolver.pendingRehideTagIdentifiers, which saveSectionOrder uses to
 /// find items whose true section is not their current position.
 ///
 /// When a temporarily shown item's app quits before rehide, pendingRelocations
@@ -98,7 +98,7 @@ struct PendingRehideTagIdentifiersTests {
         #expect(result == ["com.example.app:Status"])
     }
 
-    /// Only a true `hasPrefix` match is a sentinel, not the prefix later in the value.
+    /// Only a true hasPrefix match is a sentinel, not the prefix later in the value.
     @Test("Sentinel matching is anchored to the start of the value")
     func prefixMatchIsAnchored() {
         let result = LayoutSolver.pendingRehideTagIdentifiers(

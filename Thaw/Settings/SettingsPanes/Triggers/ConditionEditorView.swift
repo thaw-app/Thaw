@@ -9,9 +9,9 @@ import SwiftUI
 
 // MARK: - ConditionEditorView
 
-/// A self-contained editor for one ``TriggerCondition`` (kind picker plus the
+/// A self-contained editor for one TriggerCondition (kind picker plus the
 /// kind-specific editor). Used for a trigger's additional compound
-/// conditions; the primary condition is edited inline by ``TriggerRow``.
+/// conditions; the primary condition is edited inline by TriggerRow.
 struct ConditionEditorView: View {
     @Binding var condition: TriggerCondition
     let kinds: [TriggerConditionKind]

@@ -145,7 +145,7 @@ final class LayoutBarPaddingView: NSView {
 
             container.resumeArrangedViewUpdatesWithoutAnimation()
             // No move task will thaw the source row, so resume it here.
-            // `oldContainerInfo` stays so the session end can restore the view.
+            // oldContainerInfo stays so the session end can restore the view.
             if let sourceContainer = draggingSource.oldContainerInfo?.container,
                sourceContainer !== container
             {
@@ -255,7 +255,7 @@ final class LayoutBarPaddingView: NSView {
 
     /// Moves a group's drag unit as one block.
     ///
-    /// The leftmost member takes `destination` and the rest chain to its
+    /// The leftmost member takes destination and the rest chain to its
     /// right, which also gathers scattered members.
     private func move(
         items: [MenuBarItem],
@@ -811,7 +811,7 @@ final class LayoutBarPaddingView: NSView {
         )
     }
 
-    /// Whether `item` sits in `sectionItems` where `destination` asked for
+    /// Whether item sits in sectionItems where destination asked for
     /// it. Pure, so the identity rule below can be tested.
     static nonisolated func itemReachedIntendedPosition(
         item: MenuBarItem,
@@ -875,7 +875,7 @@ final class LayoutBarPaddingView: NSView {
     /// Whether a cached item is the item that was dragged.
     ///
     /// Matches the window first: after the move a provisional
-    /// `com.apple.controlcenter:Item-0` tag can resolve to the app's, and a
+    /// com.apple.controlcenter:Item-0 tag can resolve to the app's, and a
     /// tag match would alert for a move that worked. Falls back to the tag
     /// for a recreated window.
     static nonisolated func isSameItem(_ cached: MenuBarItem, _ dragged: MenuBarItem) -> Bool {
@@ -945,7 +945,7 @@ final class LayoutBarPaddingView: NSView {
         Self.nearestDropAnchor(in: arrangedItemSlots, from: index, towardRight: false)
     }
 
-    /// The item behind each arranged view, `nil` for non-item views, index for index.
+    /// The item behind each arranged view, nil for non-item views, index for index.
     private var arrangedItemSlots: [MenuBarItem?] {
         arrangedViews.map { view in
             if case let .item(item) = view.kind {
@@ -955,7 +955,7 @@ final class LayoutBarPaddingView: NSView {
         }
     }
 
-    /// The closest item on one side of `index` that a drop may sit beside.
+    /// The closest item on one side of index that a drop may sit beside.
     ///
     /// Slots skipped as anchors leave the drop to the section's divider
     /// fallback when nothing else qualifies.
@@ -1230,7 +1230,7 @@ final class LayoutBarPaddingView: NSView {
         let notchIndicatorWidth = notch.width + MenuBarSection.notchGap
         // The real items area right of the notch, plus the 7.5pt inset.
         let notchTrailingOffset = max(0, screen.frame.maxX - notch.maxX - MenuBarSection.notchGap) + 7.5
-        // Wide enough for `notch.minX` to `screen.maxX` plus the 7.5pt inset.
+        // Wide enough for notch.minX to screen.maxX plus the 7.5pt inset.
         // A wider pane grows the bar to the left of the notch.
         let barMinWidth = max(0, screen.frame.maxX - notch.minX) + 7.5
         let colorInfo = container.appState?.menuBarManager.averageColorInfo
@@ -1289,7 +1289,7 @@ final class LayoutBarPaddingView: NSView {
 }
 
 /// Shown when a group move's placement can't be confirmed. Only surfaces
-/// after ``LayoutBarPaddingView/recoverFromFailedMove`` re-verifies.
+/// after LayoutBarPaddingView/recoverFromFailedMove re-verifies.
 private struct GroupMoveStabilizationError: LocalizedError {
     var errorDescription: String? {
         String(localized: "Couldn't confirm that the group settled into place.")

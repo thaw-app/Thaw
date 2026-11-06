@@ -10,7 +10,7 @@ import AsyncAlgorithms
 import Cocoa
 import Combine
 
-/// The live half of ``DisplaySettingsManager``, excluded from coverage
+/// The live half of DisplaySettingsManager, excluded from coverage
 /// because it needs real display state, defaults, or modal alerts. New
 /// decision logic belongs in DisplaySettingsManager.swift, not here.
 extension DisplaySettingsManager {
@@ -27,8 +27,8 @@ extension DisplaySettingsManager {
     /// Copies the active display's offset into the spacing manager at launch.
     ///
     /// Otherwise the offset stays 0 on a plain launch while disk holds the
-    /// user's value, so `applyProfile` would reset it and the notch overflow
-    /// budget would mis-measure. Seeds only: `applyOffset()` would fire a
+    /// user's value, so applyProfile would reset it and the notch overflow
+    /// budget would mis-measure. Seeds only: applyOffset() would fire a
     /// relaunch wave for a value already in effect.
     private func seedSpacingOffsetFromActiveDisplay() {
         guard let appState else { return }
@@ -127,7 +127,7 @@ extension DisplaySettingsManager {
 
     // MARK: - Observers
 
-    /// Persistence is handled by each property's `didSet`, not here.
+    /// Persistence is handled by each property's didSet, not here.
     private func configureObservers() {
         var c = Set<AnyCancellable>()
 
@@ -264,7 +264,7 @@ extension DisplaySettingsManager {
     }
 
     /// Makes a "Don't ask again" answer stick. Apply turns confirmations
-    /// off. Cancel switches to `writeOnly`, so later applies relaunch nothing
+    /// off. Cancel switches to writeOnly, so later applies relaunch nothing
     /// and have nothing to ask about.
     ///
     /// Internal so tests can call it without running the alert.

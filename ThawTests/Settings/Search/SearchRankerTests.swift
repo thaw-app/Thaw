@@ -13,12 +13,12 @@ import Testing
 struct SearchRankerTests {
     // MARK: - Settings Weights
 
-    /// Ifrit scales a field's diff score by `(1 - weight)` (a weight of `1`
+    /// Ifrit scales a field's diff score by (1 - weight) (a weight of 1
     /// is a no-op), and a lower score ranks higher, so a larger weight ranks
     /// a field higher.
     ///
-    /// Pins a regression where `SearchWeights.settings` gave `keywords` a
-    /// larger weight than `title`, so keyword matches outranked title matches.
+    /// Pins a regression where SearchWeights.settings gave keywords a
+    /// larger weight than title, so keyword matches outranked title matches.
     /// Derived here rather than read from Fuse to keep the test Ifrit-free.
     private static func rankingFactor(forWeight weight: Double) -> Double {
         weight == 1 ? 1 : 1 - weight

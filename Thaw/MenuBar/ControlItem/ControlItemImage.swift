@@ -63,7 +63,7 @@ nonisolated extension ControlItemImage {
 }
 
 extension ControlItemImage {
-    /// Cached so ``nsImage(for:)`` doesn't redraw on every call.
+    /// Cached so nsImage(for:) doesn't redraw on every call.
     private enum StaticBuiltins {
         enum Chevron {
             private static func chevron(size: CGSize, lineWidth: CGFloat) -> NSImage {

@@ -33,7 +33,7 @@ private struct WatchedItemPicker: View {
 }
 
 /// Picks the item whose icon is watched for attention-seeking behaviour.
-/// Unlike ``ImageConditionEditor`` there is no reference to capture: the
+/// Unlike ImageConditionEditor there is no reference to capture: the
 /// verdict comes from how the icon moves over time, not from a comparison
 /// against a stored snapshot.
 struct AttentionConditionEditor: View {

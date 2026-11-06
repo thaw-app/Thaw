@@ -10,15 +10,15 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``KeyCode``'s Carbon raw values, its `Hashable`/`Codable`
+/// Covers KeyCode's Carbon raw values, its Hashable/Codable
 /// conformances, and the string the hotkey recorder renders for a key.
 ///
-/// `keyEquivalent` resolves through the current keyboard layout, so only the
+/// keyEquivalent resolves through the current keyboard layout, so only the
 /// layout-independent parts are pinned: the custom mapping table and the
 /// empty-string fallback.
 ///
-/// Serialized on the main actor: overlapping `TISCopyCurrentASCIICapable...`
-/// and `UCKeyTranslate` calls crash the host.
+/// Serialized on the main actor: overlapping TISCopyCurrentASCIICapable...
+/// and UCKeyTranslate calls crash the host.
 @MainActor
 @Suite("Key codes", .serialized)
 struct KeyCodeTests {
@@ -95,8 +95,8 @@ struct KeyCodeTests {
 
     // MARK: Codable
 
-    // Not parameterized over `arguments:`. `KeyCode` is neither
-    // `CustomStringConvertible` nor `CustomTestArgumentEncodable`, and
+    // Not parameterized over arguments:. KeyCode is neither
+    // CustomStringConvertible nor CustomTestArgumentEncodable, and
     // swift-testing crashes describing it as a test argument.
 
     @Test("A key code round-trips through Codable")

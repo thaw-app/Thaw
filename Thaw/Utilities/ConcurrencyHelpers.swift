@@ -13,8 +13,8 @@ import os.lock
 
 // MARK: - Debounced Notification Task
 
-/// Starts a `MainActor` task that feeds `center` notifications into a debounced
-/// `AsyncChannel` and runs `action` once per burst coalesced over `interval`.
+/// Starts a MainActor task that feeds center notifications into a debounced
+/// AsyncChannel and runs action once per burst coalesced over interval.
 ///
 /// The observer is registered before this returns and removed when the task
 /// ends. Cancel the previous task before a repeated setup, or the old observer
@@ -151,15 +151,14 @@ nonisolated extension Task where Failure == any Error {
     /// new _unstructured_ top-level task.
     ///
     /// If the operation does not complete within the provided duration,
-    /// the task is cancelled and a ``TaskTimeoutError`` is thrown.
+    /// the task is cancelled and a TaskTimeoutError is thrown.
     ///
-    /// - Parameters:
-    ///   - timeout: The duration the operation must complete within.
-    ///   - tolerance: The precision threshold of the timeout operation.
-    ///   - clock: The clock that manages the timeout operation.
-    ///   - name: Human readable name of the task.
-    ///   - priority: The priority of the operation.
-    ///   - operation: The operation to perform.
+    /// timeout: The duration the operation must complete within.
+    /// tolerance: The precision threshold of the timeout operation.
+    /// clock: The clock that manages the timeout operation.
+    /// name: Human readable name of the task.
+    /// priority: The priority of the operation.
+    /// operation: The operation to perform.
     @discardableResult
     init<C: Clock>(
         timeout: C.Instant.Duration,
@@ -179,17 +178,16 @@ nonisolated extension Task where Failure == any Error {
     /// new _unstructured_ _detached_ top-level task.
     ///
     /// If the operation does not complete within the provided duration,
-    /// the task is cancelled and a ``TaskTimeoutError`` is thrown.
+    /// the task is cancelled and a TaskTimeoutError is thrown.
     ///
-    /// - Parameters:
-    ///   - timeout: The duration the operation must complete within.
-    ///   - tolerance: The precision threshold of the timeout operation.
-    ///   - clock: The clock that manages the timeout operation.
-    ///   - name: Human readable name of the task.
-    ///   - priority: The priority of the operation.
-    ///   - operation: The operation to perform.
+    /// timeout: The duration the operation must complete within.
+    /// tolerance: The precision threshold of the timeout operation.
+    /// clock: The clock that manages the timeout operation.
+    /// name: Human readable name of the task.
+    /// priority: The priority of the operation.
+    /// operation: The operation to perform.
     ///
-    /// - Returns: A reference to the task.
+    /// Returns a reference to the task.
     @discardableResult
     static func detached<C: Clock>(
         timeout: C.Instant.Duration,

@@ -15,7 +15,7 @@ import Testing
 /// The mistakes to guard against: crediting an unrelated app's window, or
 /// reading an item's ordinary reflow as a reaction.
 ///
-/// Serialized because overlapping CGS window-list calls on `Bridging`'s
+/// Serialized because overlapping CGS window-list calls on Bridging's
 /// process-wide main connection are not safe.
 @Suite("Click reaction verifier", .serialized)
 struct ClickReactionVerifierTests {

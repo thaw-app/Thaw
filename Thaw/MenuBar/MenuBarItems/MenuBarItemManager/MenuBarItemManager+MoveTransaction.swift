@@ -391,7 +391,7 @@ extension MenuBarItemManager {
 
     /// Moves a menu bar item to the given destination.
     ///
-    /// - Parameter options: The move tunables; every field defaults.
+    /// options: The move tunables; every field defaults.
     func move(
         item: MenuBarItem,
         to destination: MoveDestination,

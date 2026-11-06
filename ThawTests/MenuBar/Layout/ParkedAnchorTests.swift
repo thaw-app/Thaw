@@ -12,7 +12,7 @@ import Testing
 /// Keeps a parked off-screen item from being used as the H_ctrl drag anchor.
 ///
 /// At launch hidden items are parked thousands of points left of the display.
-/// Picking one (such as `ai.elementlabs.lmstudio:Item-0` at minX -4222) failed all
+/// Picking one (such as ai.elementlabs.lmstudio:Item-0 at minX -4222) failed all
 /// 8 retries, each briefly pulling the divider on-screen, and seized the cursor
 /// (#881). Parked items are excluded so the per-item LCS pass runs instead.
 @Suite("Parked anchor exclusion")
@@ -112,7 +112,7 @@ struct ParkedAnchorTests {
     }
 }
 
-/// Pins where ``LayoutSolver/isOnScreen(bounds:screenFrames:)`` measures.
+/// Pins where LayoutSolver/isOnScreen(bounds:screenFrames:) measures.
 ///
 /// A collapsed hidden divider is 5000 points wide, so its center sits 2500 points
 /// right of the divider. On a three-display setup that point hit a screen while

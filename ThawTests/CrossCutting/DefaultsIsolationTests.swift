@@ -9,14 +9,14 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Guards the process-wide defaults isolation `TestBootstrap` installs.
+/// Guards the process-wide defaults isolation TestBootstrap installs.
 ///
-/// The bootstrap is wired through `NSPrincipalClass` in the generated
+/// The bootstrap is wired through NSPrincipalClass in the generated
 /// Info.plist, so a renamed class or dropped build setting would silently
-/// send every unscoped `Defaults.set` to the real `com.stonerl.Thaw` domain.
+/// send every unscoped Defaults.set to the real com.stonerl.Thaw domain.
 ///
-/// `withScratchDefaults` in a parallel test swaps in another scratch suite,
-/// which is still not `.standard`.
+/// withScratchDefaults in a parallel test swaps in another scratch suite,
+/// which is still not .standard.
 @Suite("Defaults isolation")
 struct DefaultsIsolationTests {
     @Test("The Defaults facade does not point at the standard store")

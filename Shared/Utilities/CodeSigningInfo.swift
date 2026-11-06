@@ -8,7 +8,7 @@
 import Security
 
 nonisolated enum CodeSigningInfo {
-    /// The team identifier of the current process, or `nil` when signed
+    /// The team identifier of the current process, or nil when signed
     /// without one (ad-hoc), in which case a same-team peer requirement can't pass.
     static let processTeamIdentifier: String? = {
         var code: SecCode?

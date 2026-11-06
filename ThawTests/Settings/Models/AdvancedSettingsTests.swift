@@ -9,23 +9,23 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``AdvancedSettings``' setup surface: the `Defaults` load performed by
-/// `performSetup(with:)` and the Settings-URI notification it subscribes to.
+/// Covers AdvancedSettings' setup surface: the Defaults load performed by
+/// performSetup(with:) and the Settings-URI notification it subscribes to.
 ///
 /// The load may read values from an older build, a hand-edited plist, or a
 /// failed import, so an unknown divider style or a short, duplicated, or
 /// unknown search-section order must still give a usable search panel. The
-/// notification comes from a third-party `thaw://` URL, so unowned keys and
-/// wrong-typed payloads are dropped. `SettingsURIHandlerApplyTests` covers the
-/// sending side; both must agree on the `userInfo` shape.
+/// notification comes from a third-party thaw:// URL, so unowned keys and
+/// wrong-typed payloads are dropped. SettingsURIHandlerApplyTests covers the
+/// sending side; both must agree on the userInfo shape.
 ///
-/// Each test runs in `withScratchDefaults` from an empty store. That keeps
-/// `enableDiagnosticLogging` at its default, so the `didSet` that reaches into
-/// the shared ``DiagnosticLogger`` never runs.
+/// Each test runs in withScratchDefaults from an empty store. That keeps
+/// enableDiagnosticLogging at its default, so the didSet that reaches into
+/// the shared DiagnosticLogger never runs.
 @MainActor
 @Suite("Advanced settings", .serialized)
 struct AdvancedSettingsTests {
-    /// Returns a model that has run its setup against the current `Defaults`.
+    /// Returns a model that has run its setup against the current Defaults.
     ///
     /// The app state is unused by this model, so setup runs without one.
     private func makeSettings() -> AdvancedSettings {
@@ -36,12 +36,12 @@ struct AdvancedSettingsTests {
 
     /// Posts external settings changes and waits for the model to handle them.
     ///
-    /// `observeSettingsChangesViaURI` enqueues handlers in order on
-    /// `DispatchQueue.main`, so a block queued after the last post is a
+    /// observeSettingsChangesViaURI enqueues handlers in order on
+    /// DispatchQueue.main, so a block queued after the last post is a
     /// deterministic wait. Posting as a batch suspends once, which narrows the
     /// window for another suite to run over this one's scratch values.
     ///
-    /// `SettingsURIHandlerApplyTests` posts on the same center, so assertions
+    /// SettingsURIHandlerApplyTests posts on the same center, so assertions
     /// stick to keys no other suite writes.
     private func postExternalChanges(_ changes: [[String: Any]]) async {
         for change in changes {
@@ -331,7 +331,7 @@ struct AdvancedSettingsTests {
                 ["key": "iconRefreshInterval", "doubleValue": 3.75],
             ])
 
-            // Assert the model, not `Defaults`: another suite's whole-domain
+            // Assert the model, not Defaults: another suite's whole-domain
             // restore can land during the suspension and wipe the writes.
             #expect(settings.showOnHoverDelay == 1.75)
             #expect(settings.tooltipDelay == 2.75)
@@ -358,7 +358,7 @@ struct AdvancedSettingsTests {
         try await withScratchDefaults { _ in
             let settings = makeSettings()
 
-            // `alwaysShowHiddenItems` is a per-display setting owned by
+            // alwaysShowHiddenItems is a per-display setting owned by
             // DisplaySettingsManager. This model sees every change posted on this
             // channel and has to let the ones it does not own by.
             await postExternalChange(["key": "alwaysShowHiddenItems", "value": true])
@@ -407,7 +407,7 @@ struct AdvancedSettingsTests {
             let settings = makeSettings()
             let order = settings.searchSectionOrder
 
-            // Neither key is handled by `handleExternalSettingsChange`, so a
+            // Neither key is handled by handleExternalSettingsChange, so a
             // well-formed payload for one must still change nothing.
             await postExternalChanges([
                 ["key": "sectionDividerStyle", "rawEnumValue": SectionDividerStyle.chevron.rawValue],

@@ -9,15 +9,14 @@ import AppKit
 import Testing
 @testable import Thaw
 
-/// Covers ``KeyCombination``, the key-plus-modifiers pair behind every hotkey.
+/// Covers KeyCombination, the key-plus-modifiers pair behind every hotkey.
 ///
-/// - The stored form is an unkeyed `[keyCode, modifierMask]` array. Swapping
-///   the elements still decodes but binds a different hotkey, and the arity
-///   check is the only guard against a truncated payload.
-/// - `init(event:)` narrows `NSEvent.modifierFlags` (which also carries Caps
-///   Lock, Fn, and the keypad bit) to the four supported modifiers.
-/// - `isSystemReserved` reads the live symbolic hotkey table, which varies
-///   by machine.
+/// The stored form is an unkeyed [keyCode, modifierMask] array. Swapping
+/// the elements still decodes but binds a different hotkey, and the arity
+/// check is the only guard against a truncated payload. init(event:)
+/// narrows NSEvent.modifierFlags (which also carries Caps Lock, Fn, and the
+/// keypad bit) to the four supported modifiers. isSystemReserved reads the
+/// live symbolic hotkey table, which varies by machine.
 @MainActor
 @Suite("Key combination")
 struct KeyCombinationTests {
@@ -111,7 +110,7 @@ struct KeyCombinationTests {
     }
 
     /// Caps Lock, Fn, and the numeric-keypad bit all ride along in a real
-    /// `NSEvent`, and none of them is a modifier the app can bind.
+    /// NSEvent, and none of them is a modifier the app can bind.
     @Test("Modifier bits the app does not support are dropped")
     func unsupportedModifierBitsAreDropped() throws {
         let event = try #require(
@@ -161,7 +160,7 @@ struct KeyCombinationTests {
         #expect(decoded == combination)
     }
 
-    /// Both the order and the arity of `[keyCode, modifierMask]` matter.
+    /// Both the order and the arity of [keyCode, modifierMask] matter.
     @Test("A combination encodes as a key code followed by a modifier mask")
     func combinationEncodesAsAnOrderedPair() throws {
         let combination = KeyCombination(key: .f19, modifiers: [.command, .shift])
@@ -181,7 +180,7 @@ struct KeyCombinationTests {
         #expect(decoded == KeyCombination(key: .f19, modifiers: .command))
     }
 
-    /// An unrecognized key code is not rejected: `KeyCode` is a raw wrapper
+    /// An unrecognized key code is not rejected: KeyCode is a raw wrapper
     /// rather than a closed enum, so an unknown physical key round-trips.
     @Test("An unrecognized key code round-trips rather than failing")
     func unrecognizedKeyCodeRoundTrips() throws {

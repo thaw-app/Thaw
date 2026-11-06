@@ -60,9 +60,9 @@ nonisolated extension MenuBarItemManager.ControlItemPair {
     /// hidden divider is required; the always-hidden divider is optional to
     /// model both layouts (with and without the always-hidden section).
     ///
-    /// Default window IDs start at 1_000_000 so `Bridging.getWindowBounds`
-    /// (called by `CacheContext.bestBounds`) misses and falls back to
-    /// `item.bounds`. Real window IDs are far smaller.
+    /// Default window IDs start at 1_000_000 so Bridging.getWindowBounds
+    /// (called by CacheContext.bestBounds) misses and falls back to
+    /// item.bounds. Real window IDs are far smaller.
     static func fixture(
         hiddenAt: CGRect,
         alwaysHiddenAt: CGRect? = nil,

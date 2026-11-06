@@ -9,7 +9,7 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Covers ``MenuBarItemManager/menuBarAppearsConcealed(itemBounds:itemIsOnScreen:hiddenDividerMaxX:displayBounds:)``.
+/// Covers MenuBarItemManager/menuBarAppearsConcealed(itemBounds:itemIsOnScreen:hiddenDividerMaxX:displayBounds:).
 ///
 /// With the menu bar auto-hidden, every item window reports off screen. The
 /// rehide then failed nine times as "stale destination" in about 35 seconds and

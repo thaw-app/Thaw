@@ -110,7 +110,7 @@ final class AdvancedSettings {
 
     /// The interval between icon image refreshes in panels (Thaw Bar, search, layout).
     ///
-    /// Every write is snapped to the slider's grid, `0` (Off) or `1/n`, so the
+    /// Every write is snapped to the slider's grid, 0 (Off) or 1/n, so the
     /// UI and the live-refresh loop never disagree.
     var iconRefreshInterval = Defaults.DefaultValue.iconRefreshInterval {
         didSet {
@@ -126,10 +126,10 @@ final class AdvancedSettings {
 
     /// Snaps an icon-refresh interval onto the values the slider can express.
     ///
-    /// - `<= 0` stays Off (`0`).
-    /// - Otherwise snaps to `1 / clamp(round(1 / interval), 1, ceiling)`,
-    ///   where the ceiling is ``MenuBarItemImageCache/maxIconRefreshRate``.
-    /// - Idempotent: already-on-grid values round-trip unchanged.
+    /// A value of 0 or less stays Off (0). Anything else snaps to
+    /// 1 / clamp(round(1 / interval), 1, ceiling), where the ceiling is
+    /// MenuBarItemImageCache/maxIconRefreshRate. It's idempotent:
+    /// already-on-grid values round-trip unchanged.
     static nonisolated func normalizedIconRefreshInterval(_ interval: TimeInterval) -> TimeInterval {
         guard interval > 0 else { return 0 }
         let ceiling = MenuBarItemImageCache.maxIconRefreshRate
@@ -138,7 +138,7 @@ final class AdvancedSettings {
     }
 
     /// A Boolean value that indicates whether zen mode engages by itself while
-    /// the screen is mirrored or being shared. See ``PresentationMonitor`` for
+    /// the screen is mirrored or being shared. See PresentationMonitor for
     /// what that does and does not detect.
     var autoZenWhileSharingScreen = Defaults.DefaultValue.autoZenWhileSharingScreen {
         didSet {
@@ -192,9 +192,9 @@ final class AdvancedSettings {
         }
     }
 
-    /// True while ``loadInitialState()`` runs.
+    /// True while loadInitialState() runs.
     ///
-    /// Stops each `didSet` from sending the service a half-loaded policy.
+    /// Stops each didSet from sending the service a half-loaded policy.
     @ObservationIgnored
     private var isLoadingInitialState = false
 
@@ -204,8 +204,8 @@ final class AdvancedSettings {
     /// Hands the current rotation settings to the diagnostic logger, and
     /// optionally to the XPC service that shares the log directory.
     ///
-    /// - Parameter pushingToService: Whether to forward the policy over XPC.
-    ///   Off during initialization; `Connection.start()` sends it anyway.
+    /// pushingToService: Whether to forward the policy over XPC.
+    /// Off during initialization; Connection.start() sends it anyway.
     func applyLogRotationPolicy(pushingToService: Bool = false) {
         DiagnosticLogger.shared.setRotationPolicy(
             Self.rotationPolicy(
@@ -226,7 +226,7 @@ final class AdvancedSettings {
         interval: LogRotationInterval
     ) -> DiagnosticLogger.RotationPolicy {
         var policy = DiagnosticLogger.RotationPolicy()
-        // Clamp first: `UInt64(huge) * 1024 * 1024` traps on overflow.
+        // Clamp first: UInt64(huge) * 1024 * 1024 traps on overflow.
         let megabytes = min(max(0, maxSizeMB), maxDiagnosticLogSizeMB)
         policy.maxFileSizeBytes = UInt64(megabytes) * 1024 * 1024
         policy.retentionDays = max(1, retentionDays)
@@ -269,7 +269,7 @@ final class AdvancedSettings {
     ///
     /// When off, the late-arrival re-sort and saved-layout restore stand down;
     /// profile applies still work. Read in
-    /// `MenuBarItemManager.applyProfileLayout`.
+    /// MenuBarItemManager.applyProfileLayout.
     var automaticArrangementEnabled = Defaults.DefaultValue.automaticArrangementEnabled {
         didSet {
             guard oldValue != automaticArrangementEnabled else { return }
@@ -379,7 +379,7 @@ final class AdvancedSettings {
     @ObservationIgnored
     private(set) weak var appState: AppState?
 
-    /// `appState` is only stored, so it's optional for setup without one.
+    /// appState is only stored, so it's optional for setup without one.
     func performSetup(with appState: AppState? = nil) {
         self.appState = appState
         loadInitialState()
@@ -444,7 +444,7 @@ final class AdvancedSettings {
         applyLogRotationPolicy()
     }
 
-    /// Returns a search-section order that contains each `MenuBarSection.Name`
+    /// Returns a search-section order that contains each MenuBarSection.Name
     /// case exactly once, using the supplied raw values as the preferred order
     /// and filling any missing cases at the end. Returns the default order if
     /// the input is unusable.
@@ -455,7 +455,7 @@ final class AdvancedSettings {
         return preferred + MenuBarSection.Name.allCases.filter { !preferred.contains($0) }
     }
 
-    /// Only the Settings-URI subscription; persistence is in each `didSet`.
+    /// Only the Settings-URI subscription; persistence is in each didSet.
     private func configureObservers() {
         cancellables = [
             NotificationCenter.observeSettingsChangesViaURI { [weak self] change in

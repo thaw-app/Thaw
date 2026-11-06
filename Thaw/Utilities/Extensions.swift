@@ -13,24 +13,24 @@ import SwiftUI
 // MARK: - Bundle
 
 nonisolated extension Bundle {
-    /// The bundle's `NSHumanReadableCopyright` value.
+    /// The bundle's NSHumanReadableCopyright value.
     var copyrightString: String? {
         object(forInfoDictionaryKey: "NSHumanReadableCopyright") as? String
     }
 
-    /// `CFBundleDisplayName`, falling back to `CFBundleName`, then `Thaw`.
+    /// CFBundleDisplayName, falling back to CFBundleName, then Thaw.
     var displayName: String {
         object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ??
             object(forInfoDictionaryKey: "CFBundleName") as? String ??
             "Thaw"
     }
 
-    /// The bundle's `CFBundleShortVersionString` value.
+    /// The bundle's CFBundleShortVersionString value.
     var versionString: String? {
         object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
     }
 
-    /// The bundle's `CFBundleVersion` value.
+    /// The bundle's CFBundleVersion value.
     var buildString: String? {
         object(forInfoDictionaryKey: "CFBundleVersion") as? String
     }
@@ -67,14 +67,13 @@ nonisolated extension CGImage {
 
     /// Computes and returns the average color of the image.
     ///
-    /// - Parameters:
-    ///   - colorSpace: The color space used to process the colors in the image.
-    ///     The returned color also uses this color space. Must be an RGB color
-    ///     space, or this parameter is ignored.
-    ///   - alphaThreshold: An alpha value below which pixels should be ignored.
-    ///     Pixels with an alpha component greater than or equal to this value
-    ///     contribute to the average.
-    ///   - option: Options for computing the color.
+    /// colorSpace: The color space used to process the colors in the image.
+    /// The returned color also uses this color space. Must be an RGB color
+    /// space, or this parameter is ignored.
+    /// alphaThreshold: An alpha value below which pixels should be ignored.
+    /// Pixels with an alpha component greater than or equal to this value
+    /// contribute to the average.
+    /// option: Options for computing the color.
     func averageColor(using colorSpace: CGColorSpace? = nil, alphaThreshold: CGFloat = 0.5, option: ColorAveragingOption = []) -> CGColor? {
         func createPixelData(width: Int, height: Int, colorSpace: CGColorSpace) -> [UInt32]? {
             guard width > 0, height > 0 else {
@@ -121,7 +120,7 @@ nonisolated extension CGImage {
             return nil
         }
 
-        // The smallest 8-bit alpha satisfying `byte >= 255 * threshold` is the
+        // The smallest 8-bit alpha satisfying byte >= 255 * threshold is the
         // ceiling; rounding to nearest would drop boundary pixels.
         let alphaThreshold = UInt64((alphaThreshold.clamped(to: 0 ... 1) * 255).rounded(.up))
 
@@ -171,13 +170,12 @@ nonisolated extension CGImage {
     /// Returns the image's dominant colors, most-covering first.
     ///
     /// Samples coarsely and hands the pixels to
-    /// ``WallpaperPalette/derive(from:maximumCount:minimumSeparation:)``. The grid is
-    /// larger than ``averageColor(using:alphaThreshold:option:)``'s 10x10 so a small
+    /// WallpaperPalette/derive(from:maximumCount:minimumSeparation:). The grid is
+    /// larger than averageColor(using:alphaThreshold:option:)'s 10x10 so a small
     /// subject survives bucketing.
     ///
-    /// - Parameters:
-    ///   - maximumCount: The most colors to return.
-    ///   - alphaThreshold: An alpha value below which pixels are ignored.
+    /// maximumCount: The most colors to return.
+    /// alphaThreshold: An alpha value below which pixels are ignored.
     func dominantColors(maximumCount: Int = 5, alphaThreshold: CGFloat = 0.5) -> WallpaperPalette {
         let width = min(width, 48)
         let height = min(height, 48)
@@ -196,9 +194,9 @@ nonisolated extension CGImage {
         }()
 
         var data = [UInt32](repeating: 0, count: width * height)
-        // `draw` writes through the buffer after init, and an inout-to-pointer
+        // draw writes through the buffer after init, and an inout-to-pointer
         // conversion only lives for one call, so keep the pointer in scope (as in
-        // `ImageHashing.averageHash(_:)`).
+        // ImageHashing.averageHash(_:)).
         let rendered = data.withUnsafeMutableBytes { buffer -> Bool in
             guard let context = CGContext(
                 data: buffer.baseAddress,
@@ -236,8 +234,8 @@ nonisolated extension CGImage {
     // MARK: Transparency Trimming
 
     /// A bounds-validated, read-only view over the alpha channel of row-major pixel
-    /// data. The failable init proves every addressed alpha byte lies in `bytes`.
-    /// It must not outlive the owning `CGContext` or `CFData`.
+    /// data. The failable init proves every addressed alpha byte lies in bytes.
+    /// It must not outlive the owning CGContext or CFData.
     private nonisolated struct AlphaChannelView {
         private let bytes: UnsafeRawBufferPointer
         private let rowStride: Int
@@ -252,17 +250,16 @@ nonisolated extension CGImage {
         let height: Int
 
         /// Creates a view if every alpha byte addressed by the given
-        /// geometry lies within `bytes`.
+        /// geometry lies within bytes.
         ///
-        /// - Parameters:
-        ///   - bytes: The pixel data.
-        ///   - width: The image width, in pixels.
-        ///   - height: The image height, in pixels.
-        ///   - rowStride: The number of bytes per row, including padding.
-        ///   - pixelStride: The number of bytes per pixel.
-        ///   - alphaOffset: The offset of the alpha byte within each pixel.
-        ///   - alphaThreshold: The maximum alpha value (0...1) to consider
-        ///     transparent.
+        /// bytes: The pixel data.
+        /// width: The image width, in pixels.
+        /// height: The image height, in pixels.
+        /// rowStride: The number of bytes per row, including padding.
+        /// pixelStride: The number of bytes per pixel.
+        /// alphaOffset: The offset of the alpha byte within each pixel.
+        /// alphaThreshold: The maximum alpha value (0...1) to consider
+        /// transparent.
         init?(
             bytes: UnsafeRawBufferPointer,
             width: Int,
@@ -325,15 +322,14 @@ nonisolated extension CGImage {
     /// A context for handling transparency data in an image.
     private nonisolated struct TransparencyContext: ~Copyable {
         private let image: CGImage
-        /// Retained to keep the memory backing `alphaView` alive.
+        /// Retained to keep the memory backing alphaView alive.
         private let cgContext: CGContext
         private let alphaView: AlphaChannelView
 
         /// Creates a context with the given image and alpha threshold.
         ///
-        /// - Parameters:
-        ///   - image: The image to form a context around.
-        ///   - alphaThreshold: The maximum alpha value to consider transparent.
+        /// image: The image to form a context around.
+        /// alphaThreshold: The maximum alpha value to consider transparent.
         init?(image: CGImage, alphaThreshold: CGFloat) {
             guard
                 image.width > 0,
@@ -356,7 +352,7 @@ nonisolated extension CGImage {
             let size = CGSize(width: image.width, height: image.height)
             cgContext.draw(image, in: CGRect(origin: .zero, size: size))
 
-            // The context owns `data` for the lifetime of `cgContext`, which
+            // The context owns data for the lifetime of cgContext, which
             // this struct retains, so the view can't outlive its memory.
             guard let alphaView = AlphaChannelView(
                 bytes: UnsafeRawBufferPointer(
@@ -439,9 +435,8 @@ nonisolated extension CGImage {
     /// Each edge is trimmed up to the first row or column containing pixels
     /// with an alpha component above the specified threshold.
     ///
-    /// - Parameters:
-    ///   - edges: A set of edges to trim from around the image.
-    ///   - alphaThreshold: The maximum alpha value to consider transparent.
+    /// edges: A set of edges to trim from around the image.
+    /// alphaThreshold: The maximum alpha value to consider transparent.
     func trimmingTransparency(
         around edges: Set<CGRectEdge> = [.minXEdge, .minYEdge, .maxXEdge, .maxYEdge],
         alphaThreshold: CGFloat = 0
@@ -455,10 +450,10 @@ nonisolated extension CGImage {
     /// Returns a Boolean value that indicates whether the image is transparent.
     ///
     /// Fast path reads alpha bytes straight from the data provider, skipping the
-    /// `CGContext`, draw, and buffer. Only 32-bit RGBA/ARGB with a known byte order;
-    /// other formats use `TransparencyContext`.
+    /// CGContext, draw, and buffer. Only 32-bit RGBA/ARGB with a known byte order;
+    /// other formats use TransparencyContext.
     ///
-    /// - Parameter alphaThreshold: The maximum alpha value to consider transparent.
+    /// alphaThreshold: The maximum alpha value to consider transparent.
     func isTransparent(alphaThreshold: CGFloat = 0) -> Bool {
         guard width > 0, height > 0 else { return true }
         guard alphaThreshold < 1 else { return false }
@@ -537,7 +532,7 @@ nonisolated extension CGImage {
         }
     }
 
-    /// Slow path for `isTransparent` using `TransparencyContext`.
+    /// Slow path for isTransparent using TransparencyContext.
     private func isTransparentSlow(alphaThreshold: CGFloat) -> Bool {
         guard let context = TransparencyContext(image: self, alphaThreshold: alphaThreshold) else {
             return false
@@ -549,7 +544,7 @@ nonisolated extension CGImage {
 
     /// Returns a copy that owns its own pixel buffer.
     ///
-    /// `cropping(to:)` returns an image sharing the parent's data provider, so a
+    /// cropping(to:) returns an image sharing the parent's data provider, so a
     /// small cached crop pins the entire multi-MB composite it was cut from.
     /// Redrawing into a fresh bitmap context detaches it.
     func detachedCopy() -> CGImage {
@@ -608,14 +603,13 @@ nonisolated extension Comparable {
     /// Returns a copy of this value, clamped to the given minimum
     /// and maximum limiting values.
     ///
-    /// - Parameters:
-    ///   - min: The minimum limiting value.
-    ///   - max: The maximum limiting value.
+    /// min: The minimum limiting value.
+    /// max: The maximum limiting value.
     ///
-    /// - Precondition: `min <= max`
+    /// min <= max
     ///
-    /// - Returns: The value nearest this value that is both greater
-    ///   than or equal to `min` and less than or equal to `max`.
+    /// Returns the value nearest this value that is both greater
+    /// than or equal to min and less than or equal to max.
     func clamped(min: Self, max: Self) -> Self {
         precondition(min <= max, "Clamp requires min <= max")
         return Swift.min(Swift.max(self, min), max)
@@ -624,13 +618,13 @@ nonisolated extension Comparable {
     /// Returns a copy of this value, clamped to the given limiting
     /// range.
     ///
-    /// - Parameter range: A range of values of this type, whose
-    ///   lower and upper bounds represent the minimum and maximum
-    ///   limiting values.
+    /// range: A range of values of this type, whose
+    /// lower and upper bounds represent the minimum and maximum
+    /// limiting values.
     ///
-    /// - Returns: The value nearest this value that is both greater
-    ///   than or equal to `range.lowerBound` and less than or equal
-    ///   to `range.upperBound`.
+    /// Returns the value nearest this value that is both greater
+    /// than or equal to range.lowerBound and less than or equal
+    /// to range.upperBound.
     func clamped(to range: ClosedRange<Self>) -> Self {
         clamped(min: range.lowerBound, max: range.upperBound)
     }
@@ -678,9 +672,8 @@ extension NSApplication {
 extension NSBezierPath {
     /// Draws a shadow in the shape of the path.
     ///
-    /// - Parameters:
-    ///   - color: The color of the drawn shadow.
-    ///   - radius: The radius of the drawn shadow.
+    /// color: The color of the drawn shadow.
+    /// radius: The radius of the drawn shadow.
     func drawShadow(color: NSColor, radius: CGFloat) {
         guard let context = NSGraphicsContext.current else {
             return
@@ -708,9 +701,8 @@ extension NSBezierPath {
     /// Returns a new path filled with regions in either this path or the
     /// given path.
     ///
-    /// - Parameters:
-    ///   - other: A path to union with this path.
-    ///   - windingRule: The winding rule used to join the paths.
+    /// other: A path to union with this path.
+    /// windingRule: The winding rule used to join the paths.
     func union(_ other: NSBezierPath, using windingRule: WindingRule = .evenOdd) -> NSBezierPath {
         let fillRule: CGPathFillRule = switch windingRule {
         case .nonZero: .winding
@@ -726,9 +718,9 @@ extension NSBezierPath {
 extension NSImage {
     /// Returns a new image that has been resized to the given size.
     ///
-    /// - Note: This method retains the ``isTemplate`` property.
+    /// This method retains the isTemplate property.
     ///
-    /// - Parameter size: The size to resize the current image to.
+    /// size: The size to resize the current image to.
     func resized(to size: CGSize) -> NSImage {
         let resizedImage = NSImage(size: size, flipped: false) { bounds in
             self.draw(in: bounds)
@@ -849,7 +841,7 @@ extension NSScreen {
     ///
     /// Cached per display. If the Menubar window isn't listed yet (e.g. at startup),
     /// nothing is cached: returns nil and schedules a retry. Cleared on display
-    /// changes via `invalidateMenuBarHeightCache()`.
+    /// changes via invalidateMenuBarHeightCache().
     func getMenuBarHeight() -> CGFloat? {
         let id = displayID
         if let cached = NSScreen.displayCache.withLock({ $0.menuBarHeights[id] }), cached > 0 {
@@ -909,10 +901,10 @@ extension NSScreen {
     /// Results are cached per-display and invalidated when the frontmost
     /// application changes, avoiding repeated Accessibility API round-trips.
     /// Callers that need a notch-capped width should apply the cap themselves
-    /// using `frameOfNotch`.
+    /// using frameOfNotch.
     ///
-    /// - Parameter bypassCache: If `true`, always queries the Accessibility API
-    ///   instead of using cached values. Use this when polling for changes.
+    /// bypassCache: If true, always queries the Accessibility API
+    /// instead of using cached values. Use this when polling for changes.
     func getApplicationMenuFrame(bypassCache: Bool = false) -> CGRect? {
         NSScreen.invalidateApplicationMenuFrameCacheIfNeeded()
         let id = displayID
@@ -994,7 +986,7 @@ extension NSStatusItem {
 // MARK: - OSAllocatedUnfairLock
 
 nonisolated extension OSAllocatedUnfairLock where State == Bool {
-    /// Atomically sets the value to `true` and returns whether this call
+    /// Atomically sets the value to true and returns whether this call
     /// was the first to do so. Useful for ensuring a continuation or
     /// callback is invoked exactly once across competing code paths.
     func tryClaimOnce() -> Bool {
@@ -1012,21 +1004,21 @@ extension Publisher {
     /// Replaces each upstream element with an element returned from
     /// the given closure.
     ///
-    /// - Parameter output: A closure that returns a new element to
-    ///   publish in place of the upstream element.
+    /// output: A closure that returns a new element to
+    /// publish in place of the upstream element.
     func replace<T>(_ output: @escaping () -> T) -> Publishers.Map<Self, T> {
         map { _ in output() }
     }
 
     /// Replaces each upstream element with the given element.
     ///
-    /// - Parameter output: A new element to publish in place of the
-    ///   upstream elements.
+    /// output: A new element to publish in place of the
+    /// upstream elements.
     func replace<T>(with output: T) -> Publishers.Map<Self, T> {
         replace { output }
     }
 
-    /// Publishes only non-`nil` elements.
+    /// Publishes only non-nil elements.
     func removeNil<T>() -> Publishers.CompactMap<Self, T> where Output == T? {
         compactMap(\.self)
     }
@@ -1042,9 +1034,9 @@ extension Publisher {
     }
 
     /// Merges this publisher with the given publisher, replacing upstream
-    /// elements with `Void` values.
+    /// elements with Void values.
     ///
-    /// - Parameter other: Another publisher.
+    /// other: Another publisher.
     func discardMerge<P: Publisher>(_ other: P) -> some Publisher<Void, Failure> where P.Failure == Failure {
         replace(with: ()).merge(with: other.replace(with: ()))
     }
@@ -1086,9 +1078,9 @@ nonisolated extension Sequence<MenuBarItem> {
 // MARK: - NSPanel
 
 extension NSPanel {
-    /// Waits until the panel is no longer visible, or until `timeout` elapses.
+    /// Waits until the panel is no longer visible, or until timeout elapses.
     ///
-    /// Uses KVO on `isVisible`, not polling. Main actor only, since `isVisible` is AppKit state.
+    /// Uses KVO on isVisible, not polling. Main actor only, since isVisible is AppKit state.
     @MainActor
     func waitUntilClosed(timeout: Duration = .milliseconds(200)) async {
         guard isVisible else { return }

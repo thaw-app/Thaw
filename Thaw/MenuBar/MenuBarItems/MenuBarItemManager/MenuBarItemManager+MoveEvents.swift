@@ -125,10 +125,9 @@ extension MenuBarItemManager {
 
     /// Waits for a menu bar item to respond to previously posted move events.
     ///
-    /// - Parameters:
-    ///   - item: The item to check for a response.
-    ///   - initialOrigin: The origin of the item before the events were posted.
-    ///   - timeout: The duration to wait before throwing an error.
+    /// item: The item to check for a response.
+    /// initialOrigin: The origin of the item before the events were posted.
+    /// timeout: The duration to wait before throwing an error.
     private nonisolated func waitForMoveEventResponse(
         from item: MenuBarItem,
         initialOrigin: CGPoint,

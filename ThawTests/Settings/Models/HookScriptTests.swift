@@ -9,14 +9,14 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``HookScript``'s stored shape and its global-hook persistence.
-/// Running a hook is covered by `HookRunnerTests`.
+/// Covers HookScript's stored shape and its global-hook persistence.
+/// Running a hook is covered by HookRunnerTests.
 ///
 /// The pre- and post-hook must use different keys, or a post-hook silently
 /// replaces the pre-hook. A corrupt payload degrades to nil, since profile
 /// application has nowhere to surface an error.
 ///
-/// `Defaults.store` is process-wide, so the suite is serialized and uses a
+/// Defaults.store is process-wide, so the suite is serialized and uses a
 /// scratch domain.
 @MainActor
 @Suite("Profile-apply hooks", .serialized)
@@ -49,7 +49,7 @@ struct HookScriptTests {
         #expect(HookScript(path: path).path == path)
     }
 
-    /// Clamping happens at run time, not on the model, so the `Stepper`
+    /// Clamping happens at run time, not on the model, so the Stepper
     /// binding stays simple.
     @Test("An out-of-range timeout is stored unclamped")
     func outOfRangeTimeoutIsStoredUnclamped() {
@@ -277,7 +277,7 @@ struct HookScriptTests {
         }
     }
 
-    /// A non-`Data` value in the slot, as `defaults write` produces, must not
+    /// A non-Data value in the slot, as defaults write produces, must not
     /// trap on the way out.
     @Test("A non-data value in the slot loads as nil")
     func nonDataValueLoadsAsNil() throws {

@@ -219,7 +219,7 @@ nonisolated enum LayoutReconciler {
                 return desiredFiltered.endIndex
             }
         }
-        /// Mirrors `defaultNewItemsBadgeIndex` so the badge and a new item's
+        /// Mirrors defaultNewItemsBadgeIndex so the badge and a new item's
         /// slot can't disagree.
         func sectionDefaultIndex(for section: MenuBarSection.Name) -> Int {
             switch section {
@@ -317,7 +317,7 @@ nonisolated enum LayoutReconciler {
         }
 
         // Pass 2: .newItemAnchored. leftOf keeps order because the anchor
-        // shifts right; rightOf would reuse `anchorIdx + 1` and reverse.
+        // shifts right; rightOf would reuse anchorIdx + 1 and reverse.
         // Track the last placed uid per anchor, not an index: the clamp
         // can pin every slot to the section start, and indexes go stale.
         var lastRightOfAnchorUID = [String: String]()

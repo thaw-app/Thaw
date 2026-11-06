@@ -9,9 +9,9 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers `DisplaySettingsManager.spacingApplyMode` persistence: `didSet`
-/// writes the raw value to `Defaults` and a fresh manager reads it back.
-/// The spacing manager sync needs an `AppState`, so it's covered elsewhere.
+/// Covers DisplaySettingsManager.spacingApplyMode persistence: didSet
+/// writes the raw value to Defaults and a fresh manager reads it back.
+/// The spacing manager sync needs an AppState, so it's covered elsewhere.
 @MainActor
 @Suite("Spacing apply mode persistence", .serialized)
 final class SpacingApplyModePersistenceTests {

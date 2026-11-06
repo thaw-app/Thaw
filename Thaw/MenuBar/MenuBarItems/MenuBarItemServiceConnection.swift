@@ -13,7 +13,7 @@ import XPC
 // MARK: - MenuBarItemService.Connection
 
 extension MenuBarItemService {
-    /// A connection to the `MenuBarItemService` XPC service.
+    /// A connection to the MenuBarItemService XPC service.
     final class Connection: Sendable {
         static let shared = Connection()
 
@@ -140,7 +140,7 @@ extension MenuBarItemService {
 
         /// Sends the current logging configuration once.
         ///
-        /// - Returns: Whether the service accepted it.
+        /// Returns whether the service accepted it.
         private func sendLoggingConfiguration() async -> Bool {
             let request = MenuBarItemService.Request.configureLogging(
                 filePath: DiagnosticLogger.shared.currentLogFile?.path,
@@ -181,7 +181,7 @@ extension MenuBarItemService {
 extension MenuBarItemService {
     /// A wrapper around an XPC session.
     private final nonisolated class Session: Sendable {
-        /// Every access goes through `sessionLock`, including the cancellation
+        /// Every access goes through sessionLock, including the cancellation
         /// handler, so a stale handler can't nil out a newer session.
         private final nonisolated class Storage: @unchecked Sendable {
             private let name = MenuBarItemService.name
@@ -230,7 +230,7 @@ extension MenuBarItemService {
             }
 
             /// Handles the XPC cancellation callback for the session stored
-            /// in `sessionBox`. Arrives on an arbitrary thread.
+            /// in sessionBox. Arrives on an arbitrary thread.
             private func handleCancellation(
                 _ error: XPCRichError,
                 of sessionBox: OSAllocatedUnfairLock<XPCSession?>

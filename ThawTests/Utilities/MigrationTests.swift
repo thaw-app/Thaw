@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``MigrationManager``, which runs once at launch to bring settings
+/// Covers MigrationManager, which runs once at launch to bring settings
 /// written by an earlier build up to the current format.
 ///
 /// The only surviving migration converts the global Thaw Bar switches into
@@ -20,7 +20,7 @@ import Testing
 /// the conversion for good.
 ///
 /// Every case runs against scratch defaults in a serialized suite, since
-/// `migrateAll()` writes through the process-wide `Defaults` facade.
+/// migrateAll() writes through the process-wide Defaults facade.
 @MainActor
 @Suite("Settings migration", .serialized)
 struct MigrationTests {
@@ -117,7 +117,7 @@ struct MigrationTests {
     }
 
     /// A raw value the current build does not recognize (from a downgrade or a
-    /// hand-edited plist) must resolve to `.dynamic` rather than abort the
+    /// hand-edited plist) must resolve to .dynamic rather than abort the
     /// migration.
     @Test("An unrecognized location falls back to dynamic")
     func unrecognizedLocationFallsBackToDynamic() throws {

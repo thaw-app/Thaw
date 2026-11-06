@@ -9,7 +9,7 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// `MenuBarItemManager.MovePolicy`, the pure decision core of `move(item:to:)`,
+/// MenuBarItemManager.MovePolicy, the pure decision core of move(item:to:),
 /// replayed against sequences from field logs.
 @Suite("Move policy")
 struct MovePolicyTests {
@@ -30,7 +30,7 @@ struct MovePolicyTests {
         )
     }
 
-    /// Runs `observations` through the policy and returns every decision.
+    /// Runs observations through the policy and returns every decision.
     private func decisions(
         _ observations: [Policy.Observation],
         plannedTargetMinX: CGFloat? = -3725,

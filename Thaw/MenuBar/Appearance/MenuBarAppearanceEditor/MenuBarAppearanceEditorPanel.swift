@@ -24,7 +24,7 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
-    /// Observes `appearanceManager.effectiveConfiguration` to keep the
+    /// Observes appearanceManager.effectiveConfiguration to keep the
     /// popover's content size in sync.
     private var appearanceConfigurationObservationTask: Task<Void, Never>?
 
@@ -136,7 +136,7 @@ private final class MenuBarAppearanceEditorHostingController: NSHostingControlle
     private weak var appState: AppState?
     private var cancellables = Set<AnyCancellable>()
 
-    /// Observes `appearanceManager.effectiveConfiguration` to keep the
+    /// Observes appearanceManager.effectiveConfiguration to keep the
     /// preferred content size in sync.
     private var appearanceConfigurationObservationTask: Task<Void, Never>?
 

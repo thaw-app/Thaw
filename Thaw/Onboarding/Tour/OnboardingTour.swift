@@ -147,7 +147,7 @@ struct ThawOnboardingTour: View {
 
     // MARK: Helpers
 
-    /// Returns `false` if another navigation claimed the window recently.
+    /// Returns false if another navigation claimed the window recently.
     private func beginNavigation() -> Bool {
         guard !isNavigating else { return false }
         isNavigating = true

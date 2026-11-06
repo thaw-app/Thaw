@@ -288,7 +288,7 @@ struct HiddenDividerBoundaryTests {
             #expect(mismatch == 18)
         }
 
-        /// With no always-hidden section `ahCtrlUID` was nil, so the existing repair
+        /// With no always-hidden section ahCtrlUID was nil, so the existing repair
         /// branch could not run; the boundary move must not share that gate.
         @Test("The boundary is repairable without an always-hidden divider")
         func repairDoesNotDependOnAlwaysHiddenDivider() {
@@ -312,14 +312,12 @@ struct HiddenDividerBoundaryTests {
 /// always are. With the profile's items parked on the wrong side, the chevron is
 /// the last candidate, and dragging H_ctrl to it sweeps the section across.
 ///
-/// ```
 /// Profile layout Phase 1: hiddenBoundaryMismatch=11
 /// Profile layout: 11 item(s) on the wrong side of H_ctrl, moving H_ctrl to the boundary
 /// Profile layout: moving H_ctrl -> left of <com.stonerl.Thaw:Thaw.ControlItem.Visible>
 /// post-H_ctrl classification crossSectionMoves=0, totalSectionMismatch=0
-/// ```
 ///
-/// The roster is the visible order from the issue's `broken_profile.json`
+/// The roster is the visible order from the issue's broken_profile.json
 /// (index 0 rightmost): the chevron at index 11 with four unmovable items left of it.
 @Suite("Boundary anchor refuses Thaw's own items")
 struct BoundaryAnchorControlItemRefusalTests {
@@ -640,7 +638,7 @@ struct HiddenBoundaryOffenderTests {
         #expect(unexempt.wronglyConcealed == ["ejected"])
     }
 
-    /// Drifting into always-hidden is real drift and keeps counting, as in `currentLayoutDivergesFromSaved`.
+    /// Drifting into always-hidden is real drift and keeps counting, as in currentLayoutDivergesFromSaved.
     @Test("A notch-overflow-ejected item that drifted to always-hidden still counts")
     func overflowEjectedItemInAlwaysHiddenStillCounts() {
         let split = offenders(

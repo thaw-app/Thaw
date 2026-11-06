@@ -8,7 +8,7 @@
 import Testing
 @testable import Thaw
 
-/// Covers `MenuBarItemManager.classifyHiddenDragFailure`: how the Layout
+/// Covers MenuBarItemManager.classifyHiddenDragFailure: how the Layout
 /// settings drag handler responds to a move that threw after
 /// resample-and-verify (#744).
 ///

@@ -85,8 +85,8 @@ struct CrossSectionFallbackMoveOrderTests {
     /// Field log thaw_2026-08-27_09-14-14: four items crossing into hidden were
     /// issued in saved order and came to rest reversed:
     ///
-    ///     saved:  Numi, Maccy, Flameshot, Hookshot, BetterDisplay, DisplayLink
-    ///     result: DisplayLink, BetterDisplay, Hookshot, Maccy, Numi
+    /// saved:  Numi, Maccy, Flameshot, Hookshot, BetterDisplay, DisplayLink
+    /// result: DisplayLink, BetterDisplay, Hookshot, Maccy, Numi
     ///
     /// Flameshot was not running and Numi never crossed; where non-crossing items
     /// end up is decided by the AH_ctrl placement, so this asserts only the relative

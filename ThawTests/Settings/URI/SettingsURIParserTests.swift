@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Parses `string` as a `thaw://` URL, failing the test if it is not a valid URL.
+/// Parses string as a thaw:// URL, failing the test if it is not a valid URL.
 private func parse(_ string: String) throws -> SettingsURIRequest {
     let url = try #require(URL(string: string), "Could not build a URL from \(string)")
     return SettingsURIParser.parse(url)
@@ -31,7 +31,7 @@ struct SettingsURIParserTests {
                 == .set(key: "useIceBar", value: "false", displayUUID: "ABC-123"))
         }
 
-        /// `key=` supplies an empty value rather than omitting the parameter, so
+        /// key= supplies an empty value rather than omitting the parameter, so
         /// it parses and is rejected later by key validation. ThawCtl and Droppy
         /// both emit this shape, so it must not be treated as malformed.
         @Test("An empty key is present, not absent", arguments: [
@@ -66,7 +66,7 @@ struct SettingsURIParserTests {
                 ))
         }
 
-        /// `get` never reports malformed: every parameter is optional.
+        /// get never reports malformed: every parameter is optional.
         @Test("A bare get is well formed")
         func bareGet() throws {
             #expect(try parse("thaw://get").route

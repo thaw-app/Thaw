@@ -176,12 +176,11 @@ nonisolated extension Duration {
 nonisolated extension CGEvent {
     /// Returns an event that can be sent to a menu bar item.
     ///
-    /// - Parameters:
-    ///   - item: The event's target item.
-    ///   - source: The event's source.
-    ///   - type: The event's specialized type.
-    ///   - location: The event's location. Does not need to be
-    ///     within the bounds of the item.
+    /// item: The event's target item.
+    /// source: The event's source.
+    /// type: The event's specialized type.
+    /// location: The event's location. Does not need to be
+    /// within the bounds of the item.
     static func menuBarItemEvent(
         item: MenuBarItem,
         source: CGEventSource,
@@ -229,11 +228,10 @@ nonisolated extension CGEvent {
         }
     }
 
-    /// Whether the given integer fields match between this event and `other`.
+    /// Whether the given integer fields match between this event and other.
     ///
-    /// - Parameters:
-    ///   - other: The event to compare with this event.
-    ///   - fields: The integer fields to check.
+    /// other: The event to compare with this event.
+    /// fields: The integer fields to check.
     func matches(_ other: CGEvent, byIntegerFields fields: [CGEventField]) -> Bool {
         fields.allSatisfy { field in
             getIntegerValueField(field) == other.getIntegerValueField(field)
@@ -256,7 +254,7 @@ nonisolated extension CGEvent {
 
     /// Stamps the target window onto the event.
     ///
-    /// Move events also stamp the raw 0x33 `windowID` field. Reports say it can
+    /// Move events also stamp the raw 0x33 windowID field. Reports say it can
     /// make WindowServer drop locations on pid-routed events, but A/B tests on
     /// real hardware show moves are more reliable with it.
     private func setWindowID(_ windowID: CGWindowID, for type: MenuBarItemEventType) {

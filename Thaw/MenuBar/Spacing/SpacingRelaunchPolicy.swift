@@ -9,7 +9,7 @@ import Foundation
 
 /// How the spacing relaunch wave may restart one running application.
 nonisolated enum SpacingRelaunchStrategy: Equatable {
-    /// `launchctl kickstart -k`. The only route for a launch-constrained
+    /// launchctl kickstart -k. The only route for a launch-constrained
     /// agent, because launchd stays the launching parent.
     case launchdKickstart(label: String)
 
@@ -35,7 +35,7 @@ nonisolated enum SpacingRelaunchSkipReason: String, Equatable {
 /// Decides how the spacing relaunch wave treats each app that owns a menu
 /// bar item. It must never terminate a process it cannot bring back.
 ///
-/// Terminating an agent with `KeepAlive.SuccessfulExit = false` (Spotlight,
+/// Terminating an agent with KeepAlive.SuccessfulExit = false (Spotlight,
 /// TextInputMenuAgent) means launchd never respawns it, and relaunching the
 /// bundle ourselves is SIGKILLed at exec ("Launch Constraint Violation").
 /// Unindexed system binaries are skipped for the same reason.
@@ -50,7 +50,7 @@ nonisolated enum SpacingRelaunchPolicy {
         "/Library/Apple/",
     ]
 
-    /// `launchdLabel` wins over everything: kickstart is safe for constrained
+    /// launchdLabel wins over everything: kickstart is safe for constrained
     /// binaries and respects the agent's KeepAlive policy.
     static func strategy(
         executableURL: URL?,

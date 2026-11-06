@@ -10,11 +10,11 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the read side of ``DisplaySettingsManager``'s inheritance rule: a
-/// display with no stored entry resolves through ``globalConfiguration``.
+/// Covers the read side of DisplaySettingsManager's inheritance rule: a
+/// display with no stored entry resolves through globalConfiguration.
 ///
-/// `makeManager` trips the persisting `didSet` observers, so each case runs
-/// inside `withScratchDefaults`.
+/// makeManager trips the persisting didSet observers, so each case runs
+/// inside withScratchDefaults.
 @MainActor
 @Suite("Display settings global fallback", .serialized)
 final class DisplaySettingsManagerGlobalFallbackTests {
@@ -90,7 +90,7 @@ final class DisplaySettingsManagerGlobalFallbackTests {
         }
     }
 
-    /// This offset is pushed into `MenuBarItemSpacingManager.offset` at launch,
+    /// This offset is pushed into MenuBarItemSpacingManager.offset at launch,
     /// on display transitions, and on profile apply. A skipped push leaves it
     /// at 0 and relaunches every menu bar app over the user's spacing.
     @Test("The active display's offset comes from the global fallback")

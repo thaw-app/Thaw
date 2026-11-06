@@ -13,7 +13,7 @@ import Testing
 
 // MARK: - Fixtures
 
-/// The name ``MenuBarItem/autoDetectedName`` derives from a source process,
+/// The name MenuBarItem/autoDetectedName derives from a source process,
 /// computed for the process running the tests.
 ///
 /// Tests that need a resolvable source app pass the test runner's own pid;
@@ -70,11 +70,11 @@ private func baseItem(
 
 // MARK: - MenuBarItem Value Tests
 
-/// Covers the value surface of ``MenuBarItem``: capability flags, identity,
-/// textual forms, name detection, and the `Defaults`-backed custom name.
+/// Covers the value surface of MenuBarItem: capability flags, identity,
+/// textual forms, name detection, and the Defaults-backed custom name.
 ///
 /// Everything uses the memberwise initializer. The window-derived half
-/// (`getMenuBarItems`, `init(uncheckedItemWindow:)`) is out of reach: it needs
+/// (getMenuBarItems, init(uncheckedItemWindow:)) is out of reach: it needs
 /// CGS window lists and the XPC source-pid service.
 @Suite("Menu bar item values")
 struct MenuBarItemValueTests {
@@ -208,7 +208,7 @@ struct MenuBarItemValueTests {
 
     // MARK: - Identity
 
-    /// `uniqueIdentifier`, equality, hashing and `logString`, which other
+    /// uniqueIdentifier, equality, hashing and logString, which other
     /// subsystems key persisted state on.
     @Suite("Identity")
     struct Identity {
@@ -283,8 +283,8 @@ struct MenuBarItemValueTests {
 
         @Test("Every stored field is hashed, so single-field variants never collapse in a set")
         func hashingSeesEveryField() {
-            // Hashing is what `Set<MenuBarItem>` and the item caches rely on;
-            // a field missing from `hash(into:)` would still compare unequal
+            // Hashing is what Set<MenuBarItem> and the item caches rely on;
+            // a field missing from hash(into:) would still compare unequal
             // here, so the set count is the assertion that matters.
             let items: [MenuBarItem] = [
                 baseItem(),
@@ -360,7 +360,7 @@ struct MenuBarItemValueTests {
         @Test("An item without a window title falls back to the source application's name")
         func missingTitleFallsBackToSourceName() throws {
             let sourceName = try #require(testRunnerSourceName)
-            // `MenuBarItem.fixture` substitutes the tag's title for a nil one,
+            // MenuBarItem.fixture substitutes the tag's title for a nil one,
             // so this branch needs the memberwise initializer directly.
             let item = MenuBarItem(
                 tag: appTag("Status"),
@@ -530,11 +530,11 @@ struct MenuBarItemValueTests {
 
     // MARK: - Custom Names
 
-    /// The `Defaults`-backed custom name and the display/description surface
+    /// The Defaults-backed custom name and the display/description surface
     /// layered on it.
     ///
-    /// `withScratchDefaults` swaps the process-wide `Defaults.store`, so this
-    /// suite is `.serialized` as `ScratchDefaults.swift` requires.
+    /// withScratchDefaults swaps the process-wide Defaults.store, so this
+    /// suite is .serialized as ScratchDefaults.swift requires.
     @Suite("Custom names", .serialized)
     struct CustomNames {
         @Test("An item with nothing stored has no custom name")

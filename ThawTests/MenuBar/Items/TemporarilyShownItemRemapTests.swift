@@ -10,11 +10,11 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// The windowID re-map `temporarilyShow` applies before looking up the return destination.
+/// The windowID re-map temporarilyShow applies before looking up the return destination.
 ///
-/// On a cold start the cache can hold fallback tags (`com.apple.controlcenter:Item-0:N`)
-/// while the fresh fetch has real ones, so `getReturnDestination` returns nil and
-/// every IceBar click fails with `showFailed` (#943). The window ID is stable
+/// On a cold start the cache can hold fallback tags (com.apple.controlcenter:Item-0:N)
+/// while the fresh fetch has real ones, so getReturnDestination returns nil and
+/// every IceBar click fails with showFailed (#943). The window ID is stable
 /// across resolution, so the stale item is re-mapped by it.
 @Suite("Temporarily shown item re-map")
 struct TemporarilyShownItemRemapTests {

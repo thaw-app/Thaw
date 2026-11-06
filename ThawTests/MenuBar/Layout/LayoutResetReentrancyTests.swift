@@ -8,15 +8,15 @@
 import Testing
 @testable import Thaw
 
-/// The re-entrancy guard on `resetLayoutToFreshState()`.
+/// The re-entrancy guard on resetLayoutToFreshState().
 ///
 /// A second concurrent reset used to overwrite the single cache continuation,
-/// stranding the first `await` so its `defer` never cleared `isResettingLayout`.
-/// That disabled `shouldPersistSavedOrder` for the session: nothing was ever saved.
+/// stranding the first await so its defer never cleared isResettingLayout.
+/// That disabled shouldPersistSavedOrder for the session: nothing was ever saved.
 ///
-/// A real reset needs the window server, so tests set `isResettingLayout`
-/// directly. Serialized because each builds a live `MenuBarItemManager` that
-/// reaches the shared logger, and the rejected reset's `await` could interleave.
+/// A real reset needs the window server, so tests set isResettingLayout
+/// directly. Serialized because each builds a live MenuBarItemManager that
+/// reaches the shared logger, and the rejected reset's await could interleave.
 @MainActor
 @Suite("Layout reset re-entrancy", .serialized)
 struct LayoutResetReentrancyTests {
@@ -38,7 +38,7 @@ struct LayoutResetReentrancyTests {
         }
     }
 
-    /// If the rejected call's `defer` ran, it would clear the flag under the
+    /// If the rejected call's defer ran, it would clear the flag under the
     /// in-flight reset and bring back the lost-saves bug.
     @Test("A rejected reset leaves the in-flight reset's flag set")
     func rejectedResetDoesNotClearInFlightFlag() async {

@@ -9,11 +9,11 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Covers `IceBarColorManager.colorSamplePercentage(frame:screenFrame:)`.
+/// Covers IceBarColorManager.colorSamplePercentage(frame:screenFrame:).
 ///
 /// The math divides by the screen width inset by half the bar width on each
-/// side. A full-width IceBar collapses that to zero, and the `NaN` lands in
-/// `cropRect.x`, so the guard falls back to `0.5`.
+/// side. A full-width IceBar collapses that to zero, and the NaN lands in
+/// cropRect.x, so the guard falls back to 0.5.
 @Suite("IceBar color sample percentage")
 @MainActor
 struct IceBarColorManagerTests {

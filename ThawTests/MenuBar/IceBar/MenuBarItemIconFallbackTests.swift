@@ -46,7 +46,7 @@ struct MenuBarItemIconFallbackTests {
         let first = MenuBarItemIconFallback.cachedAppIcon(forPID: ownPID)
         let second = MenuBarItemIconFallback.cachedAppIcon(forPID: ownPID)
 
-        // Identity, not equality: `.icon` builds a fresh NSImage per call.
+        // Identity, not equality: .icon builds a fresh NSImage per call.
         #expect(first === second)
     }
 

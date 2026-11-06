@@ -60,7 +60,7 @@ struct HotkeysSettingsPersistenceTests {
         }
     }
 
-    /// `null` is a valid encoding of an unbound hotkey, so it decodes and clears the
+    /// null is a valid encoding of an unbound hotkey, so it decodes and clears the
     /// binding, a different arm from the failure above.
     @Test("A stored null binding decodes to no binding")
     func storedNullBindingDecodesToNoBinding() throws {

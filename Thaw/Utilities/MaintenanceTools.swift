@@ -7,8 +7,8 @@
 
 import Foundation
 import Subprocess
-// Prefer the `System` module when available: Subprocess's API surface uses
-// `System.FilePath`, so both sides must resolve to the same module or the
+// Prefer the System module when available: Subprocess's API surface uses
+// System.FilePath, so both sides must resolve to the same module or the
 // types won't unify.
 #if canImport(System)
     import System
@@ -69,7 +69,7 @@ nonisolated enum MaintenanceTools {
     /// Quits the menu bar hosting process and deletes its preference plist, so
     /// every saved status-item position is rebuilt from scratch.
     ///
-    /// `cfprefsd` is restarted *before* the delete: it caches other processes'
+    /// cfprefsd is restarted *before* the delete: it caches other processes'
     /// domains, and would otherwise flush its stale copy back over the removal.
     @concurrent
     static func resetMenuBarLayoutPositions() async throws {
@@ -101,12 +101,12 @@ nonisolated enum MaintenanceTools {
         }
     }
 
-    /// Process name to `killall` for the current platform's menu bar host.
+    /// Process name to killall for the current platform's menu bar host.
     private static var menuBarHostingProcessName: String {
         "ControlCenter"
     }
 
-    /// Removes the item at `url` when it exists. Any removal error propagates.
+    /// Removes the item at url when it exists. Any removal error propagates.
     private static func removeItemIfExists(at url: URL, using fileManager: FileManager) throws {
         guard fileManager.fileExists(atPath: url.path(percentEncoded: false)) else {
             return

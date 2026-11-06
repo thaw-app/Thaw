@@ -8,11 +8,11 @@
 import Testing
 @testable import Thaw
 
-/// Covers ``AXItemActivator/performFirstEffectiveAction(_:perform:didReact:)``,
+/// Covers AXItemActivator/performFirstEffectiveAction(_:perform:didReact:),
 /// the rule that decides when activating an item is allowed to try harder.
 ///
 /// Escalating past an action that worked opens a menu and immediately shuts
-/// it. `AXShowMenu` throws on success: the menu's modal tracking loop blocks
+/// it. AXShowMenu throws on success: the menu's modal tracking loop blocks
 /// the app, so the messaging timeout expires (#924).
 @Suite("AX activation escalation")
 struct AXActivationEscalationTests {

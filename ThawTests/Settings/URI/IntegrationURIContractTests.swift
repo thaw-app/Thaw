@@ -12,13 +12,13 @@ import Testing
 // MARK: - Raycast
 
 //
-// Source: github.com/thaw-app/raycast-extension
-//   - src/data/index.ts: DIRECT_ACTIONS (6) and SETTINGS_ACTIONS (4)
-//   - src/utils/openUrl.ts: buildThawUrl() composes `thaw://<action>?<query>`
+// Source: github.com/thaw-app/raycast-extension, where src/data/index.ts
+// holds DIRECT_ACTIONS (6) and SETTINGS_ACTIONS (4), and buildThawUrl() in
+// src/utils/openUrl.ts composes thaw://<action>?<query>.
 //
 // buildThawUrl drops falsy query values, so a parameter is either present with
 // a non-empty value or absent entirely. Keys are compile-time constants in the
-// action table, so a bare `thaw://toggle` is unreachable from Raycast.
+// action table, so a bare thaw://toggle is unreachable from Raycast.
 
 /// Every URL the Raycast extension is able to emit.
 private let raycastURIs: [String] = [
@@ -43,7 +43,7 @@ private let raycastURIs: [String] = [
 //   "thaw://toggle?key="             (key value interpolated)
 //   "droppy://thaw-response"         (its callback scheme)
 //
-// Droppy emits no `thaw://set`. Its onboarding tells the user to enable the
+// Droppy emits no thaw://set. Its onboarding tells the user to enable the
 // Settings URI scheme and approve Droppy when prompted; it never probes with
 // a parameterless URL.
 
@@ -89,7 +89,7 @@ struct IntegrationURIContractTests {
             #expect(try parse(uri).route == .action(action))
         }
 
-        /// Raycast's onboarding depends on this: it sends `thaw://authorize`
+        /// Raycast's onboarding depends on this: it sends thaw://authorize
         /// rather than probing with an incomplete settings URL.
         @Test("Authorize command reaches the authorization gate")
         func authorize() throws {
@@ -107,9 +107,9 @@ struct IntegrationURIContractTests {
             #expect(try parse(uri).route == .toggle(key: key, displayUUID: nil))
         }
 
-        /// `buildThawUrl` forwards any query pair it is handed, so unknown
+        /// buildThawUrl forwards any query pair it is handed, so unknown
         /// parameters must be ignored rather than changing the route.
-        /// See src/utils/openUrl.test.ts, which exercises a `label` pair.
+        /// See src/utils/openUrl.test.ts, which exercises a label pair.
         @Test("Unknown query parameters are ignored")
         func unknownParametersIgnored() throws {
             #expect(try parse("thaw://toggle?key=showOnHover&label=Show+on+hover+%26+delay").route
@@ -141,7 +141,7 @@ struct IntegrationURIContractTests {
 
         @Test("Request correlation and broadcast are carried through")
         func requestIdAndBroadcast() throws {
-            // Read from the fixture so `droppyURIs` stays the single source of
+            // Read from the fixture so droppyURIs stays the single source of
             // truth for every URL shape Droppy emits.
             let uri = try #require(
                 droppyURIs.first { $0.contains("requestId=") && $0.contains("broadcast=") },
@@ -155,7 +155,7 @@ struct IntegrationURIContractTests {
             #expect(requestId == "7")
         }
 
-        /// Droppy interpolates the key into `thaw://toggle?key=`. An empty
+        /// Droppy interpolates the key into thaw://toggle?key=. An empty
         /// field yields a present-but-empty key, which must stay a toggle
         /// route and be rejected later by key validation, not as malformed.
         @Test("An empty interpolated key stays a toggle route")

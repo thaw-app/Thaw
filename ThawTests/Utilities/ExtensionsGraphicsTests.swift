@@ -12,7 +12,7 @@ import Testing
 @testable import Thaw
 
 /// Builds a clear canvas with a single filled rectangle on it, on top of the
-/// shared `makeCanvas` fixture in `Support/GraphicsTestFixtures.swift`.
+/// shared makeCanvas fixture in Support/GraphicsTestFixtures.swift.
 ///
 /// The rectangle is given in Core Graphics coordinates (origin bottom left),
 /// but every assertion below is written in terms of the trimmed *size*, which
@@ -40,21 +40,21 @@ private var hasWindowServerSession: Bool {
     CGSessionCopyCurrentDictionary() != nil
 }
 
-/// Covers the graphical extensions in `Utilities/Extensions.swift`.
+/// Covers the graphical extensions in Utilities/Extensions.swift.
 ///
-/// Every one of these extensions is declared without `nonisolated` in a module
-/// built with `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`, so the suites that
-/// touch them are pinned to the main actor. `CGImage` is the exception: that
-/// extension is explicitly `nonisolated`.
+/// Every one of these extensions is declared without nonisolated in a module
+/// built with SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor, so the suites that
+/// touch them are pinned to the main actor. CGImage is the exception: that
+/// extension is explicitly nonisolated.
 ///
-/// `CGImage.averageColor`, `CGImage.isTransparent`, and
-/// `CGImage.detachedCopy` are covered by `CGImageAnalysisTests` and
-/// `CGImageDetachedCopyTests`.
+/// CGImage.averageColor, CGImage.isTransparent, and
+/// CGImage.detachedCopy are covered by CGImageAnalysisTests and
+/// CGImageDetachedCopyTests.
 @Suite("Graphics extensions")
 struct ExtensionsGraphicsTests {
     // MARK: - CGColor
 
-    /// `brightness` is the W3C perceived-luminance formula, and it decides
+    /// brightness is the W3C perceived-luminance formula, and it decides
     /// whether the menu bar tint is treated as light or dark. The weights are
     /// the whole substance of the function, so each channel is measured on its
     /// own.
@@ -161,8 +161,8 @@ struct ExtensionsGraphicsTests {
 
     // MARK: - CGImage transparency trimming
 
-    /// `trimmingTransparency(around:alphaThreshold:)` and its private
-    /// `TransparencyContext` turn a captured menu bar item into a tightly
+    /// trimmingTransparency(around:alphaThreshold:) and its private
+    /// TransparencyContext turn a captured menu bar item into a tightly
     /// cropped icon. The cases assert on the trimmed dimensions, not the
     /// origin, so they do not depend on the bitmap's row order.
     @Suite("CGImage transparency trimming")
@@ -274,8 +274,8 @@ struct ExtensionsGraphicsTests {
 
     // MARK: - NSBezierPath
 
-    /// `union` maps AppKit's winding rule onto Core Graphics' fill rule, and
-    /// `drawShadow` hangs a shadow off the current graphics context. The
+    /// union maps AppKit's winding rule onto Core Graphics' fill rule, and
+    /// drawShadow hangs a shadow off the current graphics context. The
     /// boolean geometry itself belongs to Core Graphics; what is asserted here
     /// is the mapping, the clipping, and the graphics-state balance.
     @MainActor
@@ -332,7 +332,7 @@ struct ExtensionsGraphicsTests {
             #expect(NSGraphicsContext.current == nil)
         }
 
-        /// Two things have to hold after `drawShadow` returns: something was
+        /// Two things have to hold after drawShadow returns: something was
         /// actually drawn outside the path, and the clip and shadow it
         /// installed were popped again. The second is why the method saves and
         /// restores the graphics state; without the restore, the red band drawn
@@ -395,7 +395,7 @@ struct ExtensionsGraphicsTests {
 
     // MARK: - NSImage
 
-    /// `resized(to:)` is used for every control item image, where losing the
+    /// resized(to:) is used for every control item image, where losing the
     /// template flag turns a tinted icon into an opaque one.
     @MainActor
     @Suite("NSImage resizing")
@@ -478,7 +478,7 @@ struct ExtensionsGraphicsTests {
 
     // MARK: - NSPanel
 
-    /// `waitUntilClosed(timeout:)` gates the item-move sequences on a menu
+    /// waitUntilClosed(timeout:) gates the item-move sequences on a menu
     /// actually dismissing. Both cases give the call a timeout far longer than
     /// the suite's time limit, so a broken early-exit or a broken KVO wake-up
     /// fails the test instead of quietly falling through to the timeout.
@@ -532,9 +532,9 @@ struct ExtensionsGraphicsTests {
     // MARK: - NSScreen
 
     /// Values depend on the attached displays, so these assert invariants.
-    /// Not covered: `invalidateMenuBarHeightCache()` drops state the host app
+    /// Not covered: invalidateMenuBarHeightCache() drops state the host app
     /// relies on, and the secondary-screen branch of
-    /// `computeApplicationMenuFrame()` needs a second display.
+    /// computeApplicationMenuFrame() needs a second display.
     @MainActor
     @Suite("NSScreen on the attached displays", .serialized)
     struct NSScreenTests {

@@ -8,10 +8,10 @@
 import Testing
 @testable import Thaw
 
-/// Replays the #881 layout storm through `LayoutSolver.planLCSMoveSequence`
-/// using a reporter's real bar (see ``LayoutStormLog``).
+/// Replays the #881 layout storm through LayoutSolver.planLCSMoveSequence
+/// using a reporter's real bar (see LayoutStormLog).
 ///
-/// The bug was a second planner: on notched displays `applyProfileLayout` used a
+/// The bug was a second planner: on notched displays applyProfileLayout used a
 /// full-sort path that trimmed its replay by the longest ordered prefix, so one
 /// misplaced item near the front replayed everything after it.
 @Suite("Layout storm replay (#881)")

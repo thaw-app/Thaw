@@ -9,12 +9,12 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``SettingsURIHandler/booleanValue(forKey:)`` for a key whose shipped
-/// default is `true`.
+/// Covers SettingsURIHandler/booleanValue(forKey:) for a key whose shipped
+/// default is true.
 ///
-/// `Defaults.bool` reads a key that was never written as `false`. For
-/// `showDockIconWithSettings` that made `thaw://get` report `false` on a fresh
-/// install and the first `thaw://toggle` write `true`, leaving the setting as
+/// Defaults.bool reads a key that was never written as false. For
+/// showDockIconWithSettings that made thaw://get report false on a fresh
+/// install and the first thaw://toggle write true, leaving the setting as
 /// it was.
 @MainActor
 @Suite("Settings URI handler boolean defaults", .serialized)

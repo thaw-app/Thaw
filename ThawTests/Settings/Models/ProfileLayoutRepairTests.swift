@@ -9,13 +9,13 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``ProfileManager/repairPersistedLayouts()``, the pass that applies
+/// Covers ProfileManager/repairPersistedLayouts(), the pass that applies
 /// the saved-order pruning rules to the profile JSON on disk.
 ///
-/// Pruning profiles only on read, via `resolvedItemOrder`, left the damage in
+/// Pruning profiles only on read, via resolvedItemOrder, left the damage in
 /// the file to reseed the saved order at every startup.
 ///
-/// Every assertion reads through a second `ProfileManager` over the same
+/// Every assertion reads through a second ProfileManager over the same
 /// directory, so a repair that only happened in memory fails.
 @MainActor
 @Suite("Profile layout repair", .serialized)
@@ -49,7 +49,7 @@ struct ProfileLayoutRepairTests {
     }
 
     /// The map is a second spelling of the same layout, and
-    /// `resolvedItemSectionMap` hands it back verbatim when present. An entry
+    /// resolvedItemSectionMap hands it back verbatim when present. An entry
     /// pruned from the order but left in the map would still be planned
     /// against.
     @Test("The section map is filtered to the surviving identifiers")
@@ -70,9 +70,9 @@ struct ProfileLayoutRepairTests {
         }
     }
 
-    /// `resolvedItemOrder` treats a present-but-empty `itemOrder` as absent:
-    /// a capture taken while the bar was still settling writes `[:]`, not
-    /// `nil`. Filtering the map against that empty order would erase every
+    /// resolvedItemOrder treats a present-but-empty itemOrder as absent:
+    /// a capture taken while the bar was still settling writes [:], not
+    /// nil. Filtering the map against that empty order would erase every
     /// section assignment and persist the loss.
     @Test("An empty itemOrder does not empty the section map")
     func emptyItemOrderDoesNotEmptySectionMap() throws {
@@ -116,8 +116,8 @@ struct ProfileLayoutRepairTests {
         }
     }
 
-    /// Profiles written before `itemOrder` existed carry the layout in
-    /// `savedSectionOrder`, and that copy has to be repaired too.
+    /// Profiles written before itemOrder existed carry the layout in
+    /// savedSectionOrder, and that copy has to be repaired too.
     @Test("A legacy profile without itemOrder is repaired through savedSectionOrder")
     func repairsLegacyProfile() throws {
         let own = Constants.bundleIdentifier
@@ -138,7 +138,7 @@ struct ProfileLayoutRepairTests {
     }
 
     /// The idempotence property. A clean profile must not be rewritten, so the
-    /// pass cannot churn `modifiedAt` or the file's bytes on every build.
+    /// pass cannot churn modifiedAt or the file's bytes on every build.
     @Test("A clean profile is left untouched")
     func leavesCleanProfileAlone() throws {
         var profile = makeProfile(named: "Clean")

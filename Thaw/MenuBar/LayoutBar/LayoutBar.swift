@@ -18,7 +18,7 @@ struct LayoutBar: View {
         }
 
         func updateNSView(_: LayoutBarScrollView, context _: Context) {
-            // `LayoutBarScrollView` observes shared state itself.
+            // LayoutBarScrollView observes shared state itself.
         }
     }
 

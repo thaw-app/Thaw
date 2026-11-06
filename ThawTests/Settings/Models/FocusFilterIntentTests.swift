@@ -10,24 +10,24 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``ThawFocusFilter`` and ``ProfileEntityQuery``, the App Intents
+/// Covers ThawFocusFilter and ProfileEntityQuery, the App Intents
 /// surface that lets a macOS Focus mode switch Thaw's menu bar profile.
 ///
-/// `perform()` writes the `FocusFilterRequestedProfileID` default and posts a
-/// `DistributedNotificationCenter` notification. Only the default is asserted:
+/// perform() writes the FocusFilterRequestedProfileID default and posts a
+/// DistributedNotificationCenter notification. Only the default is asserted:
 /// the post is delivered on a run loop the test can't join, so asserting it
-/// would be flaky. `ProfileManagerPersistenceTests` covers the receiving half.
+/// would be flaky. ProfileManagerPersistenceTests covers the receiving half.
 ///
-/// Filter cases run in `withScratchDefaults`. The suite stays `.serialized`
-/// because some cases read `nonisolated(unsafe) static var`s.
+/// Filter cases run in withScratchDefaults. The suite stays .serialized
+/// because some cases read nonisolated(unsafe) static vars.
 ///
-/// Gap: `ProfileEntityQuery.allProfiles()` hardcodes the Application Support
+/// Gap: ProfileEntityQuery.allProfiles() hardcodes the Application Support
 /// path with no injection point, so these cases only assert invariants that
 /// hold for both an empty and a populated manifest.
 @MainActor
 @Suite("Thaw Focus Filter intent", .serialized)
 struct FocusFilterIntentTests {
-    /// The `UserDefaults` key the filter hands to `ProfileManager`. Pinned as a
+    /// The UserDefaults key the filter hands to ProfileManager. Pinned as a
     /// literal because renaming it on one side silently stops profile switching.
     private static let requestedProfileKey = "FocusFilterRequestedProfileID"
 
@@ -66,7 +66,7 @@ struct FocusFilterIntentTests {
         try await withScratchDefaults { suite in
             suite.set(UUID().uuidString, forKey: Self.requestedProfileKey)
             let filter = ThawFocusFilter()
-            // The entity's id is a plain `String`, so a stale or hand-built
+            // The entity's id is a plain String, so a stale or hand-built
             // entity can carry something that is not a profile identifier.
             filter.profile = ProfileEntity(id: "not-a-uuid", name: "Bogus")
 
@@ -152,7 +152,7 @@ struct FocusFilterIntentTests {
 
     @Test("The filter is presented to the system under the Profiles category")
     func intentMetadata() throws {
-        // `title` and `description` are `nonisolated(unsafe) static var`s, so
+        // title and description are nonisolated(unsafe) static vars, so
         // only read them. The category name groups the filter in the picker.
         #expect(String(localized: ThawFocusFilter.title) == String(localized: "Set Menu Bar Profile"))
 
@@ -187,8 +187,8 @@ struct FocusFilterIntentTests {
 
     @Test("Every suggested entity is identified by a profile UUID")
     func suggestedEntitiesAreIdentifiedByUUIDs() async throws {
-        // Whatever the manifest holds, each id must round-trip to a `UUID`,
-        // since `ThawFocusFilter.perform()` validates that before storing it.
+        // Whatever the manifest holds, each id must round-trip to a UUID,
+        // since ThawFocusFilter.perform() validates that before storing it.
         let entities = try await ProfileEntityQuery().suggestedEntities()
 
         for entity in entities {
@@ -209,7 +209,7 @@ struct FocusFilterIntentTests {
 
     @Test("The entity's default query answers the same as a freshly built one")
     func defaultQueryMatchesAFreshQuery() async throws {
-        // `defaultQuery` is a `nonisolated(unsafe) static var`; this suite is
+        // defaultQuery is a nonisolated(unsafe) static var; this suite is
         // serialized and only reads it.
         let unknown = UUID().uuidString
 

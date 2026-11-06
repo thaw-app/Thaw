@@ -16,14 +16,14 @@ enum ImageHashing {
     /// The side length of the downscaled hash grid.
     private static let side = 8
 
-    /// Computes the 64-bit average hash of the given image, or `nil` if the
+    /// Computes the 64-bit average hash of the given image, or nil if the
     /// image can't be rendered.
     static func averageHash(_ image: CGImage) -> UInt64? {
         let count = side * side
         var pixels = [UInt8](repeating: 0, count: count)
 
         let colorSpace = CGColorSpaceCreateDeviceGray()
-        // `draw` writes through the buffer after init, and an inout-to-pointer
+        // draw writes through the buffer after init, and an inout-to-pointer
         // conversion only lives for one call, so keep the pointer in scope.
         let rendered = pixels.withUnsafeMutableBytes { buffer -> Bool in
             guard let context = CGContext(
@@ -57,7 +57,7 @@ enum ImageHashing {
     }
 
     /// Computes a stable hash of the image's exact, normalized RGBA pixels.
-    /// Unlike ``averageHash``, a one-pixel difference changes this value,
+    /// Unlike averageHash, a one-pixel difference changes this value,
     /// which is appropriate for the opt-in exact comparison mode.
     static func exactHash(_ image: CGImage) -> UInt64? {
         let width = image.width
@@ -76,7 +76,7 @@ enum ImageHashing {
         var pixels = [UInt8](repeating: 0, count: bytesPerRow * height)
         let bitmapInfo = CGBitmapInfo.byteOrder32Big.rawValue
             | CGImageAlphaInfo.premultipliedLast.rawValue
-        // `draw` writes through the buffer after init, and an inout-to-pointer
+        // draw writes through the buffer after init, and an inout-to-pointer
         // conversion only lives for one call, so keep the pointer in scope.
         let rendered = pixels.withUnsafeMutableBytes { buffer -> Bool in
             guard let context = CGContext(

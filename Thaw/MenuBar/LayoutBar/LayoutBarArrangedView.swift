@@ -20,7 +20,7 @@ class LayoutBarArrangedView: NSView {
 
     /// The container frozen when the drag began.
     ///
-    /// Kept separately because a drag cancelled before `oldContainerInfo` is
+    /// Kept separately because a drag cancelled before oldContainerInfo is
     /// set would leave the source frozen forever.
     private weak var frozenSourceContainer: LayoutBarContainer?
 
@@ -121,8 +121,8 @@ extension LayoutBarArrangedView: NSDraggingSource {
                 )
             }
 
-            // `frozenContainer` covers a cancellation that happened before
-            // `oldContainerInfo` was populated.
+            // frozenContainer covers a cancellation that happened before
+            // oldContainerInfo was populated.
             currentContainer?.resumeArrangedViewUpdatesWithoutAnimation()
             sourceContainer?.resumeArrangedViewUpdatesWithoutAnimation()
             frozenContainer?.resumeArrangedViewUpdatesWithoutAnimation()

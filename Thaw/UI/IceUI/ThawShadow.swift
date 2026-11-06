@@ -44,7 +44,7 @@ enum ThawRadius {
 }
 
 extension View {
-    /// Drops the shared shadow for `elevation` under this view.
+    /// Drops the shared shadow for elevation under this view.
     func thawShadow(_ elevation: ThawElevation) -> some View {
         shadow(color: .black.opacity(elevation.opacity), radius: elevation.radius, y: elevation.y)
     }

@@ -8,7 +8,7 @@
 import Testing
 @testable import Thaw
 
-/// Covers `SettingsSearchNavigation`, which exists to stop a disclosure
+/// Covers SettingsSearchNavigation, which exists to stop a disclosure
 /// request from one search result leaking into a later, unrelated
 /// navigation: a request armed by a search result must be consumed by the
 /// pane that asked for it, or dropped.

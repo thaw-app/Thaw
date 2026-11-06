@@ -30,9 +30,9 @@ enum AXItemActivator {
     /// So a non-responsive app can't block a click.
     private static let messagingTimeout: Float = 0.25
 
-    /// - Throws: ActivationError when the element can't be resolved and
-    ///   verified, or AXPress had no effect. Fall back to a synthetic click;
-    ///   after `actionFailed` the item was left alone, so that's safe.
+    /// Throws activationError when the element can't be resolved and
+    /// verified, or AXPress had no effect. Fall back to a synthetic click;
+    /// after actionFailed the item was left alone, so that's safe.
     static func activate(item: MenuBarItem) async throws {
         guard let element = resolveElement(for: item) else {
             throw ActivationError.elementNotFound
@@ -121,7 +121,7 @@ enum AXItemActivator {
         return children[index]
     }
 
-    /// Index of the first frame containing `point`.
+    /// Index of the first frame containing point.
     static nonisolated func candidateIndex(inFrames frames: [CGRect], containing point: CGPoint) -> Int? {
         frames.firstIndex { $0.contains(point) }
     }

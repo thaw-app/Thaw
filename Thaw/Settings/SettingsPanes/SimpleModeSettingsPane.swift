@@ -17,7 +17,7 @@ struct SimpleModeSettingsPane: View {
     let updatesManager: UpdatesManager
     @Bindable var settings: GeneralSettings
 
-    /// Mirrors ``MenuBarLayoutSettingsPane``: arranging is blocked only while
+    /// Mirrors MenuBarLayoutSettingsPane: arranging is blocked only while
     /// the system is hiding the menu bar itself.
     private var canArrangeLayout: Bool {
         !appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults

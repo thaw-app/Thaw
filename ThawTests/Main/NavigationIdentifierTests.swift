@@ -12,7 +12,7 @@ import Testing
 @MainActor
 @Suite("Navigation identifier labels")
 struct NavigationIdentifierTests {
-    /// `SettingsNavigationIdentifier` overrides `localized`, so the protocol default
+    /// SettingsNavigationIdentifier overrides localized, so the protocol default
     /// is only reachable through a conformer that doesn't.
     @Test("A String-raw conformer labels itself with its raw value")
     func defaultLocalizedUsesTheRawValue() {
@@ -22,7 +22,7 @@ struct NavigationIdentifierTests {
 
     @Test("The shipping conformer overrides the default rather than inheriting it")
     func settingsIdentifierOverridesTheDefault() {
-        // `menuBarLayout`'s raw value is its persisted name; its label is
+        // menuBarLayout's raw value is its persisted name; its label is
         // the short sidebar title. Dropping the override would make the
         // sidebar read "Menu Bar Layout".
         #expect(SettingsNavigationIdentifier.menuBarLayout.rawValue == "Menu Bar Layout")
@@ -30,7 +30,7 @@ struct NavigationIdentifierTests {
     }
 }
 
-/// Does not override `localized`, so the protocol's `RawValue == String` default runs.
+/// Does not override localized, so the protocol's RawValue == String default runs.
 private enum PlainNavigationIdentifier: String, NavigationIdentifier {
     typealias ID = Int
 

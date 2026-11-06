@@ -57,7 +57,7 @@ nonisolated struct MenuBarAppearanceConfigurationV2: Hashable {
                 tintKind: partial.tintKind,
                 tintColor: partial.tintColor,
                 tintGradient: partial.tintGradient,
-                // Not `partial.tintOpacity`. The Thaw Bar has always drawn the
+                // Not partial.tintOpacity. The Thaw Bar has always drawn the
                 // inherited tint at a fixed opacity, so reading the menu bar's
                 // here would restyle every existing install.
                 tintOpacity: ThawBarAppearance.inheritedTintOpacity,
@@ -161,7 +161,7 @@ nonisolated struct MenuBarAppearancePartialConfiguration: Hashable {
     var borderOnMenuBar: Bool
     /// Whether the shape border is drawn around the Thaw Bar.
     ///
-    /// New, so it uses the Thaw name rather than the persisted `iceBar` prefix.
+    /// New, so it uses the Thaw name rather than the persisted iceBar prefix.
     var borderOnThawBar: Bool
     var borderColor: CGColor
     var borderWidth: Double
@@ -253,7 +253,7 @@ nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        // Settings written before the split only carry `hasBorder`, which applied
+        // Settings written before the split only carry hasBorder, which applied
         // to the menu bar and the Thaw Bar at once, so it seeds both flags.
         let legacyHasBorder = try container.decodeIfPresent(Bool.self, forKey: .hasBorder)
         try self.init(
@@ -307,11 +307,11 @@ nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
 // MARK: - ThawBarAppearance
 
 /// The Thaw Bar's own appearance, drawn in place of the menu bar's when
-/// ``overridesMenuBar`` is set.
+/// overridesMenuBar is set.
 ///
 /// Ignored until the user opts in, and seeded from what the panel already
 /// draws, so enabling it changes nothing on its own. Only the corner treatment
-/// carries over from ``MenuBarShapeKind``; a floating panel has no edges to match.
+/// carries over from MenuBarShapeKind; a floating panel has no edges to match.
 nonisolated struct ThawBarAppearance: Hashable {
     /// Whether the Thaw Bar draws with these values instead of the menu bar's.
     var overridesMenuBar: Bool
@@ -331,7 +331,7 @@ nonisolated struct ThawBarAppearance: Hashable {
 nonisolated extension ThawBarAppearance {
     /// The opacity the Thaw Bar has always drawn its inherited tint at.
     ///
-    /// Seeding from this, not the menu bar's `tintOpacity`, keeps the opt-in inert.
+    /// Seeding from this, not the menu bar's tintOpacity, keeps the opt-in inert.
     static let inheritedTintOpacity: Double = 0.2
 
     static let defaultConfiguration = ThawBarAppearance(
@@ -359,7 +359,7 @@ nonisolated extension ThawBarAppearance {
     /// An override seeded from what the Thaw Bar is drawing right now.
     ///
     /// Starts from the resolved values so switching on changes nothing. A tint
-    /// kind the panel can't draw becomes ``MenuBarTintKind/noTint``.
+    /// kind the panel can't draw becomes MenuBarTintKind/noTint.
     init(seededFrom resolved: ResolvedThawBarAppearance) {
         self.init(
             overridesMenuBar: true,

@@ -168,8 +168,8 @@ nonisolated enum MouseHelpers {
     /// Moves the mouse cursor to the given point without generating
     /// events.
     ///
-    /// - Parameter point: The point to move the cursor to in global
-    ///   display coordinates.
+    /// point: The point to move the cursor to in global
+    /// display coordinates.
     static func warpCursor(to point: CGPoint) {
         let result = CGWarpMouseCursorPosition(point)
         if result != .success {
@@ -199,10 +199,9 @@ nonisolated enum MouseHelpers {
     /// edge of a display, which sits under the Apple menu, so an item that is
     /// offscreen has to be left alone rather than warped to.
     ///
-    /// - Parameters:
-    ///   - bounds: The bounds of the item in global display coordinates.
-    ///   - displayBounds: The bounds of the available displays in global
-    ///     display coordinates.
+    /// bounds: The bounds of the item in global display coordinates.
+    /// displayBounds: The bounds of the available displays in global
+    /// display coordinates.
     static func cursorPoint(overItemWithBounds bounds: CGRect, displayBounds: [CGRect]) -> CGPoint? {
         guard !bounds.isEmpty else {
             return nil
@@ -221,22 +220,21 @@ nonisolated enum MouseHelpers {
     /// window server clamps it to a display edge. For a parked item that is
     /// the leftmost edge, under the Apple menu.
     ///
-    /// - Parameters:
-    ///   - point: The point in global display coordinates.
-    ///   - displayBounds: The bounds of the available displays in global
-    ///     display coordinates.
+    /// point: The point in global display coordinates.
+    /// displayBounds: The bounds of the available displays in global
+    /// display coordinates.
     static func isOffEveryDisplay(_ point: CGPoint, displayBounds: [CGRect]) -> Bool {
         !displayBounds.contains { $0.contains(point) }
     }
 
-    /// Returns the cursor to `point` after an operation that moved it.
+    /// Returns the cursor to point after an operation that moved it.
     ///
     /// An unconditional warp. The version that preferred the user's own position came
     /// with the macOS 27 backport (#811) and left with its revert (#857); it should
     /// return with #811.
     ///
-    /// - Parameter point: The point to move the cursor to in global
-    ///   display coordinates.
+    /// point: The point to move the cursor to in global
+    /// display coordinates.
     static func restoreCursorPosition(to point: CGPoint) {
         warpCursor(to: point)
     }
@@ -244,8 +242,8 @@ nonisolated enum MouseHelpers {
     /// Returns a Boolean value that indicates whether a mouse button
     /// is pressed.
     ///
-    /// - Parameter button: The mouse button to check. Pass nil to
-    ///   check all available mouse buttons (Quartz supports up to 32).
+    /// button: The mouse button to check. Pass nil to
+    /// check all available mouse buttons (Quartz supports up to 32).
     static func isButtonPressed(_ button: CGMouseButton? = nil) -> Bool {
         let stateID = CGEventSourceStateID.combinedSessionState
         if let button {
@@ -266,8 +264,8 @@ nonisolated enum MouseHelpers {
     /// Returns a Boolean value that indicates whether the last mouse
     /// movement event occurred within the given duration.
     ///
-    /// - Parameter duration: The duration within which the last mouse
-    ///   movement event must have occurred in order to return true.
+    /// duration: The duration within which the last mouse
+    /// movement event must have occurred in order to return true.
     static func lastMovementOccurred(
         within duration: Duration,
         stateID: CGEventSourceStateID = .combinedSessionState
@@ -277,7 +275,7 @@ nonisolated enum MouseHelpers {
     }
 
     /// Whether a physical press, release, or drag of any button happened within the
-    /// interval. `isButtonPressed()` misses a click released before the check, so these
+    /// interval. isButtonPressed() misses a click released before the check, so these
     /// timestamps are what make a bulk batch defer to a mid-sequence click.
     static func lastPointerButtonEventOccurred(
         within duration: Duration,
@@ -318,8 +316,8 @@ nonisolated enum MouseHelpers {
     /// Returns a Boolean value that indicates whether the last scroll
     /// wheel event occurred within the given duration.
     ///
-    /// - Parameter duration: The duration within which the last scroll
-    ///   wheel event must have occurred in order to return true.
+    /// duration: The duration within which the last scroll
+    /// wheel event must have occurred in order to return true.
     static func lastScrollWheelOccurred(
         within duration: Duration,
         stateID: CGEventSourceStateID = .combinedSessionState

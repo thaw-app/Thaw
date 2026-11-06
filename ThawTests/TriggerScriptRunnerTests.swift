@@ -16,10 +16,10 @@ import Testing
 @Suite("Trigger script runner", .serialized)
 @MainActor
 struct TriggerScriptRunnerTests {
-    /// Waits for `condition` to hold, up to `timeout`.
+    /// Waits for condition to hold, up to timeout.
     ///
     /// The runner's teardown (SIGTERM, 500 ms, SIGINT, 100 ms, SIGKILL, then
-    /// up to a second of group drain) can outlast `run`, so asserting right
+    /// up to a second of group drain) can outlast run, so asserting right
     /// away flakes on a loaded machine.
     private func waitUntil(
         timeout: Duration = .seconds(5),
@@ -48,10 +48,10 @@ struct TriggerScriptRunnerTests {
             ofItemAtPath: scriptURL.path
         )
 
-        // Descriptor 1 must be genuinely closed during the launch so `Pipe()` may
+        // Descriptor 1 must be genuinely closed during the launch so Pipe() may
         // reuse it, which HookProcess's close-before-dup2 ordering guards against.
         // That window is process-wide and spans a suspension point, so the suite is
-        // `.serialized` and the restore runs eagerly, not only in the `defer`.
+        // .serialized and the restore runs eagerly, not only in the defer.
         let savedStdout = Darwin.dup(STDOUT_FILENO)
         #expect(savedStdout >= 0)
         var restored = false
@@ -144,8 +144,8 @@ struct TriggerScriptRunnerTests {
 
         // The runner timeout stays well above the elapsed bound, so a slow
         // launch fails the bound instead of tripping the timeout as well and
-        // leaving the two behaviors indistinguishable. `ContinuousClock` for
-        // the same reason `waitUntil` uses it: a wall-clock adjustment must
+        // leaving the two behaviors indistinguishable. ContinuousClock for
+        // the same reason waitUntil uses it: a wall-clock adjustment must
         // not move the measurement.
         let startedAt = ContinuousClock.now
         let outcome = await TriggerScriptRunner.run(path: scriptURL.path, timeout: 4)

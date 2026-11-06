@@ -11,10 +11,10 @@ import Testing
 
 /// When the catalog already knows the app that owns an unresolved Control
 /// Center-hosted slot, the placeholder is re-tagged under that app's bundle ID
-/// so the Layout editor drag and `move(...)` can proceed (#905).
+/// so the Layout editor drag and move(...) can proceed (#905).
 ///
-/// Only the pure halves are tested here; the `LayoutBarItemView` flow sits
-/// behind an `AXIdentityCatalog` snapshot tested separately.
+/// Only the pure halves are tested here; the LayoutBarItemView flow sits
+/// behind an AXIdentityCatalog snapshot tested separately.
 @Suite("Unresolved placeholder alias")
 struct UnresolvedPlaceholderAliasTests {
     private static let hostBundleIDs: Set<String> = [

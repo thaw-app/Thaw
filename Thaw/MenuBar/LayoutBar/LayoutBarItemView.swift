@@ -36,7 +36,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// action safe if one gets through anyway.
     private var didBeginDraggingForCurrentClick = false
 
-    /// Observes `appState.imageCache.images`.
+    /// Observes appState.imageCache.images.
     private var imageObservationTask: Task<Void, Never>?
 
     /// Observes trigger ownership. Views rebuild only on cache changes, so a
@@ -53,10 +53,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     let item: MenuBarItem
 
     /// The app-owned identity AX correlation resolved for an
-    /// `unresolvedControlCenterPlaceholder`. Once set, it stays.
+    /// unresolvedControlCenterPlaceholder. Once set, it stays.
     private var aliasedItem: MenuBarItem?
 
-    /// The alias when one was resolved, otherwise `item`.
+    /// The alias when one was resolved, otherwise item.
     private var effectiveItem: MenuBarItem {
         aliasedItem ?? item
     }
@@ -64,10 +64,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     private lazy var tooltipController = CustomTooltipController(text: item.displayName, view: self)
     private var tooltipTrackingArea: NSTrackingArea?
     private var appIconPreferenceObservationTask: Task<Void, Never>?
-    /// Drawn when no capture is cached. Re-resolved in ``drawPlaceholder``,
+    /// Drawn when no capture is cached. Re-resolved in drawPlaceholder,
     /// since the view outlives cache refreshes and the app may start later.
     private var placeholderImage: NSImage?
-    /// Stops ``drawPlaceholder`` from re-running the lookup on every draw.
+    /// Stops drawPlaceholder from re-running the lookup on every draw.
     private var placeholderResolvedFromApp = false
 
     private var cachedImage: MenuBarItemImageCache.CapturedImage? {
@@ -82,7 +82,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         }
     }
 
-    /// Mirrors `advanced.alwaysUseAppIconForMenuBarItems`.
+    /// Mirrors advanced.alwaysUseAppIconForMenuBarItems.
     private var prefersAppIcon: Bool {
         appState?.settings.advanced.alwaysUseAppIconForMenuBarItems ?? false
     }
@@ -121,7 +121,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         .item(effectiveItem)
     }
 
-    /// The enabled trigger that owns this item's placement, or `nil`.
+    /// The enabled trigger that owns this item's placement, or nil.
     ///
     /// The trigger decides where the item sits. Dragging is still allowed as
     /// a manual fix before a trigger applies; the badge explains the
@@ -132,7 +132,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         ) ?? false
     }
 
-    /// For the hover tooltip only; `draw` uses ``isTriggerControlled``.
+    /// For the hover tooltip only; draw uses isTriggerControlled.
     private var controllingTrigger: MenuBarItemTrigger? {
         appState?.settings.triggers.controllingTrigger(
             forIdentifier: effectiveItem.tag.tagIdentifier
@@ -264,7 +264,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 }
             }
 
-            // `cachedImage` doesn't change, so its didSet can't cover this.
+            // cachedImage doesn't change, so its didSet can't cover this.
             appIconPreferenceObservationTask?.cancel()
             appIconPreferenceObservationTask = Task { @MainActor [weak self, weak appState] in
                 var previous: Bool?
@@ -280,8 +280,8 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 }
             }
 
-            // `controlledIdentifiers` is stored so every read registers a
-            // dependency. Read through `effectiveItem` to match `draw`.
+            // controlledIdentifiers is stored so every read registers a
+            // dependency. Read through effectiveItem to match draw.
             triggerObservationTask = Task { @MainActor [weak self, weak appState] in
                 let changes = observedValues { [weak self, weak appState] in
                     guard let self, let appState else { return false }
@@ -344,14 +344,14 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         return identity.identifier ?? identity.title ?? identity.help
     }
 
-    /// When `item` is an `unresolvedControlCenterPlaceholder` (#905) but
+    /// When item is an unresolvedControlCenterPlaceholder (#905) but
     /// Control Center's AX tree names the owning app for the slot's frame,
     /// builds a movable alias tagged and PID'd as that app. AppKit still moves
-    /// the slot by `windowID`.
+    /// the slot by windowID.
     ///
     /// The AX snapshot (up to 500 ms) runs at most once per drag: success
     /// enables the view, and failure hands its identity to
-    /// ``logMoveRefusal(correlatedIdentity:)``.
+    /// logMoveRefusal(correlatedIdentity:).
     private func aliasForUnresolvedControlCenterPlaceholder(
     ) -> (alias: MenuBarItem?, correlatedIdentity: AXIdentityCatalog.AXItemIdentity?) {
         precondition(item.immovabilityReason == .unresolvedControlCenterPlaceholder)
@@ -534,13 +534,13 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         return CGSize(width: width, height: height)
     }
 
-    /// The icon of the app that put this item on the bar, or `nil` when the
+    /// The icon of the app that put this item on the bar, or nil when the
     /// owner can only name Control Center.
     ///
-    /// Resolved through ``MenuBarItemIconFallback`` to match the Thaw Bar.
+    /// Resolved through MenuBarItemIconFallback to match the Thaw Bar.
     ///
     /// On macOS 26 every Control Center slot reports Control Center as owner.
-    /// Caching that icon would also stop ``drawPlaceholder`` retrying once
+    /// Caching that icon would also stop drawPlaceholder retrying once
     /// the real source PID is known.
     @MainActor
     private static func resolvedAppIcon(for item: MenuBarItem) -> NSImage? {
@@ -565,7 +565,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     /// Leading edge, since the unresponsive badge owns the trailing one.
-    /// Cached because `draw(_:)` runs per frame during a drag and symbol
+    /// Cached because draw(_:) runs per frame during a drag and symbol
     /// resolution allocates.
     private static let triggerBadge: NSImage? = {
         let configuration = NSImage.SymbolConfiguration(paletteColors: [.controlAccentColor])

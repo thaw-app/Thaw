@@ -72,7 +72,7 @@ final class HotkeysSettings {
 
     /// Configures the internal observers for the model.
     ///
-    /// Callbacks are assigned after ``loadInitialState()``, so only later
+    /// Callbacks are assigned after loadInitialState(), so only later
     /// changes are persisted.
     private func configureObservers() {
         for hotkey in hotkeys {
@@ -80,7 +80,7 @@ final class HotkeysSettings {
                 guard let self, let hotkey else { return }
                 do {
                     // Remove cleared bindings; encoding the optional would
-                    // store a dead `null` entry.
+                    // store a dead null entry.
                     let data = try hotkey.keyCombination.map { try encoder.encode($0) }
                     withMutableCopy(of: Defaults.dictionary(forKey: .hotkeys) ?? [:]) { dictionary in
                         if let data {

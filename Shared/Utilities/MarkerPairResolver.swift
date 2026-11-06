@@ -60,24 +60,23 @@ nonisolated enum MarkerPairResolver {
     /// wrong PID is worse than none: it renames the item and slips past the
     /// unresolved-sourcePID gates.
     ///
-    /// - Parameters:
-    ///   - unresolvedIcons: candidate on-screen icons. Icons whose own
-    ///     title is bundle-ID-shaped (contains a dot) are skipped so
-    ///     two markers cannot pair with each other.
-    ///   - markers: bundle-ID-titled marker windows extracted from the
-    ///     items-only list. Callers are expected to pre-filter Thaw
-    ///     control items and the Thaw self-registration window.
-    ///   - thawBundleID: Thaw's own bundle identifier; excluded from
-    ///     both resolution paths.
-    ///   - ccBundleID: Control Center's bundle identifier; excluded
-    ///     from the marker's owning-PID resolution path.
-    ///   - pidToBundleID: closure mapping a PID to its bundle ID,
-    ///     mirroring NSRunningApplication(processIdentifier:).
-    ///   - bundleIDToPID: closure mapping a bundle ID to a running
-    ///     app's PID, mirroring NSRunningApplication.
-    ///     runningApplications(withBundleIdentifier:).first?.
-    ///     processIdentifier.
-    /// - Returns: one Resolution per successfully resolved icon.
+    /// unresolvedIcons: candidate on-screen icons. Icons whose own
+    /// title is bundle-ID-shaped (contains a dot) are skipped so
+    /// two markers cannot pair with each other.
+    /// markers: bundle-ID-titled marker windows extracted from the
+    /// items-only list. Callers are expected to pre-filter Thaw
+    /// control items and the Thaw self-registration window.
+    /// thawBundleID: Thaw's own bundle identifier; excluded from
+    /// both resolution paths.
+    /// ccBundleID: Control Center's bundle identifier; excluded
+    /// from the marker's owning-PID resolution path.
+    /// pidToBundleID: closure mapping a PID to its bundle ID,
+    /// mirroring NSRunningApplication(processIdentifier:).
+    /// bundleIDToPID: closure mapping a bundle ID to a running
+    /// app's PID, mirroring NSRunningApplication.
+    /// runningApplications(withBundleIdentifier:).first?.
+    /// processIdentifier.
+    /// Returns one Resolution per successfully resolved icon.
     static func resolve(
         unresolvedIcons: [UnresolvedIcon],
         markers: [Marker],
@@ -195,9 +194,9 @@ nonisolated enum MarkerPairResolver {
 /// off, SpamSieve ~8pt) so a nearby unrelated neighbor is never attributed.
 nonisolated enum HostedItemOwnership {
     /// Returns the single running bundle identifier a window title names
-    /// outright, or `nil`. Case-insensitive.
+    /// outright, or nil. Case-insensitive.
     ///
-    /// Unlike ``titleIndicatesOwner(_:bundleID:)``, exact equality needs no
+    /// Unlike titleIndicatesOwner(_:bundleID:), exact equality needs no
     /// spatial corroboration, which CC-hosted items can never supply (#854).
     /// Requiring a unique match rules out two processes sharing an identifier.
     static func exactlyNamedOwner(_ title: String?, runningBundleIDs: [String]) -> String? {

@@ -18,7 +18,7 @@ nonisolated enum LogRotationInterval: String, CaseIterable, Identifiable {
         rawValue
     }
 
-    /// The interval in seconds, or `0` when scheduled rotation is off.
+    /// The interval in seconds, or 0 when scheduled rotation is off.
     var seconds: TimeInterval {
         switch self {
         case .off: 0

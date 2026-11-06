@@ -23,7 +23,7 @@ final class IceBarPanel: NSPanel {
     /// Show at the mouse pointer regardless of the user's settings.
     private var hotkeyLocationOverride = false
 
-    /// Suppresses the screen-parameters auto-hide that races with `show()`
+    /// Suppresses the screen-parameters auto-hide that races with show()
     /// when the user clicks an inactive screen's menu bar.
     private var lastShowTimestamp: Date?
 
@@ -418,7 +418,7 @@ private struct IceBarContentView: View {
         return menuBarHeight > 0 ? menuBarHeight : nil
     }
 
-    /// Mirrors `advanced.alwaysUseAppIconForMenuBarItems`.
+    /// Mirrors advanced.alwaysUseAppIconForMenuBarItems.
     private var prefersAppIcon: Bool {
         appState.settings.advanced.alwaysUseAppIconForMenuBarItems
     }
@@ -783,8 +783,8 @@ private struct IceBarItemView: View {
         }
     }
 
-    /// Re-fetches on-screen items and returns the live `MenuBarItem` whose
-    /// tag+PID matches `item`, or `nil` if the item is not currently on-screen.
+    /// Re-fetches on-screen items and returns the live MenuBarItem whose
+    /// tag+PID matches item, or nil if the item is not currently on-screen.
     ///
     /// Matches by tag+PID because CGWindowIDs get recycled after a long sleep.
     private func liveOnScreenItem(matching item: MenuBarItem, on displayID: CGDirectDisplayID) async -> MenuBarItem? {

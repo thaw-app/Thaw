@@ -344,7 +344,7 @@ struct MarkerPairResolverTests {
     }
 
     /// Marker's windowID equals the icon's windowID (self-pair): the
-    /// `windowID != icon.windowID` filter rejects self-pairings even
+    /// windowID != icon.windowID filter rejects self-pairings even
     /// though the size matches.
     @Test("A self-pairing is rejected")
     func selfPairingRejected() {

@@ -205,7 +205,7 @@ struct ProfileLayoutLogReplayTests {
     // MARK: Hardening: prefer the logged desiredVisible over inference
 
     /// The logged desiredVisible is used verbatim instead of inferred.
-    /// `com.example.extra:Item-0` is a visible non-orphan the profile doesn't
+    /// com.example.extra:Item-0 is a visible non-orphan the profile doesn't
     /// cover: inference would treat it as desired, while the logged set omits
     /// it and the partitioner flags it unmanaged, matching the log.
     @Test("The logged desiredVisible is used instead of inference")
@@ -369,7 +369,7 @@ struct ProfileLayoutLogReplayTests {
 
     /// Replays a field cycle (thaw_2026-08-20_11-21-26.log, 16:32:47.8) where
     /// the bar is persistently over the notch budget, so every apply ejects one
-    /// item, while Phase 1 reads `leits.MeetingBar` (hidden in this snapshot,
+    /// item, while Phase 1 reads leits.MeetingBar (hidden in this snapshot,
     /// visible per the saved order) as wronglyConcealed.
     ///
     /// The repair recalled MeetingBar to visible and the next eject sent it
@@ -502,12 +502,12 @@ enum ProfileLayoutLogReplay {
 
     /// Parses a captured diagnostic log into replayable cycles.
     ///
-    /// Each pattern below is a contract with a production `diagLog` call site.
+    /// Each pattern below is a contract with a production diagLog call site.
     /// The emitting sites are marked with a matching
-    /// `// Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:)`
+    /// // Format contract: parsed by ProfileLayoutLogReplayTests.parse(_:)
     /// comment; find them with:
     ///
-    ///     grep -rn 'Format contract: parsed by ProfileLayoutLogReplayTests' Thaw/
+    /// grep -rn 'Format contract: parsed by ProfileLayoutLogReplayTests' Thaw/
     ///
     /// The checked-in fixtures are real captured field logs that cannot be
     /// regenerated, so the production messages must not be reworded.
@@ -595,7 +595,7 @@ enum ProfileLayoutLogReplay {
     /// Builds a live MenuBarItemTag from a logged uniqueIdentifier so the
     /// harness exercises the real tag predicates (isControlCenterGenericItem,
     /// isControlItem) and the real identifier format rather than reimplementing
-    /// them. Identifiers are `namespace:title[:index]`; only a trailing
+    /// them. Identifiers are namespace:title[:index]; only a trailing
     /// all-digits component is the instance index, and titles may themselves
     /// contain dots (e.g. com.apple.menuextra.TimeMachine) but not colons.
     static func makeTag(fromUID uid: String, windowID: CGWindowID) -> MenuBarItemTag {
@@ -638,7 +638,7 @@ enum ProfileLayoutLogReplay {
     }
 
     /// Extracts the quoted UIDs from a logged array body like
-    /// `"a", "b", "c"`.
+    /// "a", "b", "c".
     private static func quotedStrings(in body: Substring) -> [String] {
         body.matches(of: /"([^"]+)"/).map { String($0.output.1) }
     }

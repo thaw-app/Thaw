@@ -8,12 +8,12 @@
 import Testing
 @testable import Thaw
 
-/// Covers `ShareableContentCache`'s coalescing: a hit inside `maxAge`, a miss
+/// Covers ShareableContentCache's coalescing: a hit inside maxAge, a miss
 /// once it has elapsed, concurrent callers joining one in-flight fetch, and
 /// one caller's cancellation not poisoning another's result.
 ///
 /// Serialized because every case measures real elapsed time against short
-/// `maxAge` budgets, and concurrent cases would contend for the executor.
+/// maxAge budgets, and concurrent cases would contend for the executor.
 @Suite("Shareable content cache", .serialized, .timeLimit(.minutes(1)))
 struct ShareableContentCacheTests {
     // MARK: - Hit within maxAge
@@ -143,7 +143,7 @@ private actor Counter {
 
     // MARK: - Forced refresh
 
-    /// `captureWindowsImageSCK` re-fetches with `maxAge: .zero` when no
+    /// captureWindowsImageSCK re-fetches with maxAge: .zero when no
     /// display intersects the windows it is capturing, on the theory that the
     /// cached display set predates a topology change (#794). That recovery
     /// only works if a zero budget genuinely bypasses the cache rather than

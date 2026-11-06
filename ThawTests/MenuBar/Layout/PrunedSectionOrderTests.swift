@@ -54,7 +54,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["visible"] == system)
     }
 
-    /// Instance indexes are identity, so `:1` is not a duplicate of `:0`.
+    /// Instance indexes are identity, so :1 is not a duplicate of :0.
     @Test("Differing instance indexes are not duplicates")
     func instanceIndexesAreDistinct() {
         let entries = [
@@ -67,8 +67,8 @@ struct PrunedSectionOrderTests {
 
     // MARK: Localized display-name ghosts (#949)
 
-    /// An en-GB machine minted `Control Centre:WiFi` while the bundle ID read nil,
-    /// and treating it as a real owner deleted the genuine `com.apple.controlcenter:WiFi` (#949).
+    /// An en-GB machine minted Control Centre:WiFi while the bundle ID read nil,
+    /// and treating it as a real owner deleted the genuine com.apple.controlcenter:WiFi (#949).
     @Test("A localized ghost never deletes its genuine Control Center twin")
     func localizedGhostDoesNotDeleteGenuineTwin() {
         let ghost = "Control Centre:WiFi"
@@ -111,7 +111,7 @@ struct PrunedSectionOrderTests {
         #expect(withAlias["visible"] == [genuine])
     }
 
-    /// `Control Centre:Alcove` next to `com.henrikruscon.Alcove:Alcove`: a third-party
+    /// Control Centre:Alcove next to com.henrikruscon.Alcove:Alcove: a third-party
     /// twin found only via the claimed-title rule (#949).
     @Test("A localized ghost of a real owner's item is dropped")
     func localizedGhostOfRealOwnerIsDropped() {
@@ -195,7 +195,7 @@ struct PrunedSectionOrderTests {
         #expect(LayoutSolver.prunedSectionOrder(clean) == clean)
     }
 
-    /// Keeps the caller's `pruned != stored` comparison meaningful.
+    /// Keeps the caller's pruned != stored comparison meaningful.
     @Test("Sections and keys survive an empty result")
     func keysSurviveEmptying() {
         let pruned = LayoutSolver.prunedSectionOrder([
@@ -276,7 +276,7 @@ struct PrunedSectionOrderTests {
     }
 
     /// This rule runs before the duplicate check: otherwise the misattributed entry
-    /// owns `WiFi` and the genuine Control Center item is deleted instead (#927).
+    /// owns WiFi and the genuine Control Center item is deleted instead (#927).
     @Test("The genuine Control Center twin survives its misattributed copy")
     func keepsGenuineTwinOfMisattributedEntry() {
         let own = Constants.bundleIdentifier
@@ -350,7 +350,7 @@ struct PrunedSectionOrderTests {
         #expect(pruned["hidden"] == ["com.steipete.codexbar:codexbar-claude", "leits.MeetingBar:Item-0"])
     }
 
-    /// Pruning runs after ``LayoutSolver/canonicalizedSectionOrder(_:)``, which
+    /// Pruning runs after LayoutSolver/canonicalizedSectionOrder(_:), which
     /// rewrites the helper namespace but not the title, so they no longer match literally.
     @Test("A canonicalized helper namespace still reads as self-titled")
     func dropsSelfTitledEntryAfterNamespaceCanonicalization() {

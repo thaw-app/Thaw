@@ -13,12 +13,11 @@ import Testing
 /// Log-replay harness for the SourcePIDCache strict 1pt spatial pass.
 ///
 /// macOS 26 hosts third-party status items under Control Center at the CG
-/// layer. Two identical-looking shapes must resolve in opposite directions:
-///
-///   - Little Snitch publishes no extras-bar child, so the only AX child on
-///     its icon is Control Center's. It must stay unresolved for marker-pair.
-///   - The Clock publishes its own extras-bar child on the same icon, so it
-///     must resolve to com.fabriceleyne.theclock.
+/// layer. Two identical-looking shapes must resolve in opposite directions.
+/// Little Snitch publishes no extras-bar child, so the only AX child on its
+/// icon is Control Center's, and it must stay unresolved for marker-pair.
+/// The Clock publishes its own extras-bar child on the same icon, so it must
+/// resolve to com.fabriceleyne.theclock.
 ///
 /// A fix for either case has repeatedly broken the other. These tests replay
 /// the real "diag unresolved" lines for both through the real gate.
@@ -166,7 +165,7 @@ struct ControlCenterHostedMatchLogReplayTests {
 /// Parses a SourcePIDCache "diag unresolved" line and replays the strict 1pt
 /// pass to show which app an icon would bind to.
 enum ControlCenterHostedResolutionReplay {
-    /// One nearest-candidate AX child from the diag line's `nearest=[...]` list.
+    /// One nearest-candidate AX child from the diag line's nearest=[...] list.
     struct CandidateChild: Equatable {
         let appBundleID: String
         let distance: CGFloat

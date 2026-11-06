@@ -43,7 +43,7 @@ struct ProfilePreviewModelTests {
         #expect(parsed.title == "Title: With Colon")
     }
 
-    /// Legacy `savedSectionOrder` entries are bare bundle IDs with no colon.
+    /// Legacy savedSectionOrder entries are bare bundle IDs with no colon.
     @Test("split falls back to the whole identifier when there is no colon")
     func splitFallsBackToWholeIdentifier() {
         let parsed = ProfilePreviewModel.split("com.example.app")
@@ -81,7 +81,7 @@ struct ProfilePreviewModelTests {
         #expect(sections[0].items.map(\.title) == ["com.legacy.app"])
     }
 
-    /// A capture taken while the bar is settling writes an empty `itemOrder`.
+    /// A capture taken while the bar is settling writes an empty itemOrder.
     /// Read it as absent, like the apply path, or the preview shows an empty
     /// profile over a good legacy order.
     @Test("An empty itemOrder falls back to the legacy order")

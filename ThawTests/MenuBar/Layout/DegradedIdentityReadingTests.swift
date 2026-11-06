@@ -8,10 +8,10 @@
 import Testing
 @testable import Thaw
 
-/// Covers ``LayoutSolver/liveIdentitiesAreDegraded(_:)``, which keeps a bar-wide
-/// `kCGWindowName` degradation out of the cache.
+/// Covers LayoutSolver/liveIdentitiesAreDegraded(_:), which keeps a bar-wide
+/// kCGWindowName degradation out of the cache.
 ///
-/// A log read the hidden section as `com.rogueamoeba.soundsource:com.rogueamoeba.soundsource`
+/// A log read the hidden section as com.rogueamoeba.soundsource:com.rogueamoeba.soundsource
 /// and ten more like it, Thaw's control item included, minutes after a normal
 /// reading (#881). Caching it saves the bar under a second set of identifiers,
 /// and each flip back triggers a re-sort, bulk apply, and captured cursor.
@@ -38,7 +38,7 @@ struct DegradedIdentityReadingTests {
         #expect(LayoutSolver.liveIdentitiesAreDegraded(degraded))
     }
 
-    /// Thaw titles its items `Thaw.ControlItem.*`, so one titled with our bundle ID
+    /// Thaw titles its items Thaw.ControlItem.*, so one titled with our bundle ID
     /// is always wrong, and it comes with unrecognizable dividers.
     @Test("Our own item titled with our bundle ID is enough on its own")
     func ownDegradedControlItemIsSufficient() {

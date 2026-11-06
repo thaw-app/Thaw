@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Tests for the rule that turns raw `occlusionState` readings into a verdict
+/// Tests for the rule that turns raw occlusionState readings into a verdict
 /// on whether a control item is being rendered.
 ///
 /// The window server publishes occlusion asynchronously and reports everything

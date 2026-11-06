@@ -44,7 +44,7 @@ final class MenuBarItemSpacingManager {
         let bundleURL: URL?
 
         /// Decided before the wave, while the executable URL is readable.
-        /// Never `.leaveRunning`; those apps aren't captured.
+        /// Never .leaveRunning; those apps aren't captured.
         let strategy: SpacingRelaunchStrategy
     }
 
@@ -73,7 +73,7 @@ final class MenuBarItemSpacingManager {
     /// Does not take effect until applyOffset() is called.
     var offset = 0
 
-    /// Whether a relaunch wave may run. Synced from `DisplaySettingsManager`,
+    /// Whether a relaunch wave may run. Synced from DisplaySettingsManager,
     /// but kept here so this stays the one place that decides.
     var spacingApplyMode: SpacingApplyMode = .relaunchApps
 
@@ -90,7 +90,7 @@ final class MenuBarItemSpacingManager {
     ) async throws {
         let result: ExecutionResult<Void, DiscardedOutput, StringOutput<UTF8>>
         do {
-            // Run by absolute path from Info.plist, never via PATH. `command`
+            // Run by absolute path from Info.plist, never via PATH. command
             // only describes the invocation in logs.
             result = try await Subprocess.run(
                 .path(FilePath(executableURL.path)),
@@ -147,7 +147,7 @@ final class MenuBarItemSpacingManager {
     /// Restarts the launchd job with the given label in the calling user's
     /// GUI domain.
     ///
-    /// `kickstart -k` keeps launchd as the parent, the only way to bring a
+    /// kickstart -k keeps launchd as the parent, the only way to bring a
     /// launch-constrained agent back. Replaces terminate-then-launch.
     private func kickstartLaunchAgent(label: String) async throws {
         let target = "gui/\(getuid())/\(label)"
@@ -277,7 +277,7 @@ final class MenuBarItemSpacingManager {
         return value ?? key.defaultValue
     }
 
-    /// Whether applying `offset` would fire a relaunch wave. Mirrors the no-op
+    /// Whether applying offset would fire a relaunch wave. Mirrors the no-op
     /// guard in applyOffsetLocked so callers can prompt first.
     func willRelaunch(forOffset offset: Int) -> Bool {
         guard spacingApplyMode == .relaunchApps else {
@@ -287,14 +287,14 @@ final class MenuBarItemSpacingManager {
         return !isOnDisk(offset: offset)
     }
 
-    /// Whether the on-disk spacing and padding already match `offset`,
+    /// Whether the on-disk spacing and padding already match offset,
     /// regardless of the apply mode.
     func isOnDisk(offset: Int) -> Bool {
         currentlyAppliedValue(forKey: .spacing) == Key.spacing.defaultValue + offset
             && currentlyAppliedValue(forKey: .padding) == Key.padding.defaultValue + offset
     }
 
-    /// Applies the current offset. `didRelaunch` in the outcome gates any
+    /// Applies the current offset. didRelaunch in the outcome gates any
     /// settling period.
     @discardableResult
     func applyOffset() async throws -> ApplyOutcome {

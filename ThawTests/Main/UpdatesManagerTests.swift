@@ -14,7 +14,7 @@ import Testing
 /// The alert starts an alpha check. Sparkle stays silent when a background
 /// check finds nothing, so an empty feed opens the releases page instead.
 ///
-/// Serialized: subscribing writes through the process-wide `Defaults.store`.
+/// Serialized: subscribing writes through the process-wide Defaults.store.
 @MainActor
 @Suite("Compatibility update check", .serialized)
 struct UpdatesManagerTests {
@@ -25,8 +25,8 @@ struct UpdatesManagerTests {
         return manager
     }
 
-    /// Read via ``UpdatesManager/storedUpdateChannel(on:)`` because the
-    /// `updateChannel` getter withholds alpha on a supported macOS.
+    /// Read via UpdatesManager/storedUpdateChannel(on:) because the
+    /// updateChannel getter withholds alpha on a supported macOS.
     @Test("Accepting the alert subscribes to beta")
     func acceptingTheAlertSubscribesToBeta() throws {
         try withScratchDefaults { _ in
@@ -53,8 +53,8 @@ struct UpdatesManagerTests {
         }
     }
 
-    /// Sparkle reports an empty check twice: `updaterDidNotFindUpdate` first,
-    /// then an abort carrying `SUNoUpdateError`. The second must not reopen
+    /// Sparkle reports an empty check twice: updaterDidNotFindUpdate first,
+    /// then an abort carrying SUNoUpdateError. The second must not reopen
     /// the page.
     @Test("The promise is answered once")
     func promiseIsAnsweredOnce() throws {
@@ -121,7 +121,7 @@ struct UpdatesManagerTests {
     }
 
     /// Drives Sparkle's own delegate callbacks to cover the wiring.
-    /// `startingUpdater: false` keeps it off the network.
+    /// startingUpdater: false keeps it off the network.
     @Test("Sparkle reporting an empty check opens the releases page")
     func sparkleEmptyCheckOpensReleasesPage() throws {
         try withScratchDefaults { _ in
@@ -133,8 +133,8 @@ struct UpdatesManagerTests {
         }
     }
 
-    /// An empty check ends twice: `updaterDidNotFindUpdate`, then an abort
-    /// carrying `SUNoUpdateError`. Only the first ending answers.
+    /// An empty check ends twice: updaterDidNotFindUpdate, then an abort
+    /// carrying SUNoUpdateError. Only the first ending answers.
     @Test("The abort that follows an empty check is not a second answer")
     func abortAfterEmptyCheckDoesNotReopen() throws {
         try withScratchDefaults { _ in

@@ -109,7 +109,7 @@ extension MenuBarItemManager {
     }
 
     /// Keeps persistence independent from presentation throttling: every
-    /// definitive failure is saved, while only `.present` reaches the user.
+    /// definitive failure is saved, while only .present reaches the user.
     static nonisolated func automaticMoveFailureHandlingPlan(
         disposition: AutomaticMoveFailureDisposition,
         presentationDecision: AutomaticMoveFailurePresentationDecision

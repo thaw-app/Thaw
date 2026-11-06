@@ -16,8 +16,8 @@ import Testing
 /// Violation). The spacing wave restarts them through launchd by label.
 @Suite("System launch agent index")
 struct SystemLaunchAgentIndexTests {
-    /// Writes `agents` as property lists into a fresh temporary directory
-    /// and hands it to `body`, cleaning up afterwards.
+    /// Writes agents as property lists into a fresh temporary directory
+    /// and hands it to body, cleaning up afterwards.
     private func withAgentDirectory(
         _ agents: [String: [String: Any]],
         _ body: (URL) throws -> Void
@@ -38,7 +38,7 @@ struct SystemLaunchAgentIndexTests {
         try body(tmp)
     }
 
-    /// The common shape: the launched binary is `ProgramArguments[0]`.
+    /// The common shape: the launched binary is ProgramArguments[0].
     @Test("Resolves a label from ProgramArguments")
     func resolvesLabelFromProgramArguments() throws {
         try withAgentDirectory([
@@ -56,7 +56,7 @@ struct SystemLaunchAgentIndexTests {
         }
     }
 
-    /// The other shape: a bare `Program` key with no argument vector.
+    /// The other shape: a bare Program key with no argument vector.
     @Test("Resolves a label from Program")
     func resolvesLabelFromProgram() throws {
         try withAgentDirectory([
@@ -75,8 +75,8 @@ struct SystemLaunchAgentIndexTests {
     }
 
     /// The label is only readable from the plist. Deriving it from the bundle
-    /// ID or file name gives `com.apple.dock`, which launchd rejects ("Could
-    /// not find service"); the real label is `com.apple.Dock.agent`.
+    /// ID or file name gives com.apple.dock, which launchd rejects ("Could
+    /// not find service"); the real label is com.apple.Dock.agent.
     @Test("The label comes from the plist, not the file name or bundle ID")
     func labelIsNotDerivedFromFileName() throws {
         try withAgentDirectory([
@@ -171,7 +171,7 @@ struct SystemLaunchAgentIndexTests {
         }
     }
 
-    /// The agent may declare a symlink while `NSRunningApplication.executableURL`
+    /// The agent may declare a symlink while NSRunningApplication.executableURL
     /// reports the target, or the reverse, so both sides are canonicalized.
     @Test("A symlinked program path resolves when looked up by its target")
     func symlinkedProgramPathResolvesFromTarget() throws {

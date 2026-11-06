@@ -9,11 +9,11 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``StaleIdentifierLedger``: when an identifier that matches nothing
+/// Covers StaleIdentifierLedger: when an identifier that matches nothing
 /// stops counting as a position, and when it must not.
 ///
 /// The ledger persists on every write, so the suite uses scratch defaults and
-/// is `.serialized` as ``withScratchDefaults(_:)`` requires.
+/// is .serialized as withScratchDefaults(_:) requires.
 @MainActor
 @Suite("Stale identifier ledger", .serialized)
 struct StaleIdentifierLedgerTests {
@@ -29,7 +29,7 @@ struct StaleIdentifierLedgerTests {
         Set(Self.live + [Self.dead])
     }
 
-    /// Runs `count` applies in which only the dead identifier misses.
+    /// Runs count applies in which only the dead identifier misses.
     private func missDead(_ ledger: StaleIdentifierLedger, times count: Int) {
         for _ in 0 ..< count {
             ledger.recordApply(planned: planned, matched: Set(Self.live))
@@ -156,7 +156,7 @@ struct StaleIdentifierLedgerTests {
 
     // MARK: - Pruning
 
-    /// A ghost ahead of a live entry inflates the index `savedPositionByBaseID` reports.
+    /// A ghost ahead of a live entry inflates the index savedPositionByBaseID reports.
     @Test("Pruning drops retired identifiers and keeps the rest in order")
     func pruningDropsRetiredEntriesInPlace() throws {
         try withScratchDefaults { _ in

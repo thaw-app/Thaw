@@ -125,10 +125,9 @@ extension MenuBarItemManager {
     /// Opens an item's menu. On-screen items are clicked in place; off-screen
     /// ones go through temporarilyShow, which moves, clicks, and rehides them.
     ///
-    /// - Parameters:
-    ///   - item: The menu bar item to activate.
-    ///   - displayID: The display whose menu bar hosts a temporary reveal for
-    ///     off-screen items.
+    /// item: The menu bar item to activate.
+    /// displayID: The display whose menu bar hosts a temporary reveal for
+    /// off-screen items.
     func activate(item: MenuBarItem, on displayID: CGDirectDisplayID?) async {
         if Bridging.isWindowOnScreen(item.windowID) {
             // Electron tray items ignore synthetic clicks, so use an AX press. Everything
@@ -210,16 +209,15 @@ extension MenuBarItemManager {
 
     /// Clicks a menu bar item with the given mouse button.
     ///
-    /// - Parameters:
-    ///   - item: The menu bar item to click.
-    ///   - mouseButton: The mouse button to click the item with.
-    ///   - skipInputPause: Skip waiting for user input to pause.
-    ///   - maxAttempts: Maximum number of click attempts (default 3).
-    ///     Pass `1` from `temporarilyShow` so a single failure returns
-    ///     immediately and the caller's fallback path fires promptly.
-    /// - Returns: What the owner was observed to do in response. Callers
-    ///   that need the window the click opened can read it from here
-    ///   instead of scanning for it themselves.
+    /// item: The menu bar item to click.
+    /// mouseButton: The mouse button to click the item with.
+    /// skipInputPause: Skip waiting for user input to pause.
+    /// maxAttempts: Maximum number of click attempts (default 3).
+    /// Pass 1 from temporarilyShow so a single failure returns
+    /// immediately and the caller's fallback path fires promptly.
+    /// Returns what the owner was observed to do in response. Callers
+    /// that need the window the click opened can read it from here
+    /// instead of scanning for it themselves.
     @discardableResult
     func click(
         item: MenuBarItem,

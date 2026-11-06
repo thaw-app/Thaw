@@ -9,7 +9,7 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Covers `MenuBarItemImageCache.resolvedScale(imagePixelWidth:boundsWidth:expected:)`,
+/// Covers MenuBarItemImageCache.resolvedScale(imagePixelWidth:boundsWidth:expected:),
 /// shared by every capture path (#851, #736, #990).
 ///
 /// On a 1x external beside a Retina display, SCK and SkyLight both return 2x

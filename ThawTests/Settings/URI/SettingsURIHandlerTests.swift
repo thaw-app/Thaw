@@ -25,8 +25,8 @@ struct SettingsURIHandlerTests {
         #expect(keys.contains("showOnClick"))
         #expect(keys.contains("showOnHover"))
         #expect(keys.contains("enableDiagnosticLogging"))
-        // Per-display Booleans belong to `perDisplayKeys`, not here.
-        // `useIceBar` used to appear in both tables.
+        // Per-display Booleans belong to perDisplayKeys, not here.
+        // useIceBar used to appear in both tables.
         #expect(!keys.contains("useIceBar"))
         #expect(!keys.contains("alwaysShowHiddenItems"))
         #expect(SettingsURIHandler.perDisplayKeys.contains("useIceBar"))
@@ -73,7 +73,7 @@ struct SettingsURIHandlerTests {
         #expect(keys.contains("gridColumns"))
     }
 
-    /// Guards the copies in `SettingsURIKeyTable` against drift. Without it a
+    /// Guards the copies in SettingsURIKeyTable against drift. Without it a
     /// key added to production would escape every test that iterates them.
     @Test("The key lists the URI tests iterate still match the handler's own tables")
     func localKeyListsMatchTheHandler() {
@@ -225,7 +225,7 @@ struct SettingsURIHandlerTests {
         #expect(SettingsURIHandler.parseDouble("12abc") == nil)
     }
 
-    /// `parseDouble` is `Double.init(String:)`, so it accepts every spelling
+    /// parseDouble is Double.init(String:), so it accepts every spelling
     /// Swift does, including hex floats, a leading plus, and a bare leading or
     /// trailing point.
     @Test("Every spelling Swift accepts parses to its value", arguments: [
@@ -336,11 +336,11 @@ struct SettingsURIHandlerTests {
     }
 }
 
-/// The keys ``SettingsURIHandler`` publishes, copied for `@Test(arguments:)`.
+/// The keys SettingsURIHandler publishes, copied for @Test(arguments:).
 ///
 /// The arguments are evaluated outside the main actor and the handler is
-/// `@MainActor`, so the tables cannot be read directly.
-/// `localKeyListsMatchTheHandler` keeps the copies in step.
+/// @MainActor, so the tables cannot be read directly.
+/// localKeyListsMatchTheHandler keeps the copies in step.
 nonisolated enum SettingsURIKeyTable {
     static let booleanKeys: [String] = [
         "autoRehide",
@@ -382,11 +382,11 @@ nonisolated enum SettingsURIKeyTable {
         "gridColumns",
     ]
 
-    /// The Boolean keys stored in `Defaults`, which answer on
-    /// `.settingsDidChangeViaURI`. That is all of ``booleanKeys``: the handler
-    /// keeps the per-display Booleans out of `supportedBooleanKeys`.
+    /// The Boolean keys stored in Defaults, which answer on
+    /// .settingsDidChangeViaURI. That is all of booleanKeys: the handler
+    /// keeps the per-display Booleans out of supportedBooleanKeys.
     static let globalBooleanKeys: [String] = booleanKeys
 
-    /// Every key `get` can be asked for that is not a per-display one.
+    /// Every key get can be asked for that is not a per-display one.
     static let globalReadableKeys: [String] = globalBooleanKeys + doubleKeys + enumKeys
 }

@@ -26,17 +26,17 @@ nonisolated enum ExtrasMenuBarProbeMemory {
     /// before the result is worth remembering across launches.
     ///
     /// One miss is not evidence: an app still launching or wedged reports none,
-    /// and `getOrCreateExtrasMenuBar()` can't detect every such case.
+    /// and getOrCreateExtrasMenuBar() can't detect every such case.
     static let minimumMissesToRemember = 2
 
     /// The largest miss count stored.
     ///
-    /// `ExtrasMenuBarNegativeCachePolicy.ttl(afterConsecutiveMisses:)`
+    /// ExtrasMenuBarNegativeCachePolicy.ttl(afterConsecutiveMisses:)
     /// saturates at its top rung.
     static let maximumRememberedMisses = 4
 
     /// The state a freshly created cache entry should adopt for an
-    /// application the memory has an opinion about, or `nil` when it has
+    /// application the memory has an opinion about, or nil when it has
     /// none worth acting on.
     ///
     /// The deadline is the *first* rung, not the one the count earns: enough to
@@ -55,13 +55,12 @@ nonisolated enum ExtrasMenuBarProbeMemory {
     /// The memory to persist, given what was already stored and what this
     /// session observed.
     ///
-    /// - Parameters:
-    ///   - persisted: The memory as it was last written.
-    ///   - observed: Consecutive misses per bundle identifier for the
-    ///     applications running now. Zero means the application has an extras
-    ///     menu bar, since finding one resets the count.
-    ///   - runningBundleIDs: The applications running now, used to decide
-    ///     what to evict when the memory is over capacity.
+    /// persisted: The memory as it was last written.
+    /// observed: Consecutive misses per bundle identifier for the
+    /// applications running now. Zero means the application has an extras
+    /// menu bar, since finding one resets the count.
+    /// runningBundleIDs: The applications running now, used to decide
+    /// what to evict when the memory is over capacity.
     ///
     /// An observation always wins over what was stored, so an app that now has
     /// an extras menu bar loses its entry outright.
@@ -83,7 +82,7 @@ nonisolated enum ExtrasMenuBarProbeMemory {
         guard merged.count > capacity else {
             return merged
         }
-        // Keep everything running now; evict the rest, like `MenuBarItemNameMemory`.
+        // Keep everything running now; evict the rest, like MenuBarItemNameMemory.
         return merged.filter { runningBundleIDs.contains($0.key) }
     }
 }

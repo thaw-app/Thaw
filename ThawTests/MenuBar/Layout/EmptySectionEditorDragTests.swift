@@ -8,10 +8,10 @@
 import Testing
 @testable import Thaw
 
-/// Covers `LayoutBarPaddingView.shouldRevealSectionForEditorDrag`.
+/// Covers LayoutBarPaddingView.shouldRevealSectionForEditorDrag.
 ///
 /// With Hidden empty, both dividers park at the same offscreen coordinate, so a
-/// drag into Hidden resolves to `.leftOfItem(H_ctrl)`, which the #923 guard
+/// drag into Hidden resolves to .leftOfItem(H_ctrl), which the #923 guard
 /// refuses. Its "open the section and retry" advice deadlocks on an empty
 /// section, so the empty section is revealed instead. The rule stays narrow:
 /// populated sections anchor on items, a showing section's divider is onscreen,

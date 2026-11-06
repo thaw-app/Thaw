@@ -109,7 +109,7 @@ enum TriggerFeature: String, CaseIterable, Identifiable {
 
 // MARK: - TriggerFeatureFlagsManager
 
-/// Persists and publishes the set of enabled ``TriggerFeature`` values.
+/// Persists and publishes the set of enabled TriggerFeature values.
 ///
 /// Stored as a list of raw values under a single Defaults key so new
 /// features can be added without a migration. Everything defaults to off

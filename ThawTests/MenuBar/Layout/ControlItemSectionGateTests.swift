@@ -9,7 +9,7 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Covers ``LayoutSolver/controlItemsAreInCanonicalOrder(visibleControlItemBounds:hiddenControlItemBounds:alwaysHiddenControlItemBounds:)``,
+/// Covers LayoutSolver/controlItemsAreInCanonicalOrder(visibleControlItemBounds:hiddenControlItemBounds:alwaysHiddenControlItemBounds:),
 /// which stops a bulk apply from planning against dividers that drifted out of order.
 ///
 /// After a restart the hidden divider parked offscreen and the visible control
@@ -84,7 +84,7 @@ struct ControlItemSectionGateTests {
 
     /// Replays #1027's dispatch-time reading: one visible item left, the visible
     /// control item read inside hidden, and the always-hidden divider read under its
-    /// degraded identity (`com.apple.controlcenter:com.stonerl.Thaw`). Before the fix
+    /// degraded identity (com.apple.controlcenter:com.stonerl.Thaw). Before the fix
     /// the apply planned Battery into hidden again.
     ///
     /// The log records sections, not bounds, so the chevron's bounds are synthesized

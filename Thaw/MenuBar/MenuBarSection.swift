@@ -181,8 +181,8 @@ final class MenuBarSection {
     /// Updates the state of the control item based on the desired state
     /// and the current display configuration.
     ///
-    /// - Parameter screen: The screen to use for the update. If `nil`, the
-    ///   best screen is determined automatically.
+    /// screen: The screen to use for the update. If nil, the
+    /// best screen is determined automatically.
     func updateControlItemState(for screen: NSScreen? = nil) {
         guard let appState else { return }
 
@@ -345,7 +345,7 @@ final class MenuBarSection {
         }
     }
 
-    /// Returns `true` when the mouse cursor is inside the menu bar or the
+    /// Returns true when the mouse cursor is inside the menu bar or the
     /// IceBar panel, meaning the section should not be rehidden yet.
     private func isMouseInsideActiveArea() -> Bool {
         guard let appState else { return false }

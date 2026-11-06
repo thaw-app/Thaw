@@ -10,7 +10,7 @@ import Testing
 @testable import Thaw
 
 /// Covers how the layout editor treats an unresolved Control Center slot
-/// (`com.apple.controlcenter:Item-N` with no source PID).
+/// (com.apple.controlcenter:Item-N with no source PID).
 ///
 /// In #1190 always-hidden held only such a slot, parked near x=-8454. Drops
 /// anchored beside it landed off-screen and reverted, and dragging the slot

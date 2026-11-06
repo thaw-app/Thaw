@@ -8,14 +8,14 @@
 import Foundation
 import os.lock
 
-/// Read-side view of the Focus mode requested by ``ThawFocusFilter``.
+/// Read-side view of the Focus mode requested by ThawFocusFilter.
 ///
 /// Profile-specific Focus Filter triggers need the requested Thaw profile by
 /// name. The Focus Filter API does not expose the enclosing macOS Focus's
 /// display name, so the UI deliberately describes this value as a profile.
 nonisolated enum ThawFocusModeStore {
     /// The active Focus Filter's requested Thaw profile name, or
-    /// `nil` when no Thaw Focus Filter is currently applied.
+    /// nil when no Thaw Focus Filter is currently applied.
     static var activeMode: String? {
         guard
             let id = Defaults.string(forKey: .focusFilterRequestedProfileID),
@@ -26,7 +26,7 @@ nonisolated enum ThawFocusModeStore {
         return profileName(forID: id) ?? id
     }
 
-    /// The profile manifest, shared with ``ProfileEntityQuery``.
+    /// The profile manifest, shared with ProfileEntityQuery.
     static var manifestURL: URL? {
         FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)
@@ -44,9 +44,9 @@ nonisolated enum ThawFocusModeStore {
     private static let cache = OSAllocatedUnfairLock<CachedManifest?>(initialState: nil)
 
     /// Resolves a profile id to its name from the on-disk profile manifest,
-    /// matching how ``ProfileEntityQuery`` reads profiles.
+    /// matching how ProfileEntityQuery reads profiles.
     ///
-    /// Cached against the manifest's modification date, since ``activeMode``
+    /// Cached against the manifest's modification date, since activeMode
     /// is polled every five seconds and the manifest only changes on a
     /// profile edit.
     private static func profileName(forID id: String) -> String? {

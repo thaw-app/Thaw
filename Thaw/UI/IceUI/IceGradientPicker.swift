@@ -39,10 +39,9 @@ struct IceGradientPicker<Label: View>: View {
 
     /// Creates a new gradient picker.
     ///
-    /// - Parameters:
-    ///   - gradient: A binding to a gradient.
-    ///   - supportsOpacity: A Boolean value indicating whether the
-    ///     picker should support opacity.
+    /// gradient: A binding to a gradient.
+    /// supportsOpacity: A Boolean value indicating whether the
+    /// picker should support opacity.
     init(
         gradient: Binding<IceGradient>,
         supportsOpacity: Bool = true

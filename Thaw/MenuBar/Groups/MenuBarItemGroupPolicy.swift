@@ -10,11 +10,11 @@ import Foundation
 /// Canonicalizes identifier orders so a group's members stay contiguous, and
 /// repairs orders where a group has been split across sections.
 ///
-/// ``MenuBarItemGroupResolver`` says what the groups are; this says what a
+/// MenuBarItemGroupResolver says what the groups are; this says what a
 /// valid order looks like. Applied where layout state is written, so the
 /// planners can stay group-unaware.
 ///
-/// Safe on every write because `gather` is a permutation (never loses an
+/// Safe on every write because gather is a permutation (never loses an
 /// item) and idempotent (no write storm). Both are covered by tests.
 nonisolated enum MenuBarItemGroupPolicy {
     // MARK: - GroupSet
@@ -32,8 +32,8 @@ nonisolated enum MenuBarItemGroupPolicy {
             var kept = [[String]]()
             var index = [String: Int]()
             for members in groups {
-                // First group wins, as in `MenuBarItemGroupSet.normalized()`.
-                // Repeats within a group are claimed once too, or `gather`
+                // First group wins, as in MenuBarItemGroupSet.normalized().
+                // Repeats within a group are claimed once too, or gather
                 // stops being a permutation.
                 var seen = Set<String>()
                 let unclaimed = members.filter { index[$0] == nil && seen.insert($0).inserted }
@@ -103,7 +103,7 @@ nonisolated enum MenuBarItemGroupPolicy {
 
     // MARK: - Contiguity within one order
 
-    /// Reorders `order` so every group's members sit in one contiguous run,
+    /// Reorders order so every group's members sit in one contiguous run,
     /// anchored at the position of the group's leftmost member.
     ///
     /// Members and non-members both keep their relative order.
@@ -201,16 +201,15 @@ nonisolated enum MenuBarItemGroupPolicy {
     /// Consolidates every split group into a single section, then gathers each
     /// section's order.
     ///
-    /// Winner selection is deterministic:
-    /// 1. if the group is feasible in only one of the sections it occupies, that one;
-    /// 2. otherwise the section holding the most members;
-    /// 3. ties break toward the **most visible** section.
+    /// Winner selection is deterministic: the only section the group is feasible
+    /// in, if there is one among those it occupies; otherwise the section holding
+    /// the most members, with ties breaking toward the most visible section.
     ///
     /// Repairing toward visibility never makes an item unreachable; on macOS 27
     /// the always-hidden reveal gesture may not even be enabled.
-    /// - Parameter gatheringWithin: Sections whose internal order may be
-    ///   rewritten. Membership is repaired everywhere; on macOS 27 the visible
-    ///   order mirrors live AX geometry and must not be rewritten.
+    /// gatheringWithin: Sections whose internal order may be
+    /// rewritten. Membership is repaired everywhere; on macOS 27 the visible
+    /// order mirrors live AX geometry and must not be rewritten.
     static func gather(
         groups: GroupSet,
         inSections sections: [MenuBarSection.Name: [String]],

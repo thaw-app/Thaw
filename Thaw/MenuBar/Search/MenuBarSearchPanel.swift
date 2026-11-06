@@ -126,9 +126,9 @@ final class MenuBarSearchPanel: NSPanel {
         Defaults.set(names, forKey: .menuBarItemCustomNames)
         // Renaming is the only thing that changes a name while the panel is open.
         ItemNameCache.clear()
-        // Rows read names from `Defaults`, which Observation doesn't track.
-        // Writing `displayedItems` back unchanged still fires `withMutation`,
-        // so rows re-render. The local keeps it from reading as `x = x`.
+        // Rows read names from Defaults, which Observation doesn't track.
+        // Writing displayedItems back unchanged still fires withMutation,
+        // so rows re-render. The local keeps it from reading as x = x.
         let itemsToRerender = model.displayedItems
         model.displayedItems = itemsToRerender
     }
@@ -138,7 +138,7 @@ final class MenuBarSearchPanel: NSPanel {
         NSScreen.screenWithMouse ?? NSScreen.main
     }
 
-    /// Overridden to always be `true`.
+    /// Overridden to always be true.
     override var canBecomeKey: Bool {
         true
     }
@@ -424,8 +424,8 @@ private struct MenuBarSearchContentView: View {
     @Environment(AppState.self) var appState: AppState
     @Environment(MenuBarItemManager.self) var itemManager: MenuBarItemManager
     @Environment(MenuBarItemImageCache.self) var imageCache: MenuBarItemImageCache
-    // Held as `@Bindable` rather than from `@Environment` so computed
-    // properties outside `body` can use `$model` bindings.
+    // Held as @Bindable rather than from @Environment so computed
+    // properties outside body can use $model bindings.
     @Bindable var model: MenuBarSearchModel
     @FocusState private var searchFieldIsFocused: Bool
     @AppStorage(Defaults.Key.rememberSearchQuery.rawValue) private var rememberSearchQuery = Defaults.DefaultValue.rememberSearchQuery
@@ -519,7 +519,7 @@ private struct MenuBarSearchContentView: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        // No Screen Recording branch: search matches names, and `itemView`
+        // No Screen Recording branch: search matches names, and itemView
         // omits the glyph preview when there's no capture.
         if hasItems {
             SectionedList(
@@ -586,7 +586,7 @@ private struct MenuBarSearchContentView: View {
     }
 
     /// Re-selects the first item when the current selection has been
-    /// filtered out of `displayedItems` (or was never set).
+    /// filtered out of displayedItems (or was never set).
     private func ensureValidSelection() {
         guard let selection = model.selection else {
             selectFirstDisplayedItem()
@@ -679,7 +679,7 @@ private struct MenuBarSearchContentView: View {
         }
     }
 
-    /// Moves the pointer onto `item` once it has been revealed, so that the
+    /// Moves the pointer onto item once it has been revealed, so that the
     /// menu it opened sits under the pointer.
     private func moveCursor(to item: MenuBarItem) {
         // The cached bounds predate the reveal, so read the live window
@@ -828,7 +828,7 @@ private struct BottomBarButtonStyle: ButtonStyle {
 
 /// Memoizes item display names for the search rows.
 ///
-/// `MenuBarItem.displayName` reads defaults, Launch Services, and regexes,
+/// MenuBarItem.displayName reads defaults, Launch Services, and regexes,
 /// and search asks for it per item and per row on every keystroke.
 ///
 /// Cleared when the panel closes and when a name is edited.
@@ -859,7 +859,7 @@ private struct MenuBarSearchItemView: View {
     let item: MenuBarItem
     @FocusState private var isEditing: Bool
 
-    /// The captured glyph, or `nil` when there is none to draw.
+    /// The captured glyph, or nil when there is none to draw.
     private var itemImage: NSImage? {
         let captured = imageCache.trimmedImage(for: item.tag)
         // When icons are preferred, the trailing preview would repeat the

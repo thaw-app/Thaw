@@ -9,9 +9,9 @@
 import LaunchAtLogin
 import SwiftUI
 
-// General settings rows shared by ``GeneralSettingsPane`` and
-// ``SimpleModeSettingsPane``. Tuning rows (hover delay, rehide strategy,
-// always-hidden gestures) stay in ``GeneralSettingsPane``.
+// General settings rows shared by GeneralSettingsPane and
+// SimpleModeSettingsPane. Tuning rows (hover delay, rehide strategy,
+// always-hidden gestures) stay in GeneralSettingsPane.
 
 // MARK: - LaunchAtLoginRow
 

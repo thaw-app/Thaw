@@ -15,7 +15,7 @@ import Foundation
 /// items must restart through launchd, which needs their label.
 ///
 /// Labels can't be derived from bundle IDs or plist names (Dock's agent is
-/// `com.apple.Dock.agent`), so the index keys on the executable path.
+/// com.apple.Dock.agent), so the index keys on the executable path.
 nonisolated struct SystemLaunchAgentIndex: Sendable {
     /// The directories macOS ships its per-user LaunchAgents in.
     static let systemDirectories = [
@@ -69,14 +69,14 @@ nonisolated struct SystemLaunchAgentIndex: Sendable {
         labelsByExecutablePath = labels
     }
 
-    /// The launchd label for the executable at `url`, or `nil` when no indexed
+    /// The launchd label for the executable at url, or nil when no indexed
     /// agent owns it.
     func label(forExecutableAt url: URL) -> String? {
         labelsByExecutablePath[Self.normalized(url.path)]
     }
 
-    /// The executable a LaunchAgent launches. `Program` wins when present;
-    /// otherwise launchd treats `ProgramArguments[0]` as the path.
+    /// The executable a LaunchAgent launches. Program wins when present;
+    /// otherwise launchd treats ProgramArguments[0] as the path.
     private static func programPath(from plist: [String: Any]) -> String? {
         if let program = plist["Program"] as? String {
             return program

@@ -24,7 +24,7 @@ final nonisolated class Listener: @unchecked Sendable {
     private var xpcListener: XPCListener?
 
     private init() {
-        // Intentionally empty: this type is a singleton and is configured via `activate()`.
+        // Intentionally empty: this type is a singleton and is configured via activate().
     }
 
     deinit {
@@ -84,7 +84,7 @@ final nonisolated class Listener: @unchecked Sendable {
     }
 
     /// Accepts an incoming session request, routing its messages to
-    /// ``handleMessage(_:)``.
+    /// handleMessage(_:).
     private func acceptSession(
         _ request: XPCListener.IncomingSessionRequest
     ) -> XPCListener.IncomingSessionRequest.Decision {
@@ -96,7 +96,7 @@ final nonisolated class Listener: @unchecked Sendable {
     /// Activates the listener.
     ///
     /// Peers must share the service's team identifier. Ad-hoc builds skip the
-    /// peer requirement, since `.isFromSameTeam()` can never pass there.
+    /// peer requirement, since .isFromSameTeam() can never pass there.
     ///
     /// Before macOS 26 the listener stays down: each item window belongs to its
     /// source app, so nothing needs the service.

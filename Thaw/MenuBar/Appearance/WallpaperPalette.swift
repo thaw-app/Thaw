@@ -13,7 +13,7 @@ import CoreGraphics
 /// actually occupy the image.
 ///
 /// Pure and deterministic so it can be tested without a screen. Pixel reading
-/// lives in ``CGImage/dominantColors(maximumCount:)``.
+/// lives in CGImage/dominantColors(maximumCount:).
 nonisolated struct WallpaperPalette: Equatable {
     struct Swatch: Equatable {
         /// Components in the 0...1 range.
@@ -61,7 +61,7 @@ nonisolated struct WallpaperPalette: Equatable {
         swatches.first
     }
 
-    /// The second most-covering swatch, falling back to ``primary`` so a
+    /// The second most-covering swatch, falling back to primary so a
     /// single-colour wallpaper still yields a usable pair.
     var secondary: Swatch? {
         swatches.count > 1 ? swatches[1] : primary
@@ -76,11 +76,10 @@ nonisolated struct WallpaperPalette: Equatable {
     /// Takes buckets most-populous first, skipping any too close to one
     /// already taken, so a sky photo doesn't return five blues.
     ///
-    /// - Parameters:
-    ///   - samples: The observed pixels. Order does not matter.
-    ///   - maximumCount: The most swatches to return.
-    ///   - minimumSeparation: How far apart two swatches must be, as an RGB
-    ///     distance. Zero returns the raw most-populous buckets.
+    /// samples: The observed pixels. Order does not matter.
+    /// maximumCount: The most swatches to return.
+    /// minimumSeparation: How far apart two swatches must be, as an RGB
+    /// distance. Zero returns the raw most-populous buckets.
     static func derive(
         from samples: [Sample],
         maximumCount: Int = 5,

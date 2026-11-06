@@ -177,10 +177,10 @@ final class IceBarColorManager {
         windowImage = nil
     }
 
-    /// Captures the menu bar / wallpaper strip for `screen`.
+    /// Captures the menu bar / wallpaper strip for screen.
     ///
-    /// - Returns: `true` when this call stored the current generation's image.
-    ///   Don't update ``colorInfo`` after `false`.
+    /// Returns true when this call stored the current generation's image.
+    /// Don't update colorInfo after false.
     @discardableResult
     private func updateWindowImage(for screen: NSScreen) async -> Bool {
         let windows = WindowInfo.createWindows(option: .onScreen)
@@ -212,10 +212,10 @@ final class IceBarColorManager {
         return true
     }
 
-    /// The horizontal position (`0...1`) of the bar's center within the screen.
+    /// The horizontal position (0...1) of the bar's center within the screen.
     ///
     /// A full-width bar collapses the inset frame to zero width, so the guard
-    /// falls back to the middle instead of dividing into `NaN`.
+    /// falls back to the middle instead of dividing into NaN.
     static func colorSamplePercentage(frame: CGRect, screenFrame: CGRect) -> CGFloat {
         let insetScreenFrame = screenFrame.insetBy(dx: frame.width / 2, dy: 0)
         guard insetScreenFrame.width > 0 else {
@@ -269,7 +269,7 @@ final class IceBarColorManager {
         clearWindowImage()
     }
 
-    /// Captures the menu bar strip for `screen` and rewrites ``colorInfo``.
+    /// Captures the menu bar strip for screen and rewrites colorInfo.
     func refresh(with frame: CGRect, screen: NSScreen) async {
         guard await updateWindowImage(for: screen) else { return }
         updateColorInfo(with: frame, screen: screen)

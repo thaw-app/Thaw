@@ -26,7 +26,7 @@ struct ThawOnboardingView: View {
     private let onComplete: () -> Void
 
     /// Creates the reusable onboarding flow.
-    /// - Parameter onComplete: Called once the user finishes the permissions step.
+    /// onComplete: Called once the user finishes the permissions step.
     init(onComplete: @escaping () -> Void) {
         self.onComplete = onComplete
     }

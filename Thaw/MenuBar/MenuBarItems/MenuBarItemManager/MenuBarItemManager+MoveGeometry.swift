@@ -196,11 +196,11 @@ extension MenuBarItemManager {
 
     /// A nil endpoint display means parked off-screen; another display means a
     /// stale or cross-display plan, which is rejected.
-    /// - Parameter itemNeedsPointerTravel: Whether the item can only be moved by
-    ///   a gesture whose press lands inside the item itself and whose pointer
-    ///   actually travels. Control Center slots with no resolvable owner are
-    ///   such items: no process acknowledges a press aimed at the destination,
-    ///   and a press released without travel is undone by macOS.
+    /// itemNeedsPointerTravel: Whether the item can only be moved by
+    /// a gesture whose press lands inside the item itself and whose pointer
+    /// actually travels. Control Center slots with no resolvable owner are
+    /// such items: no process acknowledges a press aimed at the destination,
+    /// and a press released without travel is undone by macOS.
     static nonisolated func strictTransportDecision(
         faithfulDragEnabled: Bool,
         itemIsControlItem: Bool,
@@ -566,7 +566,7 @@ extension MenuBarItemManager {
     /// Ordinal, not coordinates: our own drag displaces the target, so comparing
     /// coordinates fails on a reflowing bar (#900). One snapshot, exact window IDs.
     ///
-    /// - Note: source PIDs are left unresolved; only tags, IDs and bounds are needed.
+    /// source PIDs are left unresolved; only tags, IDs and bounds are needed.
     ///
     /// Main-actor isolated rather than nonisolated: the enumeration and the
     /// tag comparison both are, and hopping once per attempt costs nothing

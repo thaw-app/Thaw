@@ -75,8 +75,8 @@ final class MissionControlDetector {
 
     /// Starts the detector, if not already running.
     ///
-    /// - Parameter representativeScreen: The screen for the probe window.
-    ///   Any screen works, since Mission Control moves every window.
+    /// representativeScreen: The screen for the probe window.
+    /// Any screen works, since Mission Control moves every window.
     func start(representativeScreen: NSScreen) {
         guard probeWindow == nil else {
             return

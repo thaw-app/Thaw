@@ -12,7 +12,7 @@ import UniformTypeIdentifiers
 
 // MARK: - Option value types
 
-/// A value-type item option. Decoupled from the live cache so the `Picker`
+/// A value-type item option. Decoupled from the live cache so the Picker
 /// doesn't rebuild and drop an in-progress selection on every cache publish.
 struct TriggerItemOption: Hashable {
     let id: String
@@ -319,7 +319,7 @@ struct TriggersSettingsPane: View {
             bluetoothOptions = []
             return
         }
-        // Off the main thread: `pairedDevices()` blocks on a semaphore in IOBluetooth
+        // Off the main thread: pairedDevices() blocks on a semaphore in IOBluetooth
         // and can raise a TCC prompt, which would stall the window that has to draw it.
         Task.detached(priority: .userInitiated) {
             let devices = SystemStateMonitor.pairedBluetoothDeviceNames()
@@ -452,7 +452,7 @@ private struct TriggerPriorityDropDelegate: DropDelegate {
     @Binding var draggedTriggerID: UUID?
     @Binding var dropIndicator: TriggerDropIndicator?
 
-    /// Hovering only previews. `manager.triggers` persists in `didSet`, so committing
+    /// Hovering only previews. manager.triggers persists in didSet, so committing
     /// here writes once per row crossed and keeps the hovered order on cancel.
     func dropEntered(info: DropInfo) {
         guard info.hasItemsConforming(to: [.thawTriggerPriority]) else { return }

@@ -9,24 +9,22 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``Hotkey`` construction, enable/disable, the change announcement,
-/// and value equality, without an `AppState`.
+/// Covers Hotkey construction, enable/disable, the change announcement,
+/// and value equality, without an AppState.
 ///
-/// Without `performSetup(with:)` the private `Listener` init returns `nil`,
-/// so the hotkey never becomes enabled and `enable()` touches nothing global.
+/// Without performSetup(with:) the private Listener init returns nil,
+/// so the hotkey never becomes enabled and enable() touches nothing global.
 ///
-/// `HotkeysSettings`, `MenuBarManager`, and `ProfileManager` persist the
-/// binding from the `keyCombination` `didSet` callback, which relies on:
+/// HotkeysSettings, MenuBarManager, and ProfileManager persist the
+/// binding from the keyCombination didSet callback. That relies on the value
+/// passed to init not being announced, so a binding just read off disk is
+/// not written straight back, and on every later assignment, including nil,
+/// announcing exactly once with the new value already stored. Otherwise
+/// HotkeysSettings would persist a stale binding or leave a dead entry behind.
 ///
-/// - The value passed to `init` is **not** announced, so a binding just read
-///   off disk is not written straight back.
-/// - Every later assignment, including `nil`, announces **exactly once** with
-///   the new value already stored. Otherwise `HotkeysSettings` would persist a
-///   stale binding or leave a dead entry behind.
-///
-/// `performSetup(with:)`, listener registration and dispatch, and
-/// `Listener.invalidate()` need a live `AppState` and are not covered, so
-/// `isEnabled` is only asserted `false`.
+/// performSetup(with:), listener registration and dispatch, and
+/// Listener.invalidate() need a live AppState and are not covered, so
+/// isEnabled is only asserted false.
 @MainActor
 @Suite("Hotkey lifecycle")
 struct HotkeyLifecycleTests {
@@ -50,7 +48,7 @@ struct HotkeyLifecycleTests {
         }
     }
 
-    /// Attaches a recorder to `hotkey` that captures the key combination
+    /// Attaches a recorder to hotkey that captures the key combination
     /// visible *from inside* the callback.
     private func recordChanges(of hotkey: Hotkey) -> ChangeRecorder {
         let recorder = ChangeRecorder()
@@ -83,7 +81,7 @@ struct HotkeyLifecycleTests {
             #expect(!hotkey.isEnabled)
         }
 
-        /// `HotkeysSettings` and `ProfileManager` build hotkeys for these
+        /// HotkeysSettings and ProfileManager build hotkeys for these
         /// actions, so no case may be special-cased out at construction.
         @Test("Every action can back a hotkey", arguments: HotkeyAction.allCases)
         func everyActionCanBackAHotkey(_ action: HotkeyAction) {
@@ -128,7 +126,7 @@ struct HotkeyLifecycleTests {
             #expect(!hotkey.isEnabled)
         }
 
-        /// `disable()` runs on teardown paths that cannot know whether a
+        /// disable() runs on teardown paths that cannot know whether a
         /// listener was ever installed.
         @Test("Disabling a hotkey that was never enabled is idempotent")
         func disableIsIdempotent() {
@@ -167,7 +165,7 @@ struct HotkeyLifecycleTests {
         #expect(recorder.observed == [Self.commandF19])
     }
 
-    /// The owners read `hotkey.keyCombination` from inside the callback rather
+    /// The owners read hotkey.keyCombination from inside the callback rather
     /// than being handed the value, so the store has to have happened first.
     @Test("An announcement sees the new value already stored")
     func announcementSeesTheStoredValue() {
@@ -191,7 +189,7 @@ struct HotkeyLifecycleTests {
         #expect(recorder.observed == [Self.commandF19, Self.controlOptionF20, Self.shiftSpace])
     }
 
-    /// Unbinding deletes the stored entry, so the callback has to see `nil`.
+    /// Unbinding deletes the stored entry, so the callback has to see nil.
     @Test("Clearing a key combination announces the cleared value")
     func clearingIsAnnounced() {
         let hotkey = Hotkey(action: .enableIceBar, keyCombination: Self.commandF19)
@@ -252,7 +250,7 @@ struct HotkeyLifecycleTests {
             return hasher.finalize()
         }
 
-        /// `Hotkey` is a class that compares by value.
+        /// Hotkey is a class that compares by value.
         @Test("Two hotkeys with the same action and binding are equal")
         func sameActionAndBindingAreEqual() {
             let combination = KeyCombination(key: .f19, modifiers: [.command])

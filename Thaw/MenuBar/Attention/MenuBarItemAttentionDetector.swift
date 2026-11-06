@@ -22,13 +22,13 @@ nonisolated struct MenuBarItemAttentionDetector {
         /// How far back the detector looks.
         var window: TimeInterval
 
-        /// The minimum number of image changes within ``window``.
+        /// The minimum number of image changes within window.
         ///
         /// Three is the first count that can't be one round trip. Higher
-        /// would miss a slow blink; ``maximumDistinctStates`` rejects clocks.
+        /// would miss a slow blink; maximumDistinctStates rejects clocks.
         var minimumChanges: Int
 
-        /// The maximum number of distinct images within ``window``.
+        /// The maximum number of distinct images within window.
         ///
         /// Rules out clocks and counters, which show a new state on every
         /// change.
@@ -64,10 +64,9 @@ nonisolated struct MenuBarItemAttentionDetector {
     /// Identical fingerprints are kept, since the gap between changes
     /// separates a slow blink from a fast one.
     ///
-    /// - Parameters:
-    ///   - fingerprint: A value that differs when the image differs.
-    ///   - tag: The item that drew it.
-    ///   - timestamp: When it was observed.
+    /// fingerprint: A value that differs when the image differs.
+    /// tag: The item that drew it.
+    /// timestamp: When it was observed.
     mutating func record(fingerprint: Int, for tag: MenuBarItemTag, at timestamp: TimeInterval) {
         var itemSamples = samples[tag] ?? []
         itemSamples.append(Sample(fingerprint: fingerprint, timestamp: timestamp))
@@ -77,9 +76,8 @@ nonisolated struct MenuBarItemAttentionDetector {
 
     /// Returns whether the item is currently asking for attention.
     ///
-    /// - Parameters:
-    ///   - tag: The item to judge.
-    ///   - timestamp: The current time, used to age out stale samples.
+    /// tag: The item to judge.
+    /// timestamp: The current time, used to age out stale samples.
     func isSeekingAttention(_ tag: MenuBarItemTag, at timestamp: TimeInterval) -> Bool {
         guard let itemSamples = samples[tag] else { return false }
         let fresh = itemSamples.filter { timestamp - $0.timestamp <= configuration.window }

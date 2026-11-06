@@ -9,18 +9,18 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``AppSettings``' reset surface: every reset returns the properties
-/// it owns to `Defaults.DefaultValue` and stays inside its own pane.
+/// Covers AppSettings' reset surface: every reset returns the properties
+/// it owns to Defaults.DefaultValue and stays inside its own pane.
 ///
-/// Built without an `AppState`, so the `appState?.…` hops in
-/// `resetAppearance()` and `resetAdvanced()` are no-ops here.
+/// Built without an AppState, so the appState?.… hops in
+/// resetAppearance() and resetAdvanced() are no-ops here.
 ///
-/// Uses `withScratchDefaults`, not an `init`/`deinit` snapshot of the real
-/// domain: that ran per test and raced every other suite reading `Defaults`.
+/// Uses withScratchDefaults, not an init/deinit snapshot of the real
+/// domain: that ran per test and raced every other suite reading Defaults.
 @MainActor
 @Suite("Settings resetter")
 struct SettingsResetterTests {
-    /// Builds an `AppSettings` inside a scratch store. It reads `Defaults` in
+    /// Builds an AppSettings inside a scratch store. It reads Defaults in
     /// its initializer, so it has to be constructed after the swap.
     private func withSettings(_ body: (AppSettings) throws -> Void) throws {
         try withScratchDefaults { _ in
@@ -98,10 +98,10 @@ struct SettingsResetterTests {
         }
     }
 
-    /// `resetAdvanced()` once omitted persisted booleans, leaving them as the
-    /// user set them. `hideApplicationMenus` and `showMenuBarTooltips` stay in
-    /// as controls. Any boolean added to `AdvancedSettings` belongs in both
-    /// `resetAdvanced()` and this test.
+    /// resetAdvanced() once omitted persisted booleans, leaving them as the
+    /// user set them. hideApplicationMenus and showMenuBarTooltips stay in
+    /// as controls. Any boolean added to AdvancedSettings belongs in both
+    /// resetAdvanced() and this test.
     @Test("Resetting Advanced restores every persisted boolean")
     func resetAdvancedRestoresEveryBoolean() throws {
         try withSettings { settings in
@@ -157,7 +157,7 @@ struct SettingsResetterTests {
             ]
             settings.displaySettings.globalConfiguration = .defaultConfiguration.withItemSpacingOffset(-9)
             settings.displaySettings.confirmSpacingRelaunch = !Defaults.DefaultValue.confirmSpacingRelaunch
-            // Default is `.activeProfile`, so this has to be moved off it for the
+            // Default is .activeProfile, so this has to be moved off it for the
             // assertion below to mean anything.
             settings.displaySettings.unconfirmedSpacingProfileScope = .allProfiles
             settings.displaySettings.spacingApplyMode = .writeOnly

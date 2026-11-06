@@ -13,7 +13,7 @@ import Foundation
 /// The general settings block every profile fixture shares.
 ///
 /// The values are arbitrary but load-bearing: several round-trip tests assert
-/// them back out (`rehideInterval == 15`, `showOnClick`, ...), so change them
+/// them back out (rehideInterval == 15, showOnClick, ...), so change them
 /// only together with those assertions.
 func makeTestGeneralSettings() -> GeneralSettingsSnapshot {
     GeneralSettingsSnapshot(
@@ -36,8 +36,8 @@ func makeTestGeneralSettings() -> GeneralSettingsSnapshot {
 }
 
 /// The advanced settings block every profile fixture shares. Same caveat as
-/// ``makeTestGeneralSettings()``: tests assert `showOnHoverDelay == 0.2`,
-/// `tooltipDelay == 1.0` and friends.
+/// makeTestGeneralSettings(): tests assert showOnHoverDelay == 0.2,
+/// tooltipDelay == 1.0 and friends.
 func makeTestAdvancedSettings() -> AdvancedSettingsSnapshot {
     AdvancedSettingsSnapshot(
         enableAlwaysHiddenSection: true,
@@ -60,7 +60,7 @@ func makeTestAdvancedSettings() -> AdvancedSettingsSnapshot {
     )
 }
 
-/// Builds the `ProfileContent` the profile fixtures share, with the
+/// Builds the ProfileContent the profile fixtures share, with the
 /// collection-valued fields parameterized for the tests that need them
 /// populated.
 func makeTestProfileContent(
@@ -85,7 +85,7 @@ func makeTestProfileContent(
 
 // MARK: - Profile fixtures
 
-/// Builds the standard test profile the `ProfileManager` suites share.
+/// Builds the standard test profile the ProfileManager suites share.
 func makeProfile(
     named name: String = "Test Profile",
     savedSectionOrder: [String: [String]] = [:],
@@ -102,8 +102,8 @@ func makeProfile(
 
 // MARK: - Manifest seeding
 
-/// Writes each profile's JSON plus a `profiles.json` manifest, so a freshly
-/// constructed `ProfileManager` loads them the way it would in production.
+/// Writes each profile's JSON plus a profiles.json manifest, so a freshly
+/// constructed ProfileManager loads them the way it would in production.
 func seedManifest(with profiles: [Profile], into directory: URL) throws {
     let fileManager = FileManager.default
     try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)

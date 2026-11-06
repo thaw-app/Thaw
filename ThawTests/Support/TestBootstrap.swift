@@ -8,13 +8,13 @@
 import Foundation
 @testable import Thaw
 
-/// Instantiated once by the test runner (`NSPrincipalClass`) before any
+/// Instantiated once by the test runner (NSPrincipalClass) before any
 /// test in the bundle executes.
 ///
-/// Points the process-wide `Defaults` facade at a scratch suite so no
-/// suite can write to the real `com.stonerl.Thaw` domain. Suites using
-/// `withScratchDefaults` restore to this scratch base rather than
-/// `.standard`.
+/// Points the process-wide Defaults facade at a scratch suite so no
+/// suite can write to the real com.stonerl.Thaw domain. Suites using
+/// withScratchDefaults restore to this scratch base rather than
+/// .standard.
 ///
 /// The app host has already launched and read its state from the real
 /// domain by the time the test bundle loads; only reads and writes made

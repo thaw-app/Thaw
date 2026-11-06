@@ -12,16 +12,16 @@ import Testing
 /// Spots a cache pass taken part-way through a section expand or collapse.
 ///
 /// A collapsed section stretches its divider across the displays; an expanded
-/// one leaves it at `NSStatusItem.variableLength`. Drag and resize are separate
+/// one leaves it at NSStatusItem.variableLength. Drag and resize are separate
 /// steps, so a pass can see revealed items behind a still-stretched divider,
-/// and classifying that mixture moves a whole section into `visible`.
+/// and classifying that mixture moves a whole section into visible.
 @Suite("Mid-section transition")
 struct MidSectionTransitionTests {
     /// A collapsed divider's width as reported (#851 log): the requested 10000 pt
     /// is clamped to roughly the span of the displays.
     private let stretchedWidth: CGFloat = 5000
 
-    /// `variableLength` measures in single digits once laid out; the #851 log also shows 0.
+    /// variableLength measures in single digits once laid out; the #851 log also shows 0.
     private let markerWidth: CGFloat = 0
 
     @Test("A collapsed section with a stretched divider is consistent")
@@ -66,7 +66,7 @@ struct MidSectionTransitionTests {
         )
     }
 
-    /// A laid-out `variableLength` divider is a few points wide, not zero, and
+    /// A laid-out variableLength divider is a few points wide, not zero, and
     /// must still read as a marker.
     @Test("A small non-zero width still counts as a marker")
     func smallNonZeroWidthCountsAsMarker() {

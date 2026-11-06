@@ -9,7 +9,7 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Covers ``MenuBarItemManager/windowIDsNeedingSourceResolution(cachedItems:currentWindowIDs:)``,
+/// Covers MenuBarItemManager/windowIDsNeedingSourceResolution(cachedItems:currentWindowIDs:),
 /// which decides whether a cycle with no window change should still ask for source processes.
 ///
 /// Without a source, an item's namespace falls back to its window owner (Control

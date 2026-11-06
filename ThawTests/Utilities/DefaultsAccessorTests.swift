@@ -9,13 +9,13 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// The typed `Defaults` accessors with no caller elsewhere in the app.
+/// The typed Defaults accessors with no caller elsewhere in the app.
 ///
-/// Serialized because `Defaults.store` is process-wide. The accessors ignore
+/// Serialized because Defaults.store is process-wide. The accessors ignore
 /// the key's meaning, so each test picks any key of the matching type.
 @Suite("Defaults accessors", .serialized)
 struct DefaultsAccessorTests {
-    /// `globalDomain` reads `NSGlobalDomain`, not the app's domain, so a value
+    /// globalDomain reads NSGlobalDomain, not the app's domain, so a value
     /// written through the facade must not show up in it.
     @Test("globalDomain reads the shared domain rather than the app's own")
     func globalDomainDoesNotSeeTheAppDomain() throws {

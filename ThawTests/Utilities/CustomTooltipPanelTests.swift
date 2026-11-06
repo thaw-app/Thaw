@@ -10,7 +10,7 @@ import Testing
 @testable import Thaw
 
 /// Pinned to the main actor and serialized: the first case reaches the
-/// `CustomTooltipPanel.shared` singleton and builds a real `IceBarPanel`,
+/// CustomTooltipPanel.shared singleton and builds a real IceBarPanel,
 /// so the cases must not overlap in-process.
 @MainActor
 @Suite("Custom tooltip panel", .serialized)

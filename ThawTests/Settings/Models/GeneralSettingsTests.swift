@@ -9,17 +9,17 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``GeneralSettings``' setup surface: the `Defaults` load performed by
-/// `performSetup(with:)` and the Settings-URI notification it subscribes to.
+/// Covers GeneralSettings' setup surface: the Defaults load performed by
+/// performSetup(with:) and the Settings-URI notification it subscribes to.
 ///
 /// The load may read values from an older build, a hand-edited plist, or a
 /// failed import, so an unknown enum raw value or undecodable icon keeps the
-/// shipped default. The notification comes from a third-party `thaw://` URL,
+/// shipped default. The notification comes from a third-party thaw:// URL,
 /// so unowned keys and wrong-typed payloads are dropped.
-/// `SettingsURIHandlerApplyTests` covers the sending side; both must agree on
-/// the `userInfo` shape.
+/// SettingsURIHandlerApplyTests covers the sending side; both must agree on
+/// the userInfo shape.
 ///
-/// `Defaults` is hardcoded to `.standard`, so the suite restores only the keys
+/// Defaults is hardcoded to .standard, so the suite restores only the keys
 /// it touches. A whole-domain snapshot can capture a concurrent suite's
 /// scratch values and write them back over the developer's settings.
 @MainActor
@@ -54,7 +54,7 @@ final class GeneralSettingsTests {
     }
 
     /// Isolated so the non-Sendable snapshot is reachable here; the suite is
-    /// already `@MainActor`.
+    /// already @MainActor.
     @MainActor
     deinit {
         for (key, value) in savedDefaults {
@@ -66,7 +66,7 @@ final class GeneralSettingsTests {
         }
     }
 
-    /// Returns a model that has run its setup against the current `Defaults`.
+    /// Returns a model that has run its setup against the current Defaults.
     ///
     /// The app state is unused by this model, so setup runs without one.
     private func makeSettings() -> GeneralSettings {
@@ -85,12 +85,12 @@ final class GeneralSettingsTests {
 
     /// Posts external settings changes and waits for the model to handle them.
     ///
-    /// `observeSettingsChangesViaURI` enqueues handlers in order on
-    /// `DispatchQueue.main`, so a block queued after the last post is a
+    /// observeSettingsChangesViaURI enqueues handlers in order on
+    /// DispatchQueue.main, so a block queued after the last post is a
     /// deterministic wait. Posting as a batch suspends once, which narrows the
     /// window for another suite to run over this one's scratch values.
     ///
-    /// `SettingsURIHandlerApplyTests` posts on the same center, so assertions
+    /// SettingsURIHandlerApplyTests posts on the same center, so assertions
     /// stick to keys no other suite writes.
     private func postExternalChanges(_ changes: [[String: Any]]) async {
         for change in changes {
@@ -299,7 +299,7 @@ final class GeneralSettingsTests {
 
         await postExternalChange(["key": "rehideInterval", "doubleValue": 123.5])
 
-        // Assert the model, not `Defaults`: another suite's whole-domain
+        // Assert the model, not Defaults: another suite's whole-domain
         // restore can land during the suspension and wipe the write.
         #expect(settings.rehideInterval == 123.5)
     }
@@ -335,7 +335,7 @@ final class GeneralSettingsTests {
         clearStoredSettings()
         let settings = makeSettings()
 
-        // `alwaysShowHiddenItems` is a per-display setting owned by
+        // alwaysShowHiddenItems is a per-display setting owned by
         // DisplaySettingsManager. This model sees every change posted on this
         // channel and has to let the ones it does not own by.
         await postExternalChange(["key": "alwaysShowHiddenItems", "value": true])

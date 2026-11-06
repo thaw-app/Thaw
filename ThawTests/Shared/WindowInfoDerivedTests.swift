@@ -33,7 +33,7 @@ private func requireContainableEmptyDisplay() throws {
     )
 }
 
-/// The four attributes `menuBarWindow(from:for:)` requires of a window,
+/// The four attributes menuBarWindow(from:for:) requires of a window,
 /// one case per clause of its predicate.
 private enum MenuBarWindowRule: String, CaseIterable, Sendable {
     case ownedByTheWindowServer
@@ -44,28 +44,28 @@ private enum MenuBarWindowRule: String, CaseIterable, Sendable {
 
 // MARK: - Suite
 
-/// Covers the parts of `Shared/Utilities/WindowInfo.swift` that answer
+/// Covers the parts of Shared/Utilities/WindowInfo.swift that answer
 /// without a window server: the two selection rules, and the enumeration
 /// paths that refuse before reaching one.
 ///
-/// `CGDisplayBounds` reports an empty rect for an unknown display, and an
+/// CGDisplayBounds reports an empty rect for an unknown display, and an
 /// empty rect contains itself, so a zero-bounds window satisfies the
 /// containment clause of both rules on any machine. That frees the other
 /// clauses to be asserted one at a time; a window with real bounds pins
 /// the containment clause itself.
 ///
-/// `menuBarWindow(from:for:)` is how `NSScreen.getMenuBarHeight()` finds the
+/// menuBarWindow(from:for:) is how NSScreen.getMenuBarHeight() finds the
 /// window it measures, and that height places every managed item. A dropped
 /// clause would match another window and return a plausible but wrong height.
 ///
-/// The window server paths are covered by `WindowInfoLiveTests` below. The
-/// Dock-owned arm of `wallpaperWindow(from:for:)` is pinned here from the
+/// The window server paths are covered by WindowInfoLiveTests below. The
+/// Dock-owned arm of wallpaperWindow(from:for:) is pinned here from the
 /// other side by a non-Dock owner.
 @Suite("Window info lookups without a window server")
 struct WindowInfoDerivedTests {
     // MARK: - Enumeration refusals
 
-    /// `Bridging.createCGWindowArray(with:)` documents that it returns `nil`
+    /// Bridging.createCGWindowArray(with:) documents that it returns nil
     /// for an empty list, or for a list none of whose elements is a valid bit
     /// pattern. Both refusals happen before any window server call, so these
     /// are the two enumeration inputs whose answer is fixed.
@@ -100,7 +100,7 @@ struct WindowInfoDerivedTests {
     struct MenuBarWindowTests {
         /// A window carrying every attribute the rule asks for. Its bounds
         /// are zero so that the containment clause holds against
-        /// `unknownDisplay`; the cases that are about containment pass real
+        /// unknownDisplay; the cases that are about containment pass real
         /// bounds instead.
         private func candidate(
             windowID: CGWindowID = 1,
@@ -152,9 +152,9 @@ struct WindowInfoDerivedTests {
             #expect(WindowInfo.menuBarWindow(from: [rejected, accepted], for: unknownDisplay) == accepted)
         }
 
-        /// A window server window titled `Menubar` on the right layer still
+        /// A window server window titled Menubar on the right layer still
         /// belongs to whichever display it sits on. Without this clause
-        /// `getMenuBarHeight()` would measure another display's menu bar on a
+        /// getMenuBarHeight() would measure another display's menu bar on a
         /// multi-display Mac.
         @Test("A window that lies outside the display is not its menu bar window")
         func windowOutsideTheDisplayIsRejected() throws {
@@ -208,7 +208,7 @@ struct WindowInfoDerivedTests {
             #expect(WindowInfo.wallpaperWindow(from: [], for: unknownDisplay) == nil)
         }
 
-        /// `pid_max` is five digits on macOS, so this identifier can never
+        /// pid_max is five digits on macOS, so this identifier can never
         /// name a running process and the owner lookup is guaranteed to come
         /// back empty. The window is otherwise built to look exactly like a
         /// wallpaper window, including its owner *name*, which the rule
@@ -228,7 +228,7 @@ struct WindowInfoDerivedTests {
         /// the one application a unit test can be certain is running is its
         /// own. Anything else would either need the Dock to be up or leave
         /// the clause pinned only against a nil owner, which a check as loose
-        /// as `owningApplication != nil` would also satisfy.
+        /// as owningApplication != nil would also satisfy.
         @Test("A window owned by an application other than the Dock is not the wallpaper")
         func nonDockWindowIsNotTheWallpaper() throws {
             try requireContainableEmptyDisplay()

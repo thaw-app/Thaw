@@ -9,9 +9,9 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// The importer writes through the `Defaults` facade, so every case runs
-/// inside `withScratchDefaults` and the suite is `.serialized`:
-/// `Defaults.store` is process-wide.
+/// The importer writes through the Defaults facade, so every case runs
+/// inside withScratchDefaults and the suite is .serialized:
+/// Defaults.store is process-wide.
 @Suite("Ice settings importer", .serialized)
 @MainActor
 struct IceSettingsImporterTests {

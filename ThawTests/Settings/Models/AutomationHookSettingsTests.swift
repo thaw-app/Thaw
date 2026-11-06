@@ -9,8 +9,8 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// The global hooks load once at init; the `didSet` observers must not echo
-/// them back to `UserDefaults` on every launch.
+/// The global hooks load once at init; the didSet observers must not echo
+/// them back to UserDefaults on every launch.
 @MainActor
 @Suite("Automation hook settings", .serialized)
 struct AutomationHookSettingsTests {
@@ -40,7 +40,7 @@ struct AutomationHookSettingsTests {
     }
 
     /// The stored bytes are deliberately in an order and spacing that
-    /// `JSONEncoder` would never emit, so an echo from the `didSet`
+    /// JSONEncoder would never emit, so an echo from the didSet
     /// observers would rewrite them and this comparison would fail.
     @Test("Loading at init does not write the hooks back to defaults")
     func loadingAtInitDoesNotEchoBackToDefaults() throws {
@@ -55,7 +55,7 @@ struct AutomationHookSettingsTests {
         }
     }
 
-    /// The contrast that makes the previous test meaningful: once `init` has
+    /// The contrast that makes the previous test meaningful: once init has
     /// returned, an assignment *is* persisted.
     @Test("An assignment after init is persisted")
     func assigningAfterInitPersists() throws {

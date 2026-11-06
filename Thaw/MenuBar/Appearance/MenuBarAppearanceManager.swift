@@ -20,8 +20,8 @@ final class MenuBarAppearanceManager {
 
     /// The current menu bar appearance configuration.
     ///
-    /// `didSet` persists every change; panel reconfiguration is throttled
-    /// separately by `configurationPanelObservationTask`.
+    /// didSet persists every change; panel reconfiguration is throttled
+    /// separately by configurationPanelObservationTask.
     var configuration = Defaults.DefaultValue.menuBarAppearanceConfigurationV2 {
         didSet {
             do {
@@ -36,14 +36,14 @@ final class MenuBarAppearanceManager {
 
     /// Appearance overrides applied while a specific Space is active, keyed
     /// by the Space's persistent key — the reboot-stable identifier — with a
-    /// session-scoped `CGSSpaceID` fallback for Spaces that expose none.
+    /// session-scoped CGSSpaceID fallback for Spaces that expose none.
     private(set) var spaceOverrides: [String: MenuBarAppearanceConfigurationV2] = [:]
 
     /// The most recently observed active Space.
     private(set) var activeSpaceID = SpaceInfo.activeSpace().spaceID
 
     /// The configuration the overlay panels render: the active Space's
-    /// override when one exists, otherwise the shared `configuration`.
+    /// override when one exists, otherwise the shared configuration.
     private(set) var effectiveConfiguration = Defaults.DefaultValue.menuBarAppearanceConfigurationV2
 
     /// The currently previewed partial configuration.
@@ -70,7 +70,7 @@ final class MenuBarAppearanceManager {
     /// Accessibility's Reduce Transparency is enabled.
     ///
     /// The overlay sits behind the menu bar, so an opaque material hides it
-    /// entirely (see ``MenuBarOverlayPanel/updateWindowLevel()``); the editor
+    /// entirely (see MenuBarOverlayPanel/updateWindowLevel()); the editor
     /// warns the user instead.
     private(set) var isReduceTransparencyEnabled =
         NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
@@ -91,10 +91,10 @@ final class MenuBarAppearanceManager {
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
-    /// Task observing `configuration`, throttled to 0.1 s (latest value wins),
+    /// Task observing configuration, throttled to 0.1 s (latest value wins),
     /// that creates or tears down the overlay panels.
     ///
-    /// `_throttle(for:latest:)` is not a typo: swift-async-algorithms 1.1.5
+    /// _throttle(for:latest:) is not a typo: swift-async-algorithms 1.1.5
     /// only exposes the throttle under the underscored name.
     private var configurationPanelObservationTask: Task<Void, Never>?
 
@@ -168,7 +168,7 @@ final class MenuBarAppearanceManager {
     /// The configuration the appearance editor reads and writes.
     ///
     /// The active Space's override when it has one, since the panels render
-    /// ``effectiveConfiguration``; otherwise the shared ``configuration``.
+    /// effectiveConfiguration; otherwise the shared configuration.
     var editedConfiguration: MenuBarAppearanceConfigurationV2 {
         get {
             effectiveConfiguration
@@ -239,7 +239,7 @@ final class MenuBarAppearanceManager {
             overrides: spaceOverrides,
             activeSpaceKey: activeSpaceOverrideKey()
         )
-        // `configurationPanelObservationTask` ignores Space changes, so reconcile
+        // configurationPanelObservationTask ignores Space changes, so reconcile
         // panels here or an override that needs them renders nothing.
         if overlayPanels.isEmpty {
             configureOverlayPanels(with: effectiveConfiguration)

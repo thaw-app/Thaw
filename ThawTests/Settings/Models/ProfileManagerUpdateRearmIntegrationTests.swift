@@ -11,11 +11,11 @@ import Testing
 
 /// End-to-end regression lock for the update-re-arms-cache wiring.
 ///
-/// Drives the real `updateProfileLayout` path against a temporary profiles
+/// Drives the real updateProfileLayout path against a temporary profiles
 /// directory and a standalone MenuBarItemManager. Fails if the re-arm wiring
-/// is removed from `updateProfileLayout`.
+/// is removed from updateProfileLayout.
 ///
-/// Serialized because `withScratchDefaults` swaps the process-wide `Defaults`
+/// Serialized because withScratchDefaults swaps the process-wide Defaults
 /// store.
 @MainActor
 @Suite("Profile manager update re-arm integration", .serialized)

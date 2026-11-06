@@ -9,10 +9,10 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the whitelist bookkeeping in ``AutomationSettings``.
+/// Covers the whitelist bookkeeping in AutomationSettings.
 ///
-/// The whitelist lives in `UserDefaults` via `SettingsURIHandler`, so each
-/// case runs in `withScratchDefaults` against a throwaway, empty store.
+/// The whitelist lives in UserDefaults via SettingsURIHandler, so each
+/// case runs in withScratchDefaults against a throwaway, empty store.
 @MainActor
 @Suite("Automation settings", .serialized)
 struct AutomationSettingsTests {

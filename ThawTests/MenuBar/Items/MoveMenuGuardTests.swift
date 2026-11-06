@@ -9,11 +9,11 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Covers `EventError.menuTrackingActive` classification and description, the
+/// Covers EventError.menuTrackingActive classification and description, the
 /// pure seam behind deferring moves while an item's menu is tracking (#739, #746).
 ///
-/// The deciding paths (`isAnyMenuBarItemMenuOpen()`, the ~5s wait in `move(...)`,
-/// and the early-outs in `applySavedLayout`/`applyProfileLayout`) need live
+/// The deciding paths (isAnyMenuBarItemMenuOpen(), the ~5s wait in move(...),
+/// and the early-outs in applySavedLayout/applyProfileLayout) need live
 /// Accessibility state and were verified manually.
 @Suite("Move-menu guard error classification")
 struct MoveMenuGuardTests {

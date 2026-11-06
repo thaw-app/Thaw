@@ -7,10 +7,10 @@
 
 import Foundation
 
-/// Reads and writes ``ExtrasMenuBarProbeMemory``'s contents.
+/// Reads and writes ExtrasMenuBarProbeMemory's contents.
 ///
 /// Stored in the service's own defaults domain
-/// (`com.stonerl.Thaw.MenuBarItemService`), not the app's: it is a
+/// (com.stonerl.Thaw.MenuBarItemService), not the app's: it is a
 /// measurement, not a user setting, and losing it costs one slow scan.
 nonisolated enum ExtrasMenuBarProbeStore {
     private static let key = "ExtrasMenuBarProbeMisses"
@@ -22,7 +22,7 @@ nonisolated enum ExtrasMenuBarProbeStore {
         stored()
     }
 
-    /// Writes `misses`, unless it matches what is already stored.
+    /// Writes misses, unless it matches what is already stored.
     ///
     /// The write guard makes this safe to call from cache cleanup, which runs
     /// on every process launch or exit (about every nine seconds).

@@ -65,10 +65,10 @@ actor SimpleSemaphore {
     }
 
     /// Waits for, or decrements, the semaphore with a timeout.
-    /// Throws ``CancellationError`` on cancellation or
-    /// ``TimeoutError`` on timeout.
+    /// Throws CancellationError on cancellation or
+    /// TimeoutError on timeout.
     ///
-    /// Invariant 1: on `TimeoutError`, the semaphore's state is exactly as
+    /// Invariant 1: on TimeoutError, the semaphore's state is exactly as
     /// if this call never happened (no permit held, no waiter left behind).
     /// Invariant 2: on normal return, exactly one permit is held.
     func wait(timeout: Duration) async throws {

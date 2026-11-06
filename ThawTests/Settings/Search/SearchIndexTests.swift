@@ -18,8 +18,8 @@ struct SearchIndexTests {
 
     @Test("Every entry has a unique identifier")
     func identifiersAreUnique() {
-        // Identifiers are the `Identifiable` key for the result list and the
-        // switch key for `disclosure`, so a duplicate is a real defect.
+        // Identifiers are the Identifiable key for the result list and the
+        // switch key for disclosure, so a duplicate is a real defect.
         let ids = SearchIndex.entries.map(\.id)
 
         #expect(Set(ids).count == ids.count)

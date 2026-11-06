@@ -9,27 +9,27 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``SettingsURIHandler``'s `get` action, how it answers, and the
-/// per-display lookups shared with `set` and `toggle`.
+/// Covers SettingsURIHandler's get action, how it answers, and the
+/// per-display lookups shared with set and toggle.
 ///
-/// A callback URL would otherwise go to `NSWorkspace`, so every malformed or
+/// A callback URL would otherwise go to NSWorkspace, so every malformed or
 /// dangerous one must be refused before it is opened. No test supplies a
 /// callback the handler would accept, so nothing opens a URL or launches an app.
 ///
 /// Response bodies are not observable here: the payload travels down a
-/// callback URL, and the `distnoted` broadcast does not deliver back into the
+/// callback URL, and the distnoted broadcast does not deliver back into the
 /// test host. Tests assert the returned Boolean (a broadcast request succeeds
 /// only when it produced data, like a callback request) or the per-display
-/// notification's `userInfo`. The `iceBarLocation valid values` test calls
-/// `getSettingValue` directly instead.
+/// notification's userInfo. The iceBarLocation valid values test calls
+/// getSettingValue directly instead.
 ///
-/// Every test runs inside `withScratchDefaults`.
+/// Every test runs inside withScratchDefaults.
 @MainActor
 @Suite("Settings URI handler get", .serialized)
 struct SettingsURIHandlerGetTests {
     // MARK: Helpers
 
-    /// Persists a configuration for `uuid` so the handler accepts it as a
+    /// Persists a configuration for uuid so the handler accepts it as a
     /// known display. A test cannot attach a screen, so this is the only way
     /// into the specific-display paths.
     private func persistConfiguration(
@@ -40,7 +40,7 @@ struct SettingsURIHandlerGetTests {
         Defaults.set(data, forKey: .displayIceBarConfigurations)
     }
 
-    /// Collects the notifications posted on `name` while `body` runs.
+    /// Collects the notifications posted on name while body runs.
     private func notifications(
         named name: Notification.Name,
         during body: () -> Void
@@ -57,8 +57,8 @@ struct SettingsURIHandlerGetTests {
     }
 
     /// Notifications are delivered synchronously on the posting thread, but
-    /// the observer closure is `@Sendable`, so the collector needs to be a
-    /// reference type rather than a captured `var`.
+    /// the observer closure is @Sendable, so the collector needs to be a
+    /// reference type rather than a captured var.
     private final class NotificationBox: @unchecked Sendable {
         private(set) var contents: [Notification] = []
         func append(_ notification: Notification) {
@@ -349,7 +349,7 @@ struct SettingsURIHandlerGetTests {
     ])
     func everyReadableKeyIsAnswered(_ key: String) throws {
         try withScratchDefaults { _ in
-            // Reading a key must never fail the request: `all` walks every setting
+            // Reading a key must never fail the request: all walks every setting
             // and every attached screen, and the per-display keys resolve against
             // the active display when no UUID is given.
             #expect(
@@ -450,7 +450,7 @@ struct SettingsURIHandlerGetTests {
         }
     }
 
-    /// Reading is never destructive: a `get` of every publishable key must
+    /// Reading is never destructive: a get of every publishable key must
     /// leave the store exactly as it found it. Three keys are seeded with
     /// distinctive values so a read that wrote a default back is caught,
     /// and one is left unset so a read that materialised a default is too.
@@ -519,8 +519,8 @@ struct SettingsURIHandlerGetTests {
         }
     }
 
-    /// A malformed identifier takes the same route out, unlike `set`, which
-    /// rejects it earlier on its `UUID(uuidString:)` check.
+    /// A malformed identifier takes the same route out, unlike set, which
+    /// rejects it earlier on its UUID(uuidString:) check.
     @Test("A per-display read with a malformed identifier is refused", arguments: SettingsURIKeyTable.perDisplayKeys)
     func perDisplayReadWithAMalformedIdentifierIsRefused(_ key: String) throws {
         try withScratchDefaults { _ in
@@ -557,7 +557,7 @@ struct SettingsURIHandlerGetTests {
 
     // MARK: Stored values the enumeration cannot name
 
-    /// A downgrade or a hand-written `defaults write` can leave a raw value
+    /// A downgrade or a hand-written defaults write can leave a raw value
     /// outside the enumeration. The read must answer with it rather than
     /// report "Setting not found", or the caller could never see or fix it.
     @Test("A rehideStrategy the enumeration cannot name is still answered", arguments: [99, -1, 3])

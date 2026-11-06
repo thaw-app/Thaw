@@ -9,13 +9,13 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the capture half of ``ProfileManager``: saving current state as a
+/// Covers the capture half of ProfileManager: saving current state as a
 /// profile, overwriting a profile from current state, and scoped updates.
 ///
-/// Uses real stores through `saveProfile(name:settings:appearanceManager:itemManager:)`,
-/// so no live `AppState` is needed. Every store lives in a scratch `Defaults`
-/// suite, since settings persist through `didSet` and layout capture reads
-/// `Defaults.store` directly.
+/// Uses real stores through saveProfile(name:settings:appearanceManager:itemManager:),
+/// so no live AppState is needed. Every store lives in a scratch Defaults
+/// suite, since settings persist through didSet and layout capture reads
+/// Defaults.store directly.
 ///
 /// Mutating cases assert against a reloaded manager where persisted state matters.
 @MainActor

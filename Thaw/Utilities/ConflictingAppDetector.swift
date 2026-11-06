@@ -36,7 +36,7 @@ enum ConflictingAppDetector {
         return conflicts
     }
 
-    /// Shows a warning alert listing the conflicting apps. Returns `true` if the user chose to continue.
+    /// Shows a warning alert listing the conflicting apps. Returns true if the user chose to continue.
     @MainActor
     @discardableResult
     static func showWarningIfNeeded() -> Bool {

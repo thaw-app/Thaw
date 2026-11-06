@@ -194,7 +194,7 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Whether the user has paused input for at least `duration`.
+    /// Whether the user has paused input for at least duration.
     nonisolated func hasUserPausedInput(for duration: Duration) -> Bool {
         NSEvent.modifierFlags.isEmpty &&
             !MouseHelpers.lastMovementOccurred(within: duration) &&
@@ -266,7 +266,7 @@ extension MenuBarItemManager {
     /// overrides active input.
     ///
     /// On by default at 300 ms; disable with:
-    ///   defaults write com.stonerl.Thaw bulkApplyIdleThresholdMs -int 0
+    /// defaults write com.stonerl.Thaw bulkApplyIdleThresholdMs -int 0
     nonisolated func waitForBulkApplyIdleWindow() async -> Bool {
         let thresholdMs = (Defaults.object(forKey: .bulkApplyIdleThresholdMs) as? Int)
             ?? Defaults.DefaultValue.bulkApplyIdleThresholdMs
@@ -523,7 +523,7 @@ extension MenuBarItemManager {
     ///
     /// Echoes with matching window fields pass through, so the scromble
     /// handshake is unaffected. Kill switch:
-    ///   defaults write com.stonerl.Thaw discardStrayMoveEvents -bool NO
+    /// defaults write com.stonerl.Thaw discardStrayMoveEvents -bool NO
     private nonisolated var discardsStrayMoveEvents: Bool {
         (Defaults.object(forKey: .discardStrayMoveEvents) as? Bool) ?? Defaults.DefaultValue.discardStrayMoveEvents
     }
@@ -534,7 +534,7 @@ extension MenuBarItemManager {
     ///
     /// A mismatch means the coordinates were clamped (the Apple-menu case). It's
     /// always logged; failing early is opt-in because it's unverified on hardware:
-    ///   defaults write com.stonerl.Thaw failFastOnEventWindowMismatch -bool YES
+    /// defaults write com.stonerl.Thaw failFastOnEventWindowMismatch -bool YES
     private nonisolated var failsFastOnEventWindowMismatch: Bool {
         Defaults.bool(forKey: .failFastOnEventWindowMismatch)
     }
@@ -881,15 +881,14 @@ extension MenuBarItemManager {
     /// Posts an event to the given menu bar item and waits until
     /// it is received before returning.
     ///
-    /// - Parameters:
-    ///   - event: The event to post.
-    ///   - item: The menu bar item that the event targets.
-    ///   - timeout: The base duration to wait before throwing an error.
-    ///     The value of this parameter is multiplied by count to
-    ///     produce the actual timeout duration.
-    ///   - count: The number of times to repeat the operation. As it
-    ///     is considerably more efficient, prefer increasing this value
-    ///     over repeatedly calling postEventWithBarrier.
+    /// event: The event to post.
+    /// item: The menu bar item that the event targets.
+    /// timeout: The base duration to wait before throwing an error.
+    /// The value of this parameter is multiplied by count to
+    /// produce the actual timeout duration.
+    /// count: The number of times to repeat the operation. As it
+    /// is considerably more efficient, prefer increasing this value
+    /// over repeatedly calling postEventWithBarrier.
     nonisolated func postEventWithBarrier(
         _ event: CGEvent,
         to item: MenuBarItem,
@@ -908,15 +907,14 @@ extension MenuBarItemManager {
     /// Casts forbidden magic to make a menu bar item receive and
     /// respond to an event during a move operation.
     ///
-    /// - Parameters:
-    ///   - event: The event to post.
-    ///   - item: The menu bar item that the event targets.
-    ///   - timeout: The base duration to wait before throwing an error.
-    ///     The value of this parameter is multiplied by count to
-    ///     produce the actual timeout duration.
-    ///   - count: The number of times to repeat the operation. As it
-    ///     is considerably more efficient, prefer increasing this value
-    ///     over repeatedly calling scrombleEvent.
+    /// event: The event to post.
+    /// item: The menu bar item that the event targets.
+    /// timeout: The base duration to wait before throwing an error.
+    /// The value of this parameter is multiplied by count to
+    /// produce the actual timeout duration.
+    /// count: The number of times to repeat the operation. As it
+    /// is considerably more efficient, prefer increasing this value
+    /// over repeatedly calling scrombleEvent.
     nonisolated func scrombleEvent(
         _ event: CGEvent,
         item: MenuBarItem,

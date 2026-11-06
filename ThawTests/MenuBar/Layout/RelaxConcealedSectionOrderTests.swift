@@ -75,7 +75,7 @@ struct RelaxConcealedSectionOrderTests {
     /// An item reassigned from visible to hidden is absent from hidden's current run, so it still moves.
     @Test("An item crossing into a concealed section still plans a move")
     func crossSectionMoveSurvives() {
-        // `b` currently sits in visible; the layout wants it in hidden.
+        // b currently sits in visible; the layout wants it in hidden.
         let sectionMap = ["a": "visible", "b": "hidden", "c": "hidden"]
         let relaxed = LayoutSolver.relaxConcealedSectionOrder(
             desiredNoControls: ["a", "b", "c"],

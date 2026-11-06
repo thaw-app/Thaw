@@ -12,7 +12,7 @@ import UniformTypeIdentifiers
 /// offered from the failure alert for attaching to a bug report.
 ///
 /// Adds the display, the rest of the bar, and the move settings to the log
-/// excerpt, redacted with ``DiagnosticRedactor``.
+/// excerpt, redacted with DiagnosticRedactor.
 nonisolated struct MoveFailureDiagnosticReport {
     /// The move that failed.
     struct Failure {
@@ -45,7 +45,7 @@ nonisolated struct MoveFailureDiagnosticReport {
     }
 
     /// Enumeration and move categories only; nothing that quotes a network,
-    /// device, or script. `Bridging` is left out as noise.
+    /// device, or script. Bridging is left out as noise.
     static let logCategories: Set<String> = [
         "AppState",
         "ControlItem",
@@ -81,7 +81,7 @@ nonisolated struct MoveFailureDiagnosticReport {
 
     @MainActor
     static func generate(for failure: Failure, appState: AppState) async -> MoveFailureDiagnosticReport {
-        // Not `.onScreen`: collapsed sections are usually what failed.
+        // Not .onScreen: collapsed sections are usually what failed.
         let liveItems = await MenuBarItem.getMenuBarItems(on: nil, option: .activeSpace, resolveSourcePID: false)
         let logger = DiagnosticLogger.shared
         let diagnosticLoggingWasEnabled = logger.isEnabled
@@ -110,7 +110,7 @@ nonisolated struct MoveFailureDiagnosticReport {
 
     // MARK: Presentation
 
-    /// Presents `alert` with an added "Save Diagnostic Report…" button and
+    /// Presents alert with an added "Save Diagnostic Report…" button and
     /// saves this report when it is chosen.
     ///
     /// Prefer a sheet: an app-modal alert blocks the main actor, and a move
@@ -136,7 +136,7 @@ nonisolated struct MoveFailureDiagnosticReport {
         }
     }
 
-    /// Reuses the primary button supplied by `NSAlert`, adds one save
+    /// Reuses the primary button supplied by NSAlert, adds one save
     /// button, and returns the response value for that button.
     @MainActor
     static func configureButtons(on alert: NSAlert) -> NSApplication.ModalResponse {
@@ -165,7 +165,7 @@ nonisolated struct MoveFailureDiagnosticReport {
     }
 
     /// Where reports for failed automatic moves are written without asking:
-    /// `~/Library/Logs/Thaw/Diagnostics`.
+    /// ~/Library/Logs/Thaw/Diagnostics.
     static var automaticReportsDirectory: URL {
         DiagnosticLogger.shared.logDirectory.appendingPathComponent("Diagnostics", isDirectory: true)
     }
@@ -174,7 +174,7 @@ nonisolated struct MoveFailureDiagnosticReport {
     static let automaticReportsKept = 20
 
     /// Writes to the automatic folder and prunes beyond
-    /// ``automaticReportsKept``. Same-timestamp names get a suffix.
+    /// automaticReportsKept. Same-timestamp names get a suffix.
     @discardableResult
     func writeToAutomaticReports(in directory: URL = Self.automaticReportsDirectory) throws -> URL {
         let fileManager = FileManager.default
@@ -189,7 +189,7 @@ nonisolated struct MoveFailureDiagnosticReport {
         return url
     }
 
-    /// Returns a non-existing URL for `suggestedFileName`, adding a numeric
+    /// Returns a non-existing URL for suggestedFileName, adding a numeric
     /// suffix before its extension when needed.
     static func availableReportURL(
         in directory: URL,
@@ -216,8 +216,8 @@ nonisolated struct MoveFailureDiagnosticReport {
         }
     }
 
-    /// Removes all but the newest `keepCount` automatic move reports in
-    /// `directory`. Other text files in the diagnostics folder are retained.
+    /// Removes all but the newest keepCount automatic move reports in
+    /// directory. Other text files in the diagnostics folder are retained.
     static func pruneAutomaticReports(in directory: URL, keeping keepCount: Int) {
         let fileManager = FileManager.default
         guard let urls = try? fileManager.contentsOfDirectory(
@@ -280,7 +280,7 @@ nonisolated struct MoveFailureDiagnosticReport {
 
     // MARK: Log excerpt
 
-    /// Keeps the newest `limit` lines in ``logCategories``. Unparseable lines
+    /// Keeps the newest limit lines in logCategories. Unparseable lines
     /// are dropped.
     static func filterLogLines(_ lines: [String], limit: Int = logLineLimit) -> [String] {
         guard limit > 0 else { return [] }
@@ -298,8 +298,8 @@ nonisolated struct MoveFailureDiagnosticReport {
         return Array(kept.reversed())
     }
 
-    /// The `[Category]` field of a log line, which follows the timestamp
-    /// and the level: `2026-08-28 22:16:43.817 [DEBUG] [MenuBarItemManager] …`.
+    /// The [Category] field of a log line, which follows the timestamp
+    /// and the level: 2026-08-28 22:16:43.817 [DEBUG] [MenuBarItemManager] ….
     static func logCategory(of line: String) -> String? {
         guard let match = line.firstMatch(of: #/^\S+ \S+ \[[A-Z]+\] \[([^\]]+)\]/#) else {
             return nil

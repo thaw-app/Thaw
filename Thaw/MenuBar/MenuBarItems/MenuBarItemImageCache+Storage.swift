@@ -38,8 +38,8 @@ extension MenuBarItemImageCache {
         return image
     }
 
-    /// Looks up `tag` in `store`, with the same exact-then-`matchesIgnoringWindowID`
-    /// fallback used by ``image(for:)``.
+    /// Looks up tag in store, with the same exact-then-matchesIgnoringWindowID
+    /// fallback used by image(for:).
     static func image(
         for tag: MenuBarItemTag,
         in store: [MenuBarItemTag: CapturedImage]
@@ -91,7 +91,7 @@ extension MenuBarItemImageCache {
         accessOrder.count
     }
 
-    /// Removes entries with invalid window IDs, except tags in `preserving`.
+    /// Removes entries with invalid window IDs, except tags in preserving.
     /// Returns the number removed.
     @MainActor
     func validateAndCleanupInvalidEntries(

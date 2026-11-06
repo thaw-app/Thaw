@@ -29,7 +29,7 @@ struct SpaceInfo: Hashable {
         self.isFullscreen = Bridging.isSpaceFullscreen(spaceID)
     }
 
-    /// The space as the window server currently describes it, or `nil` if
+    /// The space as the window server currently describes it, or nil if
     /// it has not been published in the managed-display list yet.
     ///
     /// Looked up on demand rather than stored, because resolving it walks
@@ -40,7 +40,7 @@ struct SpaceInfo: Hashable {
 
     /// A reboot-stable key for the space, suitable for persisting.
     ///
-    /// Unlike ``spaceID``, this survives logout.
+    /// Unlike spaceID, this survives logout.
     var persistentKey: String? {
         managedSpace?.persistentKey
     }
@@ -71,7 +71,7 @@ struct SpaceInfo: Hashable {
 
     /// Returns the current space on the given display.
     ///
-    /// - Parameter displayID: An identifier for a display.
+    /// displayID: An identifier for a display.
     static func currentSpace(for displayID: CGDirectDisplayID) -> SpaceInfo? {
         guard let spaceID = Bridging.getCurrentSpaceID(for: displayID) else {
             return nil

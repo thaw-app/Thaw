@@ -162,7 +162,7 @@ final class ControlItem {
     /// Spacer items used to extend hidden/always-hidden width on ultra-wide displays.
     private var spacerItems = [NSStatusItem]()
 
-    /// What the button's image was last built from. `NSImage` compares by
+    /// What the button's image was last built from. NSImage compares by
     /// identity, so the source is what tells a real change from a repeat.
     private var appliedImageSource: ImageSource?
 
@@ -612,7 +612,7 @@ final class ControlItem {
         }
     }
 
-    /// See ``updateStatusItem()`` for why repeated writes matter.
+    /// See updateStatusItem() for why repeated writes matter.
     private func setIfChanged<Root: AnyObject, Value: Equatable>(
         _ object: Root,
         _ keyPath: ReferenceWritableKeyPath<Root, Value>,

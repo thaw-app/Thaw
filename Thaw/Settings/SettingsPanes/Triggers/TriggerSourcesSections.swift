@@ -176,7 +176,7 @@ struct TriggerSourcesSections: View {
     }
 
     /// Renders a recording-device reading, or the flag-off placeholder when the
-    /// `recordingDevices` feature is not enabled.
+    /// recordingDevices feature is not enabled.
     private func recordingState(_ inUse: Bool) -> String {
         guard flags.isEnabled(.recordingDevices) else {
             return "Enable flag to read"
@@ -219,7 +219,7 @@ struct TriggerSourcesSections: View {
         }
     }
 
-    /// Why a Location-backed readout has no value, or `nil` once permission is
+    /// Why a Location-backed readout has no value, or nil once permission is
     /// granted and the caller has to explain the gap itself.
     private func locationPermissionMessage() -> String? {
         switch systemMonitor.locationAuthorizationStatus {

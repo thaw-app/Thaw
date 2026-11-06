@@ -12,13 +12,13 @@ import Testing
 
 // MARK: - Fixtures
 
-/// One 32-bit pixel layout that `CGImage.isTransparent(alphaThreshold:)`
+/// One 32-bit pixel layout that CGImage.isTransparent(alphaThreshold:)
 /// claims to read straight out of the image's own bytes, paired with the
 /// byte index the alpha component physically occupies under that layout.
 ///
 /// The offsets are the ones the extension's own table asserts: a logical
-/// `First` layout read little-endian lands alpha in the *last* byte, and a
-/// logical `Last` layout read little-endian lands it in the *first*.
+/// First layout read little-endian lands alpha in the *last* byte, and a
+/// logical Last layout read little-endian lands it in the *first*.
 private struct PixelLayout: Sendable, CustomStringConvertible {
     let name: String
     let alphaInfo: CGImageAlphaInfo
@@ -84,11 +84,11 @@ private struct PixelLayout: Sendable, CustomStringConvertible {
     ]
 }
 
-/// Builds a 32-bit image every one of whose pixels carries `bytes`, in
+/// Builds a 32-bit image every one of whose pixels carries bytes, in
 /// exactly that physical order.
 ///
-/// Built from a data provider because `CGContext` cannot be created with a
-/// big-endian or `Last`-alpha layout, so a context-built fixture could not
+/// Built from a data provider because CGContext cannot be created with a
+/// big-endian or Last-alpha layout, so a context-built fixture could not
 /// reach half of the offset table.
 private func makeRawImage(
     width: Int,
@@ -124,9 +124,9 @@ private func makeRawImage(
     )
 }
 
-/// A four-byte pixel whose byte at `index` is `alpha` and whose other three
-/// bytes are `others`. Filling them with the opposite value means the
-/// fixture only gives the expected answer if alpha is read from `index`.
+/// A four-byte pixel whose byte at index is alpha and whose other three
+/// bytes are others. Filling them with the opposite value means the
+/// fixture only gives the expected answer if alpha is read from index.
 private func makePixel(alpha: UInt8, atByte index: Int, others: UInt8) -> [UInt8] {
     var bytes = [UInt8](repeating: others, count: 4)
     bytes[index] = alpha
@@ -158,14 +158,14 @@ private func makeMask(width: Int, height: Int, value: UInt8) throws -> CGImage {
 
 // MARK: - Suite
 
-/// Covers the two `CGImage` analysis helpers in `Extensions.swift`:
-/// `averageColor(using:alphaThreshold:option:)` and
-/// `isTransparent(alphaThreshold:)`.
+/// Covers the two CGImage analysis helpers in Extensions.swift:
+/// averageColor(using:alphaThreshold:option:) and
+/// isTransparent(alphaThreshold:).
 ///
 /// Both are pure functions of pixel data: the average color drives the
 /// adaptive tint, and the transparency check decides whether a captured
-/// item is worth caching. `isTransparent` has a fast path for known pixel
-/// formats and a `TransparencyContext` fallback, so the cases build images
+/// item is worth caching. isTransparent has a fast path for known pixel
+/// formats and a TransparencyContext fallback, so the cases build images
 /// in several formats to exercise both.
 @Suite("CGImage analysis")
 struct CGImageAnalysisTests {
@@ -380,7 +380,7 @@ struct CGImageAnalysisTests {
 
     // MARK: - CGImage transparency by pixel format
 
-    /// The fast path in `isTransparent(alphaThreshold:)` reads alpha bytes
+    /// The fast path in isTransparent(alphaThreshold:) reads alpha bytes
     /// straight out of the image's data provider, which means it has to work
     /// out where the alpha byte sits from the alpha info and the byte order
     /// on its own. Each case below writes the *opposite* value into the three
@@ -471,7 +471,7 @@ struct CGImageAnalysisTests {
         }
 
         /// Anything that is not four bytes per pixel is handed to the
-        /// `TransparencyContext` fallback, which redraws the image into an
+        /// TransparencyContext fallback, which redraws the image into an
         /// alpha-only context instead of reading its bytes. A mask is the
         /// cheapest such image to build, at one byte per pixel.
         ///
@@ -492,7 +492,7 @@ struct CGImageAnalysisTests {
 
     // MARK: - CGImage average color
 
-    /// `averageColor` picks the color space it works in before it looks at a
+    /// averageColor picks the color space it works in before it looks at a
     /// single pixel: the caller's, else the image's, else Display P3. Both
     /// the last step and the refusal that follows a space it cannot draw into
     /// decide whether the menu bar's adaptive tint gets a color or nothing.
@@ -517,7 +517,7 @@ struct CGImageAnalysisTests {
             #expect(components[3] > 0.99, "the mask paints opaque, so the average is opaque")
         }
 
-        /// `extendedSRGB` passes the RGB-model test the resolution step
+        /// extendedSRGB passes the RGB-model test the resolution step
         /// applies, but its components are outside 0...1, so it cannot back
         /// the eight-bit context the average is computed in. The only honest
         /// answer is no color: a fabricated one would be blended into the
@@ -538,8 +538,8 @@ struct CGImageAnalysisTests {
     // MARK: - Helpers
 
     /// Builds an image with no explicit byte order. The alpha fast path
-    /// bails on `byteOrderDefault` "for safety", so this routes through the
-    /// `TransparencyContext` fallback instead.
+    /// bails on byteOrderDefault "for safety", so this routes through the
+    /// TransparencyContext fallback instead.
     private func makeDefaultByteOrderImage(width: Int, height: Int, opaque: Bool) throws -> CGImage {
         let context = try #require(
             CGContext(

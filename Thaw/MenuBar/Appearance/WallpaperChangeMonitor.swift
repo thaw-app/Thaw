@@ -12,12 +12,12 @@ import Foundation
 /// macOS posts no public notification for wallpaper changes, so this watches
 /// the file the system rewrites when the wallpaper is set.
 ///
-/// Only a latency improvement: the periodic refresh in ``MenuBarManager``
+/// Only a latency improvement: the periodic refresh in MenuBarManager
 /// still has to run, because dynamic and aerial wallpapers change pixels
 /// without rewriting the index.
 @MainActor
 final class WallpaperChangeMonitor {
-    /// The wallpaper store index. The older `Dock/desktoppicture.db` no
+    /// The wallpaper store index. The older Dock/desktoppicture.db no
     /// longer exists on the deployment target.
     static let indexURL = URL(
         fileURLWithPath: NSHomeDirectory()
@@ -39,17 +39,16 @@ final class WallpaperChangeMonitor {
     /// Called on the main actor after the debounce interval elapses.
     var onChange: (() -> Void)?
 
-    /// - Parameters:
-    ///   - url: The file to watch.
-    ///   - debounce: How long to coalesce writes. Setting a wallpaper
-    ///     rewrites the index several times, each costing a screen capture.
+    /// url: The file to watch.
+    /// debounce: How long to coalesce writes. Setting a wallpaper
+    /// rewrites the index several times, each costing a screen capture.
     init(url: URL = WallpaperChangeMonitor.indexURL, debounce: Duration = .milliseconds(500)) {
         self.url = url
         self.debounce = debounce
     }
 
     deinit {
-        // `stop()` is main-actor isolated and deinit is not, and the cancel
+        // stop() is main-actor isolated and deinit is not, and the cancel
         // handler won't run after deallocation, so close directly.
         debounceTask?.cancel()
         restartRetryTask?.cancel()
@@ -74,7 +73,7 @@ final class WallpaperChangeMonitor {
             queue: .main
         )
         // GCD retains its handler, so a strong capture would leak a source
-        // on every `restart()`.
+        // on every restart().
         source.setEventHandler { [weak self, weak source] in
             guard let self, let source else { return }
             let events = source.data

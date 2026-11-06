@@ -21,11 +21,11 @@ private func fixtureItem(_ title: String, windowID: CGWindowID) -> MenuBarItem {
     .fixture(tag: fixtureTag(title), windowID: windowID)
 }
 
-/// Covers the `Sequence<MenuBarItem>` helpers for re-finding an item across
+/// Covers the Sequence<MenuBarItem> helpers for re-finding an item across
 /// window-list snapshots.
 ///
-/// `first(matching:)` is exact tag equality, windowID included for non-system
-/// items. `first(matchingTag:pid:)` ignores windowIDs, which churn, and uses
+/// first(matching:) is exact tag equality, windowID included for non-system
+/// items. first(matchingTag:pid:) ignores windowIDs, which churn, and uses
 /// the tag plus sourcePID, falling back to ownerPID. A wrong fallback strands
 /// rehides and click refetches.
 @Suite("Menu bar item matching helpers")
@@ -120,7 +120,7 @@ struct MenuBarItemMatchingTests {
     /// item lookup is expressed, and every caller depends on two things the
     /// implementation does not spell out: the returned index is a real
     /// collection index (so it survives slicing), and matching goes through
-    /// `MenuBarItemTag` equality rather than window identity.
+    /// MenuBarItemTag equality rather than window identity.
     @MainActor
     @Suite("Menu bar item lookup")
     struct MenuBarItemLookupTests {
@@ -174,7 +174,7 @@ struct MenuBarItemMatchingTests {
             #expect(collection.firstIndex(matching: fixtureTag("Alpha", windowID: 11)) == nil)
         }
 
-        // `removeFirst(matching:)` is mutating, and the #expect/#require macros
+        // removeFirst(matching:) is mutating, and the #expect/#require macros
         // capture their argument into a closure that binds it immutably. Each
         // call is therefore made on its own line and the result inspected after.
 

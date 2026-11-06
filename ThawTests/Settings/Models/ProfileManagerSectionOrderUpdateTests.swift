@@ -9,9 +9,9 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers `ProfileManager.updateActiveProfileSectionOrder(_:identifiers:)`,
+/// Covers ProfileManager.updateActiveProfileSectionOrder(_:identifiers:),
 /// which Sort A→Z uses to persist a sorted section before re-applying, so
-/// `reapplyActiveProfile` reads the new order, not the stale on-disk one.
+/// reapplyActiveProfile reads the new order, not the stale on-disk one.
 ///
 /// Serialized because withScratchDefaults swaps the process-wide Defaults store.
 @MainActor

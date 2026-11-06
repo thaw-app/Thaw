@@ -12,7 +12,7 @@ import Testing
 
 /// Pins the identity-quality filter on late-arrival detection.
 ///
-/// With just under half the `sourcePID`s unresolved, every apply still runs
+/// With just under half the sourcePIDs unresolved, every apply still runs
 /// (#881). Each resolution flap swaps an item between its resolved and
 /// fallback identity, and the unrecorded form reads as a fresh arrival,
 /// scheduling another re-sort. The moves land, so no other guard stops it.
