@@ -603,8 +603,7 @@ extension MenuBarItemImageCache {
         // A bar mid-reflow draws items scaled down and faded. Bounded so a
         // flag that never clears cannot starve capture.
         let reflowSkip = await MainActor.run { () -> Int in
-            let reflowing = appState.menuBarManager.shouldSuppressMenuBarAgentNudge
-                || appState.menuBarManager.isRevealHideTransitionActive
+            let reflowing = appState.barSettling.hold(for: .agentNudge) != nil
             guard reflowing, consecutiveReflowSkips < Self.maximumReflowSkips else {
                 consecutiveReflowSkips = 0
                 return 0

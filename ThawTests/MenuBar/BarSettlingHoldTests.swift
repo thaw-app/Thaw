@@ -198,17 +198,17 @@ struct BarSettlingHoldTests {
         defer { subscription.cancel() }
 
         #expect(received == 0)
-        #expect(!manager.shouldSuppressMenuBarAgentNudge)
+        #expect(manager.barSettling.hold(for: .agentNudge) == nil)
     }
 
     @Test("Inside the reflow window the manager holds off the MenuBarAgent nudge")
     func managerGatesTheNudgeOnTheWindow() {
         let manager = MenuBarManager(barSettling: makeSettling())
-        #expect(!manager.shouldSuppressMenuBarAgentNudge)
+        #expect(manager.barSettling.hold(for: .agentNudge) == nil)
 
         manager.barSettling.note(.revealedSectionChanged)
 
-        #expect(manager.shouldSuppressMenuBarAgentNudge)
+        #expect(manager.barSettling.hold(for: .agentNudge) != nil)
         // The gate returns before it reaches the status item, so this touches nothing.
         #expect(!manager.requestMenuBarAgentPositionRefresh())
     }
@@ -218,11 +218,11 @@ struct BarSettlingHoldTests {
         let manager = MenuBarManager(barSettling: makeSettling())
 
         manager.setRevealHideTransitionActive(true)
-        #expect(manager.isRevealHideTransitionActive)
-        #expect(manager.shouldSuppressMenuBarAgentNudge)
+        #expect(manager.barSettling.isRevealTransitionActive)
+        #expect(manager.barSettling.hold(for: .agentNudge) != nil)
 
         manager.setRevealHideTransitionActive(false)
-        #expect(!manager.shouldSuppressMenuBarAgentNudge)
+        #expect(manager.barSettling.hold(for: .agentNudge) == nil)
     }
 }
 
@@ -319,14 +319,43 @@ struct BarSettlingRestrictionHoldTests {
         #expect(disturbance.kind == nil)
     }
 
-    @Test("The manager's defer flag follows the native-bar hold")
+    @Test("The manager's shared settling holds bar mutations after a native-bar change")
     func managerDefersOnNativeBarChange() {
         let manager = MenuBarManager(barSettling: makeSettling())
-        #expect(!manager.shouldDeferBarMutation)
+        #expect(manager.barSettling.hold(for: .barMutation) == nil)
 
         manager.barSettling.note(.nativeBarChanged)
 
-        #expect(manager.shouldDeferBarMutation)
+        #expect(manager.barSettling.hold(for: .barMutation) != nil)
+    }
+
+    @Test("The structural pass waits for a running settle and for the kit's transition, each on its own")
+    func structuralPassHolds() {
+        let settling = makeSettling()
+        #expect(settling.holds(for: .structuralPass).isEmpty)
+
+        settling.note(.revealTransition(active: true))
+        #expect(settling.holds(for: .structuralPass) == [.revealTransition])
+
+        settling.note(.spacingWaveStarted(cause: nil))
+        defer { settling.note(.spacingWaveEnded(cause: nil, outcome: .noOp)) }
+        #expect(settling.holds(for: .structuralPass) == [.settling, .revealTransition])
+        #expect(settling.hold(for: .structuralPass) == .settling)
+    }
+
+    @Test("The structural pass reads its settling and transition rows from the shared settling")
+    func writeHoldSituationRows() {
+        let manager = MenuBarItemManager(barSettling: makeSettling())
+        #expect(!manager.structuralNormalizationSituation().startupSettling)
+        #expect(!manager.structuralNormalizationSituation().revealTransitionActive)
+
+        manager.barSettling.note(.revealTransition(active: true))
+        manager.barSettling.holdForTesting()
+        defer { manager.barSettling.releaseForTesting() }
+
+        let situation = manager.structuralNormalizationSituation()
+        #expect(situation.startupSettling)
+        #expect(situation.revealTransitionActive)
     }
 
     @Test("A restriction change reported to the item manager holds the resort signal")

@@ -60,10 +60,13 @@ extension BarSettling {
         case barMutation
         /// An automatic reorder or saved-layout re-apply, which would take a restriction reflow for drift.
         case layoutReorder
+        /// The structural normalization pass, which re-lays the control items.
+        case structuralPass
     }
 
     /// Why a purpose is held off.
     nonisolated enum Hold: Equatable, Sendable {
+        case settling
         case revealReflow
         case revealTransition
         case barNotQuiet

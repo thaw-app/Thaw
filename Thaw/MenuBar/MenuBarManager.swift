@@ -232,11 +232,6 @@ final class MenuBarManager {
     /// Re-applies "Always show hidden items" when the active menu bar moves to another display.
     private var activeDisplayWatcher: ActiveMenuBarDisplayWatcher?
 
-    /// Read by the kit adapter, which reaches the shared settling through this manager.
-    var shouldDeferBarMutation: Bool {
-        barSettling.hold(for: .barMutation) != nil
-    }
-
     /// Fixed sections, built once and never reordered; access by section(withName:).
     let sections = [
         MenuBarSection(name: .visible),
@@ -1495,26 +1490,17 @@ final class MenuBarManager {
 
     /// The kit suppresses nudges during assertion recompositing, which already lays out the bar; extra resizing flickers.
     /// It clears this before position-restoring writes; the reveal reflow window guards new transitions during suspended restores.
-    var isRevealHideTransitionActive: Bool {
-        barSettling.isRevealTransitionActive
-    }
-
     func setRevealHideTransitionActive(_ active: Bool) {
         barSettling.note(.revealTransition(active: active))
         // Either edge of the transition moves the items, so the pill should follow closely.
         leadingEdgeWatcher.expectChange()
     }
 
-    /// Suppress width nudges and structural normalization during the transition or fixed settling window.
-    var shouldSuppressMenuBarAgentNudge: Bool {
-        barSettling.hold(for: .agentNudge) != nil
-    }
-
     /// Cursor-free invalidation after position writes; suppress during reflow to avoid missed rehide clicks, but allow settled reveals.
     /// Returns whether armed, not evidence about MenuBarAgent when skipped; see ControlItem.requestMenuBarAgentPositionRefresh.
     @discardableResult
     func requestMenuBarAgentPositionRefresh() -> Bool {
-        guard !shouldSuppressMenuBarAgentNudge else {
+        guard barSettling.hold(for: .agentNudge) == nil else {
             diagLog.debug(
                 "Skipping MenuBarAgent position refresh: reveal/hide transition or reflow still settling"
             )

@@ -867,7 +867,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
             stableTrailingBounds: lastStableTrailingPathBounds,
             screenFrame: panel.owningScreen.cgFrame,
             revealedSection: appState.menuBarManager.sectionController.revealedSection,
-            isTransitioning: appState.menuBarManager.isRevealHideTransitionActive,
+            isTransitioning: appState.barSettling.isRevealTransitionActive,
             sourceScreenFrame: cachedAXSourceScreenFrame
         )
         cachedAXItemBounds = updated.itemBounds

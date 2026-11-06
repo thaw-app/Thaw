@@ -24,22 +24,31 @@ extension BarSettling {
         Self.isQuiet(now: now(), events: [lastBarDisturbance, other], quietPeriod: Self.quietPeriod)
     }
 
-    /// Why the purpose has to wait, or nil when it may go ahead. The reflow window sits inside the kit's
-    /// longer transition, so it only holds the nudge off if the kit clears its flag early.
+    /// Why the purpose has to wait, or nil when it may go ahead.
     func hold(for purpose: Purpose) -> Hold? {
-        switch purpose {
+        holds(for: purpose).first
+    }
+
+    /// Every reason the purpose has to wait, in the order hold(for:) picks from. The reflow window sits
+    /// inside the kit's longer transition, so it only holds the nudge off if the kit clears its flag early.
+    func holds(for purpose: Purpose) -> [Hold] {
+        let now = now()
+        let candidates: [(Bool, Hold)] = switch purpose {
         case .agentNudge:
-            if Self.isReflowing(lastRevealChange: lastRevealChange, now: now()) {
-                return .revealReflow
-            }
-            return isRevealTransitionActive ? .revealTransition : nil
+            [
+                (Self.isReflowing(lastRevealChange: lastRevealChange, now: now), .revealReflow),
+                (isRevealTransitionActive, .revealTransition),
+            ]
         case .savedOrderMirror:
-            return isBarQuiet(alsoAfter: lastRestrictionChange) ? nil : .barNotQuiet
+            [(!isBarQuiet(alsoAfter: lastRestrictionChange), .barNotQuiet)]
         case .barMutation:
-            return Self.isWithin(Self.nativeBarChangeWindow, of: lastNativeBarChange, now: now()) ? .nativeBarChanging : nil
+            [(Self.isWithin(Self.nativeBarChangeWindow, of: lastNativeBarChange, now: now), .nativeBarChanging)]
         case .layoutReorder:
-            return Self.isWithin(Self.restrictionReflowWindow, of: lastRestrictionChange, now: now()) ? .restrictionReflow : nil
+            [(Self.isWithin(Self.restrictionReflowWindow, of: lastRestrictionChange, now: now), .restrictionReflow)]
+        case .structuralPass:
+            [(isSettling, .settling), (isRevealTransitionActive, .revealTransition)]
         }
+        return candidates.filter(\.0).map(\.1)
     }
 
     static nonisolated func isQuiet(
