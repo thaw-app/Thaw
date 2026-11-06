@@ -21,23 +21,54 @@ private final class RehideWorld {
     var sleeps: [Duration] = []
     var hiddenSectionHides = 0
     var everySectionHides = 0
+    var pointerInArea = false
+    /// Answers given before falling back to pointerInArea and menuOpen, oldest first.
+    var pointerInAreaAnswers: [Bool] = []
+    var menuOpenAnswers: [Bool] = []
+    /// Lets a sleep move the clock and return at once instead of waiting for finishWaits.
+    var sleepsReturnAtOnce = false
+    var sectionHides: [MenuBarSection.Name] = []
+    var monitorStarts: [MenuBarSection.Name] = []
+    var moveHandlers: [MenuBarSection.Name: @MainActor () -> Void] = [:]
     private var held: [CheckedContinuation<Void, Never>] = []
 
-    lazy var controller = RehideController(environment: RehideController.Environment(
+    lazy var controller: RehideController = .init(environment: RehideController.Environment(
         settings: { [unowned self] in settings },
-        isAnyMenuOpen: { [unowned self] in menuOpen },
+        isAnyMenuOpen: { [unowned self] in menuOpenAnswers.isEmpty ? menuOpen : menuOpenAnswers.removeFirst() },
         isPointerAwayFromBars: { [unowned self] in pointerAwayFromBars },
         activeSpaceID: { [unowned self] in spaceID },
         isPointerOverFrontmostApp: { [unowned self] in pointerOverFrontmostApp },
         hideHiddenSection: { [unowned self] in hiddenSectionHides += 1 },
         hideEverySection: { [unowned self] in everySectionHides += 1 },
+        isPointerInActiveArea: { [unowned self] in
+            pointerInAreaAnswers.isEmpty ? pointerInArea : pointerInAreaAnswers.removeFirst()
+        },
+        hideSection: { [unowned self] name in
+            sectionHides.append(name)
+            // MenuBarSection.hide reports back the same way.
+            controller.hidden(name)
+        },
+        startPointerMonitor: { [unowned self] name, onMove in
+            monitorStarts.append(name)
+            moveHandlers[name] = onMove
+        },
+        stopPointerMonitor: { [unowned self] name in moveHandlers[name] = nil },
         now: { [unowned self] in now },
         sleep: { [unowned self] duration in
             sleeps.append(duration)
-            await withCheckedContinuation { held.append($0) }
+            if sleepsReturnAtOnce {
+                now += duration
+            } else {
+                await withCheckedContinuation { held.append($0) }
+            }
             try Task.checkCancellation()
         }
     ))
+
+    func movePointer(over section: MenuBarSection.Name, inArea: Bool) {
+        pointerInArea = inArea
+        moveHandlers[section]?()
+    }
 
     /// Lets every queued rehide reach its wait.
     func settle() async {
@@ -246,6 +277,10 @@ struct LiveRehideEnvironmentTests {
         _ = environment.isPointerOverFrontmostApp()
         environment.hideHiddenSection()
         environment.hideEverySection()
+        environment.hideSection(.alwaysHidden)
+        _ = environment.isPointerInActiveArea()
+        environment.startPointerMonitor(.hidden) {}
+        environment.stopPointerMonitor(.hidden)
         #expect(appState.menuBarManager.section(withName: .hidden)?.isHidden == true)
         let before = environment.now()
         try await environment.sleep(.zero)
@@ -290,5 +325,131 @@ struct LiveRehideEnvironmentTests {
         await world.settle()
         // Before setup no section is showing, so the click arms nothing.
         #expect(world.sleeps.isEmpty)
+    }
+}
+
+@MainActor
+@Suite("Section rehide timers")
+struct SectionRehideTests {
+    private static let poll = Duration.milliseconds(250)
+
+    private func world(_ strategy: RehideStrategy, atOnce: Bool = true) -> RehideWorld {
+        let world = RehideWorld()
+        world.settings.strategy = strategy
+        world.sleepsReturnAtOnce = atOnce
+        return world
+    }
+
+    @Test("A timed reveal with no movement hides after a full interval of polls", arguments: [RehideStrategy.timed, .smart])
+    func hidesAfterInterval(strategy: RehideStrategy) async {
+        let world = world(strategy)
+        world.controller.revealed(.hidden)
+        await world.controller.waitUntilIdle()
+        #expect(world.sleeps == Array(repeating: Self.poll, count: 8))
+        #expect(world.sectionHides == [.hidden])
+        #expect(world.monitorStarts == (strategy == .timed ? [.hidden] : []))
+        #expect(world.moveHandlers.isEmpty)
+    }
+
+    @Test("Moving into a bar stops the timed countdown and leaving starts one, never two")
+    func pointerDrivesCountdown() async {
+        let world = world(.timed, atOnce: false)
+        world.pointerInArea = true
+        world.controller.revealed(.hidden)
+        await world.settle()
+        #expect(world.sleeps.isEmpty)
+        world.movePointer(over: .hidden, inArea: false)
+        world.movePointer(over: .hidden, inArea: false)
+        await world.settle()
+        #expect(world.sleeps.count == 1)
+        world.movePointer(over: .hidden, inArea: true)
+        await world.finishWaits()
+        #expect(world.sectionHides.isEmpty)
+    }
+
+    @Test("A countdown the pointer ended still counts as running until a move inside the bar clears it")
+    func endedCountdownNeedsAMoveInside() async {
+        let world = world(.timed)
+        world.pointerInAreaAnswers = [false, true]
+        world.controller.revealed(.hidden)
+        await world.controller.waitUntilIdle()
+        world.movePointer(over: .hidden, inArea: false)
+        await world.controller.waitUntilIdle()
+        #expect(world.sleeps.count == 1)
+        world.movePointer(over: .hidden, inArea: true)
+        world.movePointer(over: .hidden, inArea: false)
+        await world.controller.waitUntilIdle()
+        #expect(world.sectionHides == [.hidden])
+    }
+
+    @Test("An open menu while waiting starts the interval over")
+    func openMenuResetsInterval() async {
+        let world = world(.timed)
+        world.menuOpenAnswers = [true, true, true, true]
+        world.controller.revealed(.hidden)
+        await world.controller.waitUntilIdle()
+        #expect(world.sleeps.count == 12)
+        #expect(world.sectionHides == [.hidden])
+    }
+
+    @Test("A menu open at the end restarts the countdown, and only smart restarts the whole check", arguments: [RehideStrategy.timed, .smart])
+    func openMenuAtEndRestarts(strategy: RehideStrategy) async {
+        let world = world(strategy)
+        world.menuOpenAnswers = Array(repeating: false, count: 8) + [true]
+        world.controller.revealed(.hidden)
+        await world.controller.waitUntilIdle()
+        await world.controller.waitUntilIdle()
+        #expect(world.sleeps.count == 16)
+        #expect(world.sectionHides == [.hidden])
+        #expect(world.monitorStarts.count == (strategy == .timed ? 1 : 0))
+    }
+
+    @Test("A pointer back in the bar at the end restarts the timed checks with a fresh monitor")
+    func pointerAtEndRestarts() async {
+        let world = world(.timed)
+        world.pointerInAreaAnswers = Array(repeating: false, count: 9) + [true]
+        world.controller.revealed(.hidden)
+        await world.controller.waitUntilIdle()
+        await world.controller.waitUntilIdle()
+        #expect(world.monitorStarts == [.hidden, .hidden])
+        #expect(world.sleeps.count == 16)
+        #expect(world.sectionHides == [.hidden])
+    }
+
+    @Test("The smart fallback gives up for good once the pointer reaches a bar")
+    func smartFallbackEndsInBar() async {
+        let world = world(.smart)
+        world.pointerInAreaAnswers = [true]
+        world.controller.revealed(.hidden)
+        await world.controller.waitUntilIdle()
+        #expect(world.sleeps == [Self.poll])
+        #expect(world.sectionHides.isEmpty)
+    }
+
+    @Test("Focused-app rehide and rehide turned off leave no section timer and stop the old monitor")
+    func noSectionTimer() async {
+        for change in [{ (world: RehideWorld) in world.settings.strategy = .focusedApp }, { $0.settings.autoRehide = false }] {
+            let world = world(.timed, atOnce: false)
+            world.pointerInArea = true
+            world.controller.revealed(.hidden)
+            change(world)
+            world.controller.revealed(.hidden)
+            await world.settle()
+            #expect(world.moveHandlers.isEmpty)
+            #expect(world.sleeps.isEmpty)
+        }
+    }
+
+    @Test("Each section keeps its own timer; hiding one stops only its own and a second reveal replaces it")
+    func oneTimerPerSection() async {
+        let world = world(.timed)
+        world.controller.revealed(.hidden)
+        world.controller.revealed(.alwaysHidden)
+        world.controller.revealed(.alwaysHidden)
+        world.controller.hidden(.hidden)
+        #expect(Set(world.moveHandlers.keys) == [.alwaysHidden])
+        await world.controller.waitUntilIdle()
+        #expect(world.sectionHides == [.alwaysHidden])
+        #expect(world.sleeps.count == 8)
     }
 }

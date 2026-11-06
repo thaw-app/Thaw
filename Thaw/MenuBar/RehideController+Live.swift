@@ -7,12 +7,15 @@
 
 import AppKit
 import MenuBarModel
+import os
+import QuartzCore
 
 extension RehideController.Environment {
     /// Reads the live pointer, spaces and windows and hides the app's sections.
     static func live(appState: AppState) -> Self {
         let configuration: any MenuBarEngineConfiguration = appState.settings
         let menuOpenMonitor = appState.itemManager.menuOpenMonitor
+        let pointerMonitors = RehidePointerMonitors()
         return Self(
             settings: {
                 RehideController.Settings(
@@ -45,7 +48,19 @@ extension RehideController.Environment {
                 for section in appState?.menuBarManager.sections ?? [] {
                     section.hide()
                 }
-            }
+            },
+            isPointerInActiveArea: { [weak appState] in
+                guard let appState else { return false }
+                let hidEventManager = appState.hidEventManager
+                return NSScreen.screens.contains {
+                    hidEventManager.isMouseInsideMenuBarHoverBand(appState: appState, screen: $0)
+                } || hidEventManager.isMouseInsideThawBar(appState: appState)
+            },
+            hideSection: { [weak appState] name in
+                appState?.menuBarManager.section(withName: name)?.hide()
+            },
+            startPointerMonitor: pointerMonitors.start,
+            stopPointerMonitor: pointerMonitors.stop
         )
     }
 
@@ -61,5 +76,32 @@ extension RehideController.Environment {
                     && window.title?.isEmpty == false
             }?
             .owningApplication
+    }
+}
+
+/// One mouse-moved monitor per section with a timed rehide.
+@MainActor
+final class RehidePointerMonitors {
+    /// Shared by every section's monitor, so one event reaches at most one of them.
+    private static let lastTime = OSAllocatedUnfairLock(initialState: TimeInterval(0))
+
+    private var monitors: [MenuBarSection.Name: EventMonitor] = [:]
+
+    func start(_ section: MenuBarSection.Name, onMove: @escaping @MainActor () -> Void) {
+        let monitor = EventMonitor.universal(for: .mouseMoved) { event in
+            // At most about 20 updates a second, whatever the mouse polling rate.
+            let now = CACurrentMediaTime()
+            guard now - Self.lastTime.withLock({ $0 }) > 0.05 else { return event }
+            Self.lastTime.withLock { $0 = now }
+            onMove()
+            return event
+        }
+        monitors[section] = monitor
+        monitor.start()
+    }
+
+    func stop(_ section: MenuBarSection.Name) {
+        monitors[section]?.stop()
+        monitors[section] = nil
     }
 }

@@ -7,8 +7,6 @@
 
 import AppKit
 import MenuBarModel
-import os
-import QuartzCore
 
 @MainActor
 final class MenuBarSection {
@@ -20,16 +18,8 @@ final class MenuBarSection {
 
     private weak var appState: AppState?
 
-    /// Captured at setup so rehide reads menu state without reaching through the item manager.
-    private var menuOpenMonitor: MenuOpenMonitor?
-
     /// Engine-facing settings; see MenuBarEngineConfiguration for the dependency boundary.
     private var configuration: any MenuBarEngineConfiguration = AppSettings.engineDefaults
-
-    private var rehideTask: Task<Void, Never>?
-
-    /// Starts rehide when the mouse leaves the menu bar.
-    private var rehideMonitor: EventMonitor?
 
     private nonisolated let diagLog = DiagLog(category: "MenuBarSection")
 
@@ -212,7 +202,6 @@ final class MenuBarSection {
     func performSetup(with appState: AppState, displays: DisplayEnvironment) {
         self.appState = appState
         configuration = appState.settings
-        menuOpenMonitor = appState.itemManager.menuOpenMonitor
         controlItem.performSetup(with: appState, displayInvalidations: displays.invalidations)
         desiredState = controlItem.state
     }
@@ -278,7 +267,7 @@ final class MenuBarSection {
                 on: screen,
                 triggeredByHotkey: triggeredByHotkey
             )
-            startRehideChecks()
+            menuBarManager.rehideController?.revealed(name)
             return
         }
 
@@ -297,7 +286,7 @@ final class MenuBarSection {
             }
         }
         refreshRevealedItemImages()
-        startRehideChecks()
+        menuBarManager.rehideController?.revealed(name)
     }
 
     /// Capture glyphs while the section is revealed to replace app-icon fallbacks in layout and search.
@@ -347,7 +336,7 @@ final class MenuBarSection {
             menuBarManager.thawBarPanel.close()
         }
         resetClosedPresentationState(using: menuBarManager)
-        stopRehideChecks()
+        menuBarManager.rehideController?.hidden(name)
     }
 
     private func resetClosedPresentationState(using menuBarManager: MenuBarManager) {
@@ -364,151 +353,5 @@ final class MenuBarSection {
         } else {
             hide()
         }
-    }
-
-    /// Pointer activity in either bar defers rehide.
-    private func isMouseInsideActiveArea() -> Bool {
-        guard let appState else { return false }
-        let hidEventManager = appState.hidEventManager
-        return NSScreen.screens.contains {
-            hidEventManager.isMouseInsideMenuBarHoverBand(appState: appState, screen: $0)
-        } || hidEventManager.isMouseInsideThawBar(appState: appState)
-    }
-
-    private func startRehideChecks() {
-        rehideTask?.cancel()
-        rehideTask = nil
-        rehideMonitor?.stop()
-
-        guard
-            let appState,
-            configuration.autoRehide
-        else {
-            return
-        }
-
-        switch configuration.rehideStrategy {
-        case .smart:
-            // The interval is a fallback for click-based smart rehide; task cancellation stops the wait.
-            rehideTask = makeRehideTask(interval: configuration.rehideInterval) { [weak self] in
-                self?.startRehideChecks()
-            }
-        case .timed:
-            rehideMonitor = EventMonitor.universal(for: .mouseMoved) { [weak self, weak appState] event in
-                // Throttle: process at most ~20fps regardless of mouse polling rate.
-                enum Context {
-                    static let lastTime = OSAllocatedUnfairLock(initialState: TimeInterval(0))
-                }
-                let now = CACurrentMediaTime()
-                guard now - Context.lastTime.withLock({ $0 }) > 0.05 else { return event }
-                Context.lastTime.withLock { $0 = now }
-
-                guard let self, appState != nil else { return event }
-                updateTimedRehide()
-                return event
-            }
-
-            rehideMonitor?.start()
-            // A reveal may be followed by no movement at all, so the countdown starts now.
-            updateTimedRehide()
-        case .focusedApp:
-            break
-        }
-    }
-
-    private func updateTimedRehide() {
-        switch TimedRehideStep.next(pointerInBar: isMouseInsideActiveArea(), countdownRunning: rehideTask != nil) {
-        case .start:
-            rehideTask = makeRehideTask(interval: configuration.rehideInterval) { [weak self] in
-                self?.diagLog.debug("Open menu detected - restarting timed rehide task")
-                await self?.restartTimedRehideTimer()
-            }
-        case .cancel:
-            rehideTask?.cancel()
-            rehideTask = nil
-        case .keep:
-            break
-        }
-    }
-
-    /// Restarts the timed rehide task (used when a menu is detected).
-    @MainActor
-    private func restartTimedRehideTimer() async {
-        guard
-            appState != nil,
-            configuration.autoRehide,
-            case .timed = configuration.rehideStrategy
-        else {
-            return
-        }
-
-        rehideTask?.cancel()
-        rehideTask = makeRehideTask(interval: configuration.rehideInterval) { [weak self] in
-            self?.diagLog.debug("Open menu still detected - restarting timed rehide task again")
-            await self?.restartTimedRehideTimer()
-        }
-    }
-
-    /// Require a full eligible interval; active-area mouse movement restarts checks, open menus defer to onOpenMenu.
-    private func makeRehideTask(
-        interval: TimeInterval,
-        onOpenMenu: @escaping @MainActor () async -> Void
-    ) -> Task<Void, Never> {
-        Task { @MainActor [weak self, weak appState] in
-            guard
-                let self,
-                let appState,
-                await self.waitForContinuousRehideEligibility(
-                    appState: appState,
-                    interval: interval
-                )
-            else { return }
-            if self.isMouseInsideActiveArea() {
-                self.startRehideChecks()
-                return
-            }
-            if await menuOpenMonitor?.isAnyMenuOpen() == true {
-                await onOpenMenu()
-                return
-            }
-            self.hide()
-        }
-    }
-
-    /// Open-menu time does not count toward rehide, avoiding immediate collapse after a menu choice.
-    private func waitForContinuousRehideEligibility(
-        appState _: AppState,
-        interval: TimeInterval
-    ) async -> Bool {
-        let pollInterval: TimeInterval = 0.25
-        let clock = ContinuousClock()
-        var eligibleSince = clock.now
-
-        while !Task.isCancelled {
-            try? await Task.sleep(for: .seconds(pollInterval))
-            guard !Task.isCancelled else { return false }
-
-            if isMouseInsideActiveArea() {
-                return false
-            }
-
-            if await menuOpenMonitor?.isAnyMenuOpen() == true {
-                eligibleSince = clock.now
-                continue
-            }
-
-            if eligibleSince.duration(to: clock.now) >= .seconds(interval) {
-                return true
-            }
-        }
-
-        return false
-    }
-
-    private func stopRehideChecks() {
-        rehideTask?.cancel()
-        rehideMonitor?.stop()
-        rehideTask = nil
-        rehideMonitor = nil
     }
 }
