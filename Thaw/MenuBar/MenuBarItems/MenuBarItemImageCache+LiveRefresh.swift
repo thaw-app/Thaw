@@ -258,6 +258,12 @@ extension MenuBarItemImageCache {
                 continue
             }
 
+            // Capturing over a full-screen app lights the screen recording indicator.
+            if SpaceInfo.isFullscreen(Bridging.getCurrentSpaceID(for: screen.displayID)) {
+                try? await Task.sleep(for: .seconds(max(interval, Self.minIconRefreshInterval)))
+                continue
+            }
+
             let scale = screen.backingScaleFactor
             let now = ContinuousClock.now
             var nextWake = now + .seconds(max(interval, Self.minIconRefreshInterval))

@@ -16,6 +16,14 @@ struct SpaceInfo: Hashable {
     /// A Boolean value that indicates whether the space is fullscreen.
     let isFullscreen: Bool
 
+    /// Whether a display's current Space, if it has one, is a full-screen app's.
+    static nonisolated func isFullscreen(
+        _ spaceID: CGSSpaceID?,
+        isSpaceFullscreen: (CGSSpaceID) -> Bool = Bridging.isSpaceFullscreen
+    ) -> Bool {
+        spaceID.map(isSpaceFullscreen) ?? false
+    }
+
     init(spaceID: CGSSpaceID) {
         self.spaceID = spaceID
         self.isFullscreen = Bridging.isSpaceFullscreen(spaceID)

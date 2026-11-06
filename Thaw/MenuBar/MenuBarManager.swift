@@ -725,7 +725,9 @@ final class MenuBarManager {
         var inputs = [(displayID: CGDirectDisplayID, windowIDs: [CGWindowID], bounds: CGRect, fullBounds: CGRect)]()
         for screen in targetScreens {
             let displayID = screen.displayID
+            // Capturing over a full-screen app lights the screen recording indicator.
             guard
+                !SpaceInfo.isFullscreen(Bridging.getCurrentSpaceID(for: displayID)),
                 let menuBarWindow = WindowInfo.menuBarWindow(from: windows, for: displayID),
                 let wallpaperWindow = WindowInfo.wallpaperWindow(from: windows, for: displayID)
             else {

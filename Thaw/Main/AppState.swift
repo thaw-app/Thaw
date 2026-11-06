@@ -336,7 +336,8 @@ final class AppState {
                 (navigationState.isAppFrontmost, navigationState.isSettingsPresented)
             }
             for await (isAppFrontmost, isSettingsPresented) in changes {
-                guard isAppFrontmost, isSettingsPresented else { continue }
+                // With app icons on, a capture only lights the screen recording indicator.
+                guard isAppFrontmost, isSettingsPresented, !self.settings.advanced.alwaysUseAppIconForMenuBarItems else { continue }
                 await self.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
                 // Log cache status periodically (only if cache is getting full)
                 if self.imageCache.cacheSize > 15 {

@@ -90,6 +90,12 @@ extension MenuBarItemImageCache {
             )
         }
 
+        // Capturing over a full-screen app lights the screen recording indicator.
+        if SpaceInfo.isFullscreen(Bridging.getCurrentSpaceID(for: screen.displayID)) {
+            MenuBarItemImageCache.diagLog.debug("updateCacheWithoutChecks: display \(screen.displayID) shows a full-screen Space, skipping capture")
+            return
+        }
+
         let scale = screen.backingScaleFactor
         MenuBarItemImageCache.diagLog.notice("updateCacheWithoutChecks: displayID=\(screen.displayID) backingScaleFactor=\(Double(scale)) hasNotch=\(screen.hasNotch) menuBarHeight=\(Double(screen.getMenuBarHeightEstimate())) sections=\(sections.map(\.logString))")
         var newImages = [MenuBarItemTag: CapturedImage]()
