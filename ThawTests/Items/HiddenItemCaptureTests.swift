@@ -89,11 +89,10 @@ struct HiddenItemCaptureTests {
 
     @Test("A hidden Control Center module is left out, since showing it never draws it")
     func controlCenterModulesAreSkipped() {
-        let cache = MenuBarItemImageCache(screenIsLocked: { false })
-        #expect(cache.prewarmSkips(item(.menuBarAgent, "com.apple.menuextra.bluetooth")))
-        #expect(cache.prewarmSkips(item(.menuBarAgent, "com.apple.menuextra.wifi")))
-        #expect(!cache.prewarmSkips(item(.string("com.example.app"), "Item-0")))
-        #expect(cache.prewarmSkips(item(.string("com.example.app"), "Item-0", width: 2)), "A blank item is still left out")
+        #expect(RevealCapturePrewarm.skips(item(.menuBarAgent, "com.apple.menuextra.bluetooth"), allowsCaptureReveal: false))
+        #expect(RevealCapturePrewarm.skips(item(.menuBarAgent, "com.apple.menuextra.wifi"), allowsCaptureReveal: false))
+        #expect(!RevealCapturePrewarm.skips(item(.string("com.example.app"), "Item-0"), allowsCaptureReveal: false))
+        #expect(RevealCapturePrewarm.skips(item(.string("com.example.app"), "Item-0", width: 2), allowsCaptureReveal: false), "A blank item is still left out")
     }
 
     @Test("Each outcome gets a message, naming what's missing")
