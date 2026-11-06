@@ -1,0 +1,221 @@
+//
+//  MouseHelpers.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import CoreGraphics
+import Foundation
+import MenuBarModel
+import Synchronization
+
+/// A namespace for mouse helper operations.
+nonisolated enum MouseHelpers {
+    private static let diagLog = DiagLog(category: "MouseHelpers")
+    private static let cursorHideCountLock = Mutex<Int>(0)
+    /// Force-shows the cursor if a hide is never balanced. A new watchdog
+    /// cancels the old one, so at most one fires.
+    private static let autoShowTask = Mutex<Task<Void, Never>?>(nil)
+    private static let defaultWatchdogTimeout: Duration = .seconds(1)
+    /// Hides issued by reassertHiddenCursor() on top of the one that
+    /// hideCursor(watchdogTimeout:) took. CGDisplayHideCursor is
+    /// counted per connection, so every one of these must be balanced by a
+    /// CGDisplayShowCursor when the outer hide is released.
+    private static let reassertedHides = Mutex<Int>(0)
+
+    private static func formattedTimeout(_ duration: Duration) -> String {
+        String(
+            format: "%.3fs",
+            Double(duration.components.seconds)
+                + Double(duration.components.attoseconds) / 1e18
+        )
+    }
+
+    private static func scheduleAutoShow(after timeout: Duration = defaultWatchdogTimeout) {
+        let task = Task(priority: .utility) {
+            do {
+                try await Task.sleep(for: timeout)
+            } catch {
+                // Cancelled, a matching showCursor() arrived or a newer
+                // watchdog superseded this one. Stay quiet either way.
+                return
+            }
+            guard !Task.isCancelled else { return }
+            autoShowTask.withLock { $0 = nil }
+            forceShowCursor(reason: "watchdog timeout")
+        }
+        let previous = autoShowTask.withLock { state -> Task<Void, Never>? in
+            let old = state
+            state = task
+            return old
+        }
+        previous?.cancel()
+        diagLog.debug("Cursor watchdog scheduled for \(formattedTimeout(timeout))")
+    }
+
+    private static func cancelAutoShow() {
+        let previous = autoShowTask.withLock { state -> Task<Void, Never>? in
+            let old = state
+            state = nil
+            return old
+        }
+        previous?.cancel()
+    }
+
+    private static func forceShowCursor(reason: String) {
+        cursorHideCountLock.withLock { $0 = 0 }
+        drainReassertedHides()
+        let result = CGDisplayShowCursor(CGMainDisplayID())
+        if result != .success {
+            diagLog.error("Force show cursor failed (reason: \(reason), error: \(result.rawValue))")
+        } else {
+            diagLog.info("Cursor force-shown (reason: \(reason))")
+        }
+    }
+
+    /// Returns the location of the mouse cursor in the coordinate
+    /// space used by AppKit, with the origin at the bottom left
+    /// of the screen.
+    static var locationAppKit: CGPoint? {
+        CGEvent(source: nil)?.unflippedLocation
+    }
+
+    /// Returns the location of the mouse cursor in the coordinate
+    /// space used by CoreGraphics, with the origin at the top left
+    /// of the screen.
+    static var locationCoreGraphics: CGPoint? {
+        CGEvent(source: nil)?.location
+    }
+
+    private static func drainReassertedHides() {
+        let extra = reassertedHides.withLock { count -> Int in
+            let value = count
+            count = 0
+            return value
+        }
+        for _ in 0 ..< extra {
+            CGDisplayShowCursor(CGMainDisplayID())
+        }
+    }
+
+    /// Hides the mouse cursor and increments the hide cursor count.
+    static func hideCursor(watchdogTimeout: Duration? = nil) {
+        let shouldHide = cursorHideCountLock.withLock { count -> Bool in
+            count += 1
+            return count == 1
+        }
+
+        guard shouldHide else { return }
+
+        let result = CGDisplayHideCursor(CGMainDisplayID())
+        if result != .success {
+            diagLog.error("CGDisplayHideCursor failed with error code \(result.rawValue)")
+            cursorHideCountLock.withLock { $0 = 0 } // Reset on failure
+        } else {
+            scheduleAutoShow(after: watchdogTimeout ?? defaultWatchdogTimeout)
+        }
+    }
+
+    /// Decrements the hide cursor count and shows the mouse cursor
+    /// if the count is 0.
+    static func showCursor() {
+        var shouldShow = false
+        var wasAlreadyZero = false
+        cursorHideCountLock.withLock { count in
+            if count > 0 {
+                count -= 1
+                shouldShow = count == 0
+            } else {
+                wasAlreadyZero = true
+            }
+        }
+
+        if wasAlreadyZero {
+            diagLog.debug("showCursor called with count already zero")
+            return
+        }
+
+        guard shouldShow else { return }
+
+        cancelAutoShow()
+        drainReassertedHides()
+
+        let result = CGDisplayShowCursor(CGMainDisplayID())
+        if result != .success {
+            diagLog.error("CGDisplayShowCursor failed with error code \(result.rawValue)")
+            // Don't reset count on failure to prevent imbalance
+        }
+    }
+
+    /// Moves the mouse cursor to the given point without generating
+    /// events.
+    ///
+    /// - Parameter point: The point to move the cursor to in global
+    ///   display coordinates.
+    static func warpCursor(to point: CGPoint) {
+        let result = CGWarpMouseCursorPosition(point)
+        if result != .success {
+            diagLog.warning("CGWarpMouseCursorPosition failed (error: \(result.rawValue)), falling back to CGEvent mouseMoved")
+            // While a menu tracks the cursor, warp can be blocked but a posted
+            // mouseMoved still updates the position.
+            guard
+                let source = CGEventSource(stateID: .hidSystemState),
+                let event = CGEvent(
+                    mouseEventSource: source,
+                    mouseType: .mouseMoved,
+                    mouseCursorPosition: point,
+                    mouseButton: .left
+                )
+            else {
+                diagLog.error("Failed to create fallback mouseMoved event")
+                return
+            }
+            event.post(tap: .cghidEventTap)
+        }
+    }
+
+    /// Returns a Boolean value that indicates whether a mouse button
+    /// is pressed.
+    ///
+    /// - Parameter button: The mouse button to check. Pass nil to
+    ///   check all available mouse buttons (Quartz supports up to 32).
+    static func isButtonPressed(_ button: CGMouseButton? = nil) -> Bool {
+        let stateID = CGEventSourceStateID.combinedSessionState
+        if let button {
+            return CGEventSource.buttonState(stateID, button: button)
+        }
+        for n: UInt32 in 0 ... 31 {
+            guard
+                let button = CGMouseButton(rawValue: n),
+                CGEventSource.buttonState(stateID, button: button)
+            else {
+                continue
+            }
+            return true
+        }
+        return false
+    }
+
+    /// Returns a Boolean value that indicates whether the last mouse
+    /// movement event occurred within the given duration.
+    ///
+    /// - Parameter duration: The duration within which the last mouse
+    ///   movement event must have occurred in order to return true.
+    static func lastMovementOccurred(within duration: Duration) -> Bool {
+        let stateID = CGEventSourceStateID.combinedSessionState
+        let seconds = CGEventSource.secondsSinceLastEventType(stateID, eventType: .mouseMoved)
+        return .seconds(seconds) <= duration
+    }
+
+    /// Returns a Boolean value that indicates whether the last scroll
+    /// wheel event occurred within the given duration.
+    ///
+    /// - Parameter duration: The duration within which the last scroll
+    ///   wheel event must have occurred in order to return true.
+    static func lastScrollWheelOccurred(within duration: Duration) -> Bool {
+        let stateID = CGEventSourceStateID.combinedSessionState
+        let seconds = CGEventSource.secondsSinceLastEventType(stateID, eventType: .scrollWheel)
+        return .seconds(seconds) <= duration
+    }
+}

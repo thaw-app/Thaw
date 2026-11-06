@@ -1,0 +1,128 @@
+//
+//  SearchIndex+Hotkeys.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import SwiftUI
+
+nonisolated extension SearchIndex {
+    // MARK: Hotkey Settings
+
+    /// Hotkey bindings are dictionary-based on HotkeysSettings, not simple
+    /// @Published toggles, so they are not covered by the drift guard.
+    static let hotkeyEntries: [SearchEntry] = [
+        SearchEntry(
+            id: "hotkeys.toggleHiddenSection",
+            title: "Show or hide hidden items",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Visibility",
+            keywords: ["toggle", "hidden", "section", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.toggleAlwaysHiddenSection",
+            title: "Show or hide Always Hidden items",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Visibility",
+            keywords: ["toggle", "always hidden", "section", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.toggleSwap",
+            title: "Swap shown and hidden items",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Visibility",
+            keywords: ["swap", "switch", "exchange", "shown", "hidden", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.searchMenuBarItems",
+            title: "Search menu bar items",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Menu bar items",
+            keywords: ["search", "menu bar items", "hotkey", "shortcut", "panel"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.showItemHints",
+            title: "Open an item by letter",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Menu bar items",
+            keywords: ["open", "letter", "hint", "hints", "keyboard", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.openMenuBarItems",
+            title: "Open menu bar items",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Menu bar items",
+            keywords: ["open", "menu bar items", "hotkey", "per item"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.revealSystemMenuBar",
+            title: "Reveal the menu bar",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Visibility",
+            keywords: ["reveal", "show", "menu bar", "auto-hide", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.enableThawBar",
+            titleKey: "Turn \(Constants.displayName) Bar on or off",
+            titleText: "Turn \(Constants.displayName) Bar on or off",
+            descriptionText: nil,
+            pane: .hotkeys,
+            // sectionText stays "Thaw Bar" so ShortcutsTab finds it whatever the app is called.
+            sectionKey: "\(Constants.displayName) Bar",
+            sectionText: "Thaw Bar",
+            keywords: ["enable", "toggle", "turn on", "turn off", "ice bar", "thaw bar", "hotkey", "shortcut", "keyboard shortcut"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.toggleApplicationMenus",
+            title: "Hide or show app menus",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Visibility",
+            keywords: ["toggle", "application menus", "app menus", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.toggleAutoRehide",
+            title: "Turn “Hide items again” on or off",
+            descriptionText: String(localized: "Switches Hide items again between Never and your last other choice."),
+            pane: .hotkeys,
+            section: "Visibility",
+            keywords: ["toggle", "auto rehide", "automatically rehide", "hide items again", "rehide", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.toggleZenMode",
+            title: "Toggle Zen Mode",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Visibility",
+            keywords: ["zen", "zen mode", "empty", "focus", "toggle", "hotkey", "shortcut"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "hotkeys.toggleLayoutEditor",
+            title: "Show Layout",
+            descriptionText: nil,
+            pane: .hotkeys,
+            section: "Layout",
+            keywords: ["layout", "show", "open", "settings", "hotkey", "shortcut"],
+            property: nil
+        ),
+    ]
+}

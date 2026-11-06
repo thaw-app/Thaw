@@ -1,0 +1,15 @@
+name: Remove Skipped Workflow Runs
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  remove-skipped-runs:
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: ubuntu-slim
+    permissions:
+      actions: write
+    steps:
+      - uses: thaw-app/org-ci/actions/remove-skipped-runs@369e3b50e278dc7799513209c6ddc8ec758d884b

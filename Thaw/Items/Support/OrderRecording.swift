@@ -1,0 +1,87 @@
+//
+//  OrderRecording.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import MenuBarModel
+
+/// What to write down as a section's order once the bar has changed under it.
+///
+/// A completed move and an arrival both leave the saved order behind the live bar. These rules
+/// decide which order survives, from the items alone, so they hold no state.
+nonisolated enum OrderRecording {
+    /// Use observed order, not stale pane order; AX-missing members retain proposed slots.
+    /// A vanished mover cannot commit; the controller still filters and preserves overflow.
+    static func sectionOrderAfterCompletedMove(
+        of item: MenuBarItem,
+        proposedOrder: [MenuBarItem],
+        liveItems: [MenuBarItem]
+    ) -> [MenuBarItem]? {
+        let proposedIDs = Set(proposedOrder.map(\.uniqueIdentifier))
+        var observedIDs = Set<String>()
+        let observed = MenuBarItem.sortByLeadingEdge(liveItems).filter {
+            proposedIDs.contains($0.uniqueIdentifier) &&
+                $0.isOnScreen && !$0.bounds.isEmpty && !$0.isSystemClone &&
+                observedIDs.insert($0.uniqueIdentifier).inserted
+        }
+        guard observedIDs.contains(item.uniqueIdentifier) else { return nil }
+        var iterator = observed.makeIterator()
+        return proposedOrder.map { member in
+            guard observedIDs.contains(member.uniqueIdentifier) else { return member }
+            return iterator.next() ?? member
+        }
+    }
+
+    /// The Visible order to keep when an arrival disturbed the items already on the bar, or nil to mirror as is.
+    /// A ⌘-drag leaves the item set unchanged, so only a pure arrival counts.
+    /// An item that comes back to a slot it has in the saved order takes that slot again; only a new item keeps the one macOS gave it.
+    static func visibleOrderPreservedAcrossArrival(
+        savedOrder: [String],
+        mirroredOrder: [String],
+        previousLive: Set<String>,
+        currentLive: Set<String>
+    ) -> [String]? {
+        guard currentLive != previousLive, currentLive.isSuperset(of: previousLive) else { return nil }
+        let returning = currentLive.subtracting(previousLive).intersection(savedOrder)
+        let recorded = previousLive.union(returning)
+        let savedRecorded = savedOrder.filter(recorded.contains)
+        let mirroredRecorded = mirroredOrder.filter(recorded.contains)
+        guard savedRecorded != mirroredRecorded,
+              savedRecorded.count == mirroredRecorded.count,
+              Set(savedRecorded) == Set(mirroredRecorded)
+        else { return nil }
+        var iterator = savedRecorded.makeIterator()
+        return mirroredOrder.map { identifier in
+            recorded.contains(identifier) ? (iterator.next() ?? identifier) : identifier
+        }
+    }
+
+    /// A saved order re-keyed by section name, the form the controller takes an observed order in.
+    /// Keys that name no section are dropped.
+    static func observedOrder(from saved: [String: [String]]) -> [MenuBarSectionName: [String]] {
+        saved.reduce(into: [:]) { result, entry in
+            guard let section = MenuBarSectionName(rawValue: entry.key) else { return }
+            result[section] = entry.value
+        }
+    }
+
+    /// The controller's order as Thaw keeps a saved order, keyed by section raw value.
+    /// A section with no members has no entry, as in the mirror.
+    static func savedOrder(from controllerOrder: [MenuBarSectionName: [String]]) -> [String: [String]] {
+        controllerOrder.reduce(into: [:]) { result, entry in
+            guard !entry.value.isEmpty else { return }
+            result[entry.key.rawValue] = entry.value
+        }
+    }
+
+    /// User drops already verified their position; only structural edits and repairs need another rewrite.
+    static func shouldNormalizeStructureAfterMove(
+        item: MenuBarItem,
+        destination: MoveDestination,
+        isUserInitiated: Bool
+    ) -> Bool {
+        !isUserInitiated || item.isControlItem || destination.targetItem.isControlItem
+    }
+}

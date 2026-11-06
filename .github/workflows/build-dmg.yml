@@ -1,0 +1,49 @@
+name: Build DMG
+
+# Manual signed, notarized DMG as a short-lived artifact, never a release. The
+# build runs in org-ci's build-macos-app.yml without an attestation, so any ref
+# builds; the `.build` PR command runs it on the pull request's branch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag, or commit to build (empty = the commit on the selected workflow branch)
+        required: false
+        type: string
+        default: ""
+
+concurrency:
+  group: build-dmg-${{ inputs.ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # The artifact is build-dev-<short sha>: the DMG, its checksum, the SBOM and
+  # the exported app as a ZIP, kept for three days.
+  build-dmg:
+    if: github.repository == 'thaw-app/Thaw'
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    uses: thaw-app/org-ci/.github/workflows/build-macos-app.yml@369e3b50e278dc7799513209c6ddc8ec758d884b
+    with:
+      ref: ${{ inputs.ref }}
+      project-name: Thaw.xcodeproj
+      target-name: Thaw
+      scheme-name: Thaw
+      app-name: Thaw.app
+      dmg-name: Thaw-dev.dmg
+      asset-prefix: Thaw
+      # Holds the signing secrets and has no approval rule.
+      environment: signing
+      # GitHub-hosted Xcode 27 preview image (arm64); xcode-27-xlarge for more cores.
+      runner: xcode-27
+      # The Thaw target's lint build phase requires the pinned SwiftLint on PATH.
+      prepare-script: scripts/install-swiftlint.sh
+      attest: false
+      retention-days: 3
+    secrets: inherit

@@ -1,0 +1,3 @@
+*.rtf linguist-vendored
+*.xcstrings linguist-language=JSON
+.github/workflows/*.lock.yml linguist-generated=true merge=ours

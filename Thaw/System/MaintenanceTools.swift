@@ -1,0 +1,158 @@
+//
+//  MaintenanceTools.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import Foundation
+import MenuBarModel
+import PlatformRuntimeKit
+import Subprocess
+#if canImport(System)
+    import System
+#else
+    import SystemPackage
+#endif
+
+/// Destructive troubleshooting helpers used by Settings → Tools.
+///
+/// These operate on the current user's Library and TCC entries for Thaw's own
+/// bundle identifier and the menu bar's saved positions. They are intentionally
+/// narrow: no sudo, and no other apps' preferences.
+nonisolated enum MaintenanceTools {
+    /// Quits the menu bar hosting process and deletes the files holding saved
+    /// status-item positions, so every position is rebuilt from scratch.
+    ///
+    /// A backup is written first and returned, because this discards the
+    /// user's entire menu bar arrangement. cfprefsd is restarted before
+    /// the delete: it caches other processes' domains, and would otherwise
+    /// flush its stale copy back over the removal.
+    ///
+    /// Returns the backup, or nil when there was nothing to back up.
+    @concurrent
+    @discardableResult
+    static func resetMenuBarLayoutPositions() async throws -> MenuBarLayoutBackups.Backup? {
+        let fileManager = FileManager.default
+        let backup = try MenuBarLayoutBackups.capture(fileManager: fileManager)
+
+        // Best-effort: neither process is guaranteed to be running.
+        try? await run(path: "/usr/bin/killall", arguments: [menuBarHostingProcessName])
+        try? await run(path: "/usr/bin/killall", arguments: ["cfprefsd"])
+
+        let preferences = preferencesDirectory(fileManager: fileManager)
+        let hostingBundleID = SharedConstants.menuBarHostingBundleID
+        try removeItemIfExists(
+            at: preferences.appending(path: "\(hostingBundleID).plist"),
+            using: fileManager
+        )
+        // On macOS 27 the positions live in the MenuBar group container, not
+        // the plist above; delete every file the backup just captured.
+        for source in MenuBarLayoutBackups.liveSources(fileManager: fileManager) {
+            try removeItemIfExists(at: source, using: fileManager)
+        }
+
+        let byHost = preferences.appending(path: "ByHost", directoryHint: .isDirectory)
+        guard fileManager.fileExists(atPath: byHost.path(percentEncoded: false)) else {
+            return backup
+        }
+        let byHostFiles = try fileManager.contentsOfDirectory(
+            at: byHost,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        )
+        for fileURL in byHostFiles where fileURL.lastPathComponent.hasPrefix(hostingBundleID) {
+            try fileManager.removeItem(at: fileURL)
+        }
+        return backup
+    }
+
+    /// Quits the menu bar host so launchd starts a fresh one, which clears a
+    /// bar stuck in the wrong state. Saved positions are left alone.
+    @concurrent
+    static func restartMenuBar() async throws {
+        try await run(path: "/usr/bin/killall", arguments: [menuBarHostingProcessName])
+    }
+
+    /// Puts a layout backup back, after snapshotting what it overwrites.
+    ///
+    /// The undo snapshot is taken before anything is killed, and a failure to
+    /// take it aborts the restore: an unundoable restore is what this surface
+    /// exists to avoid.
+    ///
+    /// cfprefsd is stopped twice on purpose. Before the copy, because it
+    /// caches other processes' domains and would flush its stale copy back
+    /// over the files. After, because anything that read the domain during
+    /// the copy re-cached the pre-restore contents, and the host reads
+    /// through that cache when launchd brings it back.
+    @concurrent
+    static func restoreMenuBarLayout(
+        from backup: MenuBarLayoutBackups.Backup
+    ) async throws -> MenuBarLayoutBackups.RestoreReport {
+        let fileManager = FileManager.default
+        let undo: MenuBarLayoutBackups.Backup?
+        do {
+            undo = try MenuBarLayoutBackups.capture(fileManager: fileManager)
+        } catch {
+            throw MenuBarLayoutBackups.RestoreRefusal.undoBackupFailed(error)
+        }
+
+        // Best-effort: neither process is guaranteed to be running.
+        try? await run(path: "/usr/bin/killall", arguments: [menuBarHostingProcessName])
+        try? await run(path: "/usr/bin/killall", arguments: ["cfprefsd"])
+
+        let outcome = try MenuBarLayoutBackups.restoreFiles(from: backup, fileManager: fileManager)
+
+        try? await run(path: "/usr/bin/killall", arguments: ["cfprefsd"])
+
+        return MenuBarLayoutBackups.RestoreReport(
+            undoBackup: undo,
+            restored: outcome.restored,
+            skipped: outcome.skipped
+        )
+    }
+
+    /// Process name to killall for the current platform's menu bar host.
+    private static var menuBarHostingProcessName: String {
+        "MenuBarAgent"
+    }
+
+    private static func preferencesDirectory(fileManager: FileManager) -> URL {
+        fileManager.homeDirectoryForCurrentUser
+            .appending(path: "Library/Preferences", directoryHint: .isDirectory)
+    }
+
+    /// Removes the item at url when it exists. Any removal error propagates.
+    private static func removeItemIfExists(at url: URL, using fileManager: FileManager) throws {
+        guard fileManager.fileExists(atPath: url.path(percentEncoded: false)) else {
+            return
+        }
+        try fileManager.removeItem(at: url)
+    }
+
+    /// Resets Accessibility and Screen Recording TCC decisions for Thaw so the
+    /// user can re-grant them on the next launch.
+    @concurrent
+    static func resetAppPermissions() async throws {
+        for arguments in permissionResetArguments(bundleID: Constants.bundleIdentifier) {
+            try await run(path: "/usr/bin/tccutil", arguments: arguments)
+        }
+    }
+
+    @concurrent
+    private static func run(path: String, arguments: [String]) async throws {
+        let result = try await Subprocess.run(
+            .path(FilePath(path)),
+            arguments: Arguments(arguments),
+            output: .string(limit: 64 * 1024),
+            error: .string(limit: 64 * 1024)
+        )
+        let exitStatus = result.terminationStatus.code
+        guard result.terminationStatus.isSuccess else {
+            let detail = [result.standardOutput, result.standardError]
+                .compactMap(\.self)
+                .joined(separator: "\n")
+            throw ToolError.commandFailed(URL(fileURLWithPath: path).lastPathComponent, exitStatus, detail)
+        }
+    }
+}

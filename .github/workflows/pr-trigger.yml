@@ -1,0 +1,20 @@
+name: PR Command Trigger
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  trigger-build:
+    if: ${{ github.repository == 'thaw-app/Thaw' && github.event.issue.pull_request && startsWith(github.event.comment.body, '.build') }}
+    runs-on: ubuntu-slim
+    permissions:
+      actions: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: thaw-app/org-ci/actions/pr-build-command@369e3b50e278dc7799513209c6ddc8ec758d884b

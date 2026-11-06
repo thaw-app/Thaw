@@ -1,0 +1,272 @@
+//
+//  NotificationCenterActivation.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import AppKit
+import CoreGraphics
+import DequeModule
+import Foundation
+
+@MainActor
+final class NotificationCenterActivation {
+    enum Request: Equatable {
+        case clock(CGPoint)
+        case shortcut(SystemNotificationCenterHotkey)
+    }
+
+    enum Lease {
+        case acquired
+        case notRequired
+        case unavailable
+    }
+
+    /// How the panel behaved while a release was held.
+    enum Outcome: Equatable {
+        case panelOpened
+        case panelClosed
+        /// The release ran to its bound with no panel, as an abandoned press also does.
+        case panelNeverOpened
+        /// A close gesture left the panel up until the bound.
+        case panelDidNotClose
+    }
+
+    private let activate: (Request) async -> Void
+    private let panelPresenting: () -> Bool
+    private let report: (Outcome) -> Void
+    private let now: () -> ContinuousClock.Instant
+    private var pending: Deque<Request> = []
+    private var worker: Task<Void, Never>?
+    private let restoreSlot = TaskSlot()
+    private var restoreLease: (() -> Void)?
+    private var leaseAcquiredAt: ContinuousClock.Instant?
+    private var restorationPause: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+
+    /// How long a release must be held before the replayed activation posts,
+    /// counted from lease acquisition (the physical press when prepared at mouse-down).
+    static let minimumReleaseAge = Duration.milliseconds(60)
+
+    /// How often the restore task checks for the panel; every tick of lag
+    /// keeps the hidden items in the bar.
+    static let pollInterval = Duration.milliseconds(20)
+
+    /// Longest the release survives a panel that never presents.
+    static let presentationTimeout = Duration.seconds(1.2)
+
+    /// Held after the panel appears, so the slide-out clears the bar before
+    /// concealment snaps back. The hidden items are in the bar meanwhile.
+    static let escapeGrace = Duration.milliseconds(150)
+
+    /// Held after the panel disappears on a close gesture, so the slide-in
+    /// finishes before the bar returns.
+    static let dismissGrace = Duration.milliseconds(120)
+
+    /// Hidden default that turns the bridge off. Clock clicks and the shortcut then
+    /// go to macOS untouched, which cannot open the panel while items are hidden.
+    nonisolated static let bridgeDisabledKey = Defaults.Key.disableNotificationCenterBridge.rawValue
+
+    nonisolated static func isBridgeEnabled(in defaults: UserDefaults = .standard) -> Bool {
+        !defaults.bool(forKey: bridgeDisabledKey)
+    }
+
+    var isBusy: Bool {
+        worker != nil || restoreLease != nil
+    }
+
+    init(
+        activate: @escaping (Request) async -> Void,
+        panelPresenting: @escaping () -> Bool = NotificationCenterActivation.systemPanelPresenting,
+        report: @escaping (Outcome) -> Void = { _ in /* Callers that don't track outcomes pass nothing, so the default ignores them. */ },
+        now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }
+    ) {
+        self.activate = activate
+        self.panelPresenting = panelPresenting
+        self.report = report
+        self.now = now
+    }
+
+    /// Notification Center is presenting when its panel window is on-screen.
+    /// The flag flips within ~100 ms of open and close, inside one poll interval.
+    private static nonisolated func systemPanelPresenting() -> Bool {
+        let owners = Set(
+            NSRunningApplication.runningApplications(withBundleIdentifier: panelOwnerBundleID)
+                .map(\.processIdentifier)
+        )
+        guard !owners.isEmpty else { return false }
+        let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+        return list.contains { isPanelWindow($0, panelOwners: owners) }
+    }
+
+    private nonisolated static let panelOwnerBundleID = "com.apple.notificationcenterui"
+
+    /// Whether a window is the panel: owned by the panel's process, above normal level.
+    /// The same process keeps desktop widgets on-screen at the desktop level.
+    static nonisolated func isPanelWindow(_ window: [String: Any], panelOwners: Set<pid_t>) -> Bool {
+        guard let owner = window[kCGWindowOwnerPID as String] as? Int,
+              panelOwners.contains(pid_t(owner)),
+              let layer = window[kCGWindowLayer as String] as? Int
+        else { return false }
+        return layer > Int(CGWindowLevelForKey(.normalWindow))
+    }
+
+    func enqueue(_ request: Request) {
+        pending.append(request)
+        if restoreLease != nil {
+            scheduleRestoration(panelWasPresentingAtStart: panelPresenting())
+        }
+        startIfNeeded()
+    }
+
+    /// Acquires the release lease at mouse-down so mouse-up needs no added settle.
+    /// A press that never completes restores itself at the usual bound.
+    func prepareLease(
+        begin: @escaping () -> Lease,
+        restore: @escaping () -> Void
+    ) {
+        guard restoreLease == nil else {
+            scheduleRestoration(panelWasPresentingAtStart: panelPresenting())
+            return
+        }
+        switch begin() {
+        case .acquired:
+            restoreLease = restore
+            leaseAcquiredAt = now()
+            scheduleRestoration(panelWasPresentingAtStart: panelPresenting())
+        case .notRequired, .unavailable:
+            break
+        }
+    }
+
+    func cancel() {
+        pending.removeAll()
+        worker?.cancel()
+        restoreAssertion()
+    }
+
+    func waitUntilIdle() async {
+        while worker != nil || restoreSlot.isRunning {
+            if let worker {
+                await worker.value
+            } else {
+                await restoreSlot.waitUntilFinished()
+            }
+        }
+    }
+
+    isolated deinit {
+        restoreSlot.cancel()
+        restoreLease?()
+    }
+
+    private func startIfNeeded() {
+        guard worker == nil, !pending.isEmpty else { return }
+        worker = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                worker = nil
+                startIfNeeded()
+            }
+            while !Task.isCancelled, !pending.isEmpty {
+                let request = pending.removeFirst()
+                await activate(request)
+            }
+        }
+    }
+
+    /// Keeps the assertion released until the panel is up, plus a grace for the
+    /// slide-out. The restore polls the panel rather than using a fixed delay.
+    func replay(
+        begin: () -> Lease,
+        restore: @escaping () -> Void,
+        send: () -> Void,
+        pause: @escaping (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+    ) async {
+        guard !Task.isCancelled else { return }
+        restoreSlot.cancel()
+        var acquired = false
+        if restoreLease == nil {
+            switch begin() {
+            case .acquired:
+                restoreLease = restore
+                acquired = true
+            case .notRequired:
+                break
+            case .unavailable:
+                return
+            }
+        }
+        restorationPause = pause
+        do {
+            let panelWasPresentingAtStart = panelPresenting()
+            if acquired {
+                leaseAcquiredAt = now()
+                // No press to age through, so keep the full release settle.
+                // Shorter settles were never shown safe for input-tap readiness.
+                try await pause(.milliseconds(60))
+            } else if let acquiredAt = leaseAcquiredAt {
+                // Prepared at mouse-down: wait out the rest of the minimum age,
+                // usually zero after a human click.
+                let remaining = Self.minimumReleaseAge - acquiredAt.duration(to: now())
+                if remaining > .zero {
+                    try await pause(remaining)
+                }
+            }
+            try Task.checkCancellation()
+            send()
+            if restoreLease != nil {
+                scheduleRestoration(panelWasPresentingAtStart: panelWasPresentingAtStart)
+            }
+        } catch {
+            restoreAssertion()
+        }
+    }
+
+    private func scheduleRestoration(panelWasPresentingAtStart: Bool) {
+        let pause = restorationPause
+        let presenting = panelPresenting
+        restoreSlot.replace { [weak self] ticket in
+            // Opening: wait for the panel, then grace the slide-out. Closing:
+            // restore as soon as it clears. Both are bounded by the timeout.
+            let waitingForDismissal = panelWasPresentingAtStart
+            var outcome: Outcome?
+            var waited = Duration.zero
+            while !Task.isCancelled {
+                let present = presenting()
+                if waitingForDismissal ? !present : present {
+                    outcome = waitingForDismissal ? .panelClosed : .panelOpened
+                    break
+                }
+                guard waited < Self.presentationTimeout else {
+                    outcome = waitingForDismissal ? .panelDidNotClose : .panelNeverOpened
+                    break
+                }
+                do {
+                    try await pause(Self.pollInterval)
+                } catch {
+                    break
+                }
+                waited += Self.pollInterval
+            }
+            if outcome == .panelClosed {
+                try? await pause(Self.dismissGrace)
+            } else if outcome == .panelOpened {
+                try? await pause(Self.escapeGrace)
+            }
+            guard let self, self.restoreSlot.isCurrent(ticket) else { return }
+            if let outcome {
+                self.report(outcome)
+            }
+            self.restoreAssertion()
+        }
+    }
+
+    private func restoreAssertion() {
+        restoreSlot.cancel()
+        let restore = restoreLease
+        restoreLease = nil
+        leaseAcquiredAt = nil
+        restore?()
+    }
+}

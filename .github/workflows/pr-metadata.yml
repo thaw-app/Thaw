@@ -1,0 +1,49 @@
+name: "PR Metadata"
+
+# Labels and shape checks via pull_request_target, never checking out PR code.
+# Crowdin and bot PRs skip by branch or login, never title; no `edited` runs.
+# The area labels below are the ones the pull request template lists.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: pr-metadata-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  metadata:
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: ubuntu-slim
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: thaw-app/org-ci/actions/pr-metadata@369e3b50e278dc7799513209c6ddc8ec758d884b
+        with:
+          comment-marker: "<!-- thaw-pr-conventions -->"
+          title-example-scope: menubar
+          translation-sync-branch: l10n_development
+          maintainer-only-base: main
+          contributor-base: development
+          require-closes: "true"
+          require-signoff: "true"
+          area-rules: |
+            [
+              {"label": "icebar", "prefixes": ["Thaw/MenuBar/IceBar/"]},
+              {"label": "layout", "prefixes": ["Thaw/MenuBar/LayoutBar/"], "patterns": ["MenuBarLayout", "SavedLayout"]},
+              {"label": "appearance", "prefixes": ["Thaw/MenuBar/Appearance/"], "patterns": ["MenuBarAppearance"]},
+              {"label": "menubar", "prefixes": ["Thaw/MenuBar/"]},
+              {"label": "onboarding", "prefixes": ["Thaw/Onboarding/"]},
+              {"label": "permissions", "prefixes": ["Thaw/Permissions/"]},
+              {"label": "profiles", "patterns": ["Profile"]},
+              {"label": "hotkeys", "patterns": ["Hotkey"]},
+              {"label": "updates", "patterns": ["Sparkle", "/Update", "appcast"]},
+              {"label": "settings", "kind": "fallback", "prefixes": ["Thaw/Settings/"]},
+              {"label": "ops", "kind": "ops", "prefixes": [".github/", "scripts/"], "paths": ["AGENTS.md", "FREQUENT_ISSUES.md", "README.md", ".swiftformat", ".swiftlint.yml", "sonar-project.properties"]}
+            ]

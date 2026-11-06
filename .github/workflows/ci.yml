@@ -1,0 +1,226 @@
+name: CI
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+# Runs on every PR and push to development so Scorecard sees checks; the
+# macOS work stays gated on path detection below.
+on:
+  pull_request:
+  push:
+    branches:
+      - development
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: ubuntu-slim
+    permissions:
+      contents: read
+      actions: read
+    env:
+      CODE_PATTERNS: '(\.swift$|(^|/)Package\.swift$|(^|/)Package\.resolved$|^sonar-project\.properties$|^\.swiftlint|^\.swiftformat|^Thaw\.xcodeproj/|^scripts/|\.xcstrings$|^\.github/workflows/ci\.yml$)'
+    outputs:
+      code: ${{ steps.since-last-run.outputs.code || steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect code-related paths
+        id: filter
+        uses: thaw-app/org-ci/actions/detect-code-changes@369e3b50e278dc7799513209c6ddc8ec758d884b
+        with:
+          patterns: ${{ env.CODE_PATTERNS }}
+      # The filter compares the whole pull request with its base, so a push that only
+      # fixes the changelog would build and test again. When the files changed since
+      # the previous push are not code, and CI passed on that push, nothing new needs
+      # testing. Anything it cannot confirm (a force push, a cancelled or failed run,
+      # an API error) keeps the full run.
+      - name: Skip what the last passing run already tested
+        id: since-last-run
+        if: github.event_name == 'pull_request' && github.event.action == 'synchronize' && steps.filter.outputs.code == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          code=true
+          if changed=$(git -c core.quotePath=false diff --name-only --no-renames "$BEFORE" "$AFTER" 2>/dev/null) \
+            && ! grep -Eq "$CODE_PATTERNS" <<<"$changed"; then
+            runs=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$BEFORE&event=pull_request&status=success&per_page=1" \
+              | grep -oE '"total_count": *[0-9]+' | grep -oE '[0-9]+$' || echo 0)
+            if [ "${runs:-0}" -gt 0 ]; then
+              code=false
+              echo "Only non-code files changed since $BEFORE, which passed CI; skipping the build and tests."
+            fi
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+  static_analysis:
+    needs: changes
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: needs.changes.outputs.code == 'true'
+        with:
+          fetch-depth: 0
+
+      - name: Skip lint (no code changes)
+        if: needs.changes.outputs.code != 'true'
+        run: echo "No code-related paths changed; skipping SwiftLint."
+
+      - name: Validate XCStrings
+        if: needs.changes.outputs.code == 'true' && github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed_files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '\.xcstrings$' || true)
+          if [ -z "$changed_files" ]; then
+            echo "No modified .xcstrings files."
+            exit 0
+          fi
+          for file in $changed_files; do
+            echo "Validating $file"
+            python3 -m json.tool "$file" > /dev/null
+          done
+
+      - name: Run SwiftLint
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          bash scripts/tests/test-lint.sh
+          docker run --rm -v "$PWD:/work" -w /work \
+            ghcr.io/realm/swiftlint:0.65.1@sha256:f47e083201e47a136cda5ae847595bfe00226c444ca226fa74fa5dc648a9b057 \
+            /bin/sh scripts/lint.sh --strict
+
+  build:
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: xcode-27
+    needs: [changes, static_analysis]
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+    steps:
+      - name: Skip macOS build (no code changes)
+        if: needs.changes.outputs.code != 'true'
+        run: echo "No code-related paths changed; skipping xcodebuild test."
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: needs.changes.outputs.code == 'true'
+
+      - name: Cache SwiftPM
+        if: needs.changes.outputs.code == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            Build/SourcePackages
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
+
+      - name: Compute cache week
+        if: needs.changes.outputs.code == 'true'
+        id: cache-week
+        run: echo "week=$(date +%Y-%U)" >> "$GITHUB_OUTPUT"
+
+      # Persists Xcode's compilation cache so most of the build is cache hits. Keyed
+      # by week to rotate it; restore-keys start from last week's.
+      - name: Cache Swift compilation cache
+        if: needs.changes.outputs.code == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: Build/CompilationCache.noindex
+          key: compilation-cache-${{ runner.os }}-${{ github.ref_name }}-${{ steps.cache-week.outputs.week }}
+          restore-keys: |
+            compilation-cache-${{ runner.os }}-${{ github.ref_name }}-
+            compilation-cache-${{ runner.os }}-
+
+      # The Thaw target's lint build phase requires the pinned SwiftLint on PATH.
+      - name: Install pinned SwiftLint
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          sh scripts/install-swiftlint.sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build and Test
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          xcodebuild test \
+            -project Thaw.xcodeproj \
+            -scheme Thaw \
+            -derivedDataPath Build/ \
+            -destination 'platform=macOS' \
+            -enableCodeCoverage YES \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Check memory budget
+        if: needs.changes.outputs.code == 'true'
+        run: ./scripts/check-memory-budget.sh Build/Build/Products/Debug/Thaw.app/Contents/MacOS/Thaw
+
+      - name: Convert coverage to XML
+        if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          XCRESULTPARSER_VERSION: "2.0.1"
+        run: |
+          set -euo pipefail
+          curl -fsSL -o xcresultparser.zip \
+            "https://github.com/a7ex/xcresultparser/releases/download/${XCRESULTPARSER_VERSION}/xcresultparser.zip"
+          unzip -oq xcresultparser.zip
+          NEWEST_BUNDLE=$(python3 -c 'import glob, os; print(max(glob.glob("Build/Logs/Test/*.xcresult"), key=os.path.getmtime))')
+          ./product/xcresultparser -c -o xml "$NEWEST_BUNDLE" > coverage.xml
+          # Sonar matches coverage by path on Linux, so rewrite this runner's absolute
+          # paths; the script fails if nothing resolves rather than report 0%.
+          python3 scripts/normalize-coverage.py coverage.xml
+
+      - name: Upload Coverage XML
+        if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-data
+          path: coverage.xml
+          retention-days: 1
+          if-no-files-found: error
+
+
+  # Always runs so Scorecard sees a Sonar check on nearly every PR; forks and
+  # Dependabot no-op without secrets under the same job name.
+  sonarqube:
+    needs: [changes, build]
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: ubuntu-latest
+    env:
+      # Forks and Dependabot get no SONAR_TOKEN on pull_request.
+      SONAR_ENABLED: ${{ github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    steps:
+      - name: Skip SonarQube for fork / Dependabot PRs
+        if: env.SONAR_ENABLED != 'true'
+        run: |
+          echo "Skipping SonarQube analysis (fork or Dependabot PR; no SONAR_TOKEN access)"
+          echo "Analysis will be performed after merge to the default branch"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.SONAR_ENABLED == 'true'
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Uses this run's coverage, or the last cached report when the build was
+      # skipped. With neither, it leaves the last analysis alone.
+      - name: Scan with coverage
+        if: env.SONAR_ENABLED == 'true'
+        uses: thaw-app/org-ci/actions/sonar-scan@369e3b50e278dc7799513209c6ddc8ec758d884b
+        with:
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
+          code-changed: ${{ needs.changes.outputs.code }}
+          cache-path: coverage.xml
+          reports: |
+            sonar.coverageReportPaths=coverage.xml

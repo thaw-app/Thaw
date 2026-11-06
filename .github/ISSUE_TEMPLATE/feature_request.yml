@@ -1,0 +1,58 @@
+name: Feature Request
+description: Propose a specific feature or improvement.
+title: "[Feature Request] "
+type: feature
+projects: ["thaw-app/1"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Before you suggest something:**
+
+        Still an idea? Post it in [Discussions](https://github.com/orgs/thaw-app/discussions) first.
+
+        1. Search [existing suggestions](https://github.com/thaw-app/Thaw/issues?q=is%3Aissue+-type%3ABug) for duplicates.
+        2. Describe the problem you want solved, then how you'd like it to work.
+
+        We look at requests with a clear use case and a proposed solution first. We close requests that lack these details or get no reply after two follow-ups. Inactive requests are marked stale after 10 days and closed after about 14. You can reopen any time. Write in English; machine translation is fine.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and found no duplicate
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you want to do that Thaw makes hard or impossible today.
+      placeholder: "I'd like to be able to…"
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: How it could work
+      placeholder: What you'd like Thaw to do.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Other options you tried
+      description: Workarounds, or other ways it could work.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Anything else?
+      description: Screenshots, mockups or recordings.
+    validations:
+      required: false

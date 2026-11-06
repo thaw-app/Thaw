@@ -1,0 +1,1072 @@
+//
+//  ProfileManager.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import AsyncAlgorithms
+import Cocoa
+import Combine
+import Foundation
+import MenuBarModel
+import ThawModuleKit
+import ThawUI
+
+@MainActor
+@Observable
+final class ProfileManager {
+    /// loadManifest() fires didSet during construction because only direct init assignments are exempt.
+    /// rebuildProfileHotkeys() safely no-ops until appState is wired.
+    private(set) var profiles: [ProfileMetadata] = [] {
+        didSet {
+            rebuildProfileHotkeys()
+        }
+    }
+
+    /// The ID of the currently active profile, or nil.
+    var activeProfileID: UUID? {
+        didSet { launchGate.record?.lastActiveProfileID = activeProfileID }
+    }
+
+    /// Keeps the active profile for the next launch and decides the switch at this one.
+    let launchGate: ProfileLaunchGate
+
+    /// The last manifest write that failed in a non-throwing path, or nil.
+    private(set) var lastManifestError: String?
+
+    /// Returns and clears the pending manifest failure, so the pane that asked
+    /// for the change reports it once.
+    func takeManifestError() -> String? {
+        defer { lastManifestError = nil }
+        return lastManifestError
+    }
+
+    let diagLog = DiagLog(category: "ProfileManager")
+    private let encoder: JSONEncoder
+    private let decoder: JSONDecoder
+    private let profilesDirectory: URL
+    private let manifestURL: URL
+    weak var appState: AppState?
+    private var cancellables = Set<AnyCancellable>()
+    /// Tracks the last seen active Space key for auto-switch debouncing.
+    private var lastActiveSpaceKey: String?
+    /// Whether a Focus Filter profile is currently applied.
+    private(set) var focusFilterActive = false
+    /// Reads the system's Focus filter state; tests replace it.
+    @ObservationIgnored var focusFilterSignal = FocusFilterSignal.system
+    /// The in-flight layout apply and its profile, for callers that wait for it (e.g. the Apply button).
+    private(set) var layoutTask: Task<Void, Never>?
+    private(set) var layoutTaskProfileID: UUID?
+
+    /// Callers awaiting layoutTask use this to report an unavailable layout engine, even when profile settings applied.
+    /// Cleared at the start of each apply.
+    private(set) var layoutDidNotRun = false
+
+    /// Generation counter to prevent older layout tasks from clearing newer ones.
+    private var layoutGeneration: UInt = 0
+
+    /// Clear the verdict and issue a reporting generation; separate from app relaunches so tests need no AppState.
+    func beginLayoutApply(profileID: UUID? = nil) -> UInt {
+        layoutDidNotRun = false
+        layoutTaskProfileID = profileID
+        layoutGeneration &+= 1
+        return layoutGeneration
+    }
+
+    private func endLayoutTask(generation: UInt) {
+        guard layoutGeneration == generation else { return }
+        layoutTask = nil
+    }
+
+    /// Ignore superseded failures so late tasks cannot overwrite a newer apply's clean verdict.
+    func recordLayoutDidNotRun(generation: UInt) {
+        guard layoutGeneration == generation else { return }
+        layoutDidNotRun = true
+    }
+
+    /// Hotkeys for switching to each profile, keyed by profile ID.
+    private(set) var profileHotkeys: [UUID: Hotkey] = [:]
+    /// Maps Hotkey identity to profile ID for the perform() lookup.
+    var hotkeyProfileMap: [ObjectIdentifier: UUID] = [:]
+    /// Observers for profile hotkey changes.
+    private var profileHotkeyCancellables = Set<AnyCancellable>()
+
+    /// - Parameter profilesDirectory: Profile and manifest directory; defaults to directoryOverride, then Application Support. Tests use temporary directories to protect user profiles.
+    init(profilesDirectory: URL? = nil, launchRecord: ProfileLaunchApply.Record? = nil) {
+        launchGate = ProfileLaunchGate(record: launchRecord ?? ((profilesDirectory ?? Self.directoryOverride) == nil ? ProfileLaunchApply.Record() : nil))
+        let enc = JSONEncoder()
+        enc.dateEncodingStrategy = .iso8601
+        enc.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder = enc
+
+        let dec = JSONDecoder()
+        dec.dateDecodingStrategy = .iso8601
+        decoder = dec
+
+        if let profilesDirectory = profilesDirectory ?? Self.directoryOverride {
+            self.profilesDirectory = profilesDirectory
+        } else {
+            // The search API is documented to return a URL but nothing
+            // enforces it; derive the same directory from the home URL.
+            let appSupport = FileManager.default.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            ).first
+                ?? FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Application Support", isDirectory: true)
+            self.profilesDirectory = appSupport
+                .appendingPathComponent("Thaw/Profiles", isDirectory: true)
+        }
+        manifestURL = self.profilesDirectory
+            .appendingPathComponent("profiles.json")
+
+        ensureDirectoryExists()
+        loadManifest()
+    }
+
+    /// Apply the current display's associated profile only after the menu bar settles.
+    func performSetup(with appState: AppState) {
+        self.appState = appState
+        rebuildProfileHotkeys()
+
+        // Debounce beyond the Space animation so rapid swipes apply only the final profile.
+        let spaceSwitchTask = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.activeSpaceDidChangeNotification, debounce: .seconds(0.75)) { [weak self] in
+            guard let self else { return }
+            await self.checkSpaceAndAutoSwitch()
+        }
+        cancellables.insert(AnyCancellable { spaceSwitchTask.cancel() })
+
+        // Any process can post these, so both only wake the check against the system's Focus filter state.
+        let center = DistributedNotificationCenter.default()
+        center.publisher(for: Notification.Name("com.stonerl.Thaw.focusFilterActivated"))
+            .merge(with: center.publisher(for: Notification.Name("com.stonerl.Thaw.focusFilterDeactivated")))
+            .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                Task { [weak self] in
+                    await self?.handleFocusFilterSignal()
+                }
+            }
+            .store(in: &cancellables)
+
+        Task { [weak self] in await self?.applyStartupProfile() }
+    }
+
+    /// Applies the active Focus Filter's profile, else the Space's, else the display's.
+    private func applyStartupProfile() async {
+        defer { launchGate.close() }
+        do {
+            let current = try await ThawFocusFilter.current
+            if current.profile != nil {
+                _ = try await current.perform()
+                await applyFocusFilterProfile()
+                return
+            }
+        } catch {
+            diagLog.debug("No active Focus Filter on startup: \(error)")
+        }
+        // Always apply spacing to correct offsets left by another display's session; matching offsets no-op.
+        await applyProfileForSpaceOrDisplay()
+    }
+
+    /// Without a Focus profile, the current Space's profile wins over the display's.
+    private func applyProfileForSpaceOrDisplay() async {
+        lastActiveSpaceKey = SpaceInfo.activeSpace().persistentKey
+        switch AutomaticProfileChoice.choose(spaceKey: lastActiveSpaceKey, spaceHasProfile: { profile(forSpaceKey: $0) != nil }, displayUUID: Bridging.getActiveMenuBarDisplayUUID()) {
+        case let .space(key): await applyProfileForSpace(key: key)
+        case let .display(uuid): await applyProfileForDisplay(uuid: uuid)
+        case .none: break
+        }
+    }
+
+    // MARK: - Private Helpers
+
+    private func ensureDirectoryExists() {
+        let fm = FileManager.default
+        if !fm.fileExists(atPath: profilesDirectory.path) {
+            do {
+                try fm.createDirectory(
+                    at: profilesDirectory,
+                    withIntermediateDirectories: true
+                )
+            } catch {
+                diagLog.error("Failed to create profiles directory: \(error)")
+            }
+        }
+    }
+
+    private func loadManifest() {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: manifestURL.path) else {
+            profiles = []
+            return
+        }
+        do {
+            let data = try Data(contentsOf: manifestURL)
+            profiles = try decoder.decode([ProfileMetadata].self, from: data)
+        } catch {
+            diagLog.error("Failed to load profiles manifest: \(error)")
+            profiles = []
+        }
+    }
+
+    /// Throw manifest failures so profile edits cannot appear saved in the pane but disappear on relaunch.
+    private func saveManifest() throws {
+        let data = try encoder.encode(profiles)
+        try data.write(to: manifestURL, options: .atomic)
+    }
+
+    /// Binding-driven association setters cannot throw; expose save failures through lastManifestError for the pane.
+    private func persistManifest() {
+        do {
+            try saveManifest()
+        } catch {
+            diagLog.error("Failed to save profiles manifest: \(error)")
+            lastManifestError = error.localizedDescription
+        }
+    }
+
+    private func profileURL(for id: UUID) -> URL {
+        profilesDirectory.appendingPathComponent("\(id.uuidString).json")
+    }
+
+    // MARK: - Public API
+
+    /// Captures the current app state and saves it as a named profile.
+    ///
+    /// - Returns: The identifier of the newly created profile.
+    @discardableResult
+    func saveProfile(name: String, from appState: AppState) throws -> UUID {
+        let profile = Profile(name: name, content: capturedContent(from: appState))
+
+        let data = try encoder.encode(profile)
+        try data.write(to: profileURL(for: profile.id), options: .atomic)
+
+        let metadata = ProfileMetadata(
+            id: profile.id,
+            name: profile.name,
+            createdAt: profile.createdAt,
+            modifiedAt: profile.modifiedAt
+        )
+        profiles.append(metadata)
+        try saveManifest()
+
+        return profile.id
+    }
+
+    func loadProfile(id: UUID) throws -> Profile {
+        let url = profileURL(for: id)
+        let data = try Data(contentsOf: url)
+        return try decoder.decode(Profile.self, from: data)
+    }
+
+    /// Apply spacing after settings; applyOffset avoids relaunches for matching on-disk offsets.
+    /// Capture previousProfileID before changing activeProfileID so modules hear which profile came before.
+    /// While relaunches need confirmation, spacing is only written unless spacingRelaunchApproved says the user agreed.
+    func applyProfile(_ profile: Profile, to appState: AppState, previousProfileID: UUID? = nil, relaunchesApps: Bool = true, spacingRelaunchApproved: Bool = false) {
+        diagLog.debug(
+            "applyProfile entered: name=\(profile.name)"
+        )
+
+        // The profile names both groups outright, so whichever way round a
+        // swap left them stops meaning anything here.
+        appState.menuBarManager.clearSwapState()
+
+        // Cancel any in-flight layout task before starting a new one.
+        // Prevents two profile applies from fighting over item positions.
+        layoutTask?.cancel()
+        let generation = beginLayoutApply(profileID: profile.id)
+
+        let pinnedHidden = Set(profile.menuBarLayout.pinnedHiddenBundleIDs)
+        let pinnedAlwaysHidden = Set(profile.menuBarLayout.pinnedAlwaysHiddenBundleIDs)
+        let sectionOrder = profile.menuBarLayout.savedSectionOrder
+        let itemSectionMap = profile.menuBarLayout.itemSectionMap ?? [:]
+        let itemOrder = profile.menuBarLayout.itemOrder ?? [:]
+
+        let previousName = previousProfileID.flatMap { id in
+            profiles.first(where: { $0.id == id })?.name
+        }
+        let event = ProfileSwitch(
+            profileID: profile.id,
+            profileName: profile.name,
+            previousProfileID: previousProfileID,
+            previousProfileName: previousName
+        )
+
+        layoutTask = Task { [weak self] in
+            // Modules hear of the switch first; Thaw doesn't wait for their scripts.
+            ProfileSwitchAnnouncer.post(.willApply, event)
+
+            let mayRelaunch = self?.applySnapshot(profile, to: appState, relaunchesApps: relaunchesApps, spacingRelaunchApproved: spacingRelaunchApproved) ?? false
+
+            // Apply spacing before layout: relaunches reset item positions; matching offsets no-op.
+            // Arm settling before relaunch to suppress partial cache restores, then wait for reattachment before layout.
+
+            appState.itemManager.startSettlingPeriod(reason: "spacingRelaunch:preflight")
+
+            let didRelaunch: Bool
+            let recovered: Set<String>
+            do {
+                // An unstructured wave survives superseding layout-task cancellation; see sleepIgnoringCancellation(for:).
+                let outcome = try await Task {
+                    try await appState.spacingManager.applyOffset(relaunchApps: mayRelaunch)
+                }.value
+                didRelaunch = outcome.didRelaunch
+                recovered = outcome.recoveredBundleIDs
+            } catch is CancellationError {
+                // Drop preflight settling on cancellation so stale layout work cannot overwrite a newer apply.
+                appState.itemManager.cancelSettlingPeriod(reason: "spacingRelaunch:cancelled")
+                return
+            } catch {
+                self?.diagLog.error("spacingRelaunch: applyOffset failed: \(error)")
+                didRelaunch = false
+                recovered = []
+            }
+            // The wave ignores this task's cancellation; recheck now and clean up rather than lay out a superseded profile.
+            if Task.isCancelled {
+                appState.itemManager.cancelSettlingPeriod(reason: "spacingRelaunch:cancelled")
+                return
+            }
+            if didRelaunch {
+                appState.itemManager.startSettlingPeriod(
+                    reason: "spacingRelaunch",
+                    expectedBundleIDs: recovered
+                )
+            } else {
+                // No-op apply: nothing churned, drop the preflight so the
+                // following applyProfileLayout proceeds without waiting.
+                appState.itemManager.cancelSettlingPeriod(reason: "spacingRelaunch:noOp")
+            }
+            let layoutDidRun = await appState.itemManager.applyProfileLayout(
+                pinnedHidden: pinnedHidden,
+                pinnedAlwaysHidden: pinnedAlwaysHidden,
+                sectionOrder: sectionOrder,
+                itemSectionMap: itemSectionMap,
+                itemOrder: itemOrder
+            )
+            if !layoutDidRun {
+                self?.recordLayoutDidNotRun(generation: generation)
+            }
+
+            // A newer apply cancels this task; only the switch that finished is announced as applied.
+            if Task.isCancelled {
+                self?.endLayoutTask(generation: generation)
+                return
+            }
+            ProfileSwitchAnnouncer.post(.didApply, event)
+
+            self?.endLayoutTask(generation: generation)
+        }
+    }
+
+    /// Returns whether the apply may restart apps for its spacing.
+    private func applySnapshot(_ profile: Profile, to appState: AppState, relaunchesApps: Bool, spacingRelaunchApproved: Bool) -> Bool {
+        profile.generalSettings.apply(to: appState.settings.general)
+        profile.advancedSettings.merged(onto: .capture(from: appState.settings.advanced)).apply(to: appState.settings.advanced)
+
+        Defaults.set(profile.hotkeys, forKey: .hotkeys)
+        for hotkey in appState.settings.hotkeys.hotkeys {
+            guard let data = profile.hotkeys[hotkey.action.rawValue] else {
+                hotkey.keyCombination = nil
+                continue
+            }
+            do {
+                let keyCombination = try decoder.decode(
+                    KeyCombination?.self,
+                    from: data
+                )
+                hotkey.keyCombination = keyCombination
+            } catch {
+                diagLog.error(
+                    "Failed to decode hotkey for \(hotkey.action.rawValue): \(error)"
+                )
+            }
+        }
+
+        // Install the fallback template before per-display entries. Profiles
+        // created on another machine may not contain this display's UUID.
+        appState.settings.displaySettings.globalConfiguration = profile.globalDisplayConfiguration
+
+        // Set before the configurations, whose change applies spacing under these settings.
+        let relaunchSettings = ProfileRelaunchSafety.apply(profile, to: appState.settings.displaySettings)
+        let mayRelaunch = ProfileRelaunchSafety.relaunchesApps(requested: relaunchesApps, settings: relaunchSettings, approved: spacingRelaunchApproved)
+        if relaunchesApps, !mayRelaunch, relaunchSettings.applyMode == .relaunchApps {
+            diagLog.info("Profile \(profile.name): restarting apps needs confirmation; saving spacing without relaunching")
+        }
+        appState.settings.displaySettings.assignConfigurations(profile.displayConfigurations, writeOnly: !mayRelaunch)
+        appState.settings.displaySettings.unconfirmedSpacingProfileScope = profile.unconfirmedSpacingProfileScope
+        appState.appearanceManager.configuration = profile.appearanceConfiguration
+
+        Defaults.set(
+            profile.menuBarLayout.customNames,
+            forKey: .menuBarItemCustomNames
+        )
+
+        // Apply per-item hotkeys to UserDefaults, then rebuild the live hotkey
+        // objects so the restored bindings register immediately.
+        Defaults.set(
+            profile.menuBarLayout.itemHotkeys ?? [:],
+            forKey: .menuBarItemHotkeys
+        )
+        appState.menuBarManager.rebuildItemHotkeys()
+
+        // Resolve layout against this profile's groups, not the outgoing profile's.
+        appState.itemGroupManager.apply(profile.menuBarLayout.itemGroups)
+
+        // Set badge placement before layout so late arrivals use the profile-defined spot.
+        if let placement = profile.menuBarLayout.newItemsPlacement {
+            appState.itemManager.applyNewItemsPlacement(placement)
+        }
+        return mayRelaunch
+    }
+
+    func deleteProfile(id: UUID) throws {
+        let url = profileURL(for: id)
+        try ProfileDeletion.removeFile(at: url, isListed: profiles.contains { $0.id == id })
+        profiles.removeAll { $0.id == id }
+        try saveManifest()
+    }
+
+    /// Undo restores the same identity and manifest position, not a copy.
+    /// Reclaim display and Space associations by clearing competing owners, as association setters do.
+    func restoreProfile(
+        _ profile: Profile,
+        metadata: ProfileMetadata,
+        at index: Int,
+        wasActive: Bool
+    ) throws {
+        let data = try encoder.encode(profile)
+        try data.write(to: profileURL(for: metadata.id), options: .atomic)
+
+        if let displayUUID = metadata.associatedDisplayUUID {
+            for i in profiles.indices where profiles[i].associatedDisplayUUID == displayUUID {
+                profiles[i].associatedDisplayUUID = nil
+                profiles[i].associatedDisplayName = nil
+            }
+        }
+        if let spaceKey = metadata.associatedSpaceKey {
+            for i in profiles.indices where profiles[i].associatedSpaceKey == spaceKey {
+                profiles[i].associatedSpaceKey = nil
+                profiles[i].associatedSpaceName = nil
+            }
+        }
+
+        if let existing = profiles.firstIndex(where: { $0.id == metadata.id }) {
+            profiles[existing] = metadata
+        } else {
+            profiles.insert(metadata, at: min(max(index, 0), profiles.count))
+        }
+        try saveManifest()
+
+        if wasActive {
+            activeProfileID = metadata.id
+        }
+    }
+
+    /// Saves a profile to disk and updates the manifest, without applying it; reverting a saved copy
+    /// must not rearrange the live bar.
+    func replaceProfile(_ profile: Profile) throws {
+        let data = try encoder.encode(profile)
+        try data.write(to: profileURL(for: profile.id), options: .atomic)
+        if let index = profiles.firstIndex(where: { $0.id == profile.id }) {
+            profiles[index].modifiedAt = profile.modifiedAt
+        }
+        try saveManifest()
+    }
+
+    func renameProfile(id: UUID, to newName: String) throws {
+        var profile = try loadProfile(id: id)
+        profile = Profile(
+            id: profile.id,
+            name: newName,
+            createdAt: profile.createdAt,
+            modifiedAt: Date(),
+            content: profile.content
+        )
+
+        let data = try encoder.encode(profile)
+        try data.write(to: profileURL(for: id), options: .atomic)
+
+        if let index = profiles.firstIndex(where: { $0.id == id }) {
+            var updated = profiles[index]
+            updated.name = newName
+            updated.modifiedAt = profile.modifiedAt
+            profiles[index] = updated
+        }
+        try saveManifest()
+    }
+
+    /// Duplicates an existing profile with a new name.
+    func duplicateProfile(id: UUID, newName: String) throws {
+        let original = try loadProfile(id: id).withCurrentScripts(moduleDefaults: .scriptsModule)
+        let duplicate = Profile(
+            name: newName,
+            content: original.content
+        )
+
+        let data = try encoder.encode(duplicate)
+        try data.write(to: profileURL(for: duplicate.id), options: .atomic)
+
+        let source = profiles.first { $0.id == id }
+        let metadata = ProfileMetadata(
+            id: duplicate.id,
+            name: duplicate.name,
+            createdAt: duplicate.createdAt,
+            modifiedAt: duplicate.modifiedAt,
+            keepsLayoutChangesSetting: source?.keepsLayoutChangesSetting,
+            reappliesAtLaunchSetting: source?.reappliesAtLaunchSetting
+        )
+        profiles.append(metadata)
+        try saveManifest()
+    }
+
+    /// Exports a profile to a file, including display associations.
+    func exportProfile(id: UUID, to url: URL) throws {
+        let profile = try loadProfile(id: id).withCurrentScripts(moduleDefaults: .scriptsModule)
+        let meta = profiles.first { $0.id == id }
+        let entry = ProfileExportEntry(
+            profile: profile,
+            associatedDisplayUUID: meta?.associatedDisplayUUID,
+            associatedDisplayName: meta?.associatedDisplayName,
+            associatedSpaceKey: meta?.associatedSpaceKey,
+            associatedSpaceName: meta?.associatedSpaceName,
+            keepsLayoutChanges: meta?.keepsLayoutChangesSetting,
+            reappliesAtLaunch: meta?.reappliesAtLaunchSetting
+        )
+        let bundle = ProfileExportBundle(entries: [entry])
+        let data = try encoder.encode(bundle)
+        try data.write(to: url, options: .atomic)
+    }
+
+    /// Overwrites an existing profile with the current app state,
+    /// keeping its id, name, display association, creation date, and script hooks.
+    func updateProfileWithCurrentState(id: UUID, appState: AppState) throws {
+        guard let old = profiles.first(where: { $0.id == id }) else { return }
+
+        // Script hooks are the profile's own, not part of the app state being captured.
+        var content = capturedContent(from: appState)
+        content.automation = try loadProfile(id: id).automation
+        let updated = Profile(id: id, name: old.name, createdAt: old.createdAt, modifiedAt: Date(), content: content)
+
+        let data = try encoder.encode(updated)
+        try data.write(to: profileURL(for: id), options: .atomic)
+
+        if let index = profiles.firstIndex(where: { $0.id == id }) {
+            profiles[index].modifiedAt = updated.modifiedAt
+        }
+        try saveManifest()
+
+        // Rearm the active layout cache without moving items so New Items placement uses the newly saved order.
+        rearmActiveLayoutIfNeeded(
+            updatedID: id,
+            scope: .all,
+            layout: content.menuBarLayout,
+            itemManager: appState.itemManager
+        )
+    }
+
+    // MARK: - Capture Helpers
+
+    /// Everything a profile captures from the running app, with menuBarLayout in place of the live
+    /// layout when given. The one list of captured fields, so every kind of update saves the same ones.
+    private func capturedContent(from appState: AppState, menuBarLayout: MenuBarLayoutSnapshot? = nil) -> ProfileContent {
+        ProfileContent(
+            generalSettings: GeneralSettingsSnapshot.capture(from: appState.settings.general),
+            advancedSettings: AdvancedSettingsSnapshot.capture(from: appState.settings.advanced),
+            hotkeys: Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:],
+            displayConfigurations: appState.settings.displaySettings.configurations,
+            globalDisplayConfiguration: appState.settings.displaySettings.globalConfiguration,
+            confirmSpacingRelaunch: appState.settings.displaySettings.confirmSpacingRelaunch,
+            unconfirmedSpacingProfileScope: appState.settings.displaySettings.unconfirmedSpacingProfileScope,
+            spacingApplyMode: appState.settings.displaySettings.spacingApplyMode,
+            appearanceConfiguration: appState.appearanceManager.configuration,
+            menuBarLayout: menuBarLayout ?? captureCurrentLayout(
+                from: appState.itemManager,
+                groups: appState.itemGroupManager.snapshot()
+            )
+        )
+    }
+
+    /// Share profile capture with preview diffs so closed apps and transient widgets do not produce promised but unapplied moves.
+    func currentLayoutSnapshot(from appState: AppState) -> MenuBarLayoutSnapshot {
+        captureCurrentLayout(
+            from: appState.itemManager,
+            groups: appState.itemGroupManager.snapshot()
+        )
+    }
+
+    /// Depend only on the item manager and defaults so capture and rearm tests need no AppState.
+    func captureCurrentLayout(
+        from itemManager: MenuBarItemManager,
+        groups: MenuBarItemGroupSet
+    ) -> MenuBarLayoutSnapshot {
+        let computedItemOrder = itemManager.computeSectionOrder(
+            from: itemManager.itemCache
+        )
+        let persistedSectionOrder = UserDefaults.standard.dictionary(
+            forKey: SavedSectionOrderDefaults.key
+        ) as? [String: [String]] ?? [:]
+
+        // An empty cache without a display ID is not meaningful; preserve mirrored assignments rather than erase the profile.
+        let itemOrder: [String: [String]] = if computedItemOrder.isEmpty,
+                                               itemManager.itemDisplayID == nil,
+                                               !persistedSectionOrder.isEmpty
+        {
+            persistedSectionOrder
+        } else {
+            computedItemOrder
+        }
+        // macOS 27 membership lives in RuntimeSectionController; mirror curated cache order for complete visible/hidden profile snapshots.
+        let savedSectionOrder: [String: [String]] = itemOrder
+        let pinnedHiddenBundleIDs = UserDefaults.standard.array(
+            forKey: "MenuBarItemManager.pinnedHiddenBundleIDs"
+        ) as? [String] ?? []
+        let pinnedAlwaysHiddenBundleIDs = UserDefaults.standard.array(
+            forKey: "MenuBarItemManager.pinnedAlwaysHiddenBundleIDs"
+        ) as? [String] ?? []
+        let customNames = Defaults.dictionary(
+            forKey: .menuBarItemCustomNames
+        ) as? [String: String] ?? [:]
+        let itemHotkeys = Defaults.dictionary(
+            forKey: .menuBarItemHotkeys
+        ) as? [String: Data] ?? [:]
+
+        // Apply requires itemOrder and savedSectionOrder to agree; computeSectionOrder preserves closed apps and filters transient widgets.
+        // Direct cache iteration would route closed saved apps through unmanaged placement instead of their saved section.
+        var itemSectionMap = [String: String]()
+        for (sectionKey, uids) in itemOrder {
+            for uid in uids {
+                itemSectionMap[uid] = sectionKey
+            }
+        }
+
+        return MenuBarLayoutSnapshot(
+            savedSectionOrder: savedSectionOrder,
+            pinnedHiddenBundleIDs: pinnedHiddenBundleIDs,
+            pinnedAlwaysHiddenBundleIDs: pinnedAlwaysHiddenBundleIDs,
+            customNames: customNames,
+            itemSectionMap: itemSectionMap,
+            itemOrder: itemOrder,
+            newItemsPlacement: itemManager.newItemsPlacement,
+            itemHotkeys: itemHotkeys,
+            itemGroups: groups
+        )
+    }
+
+    /// Applies the current configuration (settings, hotkeys, appearance) to a profile, keeping its layout and script hooks.
+    private func applyCurrentConfiguration(to profile: inout Profile, from appState: AppState) {
+        var content = capturedContent(from: appState, menuBarLayout: profile.menuBarLayout)
+        content.automation = profile.automation
+        profile = Profile(id: profile.id, name: profile.name, createdAt: profile.createdAt, modifiedAt: profile.modifiedAt, content: content)
+    }
+
+    // MARK: - Scoped Updates
+
+    /// What parts of a profile to update.
+    enum ProfileUpdateScope {
+        case all
+        case layoutOnly
+        case configurationOnly
+    }
+
+    /// Rearm only fresh layout updates to the active profile; configuration-only or inactive edits must not touch live layout state.
+    /// Otherwise New Items placement would use stale cached order until manual reapply.
+    static nonisolated func shouldRearmActiveLayout(
+        updatedID: UUID,
+        activeID: UUID?,
+        scope: ProfileUpdateScope
+    ) -> Bool {
+        guard updatedID == activeID else { return false }
+        switch scope {
+        case .all, .layoutOnly:
+            return true
+        case .configurationOnly:
+            return false
+        }
+    }
+
+    /// Updates a profile with only the specified scope of current state.
+    func updateProfile(id: UUID, scope: ProfileUpdateScope, appState: AppState) throws {
+        switch scope {
+        case .all:
+            try updateProfileWithCurrentState(id: id, appState: appState)
+        case .layoutOnly:
+            try updateProfileLayout(
+                id: id,
+                itemManager: appState.itemManager,
+                groups: appState.itemGroupManager.snapshot()
+            )
+        case .configurationOnly:
+            try updateProfileConfiguration(id: id, appState: appState)
+        }
+    }
+
+    /// Narrow the dependency to the item manager so integration tests can update layout through an injected directory without AppState.
+    func updateProfileLayout(
+        id: UUID,
+        itemManager: MenuBarItemManager,
+        groups: MenuBarItemGroupSet? = nil
+    ) throws {
+        var profile = try loadProfile(id: id)
+        // Preserve existing groups when no fresh snapshot is supplied; defaulting to none would silently erase them.
+        let layout = captureCurrentLayout(
+            from: itemManager,
+            groups: groups ?? profile.menuBarLayout.itemGroups ?? .empty
+        )
+        profile.menuBarLayout = layout
+        profile.modifiedAt = Date()
+        try replaceProfile(profile)
+        rearmActiveLayoutIfNeeded(updatedID: id, scope: .layoutOnly, layout: layout, itemManager: itemManager)
+    }
+
+    /// Sync the active profile's cached spec after fresh layout capture so New Items placement uses it without reapply.
+    /// The captured layout already matches the bar; move nothing and no-op for inactive profiles.
+    private func rearmActiveLayoutIfNeeded(
+        updatedID: UUID,
+        scope: ProfileUpdateScope,
+        layout: MenuBarLayoutSnapshot,
+        itemManager: MenuBarItemManager
+    ) {
+        guard Self.shouldRearmActiveLayout(
+            updatedID: updatedID,
+            activeID: activeProfileID,
+            scope: scope
+        ) else { return }
+        itemManager.rearmActiveProfileLayout(
+            pinnedHidden: Set(layout.pinnedHiddenBundleIDs),
+            pinnedAlwaysHidden: Set(layout.pinnedAlwaysHiddenBundleIDs),
+            sectionOrder: layout.savedSectionOrder,
+            itemSectionMap: layout.itemSectionMap ?? [:],
+            itemOrder: layout.itemOrder ?? [:]
+        )
+    }
+
+    /// Updates only the configuration (settings, hotkeys, appearance) of an existing profile.
+    private func updateProfileConfiguration(id: UUID, appState: AppState) throws {
+        var profile = try loadProfile(id: id)
+        applyCurrentConfiguration(to: &profile, from: appState)
+        profile.modifiedAt = Date()
+        try replaceProfile(profile)
+    }
+
+    /// Broadcast spacing to every profile's display entry, creating missing entries from the global template.
+    /// DisplaySettingsPane uses this to prevent the next profile reapply from reverting confirmed spacing.
+    func updateAllProfilesItemSpacingOffset(displayUUID: String, offset: Double) throws {
+        let now = Date()
+        var pending: [Profile] = []
+        pending.reserveCapacity(profiles.count)
+        for meta in profiles {
+            var profile = try loadProfile(id: meta.id)
+            let base = profile.displayConfigurations[displayUUID] ?? profile.globalDisplayConfiguration
+            profile.displayConfigurations[displayUUID] = base.withItemSpacingOffset(offset)
+            profile.modifiedAt = now
+            pending.append(profile)
+        }
+        for profile in pending {
+            let data = try encoder.encode(profile)
+            try data.write(to: profileURL(for: profile.id), options: .atomic)
+        }
+        for profile in pending {
+            if let index = profiles.firstIndex(where: { $0.id == profile.id }) {
+                profiles[index].modifiedAt = profile.modifiedAt
+            }
+        }
+        try saveManifest()
+    }
+
+    /// Broadcast global configuration and optionally every display entry so profile reapply cannot revert it.
+    /// Load all profiles before writing and update the manifest once, as in spacing broadcasts, to limit partial-update failures.
+    func updateAllProfilesGlobalConfiguration(
+        _ config: DisplayThawBarConfiguration,
+        propagateToDisplays: Bool
+    ) throws {
+        let now = Date()
+        var pending: [Profile] = []
+        pending.reserveCapacity(profiles.count)
+        for meta in profiles {
+            var profile = try loadProfile(id: meta.id)
+            profile.globalDisplayConfiguration = config
+            if propagateToDisplays {
+                for uuid in profile.displayConfigurations.keys {
+                    profile.displayConfigurations[uuid] = config
+                }
+            }
+            profile.modifiedAt = now
+            pending.append(profile)
+        }
+        for profile in pending {
+            let data = try encoder.encode(profile)
+            try data.write(to: profileURL(for: profile.id), options: .atomic)
+        }
+        for profile in pending {
+            if let index = profiles.firstIndex(where: { $0.id == profile.id }) {
+                profiles[index].modifiedAt = profile.modifiedAt
+            }
+        }
+        try saveManifest()
+    }
+
+    /// Exports all profiles as a single JSON file including metadata.
+    func exportAllProfiles() -> String? {
+        var entries = [ProfileExportEntry]()
+        for meta in profiles {
+            guard let profile = try? loadProfile(id: meta.id) else { continue }
+            entries.append(ProfileExportEntry(
+                profile: profile,
+                associatedDisplayUUID: meta.associatedDisplayUUID,
+                associatedDisplayName: meta.associatedDisplayName,
+                associatedSpaceKey: meta.associatedSpaceKey,
+                associatedSpaceName: meta.associatedSpaceName,
+                keepsLayoutChanges: meta.keepsLayoutChangesSetting,
+                reappliesAtLaunch: meta.reappliesAtLaunchSetting
+            ))
+        }
+        let bundle = ProfileExportBundle(entries: entries)
+        guard let data = try? encoder.encode(bundle) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    // MARK: - Space Association
+
+    /// Enforce unique Space ownership and cache the display label.
+    func setAssociatedSpace(key: String?, spaceName: String? = nil, forProfileID profileID: UUID) {
+        ProfileAssociations.assignSpace(key, name: spaceName, to: profileID, in: &profiles)
+        persistManifest()
+    }
+
+    /// Returns the profile associated with the given Space key, if any.
+    func profile(forSpaceKey key: String) -> ProfileMetadata? {
+        profiles.first { $0.associatedSpaceKey == key }
+    }
+
+    // MARK: - Display Association
+
+    /// Enforce unique display ownership and retain its name for disconnected displays.
+    func setAssociatedDisplay(uuid: String?, displayName: String? = nil, forProfileID profileID: UUID) {
+        ProfileAssociations.assignDisplay(uuid, name: displayName, to: profileID, in: &profiles)
+        persistManifest()
+    }
+
+    // MARK: - Layout Behavior
+
+    /// Sets whether the profile keeps layout changes and whether it applies
+    /// again at launch. A nil argument leaves that switch as it is.
+    func setLayoutBehavior(keepsChanges: Bool? = nil, reappliesAtLaunch: Bool? = nil, forProfileID profileID: UUID) {
+        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else { return }
+        if let keepsChanges {
+            profiles[index].keepsLayoutChangesSetting = keepsChanges
+        }
+        if let reappliesAtLaunch {
+            profiles[index].reappliesAtLaunchSetting = reappliesAtLaunch
+        }
+        persistManifest()
+    }
+
+    // MARK: - Profile Hotkeys
+
+    /// Creates hotkeys for all profiles and observes their changes.
+    /// Called during setup and whenever the profile list changes.
+    func rebuildProfileHotkeys() {
+        guard let appState else { return }
+
+        for (_, hotkey) in profileHotkeys {
+            hotkey.disable()
+        }
+        hotkeyProfileMap.removeAll()
+        profileHotkeyCancellables.removeAll()
+        // With profiles off the shortcuts stay saved but nothing listens for them.
+        guard ProfilesFeature.isOnInDefaults else {
+            profileHotkeys = [:]
+            return
+        }
+
+        // Clean up orphaned hotkey entries for deleted profiles.
+        let profileIDs = Set(profiles.map(\.id.uuidString))
+        if var saved = Defaults.dictionary(forKey: .profileHotkeys) as? [String: Data] {
+            let before = saved.count
+            saved = saved.filter { profileIDs.contains($0.key) }
+            if saved.count != before {
+                Defaults.set(saved, forKey: .profileHotkeys)
+            }
+        }
+
+        let saved = Defaults.dictionary(forKey: .profileHotkeys) as? [String: Data] ?? [:]
+        let dec = JSONDecoder()
+        let enc = JSONEncoder()
+
+        var newHotkeys: [UUID: Hotkey] = [:]
+        for meta in profiles {
+            let profileID = meta.id
+
+            // Create a hotkey with .profileApply (no-op action) so the
+            // default Listener doesn't trigger unwanted side effects.
+            let hotkey = Hotkey(action: .profileApply)
+            hotkey.performSetup(with: appState)
+
+            if let data = saved[meta.id.uuidString],
+               let combo = try? dec.decode(KeyCombination?.self, from: data)
+            {
+                hotkey.keyCombination = combo
+            }
+
+            hotkeyProfileMap[ObjectIdentifier(hotkey)] = profileID
+
+            // Assign after loading so the callback persists only future recorder changes.
+            hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
+                guard let self, let hotkey else { return }
+                let newCombo = hotkey.keyCombination
+                var dict = Defaults.dictionary(forKey: .profileHotkeys) as? [String: Data] ?? [:]
+                if let combo = newCombo, let data = try? enc.encode(combo) {
+                    dict[profileID.uuidString] = data
+                } else {
+                    dict.removeValue(forKey: profileID.uuidString)
+                }
+                Defaults.set(dict, forKey: .profileHotkeys)
+                hotkeyProfileMap[ObjectIdentifier(hotkey)] = newCombo != nil ? profileID : nil
+            }
+
+            newHotkeys[meta.id] = hotkey
+        }
+        profileHotkeys = newHotkeys
+    }
+
+    // MARK: - Auto-Switch
+
+    /// Already-active guards make switches between Spaces sharing a profile no-ops.
+    private func checkSpaceAndAutoSwitch() async {
+        guard let key = SpaceInfo.activeSpace().persistentKey else {
+            // Mid-animation Spaces may not have published keys yet; leave the bar unchanged until a later switch resolves.
+            diagLog.debug("Space auto-switch: active Space has no persistent key yet")
+            return
+        }
+        guard key != lastActiveSpaceKey else { return }
+        lastActiveSpaceKey = key
+
+        // Focus outranks a Space switch, same as it outranks a display one.
+        guard !focusFilterActive else { return }
+
+        await applyProfileForSpace(key: key)
+    }
+
+    /// Applies the profile requested by a Focus Filter activation.
+    func applyFocusFilterProfile(
+        requested idString: String? = UserDefaults.standard.string(forKey: "FocusFilterRequestedProfileID")
+    ) async {
+        guard ProfilesFeature.isOnInDefaults else { return }
+        guard let idString, let profileID = UUID(uuidString: idString) else { return }
+
+        guard profileID != activeProfileID, !keepsLiveLayoutAtLaunch(profileID: profileID) else {
+            focusFilterActive = true
+            return
+        }
+        guard let appState else { return }
+
+        diagLog.info("Focus Filter: applying profile \(idString)")
+        do {
+            let profile = try loadProfile(id: profileID)
+            let previousID = activeProfileID
+            activeProfileID = profileID
+            focusFilterActive = true
+            applyProfile(profile, to: appState, previousProfileID: previousID)
+        } catch {
+            diagLog.error("Focus Filter apply failed: \(error)")
+        }
+    }
+
+    /// Handles a Focus filter notification by asking the system which Focus filter is active.
+    /// Only that answer applies a profile or reverts to the Space's or display's profile.
+    func handleFocusFilterSignal() async {
+        switch await focusFilterSignal.action(focusFilterActive: focusFilterActive) {
+        case let .apply(profileID):
+            await applyFocusFilterProfile(requested: profileID)
+        case .revert:
+            focusFilterActive = false
+            diagLog.info("Focus Filter deactivated; reverting to the Space's or display's profile")
+            await applyProfileForSpaceOrDisplay()
+        case .ignore:
+            diagLog.debug("Focus Filter notification while no Focus Filter is active; ignoring it")
+        }
+    }
+
+    /// Reapply after spacing relaunch resets positions, since auto-switch does not fire for the same active profile.
+    /// applyOffset no-ops and layout waits for expected-set settling; the active profile remains unchanged.
+    func reapplyActiveProfile() {
+        guard ProfilesFeature.isOnInDefaults else { return }
+        guard let appState else { return }
+        guard let activeID = activeProfileID else { return }
+        do {
+            let profile = try loadProfile(id: activeID)
+            // Identical previous and current IDs let hooks distinguish refresh from profile switching.
+            applyProfile(profile, to: appState, previousProfileID: activeID)
+        } catch {
+            diagLog.error("reapplyActiveProfile failed: \(error)")
+        }
+    }
+
+    /// Applies the profile associated with the given display UUID, if any.
+    private func applyProfileForDisplay(uuid: String) async {
+        // Profiles switch on their own only while they are on.
+        guard ProfilesFeature.isOnInDefaults else { return }
+        guard let meta = profiles.first(where: { $0.associatedDisplayUUID == uuid }), meta.id != activeProfileID, let appState else { return }
+        switchAutomatically(to: meta, on: appState, trigger: "display \(uuid)", relaunchesApps: false)
+    }
+
+    /// Applies the profile associated with the given Space key, if any.
+    private func applyProfileForSpace(key: String) async {
+        guard ProfilesFeature.isOnInDefaults else { return }
+        guard let meta = profile(forSpaceKey: key), meta.id != activeProfileID, let appState else { return }
+        switchAutomatically(to: meta, on: appState, trigger: "Space \(key)")
+    }
+
+    /// Imports profiles from a file.
+    /// Profiles are staged in memory and published once, so the hotkey rebuild and the manifest write run once per file.
+    func importProfile(from url: URL) throws {
+        let data = try Data(contentsOf: url)
+        let bundle = try decoder.decode(ProfileExportBundle.self, from: data)
+        try ProfileImportPolicy.validate(bundle)
+
+        var staged = profiles
+        var published = false
+        // A write that fails part-way still publishes the profiles before it, so their files aren't orphaned.
+        defer {
+            if !published, staged.count != profiles.count {
+                profiles = staged
+                persistManifest()
+            }
+        }
+
+        for entry in bundle.entries {
+            let imported = Profile(
+                name: entry.profile.name,
+                content: ProfileImportPolicy.sanitized(entry.profile.content)
+            )
+
+            let importedData = try encoder.encode(imported)
+            try importedData.write(
+                to: profileURL(for: imported.id),
+                options: .atomic
+            )
+
+            staged.append(ProfileMetadata(
+                id: imported.id,
+                name: imported.name,
+                createdAt: imported.createdAt,
+                modifiedAt: imported.modifiedAt,
+                keepsLayoutChangesSetting: entry.keepsLayoutChanges,
+                reappliesAtLaunchSetting: entry.reappliesAtLaunch
+            ))
+
+            // Any existing profile that owns this display or Space gives it up; foreign-Mac Space keys stay inert.
+            if let displayUUID = entry.associatedDisplayUUID {
+                ProfileAssociations.assignDisplay(displayUUID, name: entry.associatedDisplayName, to: imported.id, in: &staged)
+            }
+            if let spaceKey = entry.associatedSpaceKey {
+                ProfileAssociations.assignSpace(spaceKey, name: entry.associatedSpaceName, to: imported.id, in: &staged)
+            }
+        }
+
+        published = true
+        profiles = staged
+        try saveManifest()
+    }
+}

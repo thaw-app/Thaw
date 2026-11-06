@@ -1,0 +1,40 @@
+name: Assign agentic workflow issues
+
+# gh-aw opens its `agentic-workflows` tracker issues unassigned; this assigns
+# them to the maintainer so they show up in "Assigned to me".
+
+on:
+  issues:
+    types: [opened, labeled, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  assign:
+    if: ${{ github.repository == 'thaw-app/Thaw' && contains(github.event.issue.labels.*.name, 'agentic-workflows') }}
+    runs-on: ubuntu-slim
+    permissions:
+      issues: write
+    steps:
+      - name: Assign maintainer
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const maintainer = 'diazdesandi';
+            const issue = context.payload.issue;
+            const alreadyAssigned = (issue.assignees || []).some(
+              (a) => a.login.toLowerCase() === maintainer.toLowerCase(),
+            );
+            if (alreadyAssigned) {
+              core.info(`#${issue.number} already assigned to ${maintainer}`);
+              return;
+            }
+
+            await github.rest.issues.addAssignees({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              assignees: [maintainer],
+            });
+            core.info(`Assigned #${issue.number} to ${maintainer}`);

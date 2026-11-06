@@ -1,0 +1,193 @@
+//
+//  RepairLaneTests.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import Testing
+@testable import Thaw
+
+@MainActor
+@Suite("Automatic repair passes follow one another")
+struct RepairLaneTests {
+    /// One instant for every enter, so a runner that stalls past staleAfter can't make a holder look abandoned.
+    private let now = ContinuousClock.now
+
+    @Test("A free lane admits at once; later passes run in the order they asked")
+    func passesRunInOrder() async throws {
+        let lane = RepairLane()
+        var order: [RepairOrchestrator.Work] = []
+
+        let first = try #require(await lane.enter(.postRestrictionRepair, at: now))
+        let second = await startedTask {
+            guard let hold = await lane.enter(.structuralNormalization, at: now) else { return }
+            order.append(hold.work)
+            lane.leave(hold)
+        }
+        let third = await startedTask {
+            guard let hold = await lane.enter(.overflowRebalance, at: now) else { return }
+            order.append(hold.work)
+            lane.leave(hold)
+        }
+
+        #expect(lane.current == .postRestrictionRepair)
+        #expect(lane.queued == [.structuralNormalization, .overflowRebalance])
+        #expect(order.isEmpty)
+
+        lane.leave(first)
+        await second.value
+        await third.value
+
+        #expect(order == [.structuralNormalization, .overflowRebalance])
+        #expect(lane.current == nil)
+    }
+
+    @Test("User work goes ahead of waiting automatic passes, behind earlier user work, and never interrupts the holder")
+    func userWorkJumpsTheQueue() async throws {
+        let lane = RepairLane()
+        var order: [RepairOrchestrator.Work] = []
+        func queue(_ work: RepairOrchestrator.Work, _ priority: RepairLane.Priority) async -> Task<Void, Never> {
+            await startedTask {
+                guard let hold = await lane.enter(work, priority: priority, at: now) else { return }
+                order.append(hold.work)
+                lane.leave(hold)
+            }
+        }
+
+        let holder = try #require(await lane.enter(.postRestrictionRepair, at: now))
+        let automatic = await queue(.structuralNormalization, .automatic)
+        let firstUser = await queue(.authoredOrderApply, .user)
+        let laterAutomatic = await queue(.overflowRebalance, .automatic)
+        let secondUser = await queue(.storeHygiene, .user)
+
+        #expect(lane.current == .postRestrictionRepair)
+        #expect(lane.queued == [.authoredOrderApply, .storeHygiene, .structuralNormalization, .overflowRebalance])
+
+        lane.leave(holder)
+        for task in [automatic, firstUser, laterAutomatic, secondUser] {
+            await task.value
+        }
+        #expect(order == [.authoredOrderApply, .storeHygiene, .structuralNormalization, .overflowRebalance])
+    }
+
+    @Test("A synchronous writer takes a free lane and is refused a held one")
+    func enterIfFree() throws {
+        let lane = RepairLane()
+
+        let first = try #require(lane.enterIfFree(.preRevealOrder))
+        #expect(lane.current == .preRevealOrder)
+        #expect(lane.enterIfFree(.manualLayoutEdit) == nil)
+
+        lane.leave(first)
+        let second = try #require(lane.enterIfFree(.manualLayoutEdit))
+        lane.leave(second)
+        #expect(lane.current == nil)
+    }
+
+    @Test("A pass cancelled while it queued drops out of line and never runs")
+    func cancelledWaiterDropsOut() async throws {
+        let lane = RepairLane()
+        let first = try #require(await lane.enter(.postRestrictionRepair, at: now))
+
+        let superseded = await startedTask {
+            await lane.enter(.structuralNormalization, at: now)
+        }
+        let next = await startedTask {
+            await lane.enter(.arrivalOrderRestore, at: now)
+        }
+
+        superseded.cancel()
+        #expect(await superseded.value == nil)
+        #expect(lane.queued == [.arrivalOrderRestore])
+
+        lane.leave(first)
+        let hold = try #require(await next.value)
+        #expect(lane.current == .arrivalOrderRestore)
+        lane.leave(hold)
+        #expect(lane.current == nil)
+    }
+
+    @Test("An already cancelled task is not admitted")
+    func cancelledTaskIsNotAdmitted() async {
+        let lane = RepairLane()
+        let task = Task { @MainActor in
+            withUnsafeCurrentTask { $0?.cancel() }
+            return await lane.enter(.overflowRebalance, at: now)
+        }
+        #expect(await task.value == nil)
+        #expect(lane.current == nil)
+    }
+
+    @Test("A pass that never returns loses the lane, and its late leave changes nothing")
+    func staleHolderIsTakenOver() async throws {
+        let lane = RepairLane()
+        let start = ContinuousClock.now
+
+        let stuck = try #require(await lane.enter(.postRestrictionRepair, at: start))
+        let taker = try #require(
+            await lane.enter(.structuralNormalization, at: start + RepairLane.staleAfter + .seconds(1))
+        )
+
+        #expect(lane.takeovers == 1)
+        #expect(lane.current == .structuralNormalization)
+
+        lane.leave(stuck)
+        #expect(lane.current == .structuralNormalization)
+
+        lane.leave(taker)
+        #expect(lane.current == nil)
+    }
+
+    @Test("A holder within its time is not taken over")
+    func freshHolderKeepsTheLane() async throws {
+        let lane = RepairLane()
+        let start = ContinuousClock.now
+        let first = try #require(await lane.enter(.postRestrictionRepair, at: start))
+
+        let second = await startedTask {
+            await lane.enter(.overflowRebalance, at: start + .seconds(5))
+        }
+
+        #expect(lane.queued == [.overflowRebalance])
+        #expect(lane.takeovers == 0)
+        #expect(lane.current == .postRestrictionRepair)
+
+        lane.leave(first)
+        let hold = try #require(await second.value)
+        lane.leave(hold)
+    }
+
+    @Test("Dropping automatic waiters turns them away and leaves user work in line")
+    func dropAutomaticWaiters() async throws {
+        let lane = RepairLane()
+        let holder = try #require(await lane.enter(.postRestrictionRepair, at: now))
+        let automatic = await startedTask { await lane.enter(.overflowRebalance, at: now) }
+        let user = await startedTask { await lane.enter(.revealReconcile, priority: .user, at: now) }
+
+        let dropped = lane.dropAutomaticWaiters { _ in true }
+
+        #expect(dropped == [.overflowRebalance])
+        #expect(await automatic.value == nil)
+        #expect(lane.queued == [.revealReconcile])
+        lane.leave(holder)
+        let userHold = try #require(await user.value)
+        lane.leave(userHold)
+    }
+
+    @Test("A pass cancelled in the same turn it is admitted hands the lane straight back")
+    func cancelledAsAdmitted() async throws {
+        let lane = RepairLane()
+        let first = try #require(await lane.enter(.postRestrictionRepair, at: now))
+        let waiter = await startedTask { await lane.enter(.overflowRebalance, at: now) }
+
+        // The cancellation handler's hop lands after leave() has already admitted the waiter.
+        waiter.cancel()
+        lane.leave(first)
+
+        #expect(await waiter.value == nil)
+        await mainActorQueueDrained()
+        #expect(lane.current == nil)
+        #expect(lane.queued.isEmpty)
+    }
+}

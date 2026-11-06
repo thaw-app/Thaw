@@ -1,0 +1,131 @@
+//
+//  HidingMethodSection.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import SwiftUI
+import ThawUI
+
+/// The one place to choose how items are hidden, with what each method gives and costs.
+///
+/// Native rewrites another app's settings, so it stays opt-in.
+struct HidingMethodSection: View {
+    @Bindable var settings: AdvancedSettings
+    @Environment(AppState.self) private var appState
+    @State private var confirmsSetAside = false
+    @State private var setAsideError: String?
+
+    private var experiment: NativeAppHidingExperiment {
+        appState.menuBarManager.nativeAppHidingExperiment
+    }
+
+    private var method: HidingMethod {
+        HidingMethod(nativeAppHidingEnabled: settings.enableNativeAppHiding)
+    }
+
+    private var methodBinding: Binding<HidingMethod> {
+        Binding(
+            get: { method },
+            set: { newValue in
+                guard NativeHidingStart.allowsMethodChange(journalNeedsAttention: experiment.journalNeedsAttention) else {
+                    return
+                }
+                // The Apple-items switch follows: off under Native, on under Standard.
+                settings.enableNativeAppHiding = newValue.usesNativeAppHiding
+            }
+        )
+    }
+
+    var body: some View {
+        ThawSection {
+            Text("Hiding")
+        } content: {
+            ThawPillPicker("Hiding method", selection: methodBinding, values: HidingMethod.allCases, title: \.localized)
+                .disabled(!NativeHidingStart.allowsMethodChange(journalNeedsAttention: experiment.journalNeedsAttention))
+                .annotation {
+                    VStack(alignment: .leading, spacing: ThawSpacing.tight) {
+                        Text(method.explanation)
+                        if experiment.journalNeedsAttention {
+                            Text("The hiding method can change again once the unreadable record is set aside.")
+                                .foregroundStyle(.orange)
+                        }
+                        if method == .native {
+                            nativeStatus
+                        } else if let notice = experiment.failedStartNotice {
+                            Text(notice)
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                }
+
+            PlatformLimitationsNotice()
+
+            if experiment.journalNeedsAttention {
+                unreadableRecordNotice
+            } else if experiment.previousSessionRecoveryFailed {
+                SettingsWarningPill(
+                    title: "Some apps may still be hidden",
+                    message: "Some apps hidden in a previous session couldn't be restored. Open Tools to review their recovery records.",
+                    tint: .orange,
+                    actionTitle: "Open Tools"
+                ) {
+                    appState.navigationState.settingsNavigationIdentifier = .tools
+                }
+            }
+        }
+    }
+
+    /// Asks before setting the unreadable record aside, because the apps it
+    /// lists stay switched off and Thaw can no longer tell which ones it hid.
+    @ViewBuilder
+    private var unreadableRecordNotice: some View {
+        SettingsWarningPill(
+            title: "Can't read the record of hidden apps",
+            message: "\(Constants.displayName) keeps a record of the apps it switches off in System Settings \(Constants.menuArrow) Menu Bar, and that record can't be read. Until you set it aside, \(Constants.displayName) won't show or hide apps that way.",
+            tint: .orange,
+            actionTitle: "Set Aside…"
+        ) {
+            setAsideError = nil
+            confirmsSetAside = true
+        }
+        .alert("Set aside the unreadable record?", isPresented: $confirmsSetAside) {
+            Button("Set Aside") {
+                do {
+                    try experiment.setAsideUnreadableRecord()
+                } catch {
+                    setAsideError = error.localizedDescription
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                // Closing the alert is all Cancel does; the record stays where it is.
+            }
+        } message: {
+            Text("\(Constants.displayName) keeps the file under a new name and starts a new record. Apps it hid before stay switched off, and you can choose which ones to show afterwards.")
+        }
+        if let setAsideError {
+            Text(setAsideError)
+                .foregroundStyle(.orange)
+        }
+    }
+
+    /// Why this session fell back to Standard, when it did.
+    @ViewBuilder
+    private var nativeStatus: some View {
+        if let fallbackReason {
+            Text("Using Standard for now: \(fallbackReason) Choose Standard and then Native to try again.")
+                .foregroundStyle(.orange)
+        }
+    }
+
+    /// Why this session went back to Standard while Native stays chosen, or nil when Native is running.
+    private var fallbackReason: String? {
+        NativeHidingStart.fallbackReason(
+            nativeChosen: settings.enableNativeAppHiding,
+            isActive: experiment.isActive,
+            journalNeedsAttention: experiment.journalNeedsAttention,
+            lastError: experiment.lastError
+        )
+    }
+}

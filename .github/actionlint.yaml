@@ -1,0 +1,11 @@
+# Runner labels actionlint does not know about. The Xcode 27 preview images
+# are GitHub-hosted but not yet in actionlint's built-in label list.
+self-hosted-runner:
+  labels:
+    - xcode-27
+    - xcode-27-xlarge
+paths:
+  # gh-aw emits concurrency.queue, which actionlint doesn't know yet.
+  .github/workflows/*.lock.yml:
+    ignore:
+      - 'unexpected key "queue" for "concurrency" section'

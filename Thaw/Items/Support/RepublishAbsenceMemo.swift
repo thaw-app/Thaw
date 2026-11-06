@@ -1,0 +1,71 @@
+//
+//  RepublishAbsenceMemo.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+/// Which Visible members MenuBarAgent did not republish in time, and when each was last missing.
+///
+/// The ordering pass waits up to three seconds for every authored member to be live. Without
+/// this, each following pass spends the same deadline on the same absentee. Entries expire so
+/// a member that returns is waited for again.
+nonisolated struct RepublishAbsenceMemo {
+    /// How long a failed republish is remembered.
+    static let memory: Duration = .seconds(10)
+
+    private var missingSince: [String: ContinuousClock.Instant] = [:]
+
+    var count: Int {
+        missingSince.count
+    }
+
+    var isEmpty: Bool {
+        missingSince.isEmpty
+    }
+
+    /// Whether this member was missing recently enough that a pass should not wait for it.
+    func isKnownAbsent(_ identifier: String) -> Bool {
+        missingSince[identifier] != nil
+    }
+
+    /// Drops every entry older than the memory window.
+    mutating func expire(now: ContinuousClock.Instant = .now) {
+        missingSince = missingSince.filter { $0.value.duration(to: now) < Self.memory }
+    }
+
+    /// Forgets members that are live again.
+    mutating func noteArrived(_ identifiers: some Sequence<String>) {
+        for identifier in identifiers {
+            missingSince.removeValue(forKey: identifier)
+        }
+    }
+
+    /// Stamps members that never republished, restarting the window for any already held.
+    mutating func noteMissing(_ identifiers: some Sequence<String>, at now: ContinuousClock.Instant = .now) {
+        for identifier in identifiers {
+            missingSince[identifier] = now
+        }
+    }
+
+    /// The wanted members a read shows as gone. An empty read saw nothing, as a cancelled one
+    /// does, so it names nobody.
+    static func absentees(wanted: Set<String>, live: Set<String>) -> Set<String> {
+        live.isEmpty ? [] : wanted.subtracting(live)
+    }
+
+    /// The wanted members nothing can republish: their app has no item on the bar and is not
+    /// running, as when an app was removed or changed its bundle identifier. A running app may
+    /// still publish, so it is waited for. Members not named by a bundle identifier are kept.
+    static func unreachable(wanted: Set<String>, liveNamespaces: Set<String>, runningBundleIDs: Set<String>) -> Set<String> {
+        wanted.filter { identifier in
+            let namespace = String(identifier.prefix { $0 != ":" })
+            return namespace.contains(".") && !liveNamespaces.contains(namespace) && !runningBundleIDs.contains(namespace)
+        }
+    }
+
+    /// Empties the memo so the next pass waits for every member again.
+    mutating func forget() {
+        missingSince.removeAll()
+    }
+}

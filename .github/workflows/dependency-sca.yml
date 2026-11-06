@@ -1,0 +1,58 @@
+# OSV lockfile scan for OpenSSF OSPS-VM-05.03; fails on unsuppressed vulns. The
+# CLI is pinned by version and SHA-256; the Action image can't read Package.resolved.
+name: Dependency SCA
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+  schedule:
+    # Weekly hygiene scan (offset from Scorecard / CodeQL).
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # The scan reads only the lockfiles, so a pull request that leaves them alone
+  # has nothing new to scan. A skipped job still satisfies the required check,
+  # and the weekly run catches advisories published since.
+  lockfiles:
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: ubuntu-slim
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect lockfile changes
+        id: filter
+        uses: thaw-app/org-ci/actions/detect-code-changes@369e3b50e278dc7799513209c6ddc8ec758d884b
+        with:
+          patterns: '((^|/)Package\.resolved$|^osv-scanner\.toml$|^\.github/workflows/dependency-sca\.yml$)'
+
+  dependency-sca:
+    needs: lockfiles
+    if: github.repository == 'thaw-app/Thaw' && (github.event_name != 'pull_request' || needs.lockfiles.outputs.code == 'true')
+    name: dependency-sca
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: thaw-app/org-ci/actions/dependency-sca@369e3b50e278dc7799513209c6ddc8ec758d884b
+        with:
+          lockfiles: |
+            Thaw.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+          config: osv-scanner.toml

@@ -1,0 +1,214 @@
+name: Release
+
+# Manual only; pushing a tag never releases. Run it on the tag (the release
+# script passes --ref): the app is built, notarized and attested in org-ci's
+# build-macos-app.yml, which attests the commit the run was dispatched from,
+# and published by org-ci's release-macos-app.yml. The release is created as a
+# draft with the attestation bundles attached and published when Publish
+# release is checked. The Sparkle feed lives in thaw-app/updates.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to publish (for example, 3.0.0-beta.1)
+        required: true
+        type: string
+      channel:
+        description: Sparkle channel (auto infers from tag suffix)
+        required: true
+        type: choice
+        default: auto
+        options:
+          - auto
+          - stable
+          - beta
+          - alpha
+      publish_release:
+        description: Publish the GitHub Release (uncheck to leave as draft)
+        required: false
+        type: boolean
+        default: false
+      staged_rollout:
+        description: >-
+          Stage a stable or beta update over a day. Uncheck to offer it to every
+          Mac at once. Alpha and nightly updates are never staged.
+        required: false
+        type: boolean
+        default: true
+      publish_appcast:
+        description: Push signed appcast.xml to thaw-app/updates gh-pages
+        required: false
+        type: boolean
+        default: true
+      dry_run:
+        description: "Dry run: build and report only. Publishes nothing, signs nothing."
+        required: false
+        type: boolean
+        default: false
+      release_notes:
+        description: >-
+          Optional manual override for release notes (Markdown/HTML). If left
+          blank, notes are auto-extracted from the CHANGELOG.md section for this
+          tag (Keep a Changelog style: "## [tag]"). Used for both the Thaw
+          GitHub Release body and the Sparkle appcast description. Multi-line
+          text is easiest via gh workflow run release.yml -f release_notes="$(cat notes.md)"
+          The web UI's field is single-line.
+        required: false
+        type: string
+        default: ""
+
+concurrency:
+  # Dry runs publish nothing, so they must not queue behind, or block, a real release.
+  group: sparkle-appcast${{ inputs.dry_run && '-dry-run' || '' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  meta:
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      channel: ${{ steps.meta.outputs.channel }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - name: Resolve tag and channel
+        id: meta
+        env:
+          TAG_NAME: ${{ inputs.tag }}
+          CHANNEL_INPUT: ${{ inputs.channel }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$TAG_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9._]+)?$ ]]; then
+            echo "Invalid tag name format. Must be in the form 1.2.3 or 1.2.3-rc.1"
+            exit 1
+          fi
+
+          channel="$CHANNEL_INPUT"
+          if [[ "$channel" == "auto" ]]; then
+            shopt -s nocasematch
+            if [[ "$TAG_NAME" =~ -(alpha|nightly)(\.|$) ]]; then
+              channel="alpha"
+            elif [[ "$TAG_NAME" =~ -(beta|rc)(\.|$) ]]; then
+              channel="beta"
+            else
+              channel="stable"
+            fi
+            shopt -u nocasematch
+          fi
+
+          case "$channel" in
+            stable|beta|alpha) ;;
+            *)
+              echo "Unsupported channel: $channel"
+              exit 1
+              ;;
+          esac
+
+          prerelease=false
+          if [[ "$channel" != "stable" ]]; then
+            prerelease=true
+          fi
+
+          {
+            echo "tag=$TAG_NAME"
+            echo "channel=$channel"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "tag=$TAG_NAME channel=$channel prerelease=$prerelease"
+
+  # The build runs in org-ci's reusable workflow, so the provenance names that
+  # workflow as the builder: SLSA v1.0 Build L3. It builds the commit this run
+  # was dispatched from and fails when the tag names another one. Needs
+  # approval on the `release` environment (admins can bypass); secrets aren't
+  # read before that. No attestation on a dry run: an attestation is a
+  # permanent Sigstore / GitHub record.
+  build:
+    needs: meta
+    if: github.repository == 'thaw-app/Thaw'
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    uses: thaw-app/org-ci/.github/workflows/build-macos-app.yml@369e3b50e278dc7799513209c6ddc8ec758d884b
+    with:
+      ref: refs/tags/${{ needs.meta.outputs.tag }}
+      version: ${{ needs.meta.outputs.tag }}
+      project-name: Thaw.xcodeproj
+      target-name: Thaw
+      scheme-name: Thaw
+      app-name: Thaw.app
+      dmg-name: Thaw.dmg
+      asset-prefix: Thaw
+      environment: release
+      # GitHub-hosted Xcode 27 preview image (arm64); xcode-27-xlarge for more cores.
+      runner: xcode-27
+      # The Thaw target's lint build phase requires the pinned SwiftLint on PATH.
+      prepare-script: scripts/install-swiftlint.sh
+      attest: ${{ !inputs.dry_run }}
+    secrets: inherit
+
+  # The release itself runs in org-ci's reusable release-macos-app.yml: it
+  # checks the build against the attested digests, signs the DMG and the SBOM
+  # with cosign, creates the Thaw GitHub Release as a draft, publishes the
+  # Sparkle ZIP and deltas as a release of thaw-app/updates, and when Publish
+  # release is checked publishes the release and pushes the appcast. The
+  # prepare-appcasts script applies Thaw's feed rules and produces the legacy
+  # 2.x feed for stonerl/Thaw. Needs approval on the `release` environment.
+  release:
+    needs: [meta, build]
+    if: github.repository == 'thaw-app/Thaw'
+    permissions:
+      contents: write
+      id-token: write
+    uses: thaw-app/org-ci/.github/workflows/release-macos-app.yml@369e3b50e278dc7799513209c6ddc8ec758d884b
+    with:
+      tag: ${{ needs.meta.outputs.tag }}
+      channel: ${{ needs.meta.outputs.channel }}
+      prerelease: ${{ needs.meta.outputs.prerelease == 'true' }}
+      project-name: Thaw.xcodeproj
+      target-name: Thaw
+      app-name: Thaw.app
+      asset-prefix: Thaw
+      commit: ${{ needs.build.outputs.commit }}
+      build-artifact: ${{ needs.build.outputs.artifact-name }}
+      provenance-artifact: ${{ needs.build.outputs.provenance-artifact-name }}
+      app-zip-name: ${{ needs.build.outputs.app-zip-name }}
+      dmg-name: ${{ needs.build.outputs.dmg-name }}
+      dmg-digest: ${{ needs.build.outputs.dmg-digest }}
+      sbom-name: ${{ needs.build.outputs.sbom-name }}
+      sbom-digest: ${{ needs.build.outputs.sbom-digest }}
+      dmg-bundle-name: ${{ needs.build.outputs.dmg-bundle-name }}
+      sbom-bundle-name: ${{ needs.build.outputs.sbom-bundle-name }}
+      release-notes: ${{ inputs.release_notes }}
+      changelog-paths: |
+        CHANGELOG.md
+        Thaw/Resources/CHANGELOG.md
+      # Matches the Sparkle version in Package.resolved.
+      sparkle-version: "2.10.0"
+      sparkle-sha256: c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c
+      updates-repository: thaw-app/updates
+      appcast-repository: thaw-app/updates
+      appcast-branch: gh-pages
+      appcast-url: https://thaw-app.github.io/updates/appcast.xml
+      # org-ci runs the script with a fixed environment, so the choice is which script to run.
+      appcast-script: ${{ inputs.staged_rollout && '.github/actions/prepare-appcasts/prepare_appcasts.py' || '.github/actions/prepare-appcasts/prepare_appcasts_unstaged.py' }}
+      # Keep historical 1.x entries and the 2.x line, never 3.x or newer; the
+      # script returns no legacy feed for other release lines.
+      legacy-appcast-repository: stonerl/Thaw
+      legacy-appcast-branch: main
+      legacy-appcast-url: https://stonerl.github.io/Thaw/appcast.xml
+      environment: release
+      # Sparkle's tools, ditto, codesign and stapler need macOS.
+      runner: xcode-27
+      publish-release: ${{ inputs.publish_release }}
+      publish-appcast: ${{ inputs.publish_appcast }}
+      dry-run: ${{ inputs.dry_run }}
+    secrets: inherit

@@ -1,0 +1,402 @@
+# Release and update distribution
+
+How Thaw ships installers vs in-app updates.
+
+## Who hosts what
+
+| What | Where | URL pattern |
+| --- | --- | --- |
+| **Appcast** (`appcast.xml`) | [`thaw-app/updates`](https://github.com/thaw-app/updates) GitHub Pages | `https://thaw-app.github.io/updates/appcast.xml` |
+| **Update payloads** (Sparkle ZIP + deltas, all channels) | `thaw-app/updates` GitHub Releases (**canonical**; appcast enclosures) | `https://github.com/thaw-app/updates/releases/download/<tag>/…` |
+| **Update payloads (cutover mirror)** | Also attached to `thaw-app/Thaw` releases for ~2–3 releases | same files, Thaw release URLs (not used by appcast) |
+| **DMG** (human installer) + **SBOM** + Sigstore bundles + SLSA provenance | [`thaw-app/Thaw`](https://github.com/thaw-app/Thaw) GitHub Releases only | `https://github.com/thaw-app/Thaw/releases/…` |
+
+The app polls the appcast (`SUFeedURL` in `Thaw/Resources/Info.plist`). Sparkle
+never downloads the DMG for in-app updates.
+
+## Diagram
+
+```mermaid
+flowchart LR
+  subgraph clients["Clients"]
+    App["Thaw.app<br/>Sparkle updater"]
+    Human["Human / Homebrew"]
+  end
+
+  subgraph updatesRepo["thaw-app/updates"]
+    Pages["GitHub Pages<br/>appcast.xml"]
+    UpRel["GitHub Releases<br/>ZIP + deltas"]
+  end
+
+  subgraph thawRepo["thaw-app/Thaw"]
+    ThawRel["GitHub Releases<br/>DMG + SBOM + provenance<br/>+ ZIP/deltas (cutover)"]
+    CI["Release workflow"]
+  end
+
+  App -->|"1. GET SUFeedURL"| Pages
+  Pages -->|"2. enclosure URLs"| App
+  App -->|"3. download + EdDSA verify"| UpRel
+
+  Human --> ThawRel
+
+  CI -->|"publish ZIP/deltas + appcast"| updatesRepo
+  CI -->|"publish DMG + SBOM + provenance<br/>+ ZIP/deltas mirror"| ThawRel
+```
+
+## In-app update path
+
+1. App opens `https://thaw-app.github.io/updates/appcast.xml`.
+2. Appcast lists the newest build and points at a ZIP (or delta) on `updates` releases.
+3. Sparkle downloads that file from `thaw-app/updates`.
+4. Sparkle verifies the EdDSA signature against `SUPublicEDKey`.
+5. Sparkle installs the update.
+
+The DMG is **not** on this path. It is for people who download an installer from
+GitHub (or similar).
+
+## What the release job does
+
+Both halves run in `thaw-app/org-ci` as reusable workflows; this repository's
+`release.yml` only validates the tag and passes Thaw's names, repositories and
+secrets. Order matters: update assets are published **before** the Thaw DMG so
+a failed `updates` publish does not leave a public installer without matching
+Sparkle payloads, and the appcast goes out last so no feed item names a file
+that is not public yet.
+
+1. Build, notarize and attest in org-ci's reusable
+   [`build-macos-app.yml`](https://github.com/thaw-app/org-ci/blob/main/.github/workflows/build-macos-app.yml)
+   workflow. It also generates a CycloneDX SBOM of the resolved SwiftPM
+   dependencies with Syft (`Thaw_<tag>.cdx.json`), checksums the DMG and the
+   SBOM, and signs build provenance for both (`*.intoto.jsonl`). Because the
+   build runs there and not in this repository's workflow, the provenance is
+   SLSA v1.0 Build L3.
+2. Publish in org-ci's reusable
+   [`release-macos-app.yml`](https://github.com/thaw-app/org-ci/blob/main/.github/workflows/release-macos-app.yml)
+   workflow. It refuses a tag whose release is already public, downloads the
+   build and checks the app's signature, the stapled ticket and the attested
+   digests before going on.
+3. Create Sparkle ZIP (and deltas when prior ZIPs exist), then run the
+   [appcast script](#appcast-preparation) on the generated feed.
+4. Publish ZIP + deltas to **`thaw-app/updates`** (same tag).
+5. Cosign-sign the installer DMG and SBOM; create the **`thaw-app/Thaw`** release
+   **as a draft** with DMG + SBOM + `*.sigstore.json` + `*.sha256` +
+   `*.intoto.jsonl`, and (during cutover) the same Sparkle ZIP + deltas as a
+   mirror.
+6. Publish the draft when **Publish release** is checked.
+7. Push signed `appcast.xml` to **`thaw-app/updates`** `gh-pages` (new enclosure
+   URLs point at `updates`, not the Thaw mirror), and the legacy feed to
+   `stonerl/Thaw` for a 2.x tag.
+
+### Cutover dual-publish
+
+For the first ~2–3 releases after moving Sparkle hosting to `thaw-app/updates`,
+ZIP and deltas are uploaded to **both** repos. The appcast keeps a single
+enclosure URL per file, pointing at `updates`. The Thaw copies are a safety net
+only. Remove the Thaw Sparkle attachments once a couple of updates-hosted
+releases have shipped cleanly.
+
+The release is drafted in step 5 and published in step 6. A failure before
+step 5 leaves no Thaw release, though after step 4 the `updates` release
+already exists under the tag; a failure in step 5 or 6 leaves an unpublished
+draft, and re-running the workflow finishes it. The provenance is attached when
+the draft is created, so a release is never public without it. A failed appcast
+push after step 6 leaves a public release without a feed item; re-running the
+workflow is refused for a published tag, so push the appcast by hand from the
+run's generated file in that case.
+
+Workflow: [`.github/workflows/release.yml`](../.github/workflows/release.yml).  
+Shared Sparkle action: [`thaw-app/org-ci` `sparkle-release`](https://github.com/thaw-app/org-ci/tree/main/actions/sparkle-release).
+
+Required **release-environment** secret on Thaw: `UPDATES_GITHUB_TOKEN`
+(`contents: write` on `thaw-app/updates`). The reusable workflows receive it,
+the Sparkle key and the Apple signing secrets through `secrets: inherit`, which
+matches them by name, so the names in this repository's settings must stay as
+org-ci documents them.
+
+## Dispatching a release
+
+Releases build an existing tag in `thaw-app/Thaw`, using that tag's project,
+deployment target, dependencies, and changelog. There is no separate source
+repository or private-package token to configure. The run is dispatched **on
+the tag** (`--ref`), because the build attests the commit the run was
+dispatched from and refuses a tag that names another one; the workflow file
+that runs is the tag's.
+
+The workflow is `workflow_dispatch` only, and its **tag** input is free text:
+Actions `choice` inputs are a static list in the YAML, so they cannot be filled
+from the tags that exist. [`scripts/release.sh`](../scripts/release.sh) supplies
+that list locally instead. It reads the remote tags, filters them to the shape
+the workflow accepts, lets you pick one, asks for the other inputs, and
+dispatches the run.
+
+```bash
+scripts/release.sh          # override the target with REPO=owner/repo
+```
+
+Anything the script does can be done by hand from the Actions tab or with
+`gh workflow run release.yml --ref 3.0.0-beta.1 -f tag=3.0.0-beta.1 ...`; the
+script only removes the chance of dispatching a tag that does not exist. A `3.0.0-beta.1` tag selects the
+beta channel automatically.
+
+### Xcode selection
+
+Release and DMG builds use `setup-xcode` with `xcode-version: latest` on the
+`xcode-27` runner. This selects the newest installed Xcode, including betas;
+it does not download versions that are absent from the runner. The action is
+pinned to a commit, but the Xcode version follows runner-image updates. Use an
+exact `xcode-version` instead if a release needs a fixed toolchain.
+
+### Building a DMG without releasing
+
+[`.github/workflows/build-dmg.yml`](../.github/workflows/build-dmg.yml) builds a
+signed, notarized DMG as an artifact retained for three days, with org-ci's
+`build-macos-app.yml` and no attestation. Select the workflow branch to build
+its triggering commit, or set **ref** to another branch, tag, or commit in this
+repository. Leaving **ref** empty does not switch to the default branch. The
+`.build` PR command uses this behavior to build the PR branch. The artifact is
+`build-dev-<short sha>` and holds `Thaw-dev.dmg`, its checksum, the SBOM and
+the exported app as a ZIP.
+
+## Dry runs
+
+Check **Dry run** when dispatching the workflow to build and report without
+publishing anything. Steps 1–3 run normally; steps 4–7 are skipped, so no
+GitHub Release is created (not even a draft), nothing is cosign-signed or
+attested, and no appcast is pushed. For 3.x releases, `thaw-app/updates` is the
+only appcast destination; 2.x releases also mirror to the legacy repository.
+
+Signing and attestation are skipped deliberately: cosign keyless signing and
+GitHub Artifact Attestations write permanent, public Sigstore / attestation
+records that cannot be retracted, so a rehearsal must not produce them.
+
+The run's job summary then reports:
+
+- every asset that *would* be uploaded, to which repository, with size and
+  SHA-256, and whether the release would be a draft or published;
+- the SBOM component inventory;
+- a unified diff of the generated `appcast.xml` against the live feed at
+  `thaw-app.github.io/updates`, plus the filtered legacy appcast against
+  `stonerl.github.io/Thaw` for 2.x releases only, so you can see exactly what
+  each update push would change.
+
+The DMG checksum, SBOM (+ checksum), and generated appcast are attached to the
+run as a `dry-run-<tag>` artifact for local inspection. For 2.x releases, this
+also includes `legacy-appcast.xml`, the filtered feed destined for the mirror.
+The DMG itself is not attached, because it is large and is rebuilt by the real
+release run.
+
+Dry runs use a separate concurrency group, so they never queue behind or block a
+real release.
+
+## Channels
+
+All three channels share one appcast, served from the feed host named by
+`SUFeedURL`. Stable items carry no `sparkle:channel`; beta and alpha items are
+tagged with theirs. Tag suffixes map to channels in the release workflow
+(`-beta` / `-rc` → beta, `-alpha` / `-nightly` → alpha), and the `channel`
+input overrides the inference when a tag needs to go somewhere its suffix does
+not imply.
+
+Subscribers pick one channel in Settings › About. All three read the same
+`SUFeedURL`; the appcast's `sparkle:channel` tags do the sorting.
+
+| Subscriber | Receives |
+| --- | --- |
+| Stable | items with no `sparkle:channel` |
+| Beta | untagged items, plus `beta` |
+| Alpha | untagged items, plus `alpha`, never `beta` |
+
+Beta is cumulative with stable, and that is not a choice: Sparkle's
+`allowedChannels` only widens what an updater accepts. An item with no
+`sparkle:channel` is on the default channel, and per `SPUUpdaterDelegate`,
+"the default channel is always included in the allowed set." No delegate
+return value keeps stable releases away from a subscriber.
+
+Alpha is only selectable on the macOS the rewrite targets. The threshold is
+`MacOSCompatibilityWarning.firstUnsupportedMajorVersion`, shared with the
+startup warning whose alert tells the user that support for that macOS arrives
+through this channel, so the release that raises the warning is the release
+that reveals the channel. On earlier systems alpha is absent from the picker,
+and a stored alpha selection is not honored, which keeps a user who moves back
+to a supported macOS from sitting on a feed that will never offer them
+anything.
+
+Alpha carries the rewritten app built against the next macOS: a different
+product line, not a riskier build of this one. It still shares the feed,
+because Sparkle offers the newest item a subscriber is allowed to see, and a
+3.x alpha item outranks anything the 2.x line can publish. An alpha subscriber
+does see the stable items; they simply never win. This holds only while stable
+stays behind alpha in version order, which is why no further 2.x stable
+release can be numbered above the alpha line.
+
+Alpha items are tagged `sparkle:channel` = `alpha`, so beta subscribers never
+see them: beta allows `beta` and the default, not `alpha`. The two tracks run
+in parallel rather than one containing the other.
+
+Cross-version safety does not rely on any of that. `generate_appcast` derives
+`sparkle:minimumSystemVersion` from each build's deployment target, so the 3.x
+items carry `27.0` and Sparkle skips them on macOS 26, including later, when
+3.0 goes final and drops its channel tag to become the default.
+
+Promotion between stable and beta stays cheap, because they share a feed: to
+move a build from beta to stable, drop its `sparkle:channel` rather than
+publishing a second item for the same version. Beta subscribers already have
+that build and are offered nothing; stable subscribers pick it up. Two items
+sharing a version and differing only by channel is the case to avoid. For 2.x
+releases, promotion also reaches the mirrored legacy appcast.
+
+### Promoting a release candidate
+
+[`.github/workflows/promote.yml`](../.github/workflows/promote.yml) ships a
+published candidate as stable without rebuilding it. This only works for a
+candidate **built with its final version**: `MARKETING_VERSION = "2.1.0"`, a new
+build number, tagged `2.1.0-rc.1`. The version string is inside the signed app,
+so a build made as `2.1.0-rc.1` would say so in About forever, and the workflow
+refuses it. While the build is on the beta channel, appcast preparation shows
+the tag as its version, so testers still see `2.1.0-rc.1`.
+
+1. Add a `## [2.1.0]` section to `CHANGELOG.md` on `development`.
+2. Run **Promote** from `development` with **tag** `2.1.0-rc.1` (dry run first).
+
+It removes the item's channel, renames it `2.1.0`, gives it the stable notes and
+sets its date to now, so the [staged rollout](#staged-rollout) starts from the
+promotion; uploads the same ZIP as `Thaw_2.1.0.zip` to a `2.1.0` release on
+`thaw-app/updates`, so later stable releases can build deltas from it; tags
+`2.1.0` on the candidate's commit; and publishes a `2.1.0` release with the
+candidate's DMG, SBOM, Sigstore bundles and provenance, which still verify
+because the bytes are the same. `generate_appcast --channel` only applies to
+items it creates, so later releases leave the promoted item alone. Each step checks for its own
+result first, so a run that fails partway can be rerun with the same tag.
+
+Switching *away* from alpha does not roll a user back. The alpha app's version
+line is ahead of the shipping app's, so the stable feed offers nothing newer
+and Sparkle stays put. Returning to the shipping app is a reinstall, which is
+worth saying wherever alpha is advertised.
+
+### Getting alpha 7 users onto beta 1
+
+`3.0.0-alpha.7` (build 108, source stamp `b03a2c1-dirty`) sets
+`allowedChannels` to `alpha` and ignores saved channel preferences. Beta 1
+added a channel picker, but alpha 7 couldn't find the update because its
+appcast entry was tagged `beta`.
+
+The canonical appcast now lists `3.0.0-beta.1` (build 111) without a channel
+tag, so alpha 7 can find it. The signed download is unchanged, and there is
+still only one entry for this build. Its `minimumSystemVersion` stays at
+`27.0`: every channel on macOS 27 can receive it, including Stable, while
+macOS 26 remains excluded. The preparation action keeps this entry untagged
+on every release.
+
+Users who previously selected Alpha/Nightly still need to choose **Beta** in
+About Thaw after updating to receive later betas. The feed change cannot
+change their saved preference. Any future update that migrates that preference
+must also reach Alpha/Nightly subscribers; an update published only on Beta
+would leave them stuck again.
+
+## Staged rollout
+
+Stable and beta updates reach Macs in stages, and the last ones can take up to
+two days. Thaw 3 has no stable release yet, so Beta is its default channel.
+Nightly items aren't staged.
+
+Sparkle puts each Mac in one of 7 random groups and opens one group per
+interval, counted from the item's `pubDate`. Thaw's interval is 4 hours
+(`sparkle:phasedRolloutInterval` = `14400`):
+
+| Hours after `pubDate` | 0 | 4 | 8 | 12 | 16 | 20 | 24 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Groups allowed | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+
+A Mac sees the update at its next automatic check, once a day by default, so
+the last Macs get it up to about 48 hours after `pubDate`.
+
+A manual update check or an item marked as critical skips the stages. So does
+anything that doesn't update through Sparkle, such as the DMG.
+
+To offer a stable or beta update to every Mac at once, uncheck **Staged
+rollout** when dispatching **Release**, or answer no to the staging question in
+`scripts/release.sh`. Release then runs
+[`prepare_appcasts_unstaged.py`](../.github/actions/prepare-appcasts/prepare_appcasts_unstaged.py),
+which leaves the interval off the released item; older items keep theirs. Later
+releases keep it unstaged too, since the live feed shows it has no interval. Macs
+still get it at their next automatic check, so the last ones can take a day. A
+dry run asks the same question, so its feed diff shows the choice.
+
+[`prepare_appcasts.py`](../.github/actions/prepare-appcasts/prepare_appcasts.py)
+adds the interval to stable and beta items that don't have one. Later runs keep
+a different value you add to an item by hand. **Promote** runs that script from
+`development`, but **Release** runs the copy on the tag, so a tag built from a
+branch without this rule isn't staged.
+
+Thaw has no analytics, so people decide when to stop a rollout, using GitHub
+issues and Discord. Publish at the start of a maintainer's day, and have them
+watch both for the first 24 hours.
+
+### Halting a rollout
+
+Any maintainer can halt a rollout for a crash at launch, lost settings, or menu
+bar items people can't reach.
+
+1. Remove the item from `appcast.xml` on the `gh-pages` branch of
+   `thaw-app/updates`, and for a 2.x item from `main` on `stonerl/Thaw`. The feed
+   isn't signed, so a hand edit is safe. Sparkle then stops offering the update.
+2. Set the release back to draft on both `thaw-app/updates` and `thaw-app/Thaw`,
+   for its tag, and for a promoted release the candidate's tag too. Later release
+   runs re-read the ZIPs of published releases, and `generate_appcast` would add
+   the update back. This also takes down the DMG.
+3. Ship the fix with a higher build number, and read the feed diff from a dry run
+   first to confirm the pulled item stays out.
+
+Halting can't undo an install. Macs that already updated stay on that build until
+the fix ships, and Sparkle doesn't move a Mac to an older version. A Mac that
+already downloaded the update can still install it, so warn people on Discord.
+
+## Legacy installs
+
+Older builds may still poll `https://stonerl.github.io/Thaw/appcast.xml`
+(GitHub Pages from [`stonerl/Thaw`](https://github.com/stonerl/Thaw) `main`,
+path `/appcast.xml`). Only **2.x release tags** publish a filtered copy of
+`appcast.xml` to that repo after publishing to `thaw-app/updates`. The copy
+retains historical 1.x and 2.x entries with their existing enclosure signatures;
+3.x and newer entries are excluded. The canonical appcast is unchanged.
+**3.x releases never push to `stonerl/Thaw`** and do not require
+`LEGACY_APPCAST_TOKEN`. Existing installs
+must have moved to the `thaw-app.github.io/updates` `SUFeedURL` to receive the
+3.x release line.
+
+Historical enclosure URLs already in the appcast (for example old
+`stonerl/Thaw` release ZIP links) stay as-is so EdDSA signatures remain valid.
+Only **new** items point at `thaw-app/updates` releases.
+
+## Appcast preparation
+
+[`prepare_appcasts.py`](../.github/actions/prepare-appcasts/prepare_appcasts.py)
+owns the appcast rules: reapply missing macOS 26 caps to 2.x entries,
+keep the beta 1 recovery bridge untagged, show a channel item's tag as its
+version (`2.1.0-rc.1` for a build made as `2.1.0`), add the
+[rollout interval](#staged-rollout) to stable and beta items, restore the notes
+`generate_appcast` drops from every earlier archive it re-reads for deltas
+(from a snapshot of the feed taken before the run), and generate a 1.x/2.x-only
+legacy feed when releasing a 2.x tag. It uses Python's standard-library XML
+parser without external dependencies. Its two output paths feed publishing,
+dry-run comparisons, and artifact uploads.
+
+The release workflow passes the script to org-ci's `release-macos-app.yml` as
+`appcast-script`, which runs it on the generated feed with `APPCAST_PATH`,
+`PREVIOUS_APPCAST_PATH`, `RELEASE_TAG` and `CHANNEL` set and reads
+`appcast-path` and `legacy-appcast-path` back from `GITHUB_OUTPUT`.
+[`promote.yml`](../.github/workflows/promote.yml) still calls it through the
+local [`prepare-appcasts`](../.github/actions/prepare-appcasts/action.yml)
+action. The script comes from the tag being released, like the workflow itself,
+because a release is dispatched on its tag.
+
+Run the tests locally (no signing credentials or network access needed):
+
+```bash
+python3 -B -m unittest discover -s .github/actions/prepare-appcasts/tests -v
+```
+
+## Related
+
+- [Verifying releases](VERIFYING_RELEASES.md): signatures, public key, how to check a build
+- [Assurance case](ASSURANCE_CASE.md): update authenticity claims

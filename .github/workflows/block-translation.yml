@@ -1,0 +1,24 @@
+name: "Block Translation (PRs)"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "**/*.xcstrings"
+
+permissions:
+  contents: read
+
+jobs:
+  block-manual-translations:
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: ubuntu-slim
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: thaw-app/org-ci/actions/block-translation-prs@369e3b50e278dc7799513209c6ddc8ec758d884b
+        with:
+          product: Thaw
+          crowdin-url: https://crowdin.com/project/thaw
+          translation-sync-branch: l10n_development

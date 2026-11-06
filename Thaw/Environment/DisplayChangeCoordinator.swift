@@ -1,0 +1,121 @@
+//
+//  DisplayChangeCoordinator.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import Combine
+import MenuBarModel
+
+@MainActor
+protocol DisplayChangeEffects: AnyObject {
+    func stampDisplayChanged()
+    func seedDisplayConfigurations()
+    func startSettle(reason: String)
+    func resolveDisplayProfile() async
+    func applyDisplaySpacing()
+    func awaitSettle() async
+    func cleanImagesAfterRemoval() async
+    func applyPresentationPolicy()
+    func recaptureImages() async
+}
+
+/// Runs a display change's steps once per settled generation. A newer generation abandons the rest
+/// of the run and starts the steps again.
+@MainActor
+final class DisplayChangeCoordinator {
+    private let snapshot: EnvironmentSnapshot
+    private let settlements: AnyPublisher<EnvironmentChange, Never>
+    private let effects: any DisplayChangeEffects
+    private let slot = TaskSlot()
+    /// Runs apart from the slot, so an unchanged settle never calls off a change still running.
+    private var activeDisplayCheck: Task<Void, Never>?
+    private var subscription: AnyCancellable?
+    private let diagLog = DiagLog(category: "DisplayChangeCoordinator")
+
+    init(snapshot: EnvironmentSnapshot, settlements: some Publisher<EnvironmentChange, Never>, effects: any DisplayChangeEffects) {
+        self.snapshot = snapshot
+        self.settlements = settlements.eraseToAnyPublisher()
+        self.effects = effects
+    }
+
+    convenience init(environment: DisplayEnvironment, effects: any DisplayChangeEffects) {
+        self.init(snapshot: environment.snapshot, settlements: environment.settlements, effects: effects)
+    }
+
+    /// Calling it again while listening does nothing.
+    func start() {
+        guard subscription == nil else { return }
+        subscription = settlements.sink { [weak self] change in
+            self?.run(change)
+        }
+    }
+
+    func stop() {
+        subscription = nil
+        slot.cancel()
+        activeDisplayCheck?.cancel()
+    }
+
+    func waitUntilIdle() async {
+        await waitForActiveDisplayCheck()
+        await slot.waitUntilFinished()
+    }
+
+    func waitForActiveDisplayCheck() async {
+        await activeDisplayCheck?.value
+    }
+
+    private func run(_ change: EnvironmentChange) {
+        let steps = DisplayChangePlan.steps(for: change)
+        guard change != .none else {
+            activeDisplayCheck = Task { [weak self, previous = activeDisplayCheck] in
+                await previous?.value
+                for step in steps {
+                    await self?.perform(step)
+                }
+            }
+            return
+        }
+        let generation = snapshot.generation
+        slot.replace { [weak self] _ in
+            await self?.perform(steps, for: change, generation: generation)
+        }
+    }
+
+    private func perform(_ steps: [DisplayChangeStep], for change: EnvironmentChange, generation: Int) async {
+        diagLog.info("Display change generation \(generation) (\(change.rawValue)): running \(steps.count) steps")
+        for step in steps {
+            guard snapshot.generation == generation else {
+                diagLog.info("Display change generation \(generation) superseded by \(snapshot.generation) before \(step); abandoning")
+                return
+            }
+            await perform(step)
+        }
+        diagLog.info("Display change generation \(generation) (\(change.rawValue)) done")
+    }
+
+    private func perform(_ step: DisplayChangeStep) async {
+        switch step {
+        case .stampDisplayChanged:
+            effects.stampDisplayChanged()
+        case .seedConfigurations:
+            effects.seedDisplayConfigurations()
+        case let .startSettle(reason):
+            effects.startSettle(reason: reason)
+        case .resolveProfile:
+            await effects.resolveDisplayProfile()
+        case .applySpacing:
+            effects.applyDisplaySpacing()
+        case .awaitSettle:
+            await effects.awaitSettle()
+        case .cleanImages:
+            await effects.cleanImagesAfterRemoval()
+        case .applyPresentationPolicy:
+            effects.applyPresentationPolicy()
+        case .recaptureImages:
+            await effects.recaptureImages()
+        }
+    }
+}

@@ -1,0 +1,4 @@
+files:
+  - source: /Thaw/Resources/Localizable.xcstrings
+    translation: /Thaw/Resources/Localizable.xcstrings
+    multilingual: 1

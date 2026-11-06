@@ -1,0 +1,205 @@
+//
+//  LayoutBarGroupHandleView.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import Cocoa
+import MenuBarModel
+
+// MARK: - LayoutBarGroupHandleView
+
+/// A grip at the leading edge of a same-bundle cluster that drags the whole
+/// group as one block.
+///
+/// Not a LayoutBarArrangedView, so it stays outside the single-item swap
+/// machinery; its own pasteboard type routes to a whole-group drop.
+final class LayoutBarGroupHandleView: NSView {
+    private enum Metrics {
+        static let width: CGFloat = 11
+        static let dotDiameter: CGFloat = 2
+        static let dotSpacing: CGFloat = 3
+        static let columnSpacing: CGFloat = 3
+    }
+
+    /// The container the group currently lives in, frozen for the drag.
+    weak var sourceContainer: LayoutBarContainer?
+
+    /// The section the group is being dragged out of.
+    let sourceSection: MenuBarSection.Name
+
+    /// The persistent identifiers of the group's members, in visual order.
+    var memberIdentifiers: [String]
+
+    init(
+        sourceContainer: LayoutBarContainer,
+        sourceSection: MenuBarSection.Name,
+        memberIdentifiers: [String]
+    ) {
+        self.sourceContainer = sourceContainer
+        self.sourceSection = sourceSection
+        self.memberIdentifiers = memberIdentifiers
+        super.init(frame: CGRect(origin: .zero, size: CGSize(width: Metrics.width, height: 18)))
+        unregisterDraggedTypes()
+        toolTip = String(localized: "Drag to move the group. Right-click for group actions.")
+    }
+
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    /// The handle's preferred size for a cluster of the given height.
+    static func preferredSize(height: CGFloat) -> CGSize {
+        CGSize(width: Metrics.width, height: max(height, 18))
+    }
+
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: .openHand)
+    }
+
+    override func draw(_: NSRect) {
+        // Two columns of dots, a compact "grip" affordance.
+        let color = NSColor.secondaryLabelColor.withAlphaComponent(0.85)
+        color.setFill()
+
+        let columnCount = 2
+        let rowCount = 3
+        let totalColumnsWidth = CGFloat(columnCount) * Metrics.dotDiameter
+            + CGFloat(columnCount - 1) * Metrics.columnSpacing
+        let totalRowsHeight = CGFloat(rowCount) * Metrics.dotDiameter
+            + CGFloat(rowCount - 1) * Metrics.dotSpacing
+        let startX = bounds.midX - (totalColumnsWidth / 2)
+        let startY = bounds.midY - (totalRowsHeight / 2)
+
+        for column in 0 ..< columnCount {
+            for row in 0 ..< rowCount {
+                let dot = CGRect(
+                    x: startX + CGFloat(column) * (Metrics.dotDiameter + Metrics.columnSpacing),
+                    y: startY + CGFloat(row) * (Metrics.dotDiameter + Metrics.dotSpacing),
+                    width: Metrics.dotDiameter,
+                    height: Metrics.dotDiameter
+                )
+                NSBezierPath(ovalIn: dot).fill()
+            }
+        }
+    }
+
+    override func mouseDown(with _: NSEvent) {
+        // Swallow the mouse-down so the drag begins from this view.
+    }
+
+    /// The grip is the most direct place to act on a whole group, so it offers
+    /// the same menu a member does.
+    override func rightMouseDown(with event: NSEvent) {
+        guard let menu = groupMenu() else {
+            super.rightMouseDown(with: event)
+            return
+        }
+        menu.popUp(positioning: nil, at: CGPoint(x: 0, y: bounds.maxY), in: self)
+    }
+
+    // MARK: Accessibility
+
+    /// A named handle whose Show Menu action opens the group menu for VoiceOver.
+    override func isAccessibilityElement() -> Bool {
+        true
+    }
+
+    override func accessibilityRole() -> NSAccessibility.Role? {
+        .handle
+    }
+
+    override func accessibilityLabel() -> String? {
+        String(localized: "Group handle", comment: "VoiceOver name for the grip that drags a whole group in the layout editor")
+    }
+
+    override func accessibilityPerformShowMenu() -> Bool {
+        guard let menu = groupMenu() else { return false }
+        menu.popUp(positioning: nil, at: CGPoint(x: 0, y: bounds.maxY), in: self)
+        return true
+    }
+
+    /// The group's menu, or nil when the group can no longer be resolved.
+    private func groupMenu() -> NSMenu? {
+        guard let container = sourceContainer,
+              let appState = container.appState
+        else {
+            return nil
+        }
+        let orderedItems = container.orderedItemsForMenu()
+        guard let group = appState.itemGroupManager
+            .resolvedGroups(for: orderedItems)
+            .first(where: { group in
+                group.memberIndices.contains { index in
+                    orderedItems.indices.contains(index)
+                        && memberIdentifiers.contains(orderedItems[index].uniqueIdentifier)
+                }
+            }),
+            let menu = LayoutBarItemMenu.menu(
+                subject: .group(group),
+                section: sourceSection,
+                orderedItems: orderedItems,
+                appState: appState
+            )
+        else {
+            return nil
+        }
+        return menu
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        super.mouseDragged(with: event)
+        guard !memberIdentifiers.isEmpty else {
+            return
+        }
+
+        let pasteboardItem = NSPasteboardItem()
+        pasteboardItem.setString(
+            memberIdentifiers.joined(separator: "\n"),
+            forType: .layoutBarGroupHandle
+        )
+        let draggingItem = NSDraggingItem(pasteboardWriter: pasteboardItem)
+
+        if let container = sourceContainer,
+           let snapshot = container.snapshotCluster(memberIdentifiers: memberIdentifiers)
+        {
+            let frameInSelf = convert(snapshot.rect, from: container)
+            draggingItem.setDraggingFrame(frameInSelf, contents: snapshot.image)
+        } else {
+            draggingItem.setDraggingFrame(bounds, contents: nil)
+        }
+
+        beginDraggingSession(with: [draggingItem], event: event, source: self)
+    }
+}
+
+// MARK: LayoutBarGroupHandleView: NSDraggingSource
+
+extension LayoutBarGroupHandleView: NSDraggingSource {
+    func draggingSession(_: NSDraggingSession, sourceOperationMaskFor _: NSDraggingContext) -> NSDragOperation {
+        .move
+    }
+
+    func draggingSession(_ session: NSDraggingSession, willBeginAt _: NSPoint) {
+        // Freeze the source container so a cache refresh can't dissolve the
+        // group mid-drag before the drop commits.
+        sourceContainer?.acceptsViewUpdates = false
+        session.animatesToStartingPositionsOnCancelOrFail = true
+    }
+
+    func draggingSession(_: NSDraggingSession, endedAt _: NSPoint, operation: NSDragOperation) {
+        // A successful drop re-enables the source container in the drop handler;
+        // a cancelled or rejected drag restores it here.
+        if operation == [] {
+            sourceContainer?.acceptsViewUpdates = true
+        }
+    }
+}
+
+// MARK: - Pasteboard type
+
+extension NSPasteboard.PasteboardType {
+    static let layoutBarGroupHandle = Self("\(Constants.bundleIdentifier).layout-bar-group-handle")
+}

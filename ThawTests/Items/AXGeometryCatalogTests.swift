@@ -1,0 +1,408 @@
+//
+//  AXGeometryCatalogTests.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import Foundation
+import Testing
+@testable import Thaw
+
+@Suite("AX geometry catalog correlation")
+struct AXGeometryCatalogTests {
+    @Test("A blank MenuBarAgent group retains its inner menu item's identity")
+    func groupedSystemItemUsesInnerIdentity() {
+        let identity = AXGeometryCatalog.identityTitle(
+            namespace: .menuBarAgent,
+            attributes: .init(),
+            descendants: [.init(identifier: "com.apple.menuextra.sound")]
+        )
+        #expect(identity == "com.apple.menuextra.sound")
+    }
+
+    @Test("Capture resolves unnamed Time Machine beside Siri using discovery's identity")
+    func timeMachineCaptureIdentity() {
+        let title = AXGeometryCatalog.identityTitle(namespace: .systemUIServer, attributes: .init(), descendants: [])
+        #expect(title == MenuBarItemTag.timeMachine.title)
+        let rect = CGRect(x: 1642, y: 4, width: 22, height: 22)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 798, itemIndex: 1, identityTitle: title, frame: rect),
+            AXGeometryCatalog.Entry(
+                ownerPID: 798,
+                itemIndex: 0,
+                identityTitle: "Siri",
+                frame: CGRect(x: 1807, y: 3, width: 17, height: 24)
+            ),
+        ]
+        #expect(AXGeometryCatalog.match(
+            ownerPID: 798, identityTitle: MenuBarItemTag.timeMachine.title, bounds: rect, in: snapshot
+        ) == .frame(rect))
+    }
+
+    /// Live on 2026-10-09. A Live Activity reports a container a point larger than itself among its
+    /// descendants. The container covers the whole crop, so it overlapped it by exactly as much as
+    /// the item's own frame did. That was read as a tie, the item got no live frame, and its picture
+    /// was never taken.
+    @Test("An item whose descendant frame encloses it still resolves to its own frame")
+    func enclosingDescendantDoesNotTieWithTheItem() {
+        let pill = "live-activity-pill-com.apple.chrono.WidgetRenderer-Activities"
+        let own = CGRect(x: 1338.9, y: 3, width: 109.6, height: 24)
+        let frames = [
+            own,
+            CGRect(x: 1391.05, y: 0, width: 60.5, height: 30),
+            CGRect(x: 1391, y: 0, width: 61, height: 30),
+            CGRect(x: 1391.5, y: 8, width: 57.3, height: 14.3),
+            CGRect(x: 1337.9, y: 1.5, width: 111.1, height: 27),
+        ]
+        #expect(AXGeometryCatalog.frame(overlapping: own, in: frames) == own)
+        #expect(AXGeometryCatalog.frame(overlapping: own, in: frames.reversed()) == own)
+
+        var snapshot = frames.map { AXGeometryCatalog.Entry(ownerPID: 907, itemIndex: 0, identityTitle: pill, frame: $0) }
+        snapshot.append(AXGeometryCatalog.Entry(
+            ownerPID: 907,
+            itemIndex: 1,
+            identityTitle: "com.apple.menuextra.audiovideo",
+            frame: CGRect(x: 1470, y: 0, width: 20, height: 30)
+        ))
+        #expect(AXGeometryCatalog.match(ownerPID: 907, identityTitle: pill, bounds: own, in: snapshot) == .frame(own))
+    }
+
+    @Test("Two different frames that fit the crop equally well are still a tie")
+    func equallyFittingFramesStayAmbiguous() {
+        let crop = CGRect(x: 100, y: 0, width: 24, height: 24)
+        let left = CGRect(x: 94, y: 0, width: 24, height: 24)
+        let right = CGRect(x: 106, y: 0, width: 24, height: 24)
+        #expect(AXGeometryCatalog.frame(overlapping: crop, in: [left, right]) == nil)
+    }
+
+    @Test("Legacy identity resolution leaves Siri and other anonymous hosts alone")
+    func legacyIdentityIsScoped() {
+        #expect(AXGeometryCatalog.identityTitle(
+            namespace: .systemUIServer, attributes: .init(title: "Siri"), descendants: []
+        ) == "Siri")
+        #expect(AXGeometryCatalog.identityTitle(
+            namespace: .menuBarAgent, attributes: .init(), descendants: []
+        ) == nil)
+    }
+
+    @Test("Whitespace-only labels resolve to the inventory's identity")
+    func whitespaceLabelsMatchInventory() {
+        let namespace = MenuBarItemTag.Namespace.string("com.example.app")
+        let catalog = AXGeometryCatalog.identityTitle(
+            namespace: namespace,
+            attributes: .init(identifier: " ", title: "\t", accessibilityDescription: " \n"),
+            descendants: [.init(identifier: "_NS:12"), .init(accessibilityDescription: "Battery")]
+        )
+        let inventory = MenuBarItemAXProvider.rawItem(
+            namespace: namespace,
+            labels: AXItemLabels(
+                identifier: " ",
+                childIdentifier: "_NS:12",
+                accessibilityDescription: " \n",
+                childDescription: "Battery",
+                axTitle: "\t"
+            ),
+            fallbackIndex: 0,
+            bounds: .zero,
+            ownerPID: 1
+        ).identityTitle
+        #expect(catalog == inventory)
+        #expect(catalog == MenuBarItemAXProvider.identityTitle(
+            namespace: namespace, identifier: nil, accessibilityDescription: "Battery", displayTitle: "Battery"
+        ))
+    }
+
+    @Test("A neighbour cannot validate another process's stale crop")
+    func crossOwnerReplacementIsRejected() {
+        let rect = CGRect(x: 851, y: 4.5, width: 24, height: 24)
+        let snapshot = [AXGeometryCatalog.Entry(ownerPID: 2, itemIndex: 0, identityTitle: "Item-0", frame: rect)]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-0", bounds: rect, in: snapshot) == .ambiguous)
+    }
+
+    @Test("Collapsed Thaw controls do not claim a neighbouring glyph", arguments: [
+        "Thaw.ControlItem.Hidden", "Thaw.ControlItem.AlwaysHidden", "Thaw.ControlItem.Visible",
+    ])
+    func collapsedDividerDoesNotInvalidateCrop(title: String) {
+        // Droppy's live crop overlapped the 2-point divider by 1.5 points.
+        let rect = CGRect(x: 1582, y: 3, width: 32, height: 24)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: "DroppyMenuBar", frame: rect),
+            AXGeometryCatalog.Entry(
+                ownerPID: ProcessInfo.processInfo.processIdentifier,
+                itemIndex: 1,
+                identityTitle: title,
+                frame: CGRect(x: 1581.5, y: 3, width: 2, height: 24)
+            ),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "DroppyMenuBar", bounds: rect, in: snapshot) == .frame(rect))
+    }
+
+    @Test("Visible dividers and other processes still block overlapping crops", arguments: [
+        ("Thaw.ControlItem.Hidden", CGFloat(3), true),
+        ("Thaw.ControlItem.AlwaysHidden", CGFloat(16), true),
+        ("Thaw.ControlItem.Visible", CGFloat(21), true),
+        ("Thaw.ControlItem.Hidden", CGFloat(2), false),
+        ("Item-0", CGFloat(2), true),
+    ])
+    func renderingOrForeignRootsRemainAmbiguous(title: String, width: CGFloat, isThaw: Bool) {
+        let rect = CGRect(x: 1582, y: 3, width: 32, height: 24)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: "DroppyMenuBar", frame: rect),
+            AXGeometryCatalog.Entry(
+                ownerPID: isThaw ? ProcessInfo.processInfo.processIdentifier : 2,
+                itemIndex: 1,
+                identityTitle: title,
+                frame: CGRect(x: 1581.5, y: 3, width: width, height: 24)
+            ),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "DroppyMenuBar", bounds: rect, in: snapshot) == .ambiguous)
+    }
+
+    @Test("Items sharing a name are told apart by the one sitting exactly at the bounds")
+    func sharedNameResolvesByFrame() {
+        let first = CGRect(x: 1443, y: 3, width: 65.5, height: 24)
+        let second = CGRect(x: 1520, y: 3, width: 65.5, height: 24)
+        let pill = "live-activity-pill"
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: pill, frame: first),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: pill, frame: CGRect(x: 1446, y: 3, width: 28.5, height: 24)),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: pill, frame: second),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: pill, bounds: first, in: snapshot) == .frame(first))
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: pill, bounds: second, in: snapshot) == .frame(second))
+    }
+
+    @Test("Items sharing a name stay ambiguous when neither, or both, sit at the bounds")
+    func sharedNameWithoutOneFrameIsAmbiguous() {
+        let rect = CGRect(x: 1443, y: 3, width: 65, height: 24)
+        let elsewhere = CGRect(x: 1520, y: 3, width: 65, height: 24)
+        let both = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: "Pill", frame: rect),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: "Pill", frame: rect),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Pill", bounds: rect, in: both) == .ambiguous)
+        let neither = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: "Pill", frame: elsewhere),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: "Pill", frame: CGRect(x: 1600, y: 3, width: 65, height: 24)),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Pill", bounds: rect, in: neither) == .ambiguous)
+    }
+
+    @Test("Separate anonymous items sharing a frame remain ambiguous")
+    func sameOwnerAnonymousItemsAreNotDescendants() {
+        let rect = CGRect(x: 862, y: 4.5, width: 33, height: 24)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: nil, frame: rect),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: nil, frame: rect),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item#", bounds: rect, in: snapshot) == .ambiguous)
+    }
+
+    @Test("A stable identity cannot be replaced by its same-process neighbour; it reads as moved")
+    func stableIdentityRejectsSubstitution() {
+        let old = CGRect(x: 100, y: 4.5, width: 24, height: 24)
+        let moved = CGRect(x: 150, y: 4.5, width: 24, height: 24)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: "CPU", frame: moved),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: "Memory", frame: old),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "CPU", bounds: old, in: snapshot) == .unavailable)
+    }
+
+    @Test("An item pushed along by a wider neighbour keeps its picture instead of losing it")
+    func itemShiftedByAWidthChangeReadsAsMoved() {
+        // From a live log: a traffic meter grew to 118 points and every icon to
+        // its right shifted, so each one's old bounds now held another app.
+        let stale = CGRect(x: 1332, y: 3, width: 24, height: 24)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 66734, itemIndex: 0, identityTitle: "Item-0", frame: CGRect(x: 1216, y: 3, width: 24, height: 24)),
+            AXGeometryCatalog.Entry(ownerPID: 824, itemIndex: 0, identityTitle: "Item-0", frame: CGRect(x: 1361, y: 3, width: 118, height: 24)),
+            AXGeometryCatalog.Entry(ownerPID: 90241, itemIndex: 0, identityTitle: "Item-0", frame: CGRect(x: 1331, y: 3, width: 24, height: 24)),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 66734, identityTitle: "Item-0", bounds: stale, in: snapshot) == .unavailable)
+    }
+
+    @Test("An item that changed width keeps its picture even though its old rectangle now holds a neighbour")
+    func resizedItemReadsAsMoved() {
+        // From a live log: the traffic meter was cropped at its old 118-point
+        // rectangle after it had shifted, and a neighbour sat inside that rectangle.
+        let stale = CGRect(x: 1881, y: 3, width: 118, height: 24)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 824, itemIndex: 0, identityTitle: "Item-0", frame: CGRect(x: 1843, y: 3, width: 118, height: 24)),
+            AXGeometryCatalog.Entry(ownerPID: 13600, itemIndex: 0, identityTitle: "LiquidPlayerMenuBar", frame: CGRect(x: 1968, y: 3, width: 57, height: 24)),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 824, identityTitle: "Item-0", bounds: stale, in: snapshot) == .unavailable)
+
+        // Same left edge, narrower: the meter shrank and a neighbour moved into the space it left.
+        let shrunk = [
+            AXGeometryCatalog.Entry(ownerPID: 824, itemIndex: 0, identityTitle: "Item-0", frame: CGRect(x: 1881, y: 3, width: 70, height: 24)),
+            AXGeometryCatalog.Entry(ownerPID: 13600, itemIndex: 0, identityTitle: "LiquidPlayerMenuBar", frame: CGRect(x: 1955, y: 3, width: 40, height: 24)),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 824, identityTitle: "Item-0", bounds: stale, in: shrunk) == .unavailable)
+    }
+
+    @Test("An item whose own frame is only a placeholder still checks its neighbours")
+    func placeholderFrameFallsBackToOverlapCheck() {
+        let rect = CGRect(x: 100, y: 4.5, width: 24, height: 24)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: "CPU", frame: .zero),
+            AXGeometryCatalog.Entry(ownerPID: 2, itemIndex: 0, identityTitle: "Item-0", frame: rect),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "CPU", bounds: rect, in: snapshot) == .ambiguous)
+    }
+
+    @Test("An identified item and its descendants keep one ownership")
+    func identifiedDescendantsResolve() {
+        let rect = CGRect(x: 100, y: 4.5, width: 24, height: 24)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: "CPU", frame: rect),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: "CPU", frame: rect),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: "Memory", frame: rect.offsetBy(dx: 50, dy: 0)),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "CPU", bounds: rect, in: snapshot) == .frame(rect))
+    }
+
+    @Test("Untitled siblings get names in AX order, not screen order")
+    func untitledSiblingsResolveByMintedName() {
+        let frames = [
+            CGRect(x: 1449, y: 3.5, width: 77, height: 24),
+            CGRect(x: 1559, y: 3.5, width: 36, height: 24),
+            CGRect(x: 1416, y: 3.5, width: 33, height: 24),
+        ]
+        var fallbackIndex = 0
+        let snapshot = frames.enumerated().map { index, frame in
+            let identity = AXGeometryCatalog.rootIdentityTitle(
+                namespace: .string("eu.exelban.Stats"),
+                attributes: .init(frame: frame),
+                descendants: [],
+                maximumItemHeight: 40,
+                fallbackIndex: &fallbackIndex
+            )
+            return AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: index, identityTitle: identity, frame: frame)
+        }
+        #expect(fallbackIndex == frames.count)
+        for (index, rect) in frames.enumerated() {
+            #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-\(index)", bounds: rect, in: snapshot) == .frame(rect))
+        }
+        // Item-0 is known to sit elsewhere, so its sibling's crop is refused as a move.
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-0", bounds: frames[1], in: snapshot) == .unavailable)
+    }
+
+    @Test("Discovery-ineligible roots do not shift the next item's fallback name", arguments: [
+        CGRect?.none,
+        CGRect(x: 100, y: 0, width: 24, height: 0),
+        CGRect(x: 100, y: 24, width: 300, height: 250),
+        CGRect(x: 100, y: 0, width: 24, height: 41),
+    ])
+    func skippedRootsDoNotConsumeFallbackNames(skippedFrame: CGRect?) {
+        let namespace = MenuBarItemTag.Namespace.string("eu.exelban.Stats")
+        #expect(MenuBarItemAXProvider.itemFrame(skippedFrame, maximumHeight: 40) == nil)
+        var fallbackIndex = 0
+        let skippedIdentity = AXGeometryCatalog.rootIdentityTitle(
+            namespace: namespace,
+            attributes: .init(frame: skippedFrame),
+            descendants: [],
+            maximumItemHeight: 40,
+            fallbackIndex: &fallbackIndex
+        )
+        #expect(skippedIdentity == nil)
+        #expect(fallbackIndex == 0)
+
+        let frame = CGRect(x: 500, y: 0, width: 24, height: 40)
+        #expect(MenuBarItemAXProvider.itemFrame(frame, maximumHeight: 40) == frame)
+        let identity = AXGeometryCatalog.rootIdentityTitle(
+            namespace: namespace,
+            attributes: .init(frame: frame),
+            descendants: [],
+            maximumItemHeight: 40,
+            fallbackIndex: &fallbackIndex
+        )
+        #expect(identity == "Item-0")
+        #expect(fallbackIndex == 1)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: skippedIdentity, frame: skippedFrame ?? .zero),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: identity, frame: frame),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-0", bounds: frame, in: snapshot) == .frame(frame))
+    }
+
+    @Test("Named roots and unnamed MenuBarAgent roots leave fallback numbering alone")
+    func nonFallbackRootsDoNotConsumeNames() {
+        let frame = CGRect(x: 100, y: 0, width: 24, height: 24)
+        var fallbackIndex = 0
+        #expect(AXGeometryCatalog.rootIdentityTitle(
+            namespace: .string("com.example.app"),
+            attributes: .init(frame: frame),
+            descendants: [.init(identifier: "Status")],
+            maximumItemHeight: 40,
+            fallbackIndex: &fallbackIndex
+        ) == "Status")
+        #expect(AXGeometryCatalog.rootIdentityTitle(
+            namespace: .menuBarAgent,
+            attributes: .init(frame: frame),
+            descendants: [],
+            maximumItemHeight: 40,
+            fallbackIndex: &fallbackIndex
+        ) == nil)
+        #expect(fallbackIndex == 0)
+    }
+
+    @Test("A partial walk cannot turn anonymous siblings into one identified item")
+    func unreadSiblingPreventsSingletonFallback() {
+        let rect = CGRect(x: 100, y: 4.5, width: 24, height: 24)
+        let snapshot = [
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: nil, frame: rect),
+            AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 1, identityTitle: nil, frame: .zero),
+        ]
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-0", bounds: rect, in: snapshot) == .ambiguous)
+    }
+
+    @Test("An anonymous singleton validates, but a missing snapshot is only unavailable")
+    func singletonAndTransientAbsence() {
+        let rect = CGRect(x: 100, y: 4.5, width: 24, height: 24)
+        let entry = AXGeometryCatalog.Entry(ownerPID: 1, itemIndex: 0, identityTitle: nil, frame: rect)
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-0", bounds: rect, in: [entry]) == .frame(rect))
+        #expect(AXGeometryCatalog.match(ownerPID: 1, identityTitle: "Item-0", bounds: rect, in: []) == .unavailable)
+    }
+
+    @Test("An unmoved item resolves even when its own button shares the frame")
+    func sameFrameDescendantIsNotATie() {
+        let frame = CGRect(x: 1323, y: 3, width: 17, height: 24)
+        // An item and the button inside it are two visited elements publishing
+        // one rect. That is one answer, not an ambiguity.
+        let snapshot = [frame, frame]
+        #expect(AXGeometryCatalog.frame(overlapping: frame, in: snapshot) == frame)
+    }
+
+    @Test("Two distinct frames with equal overlap stay ambiguous")
+    func distinctFramesWithEqualOverlapTie() {
+        let target = CGRect(x: 100, y: 0, width: 20, height: 24)
+        let left = CGRect(x: 90, y: 0, width: 20, height: 24)
+        let right = CGRect(x: 110, y: 0, width: 20, height: 24)
+        #expect(AXGeometryCatalog.frame(overlapping: target, in: [left, right]) == nil)
+    }
+
+    @Test("A stale rect with no overlap resolves to nothing")
+    func staleRectHasNoLiveFrame() {
+        let snapshot = [CGRect(x: 1102, y: 4.5, width: 19, height: 24)]
+        let stale = CGRect(x: 1049, y: 4.5, width: 19, height: 24)
+        #expect(AXGeometryCatalog.frame(overlapping: stale, in: snapshot) == nil)
+    }
+
+    @Test("A rect that mostly overlaps one neighbour resolves to that neighbour")
+    func partialOverlapPicksTheLargerIntersection() {
+        let a = CGRect(x: 0, y: 0, width: 30, height: 24)
+        let b = CGRect(x: 30, y: 0, width: 30, height: 24)
+        let target = CGRect(x: 20, y: 0, width: 30, height: 24)
+        #expect(AXGeometryCatalog.frame(overlapping: target, in: [a, b]) == b)
+    }
+
+    @Test("A later frame that overlaps the crop more replaces an earlier confident one")
+    func largerLaterOverlapWins() {
+        let target = CGRect(x: 0, y: 0, width: 30, height: 24)
+        let weaker = CGRect(x: 10, y: 0, width: 30, height: 24)
+        let stronger = CGRect(x: 5, y: 0, width: 30, height: 24)
+        #expect(AXGeometryCatalog.frame(overlapping: target, in: [weaker, stronger]) == stronger)
+    }
+}
