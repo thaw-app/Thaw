@@ -171,7 +171,10 @@ final class RehideController {
                 startSectionRehide(section)
                 return
             }
-            if await environment.isAnyMenuOpen() {
+            let menuOpen = await environment.isAnyMenuOpen()
+            // A pointer move or a fresh reveal can cancel this task while it waits on the answer.
+            guard !Task.isCancelled else { return }
+            if menuOpen {
                 onOpenMenu()
                 return
             }

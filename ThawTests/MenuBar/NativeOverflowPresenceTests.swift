@@ -5,13 +5,12 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import AppKit
 import CoreGraphics
 import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("macOS's overflow is tracked per display for Settings", .serialized, .scratchDefaults)
+@Suite("macOS's overflow is tracked per display for Settings")
 struct NativeOverflowPresenceTests {
     @Test("Only connected displays the engine reports count, and the answer follows the engine")
     func followsTheEngine() {
@@ -37,13 +36,12 @@ struct NativeOverflowPresenceTests {
         #expect(!presence.isPresent(on: nil))
     }
 
-    @Test("The engine's control-item update refreshes it, and nothing reads as overflowing before setup")
-    func adapterRefreshes() {
-        let appState = AppState()
-        let adapter = RuntimeSectionContextAdapter(appState: appState, revealAttribution: RevealAttribution())
-        appState.nativeOverflowPresence.refresh(displays: [CGMainDisplayID()]) { _ in true }
-        #expect(!appState.nativeOverflowPresence.displayIDs.isEmpty, "seeded directly, so only the adapter's refresh can clear it")
-        adapter.updateControlItemStates()
-        #expect(appState.nativeOverflowPresence.displayIDs.isEmpty)
+    @Test("A refresh copies the section controller's answer, and nothing reads as overflowing before setup")
+    func controllerRefreshes() {
+        let presence = NativeOverflowPresence()
+        presence.refresh(displays: [CGMainDisplayID()]) { _ in true }
+        #expect(!presence.displayIDs.isEmpty, "seeded directly, so only the controller's answer can clear it")
+        presence.refresh(displays: [CGMainDisplayID()], from: InertSectionController())
+        #expect(presence.displayIDs.isEmpty)
     }
 }

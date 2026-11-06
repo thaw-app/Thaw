@@ -186,10 +186,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
         guard let appState else { return }
         appState.menuBarManager.updateControlItemStates()
         // The engine calls this right after macOS's overflow appears or goes away.
-        let controller = appState.menuBarManager.sectionController
-        appState.nativeOverflowPresence.refresh(displays: connectedDisplayIDs()) {
-            controller.isNativeOverflowActive(on: $0)
-        }
+        appState.nativeOverflowPresence.refresh(displays: connectedDisplayIDs(), from: appState.menuBarManager.sectionController)
     }
 
     func scheduleNativeOverflowRebalance() {
