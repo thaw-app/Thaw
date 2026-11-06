@@ -16,6 +16,7 @@ import Testing
 /// the Focus filter in it as if it had launched Thaw, and then sent a quit.
 @Suite("Thaw stays running when App Intents asks it to quit")
 struct AppIntentsIdleQuitTests {
+    /// A core Apple event with this ID that names no sender, carrying a quit reason when one is given.
     private static func event(_ eventID: AEEventID, reason: OSType? = nil) -> NSAppleEventDescriptor {
         let event = NSAppleEventDescriptor(
             eventClass: AEEventClass(kCoreEventClass),
