@@ -652,7 +652,7 @@ extension MenuBarItemManager {
             return
         }
         onScreenItemSnapshot.update(inventory.freshItems.filter(\.isOnScreen), fromCompleteWalk: inventory.completed)
-        thisRead = BarReadRecord.Read(walkCompleted: inventory.completed, hasFreshKnownInventory: inventory.hasFreshKnownInventory)
+        thisRead = BarReadRecord.Read(hasFreshKnownInventory: inventory.hasFreshKnownInventory)
 
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: getMenuBarItems returned \(items.count) items")
 
