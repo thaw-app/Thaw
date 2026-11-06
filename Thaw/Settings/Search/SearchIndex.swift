@@ -153,6 +153,15 @@ nonisolated enum SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "spaces.showSpaceIndicator",
+            title: "Show the current Space in the menu bar",
+            descriptionText: String(localized: "Adds a menu bar item with the name of the Space you're in. Its menu lists the Spaces on each display."),
+            pane: .displays,
+            section: "Space indicator",
+            keywords: ["space", "desktop", "indicator", "current space", "mission control", "number"],
+            property: .advanced("showSpaceIndicator")
+        ),
+        SearchEntry(
             id: "spaces.fullScreenAppearanceEverywhere",
             title: "Use the full-screen menu bar appearance everywhere",
             descriptionText: String(localized: "Gives ordinary desktop Spaces the menu bar appearance macOS normally reserves for full-screen apps."),

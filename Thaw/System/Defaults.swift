@@ -167,6 +167,7 @@ nonisolated enum Defaults {
             .swapActive: DefaultValue.swapActive,
             .fetchReleaseNotes: DefaultValue.fetchReleaseNotes,
             .showReleaseNotesAfterUpdate: DefaultValue.showReleaseNotesAfterUpdate,
+            .showSpaceIndicator: DefaultValue.showSpaceIndicator,
             .enableRecordingWatch: DefaultValue.enableRecordingWatch,
             .enableNativeAppHiding: DefaultValue.enableNativeAppHiding,
             .enableModuleStandIns: DefaultValue.enableModuleStandIns,
@@ -279,6 +280,7 @@ extension Defaults {
         static let swapActive = false
         static let fetchReleaseNotes = true
         static let showReleaseNotesAfterUpdate = true
+        static let showSpaceIndicator = false
         static let enableRecordingWatch = false
         static let enableNativeAppHiding = false
         /// Stand-ins for Apple menu extras Thaw removes while they sit in a
@@ -465,6 +467,8 @@ extension Defaults {
         case fetchReleaseNotes = "FetchReleaseNotes"
         /// Whether What's New opens by itself after an update.
         case showReleaseNotesAfterUpdate = "ShowReleaseNotesAfterUpdate"
+        /// Whether the Space indicator item runs.
+        case showSpaceIndicator = "ShowSpaceIndicator"
         /// Names the app holding the microphone, and reports that a camera is
         /// on, where macOS shows only a dot. Read live so the poller starts
         /// and stops without relaunching.

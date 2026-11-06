@@ -214,6 +214,14 @@ final class AdvancedSettings {
         }
     }
 
+    /// Whether a menu bar item shows the active Space's name.
+    var showSpaceIndicator = Defaults.DefaultValue.showSpaceIndicator {
+        didSet {
+            guard oldValue != showSpaceIndicator else { return }
+            Defaults.set(showSpaceIndicator, forKey: .showSpaceIndicator)
+        }
+    }
+
     /// Opt-in alternative to the assessment assertion. Native app visibility
     /// persists outside Thaw, so the experiment journals and restores its writes.
     var enableNativeAppHiding = Defaults.DefaultValue.enableNativeAppHiding {
@@ -388,6 +396,7 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .enableControlItemPanel, assign: &enableControlItemPanel)
         Defaults.ifPresent(key: .fetchReleaseNotes, assign: &fetchReleaseNotes)
         Defaults.ifPresent(key: .showReleaseNotesAfterUpdate, assign: &showReleaseNotesAfterUpdate)
+        Defaults.ifPresent(key: .showSpaceIndicator, assign: &showSpaceIndicator)
         Defaults.ifPresent(key: .enableModuleStandIns, assign: &enableModuleStandIns)
         skippedModuleStandIns = Defaults.stringArray(forKey: .skippedModuleStandIns).map(Set.init) ?? skippedModuleStandIns
         Defaults.ifPresent(key: .enableTimeMachineTakeover, assign: &enableTimeMachineTakeover)
@@ -484,6 +493,8 @@ final class AdvancedSettings {
                 fetchReleaseNotes = boolValue
             case "showReleaseNotesAfterUpdate":
                 showReleaseNotesAfterUpdate = boolValue
+            case "showSpaceIndicator":
+                showSpaceIndicator = boolValue
             case "enableRecordingWatch":
                 enableRecordingWatch = boolValue
             case "zenModeWhileRecording":
