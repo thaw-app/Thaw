@@ -297,7 +297,8 @@ jobs:
           gh release download "$TAG" --repo "$UPDATES_REPOSITORY" --pattern "Thaw_${TAG}.zip" --dir "$download"
           ditto -x -k "$download/Thaw_${TAG}.zip" build/Export
           version=$(plutil -extract CFBundleShortVersionString raw -o - "build/Export/${APP_NAME}/Contents/Info.plist")
-          if [[ "$version" != "$TAG" ]]; then
+          # A release candidate is built with its final version, so 2.1.0-rc.1 holds 2.1.0.
+          if [[ "$version" != "$TAG" && ! ( "$TAG" == *-rc.* && "$version" == "${TAG%%-*}" ) ]]; then
             echo "::error::The published ZIP is ${version}, not ${TAG}"
             exit 1
           fi
