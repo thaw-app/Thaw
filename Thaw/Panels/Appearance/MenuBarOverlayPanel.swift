@@ -839,6 +839,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                     self.scheduleAXItemBoundsRefresh()
                 }
                 .store(in: &subscriptions)
+            MenuBarAppearanceItems.rereadOnWake { [weak self] in self?.scheduleAXItemBoundsRefresh(.immediate) }.store(in: &subscriptions)
         }
 
         $fullConfiguration.replace(with: ())
