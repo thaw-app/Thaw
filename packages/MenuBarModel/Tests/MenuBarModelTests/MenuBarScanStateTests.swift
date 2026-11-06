@@ -41,6 +41,31 @@ struct MenuBarScanStateTests {
         #expect(Array(second.owners.prefix(2)) == [100, 500])
     }
 
+    /// 2026-11-06: four processes launched after the last full walk made every capture read fall
+    /// back to a two-second walk of every app, though all 17 item owners had answered.
+    @Test("An owner never read doesn't hold up the known owners, but a stale item owner does")
+    func neverReadOwnersDontBlockKnownOwners() {
+        var state = MenuBarScanState<String>()
+        let full = state.begin(owners: [1, 2], priorityOwners: [])
+        for owner in full.owners {
+            state.didAttempt(owner: owner, generation: full.generation)
+            state.record(owner == 1 ? ["item"] : [], owner: owner, generation: full.generation)
+        }
+
+        let targeted = state.begin(owners: [1, 2, 3], priorityOwners: [1], scope: .requestedOwners)
+        state.didAttempt(owner: 1, generation: targeted.generation)
+        state.record(["item"], owner: 1, generation: targeted.generation)
+
+        #expect(!state.hasFreshKnownInventory(generation: targeted.generation), "the strict check still waits for 3")
+        #expect(state.hasFreshItemOwners(generation: targeted.generation))
+
+        let stale = state.begin(owners: [1, 2, 3], priorityOwners: [2], scope: .requestedOwners)
+        state.didAttempt(owner: 2, generation: stale.generation)
+        state.record([], owner: 2, generation: stale.generation)
+        #expect(!state.hasFreshItemOwners(generation: stale.generation), "owner 1 has items and wasn't read again")
+        #expect(state.hasFreshItemOwners(generation: stale.generation, excusing: [1]))
+    }
+
     @Test("Background-only owners are asked after every other owner, but still asked")
     func backgroundOwnersGoLast() {
         var state = MenuBarScanState<String>()

@@ -110,6 +110,32 @@ struct MenuBarWalkConcurrencyTests {
         #expect(snapshot.items.contains { $0.ownerPID == owner })
     }
 
+    @Test(
+        "A read of the known owners stays complete when an app launched since the last full walk",
+        .enabled(if: MenuBarWalkConcurrencyTests.slowOwner != nil, "needs two apps besides the test host")
+    )
+    func appLaunchedSinceDiscoveryDoesNotBlockKnownOwners() async throws {
+        let owner = try #require(Self.itemOwner).processIdentifier
+        let launched = try #require(Self.slowOwner).processIdentifier
+        func reader(_ apps: [NSRunningApplication]) -> Provider.WalkReader {
+            Provider.WalkReader(runningApps: { apps }, isTrusted: { true }, read: { app, _, _, _ in
+                app.processIdentifier == owner ? [Self.item(for: owner)] : []
+            })
+        }
+        let before = Self.otherApps.filter { $0.processIdentifier != launched }
+
+        let (_, state) = await Provider.enumerateMenuBarItemsResilient(
+            state: MenuBarScanState(), scope: .discovery, priorityPIDs: [], reader: reader(before)
+        )
+        let (snapshot, _) = await Provider.enumerateMenuBarItemsResilient(
+            state: state, scope: .requestedOwners, priorityPIDs: [owner], reader: reader(Self.otherApps)
+        )
+
+        #expect(!snapshot.hasFreshMoveInventory, "a move still waits for the new app")
+        #expect(snapshot.hasFreshOwnerInventory)
+        #expect(snapshot.freshItems.contains { $0.ownerPID == owner })
+    }
+
     @Test("Background-only apps are read after every app that can show items")
     func backgroundOnlyAppsGoLast() {
         let apps = Self.runningApps

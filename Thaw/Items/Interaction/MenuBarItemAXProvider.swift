@@ -83,7 +83,8 @@ nonisolated enum MenuBarItemAXProvider {
             freshItems: restoredIdentities(snapshot.freshItems),
             completed: snapshot.completed,
             hasFreshKnownInventory: snapshot.hasFreshKnownInventory,
-            hasFreshMoveInventory: snapshot.hasFreshMoveInventory
+            hasFreshMoveInventory: snapshot.hasFreshMoveInventory,
+            hasFreshOwnerInventory: snapshot.hasFreshOwnerInventory
         )
     }
 
@@ -402,8 +403,8 @@ nonisolated enum MenuBarItemAXProvider {
         let freshItems = assemble(state.freshObservations(generation: pass.generation))
         diagLog.debug("menuBarItems: inventory=\(items.count), fresh=\(freshItems.count), truncated=\(truncated)")
         let excused = Set(slowOwners.keys).subtracting(requiredOwners)
-        let hasFreshMoveInventory = !Task.isCancelled && state.isComplete(pass, excusing: excused)
-            && state.hasFreshKnownInventory(generation: pass.generation, excusing: excused)
+        let passCovered = !Task.isCancelled && state.isComplete(pass, excusing: excused)
+        let hasFreshMoveInventory = passCovered && state.hasFreshKnownInventory(generation: pass.generation, excusing: excused)
         if hasFreshMoveInventory, !excused.isEmpty {
             diagLog.info(
                 "menuBarItems: move geometry excuses slow owner(s) \(excused.compactMap { slowOwners[$0] }.sorted())"
@@ -414,7 +415,8 @@ nonisolated enum MenuBarItemAXProvider {
             freshItems: freshItems,
             completed: state.isComplete(generation: pass.generation),
             hasFreshKnownInventory: state.hasFreshKnownInventory(generation: pass.generation),
-            hasFreshMoveInventory: hasFreshMoveInventory
+            hasFreshMoveInventory: hasFreshMoveInventory,
+            hasFreshOwnerInventory: passCovered && state.hasFreshItemOwners(generation: pass.generation, excusing: excused)
         ), state)
     }
 
@@ -673,13 +675,16 @@ nonisolated enum MenuBarItemAXProvider {
         let completed: Bool
         let hasFreshKnownInventory: Bool
         let hasFreshMoveInventory: Bool
+        /// Every requested owner and owner with items answered; apps never read, left to discovery, don't count.
+        let hasFreshOwnerInventory: Bool
 
         static let unavailable = InventorySnapshot(
             items: [],
             freshItems: [],
             completed: false,
             hasFreshKnownInventory: false,
-            hasFreshMoveInventory: false
+            hasFreshMoveInventory: false,
+            hasFreshOwnerInventory: false
         )
     }
 
@@ -710,7 +715,7 @@ nonisolated enum MenuBarItemAXProvider {
     static func menuBarItemsForAppearanceConcurrent(knownOwners: Set<pid_t>) async -> [MenuBarItem]? {
         guard let snapshot = await inventoryGate.snapshot(
             freshOnly: true, scope: .requestedOwners, priorityOwners: knownOwners
-        ), snapshot.hasFreshMoveInventory else { return nil }
+        ), snapshot.hasFreshOwnerInventory else { return nil }
         return restoredIdentities(snapshot).freshItems
     }
 
@@ -720,7 +725,7 @@ nonisolated enum MenuBarItemAXProvider {
     static func menuBarItemsForCaptureConcurrent(knownOwners: Set<pid_t>) async -> [MenuBarItem]? {
         guard let snapshot = await inventoryGate.snapshot(
             freshOnly: true, scope: .requestedOwners, priorityOwners: knownOwners, preemptsDiscovery: false
-        ), snapshot.hasFreshMoveInventory else { return nil }
+        ), snapshot.hasFreshOwnerInventory else { return nil }
         return restoredIdentities(snapshot).freshItems
     }
 
