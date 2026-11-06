@@ -40,7 +40,7 @@ nonisolated extension MenuBarItem {
         savedOrder: [String]
     ) -> [MenuBarItem] {
         let slots = items.indices.filter {
-            MenuBarItemImageCache.isContaminatedByNativeOverflow(items[$0].bounds, overflowBounds: overflowBounds)
+            AXCropRules.isContaminatedByNativeOverflow(items[$0].bounds, overflowBounds: overflowBounds)
         }
         guard slots.count > 1 else { return items }
         let rank = { (item: MenuBarItem) in savedOrder.firstIndex(of: item.uniqueIdentifier) ?? .max }

@@ -586,7 +586,7 @@ extension MenuBarItemImageCache {
                 settled: settledByIdentifier,
                 previous: previousByIdentifier,
                 current: currentByIdentifier,
-                hasStable: { Self.hasStableCaptureBounds(before: $0, after: $1) }
+                hasStable: { AXCropRules.hasStableCaptureBounds(before: $0, after: $1) }
             )
             settledByIdentifier = advanced.settled
             previousByIdentifier = advanced.previous
@@ -771,22 +771,16 @@ extension MenuBarItemImageCache {
             }
 
             // One hosting screenshot and one strip screenshot for the whole
-            // group: axBoundsCapture already crops each item out of the same
+            // group: the bounds cropper already crops each item out of the same
             // pair of frames, so every crop comes from one instant of the bar
             // rather than from N frames taken while it reflowed between them.
             // Capture against the resolved displayID directly rather than
             // captureImages(appState:), which re-resolves the "active" display
             // and can crop one display's bounds against another's screenshot.
-            let captureResult = await axBoundsCapture(
-                revealed.map { (item: $0.live, bounds: $0.live.bounds) },
-                scale: target.scale,
-                displayID: target.displayID,
-                validateFreshBounds: true,
-                // This path just revealed the items itself and waited for
-                // their live AX elements, so none of them is concealed here.
-                concealedIdentifiers: [],
-                using: sources.reader
-            )
+            // This path just revealed the items itself and waited for their
+            // live AX elements, so none of them is concealed here.
+            let request = AXBoundsCropper.Request(items: revealed.map { ($0.live, $0.live.bounds) }, displayID: target.displayID, validateFreshBounds: true)
+            let captureResult = await boundsCropper.crop(request, using: sources.reader, skipping: { self.shouldSkipCapture(for: $0) })
 
             guard commitRevealedBatch(
                 captureResult,
