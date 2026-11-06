@@ -165,7 +165,7 @@ extension MenuBarItemImageCache {
         appState: AppState,
         captureSection: @MainActor (MenuBarSection.Name) async -> CapturePass
     ) async -> Bool {
-        guard !standsDownForConcealedPrewarm("recaptureNow") else { return false }
+        guard !prewarmSlot.standsDown("recaptureNow") else { return false }
         // Before the first await: what this pass publishes must still describe the layout it started from. See publicationRejection(of:).
         let admission = CapturePublicationPolicy.admit(
             layout: appState.itemManager.layoutPublication,
@@ -822,8 +822,8 @@ extension MenuBarItemImageCache {
 
         // One pass at a time: overlapping passes land one's conceal inside the
         // other's screenshot. A queued pass whose bar closed stops here.
-        await beginConcealedPrewarm(tally: tally)
-        defer { endConcealedPrewarm() }
+        await prewarmSlot.begin(tally: tally)
+        defer { prewarmSlot.end() }
         // The hiding method can change while a pass waits its turn.
         guard !Task.isCancelled, !skipCaptureWhileScreenLocked("queued prewarm"),
               ConcealedPrewarmGate.mayReveal(for: appState) else { return }
@@ -910,29 +910,6 @@ extension MenuBarItemImageCache {
         // would otherwise pay that cost once per section back-to-back for the
         // same end state.
         saveToDisk()
-    }
-
-    /// Waits until no other concealed-section prewarm is running, then marks this one running and opens its
-    /// tally, so a queued request can't touch a running one's. Waiters are resumed in arrival order.
-    @MainActor
-    func beginConcealedPrewarm(tally: RequestedCaptureTally? = nil) async {
-        defer { markConcealedPrewarmStarted(tally: tally) }
-        guard isConcealedPrewarmRunning else {
-            isConcealedPrewarmRunning = true
-            return
-        }
-        await withCheckedContinuation { concealedPrewarmWaiters.append($0) }
-    }
-
-    /// Hands the running slot straight to the next queued prewarm, so no caller slips in between, or frees it.
-    @MainActor
-    func endConcealedPrewarm() {
-        Self.requestedCaptureTally = nil
-        if concealedPrewarmWaiters.isEmpty {
-            isConcealedPrewarmRunning = false
-        } else {
-            concealedPrewarmWaiters.removeFirst().resume()
-        }
     }
 
     /// Whether the screen is locked, in which case pass skips its capture.

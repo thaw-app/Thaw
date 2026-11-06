@@ -11,16 +11,6 @@ import MenuBarModel
 import ThawCapture
 
 extension MenuBarItemImageCache {
-    /// The tags one requested capture got a new picture of. Each request owns one.
-    @MainActor
-    final class RequestedCaptureTally {
-        var tags: Set<MenuBarItemTag> = []
-    }
-
-    /// The tally of the pass holding the prewarm slot. Nil for an automatic pass,
-    /// so it records nothing. Set and cleared only by the slot.
-    static var requestedCaptureTally: RequestedCaptureTally?
-
     /// Waits for a revealed batch to stop moving before its screenshot. See
     /// waitForSettledPixels(minimumSettle:interval:requiredMatches:budget:sleep:read:).
     func settleRevealedPixels(_ revealed: [MenuBarItem], displayID: CGDirectDisplayID) async {
@@ -40,7 +30,7 @@ extension MenuBarItemImageCache {
         of captureResult: CapturePass,
         notingRevealed revealed: [(requested: MenuBarItem, live: MenuBarItem)]
     ) {
-        if let tally = Self.requestedCaptureTally {
+        if let tally = prewarmSlot.tally {
             for pair in revealed {
                 guard let image = captureResult.captured[pair.live.tag] else { continue }
                 let kept = capturesByTag[pair.requested.tag].map { Self.preferredRevealedImage(existing: $0, candidate: image) }
