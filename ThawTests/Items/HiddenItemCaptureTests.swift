@@ -87,6 +87,36 @@ struct HiddenItemCaptureTests {
         )
     }
 
+    /// Counts both new and kept pictures after Native hiding narrows an item's parked frame.
+    @Test("A narrow parked item with a confirmed picture stays in the result", arguments: [false, true])
+    func narrowPicturedItemsAreCounted(newlyCaptured: Bool) {
+        let current = item(.string("com.example.app"), "Item-0", width: 2)
+        let pictured = MenuBarItemTag(namespace: current.tag.namespace, title: current.tag.title, windowID: 10, instanceIndex: 0)
+        let result = MenuBarItemImageCache.hiddenItemCaptureResult(
+            items: [current], alreadyGood: newlyCaptured ? [] : [pictured], newlyCaptured: newlyCaptured ? [pictured] : []
+        )
+        let expected = newlyCaptured
+            ? HiddenItemCaptureResult(captured: 1, total: 1, missing: [])
+            : HiddenItemCaptureResult(captured: 0, total: 0, missing: [], kept: 1)
+        #expect(result == expected)
+    }
+
+    /// Leaves truly blank items out rather than reporting them as failed captures.
+    @Test("A narrow item without a picture stays excluded")
+    func narrowUnpicturedItemsAreExcluded() {
+        let current = item(.string("com.example.app"), "Item-0", width: 2)
+        let result = MenuBarItemImageCache.hiddenItemCaptureResult(items: [current], alreadyGood: [], newlyCaptured: [])
+        #expect(result == HiddenItemCaptureResult(captured: 0, total: 0, missing: []))
+    }
+
+    /// Keeps switched-off system modules excluded even if the tally contains their tags.
+    @Test("Control Center modules stay excluded even with a recorded picture")
+    func picturedControlCenterModulesAreExcluded() {
+        let current = item(.menuBarAgent, "com.apple.menuextra.bluetooth")
+        let result = MenuBarItemImageCache.hiddenItemCaptureResult(items: [current], alreadyGood: [], newlyCaptured: [current.tag])
+        #expect(result == HiddenItemCaptureResult(captured: 0, total: 0, missing: []))
+    }
+
     @Test("A hidden Control Center module is left out, since showing it never draws it")
     func controlCenterModulesAreSkipped() {
         #expect(RevealCapturePrewarm.skips(item(.menuBarAgent, "com.apple.menuextra.bluetooth"), allowsCaptureReveal: false))
