@@ -292,23 +292,14 @@ final class MenuBarItemManager {
         }
     }
 
-    /// Deferred repair after a restriction reflow. Concealing one bundle
-    /// reshuffles the whole bar; visible-assigned neighbours from a multi-item
-    /// bundle can land in the overflow/parked band and never recover
-    /// because the layout-bar move cooldown blocks applySavedLayout.
-    var postRestrictionRepairTask: Task<Void, Never>?
+    /// When the repair after a restriction reflow runs. Visible neighbours of a concealed multi-item bundle
+    /// can land parked, and the move cooldown keeps applySavedLayout from putting them back.
+    @ObservationIgnored let restrictionRepairSchedule = PostRestrictionRepairSchedule()
 
     /// The pending retry of the saved-layout reconciler after a transient
     /// guard (the 5 s move cooldown, the 10 s restriction settle, an in-flight
     /// ⌘-drag) made applySavedLayout decline, and its bounded retry budget.
     private var deferredLayoutReconcile = DeferredLayoutReconcileSchedule()
-
-    /// Set while a post-restriction repair pass is executing.
-    var isRunningPostRestrictionRepair = false
-
-    /// A restriction change arrived while a pass was already running, so one
-    /// more pass is owed once the current one finishes.
-    var postRestrictionRepairNeedsRerun = false
 
     /// Which macOS 27 section-order drags failed lately. Without it,
     /// applySavedLayout re-detects the divergence every cache cycle and

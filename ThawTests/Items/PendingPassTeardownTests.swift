@@ -128,8 +128,8 @@ struct PendingPassTeardownTests {
         let manager = MenuBarItemManager()
         manager.noteRestrictionChange()
         manager.scheduleStructuralNormalization(cause: .userDragEnded)
-        manager.postRestrictionRepairNeedsRerun = true
-        let repairTask = try #require(manager.postRestrictionRepairTask)
+        manager.restrictionRepairSchedule.needsRerun = true
+        let repairTask = try #require(manager.restrictionRepairSchedule.task)
         let normalizationTask = try #require(manager.structuralNormalizationTask)
 
         PendingPassTeardown.callOff(
@@ -140,9 +140,9 @@ struct PendingPassTeardownTests {
 
         #expect(repairTask.isCancelled)
         #expect(normalizationTask.isCancelled)
-        #expect(manager.postRestrictionRepairTask == nil)
+        #expect(manager.restrictionRepairSchedule.task == nil)
         #expect(manager.structuralNormalizationTask == nil)
-        #expect(!manager.postRestrictionRepairNeedsRerun)
+        #expect(!manager.restrictionRepairSchedule.needsRerun)
         #expect(manager.repairs.ledger.causesWaiting(for: .postRestrictionRepair).isEmpty)
         #expect(manager.repairs.ledger.causesWaiting(for: .structuralNormalization).isEmpty)
     }

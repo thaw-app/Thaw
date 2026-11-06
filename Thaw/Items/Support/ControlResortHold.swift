@@ -93,7 +93,7 @@ extension ControlResortHold.Signal {
     init(of manager: MenuBarItemManager) {
         self.init(
             restrictionChangedAt: manager.barSettling.lastRestrictionChange,
-            isRestrictionBeingApplied: manager.isRunningPostRestrictionRepair,
+            isRestrictionBeingApplied: manager.restrictionRepairSchedule.isRunning,
             settleWindow: BarSettling.restrictionReflowWindow
         )
     }
