@@ -32,7 +32,7 @@ extension MenuBarItemImageCache {
     ) -> Bool {
         let earlier = Dictionary(first.map { ($0.requested.uniqueIdentifier, $0.live.bounds) }, uniquingKeysWith: { first, _ in first })
         return second.contains { pair in
-            earlier[pair.requested.uniqueIdentifier].map { !hasStableCaptureBounds(before: $0, after: pair.live.bounds) } ?? false
+            earlier[pair.requested.uniqueIdentifier].map { !AXCropRules.hasStableCaptureBounds(before: $0, after: pair.live.bounds) } ?? false
         }
     }
 }

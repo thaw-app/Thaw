@@ -255,9 +255,10 @@ private struct CaptureWorld {
 
     /// The crop pipeline a visible section runs, reading the scripted bar.
     func capture(forgiving forgivenTags: Set<MenuBarItemTag>) async -> MenuBarItemImageCache.CapturePass {
-        await cache.captureImages(
-            of: items, scale: 2, displayID: Self.display, screenFrame: nil,
-            options: .init(freshBounds: true, forgivenTags: forgivenTags), using: reader
+        await cache.boundsCropper.crop(
+            items, on: Self.display, screenFrame: nil,
+            options: .init(freshBounds: true, forgivenTags: forgivenTags), using: reader,
+            skipping: { [cache] in cache.shouldSkipCapture(for: $0) }
         )
     }
 
