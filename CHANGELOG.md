@@ -33,6 +33,7 @@ the items under New and Fixed.
 
 ### Changed
 
+- **Extras is now called Modules.** The Settings page that turns Profiles, Scripts, Triggers and Widgets on and off, and the sidebar group they appear in, use the same name as the rest of Thaw.
 - **Double-clicking Thaw's icon for Always Hidden has its own switch.** Turn off Double-click the Thaw icon to show Always Hidden in Menu Bar Access, and every click shows or hides your items.
 - **The Thaw Bar has its own switch again.** Show hidden items is now two switches, Thaw Bar and Always show hidden items. Your settings carry over.
 - **Profiles and menu bar looks follow a Space switch sooner.** Thaw hears about the switch as it starts, and a new Space can have its own profile right away.
