@@ -20,6 +20,10 @@ extension AppSettings {
         // A reset is the one moment they explicitly ask for a clean slate,
         // and it is the only way to clear a record from the UI.
         appState?.itemManager.failureLedger.removeAll()
+        if let appState {
+            let spaces = appState.spaceDirectory.spaces
+            Task { await appState.spaceMenuBarKeeper.resetAll(spaces: spaces) }
+        }
     }
 
     func resetAppearance() {
