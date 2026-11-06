@@ -96,6 +96,47 @@ struct LayoutBarItemViewTests {
         #expect(glyph.isTemplate, "the generic menu bar glyph")
     }
 
+    /// 2026-11-06: Bluetooth, hidden by switching its module off, showed its symbol inside the grey box.
+    @Test("A switched-off system module draws its symbol without the box; other tiles keep it")
+    func moduleGlyphDrawsBare() throws {
+        func item(_ namespace: MenuBarItemTag.Namespace, _ title: String) -> MenuBarItem {
+            MenuBarItem(
+                tag: MenuBarItemTag(namespace: namespace, title: title, windowID: 9),
+                windowID: 9, ownerPID: 0, sourcePID: nil,
+                bounds: CGRect(x: 0, y: 0, width: 24, height: 24), title: nil, isOnScreen: false
+            )
+        }
+        #expect(LayoutBarItemView.drawsBareModuleGlyph(for: item(.menuBarAgent, "com.apple.menuextra.bluetooth")))
+        #expect(!LayoutBarItemView.drawsBareModuleGlyph(for: item(.menuBarAgent, "com.example.unknown")))
+        #expect(!LayoutBarItemView.drawsBareModuleGlyph(for: item(.string("com.example.app"), "com.apple.menuextra.bluetooth")))
+
+        let rect = try #require(LayoutBarItemView.bareGlyphRect(in: CGRect(x: 0, y: 0, width: 40, height: 24)))
+        #expect(rect.width == rect.height)
+        #expect(rect.midX == 20 && rect.midY == 12)
+        #expect(rect.height == 24, "the full square, as the previews draw it")
+        #expect(rect == LayoutBarItemView.overflowFallbackDrawRect(
+            for: item(.menuBarAgent, "com.apple.menuextra.bluetooth"), imageSize: CGSize(width: 16, height: 16),
+            bounds: CGRect(x: 0, y: 0, width: 40, height: 24)
+        ))
+        #expect(LayoutBarItemView.bareGlyphRect(in: .zero) == nil)
+
+        let bluetooth = item(.menuBarAgent, "com.apple.menuextra.bluetooth")
+        let bar = try Bar([bluetooth])
+        let view = try bar.view(bluetooth)
+        let bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        let corner = try #require(bitmap.colorAt(x: 3, y: 3))
+        #expect(corner.alphaComponent == 0, "no box behind the symbol")
+        let glyphRect = try #require(LayoutBarItemView.bareGlyphRect(in: view.bounds))
+        let scale = CGFloat(bitmap.pixelsWide) / view.bounds.width
+        let inked = (Int(glyphRect.minX * scale) ..< Int(glyphRect.maxX * scale)).contains { x in
+            (Int(glyphRect.minY * scale) ..< Int(glyphRect.maxY * scale)).contains { y in
+                (bitmap.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0
+            }
+        }
+        #expect(inked, "the symbol itself is drawn")
+    }
+
     @Test("Padding is added only for a captured system preview")
     func systemPadding() {
         #expect(LayoutBarItemView.systemItemHorizontalPadding(for: World.item("Alpha"), image: nil, desiredPadding: 16) == 0)

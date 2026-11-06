@@ -5,6 +5,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
+import Combine
 import CoreGraphics
 import MenuBarModel
 import Testing
@@ -115,6 +117,99 @@ struct MenuBarAppearanceItemsTests {
                 knownItems: known, onScreenSnapshot: nil, notBefore: nil,
                 drawnBar: { bar }, memo: memo,
                 readOwners: { _ in ownerReads += 1; return answer },
+                discover: { [] }
+            )
+        }
+        #expect(ownerReads == 2)
+    }
+
+    /// A user's capsule border stopped drawing until Thaw restarted. A read taken while the screen
+    /// slept can answer with every frame off the bar, and kept, it emptied the shape for good.
+    @Test("A read whose drawn owners have no item on a bar is not kept, so the next refresh asks again")
+    func offBarReadIsNotRemembered() async throws {
+        let screens = [CGRect(x: 0, y: 0, width: 1512, height: 982)]
+        let bar = [MenuBarAgentWindow.Entry(ownerPID: 1, frame: CGRect(x: 300, y: 0, width: 24, height: 30))]
+        let asleep = [item(1, x: 0, y: 1080)]
+        let awake = [item(1, x: 300)]
+        let memo = MenuBarAppearanceItems.Memo()
+        var answers = [asleep, awake, awake]
+        var ownerReads = 0
+        func read() async -> MenuBarAppearanceItems.Snapshot? {
+            await MenuBarAppearanceItems.read(
+                knownItems: awake, onScreenSnapshot: nil, notBefore: nil,
+                drawnBar: { bar }, memo: memo, displayBounds: screens,
+                readOwners: { _ in ownerReads += 1; return answers.removeFirst() },
+                discover: { [] }
+            )
+        }
+
+        #expect(try #require(await read()).items == asleep)
+        #expect(try #require(await read()).items == awake)
+        #expect(try #require(await read()).items == awake)
+        #expect(ownerReads == 2, "the off-bar read is asked again, the on-bar one is kept")
+    }
+
+    @Test("A read lines up with the drawn bar only when every drawn owner it asked has an item on a bar")
+    func drawnBarMatch() {
+        let screens = [CGRect(x: 0, y: 0, width: 1512, height: 982)]
+        let bar = [
+            MenuBarAgentWindow.Entry(ownerPID: 1, frame: CGRect(x: 300, y: 0, width: 24, height: 30)),
+            MenuBarAgentWindow.Entry(ownerPID: 5, frame: CGRect(x: 400, y: 0, width: 24, height: 30)),
+        ]
+        let match = { (items: [MenuBarItem]) in
+            MenuBarAppearanceItems.matchesDrawnBar(items, bar: bar, asked: [1, 2], displayBounds: screens)
+        }
+        #expect(match([item(1, x: 300), item(2, x: 0, y: 1080)]), "an owner the bar doesn't draw may be off it")
+        #expect(!match([item(1, x: 0, y: 1080)]))
+        #expect(!match([]))
+        #expect(match([item(1, x: 300)]), "owner 5 was never asked, so its absence says nothing")
+        #expect(!MenuBarAppearanceItems.matchesDrawnBar(
+            [item(1, x: 300)], bar: [], asked: [1], displayBounds: screens
+        ), "an empty bar, as a sleeping screen may report, vouches for nothing")
+    }
+
+    @Test("Waking the screens or returning to the session each ask for a fresh read")
+    func wakeAndUnlockFire() async {
+        let center = NotificationCenter()
+        let known = [item(1, x: 300)]
+        let bar = [MenuBarAgentWindow.Entry(ownerPID: 1, frame: CGRect(x: 300, y: 0, width: 24, height: 30))]
+        let memo = MenuBarAppearanceItems.Memo()
+        var ownerReads = 0
+        func read() async {
+            _ = await MenuBarAppearanceItems.read(
+                knownItems: known, onScreenSnapshot: nil, notBefore: nil,
+                drawnBar: { bar }, memo: memo, displayBounds: [CGRect(x: 0, y: 0, width: 1512, height: 982)],
+                readOwners: { _ in ownerReads += 1; return known },
+                discover: { [] }
+            )
+        }
+        var refreshes = 0
+        let subscription = MenuBarAppearanceItems.rereadOnWake(center: center, memo: memo) { refreshes += 1 }
+        await read()
+        center.post(name: NSWorkspace.screensDidWakeNotification, object: nil)
+        center.post(name: NSWorkspace.sessionDidBecomeActiveNotification, object: nil)
+        for _ in 0 ..< 500 where refreshes < 2 {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        subscription.cancel()
+        await read()
+
+        #expect(refreshes == 2)
+        #expect(ownerReads == 2, "the wake dropped the kept read")
+    }
+
+    @Test("Forgetting the memo makes the next read ask the owners again")
+    func forgottenMemoAsksAgain() async {
+        let known = [item(1, x: 300)]
+        let bar = [MenuBarAgentWindow.Entry(ownerPID: 1, frame: CGRect(x: 300, y: 0, width: 24, height: 30))]
+        let memo = MenuBarAppearanceItems.Memo()
+        var ownerReads = 0
+        for forget in [false, true] {
+            if forget { memo.forget() }
+            _ = await MenuBarAppearanceItems.read(
+                knownItems: known, onScreenSnapshot: nil, notBefore: nil,
+                drawnBar: { bar }, memo: memo, displayBounds: [CGRect(x: 0, y: 0, width: 1512, height: 982)],
+                readOwners: { _ in ownerReads += 1; return known },
                 discover: { [] }
             )
         }
