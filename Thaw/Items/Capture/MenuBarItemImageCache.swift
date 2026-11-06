@@ -48,6 +48,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     nonisolated let screenIsLocked: @Sendable () -> Bool
     /// Whether a capture asked for now would run; false while no Thaw surface is open.
     nonisolated let captureIsAllowed: @Sendable () -> Bool
+    nonisolated let boundsCropper: AXBoundsCropper
 
     init(
         windowServer: any WindowServerReading = LiveWindowServerReader(),
@@ -57,6 +58,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
         self.windowServer = windowServer
         self.screenIsLocked = screenIsLocked
         self.captureIsAllowed = captureIsAllowed
+        boundsCropper = AXBoundsCropper(screenIsLocked: screenIsLocked, captureIsAllowed: captureIsAllowed)
     }
 
     /// Consecutive capture passes skipped because the bar was mid-reflow.
@@ -137,10 +139,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     }
 
     let failedCapturesLock = OSAllocatedUnfairLock<[MenuBarItemTag: FailedCapture]>(initialState: [:])
-
-    /// Displays whose hosting-window capture already failed since it last
-    /// succeeded, so the repeats log at debug instead of warning.
-    let hostingFailureWarnedDisplays = OSAllocatedUnfairLock<Set<CGDirectDisplayID>>(initialState: [])
 
     /// Configuration for failed capture handling
     static nonisolated let maxFailuresBeforeBlacklist = 3

@@ -42,7 +42,7 @@ struct RevealSettleAdvanceTests {
     }
 
     private static func stable(_ before: CGRect, _ after: CGRect) -> Bool {
-        MenuBarItemImageCache.hasStableCaptureBounds(before: before, after: after)
+        AXCropRules.hasStableCaptureBounds(before: before, after: after)
     }
 
     // MARK: - First poll
