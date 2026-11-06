@@ -36,8 +36,7 @@ extension MenuBarItemManager {
                     return bid
                 }
                 return nil
-            }),
-            barQuiet: savedOrderMirrorGate.isQuiet()
+            })
         )
     }
 

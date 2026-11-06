@@ -17,90 +17,94 @@ import Testing
 struct SavedOrderMirrorGateTests {
     private let start = ContinuousClock.now
     private let items: Set<String> = ["a", "b", "c"]
+    private let clock = TestClock()
+    private let settling: BarSettling
+    private let gate: SavedOrderMirrorGate
+
+    init() {
+        let clock = clock
+        settling = BarSettling(now: { clock.now })
+        gate = SavedOrderMirrorGate(settling: settling)
+        clock.now = start
+    }
 
     private func at(_ seconds: Double) -> ContinuousClock.Instant {
         start + .milliseconds(Int(seconds * 1000))
     }
 
+    /// Asks the gate at the given second on the test's clock.
+    private func allows(
+        _ identifiers: Set<String>? = nil,
+        restrictionChange: ContinuousClock.Instant? = nil,
+        sectionRevealed: Bool = false,
+        transientFrame: String? = nil,
+        at seconds: Double
+    ) -> Bool {
+        clock.now = at(seconds)
+        return gate.allowsMirror(
+            identifiers: identifiers ?? items,
+            restrictionChange: restrictionChange,
+            sectionRevealed: sectionRevealed,
+            transientFrame: transientFrame
+        )
+    }
+
     @Test("A quiet bar may be mirrored")
     func quietBarMirrors() {
-        let gate = SavedOrderMirrorGate(observesSystem: false)
-        #expect(gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(0)))
-        #expect(gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(3)))
+        #expect(allows(at: 0))
+        #expect(allows(at: 3))
     }
 
     @Test("An item arriving holds the mirror past the agent's rewrite 10 s later")
     func arrivalHoldsTheMirror() {
-        let gate = SavedOrderMirrorGate(observesSystem: false)
-        _ = gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(0))
-        #expect(!gate.allowsMirror(identifiers: items.union(["d"]), restrictionChange: nil, now: at(1)))
-        #expect(!gate.allowsMirror(identifiers: items.union(["d"]), restrictionChange: nil, now: at(11.5)))
-        #expect(gate.allowsMirror(identifiers: items.union(["d"]), restrictionChange: nil, now: at(13.5)))
+        _ = allows(at: 0)
+        #expect(!allows(items.union(["d"]), at: 1))
+        #expect(!allows(items.union(["d"]), at: 11.5))
+        #expect(allows(items.union(["d"]), at: 13.5))
     }
 
     @Test("An item leaving holds the mirror too")
     func departureHoldsTheMirror() {
-        let gate = SavedOrderMirrorGate(observesSystem: false)
-        _ = gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(0))
-        #expect(!gate.allowsMirror(identifiers: ["a", "b"], restrictionChange: nil, now: at(1)))
+        _ = allows(at: 0)
+        #expect(!allows(["a", "b"], at: 1))
     }
 
     @Test("One item swapped for another in the same pass holds the mirror")
     func swapHoldsTheMirror() {
-        let gate = SavedOrderMirrorGate(observesSystem: false)
-        _ = gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(0))
-        #expect(!gate.allowsMirror(identifiers: ["a", "b", "d"], restrictionChange: nil, now: at(1)))
+        _ = allows(at: 0)
+        #expect(!allows(["a", "b", "d"], at: 1))
     }
 
     @Test("A recent hiding change holds the mirror")
     func restrictionChangeHoldsTheMirror() {
-        let gate = SavedOrderMirrorGate(observesSystem: false)
-        #expect(!gate.allowsMirror(identifiers: items, restrictionChange: at(1), now: at(2)))
-        #expect(gate.allowsMirror(identifiers: items, restrictionChange: at(1), now: at(14)))
+        #expect(!allows(restrictionChange: at(1), at: 2))
+        #expect(allows(restrictionChange: at(1), at: 14))
     }
 
     @Test("A wake or display change holds the mirror")
     func systemEventHoldsTheMirror() {
-        let gate = SavedOrderMirrorGate(observesSystem: false)
-        _ = gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(0))
-        gate.noteDisturbance(at: at(10))
-        #expect(!gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(12)))
-        #expect(gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(23)))
-    }
-
-    @Test("The bar reads quiet only once the quiet period follows the last disturbance")
-    func quietAfterDisturbance() {
-        let gate = SavedOrderMirrorGate(observesSystem: false)
-        #expect(gate.isQuiet(now: at(0)))
-        gate.noteDisturbance(at: at(1))
-        #expect(!gate.isQuiet(now: at(12)))
-        #expect(gate.isQuiet(now: at(13.5)))
-    }
-
-    @Test("The quiet rule on its own")
-    func quietRule() {
-        #expect(SavedOrderMirrorGate.isQuiet(now: at(10), events: [nil, at(2)], quietPeriod: .seconds(5)))
-        #expect(!SavedOrderMirrorGate.isQuiet(now: at(10), events: [at(2), at(8)], quietPeriod: .seconds(5)))
-        #expect(SavedOrderMirrorGate.isQuiet(now: at(10), events: [], quietPeriod: .seconds(5)))
+        _ = allows(at: 0)
+        clock.now = at(10)
+        settling.note(.screensWoke)
+        #expect(!allows(at: 12))
+        #expect(allows(at: 23))
     }
 
     @Test("A revealed section holds the mirror, and the hold outlasts the reveal")
     func revealedSectionHoldsTheMirror() {
-        let gate = SavedOrderMirrorGate(observesSystem: false)
-        #expect(gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(0)))
-        #expect(!gate.allowsMirror(identifiers: items, restrictionChange: nil, sectionRevealed: true, now: at(1)))
-        #expect(!gate.allowsMirror(identifiers: items, restrictionChange: nil, sectionRevealed: true, now: at(20)))
-        #expect(!gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(25)))
-        #expect(gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(32.5)))
+        #expect(allows(at: 0))
+        #expect(!allows(sectionRevealed: true, at: 1))
+        #expect(!allows(sectionRevealed: true, at: 20))
+        #expect(!allows(at: 25))
+        #expect(allows(at: 32.5))
     }
 
     @Test("An item with a transient frame holds the mirror past the moment it settles")
     func transientFrameHoldsTheMirror() {
-        let gate = SavedOrderMirrorGate(observesSystem: false)
-        #expect(gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(0)))
-        #expect(!gate.allowsMirror(identifiers: items, restrictionChange: nil, transientFrame: "a at x 0", now: at(1)))
-        #expect(!gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(12.5)))
-        #expect(gate.allowsMirror(identifiers: items, restrictionChange: nil, now: at(13.5)))
+        #expect(allows(at: 0))
+        #expect(!allows(transientFrame: "a at x 0", at: 1))
+        #expect(!allows(at: 12.5))
+        #expect(allows(at: 13.5))
     }
 
     private static let displays = [
@@ -157,7 +161,6 @@ struct SavedOrderMirrorGateTests {
 
     @Test("Without a drag the mirror is never behind")
     func noDragIsNotBehind() {
-        let gate = SavedOrderMirrorGate(observesSystem: false)
         #expect(!gate.mirrorIsBehind(userDragEndedAt: nil))
         gate.noteMirrored(at: at(0))
         #expect(!gate.mirrorIsBehind(userDragEndedAt: nil))
@@ -165,21 +168,18 @@ struct SavedOrderMirrorGateTests {
 
     @Test("A drag after the last mirror leaves the mirror behind")
     func dragAfterTheMirrorIsBehind() {
-        let gate = SavedOrderMirrorGate(observesSystem: false)
         gate.noteMirrored(at: at(0))
         #expect(gate.mirrorIsBehind(userDragEndedAt: at(2)))
     }
 
     @Test("A mirror after the drag catches up")
     func mirrorAfterTheDragIsNotBehind() {
-        let gate = SavedOrderMirrorGate(observesSystem: false)
         gate.noteMirrored(at: at(14))
         #expect(!gate.mirrorIsBehind(userDragEndedAt: at(2)))
     }
 
     @Test("A drag with no mirror ever is behind")
     func dragWithoutAnyMirrorIsBehind() {
-        let gate = SavedOrderMirrorGate(observesSystem: false)
         #expect(gate.mirrorIsBehind(userDragEndedAt: at(2)))
     }
 
@@ -243,7 +243,7 @@ struct SavedOrderMirrorGateTests {
         let visibleKey = MenuBarSectionName.visible.rawValue
         let saved = [visibleKey: visible.reversed().map(\.uniqueIdentifier)]
         manager.savedSectionOrder = saved
-        manager.savedOrderMirrorGate.noteDisturbance()
+        manager.barSettling.note(.screensWoke)
 
         manager.mirrorSavedSectionOrderIfSettled(from: cache, displays: Self.displays)
         #expect(manager.savedSectionOrder == saved)

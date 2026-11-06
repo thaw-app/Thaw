@@ -179,7 +179,7 @@ struct BarSettlingTests {
         var streak = BarSettling.Streak()
         let sample = BarSettling.Sample.ready(count: 4)
         let verdicts = (0 ..< 4).map { _ in
-            BarSettling.verdict(for: sample, expecting: nil, minimumElapsed: true, waitsForQuietBar: false, streak: &streak)
+            BarSettling.verdict(for: sample, expecting: nil, minimumElapsed: true, barQuiet: true, streak: &streak)
         }
 
         #expect(verdicts == [.waiting(.countChanged(from: -1, to: 4)), .waiting(.counting), .waiting(.counting), .settled])
@@ -189,7 +189,7 @@ struct BarSettlingTests {
     func countChangeResets() {
         var streak = BarSettling.Streak(lastSeenCount: 4, stablePolls: 2)
 
-        let verdict = BarSettling.verdict(for: .ready(count: 5), expecting: nil, minimumElapsed: true, waitsForQuietBar: false, streak: &streak)
+        let verdict = BarSettling.verdict(for: .ready(count: 5), expecting: nil, minimumElapsed: true, barQuiet: true, streak: &streak)
 
         #expect(verdict == .waiting(.countChanged(from: 4, to: 5)))
         #expect(streak == .init(lastSeenCount: 5, stablePolls: 0))
@@ -199,7 +199,7 @@ struct BarSettlingTests {
     func countModeBlockers() {
         func judge(_ sample: BarSettling.Sample, minimumElapsed: Bool = true) -> BarSettling.Verdict {
             var streak = BarSettling.Streak(lastSeenCount: sample.managedCount, stablePolls: 2)
-            return BarSettling.verdict(for: sample, expecting: nil, minimumElapsed: minimumElapsed, waitsForQuietBar: false, streak: &streak)
+            return BarSettling.verdict(for: sample, expecting: nil, minimumElapsed: minimumElapsed, barQuiet: true, streak: &streak)
         }
         var noHost = BarSettling.Sample.ready(count: 3)
         noHost.hostReady = false
@@ -215,32 +215,39 @@ struct BarSettlingTests {
         #expect(judge(oneUnresolved) == .settled, "one unresolved PID is tolerated")
     }
 
-    @Test("Only a display change waits for the saved-order mirror to go quiet")
-    func onlyDisplayChangeWaitsForQuietBar() {
-        var busy = BarSettling.Sample.ready(count: 3)
-        busy.barQuiet = false
-        var displayStreak = BarSettling.Streak(lastSeenCount: 3, stablePolls: 2)
-        var otherStreak = displayStreak
+    @Test("A count-stable settle waits for a quiet bar when asked to")
+    func countModeWaitsForQuietBar() {
+        var streak = BarSettling.Streak(lastSeenCount: 3, stablePolls: 2)
 
-        let display = BarSettling.verdict(for: busy, expecting: nil, minimumElapsed: true, waitsForQuietBar: true, streak: &displayStreak)
-        let other = BarSettling.verdict(for: busy, expecting: nil, minimumElapsed: true, waitsForQuietBar: false, streak: &otherStreak)
+        let verdict = BarSettling.verdict(for: .ready(count: 3), expecting: nil, minimumElapsed: true, barQuiet: false, streak: &streak)
 
-        #expect(display == .waiting(.barNotQuiet))
-        #expect(other == .settled)
+        #expect(verdict == .waiting(.barNotQuiet))
         #expect(BarSettling.Disturbance.displayChanged(label: "displayArrangement").waitsForQuietBar)
         #expect(!BarSettling.Disturbance.thawLaunched.waitsForQuietBar)
+    }
+
+    @Test("Only a display change settle waits out the quiet period after a wake", arguments: [true, false])
+    func onlyDisplayChangeWaitsForQuietBar(isDisplayChange: Bool) async {
+        let harness = Harness(samples: [.ready(count: 3)])
+        let start = harness.clock.now
+
+        harness.settling.note(.screensWoke)
+        harness.settling.note(isDisplayChange ? .displayChanged(label: "displayConnect") : .spacingWaveStarted(cause: nil))
+        await harness.settling.settled()
+
+        let waited = start.duration(to: harness.clock.now)
+        #expect(isDisplayChange ? waited >= BarSettling.quietPeriod : waited < .seconds(5))
     }
 
     @Test("An expected-set settle ends once every awaited app is back, ignoring the count and the quiet clock")
     func expectedSetMode() {
         var streak = BarSettling.Streak()
-        var partial = BarSettling.Sample.ready(count: 5, bundleIDs: ["com.example.one"])
-        partial.barQuiet = false
+        let partial = BarSettling.Sample.ready(count: 5, bundleIDs: ["com.example.one"])
         var complete = partial
         complete.bundleIDs = ["com.example.one", "com.example.two"]
 
-        let waiting = BarSettling.verdict(for: partial, expecting: ["com.example.one", "com.example.two"], minimumElapsed: true, waitsForQuietBar: true, streak: &streak)
-        let done = BarSettling.verdict(for: complete, expecting: ["com.example.one", "com.example.two"], minimumElapsed: true, waitsForQuietBar: true, streak: &streak)
+        let waiting = BarSettling.verdict(for: partial, expecting: ["com.example.one", "com.example.two"], minimumElapsed: true, barQuiet: false, streak: &streak)
+        let done = BarSettling.verdict(for: complete, expecting: ["com.example.one", "com.example.two"], minimumElapsed: true, barQuiet: false, streak: &streak)
 
         #expect(waiting == .waiting(.missing(["com.example.two"])))
         #expect(done == .settled)
@@ -370,6 +377,6 @@ private final class Harness {
 
 private extension BarSettling.Sample {
     static func ready(count: Int, bundleIDs: Set<String> = []) -> Self {
-        Self(managedCount: count, unresolvedPIDs: 0, hostReady: true, bundleIDs: bundleIDs, barQuiet: true)
+        Self(managedCount: count, unresolvedPIDs: 0, hostReady: true, bundleIDs: bundleIDs)
     }
 }

@@ -309,7 +309,7 @@ extension MenuBarItemManager {
         let overflowIdentifiers = controller.overflowHiddenIdentifiers
         let concealedIdentifiers = controller.effectivelyConcealedIdentifiers
         let isBarSettled = controller.revealedSection == nil
-            && !appState.menuBarManager.isRevealHideTransitionActive
+            && !barSettling.isRevealTransitionActive
         let parkedWidths = !isBarSettled ? [] : visibleLive
             .filter { [screens = BarAxis.liveDisplayBounds()] item in
                 NotShownOnBar.isLeftOffTheBar(item, among: visibleLive, screens: screens)

@@ -7,14 +7,15 @@
 
 import MenuBarModel
 
-/// Whether the menu bar is still settling after Thaw's launch, an app launch, a display change or a
-/// spacing wave. Callers report what happened; the item cache's owner attaches a Host for the samples.
+/// Whether the menu bar is still settling after Thaw's launch, an app launch, a display change or a spacing
+/// wave, or was disturbed recently enough to hold a purpose off. The item cache's owner attaches the Host.
 @MainActor
 final class BarSettling {
     private static let diagLog = DiagLog(category: "BarSettling")
     static nonisolated let stableTarget = 3
 
-    private let now: @MainActor () -> ContinuousClock.Instant
+    /// Monotonic, so a wall-clock change can neither open nor close a hold.
+    let now: @MainActor () -> ContinuousClock.Instant
     private let sleep: @MainActor (Duration) async throws -> Void
     private let pollInterval: Duration
     private let minimumDuration: Duration
@@ -26,6 +27,12 @@ final class BarSettling {
     private(set) var expectedBundleIDs = Set<String>()
     private var deadline: ContinuousClock.Instant?
     private var task: Task<Void, Never>?
+
+    /// The last wake, display invalidation or shift seen while reading the bar.
+    private(set) var lastBarDisturbance: ContinuousClock.Instant?
+    private(set) var lastRevealChange: ContinuousClock.Instant?
+    /// Set by the kit for the length of a reveal or hide layout.
+    private(set) var isRevealTransitionActive = false
 
     init(
         now: @escaping @MainActor () -> ContinuousClock.Instant = { .now },
@@ -45,15 +52,33 @@ final class BarSettling {
     }
 
     /// A weaker disturbance joins a stronger settle and adds its bundle IDs; otherwise it replaces the
-    /// settle, keeping the later deadline.
+    /// settle, keeping the later deadline. Disturbances that start no settle only move their clock.
     func note(_ disturbance: Disturbance) {
-        if case .spacingWaveEnded = disturbance {
+        switch disturbance {
+        case .spacingWaveEnded:
             callOff(disturbance)
-            return
+        case .screensWoke, .displaysInvalidated, .barLayoutShifted:
+            lastBarDisturbance = now()
+        case .revealedSectionChanged:
+            lastRevealChange = now()
+        case let .revealTransition(active):
+            isRevealTransitionActive = active
+        case .thawLaunched, .appLaunched, .displayChanged, .spacingWaveStarted, .appsRelaunched:
+            if let incoming = disturbance.kind {
+                startSettle(disturbance, kind: incoming)
+            }
         }
+    }
+
+    /// Follows any settle that replaces the awaited one, through the work its host owes afterwards.
+    /// Returns early if the caller is cancelled.
+    func settled() async {
+        await SettlingWait.follow(isSettling: { isSettling }, currentTask: { task })
+    }
+
+    private func startSettle(_ disturbance: Disturbance, kind incoming: Kind) {
         let label = disturbance.label
         let merged = expectedBundleIDs.union(disturbance.expectedBundleIDs)
-        let incoming = disturbance.kind
         if let existing = kind, Self.yields(incoming: incoming, to: existing) {
             expectedBundleIDs = merged
             Self.diagLog.debug("\(label): settling start ignored; \(existing) settling already in flight")
@@ -78,12 +103,6 @@ final class BarSettling {
         }
     }
 
-    /// Follows any settle that replaces the awaited one, through the work its host owes afterwards.
-    /// Returns early if the caller is cancelled.
-    func settled() async {
-        await SettlingWait.follow(isSettling: { isSettling }, currentTask: { task })
-    }
-
     // MARK: Rules
 
     static nonisolated func yields(incoming: Kind, to existing: Kind) -> Bool {
@@ -100,13 +119,13 @@ final class BarSettling {
         incoming == .cold || existing == .cold
     }
 
-    /// After a display change macOS keeps re-laying the bar past a stable count, and a restore read
-    /// from those frames scrambles it, so that settle also waits for the mirror's quiet clock.
+    /// A count-stable settle also needs barQuiet: after a display change macOS keeps re-laying the bar
+    /// past a stable count, and a restore read from those frames scrambles it.
     static nonisolated func verdict(
         for sample: Sample,
         expecting: Set<String>?,
         minimumElapsed: Bool,
-        waitsForQuietBar: Bool,
+        barQuiet: Bool,
         streak: inout Streak
     ) -> Verdict {
         let pidsOK = sample.managedCount > 0 && sample.unresolvedPIDs <= 1
@@ -118,7 +137,6 @@ final class BarSettling {
             return .waiting(.missing(missing))
         }
 
-        let barQuiet = !waitsForQuietBar || sample.barQuiet
         if pidsOK, sample.managedCount == streak.lastSeenCount, minimumElapsed, sample.hostReady, barQuiet {
             streak.stablePolls += 1
             return streak.stablePolls >= stableTarget ? .settled : .waiting(.counting)
@@ -164,7 +182,7 @@ final class BarSettling {
                 for: sample,
                 expecting: waitsForSet ? expectedBundleIDs : nil,
                 minimumElapsed: startedAt.duration(to: now()) >= minimumDuration,
-                waitsForQuietBar: disturbance.waitsForQuietBar,
+                barQuiet: !disturbance.waitsForQuietBar || isBarQuiet(),
                 streak: &streak
             )
             if verdict == .settled {
