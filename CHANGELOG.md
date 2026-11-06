@@ -30,6 +30,7 @@ the items under New and Fixed.
 - **Opening a hidden item no longer opens the item next to it.** When macOS showed the item somewhere other than where it said, Thaw could open or click the neighboring item first and then the one you clicked. Thaw now clicks where the item is shown, and clicks nothing when it can't tell.
 - **Opening a hidden item works the first time.** The first time you opened a hidden item after Thaw started, Thaw could miss that its menu had opened. It then hid the item again, opened the menu a second time or refused to click it. Thaw now finds the item's app before opening it.
 - **Opening a hidden item moves the pointer only when it has to.** Thaw remembers how each hidden item opens, and one slow menu, or one you closed right away, could make it click that item for real from then on, moving the pointer every time. Thaw now tries a press that leaves the pointer alone first, and clicks for real straight away only for items that needed it twice in a row.
+- **Clicking a menu bar item for real is faster.** Before each real click, Thaw asked every running app where its menu bar items were, and it did that twice for a hidden item. It now asks only the item's own app, and every app only when that app doesn't answer.
 
 ## [3.0.0-alpha.14] - 2026-11-11
 

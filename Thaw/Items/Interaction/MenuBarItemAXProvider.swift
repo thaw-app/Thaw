@@ -719,6 +719,16 @@ nonisolated enum MenuBarItemAXProvider {
         return restoredIdentities(snapshot).freshItems
     }
 
+    /// Re-reads only the apps a click on an item names, for its frame now: fresh answers only. An app
+    /// that didn't answer leaves its item out, and the click reads every app instead (ClickBoundsRead).
+    @concurrent
+    static func menuBarItemsForClickConcurrent(owners: Set<pid_t>) async -> [MenuBarItem]? {
+        guard let snapshot = await inventoryGate.snapshot(
+            freshOnly: true, scope: .requestedOwners, priorityOwners: owners
+        ) else { return nil }
+        return restoredIdentities(snapshot).freshItems
+    }
+
     /// Re-reads the owners a thumbnail pass names. It runs every refresh tick,
     /// so it waits out a discovery walk in flight rather than cancelling it.
     @concurrent

@@ -110,7 +110,7 @@ extension MenuBarItemManager {
         // reflowed, and clicking a stale rectangle hits a neighbour. On
         // macOS 27 the refreshed frame is stated in one display's space, so it
         // is rebased onto the bar under the cursor before the warp below.
-        let resolvedBounds = try await getCurrentBounds(for: item)
+        let resolvedBounds = try await ClickBoundsRead.current(for: item)
         // The re-read can still land on a parked or phantom frame mid-reflow.
         let displays = BarAxis.liveDisplayBounds()
         if let rejection = ClickTargetCheck.rejection(
@@ -398,7 +398,7 @@ extension MenuBarItemManager {
     func revealInPlaceAndClick(
         item: MenuBarItem,
         with mouseButton: CGMouseButton,
-        on displayID: CGDirectDisplayID,
+        on _: CGDirectDisplayID,
         trying methods: [ConcealedItemOpenMethod],
         controller: any MenuBarSectionControlling
     ) async -> ConcealedItemOpenMethod? {
@@ -411,12 +411,12 @@ extension MenuBarItemManager {
         // isWindowOnScreen: macOS 27 status items carry synthetic window IDs.
         await eventSleep(for: Constants.MenuBarTuning.thawBarRevealSettle)
 
-        // Re-fetch live bounds; a transient "Item-N" title can change between
-        // enumerations, so fall back to same-owner, then the cached item.
-        let liveItems = await MenuBarItem.getMenuBarItems(on: displayID, option: .onScreen)
-        let liveItem = liveItems.first { $0.hasSameIdentity(as: item) }
-            ?? liveItems.first { $0.hasSameOwner(as: item) }
-            ?? item
+        // Only the drawn-element press needs the frame now; the real click re-reads it. A transient "Item-N"
+        // title can change between reads, so fall back to same-owner, then the cached item.
+        var liveItem = item
+        if methods.contains(.revealAndPress), let fresh = await ClickBoundsRead.ownApp(of: item) {
+            liveItem = fresh.first { $0.hasSameIdentity(as: item) } ?? fresh.first { $0.hasSameOwner(as: item) } ?? item
+        }
 
         var opened: ConcealedItemOpenMethod?
         if methods.contains(.revealAndPress), mouseButton == .left,
