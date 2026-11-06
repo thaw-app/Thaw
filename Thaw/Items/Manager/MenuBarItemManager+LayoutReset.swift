@@ -788,14 +788,12 @@ extension MenuBarItemManager {
             scheduleDeferredLayoutReconcile(after: .seconds(1), reason: "user drag in progress")
             return false
         }
-        if let lastRestrictionChange = lastRestrictionChangeTimestamp,
-           lastRestrictionChange.duration(to: .now) < Self.restrictionChangeLayoutSettleWindow
-        {
+        if barSettling.hold(for: .layoutReorder) != nil {
             MenuBarItemManager.diagLog.debug(
                 "applySavedLayout: skipping, within restriction-reflow settle window"
             )
             scheduleDeferredLayoutReconcile(
-                after: Self.restrictionChangeLayoutSettleWindow,
+                after: BarSettling.restrictionReflowWindow,
                 reason: "restriction-reflow settle"
             )
             return false

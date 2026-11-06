@@ -142,7 +142,6 @@ final class MenuBarManager {
 
     /// Manual URL/hotkey hiding must not be undone by automatic section state.
     private var isManuallyHidingApplicationMenus = false
-    private var nativeMenuBarStateChangedAt: ContinuousClock.Instant?
 
     let thawBarPanel = ThawBarPanel()
 
@@ -233,9 +232,9 @@ final class MenuBarManager {
     /// Re-applies "Always show hidden items" when the active menu bar moves to another display.
     private var activeDisplayWatcher: ActiveMenuBarDisplayWatcher?
 
+    /// Read by the kit adapter, which reaches the shared settling through this manager.
     var shouldDeferBarMutation: Bool {
-        guard let nativeMenuBarStateChangedAt else { return false }
-        return nativeMenuBarStateChangedAt.duration(to: .now) < Constants.MenuBarTuning.nativeMenuBarMutationSettle
+        barSettling.hold(for: .barMutation) != nil
     }
 
     /// Fixed sections, built once and never reordered; access by section(withName:).
@@ -357,7 +356,7 @@ final class MenuBarManager {
                 }
                 let hidden = options.contains(.hideMenuBar) || options.contains(.autoHideMenuBar)
                 if hidden != isMenuBarHiddenBySystem {
-                    nativeMenuBarStateChangedAt = .now
+                    barSettling.note(.nativeBarChanged)
                 }
                 isMenuBarHiddenBySystem = hidden
             }

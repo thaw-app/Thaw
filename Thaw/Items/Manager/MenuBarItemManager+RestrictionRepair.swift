@@ -13,16 +13,6 @@ import ThawCapture
 // MARK: - Restriction repair
 
 extension MenuBarItemManager {
-    /// Whether the kit's restriction was rebuilt recently enough that
-    /// automatic visible-section reorders should stand down. The image cache's
-    /// volatility recording reads it too, since a reflow shifts every crop.
-    var isWithinRestrictionReflowSettleWindow: Bool {
-        guard let lastRestrictionChange = lastRestrictionChangeTimestamp else {
-            return false
-        }
-        return lastRestrictionChange.duration(to: .now) < Self.restrictionChangeLayoutSettleWindow
-    }
-
     /// Forgets every stranded verdict after a positions reset, since the bar
     /// they described no longer exists. Otherwise the repair keeps skipping
     /// items it gave up on before the reset.
@@ -31,22 +21,11 @@ extension MenuBarItemManager {
         boundaryRepairBreaker.rearmAll()
     }
 
-    /// How long a Thaw press may take to flip the active display before a
-    /// display switch counts as the user's.
-    private static let selfInflictedDisplayChangeWindow: Duration = .seconds(6)
-
-    /// Marks the active display as about to change because of a Thaw press.
-    func noteSelfInflictedDisplayChange() {
-        selfInflictedDisplayChangeUntil = ContinuousClock.now.advanced(
-            by: Self.selfInflictedDisplayChangeWindow
-        )
-    }
-
     /// Records that the kit's restriction was torn down and rebuilt.
     /// The OS reflows the whole bar; defer saved-layout re-apply until geometry settles.
     func noteRestrictionChange() {
         layoutPublication.invalidate()
-        lastRestrictionChangeTimestamp = .now
+        barSettling.note(.restrictionChanged)
         schedulePostRestrictionRepair(cause: .restrictionChanged)
     }
 
@@ -104,7 +83,7 @@ extension MenuBarItemManager {
         let read: () async -> PostRestrictionReading? = {
             // A pass that will return at once must not take a picture first.
             guard !self.arrangementIsManual, !self.barSettling.isSettling, !self.isNotificationCenterLayoutSuspended,
-                  self.appState?.menuBarManager.shouldDeferBarMutation != true
+                  self.barSettling.hold(for: .barMutation) == nil
             else { return nil }
             let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
             let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
@@ -128,7 +107,7 @@ extension MenuBarItemManager {
         guard !arrangementIsManual, !barSettling.isSettling, !Task.isCancelled,
               !isNotificationCenterLayoutSuspended
         else { return false }
-        if appState?.menuBarManager.shouldDeferBarMutation == true {
+        if barSettling.hold(for: .barMutation) != nil {
             MenuBarItemManager.diagLog.debug(
                 "post-restriction repair: deferred; native menu bar unavailable/transitioning"
             )
@@ -184,11 +163,10 @@ extension MenuBarItemManager {
         // Not when Thaw's own press activated another display: that would
         // re-ladder the band under an open menu.
         if let last = lastBoundaryRepairDisplayID, last != displayID {
-            if let until = selfInflictedDisplayChangeUntil, ContinuousClock.now < until {
+            if barSettling.takeThawPressDisplayFlip() {
                 MenuBarItemManager.diagLog.debug(
                     "post-restriction repair: display change came from Thaw's own press; not re-arming strands"
                 )
-                selfInflictedDisplayChangeUntil = nil
             } else {
                 if boundaryRepairBreaker.suppressedCount > 0 {
                     MenuBarItemManager.diagLog.info(

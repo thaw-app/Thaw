@@ -39,10 +39,10 @@ final class SavedOrderMirrorGate {
     }
 
     /// Whether the cache holding these items may become the saved order now.
-    /// A changed item set, a revealed section and an item with a transient frame each count as a disturbance.
+    /// A changed item set, a revealed section and an item with a transient frame each count as a disturbance,
+    /// and a recent hiding change holds it too.
     func allowsMirror(
         identifiers: Set<String>,
-        restrictionChange: ContinuousClock.Instant?,
         sectionRevealed: Bool = false,
         transientFrame: String? = nil
     ) -> Bool {
@@ -53,7 +53,7 @@ final class SavedOrderMirrorGate {
             settling.note(.barLayoutShifted)
         }
         lastIdentifiers = identifiers
-        return settling.isBarQuiet(alsoAfter: restrictionChange)
+        return settling.hold(for: .savedOrderMirror) == nil
     }
 
     /// The first on-screen item still mid-layout, described for the log: its frame is at x == 0, above its display, or over none.

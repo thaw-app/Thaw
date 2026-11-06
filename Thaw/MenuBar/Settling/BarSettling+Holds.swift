@@ -10,6 +10,13 @@ extension BarSettling {
     static nonisolated let quietPeriod = Duration.seconds(12)
     /// Generous; observed reflows after a reveal or hide take tens of milliseconds.
     static nonisolated let revealReflowWindow = Duration.milliseconds(500)
+    /// How long automatic reorders stand down after a restriction reflow, so its transient geometry
+    /// is not mistaken for drift.
+    static nonisolated let restrictionReflowWindow = Duration.seconds(10)
+    /// How long macOS may take to hide or show the bar after a presentation change.
+    static nonisolated let nativeBarChangeWindow = Constants.MenuBarTuning.nativeMenuBarMutationSettle
+    /// How long a Thaw press may take to flip the active display before a display switch counts as the user's.
+    static nonisolated let thawPressFlipWindow = Duration.seconds(6)
 
     /// Whether the quiet period has passed since the last wake, display invalidation or shift, and since
     /// the given instant when there is one.
@@ -26,6 +33,12 @@ extension BarSettling {
                 return .revealReflow
             }
             return isRevealTransitionActive ? .revealTransition : nil
+        case .savedOrderMirror:
+            return isBarQuiet(alsoAfter: lastRestrictionChange) ? nil : .barNotQuiet
+        case .barMutation:
+            return Self.isWithin(Self.nativeBarChangeWindow, of: lastNativeBarChange, now: now()) ? .nativeBarChanging : nil
+        case .layoutReorder:
+            return Self.isWithin(Self.restrictionReflowWindow, of: lastRestrictionChange, now: now()) ? .restrictionReflow : nil
         }
     }
 
@@ -38,7 +51,12 @@ extension BarSettling {
     }
 
     static nonisolated func isReflowing(lastRevealChange: ContinuousClock.Instant?, now: ContinuousClock.Instant) -> Bool {
-        guard let lastRevealChange else { return false }
-        return lastRevealChange.duration(to: now) < revealReflowWindow
+        isWithin(revealReflowWindow, of: lastRevealChange, now: now)
+    }
+
+    /// Strictly inside the window: at its full length the hold has lapsed.
+    static nonisolated func isWithin(_ window: Duration, of event: ContinuousClock.Instant?, now: ContinuousClock.Instant) -> Bool {
+        guard let event else { return false }
+        return event.duration(to: now) < window
     }
 }
