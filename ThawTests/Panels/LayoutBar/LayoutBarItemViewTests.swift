@@ -113,7 +113,11 @@ struct LayoutBarItemViewTests {
         let rect = try #require(LayoutBarItemView.bareGlyphRect(in: CGRect(x: 0, y: 0, width: 40, height: 24)))
         #expect(rect.width == rect.height)
         #expect(rect.midX == 20 && rect.midY == 12)
-        #expect(rect.height < 24, "inset like the symbol inside the box")
+        #expect(rect.height == 24, "the full square, as the previews draw it")
+        #expect(rect == LayoutBarItemView.overflowFallbackDrawRect(
+            for: item(.menuBarAgent, "com.apple.menuextra.bluetooth"), imageSize: CGSize(width: 16, height: 16),
+            bounds: CGRect(x: 0, y: 0, width: 40, height: 24)
+        ))
         #expect(LayoutBarItemView.bareGlyphRect(in: .zero) == nil)
 
         let bluetooth = item(.menuBarAgent, "com.apple.menuextra.bluetooth")
