@@ -35,37 +35,18 @@ nonisolated struct HiddenItemCaptureResult: Equatable {
 }
 
 extension MenuBarItemImageCache {
-    /// Whether a prewarm leaves this item out. A Control Center module Thaw hid by switching
-    /// it off never draws when revealed, so it would only cost a settle wait. A blank item has
-    /// no size on the bar, except an app Native hiding keeps off it until this capture reveals it.
-    @MainActor
-    func prewarmSkips(_ item: MenuBarItem) -> Bool {
-        item.tag.isControlCenterGovernable
-            || appState?.menuBarManager.nativeAppHidingExperiment.allowsCaptureReveal != true && Self.isBlankItem(item.bounds)
-    }
-
     /// Unlike the automatic passes this also runs under Native hiding, where each
-    /// reveal makes macOS rebuild the bar. Items whose picture is already good are left
-    /// alone unless retakingAll, since each reveal risks a worse one. Nil when no capture can run.
+    /// reveal makes macOS rebuild the bar. See RevealCapturePrewarm.captureHiddenItems(retakingAll:).
     @MainActor
     func captureHiddenItems(retakingAll: Bool = false) async -> HiddenItemCaptureResult? {
         guard let appState else { return nil }
         let native = appState.menuBarManager.nativeAppHidingExperiment
         native.allowsCaptureReveal = true
-        defer { native.allowsCaptureReveal = false }
-        guard ConcealedPrewarmGate.mayReveal(for: appState) else { return nil }
-
-        let sections: [MenuBarSection.Name] = [.hidden, .alwaysHidden]
-        let alreadyGood = retakingAll ? [] : Set(sections.flatMap { appState.itemManager.itemCache[$0] }
-            .filter { !Self.prewarmNeedsCapture(cachedImage: image(for: $0.tag), wouldAttemptCapture: true) }
-            .map(\.tag))
-        let tally = RequestedCaptureTally()
-        await prewarmConcealedImages(sections: sections, onlyMissingImages: !retakingAll, tally: tally)
-        let newlyCaptured = tally.tags
-
-        let items = sections.flatMap { appState.itemManager.itemCache[$0] }
-            .filter { Self.isCapturable($0) && !Self.isBlankItem($0.bounds) && !$0.tag.isControlCenterGovernable }
-        return Self.hiddenItemCaptureResult(items: items, alreadyGood: alreadyGood, newlyCaptured: newlyCaptured)
+        defer {
+            native.allowsCaptureReveal = false
+            withExtendedLifetime(appState) {}
+        }
+        return await concealedPrewarm().captureHiddenItems(retakingAll: retakingAll)
     }
 
     /// Counts kept and attempted pictures using identities that survive a rebuilt menu bar.
