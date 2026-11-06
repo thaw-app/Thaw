@@ -39,7 +39,8 @@ final class SystemExtraTakeoverCoordinator {
     @ObservationIgnored private weak var controller: (any StandInSectionControlling)?
     @ObservationIgnored private var observationTasks: [Task<Void, Never>] = []
     @ObservationIgnored private var layoutSubscription: AnyCancellable?
-    @ObservationIgnored private let launcher: SystemExtraStandInLauncher
+    /// Shared with the Space indicator, so one spacing restart reaches every stand-in.
+    @ObservationIgnored let launcher: SystemExtraStandInLauncher
     @ObservationIgnored private var activeModuleStandIns: Set<SystemExtraStandIn> = []
     @ObservationIgnored private let isShownInMenuBar: @MainActor (String) -> Bool
 

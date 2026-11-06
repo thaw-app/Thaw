@@ -23,6 +23,7 @@ struct SystemExtraStandInIdentityTests {
         (.nowPlaying, "Thaw.Extra.NowPlaying"),
         (.userSwitcher, "Thaw.Extra.UserSwitcher"),
         (.textInput, "Thaw.Extra.TextInput"),
+        (.space, "Thaw.Extra.Space"),
     ])
     func itemIdentifier(standIn: SystemExtraStandIn, autosaveName: String) {
         #expect(standIn.itemIdentifier == "\(standIn.bundleIdentifier):\(autosaveName)")

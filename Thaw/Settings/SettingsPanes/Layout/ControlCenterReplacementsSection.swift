@@ -38,7 +38,7 @@ struct ControlCenterReplacements: Equatable {
         switch item {
         case .timeMachine: timeMachine
         case .textInput: textInput
-        case .timer: false
+        case .timer, .space: false
         case .focus, .airDrop, .nowPlaying, .userSwitcher: modules && !skipped.contains(item)
         }
     }
@@ -52,7 +52,7 @@ struct ControlCenterReplacements: Equatable {
             timeMachine = replaced
         case .textInput:
             textInput = replaced
-        case .timer:
+        case .timer, .space:
             break
         case .focus, .airDrop, .nowPlaying, .userSwitcher:
             if replaced {
@@ -147,6 +147,7 @@ struct ControlCenterReplacementsSection: View {
         case .timeMachine: "Time Machine"
         case .textInput: "Input menu"
         case .timer: "Timer"
+        case .space: "Space"
         }
     }
 
