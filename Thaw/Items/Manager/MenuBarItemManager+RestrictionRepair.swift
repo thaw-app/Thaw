@@ -53,7 +53,7 @@ extension MenuBarItemManager {
     func schedulePostRestrictionRepair(cause: RepairOrchestrator.Cause) {
         // Hiding still invalidates geometry, but manual arrangement never
         // schedules corrective pulses, unparking, or boundary moves.
-        guard !arrangementIsManual, !isInStartupSettling, !isNotificationCenterLayoutSuspended else {
+        guard !arrangementIsManual, !barSettling.isSettling, !isNotificationCenterLayoutSuspended else {
             PendingPassTeardown.callOff([.postRestrictionRepair], of: self, on: repairs)
             return
         }
@@ -103,7 +103,7 @@ extension MenuBarItemManager {
     private func repairVisibleLayoutInRepairLane() async -> Bool? {
         let read: () async -> PostRestrictionReading? = {
             // A pass that will return at once must not take a picture first.
-            guard !self.arrangementIsManual, !self.isInStartupSettling, !self.isNotificationCenterLayoutSuspended,
+            guard !self.arrangementIsManual, !self.barSettling.isSettling, !self.isNotificationCenterLayoutSuspended,
                   self.appState?.menuBarManager.shouldDeferBarMutation != true
             else { return nil }
             let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
@@ -125,7 +125,7 @@ extension MenuBarItemManager {
         permit: consuming StoreWritePermit,
         writing: RepairTurn.Writing
     ) async -> Bool {
-        guard !arrangementIsManual, !isInStartupSettling, !Task.isCancelled,
+        guard !arrangementIsManual, !barSettling.isSettling, !Task.isCancelled,
               !isNotificationCenterLayoutSuspended
         else { return false }
         if appState?.menuBarManager.shouldDeferBarMutation == true {

@@ -35,7 +35,7 @@ extension MenuBarItemManager {
     /// Compares one settled inventory with the apps that hosted items last
     /// session, and publishes the ones still missing.
     func noteUnseenMenuBarHosts(in cache: ItemCache, running: RunningApplicationSnapshot) {
-        guard !isInStartupSettling, !areControlItemsMissing else { return }
+        guard !barSettling.isSettling, !areControlItemsMissing else { return }
         let key = UnseenMenuBarHosts.defaultsKey
         let defaults = UserDefaults.standard
         var tracker = unseenHosts

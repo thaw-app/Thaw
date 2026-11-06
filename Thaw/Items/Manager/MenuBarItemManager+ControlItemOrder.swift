@@ -73,7 +73,7 @@ extension MenuBarItemManager {
         // During settling, tags can carry wrong namespaces before sourcePID
         // resolves; relocating on them would move every hidden item to visible.
         // Seed identifiers only and leave placement to the settling-end restore.
-        if isInStartupSettling {
+        if barSettling.isSettling {
             knownItemIdentifiers.formUnion(seedableIdentifiers())
             persistKnownItemIdentifiers()
             return false
@@ -324,7 +324,7 @@ extension MenuBarItemManager {
         // Same stranded-control exemption from Manual as enforceControlItemOrder.
         // Startup settling still gates it: weight writes need a quiet bar.
         guard !arrangementIsManual || ControlOrderRules.visibleControlIsStranded(among: items),
-              !isInStartupSettling else { return false }
+              !barSettling.isSettling else { return false }
         guard !ControlOrderRules.framesSpanSeveralBars(items) else {
             MenuBarItemManager.diagLog.debug("Skipping \(diagnosticContext): item frames span more than one bar")
             return false

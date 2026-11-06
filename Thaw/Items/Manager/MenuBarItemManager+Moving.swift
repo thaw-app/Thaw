@@ -1427,7 +1427,7 @@ extension MenuBarItemManager {
         whileRevealing revealedSection: MenuBarSection.Name?,
         permit: borrowing StoreWritePermit
     ) async -> (items: [MenuBarItem], aborted: Bool, strandsRemaining: Bool) {
-        guard !arrangementIsManual, !isInStartupSettling, !isUserArrangingMenuBar, !Task.isCancelled else {
+        guard !arrangementIsManual, !barSettling.isSettling, !isUserArrangingMenuBar, !Task.isCancelled else {
             return (liveItems, true, false)
         }
         var liveItems = liveItems

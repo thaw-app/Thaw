@@ -5,8 +5,11 @@ import Testing
 struct StartupRepairSchedulingTests {
     @Test func startupRestrictionChangesDoNotQueueRepairs() {
         let manager = MenuBarItemManager()
-        manager.isInStartupSettling = true
-        defer { manager.postRestrictionRepairTask?.cancel() }
+        manager.barSettling.holdForTesting()
+        defer {
+            manager.barSettling.releaseForTesting()
+            manager.postRestrictionRepairTask?.cancel()
+        }
 
         manager.noteRestrictionChange()
         manager.noteRestrictionChange()
@@ -16,8 +19,11 @@ struct StartupRepairSchedulingTests {
 
     @Test func startupNormalizationDoesNotQueueARewrite() {
         let manager = MenuBarItemManager()
-        manager.isInStartupSettling = true
-        defer { manager.structuralNormalizationTask?.cancel() }
+        manager.barSettling.holdForTesting()
+        defer {
+            manager.barSettling.releaseForTesting()
+            manager.structuralNormalizationTask?.cancel()
+        }
 
         manager.scheduleStructuralNormalization(cause: .settled)
 
@@ -26,9 +32,9 @@ struct StartupRepairSchedulingTests {
 
     @Test func settledStartupCanScheduleRepairsAgain() {
         let manager = MenuBarItemManager()
-        manager.isInStartupSettling = true
+        manager.barSettling.holdForTesting()
         manager.noteRestrictionChange()
-        manager.isInStartupSettling = false
+        manager.barSettling.releaseForTesting()
         defer {
             manager.postRestrictionRepairTask?.cancel()
             manager.structuralNormalizationTask?.cancel()

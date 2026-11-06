@@ -367,7 +367,7 @@ extension MenuBarItemManager {
             && LayoutSolver.shouldPersistSavedOrder(
                 isRestoringItemOrder: isRestoringItemOrder,
                 isResettingLayout: isResettingLayout,
-                isInStartupSettling: isInStartupSettling,
+                isInStartupSettling: barSettling.isSettling,
                 isApplyingProfileLayout: isApplyingProfileLayout
             )
         guard placedByUser || savedOrderMirrorGate.allowsMirror(identifiers: Set(cache.managedItems.map(\.uniqueIdentifier)), restrictionChange: lastRestrictionChangeTimestamp, sectionRevealed: isAnySectionRevealed, transientFrame: SavedOrderMirrorGate.transientFrame(among: cache[.visible], displays: displays)), shouldPersistLayoutSnapshot else {
@@ -499,7 +499,7 @@ extension MenuBarItemManager {
         hiddenControlItemWID: CGWindowID?,
         alwaysHiddenControlItemWID: CGWindowID?
     ) async {
-        if isInStartupSettling {
+        if barSettling.isSettling {
             MenuBarItemManager.diagLog.debug(
                 "cacheItemsRegardless: control items not yet registered by MenuBarAgent (startup settling); retaining last-good cache silently. Items remaining: \(items.count)"
             )
@@ -801,7 +801,7 @@ extension MenuBarItemManager {
 
         // Skip structural policy while login items repopulate MenuBarAgent positions in waves.
         // After settling, macOS 27 ambient passes remain observation-only; legacy backends enforce dividers.
-        if isInStartupSettling {
+        if barSettling.isSettling {
             MenuBarItemManager.diagLog.debug(
                 "cacheItemsRegardless: startup settling active, deferring structural control order"
             )
@@ -827,7 +827,7 @@ extension MenuBarItemManager {
         }
 
         // Defer restore until the final settling-end cache pass to avoid cascading moves during login or rapid app restarts.
-        guard !isInStartupSettling else {
+        guard !barSettling.isSettling else {
             await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID, publicationGeneration: publicationGeneration)
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: startup settling active, skipping restore")
             return
@@ -880,7 +880,7 @@ extension MenuBarItemManager {
         _ items: inout [MenuBarItem],
         itemWindowIDs: [CGWindowID]
     ) async -> Bool {
-        if isInStartupSettling {
+        if barSettling.isSettling {
             MenuBarItemManager.diagLog.debug(
                 "cacheItemsRegardless: Thaw control items not yet in AX snapshot (startup settling); retaining last-good cache silently. Items remaining: \(items.count), windowIDs: \(itemWindowIDs.count)"
             )

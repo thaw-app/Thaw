@@ -38,6 +38,15 @@ struct DisplaySpacingApplyTests {
         var finished: Bool {
             !cancelled.isEmpty || reapplied > 0
         }
+
+        /// Keeps each disturbance by its log label, which names the wave's cause and step.
+        func note(_ disturbance: BarSettling.Disturbance) {
+            if case .spacingWaveEnded = disturbance {
+                cancelled.append(disturbance.label)
+            } else {
+                started.append((disturbance.label, disturbance.expectedBundleIDs))
+            }
+        }
     }
 
     private let recorder = Recorder()
@@ -64,8 +73,7 @@ struct DisplaySpacingApplyTests {
         manager.spacingHost = DisplaySpacingApplyHost(
             spacingManager: spacingManager,
             applyOffset: apply,
-            startSettling: { recorder.started.append(($0, $1)) },
-            cancelSettling: { recorder.cancelled.append($0) },
+            noteSettling: { recorder.note($0) },
             reapplyActiveProfile: { recorder.reapplied += 1 },
             confirmRelaunch: confirms ? prompt : nil
         )

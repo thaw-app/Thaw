@@ -40,14 +40,11 @@ final class MenuBarDisplayChangeEffects: DisplayChangeEffects {
 
     func startSettle(reason: String) {
         // After a disconnect a stale Control Center edge gives a negative overflow budget that saves hidden items as visible, so the restore waits for settled geometry.
-        itemManager.startSettlingPeriod(reason: reason)
+        itemManager.barSettling.note(.displayChanged(label: reason))
     }
 
     func awaitSettle() async {
-        await SettlingWait.follow(
-            isSettling: { itemManager.isInStartupSettling },
-            currentTask: { itemManager.startupSettlingTask }
-        )
+        await itemManager.barSettling.settled()
     }
 
     /// The settle already re-read the item cache, so items carry their current displays; another full
