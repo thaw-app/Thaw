@@ -43,6 +43,12 @@ on:
         required: false
         type: boolean
         default: true
+      appcast_only:
+        description: >-
+          Appcast only: sign the already-published ZIP of an existing tag into
+          the appcast. Builds nothing and leaves the Thaw GitHub Release alone.
+        type: boolean
+        default: false
       dry_run:
         description: "Dry run: build and report only. Publishes nothing, signs nothing."
         required: false
@@ -172,6 +178,7 @@ jobs:
       # A tag that pins SwiftLint runs it as a build phase, and the archive
       # fails when that version is missing. Older tags have no installer.
       - name: Install pinned SwiftLint
+        if: ${{ !inputs.appcast_only }}
         run: |
           if [ -f scripts/install-swiftlint.sh ]; then
             sh scripts/install-swiftlint.sh
@@ -181,6 +188,7 @@ jobs:
           fi
 
       - name: Configure signing
+        if: ${{ !inputs.appcast_only }}
         uses: thaw-app/org-ci/actions/configure-signing@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
         with:
           apple-application-cert: ${{ secrets.APPLE_APPLICATION_CERT }}
@@ -190,6 +198,7 @@ jobs:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Build
+        if: ${{ !inputs.appcast_only }}
         uses: thaw-app/org-ci/actions/build@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
@@ -198,6 +207,7 @@ jobs:
           deployment-target: ${{ steps.source.outputs.deployment-target }}
 
       - name: Export Archive
+        if: ${{ !inputs.appcast_only }}
         uses: thaw-app/org-ci/actions/export-and-package@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
         with:
           apple-team-id: ${{ secrets.APPLE_TEAM_ID }}
@@ -205,6 +215,7 @@ jobs:
           dmg-name: ${{ env.DMG_NAME }}
 
       - name: Notarize
+        if: ${{ !inputs.appcast_only }}
         uses: thaw-app/org-ci/actions/notarize-and-validate@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
         with:
           dmg-name: ${{ env.DMG_NAME }}
@@ -212,6 +223,7 @@ jobs:
 
       - name: Generate CycloneDX SBOM
         id: sbom-meta
+        if: ${{ !inputs.appcast_only }}
         env:
           TAG: ${{ steps.meta.outputs.tag }}
           DMG_NAME: ${{ env.DMG_NAME }}
@@ -272,6 +284,24 @@ jobs:
             echo "dmg-digest=sha256:${dmg_hex}"
           } >> "$GITHUB_OUTPUT"
 
+      # The notarized app the tag shipped, so its appcast item matches what users installed.
+      - name: Unpack the published app
+        if: ${{ inputs.appcast_only }}
+        env:
+          GH_TOKEN: ${{ secrets.UPDATES_GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          download="$RUNNER_TEMP/published"
+          mkdir -p "$download" build/Export
+          gh release download "$TAG" --repo "$UPDATES_REPOSITORY" --pattern "Thaw_${TAG}.zip" --dir "$download"
+          ditto -x -k "$download/Thaw_${TAG}.zip" build/Export
+          version=$(plutil -extract CFBundleShortVersionString raw -o - "build/Export/${APP_NAME}/Contents/Info.plist")
+          if [[ "$version" != "$TAG" ]]; then
+            echo "::error::The published ZIP is ${version}, not ${TAG}"
+            exit 1
+          fi
+
       # generate_appcast drops the notes of prior archives it re-reads for
       # deltas; Prepare appcasts restores them from this copy.
       - name: Snapshot current appcast
@@ -298,7 +328,7 @@ jobs:
 
       - name: Sparkle ZIP and appcast
         id: sparkle
-        uses: thaw-app/org-ci/actions/sparkle-release@cfa52194f39013d6f54e6f5a14dc57cec3a20e9b
+        uses: thaw-app/org-ci/actions/sparkle-release@c40dfaa2dcf62d8988f04c4e4274658a6076664d # main, keeps major versions apart
         with:
           tag: ${{ steps.meta.outputs.tag }}
           channel: ${{ steps.meta.outputs.channel }}
@@ -367,11 +397,11 @@ jobs:
       # Skipped on a dry run: keyless signing writes a permanent, public entry to
       # the Sigstore transparency log, which cannot be retracted afterwards.
       - name: Install cosign
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && !inputs.appcast_only }}
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
       - name: Sign installer DMG and SBOM (Sigstore)
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && !inputs.appcast_only }}
         env:
           COSIGN_YES: "true"
           DMG_PATH: build/${{ env.DMG_NAME }}
@@ -384,7 +414,7 @@ jobs:
           ls -la "${DMG_PATH}.sigstore.json" "${SBOM_PATH}.sigstore.json"
 
       - name: Create Thaw GitHub Release (DMG + SBOM + Sparkle payloads)
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && !inputs.appcast_only }}
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           # softprops v3 uses the token input (env GITHUB_TOKEN is ignored).
@@ -437,7 +467,7 @@ jobs:
           max-attempts: "3"
 
       - name: Dry run report
-        if: ${{ inputs.dry_run }}
+        if: ${{ inputs.dry_run && !inputs.appcast_only }}
         env:
           TAG: ${{ steps.meta.outputs.tag }}
           CHANNEL: ${{ steps.meta.outputs.channel }}
@@ -603,7 +633,7 @@ jobs:
   # Skipped on dry run: attestations are permanent Sigstore / GitHub records.
   attest-dmg:
     needs: release
-    if: ${{ github.repository == 'thaw-app/Thaw' && !inputs.dry_run }}
+    if: ${{ github.repository == 'thaw-app/Thaw' && !inputs.dry_run && !inputs.appcast_only }}
     permissions:
       id-token: write
       attestations: write
@@ -615,7 +645,7 @@ jobs:
 
   attest-sbom:
     needs: release
-    if: ${{ github.repository == 'thaw-app/Thaw' && !inputs.dry_run }}
+    if: ${{ github.repository == 'thaw-app/Thaw' && !inputs.dry_run && !inputs.appcast_only }}
     permissions:
       id-token: write
       attestations: write
@@ -627,7 +657,7 @@ jobs:
 
   attach-provenance:
     needs: [release, attest-dmg, attest-sbom]
-    if: ${{ github.repository == 'thaw-app/Thaw' && !inputs.dry_run }}
+    if: ${{ github.repository == 'thaw-app/Thaw' && !inputs.dry_run && !inputs.appcast_only }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
