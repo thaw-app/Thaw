@@ -614,28 +614,6 @@ extension MenuBarItemImageCache {
         }
     }
 
-    /// The live bar as a grouped reveal reads it, so a test can script the
-    /// reveal's settle and its screenshot without a screen.
-    struct RevealCaptureSources {
-        /// The revealed members that reached stable bounds, paired with the
-        /// request they answer. See waitForRevealedItems(matching:displayID:).
-        let settledItems: @MainActor ([MenuBarItem]) async -> [(requested: MenuBarItem, live: MenuBarItem)]
-        /// The wait between stable AX bounds and fully rendered glyphs at those bounds.
-        let renderSettle: @MainActor ([MenuBarItem]) async -> Void
-        let reader: any MenuBarCaptureReading
-        /// Raised before a batch is revealed and lowered after it is concealed,
-        /// so the user sees the bar as it was while the capture sees the reveal.
-        var cover: @MainActor () -> Void = {
-            // No cover unless the caller supplies one, as in tests.
-        }
-        var uncover: @MainActor () -> Void = {
-            // Nothing to take down when no cover was raised.
-        }
-        /// Asked right before each batch's reveal, since the hiding method can
-        /// change while a pass is suspended between batches.
-        var mayReveal: @MainActor () -> Bool = { true }
-    }
-
     /// Reveals concealed items a few at a time and captures each group from
     /// one screenshot pair.
     ///
@@ -695,7 +673,7 @@ extension MenuBarItemImageCache {
             target: RevealCaptureTarget(displayID: displayID, admittedDisplayID: admittedDisplayID, scale: scale),
             missPolicy: missPolicy,
             appState: appState,
-            sources: RevealCaptureSources(
+            sources: RevealCaptureSession.Sources(
                 settledItems: { await self.waitForRevealedItems(matching: $0, displayID: displayID) },
                 renderSettle: { await self.settleRevealedPixels($0, displayID: displayID) },
                 reader: LiveMenuBarCaptureReader(),
@@ -720,76 +698,41 @@ extension MenuBarItemImageCache {
         target: RevealCaptureTarget,
         missPolicy: RevealMissPolicy,
         appState: AppState,
-        sources: RevealCaptureSources
+        sources: RevealCaptureSession.Sources
     ) async {
-        for batch in batches {
-            // A reveal during a move reflows the bar under the drag.
-            await moveActivity?.waitUntilIdle()
-            guard !Task.isCancelled, !skipCaptureWhileScreenLocked("revealing capture batch"),
-                  sources.mayReveal() else { return }
-
-            sources.cover()
-            for item in batch {
-                controller.revealItemTemporarily(item.uniqueIdentifier)
-            }
-            defer {
-                for item in batch {
-                    controller.concealTemporarilyRevealedItemUnlessHeld(item.uniqueIdentifier)
-                }
-                sources.uncover()
-            }
-
-            let firstRead = await sources.settledItems(batch)
-            guard !skipCaptureWhileScreenLocked("capture reveal completed") else { return }
-            guard !firstRead.isEmpty else { continue }
-
-            // AX bounds stabilize before MenuBarAgent finishes recompositing
-            // the revealed glyphs; wait for them to settle so the screenshot
-            // captures fully-rendered icons. One settle for the group, since
-            // they were revealed together.
-            let revealed = await settleAtFinalFrames(firstRead, using: sources)
-            guard !Task.isCancelled, !skipCaptureWhileScreenLocked("settled capture batch") else { return }
-
-            // Admitted here, after the reveal and its settle, with nothing
-            // awaited before the screenshot. Rebuilding the restriction for the
-            // reveal (and for the previous batch's conceal) moves the layout
-            // generation by itself, so an admission taken any earlier would
-            // reject every batch. From here on a change is a real move.
-            let admission = CapturePublicationPolicy.admit(
-                layout: appState.itemManager.layoutPublication,
-                displayID: target.admittedDisplayID
-            )
-            // A move already running, or a display that switched while the
-            // reveal settled: do not screenshot a bar this batch cannot publish.
-            if let rejection = publicationRejection(
-                of: admission, appState: appState, ignoreRecentMove: true, isRecapturePass: false
-            ) {
-                MenuBarItemImageCache.diagLog.debug(
-                    "grouped reveal capture: not capturing batch, stopping (\(String(describing: rejection)))"
+        let session = RevealCaptureSession(
+            sources: sources,
+            displayID: target.displayID,
+            reveal: { controller.revealItemTemporarily($0) },
+            conceal: { controller.concealTemporarilyRevealedItemUnlessHeld($0) },
+            waitWhileMoving: { await self.moveActivity?.waitUntilIdle() },
+            isLocked: { self.skipCaptureWhileScreenLocked($0) },
+            cropper: boundsCropper,
+            shouldSkip: { self.shouldSkipCapture(for: $0) },
+            admit: {
+                let admission = CapturePublicationPolicy.admit(
+                    layout: appState.itemManager.layoutPublication,
+                    displayID: target.admittedDisplayID
                 )
-                return
+                // A move already running, or a display that switched while the
+                // reveal settled: do not screenshot a bar this batch cannot publish.
+                if let rejection = self.publicationRejection(
+                    of: admission, appState: appState, ignoreRecentMove: true, isRecapturePass: false
+                ) {
+                    MenuBarItemImageCache.diagLog.debug(
+                        "grouped reveal capture: not capturing batch, stopping (\(String(describing: rejection)))"
+                    )
+                    return nil
+                }
+                return admission
+            },
+            commit: { captureResult, revealed, admission in
+                self.commitRevealedBatch(
+                    captureResult, revealed: revealed, admission: admission, missPolicy: missPolicy, appState: appState
+                )
             }
-
-            // One hosting screenshot and one strip screenshot for the whole
-            // group: the bounds cropper already crops each item out of the same
-            // pair of frames, so every crop comes from one instant of the bar
-            // rather than from N frames taken while it reflowed between them.
-            // Capture against the resolved displayID directly rather than
-            // captureImages(appState:), which re-resolves the "active" display
-            // and can crop one display's bounds against another's screenshot.
-            // This path just revealed the items itself and waited for their
-            // live AX elements, so none of them is concealed here.
-            let request = AXBoundsCropper.Request(items: revealed.map { ($0.live, $0.live.bounds) }, displayID: target.displayID, validateFreshBounds: true)
-            let captureResult = await boundsCropper.crop(request, using: sources.reader, skipping: { self.shouldSkipCapture(for: $0) })
-
-            guard commitRevealedBatch(
-                captureResult,
-                revealed: revealed,
-                admission: admission,
-                missPolicy: missPolicy,
-                appState: appState
-            ) else { return }
-        }
+        )
+        await session.capture(batches)
     }
 
     /// Publishes one revealed batch, or leaves the cache exactly as it was.
