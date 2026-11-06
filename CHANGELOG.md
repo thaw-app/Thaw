@@ -24,6 +24,30 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+## [2.2.0-beta.2] - 2026-11-05
+
+**macOS 15 and 26 · Build 65**
+
+A Homebrew tap for Thaw 2, a simpler Settings and three fixes. Your settings carry over.
+
+You can also [make your own Thaw icon](https://www.getthaw.app/generate) on the website. It's drawn in your browser, and Get Info in Finder puts it on Thaw.
+
+### New
+
+- **Thaw 2 has its own Homebrew tap.** Homebrew's thaw cask moves to Thaw 3 with 3.0.0. Thaw shows the commands to switch once, with a button that copies them, and the [tap's page](https://github.com/thaw-app/homebrew-tap) lists them too.
+
+### Changed
+
+- **Settings has fewer pages.** Trigger Sources is part of Triggers, Tools is now Troubleshooting, and Language is in General.
+- **One Show hidden items choice in Displays:** in the menu bar, in the Thaw Bar or always in the menu bar. It replaces two switches.
+- **Quit and Clear Cache is gone** from Troubleshooting. Thaw already drops old item pictures when it starts.
+
+### Fixed
+
+- **A trigger no longer leaves the pointer at the top right of the screen** when it shows an item for the app in front.
+- **No screen recording dot over full-screen apps.** Thaw stops capturing the menu bar while a full-screen app covers it.
+- **Importing a profile no longer takes its Space or display** from the profile that already uses it.
+
 ## [2.2.0-beta.1] - 2026-10-28
 
 **macOS 15 and 26 · Build 64**
