@@ -60,7 +60,7 @@ enum SettingsNavigationIdentifier: String, @MainActor NavigationIdentifier {
         case .widgets: "Widgets"
         case .theLab: "Experiments"
         case .tools: "Troubleshooting"
-        case .modules: "Extras"
+        case .modules: "Modules"
         case .privacy: "Privacy"
         case .about: "About"
         }

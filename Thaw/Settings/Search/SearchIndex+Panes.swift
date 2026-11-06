@@ -146,7 +146,7 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "pane.modules",
-            title: "Extras",
+            title: "Modules",
             descriptionText: "Optional parts of Thaw that run as their own apps.",
             pane: .modules,
             keywords: ["extras", "module", "modules", "extension", "add-on", "plugin", "automation", "scripts", "optional"],
