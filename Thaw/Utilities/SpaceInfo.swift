@@ -30,23 +30,6 @@ struct SpaceInfo: Hashable {
         managedSpace?.persistentKey
     }
 
-    /// The desktop number Mission Control shows; spaces have no name of their own.
-    /// Callers store it once, since a label that renumbers itself is worse than a stale one.
-    var localizedLabel: String {
-        guard let managedSpace else {
-            return String(localized: "Current Space", comment: "Label for a Space that has not been published by the window server yet.")
-        }
-        return isFullscreen
-            ? String(
-                localized: "Full Screen Space \(managedSpace.ordinal)",
-                comment: "Label for a fullscreen Space, numbered as Mission Control numbers it."
-            )
-            : String(
-                localized: "Desktop \(managedSpace.ordinal)",
-                comment: "Label for a desktop Space, numbered as Mission Control numbers it."
-            )
-    }
-
     static func activeSpace() -> SpaceInfo {
         SpaceInfo(spaceID: Bridging.getActiveSpaceID())
     }

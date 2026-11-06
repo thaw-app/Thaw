@@ -28,10 +28,13 @@ the items under New and Fixed.
 
 - **Layout warns when items don't fit.** When macOS hides items it has no room for, Layout names them until there's room again.
 - **Release notes can stay closed after an update.** Turn off Show release notes after an update in Privacy. What's New still opens from Thaw's menu and About.
+- **Profiles name Spaces the way Mission Control does.** Pick any Space for a profile, grouped by display, with full screen apps by name. A Space that's gone shows as missing, and the display with the menu bar is marked.
 
 ### Changed
 
 - **The Thaw Bar has its own switch again.** Show hidden items is now two switches, Thaw Bar and Always show hidden items. Your settings carry over.
+- **Profiles and menu bar looks follow a Space switch sooner.** Thaw hears about the switch as it starts, and a new Space can have its own profile right away.
+- **Spaces settings stay after Thaw quits.** Thaw saves what you set on the Spaces page and applies it again when it starts, when you add a Space and when macOS restarts the menu bar.
 
 ### Fixed
 
