@@ -131,11 +131,16 @@ final class ProfileManager {
         rebuildProfileHotkeys()
 
         // Debounce beyond the Space animation so rapid swipes apply only the final profile.
-        let spaceSwitchTask = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.activeSpaceDidChangeNotification, debounce: .seconds(0.75)) { [weak self] in
-            guard let self else { return }
-            await self.checkSpaceAndAutoSwitch()
+        let spaceSwitchTask = appState.spaceChanges.activeSpaceTask(debounce: .seconds(0.75)) { [weak self] _ in
+            await self?.checkSpaceAndAutoSwitch()
         }
-        cancellables.insert(AnyCancellable { spaceSwitchTask.cancel() })
+        // A new Space publishes its key only once the list is re-read.
+        let spaceListTask = Task { [weak self, directory = appState.spaceDirectory] in
+            for await _ in Observations({ directory.spaces }).dropFirst() {
+                await self?.checkSpaceAndAutoSwitch()
+            }
+        }
+        cancellables.insert(AnyCancellable { spaceSwitchTask.cancel(); spaceListTask.cancel() })
 
         // Any process can post these, so both only wake the check against the system's Focus filter state.
         let center = DistributedNotificationCenter.default()

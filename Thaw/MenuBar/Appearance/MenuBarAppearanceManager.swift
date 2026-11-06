@@ -168,9 +168,11 @@ final class MenuBarAppearanceManager {
     ) {
         cancellables = [
             observeScreenParameters(invalidations: displayInvalidations, settlements: displaySettlements),
-            observeActiveSpace(),
             observeAccentColor(),
         ]
+        if let appState {
+            cancellables.insert(observeActiveSpace(appState.spaceChanges))
+        }
 
         panelRequirementsTask?.cancel()
         panelRequirementsTask = Task { [weak self] in
@@ -249,13 +251,12 @@ final class MenuBarAppearanceManager {
             }
     }
 
-    private func observeActiveSpace() -> AnyCancellable {
-        NSWorkspace.shared.notificationCenter
-            .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.activeSpaceID = SpaceInfo.activeSpace().spaceID
-            }
+    /// Follows the window server's switch as it starts, so a per-Space look arrives with the Space.
+    private func observeActiveSpace(_ changes: SpaceChanges) -> AnyCancellable {
+        let task = changes.activeSpaceTask { [weak self] spaceID in
+            self?.activeSpaceID = spaceID
+        }
+        return AnyCancellable { task.cancel() }
     }
 
     private func updateOverlayPanels(for configuration: MenuBarAppearanceConfigurationV2) {
