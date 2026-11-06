@@ -172,7 +172,8 @@ struct UXRefreshNavigationTests {
     func thawBarEntriesRouteToThawBar() {
         let thawBarIDs: Set = [
             "pane.thawBar",
-            "displays.hiddenItemsPresentation",
+            "displays.useThawBar",
+            "displays.alwaysShowHiddenItems",
             "displays.thawBarLocation",
             "displays.thawBarLayout",
             "displays.thawBarItemSize",
