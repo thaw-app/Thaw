@@ -718,7 +718,7 @@ final class AppState {
               !navigationState.isThawBarPresented,
               !navigationState.isSearchPresented,
               !menuBarManager.layoutEditorPanel.isShown,
-              !menuBarManager.isHidingApplicationMenus,
+              !menuBarManager.applicationMenuHider.isHidingApplicationMenus,
               NSApp.modalWindow == nil,
               !NSApp.windows.contains(where: {
                   ($0.isVisible || $0.isMiniaturized) && ($0.canBecomeKey || $0.canBecomeMain)

@@ -113,10 +113,10 @@ struct MenuBarManagerUnsetupTests {
     func applicationMenusWithoutSetup() {
         let appState = AppState()
         let manager = appState.menuBarManager
-        manager.hideApplicationMenus(manual: true)
-        #expect(!manager.isHidingApplicationMenus)
-        manager.showApplicationMenus()
-        #expect(!manager.isHidingApplicationMenus)
+        manager.applicationMenuHider.hideApplicationMenus(manual: true)
+        #expect(!manager.applicationMenuHider.isHidingApplicationMenus)
+        manager.applicationMenuHider.showApplicationMenus()
+        #expect(!manager.applicationMenuHider.isHidingApplicationMenus)
     }
 }
 
