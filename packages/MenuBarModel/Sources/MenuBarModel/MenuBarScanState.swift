@@ -125,6 +125,14 @@ public struct MenuBarScanState<Observation: Sendable>: Sendable {
         }
     }
 
+    /// Whether every owner with items was read in this pass. An owner never read, such as an app
+    /// launched since the last full walk, doesn't count: reads that leave new apps to discovery use this.
+    public func hasFreshItemOwners(generation: UInt64, excusing excused: Set<Int32> = []) -> Bool {
+        owners.allSatisfy { owner in
+            excused.contains(owner) || retained[owner].map { $0.isEmpty || observed[owner] == generation } ?? true
+        }
+    }
+
     /// Every owner selected for move geometry must answer in this pass,
     /// including explicitly requested owners that were previously empty.
     public func isComplete(_ pass: Pass, excusing excused: Set<Int32> = []) -> Bool {
