@@ -104,6 +104,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Afterward, show the permissions window only if permissions are missing.
         if isFirstLaunch || appState.permissions.permissionsState == .missing {
             appState.openWindow(.permissions)
+        } else {
+            HomebrewTapNotice.showIfNeeded()
         }
     }
 

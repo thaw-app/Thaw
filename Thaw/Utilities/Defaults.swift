@@ -337,6 +337,10 @@ nonisolated extension Defaults {
 
         case hasSeenOnboarding
 
+        // MARK: Homebrew Tap Notice
+
+        case hasSeenHomebrewTapNotice
+
         // MARK: Settings URI
 
         case settingsURIEnabled = "SettingsURIEnabled"

@@ -120,6 +120,12 @@
         }
       }
     },
+    "Copy Commands" : {
+
+    },
+    "Homebrew's thaw cask moves to Thaw 3 when 3.0.0 is released, and Thaw 3 needs macOS 27. If you installed Thaw with Homebrew, run these commands in Terminal to stay on Thaw 2. Your settings stay. Without Homebrew there's nothing to do." : {
+
+    },
     "Remove from group" : {
       "localizations" : {
         "cs" : {
@@ -20580,6 +20586,9 @@
           }
         }
       }
+    },
+    "Thaw 2 Has Its Own Homebrew Tap" : {
+
     },
     "Trigger list view" : {
       "localizations" : {
