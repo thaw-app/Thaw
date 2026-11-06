@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The crop-region explanation can be translated.** Settings › Privacy built it from two strings joined in code, which bypassed localization, so it stayed English in every language.
+
 ## [3.0.0-alpha.13] - 2026-11-05
 
 **macOS 27 only · Build 124**
