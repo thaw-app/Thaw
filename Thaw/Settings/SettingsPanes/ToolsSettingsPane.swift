@@ -70,15 +70,6 @@ struct ToolsSettingsPane: View {
                 }
 
                 toolRow(
-                    title: "Quit and clear cache",
-                    detail: "Delete \(Constants.displayName)'s cache folder, then quit the app.",
-                    buttonTitle: "Quit & Clear Cache",
-                    role: .destructive
-                ) {
-                    pendingAction = .quitAndClearCache
-                }
-
-                toolRow(
                     title: "Reset permissions",
                     detail: "Clear Accessibility and Screen Recording decisions for \(Constants.displayName), then quit so you can re-grant them on next launch.",
                     buttonTitle: "Reset Permissions",
@@ -176,10 +167,6 @@ struct ToolsSettingsPane: View {
             case .resetMenuBarLayoutPositions:
                 try await MaintenanceTools.resetMenuBarLayoutPositions()
                 reportSuccess(String(localized: "Menu bar layout positions were reset."))
-            case .quitAndClearCache:
-                try MaintenanceTools.clearAppCache()
-                reportSuccess(String(localized: "Cache cleared. Quitting…"))
-                ApplicationTermination.request()
             case .resetPermissions:
                 try await MaintenanceTools.resetAppPermissions()
                 reportSuccess(String(localized: "Permissions cleared. Quitting…"))
@@ -200,7 +187,6 @@ private enum MaintenanceToolAction: Identifiable {
     case resetSettings
     case resetControlCenter
     case resetMenuBarLayoutPositions
-    case quitAndClearCache
     case resetPermissions
 
     var id: Self {
@@ -212,7 +198,6 @@ private enum MaintenanceToolAction: Identifiable {
         case .resetSettings: String(localized: "Reset all settings?")
         case .resetControlCenter: String(localized: "Reset Control Center preferences?")
         case .resetMenuBarLayoutPositions: String(localized: "Reset menu bar layout positions?")
-        case .quitAndClearCache: String(localized: "Quit and clear cache?")
         case .resetPermissions: String(localized: "Reset permissions?")
         }
     }
@@ -222,7 +207,6 @@ private enum MaintenanceToolAction: Identifiable {
         case .resetSettings: "Reset"
         case .resetControlCenter: "Reset Control Center"
         case .resetMenuBarLayoutPositions: "Reset Layout Positions"
-        case .quitAndClearCache: "Quit & Clear Cache"
         case .resetPermissions: "Reset Permissions"
         }
     }
@@ -235,8 +219,6 @@ private enum MaintenanceToolAction: Identifiable {
             "Control Center will quit and its preference files will be deleted. macOS usually relaunches it automatically."
         case .resetMenuBarLayoutPositions:
             "Every saved status-item position will be deleted and the menu bar host will quit, so your whole menu bar arrangement is rebuilt from scratch."
-        case .quitAndClearCache:
-            "\(Constants.displayName) will delete its cache folder and quit. Launch the app again afterward."
         case .resetPermissions:
             "Accessibility and Screen Recording permissions will be cleared for \(Constants.displayName). The app will quit so you can grant them again on next launch."
         }
