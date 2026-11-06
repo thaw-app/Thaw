@@ -71,4 +71,12 @@ struct AppIntentsIdleQuitTests {
     @Test func nothingIsRefusedOutsideAnEvent() {
         #expect(!AppIntentsIdleQuit.refusesCurrentRequest())
     }
+
+    /// The entry point Thaw calls refuses linkd's quit and lets any other app's through.
+    @MainActor
+    @Test func theQuitBeingHandledIsRefusedOnlyWhenLinkdSentIt() {
+        #expect(AppIntentsIdleQuit.refusesCurrentRequest(Self.event(kAEQuitApplication), isSentByLinkd: { _ in true }))
+        #expect(!AppIntentsIdleQuit.refusesCurrentRequest(Self.event(kAEQuitApplication), isSentByLinkd: { _ in false }))
+        #expect(!AppIntentsIdleQuit.refusesCurrentRequest(Self.event(kAEQuitApplication, reason: OSType(kAERestart)), isSentByLinkd: { _ in true }))
+    }
 }

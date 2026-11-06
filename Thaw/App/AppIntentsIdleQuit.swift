@@ -24,9 +24,13 @@ nonisolated enum AppIntentsIdleQuit {
     private static let diagLog = DiagLog(category: "AppIntentsIdleQuit")
 
     /// Whether Thaw should turn down the quit event it is handling now. A refusal is logged.
+    /// Thaw passes neither argument; tests pass the event and the sender check.
     @MainActor
-    static func refusesCurrentRequest() -> Bool {
-        guard let event = NSAppleEventManager.shared().currentAppleEvent, refuses(event) else {
+    static func refusesCurrentRequest(
+        _ event: NSAppleEventDescriptor? = NSAppleEventManager.shared().currentAppleEvent,
+        isSentByLinkd: (NSAppleEventDescriptor) -> Bool = isSentByLinkd
+    ) -> Bool {
+        guard let event, refuses(event, isSentByLinkd: isSentByLinkd) else {
             return false
         }
         diagLog.info("Refusing to quit \(QuitRequestSource.current()): App Intents ends apps it launched for an intent, and Thaw keeps running")
