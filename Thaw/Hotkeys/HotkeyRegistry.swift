@@ -61,9 +61,9 @@ final nonisolated class HotkeyRegistry {
 
     private var eventHandlerRef: EventHandlerRef?
 
-    /// Mutable registry storage (`registrations` and `cancellables`),
+    /// Mutable registry storage (registrations and cancellables),
     /// protected by an unfair lock so lookups and mutations are safe from
-    /// any isolation context. `Registration` is not `Sendable`, so access
+    /// any isolation context. Registration is not Sendable, so access
     /// goes through the unchecked lock variants; every touch of the stored
     /// state happens while the lock is held.
     private struct MutableState {
@@ -136,15 +136,14 @@ final nonisolated class HotkeyRegistry {
     /// identifier of the registration on success.
     ///
     /// The returned identifier can be used to unregister the hotkey using
-    /// the ``unregister(_:)`` function.
+    /// the unregister(_:) function.
     ///
-    /// - Parameters:
-    ///   - hotkey: The hotkey to register the handler with.
-    ///   - eventKind: The event kind to register the handler with.
-    ///   - handler: The handler to perform when `hotkey` is triggered with
-    ///     the event kind specified by `eventKind`.
+    /// hotkey: The hotkey to register the handler with.
+    /// eventKind: The event kind to register the handler with.
+    /// handler: The handler to perform when hotkey is triggered with
+    /// the event kind specified by eventKind.
     ///
-    /// - Returns: The registration's identifier on success, `nil` on failure.
+    /// Returns the registration's identifier on success, nil on failure.
     @MainActor
     func register(hotkey: Hotkey, eventKind: EventKind, handler: @escaping () -> Void) -> UInt32? {
         enum Context {
@@ -213,7 +212,7 @@ final nonisolated class HotkeyRegistry {
     /// Unregisters the key combination with the given identifier, retaining
     /// its registration in an inactive state.
     ///
-    /// Must be called while holding `state`'s lock, with the locked
+    /// Must be called while holding state's lock, with the locked
     /// dictionary passed inout.
     private func retainedUnregister(_ id: UInt32, registrations: inout [UInt32: Registration]) {
         guard let registration = registrations[id] else {
@@ -230,8 +229,8 @@ final nonisolated class HotkeyRegistry {
 
     /// Unregisters the key combination with the given identifier.
     ///
-    /// - Parameter id: An identifier returned from a call to the
-    ///   ``register(hotkey:eventKind:handler:)`` function.
+    /// id: An identifier returned from a call to the
+    /// register(hotkey:eventKind:handler:) function.
     func unregister(_ id: UInt32) {
         state.withLockUnchecked { state in
             retainedUnregister(id, registrations: &state.registrations)
@@ -250,7 +249,7 @@ final nonisolated class HotkeyRegistry {
     }
 
     /// Registers all registrations that were retained during a call to
-    /// ``retainedUnregister(_:)``
+    /// retainedUnregister(_:)
     private func registerAllRetained() {
         state.withLockUnchecked { state in
             for registration in state.registrations.values {

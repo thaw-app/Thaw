@@ -49,7 +49,7 @@ final class NotchIndicatorView: NSView {
 }
 
 /// Hosted so the parent view supplies the frame in screen points instead
-/// of `GeometryReader` math.
+/// of GeometryReader math.
 private struct NotchIndicatorContent: View {
     let averageColorInfo: MenuBarAverageColorInfo?
 

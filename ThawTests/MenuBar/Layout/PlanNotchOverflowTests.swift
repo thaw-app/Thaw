@@ -140,7 +140,7 @@ struct PlanNotchOverflowTests {
         // Available 70: profileBaseline = 24 + 24 + 24 + 24 = 96 > 70.
         // All unmanaged overflow (u1).
         // From CC end, fit profile items: chevron(24) + p3(24) = 48 <= 70 ✓
-        //                                  + p2(24) = 72 > 70 ✗
+        // Adding p2(24) gives 72 > 70 ✗
         // p3 fits, p2 and p1 overflow.
         let desired = makeSequence(
             chevron: chevron,
@@ -533,8 +533,8 @@ struct PlanNotchOverflowTests {
         #expect(result.updatedSectionMap == sectionMap)
     }
 
-    /// Adjacent, ordered controls give hiddenStart == hiddenEnd. A `<` instead of
-    /// `<=` would disable overflow for every empty hidden section.
+    /// Adjacent, ordered controls give hiddenStart == hiddenEnd. A < instead of
+    /// <= would disable overflow for every empty hidden section.
     @Test("An empty but correctly ordered hidden section still overflows normally")
     func emptyHiddenSectionInCorrectOrderStillOverflowsNormally() {
         // makeSequence's empty hidden and always-hidden lists put the controls adjacent.
@@ -590,7 +590,7 @@ struct PlanNotchOverflowTests {
 
     // MARK: - Tiering does not decide whether anything overflows (#881)
 
-    /// `rebalanceNotchOverflowIfNeeded` marks every item unmanaged and only checks
+    /// rebalanceNotchOverflowIfNeeded marks every item unmanaged and only checks
     /// for an empty result, which is sound only if tiers change which items
     /// overflow, not whether any do. This gate stopped #881's apply-every-tick storm.
     @Test("A row that fits overflows nothing under either tiering")

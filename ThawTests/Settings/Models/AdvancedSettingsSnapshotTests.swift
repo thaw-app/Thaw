@@ -9,9 +9,9 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``AdvancedSettingsSnapshot``'s value semantics and `Codable`
+/// Covers AdvancedSettingsSnapshot's value semantics and Codable
 /// conformance. A profile from an older build can miss any key, so decoding
-/// falls back to `Defaults.DefaultValue` instead of throwing.
+/// falls back to Defaults.DefaultValue instead of throwing.
 @Suite("Advanced settings snapshot")
 struct AdvancedSettingsSnapshotTests {
     private let encoder = JSONEncoder()
@@ -423,7 +423,7 @@ struct AdvancedSettingsSnapshotTests {
 
     // MARK: - Diagnostic Logging Exclusion
 
-    /// `enableDiagnosticLogging` is deliberately not part of a profile.
+    /// enableDiagnosticLogging is deliberately not part of a profile.
     ///
     /// Applying a profile restored the saved switch state, usually off, so
     /// logging stopped right when a user turned it on to capture a profile

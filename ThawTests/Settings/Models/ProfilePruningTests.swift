@@ -15,8 +15,8 @@ import Testing
 /// against them (#881).
 @Suite("Profile layout pruning")
 struct ProfilePruningTests {
-    /// The unidentifiable entries from #881's `547c9ba` log, as they appear
-    /// in `uniqueIdentifier` form.
+    /// The unidentifiable entries from #881's 547c9ba log, as they appear
+    /// in uniqueIdentifier form.
     private static let untitledControlCenterEntries = [
         "com.apple.controlcenter:",
         "com.apple.controlcenter::1",
@@ -47,7 +47,7 @@ struct ProfilePruningTests {
         #expect(snapshot.resolvedItemOrder["visible"] == ["eu.exelban.Stats:CPU_bar_chart"])
     }
 
-    /// Legacy profiles carry the layout in `savedSectionOrder`; they get the
+    /// Legacy profiles carry the layout in savedSectionOrder; they get the
     /// same treatment rather than being trusted because of their age.
     @Test("An untitled entry is dropped from a legacy savedSectionOrder")
     func untitledEntryIsDroppedFromLegacyOrder() {
@@ -114,7 +114,7 @@ struct ProfilePruningTests {
     }
 }
 
-/// The `LayoutSolver` rule the profile pruning above leans on.
+/// The LayoutSolver rule the profile pruning above leans on.
 @Suite("Untitled entry pruning")
 struct UntitledEntryPruningTests {
     @Test("An untitled Control Center entry is pruned")
@@ -125,7 +125,7 @@ struct UntitledEntryPruningTests {
         #expect(pruned["visible"] == ["org.p0deje.Maccy:Item-0"])
     }
 
-    /// The instance-index suffix is not a title: `com.apple.controlcenter::2`
+    /// The instance-index suffix is not a title: com.apple.controlcenter::2
     /// is the third untitled item, not an item called ":2".
     @Test("An untitled entry with an instance index is pruned")
     func untitledEntryWithInstanceIndexIsPruned() {
@@ -155,9 +155,9 @@ struct UntitledEntryPruningTests {
 
 /// On non-English systems, Control Center's localized owner name ("Control
 /// Centre", "Kontrollzentrum") can land in the namespace when bundle-ID
-/// resolution fails transiently, minting ghosts like `Control Centre:Item-0:13`.
-/// The shared `Item-N` title slips past the claimed-title rule, so they
-/// persist. When `com.apple.controlcenter` is present in the saved order, the
+/// resolution fails transiently, minting ghosts like Control Centre:Item-0:13.
+/// The shared Item-N title slips past the claimed-title rule, so they
+/// persist. When com.apple.controlcenter is present in the saved order, the
 /// aliases are pruned (#1080).
 @Suite("Localized Control Center ghost pruning")
 struct LocalizedControlCenterGhostPruningTests {

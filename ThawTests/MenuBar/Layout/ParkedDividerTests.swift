@@ -8,9 +8,9 @@
 import Testing
 @testable import Thaw
 
-/// Replays the #899 boundary-move storm against ``ParkedDividerLog``.
+/// Replays the #899 boundary-move storm against ParkedDividerLog.
 ///
-/// #881 stopped anchoring the `H_ctrl` drag to a parked item. #899 fails from
+/// #881 stopped anchoring the H_ctrl drag to a parked item. #899 fails from
 /// the other side: the anchor is back on the bar, but the divider is still
 /// parked and AppKit snaps it home on mouse-up. Both halves are pinned here.
 @Suite("Parked divider boundary move (#899)")
@@ -103,7 +103,7 @@ struct ParkedDividerTests {
 
 /// The backoff that bounds the storm in either state.
 ///
-/// The `H_ctrl` boundary move did not consult the failure ledger, so a divider
+/// The H_ctrl boundary move did not consult the failure ledger, so a divider
 /// that could not land was re-dragged by every re-sort for as long as the app ran (#899).
 @MainActor
 @Suite("Boundary move backoff (#899)", .serialized)
@@ -136,7 +136,7 @@ struct BoundaryMoveBackoffTests {
         #expect(ledger.isUnderBackoff(for: divider))
     }
 
-    /// Checking a different key than `recordFailure` writes is how a backoff silently never fires.
+    /// Checking a different key than recordFailure writes is how a backoff silently never fires.
     @Test("The item overload reads the key recordFailure writes")
     func itemOverloadMatchesRecordedKey() {
         let ledger = MenuBarItemFailureLedger()

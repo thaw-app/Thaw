@@ -10,11 +10,11 @@ import CoreGraphics
 import Foundation
 
 /// Configuration for the menu bar's appearance, as Ice stored it before its
-/// `0.11.10` release.
+/// 0.11.10 release.
 ///
 /// Thaw never wrote this format. It exists to decode appearance data that
-/// ``IceSettingsImporter`` finds in an old Ice install, which it converts with
-/// ``MenuBarAppearanceConfigurationV2/init(migrating:)``.
+/// IceSettingsImporter finds in an old Ice install, which it converts with
+/// MenuBarAppearanceConfigurationV2/init(migrating:).
 struct MenuBarAppearanceConfigurationV1: Hashable {
     var hasShadow: Bool
     var hasBorder: Bool
@@ -60,7 +60,7 @@ extension MenuBarAppearanceConfigurationV1 {
 
 extension MenuBarAppearanceConfigurationV2 {
     /// Creates a configuration from a V1 configuration, which is the format
-    /// Ice used before its `0.11.10` release.
+    /// Ice used before its 0.11.10 release.
     ///
     /// V1 had a single set of appearance values rather than one per system
     /// appearance, so the old values are applied to all three of the current

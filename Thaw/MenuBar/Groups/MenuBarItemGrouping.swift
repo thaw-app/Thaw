@@ -41,12 +41,10 @@ nonisolated enum MenuBarItemGrouping {
 
     /// Whether an item is eligible to participate in bundle grouping.
     ///
-    /// Only third-party apps group. Excluded:
-    /// - System items and the menu bar host namespace, which would collapse
-    ///   every Apple module into one group.
-    /// - Thaw's own control items.
-    /// - Fixed layout anchors and any non-movable item.
-    /// - Items whose namespace is not a bundle string (UUID / null clones).
+    /// Only third-party apps group. Excluded are system items and the menu bar
+    /// host namespace (which would collapse every Apple module into one group),
+    /// Thaw's own control items, fixed layout anchors and any non-movable item,
+    /// and items whose namespace is not a bundle string (UUID or null clones).
     static func isGroupable(_ tag: MenuBarItemTag) -> Bool {
         guard tag.namespace.isString else { return false }
         guard !tag.isSystemItem else { return false }

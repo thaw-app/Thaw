@@ -11,7 +11,7 @@ import Testing
 
 /// Characterizes which window bounds may take part in a composite capture.
 ///
-/// `refreshImages` slices one composite by each window's offset in the bounds
+/// refreshImages slices one composite by each window's offset in the bounds
 /// union. The capture APIs drop zero-size windows, but a parked one still
 /// widens the union, so the width check fails and the Hidden rows render empty.
 @Suite("Capturable bounds")

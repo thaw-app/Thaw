@@ -20,7 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     #if DEBUG
         /// Whether the app is running as an Xcode preview/playground.
         ///
-        /// Newer Xcode versions report `XCODE_RUNNING_FOR_PLAYGROUNDS` for
+        /// Newer Xcode versions report XCODE_RUNNING_FOR_PLAYGROUNDS for
         /// previews, so both variables are checked.
         private var isRunningForPreviews: Bool {
             let environment = ProcessInfo.processInfo.environment
@@ -104,6 +104,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Afterward, show the permissions window only if permissions are missing.
         if isFirstLaunch || appState.permissions.permissionsState == .missing {
             appState.openWindow(.permissions)
+        } else {
+            HomebrewTapNotice.showIfNeeded()
         }
     }
 
@@ -211,20 +213,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         handleURL(url, sender: SettingsURISender.identify(from: event))
     }
 
-    /// Dispatches an incoming `thaw://` URL to the appropriate action.
+    /// Dispatches an incoming thaw:// URL to the appropriate action.
     ///
-    /// Supported Action URLs:
-    /// - `thaw://toggle-hidden` — toggle the hidden menu bar section
-    /// - `thaw://toggle-always-hidden` — toggle the always-hidden menu bar section
-    /// - `thaw://search` — open the menu bar item search panel
-    /// - `thaw://toggle-thawbar` — toggle the IceBar on the active display; it saves the
-    ///   setting, so it needs settings access and an approved sender like the Settings URLs
-    /// - `thaw://toggle-application-menus` — toggle application menus
-    /// - `thaw://open-settings` — open the Thaw settings window
+    /// Action URLs: thaw://toggle-hidden and thaw://toggle-always-hidden toggle
+    /// those menu bar sections, thaw://search opens the item search panel,
+    /// thaw://toggle-application-menus toggles application menus, and
+    /// thaw://open-settings opens the settings window. thaw://toggle-thawbar
+    /// toggles the IceBar on the active display; it saves the setting, so it
+    /// needs settings access and an approved sender like the Settings URLs.
     ///
-    /// Supported Settings URLs (requires whitelist authorization):
-    /// - `thaw://set?key=X&value=Y` — set a boolean setting
-    /// - `thaw://toggle?key=X` — toggle a boolean setting
+    /// Settings URLs (requires whitelist authorization): thaw://set?key=X&value=Y
+    /// sets a boolean setting and thaw://toggle?key=X toggles one.
     private func handleURL(_ url: URL, sender: SettingsURISender? = nil) {
         let request = SettingsURIParser.parse(url)
 
@@ -253,7 +252,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Performs a parameterless `thaw://` action.
+    /// Performs a parameterless thaw:// action.
     private func perform(_ action: SettingsURIAction) {
         switch action {
         case .toggleHidden:
@@ -377,7 +376,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         sender.reply(toApplicationShouldTerminate: true)
     }
 
-    /// Handles `thaw://get?key=X&callback=Y`.
+    /// Handles thaw://get?key=X&callback=Y.
     private func handleGet(_ request: SettingsURIRequest) {
         guard case let .get(key, displayUUID, callback, broadcast, requestId) = request.route else {
             return

@@ -15,8 +15,8 @@ import IOKit.ps
 /// Used by the menu bar item triggers system to decide whether a
 /// battery- or power-based condition is currently satisfied.
 struct PowerState: Equatable {
-    /// The current battery charge as a percentage in the range `0...100`,
-    /// or `nil` when the machine has no battery (e.g. a desktop Mac).
+    /// The current battery charge as a percentage in the range 0...100,
+    /// or nil when the machine has no battery (e.g. a desktop Mac).
     var batteryPercentage: Double?
 
     /// A Boolean value that indicates whether the machine is currently

@@ -82,7 +82,7 @@ extension MenuBarItemManager {
         await refreshCacheUntilCycleCompletes { options }
     }
 
-    /// Like ``refreshCacheUntilCycleCompletes(options:)``, reading the options
+    /// Like refreshCacheUntilCycleCompletes(options:), reading the options
     /// again before every attempt so requests merged in meanwhile take effect.
     @discardableResult
     func refreshCacheUntilCycleCompletes(options currentOptions: () -> CacheOptions) async -> Bool {
@@ -117,7 +117,7 @@ extension MenuBarItemManager {
     /// minutes. Until then the Thaw Bar keeps showing a moved item in its old
     /// section. A separate Task, because the discarding pass still holds
     /// cacheGate. Only one runs at a time: a later request while it runs is
-    /// merged into its flags (see ``MidTransitionRetryFlags``) instead of
+    /// merged into its flags (see MidTransitionRetryFlags) instead of
     /// starting a second loop, every attempt takes the merged flags, and a
     /// request that lands after the last attempt starts a new retry.
     func scheduleCacheRetryAfterMidTransitionSkip(

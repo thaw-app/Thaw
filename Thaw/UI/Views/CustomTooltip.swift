@@ -18,7 +18,7 @@ final class CustomTooltipPanel: NSPanel {
     /// Only the owner that showed the tooltip can dismiss it.
     private(set) var currentOwner: AnyHashable?
 
-    /// Force-dismisses the tooltip after 10s without a `show(...)`, so a missed
+    /// Force-dismisses the tooltip after 10s without a show(...), so a missed
     /// hover-exit (stalled event tap, deallocated owner) can't strand it (#734).
     private var hideWatchdog: Task<Void, Never>?
 
@@ -64,7 +64,7 @@ final class CustomTooltipPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
-        // Must stay above IceBarPanel (`.mainMenu + 1`, see IceBar.swift) so
+        // Must stay above IceBarPanel (.mainMenu + 1, see IceBar.swift) so
         // Thaw Bar grid items can't obscure tooltips (#782); pinned by
         // CustomTooltipPanelTests.
         level = .mainMenu + 2
@@ -108,7 +108,7 @@ final class CustomTooltipPanel: NSPanel {
     }
 
     /// Shows the tooltip with the given text near the specified screen point.
-    /// The `owner` token is used to prevent other callers from dismissing
+    /// The owner token is used to prevent other callers from dismissing
     /// a tooltip they didn't show.
     func show(text: String, near point: CGPoint, in screen: NSScreen?, owner: AnyHashable? = nil) {
         label.stringValue = text
@@ -149,9 +149,9 @@ final class CustomTooltipPanel: NSPanel {
         }
     }
 
-    /// Origin for a panel of `panelSize` near `point`, clamped to the screen whose
-    /// `frame` contains `point`. Returns `nil` when none does (stale or parked
-    /// coordinates). `preferred` only breaks ties between overlapping screens.
+    /// Origin for a panel of panelSize near point, clamped to the screen whose
+    /// frame contains point. Returns nil when none does (stale or parked
+    /// coordinates). preferred only breaks ties between overlapping screens.
     static nonisolated func placementOrigin(
         for panelSize: NSSize,
         near point: NSPoint,
@@ -185,8 +185,8 @@ final class CustomTooltipPanel: NSPanel {
 
     /// Hides the tooltip immediately.
     ///
-    /// If `owner` is provided, the tooltip is only dismissed when the
-    /// current owner matches. Pass `nil` to dismiss unconditionally.
+    /// If owner is provided, the tooltip is only dismissed when the
+    /// current owner matches. Pass nil to dismiss unconditionally.
     func dismiss(owner: AnyHashable? = nil) {
         if let owner, let currentOwner, owner != currentOwner {
             return
@@ -212,7 +212,7 @@ final class CustomTooltipPanel: NSPanel {
 /// A per-view controller that manages showing and hiding the shared
 /// tooltip panel with a configurable delay.
 ///
-/// Each `NSView` that wants custom-delayed tooltips should own an
+/// Each NSView that wants custom-delayed tooltips should own an
 /// instance of this controller.
 @MainActor
 final class CustomTooltipController {

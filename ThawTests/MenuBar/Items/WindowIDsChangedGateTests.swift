@@ -73,7 +73,7 @@ struct WindowIDsChangedGateTests {
         )
     }
 
-    /// Control Center generic (`Item-N`) windows churn IDs while the bar is stable
+    /// Control Center generic (Item-N) windows churn IDs while the bar is stable
     /// (Live Activities, transient widgets). applySavedLayout subtracts them before
     /// diffing so churn cannot trigger a bulk apply (#736); a real disappearance still fires.
     @Test("Control Center generic churn excluded from the diff keeps the gate quiet")

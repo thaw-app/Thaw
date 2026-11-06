@@ -33,7 +33,7 @@ extension MenuBarItemManager {
     ///
     /// Shared by profile apply and the continuous rebalance so both see the
     /// same geometry. The eject decision lives in
-    /// ``LayoutSolver/planNotchOverflow(desiredFiltered:unmanagedUIDs:controlUIDs:sectionMap:uidWidths:availableWidth:)``.
+    /// LayoutSolver/planNotchOverflow(desiredFiltered:unmanagedUIDs:controlUIDs:sectionMap:uidWidths:availableWidth:).
     static func computeNotchOverflowBudget(
         items: [MenuBarItem],
         screen: NSScreen,
@@ -101,7 +101,7 @@ extension MenuBarItemManager {
     ///
     /// Runs off the cache-update tick, so items outside any profile are ejected too.
     ///
-    /// With an active profile it defers to ``scheduleProfileResort()``, but
+    /// With an active profile it defers to scheduleProfileResort(), but
     /// only once overflow is found; arming it with nothing to do re-runs the
     /// apply on every cache tick forever (#881).
     func rebalanceNotchOverflowIfNeeded(
@@ -151,7 +151,7 @@ extension MenuBarItemManager {
         // trusted. Only unparked items count: parked items sit at negative x,
         // which can land on a display left of main and read as a permanent spread.
         //
-        // The divider comes from controlItems because `items` has the control
+        // The divider comes from controlItems because items has the control
         // items stripped; searching it would find nothing and pass every parked item.
         //
         // CGDisplayBounds, not NSScreen.frame: item bounds use top-left origin.

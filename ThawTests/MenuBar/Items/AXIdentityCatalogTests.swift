@@ -9,11 +9,11 @@ import AppKit
 import Testing
 @testable import Thaw
 
-/// Covers the pure, non-AX helpers `AXIdentityCatalog` and
-/// `MenuBarItemManager.ControlItemPair` use for frame correlation.
+/// Covers the pure, non-AX helpers AXIdentityCatalog and
+/// MenuBarItemManager.ControlItemPair use for frame correlation.
 ///
-/// A real `extrasMenuBar` walk needs Accessibility permission and a live
-/// menu bar, so CI only checks that `snapshot(hosts:)` degrades quietly
+/// A real extrasMenuBar walk needs Accessibility permission and a live
+/// menu bar, so CI only checks that snapshot(hosts:) degrades quietly
 /// when AX reads fail.
 @Suite("AX identity catalog")
 @MainActor
@@ -338,7 +338,7 @@ struct AXIdentityCatalogTests {
 
     /// Present in the list means the primary lookup already claimed it;
     /// rebuilding would duplicate an item the caller expects to have been
-    /// removed from `items`.
+    /// removed from items.
     @Test("A control window present in the list is left to the primary lookup")
     func doesNotRecoverWindowPresentInList() {
         #expect(

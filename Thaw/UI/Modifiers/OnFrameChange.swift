@@ -14,11 +14,10 @@ import SwiftUI
 extension View {
     /// Performs the given action when the view's frame changes.
     ///
-    /// - Parameters:
-    ///   - coordinateSpace: The coordinate space to use when accessing
-    ///     the view's frame.
-    ///   - action: An action to perform when the view's frame changes.
-    ///     The closure takes the new frame as a parameter.
+    /// coordinateSpace: The coordinate space to use when accessing
+    /// the view's frame.
+    /// action: An action to perform when the view's frame changes.
+    /// The closure takes the new frame as a parameter.
     func onFrameChange(
         in coordinateSpace: some CoordinateSpaceProtocol = .local,
         perform action: @escaping (CGRect) -> Void
@@ -32,10 +31,9 @@ extension View {
 
     /// Updates the given binding when the view's frame changes.
     ///
-    /// - Parameters:
-    ///   - coordinateSpace: The coordinate space to use when accessing
-    ///     the view's frame.
-    ///   - binding: A binding to update when the view's frame changes.
+    /// coordinateSpace: The coordinate space to use when accessing
+    /// the view's frame.
+    /// binding: A binding to update when the view's frame changes.
     func onFrameChange(
         in coordinateSpace: some CoordinateSpaceProtocol = .local,
         update binding: Binding<CGRect>

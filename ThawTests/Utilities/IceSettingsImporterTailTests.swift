@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the parts of ``IceSettingsImporter`` that ``IceSettingsImporterTests``
+/// Covers the parts of IceSettingsImporter that IceSettingsImporterTests
 /// leaves alone: the general, advanced and hotkey mappings, the per-display
 /// gate, and the V2 appearance path.
 ///
@@ -17,16 +17,14 @@ import Testing
 /// copied unvalidated, so absent keys, wrong types and empty containers are
 /// the cases that matter.
 ///
-/// Every case runs inside `withScratchDefaults` in a `.serialized` suite,
-/// against a throwaway Ice `UserDefaults` suite per test.
+/// Every case runs inside withScratchDefaults in a .serialized suite,
+/// against a throwaway Ice UserDefaults suite per test.
 ///
-/// Gaps:
-/// - The `UseIceBar == true` branch of `importPerDisplayIceBarSettings` walks
-///   `NSScreen.screens` through `DisplayIceBarConfiguration.buildConfigurations`,
-///   so its result depends on the attached displays. Only the "no Thaw Bar to
-///   convert" side is covered.
-/// - `importPerDisplayIceBarSettings`' `diagLog.error` arm is unreachable:
-///   `JSONEncoder` cannot fail on `[String: DisplayIceBarConfiguration]`.
+/// Gaps: the UseIceBar == true branch of importPerDisplayIceBarSettings walks
+/// NSScreen.screens through DisplayIceBarConfiguration.buildConfigurations,
+/// so its result depends on the attached displays, and only the "no Thaw Bar
+/// to convert" side is covered. Its diagLog.error arm is unreachable:
+/// JSONEncoder cannot fail on [String: DisplayIceBarConfiguration].
 @MainActor
 @Suite("Ice settings importer tail", .serialized)
 struct IceSettingsImporterTailTests {
@@ -41,20 +39,20 @@ struct IceSettingsImporterTailTests {
         return configuration
     }
 
-    /// Whether `key` is absent from the store the importer wrote to.
+    /// Whether key is absent from the store the importer wrote to.
     ///
-    /// Spelled out rather than inlined into `#expect` because
-    /// `UserDefaults.object(forKey:)` returns `Any?`, which the expectation
-    /// macro cannot compare against `nil` directly.
+    /// Spelled out rather than inlined into #expect because
+    /// UserDefaults.object(forKey:) returns Any?, which the expectation
+    /// macro cannot compare against nil directly.
     private func absent(_ key: Defaults.Key, from suite: UserDefaults) -> Bool {
         suite.object(forKey: key.rawValue) == nil
     }
 
-    /// Opens a throwaway defaults suite seeded with `values`, standing in for
+    /// Opens a throwaway defaults suite seeded with values, standing in for
     /// Ice's own domain.
     ///
     /// The suite sees its own keys plus the global domain, nothing this build
-    /// writes. Thaw's `Defaults.Key` raw values are the strings the importer
+    /// writes. Thaw's Defaults.Key raw values are the strings the importer
     /// looks up in Ice's domain, so a leak would show up as phantom imports.
     private func makeSource(_ values: [String: Any]) throws -> (defaults: UserDefaults, domainName: String) {
         let domainName = "com.stonerl.ThawTests.IceSettingsImporterTail.\(UUID().uuidString)"
@@ -81,7 +79,7 @@ struct IceSettingsImporterTailTests {
             #expect(!importer.hasIceSettings())
             let result = importer.importIceSettings()
 
-            // `false` is the signal the onboarding flow uses to keep the
+            // false is the signal the onboarding flow uses to keep the
             // "import from Ice" offer hidden, so it has to be distinct from
             // "Ice is installed but has nothing worth importing".
             #expect(!result.success)
@@ -114,8 +112,8 @@ struct IceSettingsImporterTailTests {
     // MARK: Full sweep
 
     /// One pass over every mapping the importer knows, so the per-key loops and
-    /// the sum in `importIceSettings` are all driven together. `UseIceBar` is
-    /// deliberately `false`: see the suite's gaps.
+    /// the sum in importIceSettings are all driven together. UseIceBar is
+    /// deliberately false: see the suite's gaps.
     @Test("A fully populated Ice domain imports every mapped key exactly once")
     func fullyPopulatedDomainImportsEveryMapping() throws {
         try withScratchDefaults { suite in
@@ -164,8 +162,8 @@ struct IceSettingsImporterTailTests {
             // 11 general + 0 per-display + 6 advanced + 2 hotkeys + 1 appearance.
             #expect(result.settingsImported == 20)
 
-            // Booleans are read back through `object(forKey:)` rather than
-            // `bool(forKey:)` so that "imported as false" is distinguishable
+            // Booleans are read back through object(forKey:) rather than
+            // bool(forKey:) so that "imported as false" is distinguishable
             // from "never written".
             #expect(suite.object(forKey: Defaults.Key.showIceIcon.rawValue) as? Bool == false)
             #expect(suite.object(forKey: Defaults.Key.customIceIconIsTemplate.rawValue) as? Bool == true)
@@ -217,7 +215,7 @@ struct IceSettingsImporterTailTests {
 
     /// The mapping loop copies whatever object it finds without checking its
     /// type, so a key Ice stored as a string lands in Thaw's domain as a string
-    /// under a key the app reads as a `Bool`. Pinned as observed behaviour, not
+    /// under a key the app reads as a Bool. Pinned as observed behaviour, not
     /// endorsed.
     @Test("A mistyped Ice value is copied verbatim and still counted as imported")
     func mistypedValuesAreCopiedVerbatim() throws {
@@ -261,8 +259,8 @@ struct IceSettingsImporterTailTests {
 
             let result = importer.importIceSettings()
 
-            // `UseIceBar` and `IceBarLocation` are in the general mapping;
-            // `UseIceBarOnlyOnNotchedDisplay` is not, and only feeds the
+            // UseIceBar and IceBarLocation are in the general mapping;
+            // UseIceBarOnlyOnNotchedDisplay is not, and only feeds the
             // per-display conversion, which this domain does not trigger.
             #expect(result.settingsImported == 2)
             #expect(absent(.displayIceBarConfigurations, from: suite))
@@ -270,8 +268,8 @@ struct IceSettingsImporterTailTests {
         }
     }
 
-    // No test covers `UseIceBar` stored as the integer 1: `bool(forKey:)` reads
-    // it as `true`, and the per-display conversion then depends on how many
+    // No test covers UseIceBar stored as the integer 1: bool(forKey:) reads
+    // it as true, and the per-display conversion then depends on how many
     // displays are attached.
 
     // MARK: Hotkeys

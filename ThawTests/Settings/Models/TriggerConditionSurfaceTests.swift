@@ -9,11 +9,11 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the value surface of ``TriggerCondition`` and the editor's enums:
-/// per-kind lookup tables, value accessors, and the `with…` copies that edit
+/// Covers the value surface of TriggerCondition and the editor's enums:
+/// per-kind lookup tables, value accessors, and the with… copies that edit
 /// one field without disturbing the rest.
 ///
-/// Exhaustive over `allCases`: the compiler keeps each `switch` complete, so
+/// Exhaustive over allCases: the compiler keeps each switch complete, so
 /// the real risk is a new case wired to the wrong arm.
 @Suite("Trigger condition surface")
 @MainActor

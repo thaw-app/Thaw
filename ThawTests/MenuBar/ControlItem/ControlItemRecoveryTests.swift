@@ -11,13 +11,13 @@ import Testing
 @testable import Thaw
 
 /// Covers the escalation decision that gates rebuilding the control items
-/// (#754): on macOS 26 with multiple displays, `ControlItemPair` lookup in
-/// `cacheItemsRegardless` can start failing permanently after long uptime.
+/// (#754): on macOS 26 with multiple displays, ControlItemPair lookup in
+/// cacheItemsRegardless can start failing permanently after long uptime.
 ///
-/// The re-arming half (a failed lookup no longer commits `itemWindowIDs` to
-/// `CacheActor`) has no reachable seam, since `CacheActor` is private. The
-/// window-ID cache updates in `cacheItemsRegardless` must run only after the
-/// `ControlItemPair` guard succeeds.
+/// The re-arming half (a failed lookup no longer commits itemWindowIDs to
+/// CacheActor) has no reachable seam, since CacheActor is private. The
+/// window-ID cache updates in cacheItemsRegardless must run only after the
+/// ControlItemPair guard succeeds.
 @Suite("Control item recovery")
 struct ControlItemRecoveryTests {
     @Test("Below the threshold, no rebuild is requested")
@@ -320,8 +320,8 @@ struct RebuiltDividerSeedPositionTests {
 /// Covers the inverted-position half of the parked-divider rebuild (#978).
 ///
 /// Keeping the stored position on a populated bar is only right while it
-/// still orders the dividers. macOS can autosave `Hidden = 6866` against
-/// `AlwaysHidden = 1034`, and restoring that strands the divider on relaunch.
+/// still orders the dividers. macOS can autosave Hidden = 6866 against
+/// AlwaysHidden = 1034, and restoring that strands the divider on relaunch.
 @Suite("Stored divider position ordering (#978)")
 struct StoredDividerPositionOrderingTests {
     private static func positions(

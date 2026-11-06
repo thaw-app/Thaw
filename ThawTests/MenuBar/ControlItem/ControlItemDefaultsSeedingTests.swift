@@ -12,12 +12,12 @@ import Testing
 /// Characterizes the section-divider write guard and the seeding path that
 /// bypasses it (#890).
 ///
-/// AppKit writes `NSStatusItem Preferred Position <autosaveName>` itself, never
-/// through `ControlItemDefaults`, so the guard only ever blocked Thaw's own
+/// AppKit writes NSStatusItem Preferred Position <autosaveName> itself, never
+/// through ControlItemDefaults, so the guard only ever blocked Thaw's own
 /// writes, including seeding.
 ///
 /// Serialized on a scratch defaults suite: these write real position keys
-/// through the process-wide `Defaults.store`.
+/// through the process-wide Defaults.store.
 @Suite("Control item defaults seeding", .serialized)
 struct ControlItemDefaultsSeedingTests {
     private static let hidden = ControlItem.Identifier.hidden.rawValue
@@ -72,7 +72,7 @@ struct ControlItemDefaultsSeedingTests {
     }
 
     /// An unconditional reset here yanks the hidden divider back beside the
-    /// visible one on every launch and `recreateStatusItem()`, and the next
+    /// visible one on every launch and recreateStatusItem(), and the next
     /// save persists the collapsed span (#895).
     @Test("Preflight leaves a divider position the user already has")
     func preflightKeepsStoredDividerPosition() throws {

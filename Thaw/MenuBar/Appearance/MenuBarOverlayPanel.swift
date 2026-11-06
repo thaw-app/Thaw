@@ -38,10 +38,9 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         ///
         /// Setting the task cancels the previous task for the flag, if there is one.
         ///
-        /// - Parameters:
-        ///   - flag: The update flag to set the task for.
-        ///   - timeout: The timeout of the task.
-        ///   - operation: The operation for the task to perform.
+        /// flag: The update flag to set the task for.
+        /// timeout: The timeout of the task.
+        /// operation: The operation for the task to perform.
         func setTask(
             for flag: UpdateFlag,
             timeout: Duration,
@@ -63,7 +62,7 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
 
         /// Cancels the task for the given update flag.
         ///
-        /// - Parameter flag: The update flag to cancel the task for.
+        /// flag: The update flag to cancel the task for.
         func cancelTask(for flag: UpdateFlag) {
             tasks.removeValue(forKey: flag)?.cancel()
         }
@@ -544,7 +543,7 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         }
     }
 
-    /// Clears references to help deallocation, since owningScreen is a `let`.
+    /// Clears references to help deallocation, since owningScreen is a let.
     private func cleanupReferences() {
         applicationMenuFrame = nil
         updateFlags.removeAll()

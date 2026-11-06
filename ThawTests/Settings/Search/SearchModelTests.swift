@@ -43,10 +43,10 @@ struct SearchModelTests {
         #expect(model.displayedGroups.isEmpty)
     }
 
-    /// The `de` localization inside the app bundle. `String(localized:)`
-    /// picks its localization from the bundle, not from its `locale:`
+    /// The de localization inside the app bundle. String(localized:)
+    /// picks its localization from the bundle, not from its locale:
     /// argument, so switching languages in-process means resolving against
-    /// the matching `.lproj`.
+    /// the matching .lproj.
     private static func localizationBundle(_ identifier: String) throws -> Bundle {
         let path = try #require(Bundle.main.path(forResource: identifier, ofType: "lproj"))
         return try #require(Bundle(path: path))

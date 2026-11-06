@@ -9,7 +9,7 @@ import Foundation
 
 /// Pure live-refresh cadence decisions.
 nonisolated enum MenuBarLiveRefreshPolicy {
-    /// Returns the live interval for `section`, or `nil` when refresh is Off.
+    /// Returns the live interval for section, or nil when refresh is Off.
     static func refreshInterval(
         for section: MenuBarSection.Name,
         target: TimeInterval
@@ -24,7 +24,7 @@ nonisolated enum MenuBarLiveRefreshPolicy {
     }
 
     /// One offscreen request in flight. When both are due, Always Hidden goes
-    /// first: `isDue` already caps it at 1 fps, so this cannot raise its rate,
+    /// first: isDue already caps it at 1 fps, so this cannot raise its rate,
     /// and Hidden retries on the next wake instead of starving it.
     static func nextOffscreenSection(hiddenDue: Bool, alwaysHiddenDue: Bool) -> MenuBarSection.Name? {
         if alwaysHiddenDue { return .alwaysHidden }
@@ -32,7 +32,7 @@ nonisolated enum MenuBarLiveRefreshPolicy {
         return nil
     }
 
-    /// First frame is due immediately; later frames wait for `interval`.
+    /// First frame is due immediately; later frames wait for interval.
     static func isDue(
         lastCaptureAt: ContinuousClock.Instant?,
         now: ContinuousClock.Instant,
@@ -42,8 +42,8 @@ nonisolated enum MenuBarLiveRefreshPolicy {
         return now - lastCaptureAt >= interval
     }
 
-    /// Drops missed frames: if capture overran `interval`, wait a full interval
-    /// from `now` instead of queuing catch-up work.
+    /// Drops missed frames: if capture overran interval, wait a full interval
+    /// from now instead of queuing catch-up work.
     static func nextDeadline(
         capturedAt: ContinuousClock.Instant,
         interval: Duration,

@@ -45,7 +45,7 @@ struct MenuBarItemGroupResolutionTests {
         #expect(MenuBarItemGroupResolver.resolve(tags: tags, groupSet: .empty).isEmpty)
     }
 
-    /// `LayoutBarContainer` maps non-item views (New Items badge, opaque slots)
+    /// LayoutBarContainer maps non-item views (New Items badge, opaque slots)
     /// to a placeholder tag, which must not join or shift member indices.
     @Test("Non-groupable placeholders never join a group")
     func placeholdersNeverJoinAGroup() {

@@ -8,7 +8,7 @@
 
 import SwiftUI
 
-/// The tint a ``MenuBarItemContainer`` draws over its background, for a
+/// The tint a MenuBarItemContainer draws over its background, for a
 /// surface that has been given its own instead of the menu bar's.
 nonisolated struct MenuBarContainerTint: Hashable {
     var kind: MenuBarTintKind
@@ -19,9 +19,9 @@ nonisolated struct MenuBarContainerTint: Hashable {
 
 /// A view that is drawn in the style of the menu bar.
 ///
-/// - Important: This view performs drawing on layers above and
-///   below the content view. The resulting view will probably look
-///   incorrect if the content view's background is not transparent.
+/// This view performs drawing on layers above and
+/// below the content view. The resulting view will probably look
+/// incorrect if the content view's background is not transparent.
 struct MenuBarItemContainer<Content: View>: View {
     enum ColorInfoAccessor {
         case automatic
@@ -57,7 +57,7 @@ struct MenuBarItemContainer<Content: View>: View {
     /// The tint to draw, from the override if one was given.
     ///
     /// Without an override, keep the original hardcoded opacity rather than the
-    /// menu bar's `tintOpacity`.
+    /// menu bar's tintOpacity.
     private var tint: MenuBarContainerTint {
         tintOverride ?? MenuBarContainerTint(
             kind: configuration.tintKind,
@@ -129,29 +129,28 @@ struct MenuBarItemContainer<Content: View>: View {
 extension View {
     /// Draws the view in the style of the menu bar.
     ///
-    /// - Important: This modifier performs drawing on layers above and
-    ///   below the current view. The resulting view will probably look
-    ///   incorrect if the current view's background is not transparent.
+    /// This modifier performs drawing on layers above and
+    /// below the current view. The resulting view will probably look
+    /// incorrect if the current view's background is not transparent.
     func menuBarItemContainer(appState: AppState) -> some View {
         MenuBarItemContainer(appState: appState, accessor: .automatic) { self }
     }
 
     /// Draws the view in the style of the menu bar.
     ///
-    /// This modifier ignores the ``MenuBarManager/averageColorInfo``
+    /// This modifier ignores the MenuBarManager/averageColorInfo
     /// property, and instead uses the provided color information.
     ///
-    /// - Important: This modifier performs drawing on layers above and
-    ///   below the current view. The resulting view will probably look
-    ///   incorrect if the current view's background is not transparent.
+    /// This modifier performs drawing on layers above and
+    /// below the current view. The resulting view will probably look
+    /// incorrect if the current view's background is not transparent.
     ///
-    /// - Parameters:
-    ///   - appState: The shared ``AppState`` object.
-    ///   - colorInfo: Information for the average color of the menu bar.
-    ///   - screen: The screen where the container is displayed, used to determine
-    ///     the appropriate brightness threshold for notched displays.
-    ///   - tintOverride: A tint to draw in place of the menu bar's. Pass `nil`
-    ///     to follow the menu bar.
+    /// appState: The shared AppState object.
+    /// colorInfo: Information for the average color of the menu bar.
+    /// screen: The screen where the container is displayed, used to determine
+    /// the appropriate brightness threshold for notched displays.
+    /// tintOverride: A tint to draw in place of the menu bar's. Pass nil
+    /// to follow the menu bar.
     func menuBarItemContainer(
         appState: AppState,
         colorInfo: MenuBarAverageColorInfo?,

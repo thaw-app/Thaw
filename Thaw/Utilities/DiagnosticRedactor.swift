@@ -69,7 +69,7 @@ nonisolated struct DiagnosticRedactor {
         return terms
     }
 
-    /// Returns `text` with every exact term and recognized pattern replaced.
+    /// Returns text with every exact term and recognized pattern replaced.
     func redact(_ text: String) -> String {
         var result = text
         for term in terms {

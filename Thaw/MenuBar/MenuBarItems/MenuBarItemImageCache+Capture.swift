@@ -155,15 +155,14 @@ extension MenuBarItemImageCache {
     /// image cannot be trusted at any scale.
     ///
     /// Pixel width over point width is the real capture scale; when it
-    /// disagrees with `expected`, it wins, since SCK may have chosen another display.
+    /// disagrees with expected, it wins, since SCK may have chosen another display.
     ///
     /// A derived scale off every real backing scale means stale bounds, so drop
     /// the item: a missing icon recovers, a wrongly-scaled one gets cached.
     ///
-    /// - Parameters:
-    ///   - imagePixelWidth: Width of the captured image, in pixels.
-    ///   - boundsWidth: Width of the item's window, in points.
-    ///   - expected: The scale of the display resolved for the menu bar.
+    /// imagePixelWidth: Width of the captured image, in pixels.
+    /// boundsWidth: Width of the item's window, in points.
+    /// expected: The scale of the display resolved for the menu bar.
     static nonisolated func resolvedScale(
         imagePixelWidth: Int,
         boundsWidth: CGFloat,

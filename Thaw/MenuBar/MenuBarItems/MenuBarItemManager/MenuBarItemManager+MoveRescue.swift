@@ -78,7 +78,7 @@ extension MenuBarItemManager {
     /// Moves a blocked item just right of the hidden divider. Doesn't retry the
     /// original move; that's up to the caller.
     ///
-    /// - Returns: true if the rescue move completed without throwing.
+    /// Returns true if the rescue move completed without throwing.
     func rescueBlockedItemToVisible(_ item: MenuBarItem) async -> Bool {
         let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
         guard let hiddenMenuBarItem = items.first(matching: .hiddenControlItem) else {

@@ -28,7 +28,7 @@ struct IceBarLayoutTests {
 
     @Test("No two layouts share a label")
     func localizedLabelsAreDistinct() {
-        // `LocalizedStringKey` is Equatable but not Hashable, so this
+        // LocalizedStringKey is Equatable but not Hashable, so this
         // cannot go through a Set.
         let labels = IceBarLayout.allCases.map(\.localized)
         for (offset, label) in labels.enumerated() {
@@ -38,7 +38,7 @@ struct IceBarLayoutTests {
         }
     }
 
-    /// `fromString` backs `thaw://set?key=iceBarLayout&value=…`, so both
+    /// fromString backs thaw://set?key=iceBarLayout&value=…, so both
     /// spellings are an external contract.
     @Test(
         "Both the case name and the raw value parse to the same layout",

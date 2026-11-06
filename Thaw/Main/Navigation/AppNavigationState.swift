@@ -36,7 +36,7 @@ final class AppNavigationState {
            let pane = SettingsNavigationIdentifier(rawValue: rawValue),
            !Defaults.bool(forKey: .simpleMode)
         {
-            settingsNavigationIdentifier = pane
+            settingsNavigationIdentifier = pane.destination
         }
     }
 }

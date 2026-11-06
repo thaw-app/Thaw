@@ -14,15 +14,15 @@ import os
 /// A cache for the source process identifiers for menu bar item windows.
 ///
 /// The "source process" is the process that created a menu bar item. As of
-/// macOS 26, item windows are owned by Control Center, so `kCGWindowOwnerPID`
+/// macOS 26, item windows are owned by Control Center, so kCGWindowOwnerPID
 /// no longer identifies it and we resolve it through Accessibility instead.
 /// Accessibility calls block, so the work runs in this XPC service.
 ///
-/// Only the Combine wiring in `start()` (and `cancellable`) is actor-isolated.
-/// `state`, `scanLock`, and `CachedApplication` entries have their own
-/// `OSAllocatedUnfairLock`, so members that only touch them are `nonisolated`.
+/// Only the Combine wiring in start() (and cancellable) is actor-isolated.
+/// state, scanLock, and CachedApplication entries have their own
+/// OSAllocatedUnfairLock, so members that only touch them are nonisolated.
 /// Isolating them would serialize fast cache-hit reads behind blocking AX
-/// scans; `scanLock` is what serializes full scans.
+/// scans; scanLock is what serializes full scans.
 actor SourcePIDCache {
     private static let diagLog = DiagLog(category: "SourcePIDCache")
     /// An object that contains a running application and provides an
@@ -35,12 +35,12 @@ actor SourcePIDCache {
             var extrasMenuBar: UIElement?
 
             /// Consecutive checks that found no extras menu bar. Drives the
-            /// TTL ladder in ``ExtrasMenuBarNegativeCachePolicy``.
+            /// TTL ladder in ExtrasMenuBarNegativeCachePolicy.
             var consecutiveMisses = 0
 
             /// The instant after which a missing extras menu bar may be
-            /// probed again, or `nil` when this app has never come back
-            /// empty. Only meaningful while `extrasMenuBar` is `nil`.
+            /// probed again, or nil when this app has never come back
+            /// empty. Only meaningful while extrasMenuBar is nil.
             var retryAfter: ContinuousClock.Instant?
         }
 
@@ -71,7 +71,7 @@ actor SourcePIDCache {
         /// How many consecutive checks have found no extras menu bar.
         ///
         /// Zero once one is found, so this doubles as what
-        /// ``ExtrasMenuBarProbeMemory`` wants to remember: a positive count
+        /// ExtrasMenuBarProbeMemory wants to remember: a positive count
         /// is an application worth skipping next launch, and zero is one
         /// whose entry must be dropped.
         var consecutiveExtrasMenuBarMisses: Int {
@@ -79,10 +79,10 @@ actor SourcePIDCache {
         }
 
         /// Whether an unexpired negative deadline would make
-        /// ``getOrCreateExtrasMenuBar()`` skip its accessibility calls.
+        /// getOrCreateExtrasMenuBar() skip its accessibility calls.
         ///
         /// Diagnostics only, sampled outside the lock that
-        /// ``getOrCreateExtrasMenuBar()`` takes, so it is a count rather than a
+        /// getOrCreateExtrasMenuBar() takes, so it is a count rather than a
         /// guarantee. It tells a full-system probe from one the negative cache spared.
         var isSkippingExtrasMenuBarProbe: Bool {
             lock.withLock { state in
@@ -103,13 +103,13 @@ actor SourcePIDCache {
                 !Bridging.isProcessUnresponsive(processIdentifier)
         }
 
-        /// Creates a `CachedApplication` instance with the given running
+        /// Creates a CachedApplication instance with the given running
         /// application.
         ///
-        /// - Parameter seed: What earlier sessions learned about this
-        ///   application, from ``ExtrasMenuBarProbeMemory``. Starting partway up
-        ///   the ladder keeps a cold start from re-probing the whole system; a
-        ///   seeded deadline still expires within seconds.
+        /// seed: What earlier sessions learned about this
+        /// application, from ExtrasMenuBarProbeMemory. Starting partway up
+        /// the ladder keeps a cold start from re-probing the whole system; a
+        /// seeded deadline still expires within seconds.
         init(_ runningApp: NSRunningApplication, seed: (misses: Int, initialTTL: Duration)? = nil) {
             self.runningApp = runningApp
             guard let seed else {
@@ -191,7 +191,7 @@ actor SourcePIDCache {
         /// Consecutive full scans that have left each window unresolved.
         /// Drives the negative-cache TTL ladder: short deadlines while AX trees
         /// warm up at startup, then the steady-state TTL. Reset when a window
-        /// resolves; pruned alongside `negativeUntil`.
+        /// resolves; pruned alongside negativeUntil.
         var negativeFailures = [CGWindowID: Int]()
 
         /// Reorders the cached apps so that those that are confirmed
@@ -231,24 +231,24 @@ actor SourcePIDCache {
     private static let unresolvedDiagDumpInterval: Duration = .seconds(300)
 
     /// Rate-limits unresolved diagnostic dumps. Kept in its own lock because
-    /// `pidBody` (which emits diagnostics under `scanLock`) is `nonisolated`
+    /// pidBody (which emits diagnostics under scanLock) is nonisolated
     /// and cannot touch actor-isolated storage. Concurrent access is still
-    /// serialized in practice by `scanLock` around the dump site.
+    /// serialized in practice by scanLock around the dump site.
     private nonisolated let lastUnresolvedDiagDump = OSAllocatedUnfairLock<
         (windowIDs: Set<CGWindowID>, at: ContinuousClock.Instant)?
     >(initialState: nil)
 
     /// The cache's protected state.
     ///
-    /// `nonisolated`: its own `OSAllocatedUnfairLock` synchronizes it, so
-    /// cache-hit reads don't wait on the actor while `start()` or cleanup run.
+    /// nonisolated: its own OSAllocatedUnfairLock synchronizes it, so
+    /// cache-hit reads don't wait on the actor while start() or cleanup run.
     private nonisolated let state = OSAllocatedUnfairLock(initialState: State())
 
     /// What earlier sessions learned about which applications have an extras
     /// menu bar, read once at init and rewritten as this session revises it.
     ///
-    /// `nonisolated` and separately locked for the same reason as `state`:
-    /// it is touched from `performCleanupBody`, which is `nonisolated` and
+    /// nonisolated and separately locked for the same reason as state:
+    /// it is touched from performCleanupBody, which is nonisolated and
     /// cannot reach actor-isolated storage.
     private nonisolated let probeMemory = OSAllocatedUnfairLock(
         initialState: ExtrasMenuBarProbeStore.load()
@@ -256,7 +256,7 @@ actor SourcePIDCache {
 
     /// Lock to prevent multiple concurrent full scans of all applications.
     ///
-    /// `nonisolated` for the same reason as `state` above — it is the
+    /// nonisolated for the same reason as state above — it is the
     /// mechanism (not actor isolation) that serializes full AX scans.
     private nonisolated let scanLock = OSAllocatedUnfairLock(initialState: ())
 
@@ -396,7 +396,7 @@ actor SourcePIDCache {
     /// Returns the cached process identifiers for the given windows,
     /// performing a single batch resolution if any are missing.
     ///
-    /// `pidBody` already caches **all** matched windows during its full
+    /// pidBody already caches all matched windows during its full
     /// AX scan, so after one call all resolvable PIDs are available.
     ///
     /// Wrapped in an autoreleasepool: this service has no NSApplication, so
@@ -408,7 +408,7 @@ actor SourcePIDCache {
     }
 
     private nonisolated func pidsBody(for windows: [WindowInfo]) -> [pid_t?] {
-        // Drive the scan with an unresolved window, not `windows.first`: pidBody
+        // Drive the scan with an unresolved window, not windows.first: pidBody
         // returns early on a cache hit, so mid-session arrivals would never scan.
         let now = ContinuousClock.now
         if let unresolved = windows.first(where: { needsScan($0, asOf: now) }) {
@@ -419,11 +419,11 @@ actor SourcePIDCache {
         }
     }
 
-    /// Whether `window` still needs the full AX traversal: it has area to
+    /// Whether window still needs the full AX traversal: it has area to
     /// match on, no PID has been cached for it, and any negative-cache entry
-    /// has expired by `now`.
+    /// has expired by now.
     ///
-    /// Split out of `pidsBody` so the search predicate, the lock, and the
+    /// Split out of pidsBody so the search predicate, the lock, and the
     /// deadline comparison are not three closures deep.
     private nonisolated func needsScan(_ window: WindowInfo, asOf now: ContinuousClock.Instant) -> Bool {
         // A zero-area window can't match an AX element, so it must not start a
@@ -513,7 +513,7 @@ actor SourcePIDCache {
             }
             autoreleasepool {
                 // AX reads run on the target app's main thread, bounded only by the
-                // timeout set in `init`. Naming slow apps tells a long app list from a wedged app.
+                // timeout set in init. Naming slow apps tells a long app list from a wedged app.
                 let probeStart = ContinuousClock.now
                 let bar = app.getOrCreateExtrasMenuBar()
                 let probeDuration = ContinuousClock.now - probeStart

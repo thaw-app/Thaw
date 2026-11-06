@@ -11,12 +11,12 @@ import Testing
 
 // MARK: - DiagnosticLogger.Level Tests
 
-/// Pins the raw values of ``DiagnosticLogger/Level``.
+/// Pins the raw values of DiagnosticLogger/Level.
 ///
 /// The raw values are written verbatim into every diagnostic log line, so
 /// they are a parsed format rather than an implementation detail.
 ///
-/// Reads only: nothing here reaches the shared ``DiagnosticLogger`` or any
+/// Reads only: nothing here reaches the shared DiagnosticLogger or any
 /// other process-global state, so the suite is safe to run in parallel with
 /// the rest.
 @Suite("Diagnostic logger levels")
@@ -115,14 +115,14 @@ struct DiagnosticLoggerLevelTests {
 
 // MARK: - Retention Tests
 
-/// Covers which log files ``DiagnosticLogger/filesToPrune(_:retentionDays:maxCount:now:protected:)``
+/// Covers which log files DiagnosticLogger/filesToPrune(_:retentionDays:maxCount:now:protected:)
 /// selects for deletion.
 ///
 /// The decision is pure (dates and URLs in, URLs out), so these run against
 /// paths that need not exist. Deleting the wrong file loses the log a user was
 /// about to attach to a bug report.
 ///
-/// Reads only: nothing here reaches the shared ``DiagnosticLogger`` or the file
+/// Reads only: nothing here reaches the shared DiagnosticLogger or the file
 /// system, so the suite is safe to run in parallel with the rest.
 @Suite("Diagnostic log retention")
 struct DiagnosticLoggerRetentionTests {
@@ -238,7 +238,7 @@ struct DiagnosticLoggerRetentionTests {
         let second = logFile("thaw_b.log")
 
         // Only one of the two fits under the cap. Directory order must not
-        // decide which; the tie is broken by path, so `thaw_a.log` survives.
+        // decide which; the tie is broken by path, so thaw_a.log survives.
         let stale = DiagnosticLogger.filesToPrune(
             [(url: second, created: sameMoment), (url: first, created: sameMoment)],
             retentionDays: 30,
@@ -253,7 +253,7 @@ struct DiagnosticLoggerRetentionTests {
 
 // MARK: - Rotation Policy Tests
 
-/// Covers ``DiagnosticLogger/RotationPolicy/sanitized()``.
+/// Covers DiagnosticLogger/RotationPolicy/sanitized().
 ///
 /// A policy reaches the MenuBarItemService target over XPC, and a build signed
 /// without a team identifier accepts messages from any local process, so these
@@ -337,7 +337,7 @@ struct DiagnosticLoggerRotationPolicyTests {
 // MARK: - File Name Tests
 
 /// Covers the collision handling in
-/// ``DiagnosticLogger/uniqueLogFileURL(in:baseName:exists:)``.
+/// DiagnosticLogger/uniqueLogFileURL(in:baseName:exists:).
 ///
 /// Log file names carry a second-granular timestamp, so rotating twice inside
 /// one second would otherwise reuse a name and append to a segment already in
@@ -380,7 +380,7 @@ struct DiagnosticLoggerFileNameTests {
 
 // MARK: - DiagLog Tests
 
-/// `DiagnosticLogger.shared` is disabled in tests, so no files are written.
+/// DiagnosticLogger.shared is disabled in tests, so no files are written.
 @Suite("Diagnostic log facade")
 struct DiagLogTests {
     @Test("Every DiagLog level forwards without diagnostic logging enabled")

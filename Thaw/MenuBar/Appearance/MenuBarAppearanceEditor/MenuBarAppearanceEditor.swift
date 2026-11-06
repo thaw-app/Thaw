@@ -157,7 +157,7 @@ struct MenuBarAppearanceEditor: View {
     }
 
     /// Shown while Reduce Transparency is on, since the opaque menu bar hides
-    /// the overlay. See ``MenuBarOverlayPanel/updateWindowLevel()``.
+    /// the overlay. See MenuBarOverlayPanel/updateWindowLevel().
     private var reduceTransparencyWarning: some View {
         SettingsWarningPill(
             title: "Menu bar effects are hidden by Reduce Transparency",
@@ -269,8 +269,8 @@ private struct UnlabeledBackgroundEditor: View {
     }
 
     var body: some View {
-        // No wrapping VStack: `IceSection` is a native grouped `Section` and
-        // must remain a direct child of the enclosing `IceForm` list, which
+        // No wrapping VStack: IceSection is a native grouped Section and
+        // must remain a direct child of the enclosing IceForm list, which
         // provides the inter-section spacing.
         if showTitle {
             IceSection("Background") {
@@ -420,7 +420,7 @@ private struct UnlabeledShapeEditor: View {
 
     /// The shape the border follows.
     ///
-    /// There is no shape to trace on the menu bar when this is `noShape`, so
+    /// There is no shape to trace on the menu bar when this is noShape, so
     /// the menu bar side of the border row is disabled. The Thaw Bar draws its
     /// border around its own panel and is unaffected.
     let shapeKind: MenuBarShapeKind
@@ -432,8 +432,8 @@ private struct UnlabeledShapeEditor: View {
     let isThawBarOverridden: Bool
 
     var body: some View {
-        // No wrapping VStack: `IceSection` is a native grouped `Section` and
-        // must remain a direct child of the enclosing `IceForm` list, which
+        // No wrapping VStack: IceSection is a native grouped Section and
+        // must remain a direct child of the enclosing IceForm list, which
         // provides the inter-section spacing.
         IceSection {
             tintPicker

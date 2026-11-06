@@ -10,8 +10,8 @@ import SwiftUI
 
 /// The standalone permissions screen.
 ///
-/// `manager` is a stored property because `@Environment` needs a concrete
-/// type, which the generic `Manager` doesn't provide.
+/// manager is a stored property because @Environment needs a concrete
+/// type, which the generic Manager doesn't provide.
 struct PermissionsView<Manager: PermissionsManaging>: View {
     @Environment(AppState.self) var appState: AppState
     let manager: Manager
@@ -281,7 +281,7 @@ struct PermissionCard: View {
     }
 }
 
-/// A lightweight stand-in for ``AppPermissions`` used by the preview.
+/// A lightweight stand-in for AppPermissions used by the preview.
 @MainActor
 @Observable
 private final class MockPermissionsManager: PermissionsManaging {

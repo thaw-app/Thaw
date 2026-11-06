@@ -28,7 +28,7 @@ nonisolated struct WindowInfo {
 
     /// The name of the process that owns the window.
     ///
-    /// This may have a value when ``owningApplication`` does not have
+    /// This may have a value when owningApplication does not have
     /// a localized name.
     let ownerName: String?
 
@@ -51,14 +51,14 @@ nonisolated struct WindowInfo {
     ///
     /// Every source-PID match compares this window's centre with an AX frame,
     /// so a scan started for a zero-width or zero-height window can't succeed.
-    /// These exist and persist (#956: `(-4323, 0, 0, 0)`, unresolved for minutes).
+    /// These exist and persist (#956: (-4323, 0, 0, 0), unresolved for minutes).
     var isDegenerate: Bool {
         bounds.isEmpty
     }
 
     /// A Boolean value that indicates whether the window is a menu-related window.
     ///
-    /// This property returns `true` if the window's layer corresponds to a
+    /// This property returns true if the window's layer corresponds to a
     /// pop-up menu, status window, or main menu, or if it belongs to the
     /// Window Server (which often owns the actual menu windows for apps).
     var isMenuRelated: Bool {
@@ -93,7 +93,7 @@ nonisolated struct WindowInfo {
 
     /// Creates a window with the given window identifier.
     ///
-    /// - Parameter windowID: A window identifier.
+    /// windowID: A window identifier.
     init?(windowID: CGWindowID) {
         guard let window = WindowInfo.createWindows(from: [windowID]).first else {
             return nil
@@ -139,7 +139,7 @@ nonisolated extension WindowInfo {
 
     /// Creates a list of windows from the given list of window identifiers.
     ///
-    /// - Parameter windowIDs: A list of window identifiers.
+    /// windowIDs: A list of window identifiers.
     static func createWindows(from windowIDs: [CGWindowID]) -> [WindowInfo] {
         guard let array = Bridging.createCGWindowArray(with: windowIDs) else {
             diagLog.warning("createWindows: createCGWindowArray returned nil for \(windowIDs.count) window IDs")
@@ -158,8 +158,8 @@ nonisolated extension WindowInfo {
 
     /// Creates a list of windows using the given options.
     ///
-    /// - Parameter option: Options that filter the returned list.
-    ///   Pass an empty option set to return all available windows.
+    /// option: Options that filter the returned list.
+    /// Pass an empty option set to return all available windows.
     static func createWindows(option: Bridging.WindowListOption = []) -> [WindowInfo] {
         createWindows(from: Bridging.getWindowList(option: option))
     }
@@ -167,8 +167,8 @@ nonisolated extension WindowInfo {
     /// Creates a list of windows for the elements in the menu bar
     /// using the given options.
     ///
-    /// - Parameter option: Options that filter the returned list.
-    ///   Pass an empty option set to return all available windows.
+    /// option: Options that filter the returned list.
+    /// Pass an empty option set to return all available windows.
     static func createMenuBarWindows(option: Bridging.MenuBarWindowListOption = []) -> [WindowInfo] {
         createWindows(from: Bridging.getMenuBarWindowList(option: option))
     }

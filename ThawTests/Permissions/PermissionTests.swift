@@ -10,7 +10,7 @@ import SwiftUI
 import Testing
 @testable import Thaw
 
-/// Covers ``Permission``'s request/poll cycle through its injected closures,
+/// Covers Permission's request/poll cycle through its injected closures,
 /// so nothing here touches the real TCC database.
 @MainActor
 @Suite("Permission request polling")
@@ -44,7 +44,7 @@ struct PermissionTests {
         permission.performRequest()
         isGranted = true
 
-        // `onChange` fires on every poll tick, and `resume` traps on a second
+        // onChange fires on every poll tick, and resume traps on a second
         // call, so latch the first grant and ignore later ticks.
         await confirmation("Permission grant is observed after polling restarts") { granted in
             await withCheckedContinuation { continuation in
@@ -65,8 +65,8 @@ struct PermissionTests {
         #expect(permission.hasPermission)
     }
 
-    /// Built without `openSettings`, so the default `NSWorkspace` closure is stored.
-    /// `settingsURL` is `nil`, so nothing is ever opened.
+    /// Built without openSettings, so the default NSWorkspace closure is stored.
+    /// settingsURL is nil, so nothing is ever opened.
     @Test("A permission built without an opener still requests and polls")
     func defaultOpenSettingsIsInstalled() {
         var isGranted = false
@@ -89,7 +89,7 @@ struct PermissionTests {
         permission.performRequest()
 
         #expect(requestCount == 1)
-        // `performRequest` restarts polling, and the restart's first tick
+        // performRequest restarts polling, and the restart's first tick
         // is delivered synchronously, so the grant is already visible.
         #expect(permission.hasPermission)
     }

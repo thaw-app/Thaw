@@ -15,12 +15,12 @@ nonisolated struct ProfileMetadata: Codable, Identifiable, Hashable {
     var name: String
     var createdAt: Date
     var modifiedAt: Date
-    /// The display UUID this profile auto-activates for, or `nil` for manual-only.
+    /// The display UUID this profile auto-activates for, or nil for manual-only.
     var associatedDisplayUUID: String?
     /// The cached display name, used when the display is disconnected.
     var associatedDisplayName: String?
     /// The reboot-stable key of the Space this profile auto-activates for,
-    /// or `nil` for manual-only. See `Bridging.getSpacePersistentKeys()`.
+    /// or nil for manual-only. See Bridging.getSpacePersistentKeys().
     var associatedSpaceKey: String?
     /// A user-facing label for the associated Space. Spaces have no system
     /// name, so this is whatever the user typed when making the association.
@@ -77,9 +77,9 @@ nonisolated struct GeneralSettingsSnapshot: Codable {
         settings.showIceIcon = showIceIcon
         settings.customIceIconIsTemplate = customIceIconIsTemplate
         settings.iceIcon = iceIcon
-        // Assigned after `iceIcon`, not before. Setting a `.custom` icon makes
-        // that property's `didSet` mirror the new value into
-        // `lastCustomIceIcon`, so assigning first meant the snapshot's own
+        // Assigned after iceIcon, not before. Setting a .custom icon makes
+        // that property's didSet mirror the new value into
+        // lastCustomIceIcon, so assigning first meant the snapshot's own
         // value was immediately overwritten and every profile carrying a custom
         // icon came back with the two fields identical.
         settings.lastCustomIceIcon = lastCustomIceIcon
@@ -119,7 +119,7 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
     // enableDiagnosticLogging is deliberately not part of a profile: users
     // turn it on to capture a profile switch, and restoring it on apply
     // turned logging off at that moment. Old and new builds both decode
-    // fine since every field uses `decodeIfPresent` with a default.
+    // fine since every field uses decodeIfPresent with a default.
     var useDoubleClickToShowAlwaysHiddenSection: Bool
     var useOptionClickToShowAlwaysHiddenSection: Bool
     var enableMenuBarItemOverflow: Bool
@@ -339,17 +339,17 @@ nonisolated struct MenuBarLayoutSnapshot: Codable {
     var itemHotkeys: [String: Data]?
 
     /// Resolves the ordering representation used by the layout apply path.
-    /// Profiles written before `itemOrder` was added contain the equivalent
-    /// `savedSectionOrder` representation, so preserve their layout intent.
+    /// Profiles written before itemOrder was added contain the equivalent
+    /// savedSectionOrder representation, so preserve their layout intent.
     ///
-    /// An empty `itemOrder` falls back too: a capture taken while the cache
-    /// was still settling writes `[:]`, which would shadow a good
-    /// `savedSectionOrder` and leave the apply with no layout.
+    /// An empty itemOrder falls back too: a capture taken while the cache
+    /// was still settling writes [:], which would shadow a good
+    /// savedSectionOrder and leave the apply with no layout.
     ///
     /// Pruned on the way out, like the saved section order: a capture taken
     /// while source-PID resolution was degraded holds identifiers that can
     /// never match a live item. Every consumer reads the layout through here
-    /// or ``resolvedItemSectionMap``, so pruning once covers them all.
+    /// or resolvedItemSectionMap, so pruning once covers them all.
     var resolvedItemOrder: [String: [String]] {
         guard let itemOrder, !itemOrder.isEmpty else {
             return LayoutSolver.prunedSectionOrder(savedSectionOrder)
@@ -590,10 +590,22 @@ nonisolated struct ProfileExportEntry: Codable {
     var profile: Profile
     var associatedDisplayUUID: String?
     var associatedDisplayName: String?
-    /// Space associations are exported too, but a key from another Mac will
-    /// never match locally, so importing one is harmless rather than useful.
+    /// An import takes a Space or display association only while no local profile owns it.
     var associatedSpaceKey: String?
     var associatedSpaceName: String?
+}
+
+nonisolated extension ProfileExportEntry {
+    /// The entry for a profile with the associations its manifest metadata holds.
+    init(profile: Profile, metadata: ProfileMetadata?) {
+        self.init(
+            profile: profile,
+            associatedDisplayUUID: metadata?.associatedDisplayUUID,
+            associatedDisplayName: metadata?.associatedDisplayName,
+            associatedSpaceKey: metadata?.associatedSpaceKey,
+            associatedSpaceName: metadata?.associatedSpaceName
+        )
+    }
 }
 
 /// Wrapper for exporting multiple profiles as a single file.

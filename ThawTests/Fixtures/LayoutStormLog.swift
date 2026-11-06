@@ -14,10 +14,10 @@
 /// LM Studio had just launched at x=1066, left of Sound and Google Drive,
 /// while the profile ordered it to their right: one item two slots off.
 /// The old full sort trimmed only the correct prefix, so it dragged ten
-/// items. See ``LayoutStormReplayTests``.
+/// items. See LayoutStormReplayTests.
 enum LayoutStormLog {
     /// Visible section, left to right, as logged by
-    /// `applyProfileLayout: current visible section` at 04:46:26.721.
+    /// applyProfileLayout: current visible section at 04:46:26.721.
     static let currentVisible = [
         "com.apple.controlcenter:FocusModes",
         "ai.elementlabs.lmstudio:Item-0",
@@ -44,7 +44,7 @@ enum LayoutStormLog {
     /// The desired visible order.
     ///
     /// The log prints the sequence after prefix trimming, so the three leading
-    /// items are reconstructed from `visibleUIDs.count=13` and the ten-item tail.
+    /// items are reconstructed from visibleUIDs.count=13 and the ten-item tail.
     static let desiredVisible = [
         "com.apple.controlcenter:FocusModes",
         "com.apple.controlcenter:Sound",

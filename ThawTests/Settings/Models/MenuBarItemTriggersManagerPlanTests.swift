@@ -9,11 +9,11 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the decision half of ``MenuBarItemTriggersManager``: the priority
+/// Covers the decision half of MenuBarItemTriggersManager: the priority
 /// plan, identifier resolution across re-instancing, runtime status, and the
 /// legacy-target repair on load.
 ///
-/// Runs without `performSetup`. Everything a plan needs (state, present
+/// Runs without performSetup. Everything a plan needs (state, present
 /// identifiers, clock) is passed in.
 @Suite("Menu bar item triggers priority plan")
 @MainActor
@@ -43,12 +43,12 @@ struct MenuBarItemTriggersManagerPlanTests {
         )
     }
 
-    /// A state that satisfies `.onACPower` and fails `.onBatteryPower`.
+    /// A state that satisfies .onACPower and fails .onBatteryPower.
     private var onAC: SystemState {
         SystemState(power: PowerState(batteryPercentage: 50, isOnACPower: true, isCharging: true))
     }
 
-    /// A state that satisfies `.onBatteryPower` and fails `.onACPower`.
+    /// A state that satisfies .onBatteryPower and fails .onACPower.
     private var onBattery: SystemState {
         SystemState(power: PowerState(batteryPercentage: 50, isOnACPower: false, isCharging: false))
     }
@@ -490,7 +490,7 @@ struct MenuBarItemTriggersManagerPlanTests {
 
     @Test("Exact-identifier ownership stays empty until an item cache resolves it")
     func exactOwnershipNeedsALiveItemCache() {
-        // Targets resolve through `resolvedPresentIdentifier`. With no live
+        // Targets resolve through resolvedPresentIdentifier. With no live
         // item cache nothing resolves, so only the base query can answer.
         let manager = makeManager()
         let trigger = makeTrigger(name: "Battery", item: "item-a", baseIdentifier: "item-a")

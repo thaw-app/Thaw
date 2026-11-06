@@ -23,6 +23,17 @@ nonisolated enum SettingsNavigationIdentifier: String, NavigationIdentifier {
     case developer = "Developer"
     case about = "About"
 
+    /// The sidebar's panes, in order. Trigger Sources is a section of Triggers.
+    static let sidebar: [Self] = [
+        .general, .menuBarLayout, .displays, .menuBarAppearance, .hotkeys, .profiles,
+        .triggers, .automation, .advanced, .tools, .about,
+    ]
+
+    /// Where a pane opens, so a saved Trigger Sources pane lands on Triggers.
+    var destination: Self {
+        self == .developer ? .triggers : self
+    }
+
     var localized: LocalizedStringKey {
         switch self {
         case .general: "General"
@@ -34,7 +45,7 @@ nonisolated enum SettingsNavigationIdentifier: String, NavigationIdentifier {
         case .advanced: "Advanced"
         case .automation: "Automation"
         case .triggers: "Triggers"
-        case .tools: "Tools"
+        case .tools: "Troubleshooting"
         case .developer: "Trigger Sources"
         case .about: "About"
         }

@@ -12,7 +12,7 @@ import Testing
 
 // MARK: - Table Rows
 
-/// One row of the ``MenuBarSection/usableInlineWidth(from:screenFrameMinX:screenVisibleMaxX:notchFrame:)``
+/// One row of the MenuBarSection/usableInlineWidth(from:screenFrameMinX:screenVisibleMaxX:notchFrame:)
 /// table.
 private struct UsableWidthCase: Sendable, CustomStringConvertible {
     let name: String
@@ -351,14 +351,14 @@ private let presentationCases: [PresentationCase] = [
 
 // MARK: - MenuBarSection Geometry Tests
 
-/// The two pure geometry statics on ``MenuBarSection``:
-/// `usableInlineWidth(from:screenFrameMinX:screenVisibleMaxX:notchFrame:)` and
-/// `presentationMode(totalItemsWidth:appMenuRightEdge:screenFrameMinX:screenVisibleMaxX:notchFrame:allowHidingApplicationMenus:)`,
+/// The two pure geometry statics on MenuBarSection:
+/// usableInlineWidth(from:screenFrameMinX:screenVisibleMaxX:notchFrame:) and
+/// presentationMode(totalItemsWidth:appMenuRightEdge:screenFrameMinX:screenVisibleMaxX:notchFrame:allowHidingApplicationMenus:),
 /// against fixed screen descriptions. The instance half needs a live
-/// `ControlItem` and `NSScreen`.
+/// ControlItem and NSScreen.
 ///
-/// `Name`, `notchGap`, and coarse presentation modes are in `MenuBarSectionNameTests`;
-/// `forcesIceBarForNotchOverflow` is in `NotchOverflowRevealTests`.
+/// Name, notchGap, and coarse presentation modes are in MenuBarSectionNameTests;
+/// forcesIceBarForNotchOverflow is in NotchOverflowRevealTests.
 @Suite("Menu bar section geometry")
 struct MenuBarSectionGeometryTests {
     // MARK: - Usable Inline Width
@@ -394,7 +394,7 @@ struct MenuBarSectionGeometryTests {
 
         @Test("Hiding the application menus can only ever add space")
         func droppingTheApplicationMenusNeverCosts() {
-            // `presentationMode` assumes the collapsed-menus width is the larger one;
+            // presentationMode assumes the collapsed-menus width is the larger one;
             // otherwise an item set that fit could be pushed into the Thaw Bar.
             for testCase in usableWidthCases {
                 let withoutMenus = MenuBarSection.usableInlineWidth(
@@ -428,7 +428,7 @@ struct MenuBarSectionGeometryTests {
 
         @Test("An absent application menu frame is measured like one at the screen's left edge")
         func absentMenuFrameMatchesTheScreenEdge() {
-            // `presentationMode` passes `screenFrameMinX` where the first measurement passed `nil`.
+            // presentationMode passes screenFrameMinX where the first measurement passed nil.
             let absent = MenuBarSection.usableInlineWidth(
                 from: nil,
                 screenFrameMinX: NotchedScreen.minX,
@@ -457,7 +457,7 @@ struct MenuBarSectionGeometryTests {
 
         @Test("A width equal to the usable width still counts as fitting")
         func equalityFitsInline() {
-            // The comparison is `<=`. Treating an exact fit as overflow would flap between
+            // The comparison is <=. Treating an exact fit as overflow would flap between
             // inline and the Thaw Bar on every measurement.
             let usable = MenuBarSection.usableInlineWidth(
                 from: NotchedScreen.appMenuRightEdge,
@@ -489,7 +489,7 @@ struct MenuBarSectionGeometryTests {
 
         @Test("Hiding the application menus is never proposed when the setting is off")
         func hidingIsNeverProposedWhenDisabled() {
-            // A "no" must reach `.iceBar` without considering the wider bar.
+            // A "no" must reach .iceBar without considering the wider bar.
             for width in stride(from: CGFloat(0), through: 2000, by: 125) {
                 let mode = MenuBarSection.presentationMode(
                     totalItemsWidth: width,

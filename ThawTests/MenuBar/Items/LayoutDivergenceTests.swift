@@ -9,8 +9,8 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Covers ``MenuBarItemManager/layoutDivergesFromSaved(candidates:sectionLookup:hiddenBounds:alwaysHiddenBounds:overflowExemptUIDs:activelyShownTags:)``,
-/// the `applySavedLayout` trigger that fires on ambient drift.
+/// Covers MenuBarItemManager/layoutDivergesFromSaved(candidates:sectionLookup:hiddenBounds:alwaysHiddenBounds:overflowExemptUIDs:activelyShownTags:),
+/// the applySavedLayout trigger that fires on ambient drift.
 ///
 /// The open-menu probe often returns a false negative (#924), so a divergence
 /// reported here can move items under an open menu.

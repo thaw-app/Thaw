@@ -8,7 +8,7 @@
 import Testing
 @testable import Thaw
 
-/// Covers `LayoutSolver.returnAnchors`, which picks the neighbors a
+/// Covers LayoutSolver.returnAnchors, which picks the neighbors a
 /// temporarily shown item is anchored against when it is returned to its
 /// section.
 ///

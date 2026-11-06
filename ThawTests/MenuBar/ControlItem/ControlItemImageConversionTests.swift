@@ -9,8 +9,8 @@ import Cocoa
 import Testing
 @testable import Thaw
 
-/// Covers ``ControlItemImage``'s conversion to `NSImage` through the
-/// `nsImage(customIceIconIsTemplate:)` seam.
+/// Covers ControlItemImage's conversion to NSImage through the
+/// nsImage(customIceIconIsTemplate:) seam.
 ///
 /// The builtin chevrons are handler-backed, so only requesting a TIFF
 /// representation runs the drawing closure.

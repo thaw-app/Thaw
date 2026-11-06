@@ -16,10 +16,10 @@ import Security
 enum SettingsURIHandler {
     private static let diagLog = DiagLog(category: "SettingsURIHandler")
 
-    /// Global Boolean settings, each backed by a `Defaults.Key` in ``keyMapping``.
+    /// Global Boolean settings, each backed by a Defaults.Key in keyMapping.
     ///
-    /// Per-display Booleans don't belong here; they live only in ``perDisplayKeys``
-    /// and resolve through `DisplaySettingsManager`. A key listed in both silently
+    /// Per-display Booleans don't belong here; they live only in perDisplayKeys
+    /// and resolve through DisplaySettingsManager. A key listed in both silently
     /// fails for any call site that checks this table first.
     static let supportedBooleanKeys: [String] = [
         "autoRehide",
@@ -658,13 +658,13 @@ enum SettingsURIHandler {
         }
     }
 
-    /// Shipped values for boolean keys whose absence must not read as `false`.
+    /// Shipped values for boolean keys whose absence must not read as false.
     private static let booleanDefaultsWhenAbsent: [Defaults.Key: Bool] = [
         .showDockIconWithSettings: Defaults.DefaultValue.showDockIconWithSettings,
     ]
 
     /// The stored value of a boolean key, or its shipped default when the key
-    /// has never been written. `Defaults.bool` reads an absent key as `false`.
+    /// has never been written. Defaults.bool reads an absent key as false.
     static func booleanValue(forKey key: Defaults.Key) -> Bool {
         if Defaults.object(forKey: key) == nil, let fallback = booleanDefaultsWhenAbsent[key] {
             return fallback
@@ -712,7 +712,7 @@ enum SettingsURIHandler {
     /// Currently only supports useIceBar, useThawBarForAlwaysHidden and alwaysShowHiddenItems.
     private static func handlePerDisplayToggle(key: String, displayUUID: String?) -> Bool {
         if let uuid = displayUUID, !uuid.isEmpty {
-            // Validated like `handlePerDisplaySetForSpecificDisplay`. Accepting any
+            // Validated like handlePerDisplaySetForSpecificDisplay. Accepting any
             // hyphenated string reported success for displays that don't exist.
             guard validatedDisplayConfiguration(forUUID: uuid) != nil else {
                 return false
@@ -950,7 +950,7 @@ enum SettingsURIHandler {
 
     /// Gets a single setting value with metadata.
     ///
-    /// `internal` so tests can pin the `validValues` a `thaw://get` advertises. It's a
+    /// internal so tests can pin the validValues a thaw://get advertises. It's a
     /// pure read, so calling it never opens a callback URL or posts a notification.
     static func getSettingValue(key: String, displayUUID: String?) -> [String: Any]? {
         // Handle per-display keys specially (not in keyMapping)
@@ -1299,9 +1299,9 @@ extension Notification.Name {
 
 /// A single setting changed externally via the Settings URI scheme.
 ///
-/// The handler posts changes as loosely typed `userInfo`; this reads that
+/// The handler posts changes as loosely typed userInfo; this reads that
 /// payload back so the settings models don't each repeat the unwrapping. At
-/// most one of the value properties is non-`nil` for a given change.
+/// most one of the value properties is non-nil for a given change.
 struct ExternalSettingsChange {
     /// The name of the setting that changed.
     let key: String
@@ -1315,8 +1315,8 @@ struct ExternalSettingsChange {
     /// The new value, for an enumeration setting backed by an integer.
     let rawEnumValue: Int?
 
-    /// Creates an instance from a ``Notification/Name/settingsDidChangeViaURI``
-    /// notification, or `nil` when the notification names no setting.
+    /// Creates an instance from a Notification/Name/settingsDidChangeViaURI
+    /// notification, or nil when the notification names no setting.
     init?(_ notification: Notification) {
         guard let key = notification.userInfo?["key"] as? String else {
             return nil
@@ -1333,7 +1333,7 @@ struct ExternalSettingsChange {
 @MainActor
 extension NotificationCenter {
     /// Returns a subscription that delivers settings changes made externally
-    /// via the Settings URI scheme to `handler` on the main queue.
+    /// via the Settings URI scheme to handler on the main queue.
     ///
     /// Every settings model observes this notification the same way, so the
     /// pipeline lives beside the code that posts it.

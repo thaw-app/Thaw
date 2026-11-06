@@ -186,7 +186,7 @@ struct MoveEventCoordinatesTests {
     }
 
     /// Dropping on a divider's exact coordinate lets AppKit pick either side;
-    /// `.leftOfItem(AH_ctrl)` kept landing one point to its right (#923).
+    /// .leftOfItem(AH_ctrl) kept landing one point to its right (#923).
     @Test("A control-item destination biases the drop into the requested section")
     func controlItemTargetPointUsesRequestedSide() {
         let displayBounds = CGRect(x: 0, y: 0, width: 1470, height: 956)
@@ -214,7 +214,7 @@ struct MoveEventCoordinatesTests {
 
     /// A thousands-of-points-wide divider needs the bias too: the width conceals
     /// items, it is not hit-test slack. A parked, expanded AH_ctrl still landed
-    /// `.leftOfItem` moves at minX + 1.
+    /// .leftOfItem moves at minX + 1.
     @Test("An expanded control-item destination is biased too")
     func expandedControlItemTargetPointIsBiased() {
         let displayBounds = CGRect(x: 0, y: 0, width: 1470, height: 956)

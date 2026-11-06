@@ -8,7 +8,7 @@
 import Testing
 @testable import Thaw
 
-/// Covers ``MenuBarItemManager/savedLayoutHandoffNeedsCacheRefresh(deferredRefreshesBeforeApply:deferredRefreshesAfterApply:)``.
+/// Covers MenuBarItemManager/savedLayoutHandoffNeedsCacheRefresh(deferredRefreshesBeforeApply:deferredRefreshesAfterApply:).
 ///
 /// A cache pass that dispatches a saved-layout apply returns without publishing
 /// and leaves the refresh to the apply. An automatic apply that waited out its

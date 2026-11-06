@@ -62,7 +62,7 @@ nonisolated extension MenuBarShapeKind: Codable {
     }
 }
 
-/// Information for the ``MenuBarShapeKind/full`` menu bar shape kind.
+/// Information for the MenuBarShapeKind/full menu bar shape kind.
 nonisolated struct MenuBarFullShapeInfo: Codable, Hashable {
     /// The leading end cap of the shape.
     var leadingEndCap: MenuBarEndCap
@@ -80,7 +80,7 @@ nonisolated extension MenuBarFullShapeInfo {
     static let defaultValue = MenuBarFullShapeInfo(leadingEndCap: .round, trailingEndCap: .round)
 }
 
-/// Information for the ``MenuBarShapeKind/split`` menu bar shape kind.
+/// Information for the MenuBarShapeKind/split menu bar shape kind.
 nonisolated struct MenuBarSplitShapeInfo: Codable, Hashable {
     /// The leading information of the shape.
     var leading: MenuBarFullShapeInfo
@@ -98,9 +98,9 @@ nonisolated extension MenuBarSplitShapeInfo {
     static let defaultValue = MenuBarSplitShapeInfo(leading: .defaultValue, trailing: .defaultValue)
 }
 
-/// Information for the ``MenuBarShapeKind/notch`` menu bar shape kind.
+/// Information for the MenuBarShapeKind/notch menu bar shape kind.
 ///
-/// Uses ``MenuBarSplitShapeInfo`` internally — each side has its own
+/// Uses MenuBarSplitShapeInfo internally — each side has its own
 /// end-cap configuration. On non-notched displays the shape falls back
 /// to full-width, using the leading end-cap for the left corner and the
 /// trailing end-cap for the right corner.
@@ -150,7 +150,7 @@ nonisolated extension MenuBarBackgroundKind {
 nonisolated extension MenuBarBackgroundKind {
     /// App-level default for background rendering in appearance configs.
     ///
-    /// Not `default`, which is a keyword and would need backticks.
+    /// Not default, which is a keyword and would need backticks.
     static let defaultKind = MenuBarBackgroundKind.none
 
     /// The backgrounds this system can draw. Glass needs macOS 26.

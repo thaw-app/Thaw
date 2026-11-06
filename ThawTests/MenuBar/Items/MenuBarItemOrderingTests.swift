@@ -9,9 +9,9 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Covers `MenuBarItem.sortByLeadingEdgeThenIdentifier(_:)`.
+/// Covers MenuBarItem.sortByLeadingEdgeThenIdentifier(_:).
 ///
-/// `Array.sort(by:)` is not stable, so tied `minX` items can swap between
+/// Array.sort(by:) is not stable, so tied minX items can swap between
 /// passes. In a persisted layout or cache signature that reads as a
 /// spontaneous swap.
 @Suite("Menu bar item leading-edge ordering")

@@ -35,7 +35,7 @@ final class GeneralSettings {
     }
 
     /// A Boolean value that indicates whether automatic menu bar reveals
-    /// keep the Dock icon hidden. When `true`, overflow uses the Thaw Bar
+    /// keep the Dock icon hidden. When true, overflow uses the Thaw Bar
     /// instead of hiding application menus (which would flash the Dock).
     /// A manual hide-menus command still uses regular activation. Settings
     /// windows and other explicit UI still activate normally.
@@ -48,7 +48,7 @@ final class GeneralSettings {
 
     /// A Boolean value that indicates whether Settings, Permissions and other
     /// windows the user opens switch Thaw to a regular app with a Dock icon.
-    /// When `false`, those windows leave Thaw an accessory app, so opening them
+    /// When false, those windows leave Thaw an accessory app, so opening them
     /// doesn't add it to the Dock or the Dock's recent apps. Hiding the app
     /// menus still uses regular activation and can show the Dock icon.
     var showDockIconWithSettings = Defaults.DefaultValue.showDockIconWithSettings {
@@ -100,7 +100,7 @@ final class GeneralSettings {
     // MARK: - Deprecated (Per-Display Migration)
 
     // These properties are kept for one release cycle for downgrade safety.
-    // New code should use `AppSettings.displaySettings` instead.
+    // New code should use AppSettings.displaySettings instead.
 
     /// A Boolean value that indicates whether to show hidden items
     /// in a separate bar below the menu bar.
@@ -195,7 +195,7 @@ final class GeneralSettings {
     }
 
     /// A time interval for the auto-rehide feature when its rule
-    /// is ``RehideStrategy/timed``.
+    /// is RehideStrategy/timed.
     var rehideInterval = Defaults.DefaultValue.rehideInterval {
         didSet {
             guard oldValue != rehideInterval else { return }
@@ -232,7 +232,7 @@ final class GeneralSettings {
     /// Performs the initial setup of the model.
     ///
     /// The app state is stored but never read here, so it's optional to let
-    /// tests run setup without an ``AppState``.
+    /// tests run setup without an AppState.
     func performSetup(with appState: AppState? = nil) {
         self.appState = appState
         loadInitialState()
@@ -283,7 +283,7 @@ final class GeneralSettings {
 
     /// Configures the internal observers for the model.
     ///
-    /// Most properties persist through their own `didSet`; only the
+    /// Most properties persist through their own didSet; only the
     /// Settings-URI subscription lives here.
     private func configureObservers() {
         cancellables = [

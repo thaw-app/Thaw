@@ -14,15 +14,15 @@ import Foundation
 final class ProfileManager {
     /// The manager's list of profile metadata.
     ///
-    /// `didSet` doesn't fire in `init`. Before ``performSetup(with:)``,
-    /// ``rebuildProfileHotkeys()`` no-ops on its `appState` guard.
+    /// didSet doesn't fire in init. Before performSetup(with:),
+    /// rebuildProfileHotkeys() no-ops on its appState guard.
     private(set) var profiles: [ProfileMetadata] = [] {
         didSet {
             rebuildProfileHotkeys()
         }
     }
 
-    /// The ID of the currently active profile, or `nil`.
+    /// The ID of the currently active profile, or nil.
     var activeProfileID: UUID?
 
     // Not private only because ProfileManager+Live.swift extends this class.
@@ -35,8 +35,8 @@ final class ProfileManager {
     weak var appState: AppState?
 
     /// Tasks backing the swift-async-algorithms debounces installed by
-    /// ``performSetup(with:)``. Each owns its own notification observer and
-    /// removes it when the task ends, so `deinit` only has to cancel them.
+    /// performSetup(with:). Each owns its own notification observer and
+    /// removes it when the task ends, so deinit only has to cancel them.
     private(set) var screenParametersTask: Task<Void, Never>?
     private(set) var focusFilterActivatedTask: Task<Void, Never>?
     private(set) var focusFilterDeactivatedTask: Task<Void, Never>?
@@ -60,10 +60,10 @@ final class ProfileManager {
     /// Maps Hotkey identity to profile ID for the perform() lookup.
     var hotkeyProfileMap: [ObjectIdentifier: UUID] = [:]
 
-    /// - Parameter profilesDirectory: Where profile JSON and the manifest
-    ///   live. Defaults to Application Support in production; tests pass a
-    ///   temporary directory to exercise the real load/save paths in isolation
-    ///   without touching the user's profiles.
+    /// profilesDirectory: Where profile JSON and the manifest
+    /// live. Defaults to Application Support in production; tests pass a
+    /// temporary directory to exercise the real load/save paths in isolation
+    /// without touching the user's profiles.
     init(profilesDirectory: URL? = nil) {
         let enc = JSONEncoder()
         enc.dateEncodingStrategy = .iso8601
@@ -105,7 +105,7 @@ final class ProfileManager {
 
     /// (Re)starts the notification observation tasks, cancelling any previous
     /// ones so their observers don't keep running. Kept out of
-    /// `performSetup(with:)` so the wiring is testable without an `AppState`.
+    /// performSetup(with:) so the wiring is testable without an AppState.
     func startObservationTasks() {
         // Listen for display changes to trigger auto-switch.
         screenParametersTask?.cancel()
@@ -199,7 +199,7 @@ final class ProfileManager {
     /// Captures the current configuration and saves it as a named profile.
     ///
     /// Takes only the stores the capture reads so tests don't need an
-    /// AppState. The `AppState` overload in ProfileManager+Live.swift
+    /// AppState. The AppState overload in ProfileManager+Live.swift
     /// forwards here.
     func saveProfile(
         name: String,
@@ -244,7 +244,7 @@ final class ProfileManager {
 
     // MARK: - Persisted layout repair
 
-    /// Runs ``repairPersistedLayouts()`` once per app build, so a build that
+    /// Runs repairPersistedLayouts() once per app build, so a build that
     /// recognizes a new class of unmatchable identifier gets another pass.
     func repairPersistedLayoutsIfNeeded() {
         let currentBuild = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
@@ -257,16 +257,16 @@ final class ProfileManager {
 
     /// Rewrites every profile on disk with its layout pruned.
     ///
-    /// Read-time pruning leaves the damage on disk, where `armProfileState`
+    /// Read-time pruning leaves the damage on disk, where armProfileState
     /// seeds from it at startup and a manual re-apply brings entries back.
     ///
-    /// ``MenuBarLayoutSnapshot/itemSectionMap`` is filtered by the same
-    /// verdict: `resolvedItemSectionMap` returns it verbatim, so an entry
+    /// MenuBarLayoutSnapshot/itemSectionMap is filtered by the same
+    /// verdict: resolvedItemSectionMap returns it verbatim, so an entry
     /// left in the map would still be planned against.
     ///
     /// Files that fail to decode are left untouched and logged.
     ///
-    /// - Returns: The number of profiles rewritten.
+    /// Returns the number of profiles rewritten.
     @discardableResult
     func repairPersistedLayouts() -> Int {
         var repaired = 0
@@ -299,7 +299,7 @@ final class ProfileManager {
             }
 
             if let map = layout.itemSectionMap {
-                // Same empty-means-absent rule as `resolvedItemOrder`: a
+                // Same empty-means-absent rule as resolvedItemOrder: a
                 // present-but-empty itemOrder is a mistimed capture, not a
                 // layout, and filtering against it would empty the map and
                 // permanently shadow the savedSectionOrder fallback.
@@ -418,14 +418,7 @@ final class ProfileManager {
     /// Exports a profile to a file, including display and Space associations.
     func exportProfile(id: UUID, to url: URL) throws {
         let profile = try loadProfile(id: id)
-        let meta = profiles.first { $0.id == id }
-        let entry = ProfileExportEntry(
-            profile: profile,
-            associatedDisplayUUID: meta?.associatedDisplayUUID,
-            associatedDisplayName: meta?.associatedDisplayName,
-            associatedSpaceKey: meta?.associatedSpaceKey,
-            associatedSpaceName: meta?.associatedSpaceName
-        )
+        let entry = ProfileExportEntry(profile: profile, metadata: profiles.first { $0.id == id })
         let bundle = ProfileExportBundle(entries: [entry])
         let data = try encoder.encode(bundle)
         try data.write(to: url, options: .atomic)
@@ -434,7 +427,7 @@ final class ProfileManager {
     /// Overwrites an existing profile with the current configuration,
     /// keeping its id, name, display association, and creation date.
     /// Same narrow-dependency seam as
-    /// ``saveProfile(name:settings:appearanceManager:itemManager:)``.
+    /// saveProfile(name:settings:appearanceManager:itemManager:).
     func updateProfileWithCurrentState(
         id: UUID,
         settings: AppSettings,
@@ -599,7 +592,7 @@ final class ProfileManager {
 
     /// Updates a profile with only the specified scope of current state.
     /// Same narrow-dependency seam as
-    /// ``saveProfile(name:settings:appearanceManager:itemManager:)``.
+    /// saveProfile(name:settings:appearanceManager:itemManager:).
     func updateProfile(
         id: UUID,
         scope: ProfileUpdateScope,
@@ -639,9 +632,9 @@ final class ProfileManager {
 
     /// Rewrites one section's order in the active profile's persisted layout
     /// to the given sorted identifiers, so a subsequent
-    /// ``reapplyActiveProfile`` applies the new order instead of the stale
+    /// reapplyActiveProfile applies the new order instead of the stale
     /// on-disk one. Used by the "Sort A→Z" action, which writes the
-    /// live ``savedSectionOrder`` first and then calls this so the profile
+    /// live savedSectionOrder first and then calls this so the profile
     /// and the live bar stay in sync. Returns true when an active profile
     /// was updated.
     @discardableResult
@@ -818,13 +811,7 @@ final class ProfileManager {
         var entries = [ProfileExportEntry]()
         for meta in profiles {
             guard let profile = try? loadProfile(id: meta.id) else { continue }
-            entries.append(ProfileExportEntry(
-                profile: profile,
-                associatedDisplayUUID: meta.associatedDisplayUUID,
-                associatedDisplayName: meta.associatedDisplayName,
-                associatedSpaceKey: meta.associatedSpaceKey,
-                associatedSpaceName: meta.associatedSpaceName
-            ))
+            entries.append(ProfileExportEntry(profile: profile, metadata: meta))
         }
         let bundle = ProfileExportBundle(entries: entries)
         guard let data = try? encoder.encode(bundle) else { return nil }
@@ -921,23 +908,23 @@ final class ProfileManager {
             )
             profiles.append(metadata)
 
-            // Reconcile display ownership through the setter so any existing
-            // profile that owns this display has its association cleared first.
-            if let displayUUID = entry.associatedDisplayUUID {
+            // An import only fills a free association. Taking one a local profile
+            // owns would silently unbind it, and display keys repeat across Macs.
+            if let displayUUID = entry.associatedDisplayUUID,
+               !profiles.contains(where: { $0.associatedDisplayUUID == displayUUID })
+            {
                 assignDisplay(
                     uuid: displayUUID,
-                    displayName: entry.associatedDisplayName,
+                    displayName: ProfileImportPolicy.cappedLabel(entry.associatedDisplayName),
                     toProfileID: imported.id
                 )
             }
-
-            // Same reconciliation for the Space association. A key exported
-            // from another Mac will not match any local Space, so it sits
-            // inert rather than binding the profile to the wrong desktop.
-            if let spaceKey = entry.associatedSpaceKey {
+            if let spaceKey = entry.associatedSpaceKey,
+               !profiles.contains(where: { $0.associatedSpaceKey == spaceKey })
+            {
                 assignSpace(
                     key: spaceKey,
-                    spaceName: entry.associatedSpaceName,
+                    spaceName: ProfileImportPolicy.cappedLabel(entry.associatedSpaceName),
                     toProfileID: imported.id
                 )
             }

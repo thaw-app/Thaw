@@ -92,7 +92,7 @@ struct DisplayIceBarConfigurationTests {
         #expect(!original.useThawBarForAlwaysHidden)
     }
 
-    /// Every other `with` method has to carry the flag along, or setting a
+    /// Every other with method has to carry the flag along, or setting a
     /// location or a layout afterwards would silently turn the setting back off.
     @Test("The other with-methods carry the always-hidden flag along")
     func otherWithMethodsPreserveUseThawBarForAlwaysHidden() {

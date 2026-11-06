@@ -27,7 +27,7 @@ struct BluetoothDevicePicker: View {
     private static let customTag = "\u{1}custom"
 
     /// Set when the user picks "Other…" while the current value is a listed
-    /// device, which `isUnlisted` alone cannot detect.
+    /// device, which isUnlisted alone cannot detect.
     @State private var prefersCustomEntry = false
 
     var body: some View {

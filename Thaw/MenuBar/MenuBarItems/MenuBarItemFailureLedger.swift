@@ -11,12 +11,12 @@ import Foundation
 
 /// The single record of which menu bar items have been failing us, and how.
 ///
-/// - Should the next bulk apply skip it? Any move failure counts, so one
-///   stuck item can't retrigger a cursor-hijacking apply every cycle (#736).
-///   Expires on a growing timer.
-/// - Should a single operation stop retrying it? Only an owner that never
-///   acknowledges events counts (Little Snitch, with GUI Scripting off).
-///   Persisted, or it's rediscovered every launch.
+/// It answers whether the next bulk apply should skip an item, where any move
+/// failure counts so one stuck item can't retrigger a cursor-hijacking apply
+/// every cycle (#736), expiring on a growing timer. It also answers whether a
+/// single operation should stop retrying it, where only an owner that never
+/// acknowledges events counts (Little Snitch, with GUI Scripting off); that
+/// mark is persisted, or it's rediscovered every launch.
 ///
 /// One ledger because one success must clear both at once.
 ///
@@ -42,7 +42,7 @@ final class MenuBarItemFailureLedger {
     /// timeouts.
     private static let markRuleVersion = 2
 
-    /// The build the persisted marks belong to, qualified by ``markRuleVersion``.
+    /// The build the persisted marks belong to, qualified by markRuleVersion.
     /// An update drops them, or a fix stays masked for the mark's lifetime.
     private static var currentBuildVersion: String {
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
@@ -95,7 +95,7 @@ final class MenuBarItemFailureLedger {
 
     /// The key an item is filed under.
     ///
-    /// `uniqueIdentifier`, as custom names use.
+    /// uniqueIdentifier, as custom names use.
     private static func key(for item: MenuBarItem) -> String {
         // So an owner that retitles itself earns one verdict.
         MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
@@ -119,7 +119,7 @@ final class MenuBarItemFailureLedger {
     ///
     /// Takes a key because the apply loops check before resolving the item.
     ///
-    /// - Parameter key: The item's `uniqueIdentifier`.
+    /// key: The item's uniqueIdentifier.
     func isUnderBackoff(key: String, now: ContinuousClock.Instant = .now) -> Bool {
         guard let entry = backoffHistory[key] else {
             return false
@@ -129,7 +129,7 @@ final class MenuBarItemFailureLedger {
 
     /// Whether the item is inside its backoff window.
     ///
-    /// Derives the key like ``recordFailure(for:kind:now:)``. The overload
+    /// Derives the key like recordFailure(for:kind:now:). The overload
     /// above uses the raw identifier, which misses owners that retitle.
     func isUnderBackoff(for item: MenuBarItem, now: ContinuousClock.Instant = .now) -> Bool {
         isUnderBackoff(key: Self.key(for: item), now: now)
@@ -157,7 +157,7 @@ final class MenuBarItemFailureLedger {
 
     /// Every failure extends the backoff window. Only an unresponsive owner
     /// can earn a persisted mark, and only once it has failed that way
-    /// ``failuresBeforeMarking`` times in this session.
+    /// failuresBeforeMarking times in this session.
     func recordFailure(
         for item: MenuBarItem,
         kind: FailureKind,

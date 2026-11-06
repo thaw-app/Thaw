@@ -5,12 +5,12 @@ import PackageDescription
 // Fuzzing harnesses for Thaw's attacker-reachable parsers.
 //
 // This is a separate package rather than part of Thaw.xcodeproj because
-// libFuzzer needs an executable built with `-sanitize=fuzzer`, which supplies
-// its own `main`. Sources under test are symlinked in rather than copied, so
+// libFuzzer needs an executable built with -sanitize=fuzzer, which supplies
+// its own main. Sources under test are symlinked in rather than copied, so
 // the harness always compiles the same file the app ships.
 //
-// Build and run the Linux libFuzzer harness (avoid `swift build` here —
-// SwiftPM's `--defsym main=<Module>_main` fights libFuzzer's entry point):
+// Build and run the Linux libFuzzer harness (avoid swift build here —
+// SwiftPM's --defsym main=<Module>_main fights libFuzzer's entry point):
 //   mkdir -p Fuzzing/.build/release
 //   swiftc -parse-as-library -O -sanitize=fuzzer,address \
 //     -o Fuzzing/.build/release/FuzzSettingsURI \

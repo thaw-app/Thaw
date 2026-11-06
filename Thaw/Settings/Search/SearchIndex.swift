@@ -9,7 +9,7 @@ import SwiftUI
 
 // MARK: - SettingsProperty
 
-/// Links a search entry to the `@Published` property it represents on a
+/// Links a search entry to the @Published property it represents on a
 /// settings model, so the drift-guard test can assert every user-facing
 /// property has a matching entry.
 nonisolated enum SettingsProperty: Hashable {
@@ -21,13 +21,13 @@ nonisolated enum SettingsProperty: Hashable {
 
 /// One searchable row in the settings search index.
 ///
-/// `titleKey`/`sectionKey` reuse the panes' exact `LocalizedStringKey`
-/// literals, so no new translation keys are needed. The `*Text` fields are
+/// titleKey/sectionKey reuse the panes' exact LocalizedStringKey
+/// literals, so no new translation keys are needed. The *Text fields are
 /// the English sources, which double as catalog keys for localized matching.
-/// `keywords` stays English: it has no catalog entries.
+/// keywords stays English: it has no catalog entries.
 ///
-/// `@unchecked Sendable` because `LocalizedStringKey` isn't `Sendable`; the
-/// entry is all `let`, so that's safe.
+/// @unchecked Sendable because LocalizedStringKey isn't Sendable; the
+/// entry is all let, so that's safe.
 nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
     let id: String
     let titleKey: LocalizedStringKey
@@ -42,11 +42,11 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
     /// The title as the settings pane renders it.
     ///
     /// The English source doubles as the catalog key, so this resolves the
-    /// same entry the pane's `titleKey` does.
+    /// same entry the pane's titleKey does.
     ///
-    /// - Parameter bundle: The bundle to resolve against. Tests pass a
-    ///   specific `.lproj` bundle, since `String(localized:)`'s `locale:`
-    ///   only affects formatting, not which localization is looked up.
+    /// bundle: The bundle to resolve against. Tests pass a
+    /// specific .lproj bundle, since String(localized:)'s locale:
+    /// only affects formatting, not which localization is looked up.
     func localizedTitle(bundle: Bundle = .main) -> String {
         String(localized: String.LocalizationValue(titleText), bundle: bundle)
     }
@@ -91,7 +91,7 @@ nonisolated enum SearchIndex {
         return sharedEntries
     }()
 
-    /// `@Published` property names that are intentionally absent from the
+    /// @Published property names that are intentionally absent from the
     /// index because they are deprecated, internal, or currently commented out
     /// of the UI. The drift-guard test allows these.
     private static let baseNonSearchableProperties: Set<SettingsProperty> = [
@@ -118,7 +118,7 @@ nonisolated enum SearchIndex {
         return baseNonSearchableProperties.union(macOS27AdvancedNonSearchableProperties)
     }
 
-    /// ``entries`` bucketed by pane, cached for the same per-keystroke reason.
+    /// entries bucketed by pane, cached for the same per-keystroke reason.
     private static let entriesByPane: [SettingsNavigationIdentifier: [SearchEntry]] =
         Dictionary(grouping: entries, by: \.pane)
 
@@ -127,8 +127,8 @@ nonisolated enum SearchIndex {
         entriesByPane[pane] ?? []
     }
 
-    /// Sorts by Fuse `diffScore`, lowest (best) first. Delegates to
-    /// ``SearchRanker/sortedByRelevance(_:)``, shared with menu bar item search.
+    /// Sorts by Fuse diffScore, lowest (best) first. Delegates to
+    /// SearchRanker/sortedByRelevance(_:), shared with menu bar item search.
     static func sortedByRelevance<T>(_ items: [(item: T, diffScore: Double)]) -> [T] {
         SearchRanker.sortedByRelevance(items)
     }
@@ -144,7 +144,7 @@ nonisolated enum SearchIndex {
             pane: .general,
             sectionKey: nil,
             sectionText: nil,
-            keywords: ["general", "launch", "startup", "login", "icon", "reveal", "show", "hide", "hover", "click", "scroll", "rehide", "gesture"],
+            keywords: ["general", "launch", "startup", "login", "language", "icon", "reveal", "show", "hide", "hover", "click", "scroll", "rehide", "gesture"],
             property: nil
         ),
         SearchEntry(
@@ -237,8 +237,8 @@ nonisolated enum SearchIndex {
         ),
         SearchEntry(
             id: "pane.tools",
-            titleKey: "Tools",
-            titleText: "Tools",
+            titleKey: "Troubleshooting",
+            titleText: "Troubleshooting",
             descriptionText: "Diagnostics, language override, resets, and troubleshooting tools.",
             pane: .tools,
             sectionKey: nil,
@@ -251,7 +251,7 @@ nonisolated enum SearchIndex {
             titleKey: "Trigger Sources",
             titleText: "Trigger Sources",
             descriptionText: "Turn trigger sources on or off and see the live system state.",
-            pane: .developer,
+            pane: .triggers,
             sectionKey: nil,
             sectionText: nil,
             keywords: ["developer", "dev mode", "flags", "experimental", "trigger sources", "diagnostics"],
@@ -589,18 +589,18 @@ nonisolated enum SearchIndex {
 
     // MARK: Display Settings
 
-    /// Display settings live in `DisplaySettingsManager` configurations, not
-    /// `@Published` toggles, so the drift guard doesn't cover them.
+    /// Display settings live in DisplaySettingsManager configurations, not
+    /// @Published toggles, so the drift guard doesn't cover them.
     private static let displayEntries: [SearchEntry] = [
         SearchEntry(
-            id: "displays.useIceBar",
-            titleKey: "Use \(Constants.displayName) Bar",
-            titleText: "Use \(Constants.displayName) Bar",
+            id: "displays.hiddenItemsPresentation",
+            titleKey: "Show hidden items",
+            titleText: "Show hidden items",
             descriptionText: "Show hidden menu bar items in a separate bar below the menu bar.",
             pane: .displays,
             sectionKey: "Global",
             sectionText: "Global",
-            keywords: ["ice bar", "thaw bar", "hidden", "separate bar"],
+            keywords: ["ice bar", "thaw bar", "hidden", "separate bar", "always", "show", "visible", "always show hidden items", "use thaw bar"],
             property: nil
         ),
         SearchEntry(
@@ -612,17 +612,6 @@ nonisolated enum SearchIndex {
             sectionKey: "Global",
             sectionText: "Global",
             keywords: ["ice bar", "thaw bar", "always-hidden", "always hidden", "only"],
-            property: nil
-        ),
-        SearchEntry(
-            id: "displays.alwaysShowHiddenItems",
-            titleKey: "Always show hidden items",
-            titleText: "Always show hidden items",
-            descriptionText: "Always show hidden menu bar items in the menu bar.",
-            pane: .displays,
-            sectionKey: "Global",
-            sectionText: "Global",
-            keywords: ["always", "show", "hidden", "visible"],
             property: nil
         ),
         SearchEntry(
@@ -673,8 +662,8 @@ nonisolated enum SearchIndex {
 
     // MARK: Hotkey Settings
 
-    /// Hotkey bindings are dictionary-based on `HotkeysSettings`, not simple
-    /// `@Published` toggles, so they are not covered by the drift guard.
+    /// Hotkey bindings are dictionary-based on HotkeysSettings, not simple
+    /// @Published toggles, so they are not covered by the drift guard.
     private static let hotkeyEntries: [SearchEntry] = [
         SearchEntry(
             id: "hotkeys.toggleHiddenSection",

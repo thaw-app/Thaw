@@ -310,7 +310,7 @@ nonisolated struct EventMonitor {
     }
 
     /// Checks whether the monitor is running and restarts it if not.
-    /// Returns `true` if the monitor is running after this call.
+    /// Returns true if the monitor is running after this call.
     @discardableResult
     func ensureRunning() -> Bool {
         state.withLock { state in
@@ -409,9 +409,8 @@ nonisolated extension EventMonitor {
 
     /// Returns a publisher that emits events received within a defined scope.
     ///
-    /// - Parameters:
-    ///   - events: A mask that determines the events the publisher receives.
-    ///   - scope: A scope that determines where the publisher receives events.
+    /// events: A mask that determines the events the publisher receives.
+    /// scope: A scope that determines where the publisher receives events.
     static func publish(events: NSEvent.EventTypeMask, scope: Scope) -> EventPublisher {
         EventPublisher(mask: events, scope: scope)
     }

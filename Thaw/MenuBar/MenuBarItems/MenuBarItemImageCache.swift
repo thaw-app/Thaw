@@ -139,7 +139,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// The cached item images, keyed by their corresponding tags.
     var images = [MenuBarItemTag: CapturedImage]()
 
-    /// Display the current ``images`` were captured for. The light/dark tint is
+    /// Display the current images were captured for. The light/dark tint is
     /// baked into the capture, so another display's cache shows wrong colors.
     var lastCaptureDisplayID: CGDirectDisplayID?
 

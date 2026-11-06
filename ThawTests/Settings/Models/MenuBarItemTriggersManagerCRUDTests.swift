@@ -10,8 +10,8 @@ import Testing
 @testable import Thaw
 
 /// Covers add, remove, update, and priority reordering in
-/// ``MenuBarItemTriggersManager``, plus what survives a reload. Runs without
-/// `performSetup`, so no live menu bar or system monitors are involved.
+/// MenuBarItemTriggersManager, plus what survives a reload. Runs without
+/// performSetup, so no live menu bar or system monitors are involved.
 @Suite("Menu bar item triggers manager CRUD")
 @MainActor
 struct MenuBarItemTriggersManagerCRUDTests {

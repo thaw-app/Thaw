@@ -98,12 +98,11 @@ extension MenuBarItemManager {
     /// Whether any item sits in a different section than savedSectionOrder
     /// records for it.
     ///
-    /// applySavedLayout's drift trigger. Exemptions are passed in to keep it pure:
-    ///
-    /// - overflowExemptUIDs: notch ejections; empty unless the feature is on
-    ///   and the active display is notched.
-    /// - activelyShownTags: temporarily shown items. Treating them as drift can
-    ///   drag one home under the menu the user just opened (#924).
+    /// applySavedLayout's drift trigger. Exemptions are passed in to keep it
+    /// pure: overflowExemptUIDs holds notch ejections and is empty unless the
+    /// feature is on and the active display is notched; activelyShownTags holds
+    /// temporarily shown items, since treating them as drift can drag one home
+    /// under the menu the user just opened (#924).
     static nonisolated func layoutDivergesFromSaved(
         candidates: [DivergenceCandidate],
         sectionLookup: (exact: [String: MenuBarSection.Name], unambiguousBase: [String: MenuBarSection.Name]),
@@ -201,15 +200,14 @@ extension MenuBarItemManager {
     /// A wide app menu can shift status items for a moment, so divergence must
     /// be seen on two consecutive cycles (#723).
     ///
-    /// - Parameters:
-    ///   - divergedNow: The result of the current cycle's divergence check.
-    ///   - pendingSince: The timestamp of a prior unconfirmed observation, if
-    ///     one is armed.
-    ///   - now: The current time.
-    ///   - staleness: How long an armed observation can still be confirmed.
-    ///     A stale arm is treated as a fresh first observation.
-    /// - Returns: Whether this confirms the divergence, and the pending
-    ///   state for the next cycle.
+    /// divergedNow: The result of the current cycle's divergence check.
+    /// pendingSince: The timestamp of a prior unconfirmed observation, if
+    /// one is armed.
+    /// now: The current time.
+    /// staleness: How long an armed observation can still be confirmed.
+    /// A stale arm is treated as a fresh first observation.
+    /// Returns whether this confirms the divergence, and the pending
+    /// state for the next cycle.
     static nonisolated func confirmedDivergence(
         divergedNow: Bool,
         pendingSince: ContinuousClock.Instant?,
@@ -284,12 +282,12 @@ extension MenuBarItemManager {
             return false
         }
 
-        // Change gate, since this runs every tick. Two signals pass it:
-        //
-        // 1. windowIDsChanged: an item disappeared (quit or relaunch). Additions
-        //    belong to relocateNewLeftmostItems; recycled window IDs aren't covered.
-        // 2. layoutDiverged: a saved item is in another section. Catches drift
-        //    with stable windowIDs, and cold boot for non-profile users.
+        // Change gate, since this runs every tick. Two signals pass it.
+        // windowIDsChanged means an item disappeared (quit or relaunch);
+        // additions belong to relocateNewLeftmostItems, and recycled window IDs
+        // aren't covered. layoutDiverged means a saved item is in another
+        // section, which catches drift with stable windowIDs and cold boot for
+        // non-profile users.
         //
         // Divergence is only computed when needed, and must be seen twice (#723).
         // windowIDsChanged is trustworthy and stays immediate.

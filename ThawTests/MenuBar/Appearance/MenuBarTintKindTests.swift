@@ -10,14 +10,14 @@ import SwiftUI
 import Testing
 @testable import Thaw
 
-/// Covers ``MenuBarTintKind``, the stored discriminator for how the menu bar
+/// Covers MenuBarTintKind, the stored discriminator for how the menu bar
 /// overlay is tinted.
 ///
 /// The raw values are persisted in appearance configurations and exported
 /// profiles, so reordering the cases would silently repaint a user's menu bar.
 ///
-/// `init(from:)` must throw on a raw value from a future build rather than
-/// fall back to `.noTint`, or a downgrade-then-upgrade loses the tint choice.
+/// init(from:) must throw on a raw value from a future build rather than
+/// fall back to .noTint, or a downgrade-then-upgrade loses the tint choice.
 @MainActor
 @Suite("Menu bar tint kind")
 struct MenuBarTintKindTests {
@@ -81,11 +81,11 @@ struct MenuBarTintKindTests {
         #expect(MenuBarTintKind.adaptiveGradient.localized == LocalizedStringKey("Adaptive Gradient"))
     }
 
-    /// The picker rows are built straight from `allCases`, so two cases sharing
+    /// The picker rows are built straight from allCases, so two cases sharing
     /// a key would render as duplicate rows.
     @Test("No two cases share a localized key")
     func localizedKeysAreDistinct() {
-        // `LocalizedStringKey` is Equatable but not Hashable, so this compares
+        // LocalizedStringKey is Equatable but not Hashable, so this compares
         // pairwise rather than going through a Set.
         let keys = MenuBarTintKind.allCases.map(\.localized)
 
@@ -145,7 +145,7 @@ struct MenuBarTintKindTests {
         }
     }
 
-    /// Callers that recover from a bad payload match on `dataCorrupted`.
+    /// Callers that recover from a bad payload match on dataCorrupted.
     @Test("The rejection is reported as corrupted data")
     func rejectionIsReportedAsCorruptedData() throws {
         let error = #expect(throws: DecodingError.self) {

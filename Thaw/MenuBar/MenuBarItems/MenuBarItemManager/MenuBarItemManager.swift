@@ -94,7 +94,7 @@ final class MenuBarItemManager {
     /// item is rebuilt.
     static nonisolated let missingAlwaysHiddenDividerRecoveryThreshold = 3
 
-    /// AX-derived identity for items with a degraded CG identity (`Item-N` or
+    /// AX-derived identity for items with a degraded CG identity (Item-N or
     /// a bundle-ID-shaped title). Display only, never used for matching or
     /// layout keys. Nothing reads it yet.
     var degradedItemAXIdentities = [CGWindowID: AXIdentityCatalog.AXItemIdentity]()
@@ -119,12 +119,11 @@ final class MenuBarItemManager {
     /// Classifying that mixture puts the whole hidden section into visible
     /// (#851).
     ///
-    /// - Parameters:
-    ///   - dividerWidth: Width of the section's control item.
-    ///   - isSectionCollapsed: Whether the section's control item is in its
-    ///     hide state, which sets the divider's length.
+    /// dividerWidth: Width of the section's control item.
+    /// isSectionCollapsed: Whether the section's control item is in its
+    /// hide state, which sets the divider's length.
     ///
-    /// - Returns: true when geometry and logical state disagree.
+    /// Returns true when geometry and logical state disagree.
     static nonisolated func isMidSectionTransition(
         dividerWidth: CGFloat,
         isSectionCollapsed: Bool
@@ -264,7 +263,7 @@ final class MenuBarItemManager {
     var suppressNextNewLeftmostItemRelocation = false
 
     /// One-shot: the next saved-layout apply honours concealed-section order
-    /// instead of relaxing it. Armed by ``sortSection`` when there is no
+    /// instead of relaxing it. Armed by sortSection when there is no
     /// active profile, since that path reorders through the saved-layout
     /// apply rather than a profile reapply. Cleared after one use.
     var enforceConcealedSectionOrderOnNextSavedApply = false
@@ -315,28 +314,21 @@ final class MenuBarItemManager {
     // These flags guard separate AX and WindowServer timing issues found in
     // production. Merging them needs manual testing on real hardware.
     //
-    // 1. In-flight gating: cacheItemsRegardless suppresses restore,
-    //    late-arrival detection, and saves while one is set:
-    //      - isResettingLayout
-    //      - isRestoringItemOrder (+ isRestoringItemOrderTimestamp)
-    //      - isApplyingProfileLayout
-    //      - suppressNextNewLeftmostItemRelocation
+    // In-flight gating: cacheItemsRegardless suppresses restore, late-arrival
+    // detection, and saves while isResettingLayout, isRestoringItemOrder (with
+    // isRestoringItemOrderTimestamp), isApplyingProfileLayout or
+    // suppressNextNewLeftmostItemRelocation is set.
     //
-    // 2. Startup settling. Gates restore and saves during the cold-boot
-    //    or post-permission-grant window when many apps appear at once:
-    //      - isInStartupSettling (+ startupSettlingTask)
-    //      - settlingDeadline
-    //      - settlingExpectedBundleIDs
-    //      - settlingKind
+    // Startup settling gates restore and saves during the cold-boot or
+    // post-permission-grant window when many apps appear at once, through
+    // isInStartupSettling (with startupSettlingTask), settlingDeadline,
+    // settlingExpectedBundleIDs and settlingKind.
     //
-    // 3. Active-profile re-sort, so a late profile item can be reinserted
-    //    without a full re-apply:
-    //      - activeProfileLayout
-    //      - activeProfileItemIdentifiers
-    //      - profileSortedItemIdentifiers
-    //      - profileResortTask
+    // Active-profile re-sort lets a late profile item be reinserted without a
+    // full re-apply, through activeProfileLayout, activeProfileItemIdentifiers,
+    // profileSortedItemIdentifiers and profileResortTask.
     //
-    // isApplyingProfileLayout belongs to both 1 and 3.
+    // isApplyingProfileLayout belongs to both in-flight gating and the re-sort.
 
     /// Suppresses image cache updates during layout reset to prevent stale cache during moves.
     var isResettingLayout = false
@@ -363,10 +355,9 @@ final class MenuBarItemManager {
 
     /// So a preflight can't replace a more authoritative settling.
     ///
-    /// - cold: the cold-boot wait; only another cold or an expected-set
-    ///   relaunch replaces it.
-    /// - preflight: before applyOffset; cancelled by the no-op path.
-    /// - expectedSet: waiting on relaunched bundle IDs.
+    /// cold is the cold-boot wait, replaced only by another cold or an
+    /// expected-set relaunch. preflight runs before applyOffset and is
+    /// cancelled by the no-op path. expectedSet waits on relaunched bundle IDs.
     enum SettlingKind {
         case cold
         case preflight
@@ -471,8 +462,8 @@ final class MenuBarItemManager {
     ///
     /// A clean batch clears the arm rather than letting it expire.
     ///
-    /// - Parameter isCompletedApply: whether this is a real bulk apply
-    ///   finishing, as opposed to a user move borrowing the same latch.
+    /// isCompletedApply: whether this is a real bulk apply
+    /// finishing, as opposed to a user move borrowing the same latch.
     func recordBulkApplyOutcome(unenactedMoveCount: Int, isCompletedApply: Bool = true) {
         bulkApplyOutcomeGeneration += 1
         if isCompletedApply {
@@ -499,7 +490,7 @@ final class MenuBarItemManager {
 
     /// Asks the move circuit breaker and logs a refusal under the caller's name.
     ///
-    /// - Parameter quietly: Log at debug, for callers that retry every tick.
+    /// quietly: Log at debug, for callers that retry every tick.
     func isAutomaticBulkApplyPermitted(caller: String, quietly: Bool = false) -> Bool {
         if moveCircuitBreaker.permitsAutomaticBulkApply {
             return true
@@ -907,7 +898,7 @@ final class MenuBarItemManager {
         savedSectionOrder = gathered
         persistSavedSectionOrder()
 
-        // A user edit, so `automatic: false` applies it now. Exclude
+        // A user edit, so automatic: false applies it now. Exclude
         // trigger-controlled items as applySavedLayout does, or the apply
         // would fight the trigger.
         let liveItems = itemCache.managedItems
@@ -944,10 +935,10 @@ final class MenuBarItemManager {
     /// writing it. Shared with ProfileManager.captureCurrentLayout so a
     /// captured itemOrder keeps closed apps and drops transient items.
     ///
-    /// - Excludes control items except the chevron, unresolved items, and
-    ///   transient Control Center items.
-    /// - Treats temporarily shown items as closed apps, keeping their section.
-    /// - Merges closed-app entries so a slot survives a quit.
+    /// It excludes control items except the chevron, unresolved items, and
+    /// transient Control Center items; treats temporarily shown items as
+    /// closed apps, keeping their section; and merges closed-app entries so a
+    /// slot survives a quit.
     func computeSectionOrder(from cache: ItemCache) -> [String: [String]] {
         var newOrder = [String: [String]]()
 
@@ -1222,13 +1213,13 @@ final class MenuBarItemManager {
     static let waitForRelaunchAgeCap: Duration = .seconds(86400)
 
     /// Suppresses same-session moves. A relaunch's new windowID clears it, and
-    /// the timestamp lets ``planPendingMove`` age it out.
+    /// the timestamp lets planPendingMove age it out.
     func waitForRelaunchValue(windowID: CGWindowID, section: MenuBarSection.Name, setAt: Date = Date()) -> String {
         "\(Self.waitForRelaunchPrefix)\(windowID):\(sectionKey(for: section)):\(Int(setAt.timeIntervalSince1970))"
     }
 
     /// Returns nil for a plain section key. setAt is nil for the older,
-    /// untimestamped format, which ``planPendingMove`` treats as stale.
+    /// untimestamped format, which planPendingMove treats as stale.
     func parseWaitForRelaunch(_ value: String) -> (windowID: CGWindowID, section: MenuBarSection.Name, setAt: Date?)? {
         guard value.hasPrefix(Self.waitForRelaunchPrefix) else { return nil }
         let payload = value.dropFirst(Self.waitForRelaunchPrefix.count)
@@ -1321,14 +1312,13 @@ final class MenuBarItemManager {
     /// each finds a sibling. A left-side match places the badge after that
     /// sibling, a right-side match places it before.
     ///
-    /// - Parameters:
-    ///   - profileOrder: The saved identifier order for the section.
-    ///   - anchorPos: The anchor's position within profileOrder.
-    ///   - itemIdentifiers: The identifiers currently in the section.
-    ///   - walkLeftFirst: Whether the badge sat left of the anchor.
+    /// profileOrder: The saved identifier order for the section.
+    /// anchorPos: The anchor's position within profileOrder.
+    /// itemIdentifiers: The identifiers currently in the section.
+    /// walkLeftFirst: Whether the badge sat left of the anchor.
     ///
-    /// - Returns: An index into itemIdentifiers, or nil when no sibling
-    ///   from the saved order is still present.
+    /// Returns an index into itemIdentifiers, or nil when no sibling
+    /// from the saved order is still present.
     static nonisolated func badgeIndex(
         profileOrder: [String],
         anchorPos: Int,

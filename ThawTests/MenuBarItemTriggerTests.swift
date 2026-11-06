@@ -514,7 +514,7 @@ struct MenuBarItemTriggerTests {
         #expect(!trigger.shouldReveal(state: state(onAC: true, charging: true)))
     }
 
-    /// "None of" is the condition-side negation; `invert` is the action-side
+    /// "None of" is the condition-side negation; invert is the action-side
     /// one. Combining them has to cancel out, not compound.
     @Test("'None of' composes with invert")
     func noneOfComposesWithInvert() {
@@ -772,7 +772,7 @@ struct MenuBarItemTriggerTests {
 
     // MARK: - Image comparison
 
-    /// Builds a small test image: the left `whiteColumns` columns white, rest black.
+    /// Builds a small test image: the left whiteColumns columns white, rest black.
     private func makeImage(whiteColumns: Int, size: Int = 16) -> CGImage {
         let bytesPerRow = size
         var pixels = [UInt8](repeating: 0, count: size * size)
@@ -781,7 +781,7 @@ struct MenuBarItemTriggerTests {
                 pixels[y * size + x] = 255
             }
         }
-        // `makeImage` reads through the buffer, so the context and the image both
+        // makeImage reads through the buffer, so the context and the image both
         // have to be created while the inout-to-pointer conversion is still valid.
         return pixels.withUnsafeMutableBytes { buffer in
             let context = CGContext(
@@ -1463,7 +1463,7 @@ struct MenuBarItemTriggerTests {
     }
 
     @Test func decodingWithoutInvertDefaultsFalse() throws {
-        // Simulates a trigger persisted before `invert` existed.
+        // Simulates a trigger persisted before invert existed.
         let json = """
         {
             "id": "00000000-0000-0000-0000-000000000001",

@@ -23,9 +23,9 @@ struct SearchGroup: Identifiable {
 
 // MARK: - SearchItem
 
-/// A precomputed searchable wrapper around a ``SearchEntry``.
+/// A precomputed searchable wrapper around a SearchEntry.
 ///
-/// `properties` are built once so the corpus is tokenized a single time.
+/// properties are built once so the corpus is tokenized a single time.
 private struct SearchItem: Searchable {
     let entry: SearchEntry
     let properties: [FuseProp]
@@ -57,9 +57,9 @@ private struct SearchItem: Searchable {
 
 /// The model behind the settings sidebar search.
 ///
-/// Uses ``Fuse`` to fuzzy-match the static ``SearchIndex``, then groups
-/// the ranked results by pane into ``SearchGroup``s for
-/// ``SearchResultsList``.
+/// Uses Fuse to fuzzy-match the static SearchIndex, then groups
+/// the ranked results by pane into SearchGroups for
+/// SearchResultsList.
 @MainActor
 @Observable
 final class SearchModel {
@@ -76,21 +76,21 @@ final class SearchModel {
     /// The static search corpus, tokenized once and reused across queries.
     private let searchItems = SearchIndex.entries.map { SearchItem(entry: $0) }
 
-    /// Ranks the whole index against `query`, resolving titles against
-    /// `bundle`. Tests use it, since `Bundle.main` can't switch localization.
+    /// Ranks the whole index against query, resolving titles against
+    /// bundle. Tests use it, since Bundle.main can't switch localization.
     static func rankedEntries(for query: String, bundle: Bundle) -> [SearchEntry] {
         let items = SearchIndex.entries.map { SearchItem(entry: $0, bundle: bundle) }
         return rankedEntries(for: query, in: items, fuse: Fuse(threshold: 0.5))
     }
 
-    /// Ranks `items` against `query`, best match first.
+    /// Ranks items against query, best match first.
     private static func rankedEntries(for query: String, in items: [SearchItem], fuse: Fuse) -> [SearchEntry] {
         let results = fuse.searchSync(query, in: items, by: \.properties)
         let scored = results.map { (item: items[$0.index], diffScore: $0.diffScore) }
         return SearchIndex.sortedByRelevance(scored).map(\.entry)
     }
 
-    /// Rebuilds `displayedGroups` from the current `searchText`.
+    /// Rebuilds displayedGroups from the current searchText.
     func updateDisplayedItems() {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else {

@@ -9,12 +9,12 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``ControlItemImage``'s stored form and value semantics.
+/// Covers ControlItemImage's stored form and value semantics.
 ///
-/// Stored in the `iceIcon` default and exported profiles, keyed by case name,
-/// so renaming `.catalog` would leave users with an undecodable icon.
+/// Stored in the iceIcon default and exported profiles, keyed by case name,
+/// so renaming .catalog would leave users with an undecodable icon.
 ///
-/// `NSImage` conversion is covered by `ControlItemImageConversionTests`.
+/// NSImage conversion is covered by ControlItemImageConversionTests.
 @Suite("Control item image")
 struct ControlItemImageTests {
     private var encoder: JSONEncoder {

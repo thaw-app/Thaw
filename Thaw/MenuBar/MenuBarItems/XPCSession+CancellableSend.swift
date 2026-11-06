@@ -9,15 +9,14 @@ import os.lock
 import XPC
 
 extension XPCSession {
-    /// Sends `request` and returns the decoded reply, or nil on failure or cancellation.
+    /// Sends request and returns the decoded reply, or nil on failure or cancellation.
     ///
     /// Non-blocking, so cooperative threads are never stranded. Exactly one
     /// of the reply or cancellation handler resumes the continuation, so
     /// Task cancellation unblocks the caller immediately.
     ///
-    /// - Parameters:
-    ///   - onDecodeFailure: Called when the reply can't be decoded.
-    ///   - onSendFailure: Called when the send throws or the reply is an error.
+    /// onDecodeFailure: Called when the reply can't be decoded.
+    /// onSendFailure: Called when the send throws or the reply is an error.
     nonisolated func sendCancellable<Response: Decodable & Sendable>(
         _ request: some Encodable & Sendable,
         as _: Response.Type,

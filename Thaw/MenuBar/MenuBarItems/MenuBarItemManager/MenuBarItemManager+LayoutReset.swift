@@ -35,7 +35,7 @@ extension MenuBarItemManager {
     /// Resets layout data to a fresh-install state and moves every movable,
     /// hideable item except the Thaw icon to Hidden.
     ///
-    /// - Returns: The number of items that failed to move.
+    /// Returns the number of items that failed to move.
     func resetLayoutToFreshState() async throws -> Int {
         try await resetLayout(to: .hidden)
     }
@@ -324,7 +324,7 @@ extension MenuBarItemManager {
     /// On termination, moves items stuck at x=-1 back to visible, or Control
     /// Center's preferences keep them stuck. Normally hidden items are left alone.
     ///
-    /// - Returns: The number of items that failed to move.
+    /// Returns the number of items that failed to move.
     @MainActor
     func restoreBlockedItemsToVisible() async -> Int {
         MenuBarItemManager.diagLog.info("Checking for blocked items (x=-1) to restore before app termination")

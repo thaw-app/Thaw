@@ -144,8 +144,8 @@ nonisolated enum LayoutSolver {
     /// the new-items anchor every cycle. Unresolved generic Control Center
     /// items are excluded too: they never match a profile entry and would be
     /// relocated every cycle (seen with Little Snitch).
-    /// - Parameter triggerControlledUIDs: Items a trigger owns. Otherwise the
-    ///   fallback placement moves them back and undoes the trigger.
+    /// triggerControlledUIDs: Items a trigger owns. Otherwise the
+    /// fallback placement moves them back and undoes the trigger.
     static nonisolated func partitionUnmanagedUIDs(
         currentFlat: [String],
         desiredUIDs: Set<String>,
@@ -171,7 +171,7 @@ nonisolated enum LayoutSolver {
 
     // MARK: - Leftmost relocation
 
-    /// Items sitting left of the hidden divider, ordered so `first` is a
+    /// Items sitting left of the hidden divider, ordered so first is a
     /// stable choice. The Thaw icon is a control item but must always be
     /// visible, so it is admitted here.
     private static nonisolated func leftmostItems(
@@ -193,7 +193,7 @@ nonisolated enum LayoutSolver {
     }
 
     /// The Thaw-icon relocation decision on its own, for callers that must
-    /// act before the rest of ``planLeftmostMove``'s inputs are trustworthy.
+    /// act before the rest of planLeftmostMove's inputs are trustworthy.
     ///
     /// Needs only geometry and our own tag, which are right from the first
     /// pass; the other paths wait for source PIDs.
@@ -260,7 +260,7 @@ nonisolated enum LayoutSolver {
             }
         }
 
-        // Namespace fallback: an item is `<bundleID>:Item-0` while hosted as
+        // Namespace fallback: an item is <bundleID>:Item-0 while hosted as
         // a generic slot and renamed once sourcePID resolves, so one saved
         // form misses the other (#849). Only used with exactly one saved
         // entry and one live item, and it can only suppress relocations.
@@ -321,7 +321,7 @@ nonisolated enum LayoutSolver {
     /// Whether the menu bar geometry is settled enough to run a layout pass on
     /// a notched display.
     ///
-    /// `rightBoundary` is Control Center's left edge. At or left of the notch
+    /// rightBoundary is Control Center's left edge. At or left of the notch
     /// (or non-finite), Control Center is at a stale position, as during a
     /// display reconnect, and acting on it throws the Thaw icon far left.
     static nonisolated func isMenuBarGeometryReady(
@@ -386,7 +386,7 @@ nonisolated enum LayoutSolver {
 
     /// Whether an item lies entirely off every display.
     ///
-    /// For stranded dividers, unlike ``isOnScreen``: a collapsed divider's
+    /// For stranded dividers, unlike isOnScreen: a collapsed divider's
     /// leading edge is always far offscreen, so only a divider with no edge
     /// on any screen may be rebuilt (#978).
     static nonisolated func isFullyOffScreen(bounds: CGRect, screenFrames: [CGRect]) -> Bool {
@@ -571,7 +571,7 @@ nonisolated enum LayoutSolver {
         ).count
     }
 
-    /// The items counted by ``hiddenBoundaryMismatch(currentVisible:currentHidden:currentAlwaysHidden:desiredVisible:desiredHidden:desiredAlwaysHidden:)``,
+    /// The items counted by hiddenBoundaryMismatch(currentVisible:currentHidden:currentAlwaysHidden:desiredVisible:desiredHidden:desiredAlwaysHidden:),
     /// named and split by the direction they have to travel.
     ///
     /// Derived from the same rule as the tally, so the two can't disagree.
@@ -592,7 +592,7 @@ nonisolated enum LayoutSolver {
 
     /// Splits the boundary mismatch into the two directions of travel.
     ///
-    /// `overflowExemptUIDs` are notch-overflow ejects, in hidden by design.
+    /// overflowExemptUIDs are notch-overflow ejects, in hidden by design.
     /// Counting them oscillates between recall and eject. Only hidden is
     /// exempt; always-hidden is real drift.
     static nonisolated func hiddenBoundaryOffenders(
@@ -668,7 +668,7 @@ nonisolated enum LayoutSolver {
             : .leftOf(candidate)
     }
 
-    /// The item ``planHiddenDividerAnchor(desiredHidden:desiredVisible:liveMovableUIDs:unanchorableUIDs:)``
+    /// The item planHiddenDividerAnchor(desiredHidden:desiredVisible:liveMovableUIDs:unanchorableUIDs:)
     /// picks before the unanchorable test, so logs can tell "nothing live"
     /// from "refused anchor".
     static nonisolated func hiddenDividerAnchorCandidate(
@@ -736,7 +736,7 @@ nonisolated enum LayoutSolver {
             currentIndex[uid] = index
         }
 
-        // (rank, desiredIndex) keeps the sort deterministic, since `sort`
+        // (rank, desiredIndex) keeps the sort deterministic, since sort
         // isn't stable.
         var queues = [String: [String]]()
         for key in relaxedSectionKeys {
@@ -987,11 +987,11 @@ nonisolated enum LayoutSolver {
     }
 
     /// Finds the nearest eligible neighbors on either side of the item at
-    /// `index`.
+    /// index.
     ///
     /// Only same-section neighbors qualify, or the item returns into the
     /// wrong section. Successor first, as in
-    /// ``anchorDestination(forSavedIndex:inSection:savedSequence:currentUIDsInSection:)``.
+    /// anchorDestination(forSavedIndex:inSection:savedSequence:currentUIDsInSection:).
     static nonisolated func returnAnchors(
         forIndex index: Int,
         itemCount: Int,
@@ -1031,7 +1031,7 @@ nonisolated enum LayoutSolver {
                 continue
             }
             // Stale instance index: the app is back with a new :N suffix.
-            // Not `baseID(forIdentifier:)`, which truncates titles that
+            // Not baseID(forIdentifier:), which truncates titles that
             // contain a colon and re-inserts the stale entry every cycle.
             if MenuBarItemTag.resolvedBaseIdentifier(
                 for: savedUID,
@@ -1134,7 +1134,7 @@ nonisolated enum LayoutSolver {
         return result
     }
 
-    /// The `namespace:title` prefix.
+    /// The namespace:title prefix.
     static nonisolated func baseID(forIdentifier id: String) -> String {
         id.split(separator: ":", maxSplits: 2).prefix(2).joined(separator: ":")
     }
@@ -1146,7 +1146,7 @@ nonisolated enum LayoutSolver {
 
     // MARK: - Saved-order pruning
 
-    /// Keeps any `:<digits>` instance index, so instances must match too.
+    /// Keeps any :<digits> instance index, so instances must match too.
     private static nonisolated func titlePortion(forIdentifier id: String) -> String {
         guard let separator = id.firstIndex(of: ":") else { return "" }
         return String(id[id.index(after: separator)...])
@@ -1155,8 +1155,8 @@ nonisolated enum LayoutSolver {
     /// Rewrites a persisted identifier so its namespace matches what a live
     /// item now reports.
     ///
-    /// ``MenuBarItemTag/Namespace/canonicalBundleID(_:)`` renames nested
-    /// helpers, e.g. `at.obdev.littlesnitch.agent` to `at.obdev.littlesnitch`,
+    /// MenuBarItemTag/Namespace/canonicalBundleID(_:) renames nested
+    /// helpers, e.g. at.obdev.littlesnitch.agent to at.obdev.littlesnitch,
     /// so older entries would be pruned and lose their position. Only the
     /// namespace changes.
     static nonisolated func canonicalIdentifier(_ identifier: String) -> String {
@@ -1175,7 +1175,7 @@ nonisolated enum LayoutSolver {
         return canonicalIdentifier(identifier) == canonicalIdentifier(anchor)
     }
 
-    /// Applies ``canonicalIdentifier(_:)`` across a saved section order.
+    /// Applies canonicalIdentifier(_:) across a saved section order.
     ///
     /// Runs before pruning at load. Order is preserved.
     static nonisolated func canonicalizedSectionOrder(
@@ -1187,8 +1187,8 @@ nonisolated enum LayoutSolver {
     }
 
     /// Whether the namespace is a localized display name, minted when a
-    /// bundle ID reads nil mid-launch (`Control Centre:Battery`, #949).
-    /// Display names usually contain whitespace; `aliases` covers those that
+    /// bundle ID reads nil mid-launch (Control Centre:Battery, #949).
+    /// Display names usually contain whitespace; aliases covers those that
     /// don't, such as Kontrollzentrum.
     private static nonisolated func isDisplayNameNamespace(
         identifier: String,
@@ -1198,8 +1198,8 @@ nonisolated enum LayoutSolver {
         return namespace.contains(where: \.isWhitespace) || aliases.contains(namespace)
     }
 
-    /// An unreadable title persists as `com.apple.controlcenter:` or
-    /// `com.apple.controlcenter::1`.
+    /// An unreadable title persists as com.apple.controlcenter: or
+    /// com.apple.controlcenter::1.
     private static nonisolated func hasEmptyTitle(identifier: String) -> Bool {
         let title = titlePortion(forIdentifier: identifier)
         if title.isEmpty {
@@ -1211,7 +1211,7 @@ nonisolated enum LayoutSolver {
         return !index.isEmpty && index.allSatisfy(\.isNumber)
     }
 
-    /// The title without any `:<digits>` instance index.
+    /// The title without any :<digits> instance index.
     private static nonisolated func titleWithoutInstanceIndex(_ title: String) -> String {
         guard
             let separator = title.lastIndex(of: ":"),
@@ -1240,8 +1240,8 @@ nonisolated enum LayoutSolver {
 
     /// Whether an identifier's title is a copy of its own namespace.
     ///
-    /// `kCGWindowName` sometimes reports every title as the owner's bundle
-    /// ID, giving `com.steipete.codexbar:com.steipete.codexbar`. This clears
+    /// kCGWindowName sometimes reports every title as the owner's bundle
+    /// ID, giving com.steipete.codexbar:com.steipete.codexbar. This clears
     /// entries earlier builds wrote.
     ///
     /// Both halves are canonicalized, since the namespace was already
@@ -1262,7 +1262,7 @@ nonisolated enum LayoutSolver {
     }
 
     /// The smallest bar the proportional half of
-    /// ``liveIdentitiesAreDegraded(_:)`` will judge.
+    /// liveIdentitiesAreDegraded(_:) will judge.
     ///
     /// One genuinely self-titled app can be half of a bar of three, not four.
     private static let minimumDegradationSample = 4
@@ -1270,20 +1270,18 @@ nonisolated enum LayoutSolver {
     /// Whether a reading of the bar titled its items after their own owners
     /// rather than after themselves.
     ///
-    /// `kCGWindowName` degrades bar-wide. Caching it makes every item look
+    /// kCGWindowName degrades bar-wide. Caching it makes every item look
     /// new, and each flip between spellings triggers a re-sort that moves
     /// the cursor (#881).
     ///
-    /// Either signal is enough:
+    /// Either signal is enough: a control item titled with our bundle ID
+    /// (such a reading also arrives with the dividers missing), or half the
+    /// bar self-titled, subject to minimumDegradationSample.
     ///
-    /// - A control item titled with our bundle ID. Such a reading also
-    ///   arrives with the dividers missing.
-    /// - Half the bar is self-titled, subject to ``minimumDegradationSample``.
+    /// Partial degradations are cleared by prunedSectionOrder(_:).
     ///
-    /// Partial degradations are cleared by ``prunedSectionOrder(_:)``.
-    ///
-    /// - Parameter identities: Non-control items plus any window that should
-    ///   have been a control item, with clones and ghosts already dropped.
+    /// identities: Non-control items plus any window that should
+    /// have been a control item, with clones and ghosts already dropped.
     static nonisolated func liveIdentitiesAreDegraded(
         _ identities: [(namespace: String, title: String)]
     ) -> Bool {
@@ -1302,7 +1300,7 @@ nonisolated enum LayoutSolver {
         return identities.count(where: isSelfTitled) * 2 >= identities.count
     }
 
-    /// Unique identifiers of `items` sorted by `key`, stable for equal keys.
+    /// Unique identifiers of items sorted by key, stable for equal keys.
     /// Backs the "Sort A→Z" section action.
     static nonisolated func sortedSectionIdentifiers(
         _ items: [MenuBarItem],
@@ -1320,14 +1318,13 @@ nonisolated enum LayoutSolver {
         return sorted.map(\.2)
     }
 
-    /// Removes persisted entries that can no longer match a live item:
-    ///
-    /// - Control Center copies of items now saved under their real owner
-    ///   (#788). Genuine Control Center items are never removed on their own.
-    /// - Volatile-title samples (iStat Menus, LyricsX) that canonicalize to
-    ///   one key (#815). Extra entries also disable the namespace fallback.
-    /// - Foreign items under Thaw's namespace, system clones, and self-titled
-    ///   entries (#881, #927).
+    /// Removes persisted entries that can no longer match a live item. These
+    /// are Control Center copies of items now saved under their real owner
+    /// (#788), though genuine Control Center items are never removed on their
+    /// own; volatile-title samples (iStat Menus, LyricsX) that canonicalize to
+    /// one key (#815), whose extra entries also disable the namespace fallback;
+    /// and foreign items under Thaw's namespace, system clones, and self-titled
+    /// entries (#881, #927).
     ///
     /// Entries are dropped, never rearranged (#885).
     static nonisolated func prunedSectionOrder(
@@ -1386,8 +1383,8 @@ nonisolated enum LayoutSolver {
             var emitted = Set<String>()
             result[sectionKey] = identifiers.filter { identifier in
                 // The module title alone proves the misattribution, e.g.
-                // `com.techsmith.snagit.capturehelper:Battery` (#1027).
-                // Generic `Item-N` titles are ambiguous and not covered.
+                // com.techsmith.snagit.capturehelper:Battery (#1027).
+                // Generic Item-N titles are ambiguous and not covered.
                 if isMisattributedControlCenterEntry(identifier: identifier) {
                     return false
                 }
@@ -1467,10 +1464,10 @@ nonisolated enum LayoutSolver {
 
     /// Persist only when no in-flight orchestrator owns the menu bar.
     ///
-    /// `hasPendingDivergence`: a divergence awaits a second cycle's
+    /// hasPendingDivergence: a divergence awaits a second cycle's
     /// confirmation, and the cache may hold a transient macOS rebuild.
     ///
-    /// `hasUnfinishedMoveBatch`: the last apply gave up partway. Saving that
+    /// hasUnfinishedMoveBatch: the last apply gave up partway. Saving that
     /// makes the bar drift further each pass instead of converging.
     ///
     /// Extend this and its tests for any new in-flight signal.
@@ -1488,7 +1485,7 @@ nonisolated enum LayoutSolver {
             !gate.menuBarDisplayChanged
     }
 
-    /// The signals ``shouldPersistSavedOrder(_:)`` reads.
+    /// The signals shouldPersistSavedOrder(_:) reads.
     ///
     /// Defaults are the permissive state, so call sites name only the
     /// signals that deviate.
@@ -1503,17 +1500,17 @@ nonisolated enum LayoutSolver {
         var hasPendingDivergence = false
         var hasUnfinishedMoveBatch = false
 
-        /// Whether a move landed recently enough that `applySavedLayout`
+        /// Whether a move landed recently enough that applySavedLayout
         /// would decline to run.
         ///
-        /// Must match `applySavedLayout`'s cooldown, or a cycle skips the
+        /// Must match applySavedLayout's cooldown, or a cycle skips the
         /// restore but takes the save and persists an unsettled bar (#958).
         var isWithinMoveCooldown = false
 
         /// Whether the menu bar is on a different display than it was on
         /// the cycle that produced the current cache.
         ///
-        /// macOS migrates items one at a time. `itemsSpanMultipleDisplays`
+        /// macOS migrates items one at a time. itemsSpanMultipleDisplays
         /// only sees items still classified visible, which thin out as they
         /// are misread; this comes from the displays themselves (#958).
         var menuBarDisplayChanged = false
@@ -1547,14 +1544,13 @@ nonisolated enum LayoutSolver {
     /// empty live section is trusted only when no visible item is parked
     /// off-screen, which is what a collapse looks like (#868).
     ///
-    /// - Parameters:
-    ///   - hiddenControlItemMinX: Leading edge of the hidden divider.
-    ///   - alwaysHiddenControlItemMaxX: Trailing edge of the always-hidden
-    ///     divider, or `nil` when the section has no divider.
-    ///   - savedHiddenItemCount: Items the saved layout puts in hidden.
-    ///   - liveHiddenItemCount: Items the current reading puts in hidden.
-    ///   - hasVisibleItemParkedOffBar: See
-    ///     ``hasVisibleItemParkedOffBar(visibleItemBounds:screenFrames:)``.
+    /// hiddenControlItemMinX: Leading edge of the hidden divider.
+    /// alwaysHiddenControlItemMaxX: Trailing edge of the always-hidden
+    /// divider, or nil when the section has no divider.
+    /// savedHiddenItemCount: Items the saved layout puts in hidden.
+    /// liveHiddenItemCount: Items the current reading puts in hidden.
+    /// hasVisibleItemParkedOffBar: See
+    /// hasVisibleItemParkedOffBar(visibleItemBounds:screenFrames:).
     static nonisolated func hiddenSectionHasRoom(
         hiddenControlItemMinX: CGFloat,
         alwaysHiddenControlItemMaxX: CGFloat?,
@@ -1580,16 +1576,15 @@ nonisolated enum LayoutSolver {
     /// Misordered dividers mean the classifier describes a bar that doesn't
     /// exist, so the planner must not trust it (#1027).
     ///
-    /// Geometric rather than ``CacheContext/findSection(for:)``, which puts
-    /// each divider one section right of its own. A `nil` divider passes;
+    /// Geometric rather than CacheContext/findSection(for:), which puts
+    /// each divider one section right of its own. A nil divider passes;
     /// blocking on absence would refuse to ever apply.
     ///
-    /// - Parameters:
-    ///   - visibleControlItemBounds: The chevron's bounds, or `nil` when
-    ///     absent.
-    ///   - hiddenControlItemBounds: The hidden divider's bounds.
-    ///   - alwaysHiddenControlItemBounds: `nil` when the section has no
-    ///     divider.
+    /// visibleControlItemBounds: The chevron's bounds, or nil when
+    /// absent.
+    /// hiddenControlItemBounds: The hidden divider's bounds.
+    /// alwaysHiddenControlItemBounds: nil when the section has no
+    /// divider.
     static nonisolated func controlItemsAreInCanonicalOrder(
         visibleControlItemBounds: CGRect?,
         hiddenControlItemBounds: CGRect,
@@ -1612,10 +1607,10 @@ nonisolated enum LayoutSolver {
     /// display.
     ///
     /// Tells a collapsed hidden section from an emptied one. With no screen
-    /// frames, answers `true` and leaves it to the saved count.
+    /// frames, answers true and leaves it to the saved count.
     ///
     /// Geometric because the apply path has no cache. Only items at or right
-    /// of the hidden divider count. Uses ``isOnScreen(bounds:screenFrames:)``.
+    /// of the hidden divider count. Uses isOnScreen(bounds:screenFrames:).
     static nonisolated func hasVisibleItemParkedOffBar(
         itemBounds: [CGRect],
         hiddenControlItemMinX: CGFloat,
@@ -1649,8 +1644,8 @@ nonisolated enum LayoutSolver {
     // MARK: - Pending rehide identifiers
 
     /// Items whose temporary-show rehide hasn't completed: those in
-    /// `pendingReturnDestinations`, and `pendingRelocations` carrying the
-    /// `waitForRelaunch:` sentinel.
+    /// pendingReturnDestinations, and pendingRelocations carrying the
+    /// waitForRelaunch: sentinel.
     ///
     /// saveSectionOrder excludes them so their original section is kept.
     static nonisolated func pendingRehideTagIdentifiers(

@@ -10,7 +10,7 @@ import Foundation
 
 /// Carries out a hotkey action against the live app.
 ///
-/// Split from ``HotkeyAction`` because every branch drives a live menu bar,
+/// Split from HotkeyAction because every branch drives a live menu bar,
 /// which unit tests lack. New decision logic belongs in the tested file.
 extension HotkeyAction {
     @MainActor

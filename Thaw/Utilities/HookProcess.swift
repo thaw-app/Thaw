@@ -68,7 +68,7 @@ extension HookRunner {
         }
 
         /// Puts the child in its own process group, then spawns it. A pgroup of zero
-        /// makes the child PID the group ID, so signalling `-pid` reaps the whole hook
+        /// makes the child PID the group ID, so signalling -pid reaps the whole hook
         /// tree on cancellation or timeout.
         private static func spawnInOwnProcessGroup(
             executablePath: String,
@@ -167,9 +167,9 @@ extension HookRunner {
 
         /// Whether any member of the child's process group is still alive.
         ///
-        /// A group-directed `kill` returns before the kernel has torn the
+        /// A group-directed kill returns before the kernel has torn the
         /// members down, so callers that promise "no descendants survive"
-        /// must poll this rather than trust the `kill` return value.
+        /// must poll this rather than trust the kill return value.
         var hasLiveProcessGroup: Bool {
             Darwin.kill(-processIdentifier, 0) == 0
         }
@@ -187,7 +187,7 @@ extension HookRunner {
         }
 
         private func signal(_ signal: Int32) {
-            // `-pid` targets the isolated process group. Do not fall back to
+            // -pid targets the isolated process group. Do not fall back to
             // the direct PID: after it exits, PID reuse could signal an
             // unrelated process while a remaining descendant still needs the
             // group-directed signal.
@@ -216,8 +216,8 @@ extension HookRunner {
                 completedStatus = status
                 return status
             }
-            // Failure means terminated. `waitpid` returns -1 with ECHILD once reaped (or
-            // if never ours), and treating that as running traps `isRunning` pollers
+            // Failure means terminated. waitpid returns -1 with ECHILD once reaped (or
+            // if never ours), and treating that as running traps isRunning pollers
             // forever. Only result 0 means still running.
             if result == -1 {
                 completedStatus = -1

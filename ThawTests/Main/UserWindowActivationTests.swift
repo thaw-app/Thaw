@@ -12,9 +12,9 @@ import Testing
 /// Covers the activation policy for windows the user opens (Settings,
 /// Permissions, onboarding, search, the Thaw Bar).
 ///
-/// Any switch to `.regular`, even the 50 ms launch warm-up, makes macOS add
+/// Any switch to .regular, even the 50 ms launch warm-up, makes macOS add
 /// Thaw to the Dock's recent apps. With "Show Dock icon while Settings is
-/// open" turned off, Thaw has to stay `.accessory` and only activate.
+/// open" turned off, Thaw has to stay .accessory and only activate.
 @Suite("User window activation")
 struct UserWindowActivationTests {
     @Test("With the Dock icon on, user windows activate as a regular app")

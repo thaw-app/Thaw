@@ -11,33 +11,32 @@ import Testing
 
 // MARK: - Snapshot capture and apply
 
-/// Covers `capture(from:)` and `apply(to:)` on `GeneralSettingsSnapshot` and
-/// `AdvancedSettingsSnapshot`, the halves that talk to the live settings models.
+/// Covers capture(from:) and apply(to:) on GeneralSettingsSnapshot and
+/// AdvancedSettingsSnapshot, the halves that talk to the live settings models.
 ///
 /// Other snapshot suites only round-trip hand-built snapshots through JSON. A
-/// property missing from `capture` silently reverts on the next profile switch;
-/// one missing from `apply` silently keeps the previous profile's value.
+/// property missing from capture silently reverts on the next profile switch;
+/// one missing from apply silently keeps the previous profile's value.
 ///
-/// `Defaults.store` is process-wide, so each case runs inside
-/// `withScratchDefaults` and the suite is `.serialized`.
+/// Defaults.store is process-wide, so each case runs inside
+/// withScratchDefaults and the suite is .serialized.
 ///
-/// Deliberate gaps:
-/// - `enableDiagnosticLogging` is no longer in the snapshot, since a profile
-///   apply switched logging off mid-capture (#899). Old profiles' key is
-///   ignored on decode.
-/// - The models are built bare rather than through `performSetup()`.
-///   `GeneralSettingsTests` and `AdvancedSettingsTests` own that path.
+/// Deliberate gaps: enableDiagnosticLogging is no longer in the snapshot,
+/// since a profile apply switched logging off mid-capture (#899), and old
+/// profiles' key is ignored on decode. The models are built bare rather
+/// than through performSetup(); GeneralSettingsTests and
+/// AdvancedSettingsTests own that path.
 @MainActor
 @Suite("Profile snapshots against live settings models", .serialized)
 struct ProfileSnapshotLiveSettingsTests {
-    /// A named icon that is *not* `.custom`, so assigning it to `iceIcon`
-    /// leaves `lastCustomIceIcon` alone.
+    /// A named icon that is *not* .custom, so assigning it to iceIcon
+    /// leaves lastCustomIceIcon alone.
     private var namedIcon: ControlItemImageSet {
         ControlItemImageSet(name: .door, image: .symbol("door.left.hand.closed"))
     }
 
-    /// An icon whose name is `.custom`, which `GeneralSettings.iceIcon`'s
-    /// `didSet` mirrors into `lastCustomIceIcon`.
+    /// An icon whose name is .custom, which GeneralSettings.iceIcon's
+    /// didSet mirrors into lastCustomIceIcon.
     private var customIcon: ControlItemImageSet {
         ControlItemImageSet(name: .custom, image: .data(Data([0x01, 0x02, 0x03])))
     }
@@ -50,8 +49,8 @@ struct ProfileSnapshotLiveSettingsTests {
             let settings = GeneralSettings()
             settings.showIceIcon = false
             settings.iceIcon = namedIcon
-            // Assigned after `iceIcon` on purpose: a `.custom` icon would
-            // overwrite it through `iceIcon`'s `didSet`.
+            // Assigned after iceIcon on purpose: a .custom icon would
+            // overwrite it through iceIcon's didSet.
             settings.lastCustomIceIcon = customIcon
             settings.customIceIconIsTemplate = true
             settings.useIceBar = true
@@ -155,7 +154,7 @@ struct ProfileSnapshotLiveSettingsTests {
             snapshot.apply(to: settings)
 
             // A profile switch has to outlive the launch. The models persist
-            // through `didSet`, so the scratch domain shows it.
+            // through didSet, so the scratch domain shows it.
             #expect(suite.object(forKey: Defaults.Key.showOnHover.rawValue) as? Bool == true)
             #expect(suite.object(forKey: Defaults.Key.rehideInterval.rawValue) as? Double == 77)
             #expect(
@@ -174,7 +173,7 @@ struct ProfileSnapshotLiveSettingsTests {
             let settings = GeneralSettings()
             settings.rehideStrategy = .focusedApp
             var snapshot = GeneralSettingsSnapshot.capture(from: settings)
-            // No `RehideStrategy` case has this raw value.
+            // No RehideStrategy case has this raw value.
             snapshot.rehideStrategyRawValue = 9999
             snapshot.rehideInterval = 33
 
@@ -187,8 +186,8 @@ struct ProfileSnapshotLiveSettingsTests {
         }
     }
 
-    /// `iceIcon`'s `didSet` mirrors a `.custom` icon into `lastCustomIceIcon`,
-    /// so `apply(to:)` assigns `lastCustomIceIcon` last to keep the custom icon
+    /// iceIcon's didSet mirrors a .custom icon into lastCustomIceIcon,
+    /// so apply(to:) assigns lastCustomIceIcon last to keep the custom icon
     /// the profile remembered.
     @Test("Applying a custom Ice icon keeps the snapshot's last-custom icon")
     func applyGeneralSettingsCustomIconKeepsLastCustom() throws {
@@ -326,8 +325,8 @@ struct ProfileSnapshotLiveSettingsTests {
 
     /// A profile written by an older build lists fewer sections than this build
     /// knows, and one written by a newer build can list a name this build does
-    /// not. `apply(to:)` runs the raw list through
-    /// `AdvancedSettings.sanitizedSearchSectionOrder(from:)` so the search panel
+    /// not. apply(to:) runs the raw list through
+    /// AdvancedSettings.sanitizedSearchSectionOrder(from:) so the search panel
     /// still ends up with every section exactly once.
     @Test("A short or unknown search section order is completed on apply")
     func applyAdvancedSettingsSanitizesTheSearchSectionOrder() throws {
@@ -345,7 +344,7 @@ struct ProfileSnapshotLiveSettingsTests {
     }
 
     /// Same forward-compatibility contract as the rehide strategy: the divider
-    /// style is stored as an `Int`, so a value from a newer build has to leave
+    /// style is stored as an Int, so a value from a newer build has to leave
     /// the current style alone rather than reset it.
     @Test("An unrecognized section divider style leaves the live style standing")
     func applyAdvancedSettingsWithUnknownDividerStyle() throws {
@@ -353,7 +352,7 @@ struct ProfileSnapshotLiveSettingsTests {
             let settings = AdvancedSettings()
             settings.sectionDividerStyle = .chevron
             var snapshot = AdvancedSettingsSnapshot.capture(from: settings)
-            // No `SectionDividerStyle` case has this raw value.
+            // No SectionDividerStyle case has this raw value.
             snapshot.sectionDividerStyle = 9999
             snapshot.tooltipDelay = 3
 
@@ -391,8 +390,8 @@ struct ProfileSnapshotLiveSettingsTests {
     // MARK: Full round trip
 
     /// The shape a real profile save/restore takes: capture off one model,
-    /// serialize, deserialize, apply to a second model. Anything `capture`
-    /// forgets or `apply` skips shows up as a divergence between the two
+    /// serialize, deserialize, apply to a second model. Anything capture
+    /// forgets or apply skips shows up as a divergence between the two
     /// models, which no hand-built-snapshot test can see.
     @Test("A profile round trip carries the settings from one live model to another")
     func captureEncodeDecodeApplyRoundTrip() throws {
@@ -493,9 +492,9 @@ struct ProfileSnapshotLiveSettingsTests {
 
 // MARK: - Layout resolution
 
-/// Covers `MenuBarLayoutSnapshot`'s two resolution accessors, which keep
-/// profiles written before `itemOrder` and `itemSectionMap` applying the same
-/// layout. `ProfileTests` covers the plain legacy fallback; this covers the
+/// Covers MenuBarLayoutSnapshot's two resolution accessors, which keep
+/// profiles written before itemOrder and itemSectionMap applying the same
+/// layout. ProfileTests covers the plain legacy fallback; this covers the
 /// precedence between the two and what happens when they disagree.
 @Suite("Menu bar layout snapshot resolution")
 struct MenuBarLayoutSnapshotResolutionTests {
@@ -526,7 +525,7 @@ struct MenuBarLayoutSnapshotResolutionTests {
 
     @Test("An explicit section map takes precedence over the ordered representation")
     func itemSectionMapWinsOverOrder() {
-        // The two disagree on purpose: `itemSectionMap` is the source of truth
+        // The two disagree on purpose: itemSectionMap is the source of truth
         // for apps like Control Center that share one bundle ID across many
         // items, so the ordered representation must not override it.
         let snapshot = makeSnapshot(
@@ -564,7 +563,7 @@ struct MenuBarLayoutSnapshotResolutionTests {
     }
 
     /// One identifier under two sections has no stable answer: the inversion
-    /// walks a `Dictionary` whose order varies with the hash seed, so the
+    /// walks a Dictionary whose order varies with the hash seed, so the
     /// strongest claim is that it lands in one of the two.
     @Test("An identifier listed twice resolves to one of its sections, unpredictably")
     func duplicateIdentifierResolvesToOneSection() {
@@ -583,9 +582,9 @@ struct MenuBarLayoutSnapshotResolutionTests {
 
 // MARK: - Decoding asymmetry
 
-/// Pins the strict side of partial decoding: `GeneralSettingsSnapshot` uses the
-/// synthesized `init(from:)` and requires every key, while
-/// `AdvancedSettingsSnapshot` fills missing keys from `Defaults.DefaultValue`.
+/// Pins the strict side of partial decoding: GeneralSettingsSnapshot uses the
+/// synthesized init(from:) and requires every key, while
+/// AdvancedSettingsSnapshot fills missing keys from Defaults.DefaultValue.
 /// The asymmetry decides whether a hand-edited or truncated profile loads.
 @Suite("Profile decoding of partial settings objects")
 struct ProfilePartialSettingsDecodingTests {
@@ -597,7 +596,7 @@ struct ProfilePartialSettingsDecodingTests {
 
     @Test("A profile whose General settings object is incomplete fails to decode")
     func partialGeneralSettingsObjectThrows() {
-        // Present but missing every key except one. `decodeIfPresent` only
+        // Present but missing every key except one. decodeIfPresent only
         // returns nil for an absent or null value, so this reaches the
         // synthesized initializer, which has no per-field fallback.
         let json = Data(#"{"name":"Partial","generalSettings":{"showIceIcon":true}}"#.utf8)
@@ -624,7 +623,7 @@ struct ProfilePartialSettingsDecodingTests {
 
     @Test("A null General settings value falls back to the shipped defaults")
     func nullGeneralSettingsFallsBackToDefaults() throws {
-        // `null` is the one shape `decodeIfPresent` treats as absent, so this
+        // null is the one shape decodeIfPresent treats as absent, so this
         // takes the fallback branch rather than the throwing one above.
         let json = Data(#"{"name":"Nulled","generalSettings":null}"#.utf8)
 
@@ -646,9 +645,9 @@ struct ProfilePartialSettingsDecodingTests {
 @MainActor
 @Suite("Profile snapshot regressions", .serialized)
 struct ProfileSnapshotRegressionTests {
-    /// `captureCurrentLayout` writes `[:]`, not `nil`, while the menu bar is
-    /// still settling, so a plain `itemOrder ?? savedSectionOrder` handed the
-    /// apply path an empty layout next to a good `savedSectionOrder`.
+    /// captureCurrentLayout writes [:], not nil, while the menu bar is
+    /// still settling, so a plain itemOrder ?? savedSectionOrder handed the
+    /// apply path an empty layout next to a good savedSectionOrder.
     @Test("An empty item order falls back to the saved section order")
     func emptyItemOrderFallsBackToSavedSectionOrder() {
         let saved = ["visible": ["com.example.A"], "hidden": ["com.example.B"]]
@@ -665,7 +664,7 @@ struct ProfileSnapshotRegressionTests {
         #expect(layout.resolvedItemSectionMap["com.example.B"] == "hidden")
     }
 
-    /// A populated `itemOrder` must still win, or the fallback would override
+    /// A populated itemOrder must still win, or the fallback would override
     /// every layout written by a current build.
     @Test("A populated item order still takes precedence")
     func populatedItemOrderStillWins() {
@@ -696,8 +695,8 @@ struct ProfileSnapshotRegressionTests {
         #expect(layout.resolvedItemSectionMap.isEmpty)
     }
 
-    /// `iceIcon`'s `didSet` mirrors a `.custom` icon into `lastCustomIceIcon`,
-    /// so assigning `lastCustomIceIcon` first let the mirror overwrite the
+    /// iceIcon's didSet mirrors a .custom icon into lastCustomIceIcon,
+    /// so assigning lastCustomIceIcon first let the mirror overwrite the
     /// custom icon the profile remembered.
     @Test("Applying a snapshot keeps its own lastCustomIceIcon")
     func applyPreservesLastCustomIceIcon() throws {

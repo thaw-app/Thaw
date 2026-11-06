@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Pins ``AdvancedSettings.normalizedIconRefreshInterval`` to the discrete
+/// Pins AdvancedSettings.normalizedIconRefreshInterval to the discrete
 /// grid the "Icon refresh rate" slider can express: Off, or 1…30 fps.
 @Suite("Icon refresh interval normalization")
 struct IconRefreshIntervalNormalizationTests {

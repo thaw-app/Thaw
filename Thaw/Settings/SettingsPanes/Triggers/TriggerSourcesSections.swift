@@ -1,5 +1,5 @@
 //
-//  DeveloperSettingsPane.swift
+//  TriggerSourcesSections.swift
 //  Project: Thaw
 //
 //  Copyright (Ice) © 2023–2025 Jordan Baird
@@ -9,12 +9,9 @@
 import CoreLocation
 import SwiftUI
 
-// MARK: - DeveloperSettingsPane
-
-/// Developer settings: per-source feature flags for menu bar item triggers
-/// and a live readout of the aggregated system state, so each trigger
-/// source can be enabled and debugged in isolation.
-struct DeveloperSettingsPane: View {
+/// The trigger source switches and a live readout of the system state, shown
+/// at the end of the Triggers pane so each source can be checked in place.
+struct TriggerSourcesSections: View {
     @Bindable private var flags: TriggerFeatureFlagsManager
 
     /// Plain reference (not observed): used to read Location authorization
@@ -35,28 +32,27 @@ struct DeveloperSettingsPane: View {
     }
 
     var body: some View {
-        IceForm {
-            introSection
-            flagsSection
-            liveStateSection
-        }
-        .onAppear {
-            refreshLiveState()
-            // While the window is focused, nudge the Location prompt so the
-            // Wi-Fi SSID or coordinate source can resolve (no-op once decided).
-            if flags.isEnabled(.wifiSSID) || flags.isEnabled(.location) {
-                systemMonitor.ensureLocationAuthorization()
+        introSection
+        flagsSection
+        // The modifiers go on one section: on the group they would run once per section.
+        liveStateSection
+            .onAppear {
+                refreshLiveState()
+                // While the window is focused, nudge the Location prompt so the
+                // Wi-Fi SSID or coordinate source can resolve (no-op once decided).
+                if flags.isEnabled(.wifiSSID) || flags.isEnabled(.location) {
+                    systemMonitor.ensureLocationAuthorization()
+                }
             }
-        }
-        .onReceive(refreshTimer) { _ in
-            refreshLiveState()
-        }
-        .onChange(of: flags.isEnabled(.wifiSSID) || flags.isEnabled(.location)) { _, enabled in
-            if enabled {
-                systemMonitor.ensureLocationAuthorization()
+            .onReceive(refreshTimer) { _ in
+                refreshLiveState()
             }
-            refreshLiveState()
-        }
+            .onChange(of: flags.isEnabled(.wifiSSID) || flags.isEnabled(.location)) { _, enabled in
+                if enabled {
+                    systemMonitor.ensureLocationAuthorization()
+                }
+                refreshLiveState()
+            }
     }
 
     private func refreshLiveState() {
@@ -180,7 +176,7 @@ struct DeveloperSettingsPane: View {
     }
 
     /// Renders a recording-device reading, or the flag-off placeholder when the
-    /// `recordingDevices` feature is not enabled.
+    /// recordingDevices feature is not enabled.
     private func recordingState(_ inUse: Bool) -> String {
         guard flags.isEnabled(.recordingDevices) else {
             return "Enable flag to read"
@@ -223,7 +219,7 @@ struct DeveloperSettingsPane: View {
         }
     }
 
-    /// Why a Location-backed readout has no value, or `nil` once permission is
+    /// Why a Location-backed readout has no value, or nil once permission is
     /// granted and the caller has to explain the gap itself.
     private func locationPermissionMessage() -> String? {
         switch systemMonitor.locationAuthorizationStatus {

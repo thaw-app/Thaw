@@ -9,9 +9,9 @@ import Testing
 @testable import Thaw
 
 /// Pins the raw values of the hidden diagnostic flags read through
-/// `Defaults.Key`.
+/// Defaults.Key.
 ///
-/// Users may have set these with `defaults write`, so a drifted raw value
+/// Users may have set these with defaults write, so a drifted raw value
 /// would silently ignore their setting. Renaming a case is safe; changing
 /// its raw value is not. Reads only, so safe to run in parallel.
 @Suite("Defaults keys")

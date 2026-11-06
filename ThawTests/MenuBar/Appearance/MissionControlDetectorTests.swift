@@ -9,7 +9,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers `MissionControlDetector.nextInterval(isActive:lastStepUpSignal:now:)`,
+/// Covers MissionControlDetector.nextInterval(isActive:lastStepUpSignal:now:),
 /// the pure rate selection behind the detector's adaptive poll rate. The rest
 /// polls the window server.
 @MainActor

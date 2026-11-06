@@ -8,12 +8,12 @@
 import Testing
 @testable import Thaw
 
-/// Covers `CodeSigningInfo.processTeamIdentifier`, the value both the XPC
-/// service's `Listener` and the app's `MenuBarItemServiceConnection` consult
+/// Covers CodeSigningInfo.processTeamIdentifier, the value both the XPC
+/// service's Listener and the app's MenuBarItemServiceConnection consult
 /// to decide whether a same-team peer requirement can ever be satisfied.
 ///
 /// The identifier depends on how the binary was signed (Developer ID reports
-/// a team, an ad-hoc CI build reports `nil`), so the assertions cover what
+/// a team, an ad-hoc CI build reports nil), so the assertions cover what
 /// holds either way: no trap, stable reads, and never an empty or malformed
 /// team string.
 @Suite("Process code-signing identity")

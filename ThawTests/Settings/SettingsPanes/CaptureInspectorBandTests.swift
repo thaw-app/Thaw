@@ -12,8 +12,8 @@ import Testing
 /// Regression tests for #1033, where the Capture Inspector showed the
 /// frontmost app instead of the menu bar.
 ///
-/// The band becomes `SCStreamConfiguration.sourceRect`, which is
-/// top-left-origin, but was built from bottom-left-origin `NSScreen.frame`,
+/// The band becomes SCStreamConfiguration.sourceRect, which is
+/// top-left-origin, but was built from bottom-left-origin NSScreen.frame,
 /// so it selected the bottom strip. Both bands have the same size, so
 /// nothing downstream could reject it.
 @Suite("Capture inspector band")

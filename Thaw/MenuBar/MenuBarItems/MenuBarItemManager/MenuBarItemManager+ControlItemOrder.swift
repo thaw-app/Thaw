@@ -37,7 +37,7 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Records whether a queued move passed preflight. ``MoveOptions/shouldBegin``
+    /// Records whether a queued move passed preflight. MoveOptions/shouldBegin
     /// is stored in the options struct, so it can't mutate a captured local.
     private final class MoveAttemptAcceptanceRecorder {
         var didAcceptMoveAttempt = false
@@ -426,7 +426,7 @@ extension MenuBarItemManager {
 
             switch decision {
             case let .move(item, destination):
-                // The recorder outlives the loop; a stale `true` would misreport
+                // The recorder outlives the loop; a stale true would misreport
                 // this preflight rejection as a failed accepted move.
                 attemptRecorder.didAcceptCurrentMove = false
                 let targetSection: MenuBarSection.Name = {
@@ -582,7 +582,7 @@ extension MenuBarItemManager {
     /// Moves a visible control item that the live bar classifies outside the
     /// visible section back beside the hidden divider.
     ///
-    /// Pairs with ``recoverStrandedHiddenDividerBeforeRefusing(guardSource:controlItems:items:)``
+    /// Pairs with recoverStrandedHiddenDividerBeforeRefusing(guardSource:controlItems:items:)
     /// so a divider-order refusal defers instead of wedging. This one undoes
     /// macOS restoring the chevron left of the hidden divider at login (#881).
     func recoverMisplacedVisibleControlItem(

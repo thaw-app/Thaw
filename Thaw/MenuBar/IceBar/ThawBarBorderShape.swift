@@ -21,7 +21,7 @@ nonisolated struct ThawBarBorderShape: InsettableShape {
     var cornerStyle: RoundedCornerStyle = .continuous
     /// Leaves the top edge open, starting at the top-leading corner.
     var omitTopEdge: Bool
-    /// Accumulated through ``inset(by:)``.
+    /// Accumulated through inset(by:).
     var insetAmount: CGFloat = 0
 
     /// The Thaw Bar's clip for a given content height: fully rounded ends get
@@ -35,7 +35,7 @@ nonisolated struct ThawBarBorderShape: InsettableShape {
         )
     }
 
-    /// The border that traces ``thawBarClip(height:hasRoundedShape:)``.
+    /// The border that traces thawBarClip(height:hasRoundedShape:).
     ///
     /// Inset by half the stroke width so it sits centred on the clip edge.
     static func thawBarBorder(
@@ -72,7 +72,7 @@ nonisolated struct ThawBarBorderShape: InsettableShape {
             return path
         }
 
-        // Bottom corners follow `cornerStyle` to match the clip.
+        // Bottom corners follow cornerStyle to match the clip.
         let closed = UnevenRoundedRectangle(
             cornerRadii: RectangleCornerRadii(
                 topLeading: 0,
@@ -88,7 +88,7 @@ nonisolated struct ThawBarBorderShape: InsettableShape {
 
     /// Drops the top edge of a closed rounded-rect path.
     ///
-    /// `UnevenRoundedRectangle` begins partway down the trailing edge, so the
+    /// UnevenRoundedRectangle begins partway down the trailing edge, so the
     /// top edge sits mid-sequence. The loop is rebuilt in full and rotated to
     /// start just after the top edge, or the loose ends rejoin.
     private static func openPathOmittingTopEdge(_ closed: Path, in rect: CGRect) -> Path {
@@ -121,7 +121,7 @@ nonisolated struct ThawBarBorderShape: InsettableShape {
     }
 
     /// Flattens a path into its segments, materializing the closing segment
-    /// that `closeSubpath` only implies.
+    /// that closeSubpath only implies.
     private static func segments(of path: Path) -> [Segment] {
         var segments: [Segment] = []
         var current = CGPoint.zero
@@ -152,7 +152,7 @@ nonisolated struct ThawBarBorderShape: InsettableShape {
         return segments
     }
 
-    /// A zero-radius corner still emits zero-length curves on `minY`, so the
+    /// A zero-radius corner still emits zero-length curves on minY, so the
     /// width test is required.
     private static func isTopEdge(_ segment: Segment, in rect: CGRect) -> Bool {
         abs(segment.from.y - rect.minY) < 0.5

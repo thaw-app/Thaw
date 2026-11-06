@@ -22,7 +22,7 @@ nonisolated struct MenuBarSpacer: Codable, Identifiable, Equatable {
 
     let id: UUID
     var width: CGFloat
-    /// Optional fill; `nil` renders the spacer as a fully transparent gap.
+    /// Optional fill; nil renders the spacer as a fully transparent gap.
     var color: IceColor?
 
     init(id: UUID = UUID(), width: CGFloat = Self.defaultWidth, color: IceColor? = nil) {
@@ -32,8 +32,8 @@ nonisolated struct MenuBarSpacer: Codable, Identifiable, Equatable {
     }
 
     /// Decodes through the memberwise initializer so the clamp applies to
-    /// persisted widths too. A synthesized `init(from:)` assigns `width`
-    /// directly, and a downgrade from a build with a larger `maxWidth` reads
+    /// persisted widths too. A synthesized init(from:) assigns width
+    /// directly, and a downgrade from a build with a larger maxWidth reads
     /// back a value wide enough to push other items off the bar.
     init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)

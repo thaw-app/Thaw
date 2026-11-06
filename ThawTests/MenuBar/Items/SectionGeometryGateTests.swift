@@ -9,11 +9,11 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// The two section-geometry predicates behind `LayoutSolver.shouldPersistSavedOrder`;
-/// `hiddenSectionHasRoom` also gates `applySavedLayout`'s bulk dispatch (#868).
+/// The two section-geometry predicates behind LayoutSolver.shouldPersistSavedOrder;
+/// hiddenSectionHasRoom also gates applySavedLayout's bulk dispatch (#868).
 ///
-/// `CacheContext.findSection` degrades rather than fails when the dividers cannot
-/// describe the sections, and `saveSectionOrder` would save that reading. Each
+/// CacheContext.findSection degrades rather than fails when the dividers cannot
+/// describe the sections, and saveSectionOrder would save that reading. Each
 /// predicate must stay quiet for layouts that legitimately look like the fault.
 @Suite("Section geometry persist gate")
 struct SectionGeometryGateTests {
@@ -245,12 +245,12 @@ struct SectionGeometryGateTests {
     }
 }
 
-/// Drives the #868 geometry gate through `applySavedLayout` itself, since the
+/// Drives the #868 geometry gate through applySavedLayout itself, since the
 /// wiring is what regressed. Both cases share inputs and differ only in divider
 /// geometry, so a failure isolates the gate.
 ///
-/// Serialized because each case drives a real `MenuBarItemManager` and swaps
-/// the process-wide `Defaults.store`.
+/// Serialized because each case drives a real MenuBarItemManager and swaps
+/// the process-wide Defaults.store.
 @MainActor
 @Suite("Section geometry apply gate", .serialized)
 struct SectionGeometryApplyGateTests {
@@ -267,9 +267,9 @@ struct SectionGeometryApplyGateTests {
 
     /// Builds a manager whose saved layout puts every item in hidden.
     ///
-    /// `savedSectionOrder` only loads in `performSetup`, which needs `AppState`, so
+    /// savedSectionOrder only loads in performSetup, which needs AppState, so
     /// arm a profile to write it and conclude it at once to clear
-    /// `isApplyingProfileLayout`, which would short-circuit `applySavedLayout`.
+    /// isApplyingProfileLayout, which would short-circuit applySavedLayout.
     private func makeManager(savingAllOf items: [MenuBarItem]) -> MenuBarItemManager {
         let order = [
             "visible": [String](),
@@ -292,8 +292,8 @@ struct SectionGeometryApplyGateTests {
     /// Absent from the current bar: the app-quit signal that advances the change gate immediately.
     private static let departedWindowID: CGWindowID = 999_999
 
-    /// The only `return true` in `applySavedLayout` follows the `applyProfileLayout`
-    /// dispatch, so `false` means the apply was never entered.
+    /// The only return true in applySavedLayout follows the applyProfileLayout
+    /// dispatch, so false means the apply was never entered.
     @Test("Collapsed dividers stop the apply before it dispatches", .timeLimit(.minutes(1)))
     func collapsedGeometryBlocksTheApply() async throws {
         try await withScratchDefaults { _ in
@@ -342,12 +342,12 @@ struct SectionGeometryApplyGateTests {
         }
     }
 
-    /// The recovery recache after `recreateStatusItem` passes
-    /// `bypassSavedLayoutCooldown: true`, which reaches `applySavedLayout` as
-    /// `bypassMoveCooldown: true` and must get past a fresh move cooldown.
+    /// The recovery recache after recreateStatusItem passes
+    /// bypassSavedLayoutCooldown: true, which reaches applySavedLayout as
+    /// bypassMoveCooldown: true and must get past a fresh move cooldown.
     ///
-    /// `recoverParkedHiddenDividerIfNeeded` needs a live `AppState`; its gate and
-    /// episode latch are covered in `ControlItemRecoveryTests`.
+    /// recoverParkedHiddenDividerIfNeeded needs a live AppState; its gate and
+    /// episode latch are covered in ControlItemRecoveryTests.
     @Test("A recovery retry can bypass a fresh move cooldown", .timeLimit(.minutes(1)))
     func recoveryRetryBypassesMoveCooldown() async throws {
         try await withScratchDefaults { _ in
@@ -376,7 +376,7 @@ struct SectionGeometryApplyGateTests {
         }
     }
 
-    // No test for the hard cap: `MoveCircuitBreaker.bulkApplyPermitted` returns before the
-    // `applyProfileLayout` dispatch where recovery lives, and the recovery recache
-    // skips `applySavedLayout` entirely.
+    // No test for the hard cap: MoveCircuitBreaker.bulkApplyPermitted returns before the
+    // applyProfileLayout dispatch where recovery lives, and the recovery recache
+    // skips applySavedLayout entirely.
 }

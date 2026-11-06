@@ -10,7 +10,7 @@ import Testing
 
 /// Pins the extras-menu-bar negative-cache TTL ladder.
 ///
-/// Cache cleanup follows `NSWorkspace.runningApplications`, which changes
+/// Cache cleanup follows NSWorkspace.runningApplications, which changes
 /// whenever any process starts or exits, so clearing the "no extras menu bar"
 /// flag there re-probed every app over AX (#956). Deadlines survive cleanup;
 /// the ladder keeps late-registered status items findable.

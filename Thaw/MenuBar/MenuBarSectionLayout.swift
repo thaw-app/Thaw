@@ -56,11 +56,11 @@ nonisolated extension MenuBarSection {
 
     /// Whether the given section presents in the Thaw Bar.
     ///
-    /// `displayUsesThawBar` sends every section there. `alwaysHiddenUsesThawBar`
+    /// displayUsesThawBar sends every section there. alwaysHiddenUsesThawBar
     /// sends only always-hidden, since reaching it inline also expands hidden.
     ///
     /// Notch overflow can force the Thaw Bar on top of this; see
-    /// ``forcesIceBarForNotchOverflow(overflowEnabled:useThawBarOnOverflow:hasEjectedItems:)``.
+    /// forcesIceBarForNotchOverflow(overflowEnabled:useThawBarOnOverflow:hasEjectedItems:).
     static func usesThawBar(
         for name: Name,
         displayUsesThawBar: Bool,

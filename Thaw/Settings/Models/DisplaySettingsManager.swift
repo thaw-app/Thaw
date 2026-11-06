@@ -11,8 +11,8 @@ import Combine
 
 /// Manages per-display Thaw Bar configuration.
 ///
-/// Configurations are keyed by display UUID string (via `Bridging.getDisplayUUIDString(for:)`).
-/// Displays without an explicit configuration inherit ``globalConfiguration``.
+/// Configurations are keyed by display UUID string (via Bridging.getDisplayUUIDString(for:)).
+/// Displays without an explicit configuration inherit globalConfiguration.
 @MainActor
 @Observable
 final class DisplaySettingsManager {
@@ -23,8 +23,8 @@ final class DisplaySettingsManager {
 
     /// Per-display configurations, keyed by display UUID string.
     ///
-    /// `didSet` persists the value and re-derives the active display's
-    /// spacing. It doesn't fire for the load in `init`. Stands down while a
+    /// didSet persists the value and re-derives the active display's
+    /// spacing. It doesn't fire for the load in init. Stands down while a
     /// profile apply installs its snapshot; the apply drives spacing itself.
     var configurations: [String: DisplayIceBarConfiguration] = [:] {
         didSet {
@@ -84,10 +84,10 @@ final class DisplaySettingsManager {
         }
     }
 
-    /// `relaunchApps` (the default) restarts the apps Thaw can bring back so
-    /// spacing applies now. `writeOnly` leaves apps running; each picks up the
+    /// relaunchApps (the default) restarts the apps Thaw can bring back so
+    /// spacing applies now. writeOnly leaves apps running; each picks up the
     /// new spacing when it next starts. Synced into
-    /// `MenuBarItemSpacingManager.spacingApplyMode`.
+    /// MenuBarItemSpacingManager.spacingApplyMode.
     var spacingApplyMode = Defaults.DefaultValue.spacingApplyMode {
         didSet {
             guard oldValue != spacingApplyMode else { return }
@@ -100,7 +100,7 @@ final class DisplaySettingsManager {
     @ObservationIgnored
     var cancellables = Set<AnyCancellable>()
 
-    /// Screen-parameters debounce task, cancelled in `deinit`. It owns its
+    /// Screen-parameters debounce task, cancelled in deinit. It owns its
     /// notification observer and removes it when it ends.
     @ObservationIgnored
     var screenParametersTask: Task<Void, Never>?
@@ -139,8 +139,8 @@ final class DisplaySettingsManager {
         Bridging.getActiveMenuBarDisplayUUID()
     }
 
-    /// Loads persisted state here because `didSet` doesn't fire for
-    /// assignments in `init`, so just-loaded data isn't written back or
+    /// Loads persisted state here because didSet doesn't fire for
+    /// assignments in init, so just-loaded data isn't written back or
     /// re-applied as spacing.
     init() {
         loadInitialState()
@@ -150,7 +150,7 @@ final class DisplaySettingsManager {
 
     /// Loads saved configurations. On first launch with externally set system
     /// spacing, seeds each connected display from the on-disk value so Thaw
-    /// doesn't overwrite a manual `NSStatusItemSpacing` and relaunch at startup.
+    /// doesn't overwrite a manual NSStatusItemSpacing and relaunch at startup.
     private func loadInitialState() {
         let persistedData = Defaults.data(forKey: .displayIceBarConfigurations)
         if let data = persistedData {
@@ -220,7 +220,7 @@ final class DisplaySettingsManager {
 
     // MARK: - Persistence
 
-    /// Encodes and persists `configurations`.
+    /// Encodes and persists configurations.
     private func persistConfigurations() {
         do {
             let data = try encoder.encode(configurations)
@@ -262,7 +262,7 @@ final class DisplaySettingsManager {
         change()
     }
 
-    /// Runs `change` without the `configurations` reaction applying spacing.
+    /// Runs change without the configurations reaction applying spacing.
     func withSpacingReactionSuspended(_ change: () -> Void) {
         isSpacingReactionSuspended = true
         defer { isSpacingReactionSuspended = false }
@@ -281,8 +281,8 @@ final class DisplaySettingsManager {
 
     /// Handles per-display settings changed externally via Settings URI scheme.
     ///
-    /// Internal so tests can call it directly without a live `AppState`. The
-    /// `specific:UUID` scope avoids `NSScreen` when `configurations` holds the UUID.
+    /// Internal so tests can call it directly without a live AppState. The
+    /// specific:UUID scope avoids NSScreen when configurations holds the UUID.
     func handleExternalPerDisplaySettingsChange(_ notification: Notification) {
         guard let key = notification.userInfo?["key"] as? String,
               let scopeRaw = notification.userInfo?["scope"] as? String
@@ -622,7 +622,7 @@ final class DisplaySettingsManager {
 
     /// The spacing offset the active display's configuration calls for.
     ///
-    /// The single source of truth for what `MenuBarItemSpacingManager.offset`
+    /// The single source of truth for what MenuBarItemSpacingManager.offset
     /// should hold. Everything that pushes into that property reads it from
     /// here, so a launch seed, a display transition, and a profile apply can't
     /// disagree about which value is current.

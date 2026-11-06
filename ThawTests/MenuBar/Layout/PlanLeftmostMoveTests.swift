@@ -298,8 +298,8 @@ struct PlanLeftmostMoveTests {
 
     // MARK: - Unstable owner titles (#849)
 
-    /// The #849 log: saved as `com.shortcutlabs.FlicMac:Item-0`, live as
-    /// `com.shortcutlabs.FlicMac:com.shortcutlabs.FlicMac`. Flic owns one status
+    /// The #849 log: saved as com.shortcutlabs.FlicMac:Item-0, live as
+    /// com.shortcutlabs.FlicMac:com.shortcutlabs.FlicMac. Flic owns one status
     /// item, so the namespace identifies it and its saved section still applies.
     @Test("A title change under a sole owner keeps the saved section")
     func titleChangeUnderASoleOwnerKeepsTheSavedSection() {

@@ -9,8 +9,8 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers `MenuBarOverlayPanel.isStranded(panelSpaces:currentSpace:globalActiveSpace:ownsActiveMenuBar:)`,
-/// the pure decision behind the space migration in `show()` (#794). The rest
+/// Covers MenuBarOverlayPanel.isStranded(panelSpaces:currentSpace:globalActiveSpace:ownsActiveMenuBar:),
+/// the pure decision behind the space migration in show() (#794). The rest
 /// talks to the window server.
 @Suite("Menu bar overlay panel spaces")
 struct MenuBarOverlayPanelSpaceTests {

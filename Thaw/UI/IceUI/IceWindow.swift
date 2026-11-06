@@ -59,7 +59,7 @@ enum IceWindowIdentifier: String, CustomStringConvertible {
 
     /// The non-localized title of the corresponding window.
     ///
-    /// - Note: Use ``titleKey`` to get the localized title.
+    /// Use titleKey to get the localized title.
     var titleString: String {
         switch self {
         case .settings: "\(Constants.displayName)"
@@ -69,7 +69,7 @@ enum IceWindowIdentifier: String, CustomStringConvertible {
 
     /// The localized title of the corresponding window.
     ///
-    /// - Note: Use ``titleString`` to get the non-localized title.
+    /// Use titleString to get the non-localized title.
     var titleKey: LocalizedStringKey {
         LocalizedStringKey(titleString)
     }

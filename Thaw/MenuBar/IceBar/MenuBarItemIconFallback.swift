@@ -14,7 +14,7 @@ import Cocoa
 /// Captures need Screen Recording, which is optional, and notch overflow can
 /// force the Thaw Bar on. An app icon is enough to click the right item.
 ///
-/// The per-process cache is load-bearing; see ``appIconsByPID``.
+/// The per-process cache is load-bearing; see appIconsByPID.
 enum MenuBarItemIconFallback {
     /// The Control Center icon once it has been resolved.
     @MainActor
@@ -23,7 +23,7 @@ enum MenuBarItemIconFallback {
     /// The Control Center icon, shared by every system-hosted item.
     ///
     /// A miss is not cached: the host may not be running yet, and a cached
-    /// `nil` would pin every system item to the generic glyph.
+    /// nil would pin every system item to the generic glyph.
     @MainActor
     private static var controlCenterIcon: NSImage? {
         if let cachedControlCenterIcon {
@@ -40,7 +40,7 @@ enum MenuBarItemIconFallback {
     /// Application icons already resolved this session, keyed by owning
     /// process.
     ///
-    /// Resolving allocates a new `NSRunningApplication` and `NSImage` each
+    /// Resolving allocates a new NSRunningApplication and NSImage each
     /// time. View bodies read this continuously while the bar is open, which
     /// outpaces the autorelease pool and grows memory.
     ///
@@ -64,7 +64,7 @@ enum MenuBarItemIconFallback {
 
     /// The owning application's icon, resolved once per process.
     ///
-    /// Use this instead of `sourceApplication?.icon`; see ``appIconsByPID``.
+    /// Use this instead of sourceApplication?.icon; see appIconsByPID.
     @MainActor
     static func cachedAppIcon(forPID pid: pid_t) -> NSImage? {
         if let cached = appIconsByPID[pid] {
@@ -80,11 +80,10 @@ enum MenuBarItemIconFallback {
     /// The preference loses to a missing icon: an item whose app quit keeps
     /// its stale capture rather than a generic glyph.
     ///
-    /// - Parameters:
-    ///   - item: The item being rendered.
-    ///   - hasCapture: Whether a captured glyph is available for it.
-    ///   - prefersAppIcon: `alwaysUseAppIconForMenuBarItems`. Passed in so
-    ///     observing views re-render when it is toggled.
+    /// item: The item being rendered.
+    /// hasCapture: Whether a captured glyph is available for it.
+    /// prefersAppIcon: alwaysUseAppIconForMenuBarItems. Passed in so
+    /// observing views re-render when it is toggled.
     @MainActor
     static func shouldUseAppIcon(
         for item: MenuBarItem,

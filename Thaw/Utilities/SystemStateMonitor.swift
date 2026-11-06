@@ -20,7 +20,7 @@ import SystemConfiguration
 // MARK: - SystemStateMonitor
 
 /// Aggregates several system signals into a single published
-/// ``SystemState``, starting only the monitors whose feature flag is
+/// SystemState, starting only the monitors whose feature flag is
 /// enabled so disabled sources cost nothing.
 ///
 /// Event-driven sources update immediately; app-running also polls because
@@ -45,7 +45,7 @@ final class SystemStateMonitor: ObservableObject {
     private var screenObserver: NSObjectProtocol?
     private var systemLoadObservers = [NSObjectProtocol]()
 
-    /// `NSProcessInfoPowerStateDidChange` covers Low Power only; High Power changes
+    /// NSProcessInfoPowerStateDidChange covers Low Power only; High Power changes
     /// without a notification, so it needs its own observer.
     private let energyModeMonitor = EnergyModeMonitor()
     private var pathMonitor: NWPathMonitor?
@@ -320,7 +320,7 @@ final class SystemStateMonitor: ObservableObject {
 
     /// Publishes a finished volume read.
     ///
-    /// A method so the `contains` closure is not nested inside the refresh task and `update`.
+    /// A method so the contains closure is not nested inside the refresh task and update.
     private func applyMountedVolumes(_ volumes: Set<MountedVolume>) {
         update {
             $0.externalDriveConnected = volumes.contains { !$0.isNetwork }
@@ -376,7 +376,7 @@ final class SystemStateMonitor: ObservableObject {
     // MARK: Location (for Wi-Fi SSID)
 
     /// Requests Location authorization, creating the authorizer on first use.
-    /// Without it `CWWiFiClient.ssid()` returns `nil`. The authorizer sets a delegate,
+    /// Without it CWWiFiClient.ssid() returns nil. The authorizer sets a delegate,
     /// which the system prompt needs to appear.
     func ensureLocationAuthorization() {
         let provider = locationProvider ?? LocationProvider()
@@ -397,7 +397,7 @@ final class SystemStateMonitor: ObservableObject {
     }
 
     /// Requests Focus authorization the first time the Focus feature is
-    /// enabled, so `INFocusStatusCenter` can report the focus status.
+    /// enabled, so INFocusStatusCenter can report the focus status.
     private func ensureFocusAuthorization() {
         if INFocusStatusCenter.default.authorizationStatus == .notDetermined {
             INFocusStatusCenter.default.requestAuthorization { _ in
@@ -519,7 +519,7 @@ final class SystemStateMonitor: ObservableObject {
         let wantsLocation = flags.isEnabled(.location)
         let wantsRecording = flags.isEnabled(.recordingDevices)
 
-        // Read on the main actor: `currentCoordinate` reads LocationProvider,
+        // Read on the main actor: currentCoordinate reads LocationProvider,
         // which is main-actor state rather than a blocking system query.
         let coordinate = wantsLocation ? currentCoordinate : nil
 
@@ -702,9 +702,9 @@ final class SystemStateMonitor: ObservableObject {
 
     /// Every paired device name, paired with whether it is connected now.
     ///
-    /// The same source ``connectedBluetoothDeviceNames`` matches against, since the
+    /// The same source connectedBluetoothDeviceNames matches against, since the
     /// classic Bluetooth name can differ from System Settings (AirPods may report a
-    /// model name). `nonisolated` so it runs off the main thread: it blocks and can
+    /// model name). nonisolated so it runs off the main thread: it blocks and can
     /// raise a TCC prompt.
     static nonisolated func pairedBluetoothDeviceNames() -> [(name: String, isConnected: Bool)] {
         guard let devices = IOBluetoothDevice.pairedDevices() as? [IOBluetoothDevice] else {
@@ -870,14 +870,14 @@ final class SystemStateMonitor: ObservableObject {
     }
 
     /// Returns the current Wi-Fi SSID, if available. Requires Location
-    /// permission on recent macOS; returns `nil` otherwise (best-effort).
+    /// permission on recent macOS; returns nil otherwise (best-effort).
     static nonisolated func currentWiFiSSID() -> String? {
         CWWiFiClient.shared().interface()?.ssid()
     }
 
     /// Detects an active Focus / Do Not Disturb.
     ///
-    /// Prefers `INFocusStatusCenter` (needs authorization, requested when the feature
+    /// Prefers INFocusStatusCenter (needs authorization, requested when the feature
     /// is enabled), falling back to the Do Not Disturb assertions store.
     static nonisolated func isFocusActive() -> Bool {
         // Only touch focusStatus when authorized: reading protected data
@@ -911,11 +911,11 @@ final class SystemStateMonitor: ObservableObject {
 
 // MARK: - LocationProvider
 
-/// Owns a `CLLocationManager` to supply Location authorization (required by
+/// Owns a CLLocationManager to supply Location authorization (required by
 /// CoreWLAN to read the Wi-Fi SSID) and, when started, the current
 /// coordinate (for the location trigger condition).
 ///
-/// A delegate is set in `init`; the authorization prompt needs it to appear
+/// A delegate is set in init; the authorization prompt needs it to appear
 /// reliably. Created on the main thread, so callbacks arrive on the main run loop.
 private final class LocationProvider: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()

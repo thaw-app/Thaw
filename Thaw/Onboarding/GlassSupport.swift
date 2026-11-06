@@ -8,7 +8,7 @@
 import AppKit
 import SwiftUI
 
-/// An `NSVisualEffectView` that blends with whatever is behind the window,
+/// An NSVisualEffectView that blends with whatever is behind the window,
 /// with the window made non-opaque so the blend shows through.
 struct VisualEffectBackground: NSViewRepresentable {
     func makeNSView(context _: Context) -> NSVisualEffectView {
@@ -35,7 +35,7 @@ struct VisualEffectBackground: NSViewRepresentable {
 }
 
 /// A small SF Symbol glyph, optionally on a frosted circular badge. Use
-/// `showBackground: false` in menu bar mockups, where real icons have no badge.
+/// showBackground: false in menu bar mockups, where real icons have no badge.
 struct GlassIconBubble: View {
     let symbol: String
     var size: CGFloat = 30

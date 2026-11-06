@@ -10,14 +10,14 @@ import Foundation
 /// The persisted half of a layout reset, runnable before the app builds a
 /// menu bar.
 ///
-/// ``MenuBarItemManager/resetLayoutToFreshState()`` also does the live half,
-/// which needs a running `AppState`. A parked divider is restored from
-/// `NSStatusItem Preferred Position` at launch, so a wrecked bar can start
+/// MenuBarItemManager/resetLayoutToFreshState() also does the live half,
+/// which needs a running AppState. A parked divider is restored from
+/// NSStatusItem Preferred Position at launch, so a wrecked bar can start
 /// moving items before Settings is reachable (#899). This repairs it first:
 ///
-///     /Applications/Thaw.app/Contents/MacOS/Thaw --reset-layout
+/// /Applications/Thaw.app/Contents/MacOS/Thaw --reset-layout
 ///
-/// Only `UserDefaults` is touched; run it while the app is not running, or
+/// Only UserDefaults is touched; run it while the app is not running, or
 /// the live manager writes its state back.
 enum LayoutResetCommand {
     /// The argument that selects this command.
@@ -25,7 +25,7 @@ enum LayoutResetCommand {
 
     /// The defaults keys holding the persisted arrangement.
     ///
-    /// Mirrors what `resetLayoutToFreshState()` clears. Removed rather than
+    /// Mirrors what resetLayoutToFreshState() clears. Removed rather than
     /// zeroed so the loaders fall back to their own defaults.
     static let layoutDefaultsKeys = MenuBarItemManager.LayoutStateKey.all + [
         Defaults.Key.newItemsSection.rawValue,
@@ -41,7 +41,7 @@ enum LayoutResetCommand {
 
     /// Clears the persisted arrangement and re-seeds the divider positions.
     ///
-    /// Matches `resetLayoutToFreshState()`: visible to 0, hidden to 1, and
+    /// Matches resetLayoutToFreshState(): visible to 0, hidden to 1, and
     /// always-hidden untouched since it is placed dynamically.
     static func resetPersistedLayout() {
         for key in layoutDefaultsKeys {

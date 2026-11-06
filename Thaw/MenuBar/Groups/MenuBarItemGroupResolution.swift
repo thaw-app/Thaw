@@ -11,9 +11,9 @@ import Foundation
 
 /// Where a resolved group came from.
 nonisolated enum MenuBarItemGroupOrigin: Hashable, Sendable, CustomStringConvertible {
-    /// From ``MenuBarItemGrouping``. Recomputed every pass, never stored.
+    /// From MenuBarItemGrouping. Recomputed every pass, never stored.
     case automatic(MenuBarItemTag.Namespace)
-    /// Persisted in ``MenuBarItemGroupSet``.
+    /// Persisted in MenuBarItemGroupSet.
     case user(UUID)
 
     var isUserAuthored: Bool {
@@ -34,10 +34,10 @@ nonisolated enum MenuBarItemGroupOrigin: Hashable, Sendable, CustomStringConvert
 // MARK: - ResolvedGroup
 
 /// A group as it applies to one ordered sequence of items, right now.
-/// Shaped like ``MenuBarItemGrouping/Group`` so the layout bar code can adopt it.
+/// Shaped like MenuBarItemGrouping/Group so the layout bar code can adopt it.
 nonisolated struct ResolvedGroup: Equatable, Sendable {
     let origin: MenuBarItemGroupOrigin
-    /// `nil` when the caller should derive one from the members.
+    /// nil when the caller should derive one from the members.
     let displayName: String?
     let isCollapsed: Bool
     /// Ascending. Not necessarily contiguous; an automatic cluster is only
@@ -68,10 +68,10 @@ nonisolated struct ResolvedGroup: Equatable, Sendable {
 /// User groups claim their members first; automatic bundle clusters fill in
 /// the rest unless the user dissolved them.
 nonisolated enum MenuBarItemGroupResolver {
-    /// Resolves `groupSet` against a live, ordered tag sequence.
+    /// Resolves groupSet against a live, ordered tag sequence.
     ///
-    /// With an empty `groupSet` this must match
-    /// ``MenuBarItemGrouping/groups(in:)`` exactly.
+    /// With an empty groupSet this must match
+    /// MenuBarItemGrouping/groups(in:) exactly.
     static func resolve(
         tags: [MenuBarItemTag],
         groupSet: MenuBarItemGroupSet
@@ -127,7 +127,7 @@ nonisolated enum MenuBarItemGroupResolver {
             )
         }
 
-        // Match `groups(in:)`: left to right by first member.
+        // Match groups(in:): left to right by first member.
         return resolved.sorted { lhs, rhs in
             (lhs.memberIndices.first ?? 0) < (rhs.memberIndices.first ?? 0)
         }

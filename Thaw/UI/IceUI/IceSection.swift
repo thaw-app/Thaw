@@ -82,10 +82,10 @@ struct IceSection<Header: View, Content: View, Footer: View>: View {
 
     var body: some View {
         // Native grouped Section: the OS draws the card, insets, and separators.
-        // `isBordered == false` drops the card by clearing the row background.
+        // isBordered == false drops the card by clearing the row background.
         //
-        // - Important: an `IceSection` must be a direct child of a `List`/`Form`
-        //   (e.g. inside ``IceForm``). Inside a `VStack` it collapses to one plain row.
+        // an IceSection must be a direct child of a List/Form
+        //   (e.g. inside IceForm). Inside a VStack it collapses to one plain row.
         if isBordered {
             nativeSection
         } else {

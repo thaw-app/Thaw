@@ -8,7 +8,7 @@
 import AppKit
 
 /// Requests app termination after event-tracking and presentation run loops
-/// unwind so `applicationShouldTerminate` can complete its asynchronous cleanup.
+/// unwind so applicationShouldTerminate can complete its asynchronous cleanup.
 @MainActor
 enum ApplicationTermination {
     typealias Scheduler = (@escaping @MainActor () -> Void) -> Void

@@ -14,7 +14,7 @@ import Testing
 /// at load.
 ///
 /// A multi-display spatial skew can match Control Center's Battery window to
-/// another app's PID, persisting `com.techsmith.snagit.capturehelper:Battery`
+/// another app's PID, persisting com.techsmith.snagit.capturehelper:Battery
 /// (#1027). Every other guard passes, so only the title says who owns the window.
 @Suite("Misattributed Control Center module identity")
 struct ControlCenterModuleIdentityTests {
@@ -61,7 +61,7 @@ struct ControlCenterModuleIdentityTests {
     }
 
     /// Generic slots and third-party titles are not Control Center modules.
-    /// Snagit's own item really is `com.techsmith.snagit.capturehelper:Item-0`.
+    /// Snagit's own item really is com.techsmith.snagit.capturehelper:Item-0.
     @Test("Generic and app titles are not module titles")
     func genericTitlesAreNotModuleTitles() {
         #expect(!MenuBarItemTag.isControlCenterModuleTitle("Item-0"))
@@ -135,7 +135,7 @@ struct ControlCenterModuleIdentityTests {
         )
     }
 
-    /// An en-GB machine writes `Control Centre:Battery` beside the canonical
+    /// An en-GB machine writes Control Centre:Battery beside the canonical
     /// spelling (#949); the rewrite merges it instead of leaving it for the prune.
     @Test("A display-name namespace heals to the canonical spelling")
     func displayNameNamespaceHeals() {
@@ -174,7 +174,7 @@ struct ControlCenterModuleIdentityTests {
 
     // MARK: - Load-time repair seams
 
-    /// ``LayoutSolver/canonicalIdentifier(_:)`` runs over saved orders at load
+    /// LayoutSolver/canonicalIdentifier(_:) runs over saved orders at load
     /// and must leave the ghost to the prune; renaming it would duplicate the entry.
     @Test("canonicalIdentifier leaves the ghost for the prune")
     func canonicalIdentifierLeavesGhostAlone() {
@@ -185,7 +185,7 @@ struct ControlCenterModuleIdentityTests {
     }
 
     /// The prune recognizes the ghost by title alone. The live module often
-    /// resolves nil, so the genuine `com.apple.controlcenter:Battery` may never
+    /// resolves nil, so the genuine com.apple.controlcenter:Battery may never
     /// have been saved for the twin rule to find.
     @Test("prunedSectionOrder drops the ghost with no twin present")
     func prunedSectionOrderDropsGhostWithoutTwin() {
@@ -221,7 +221,7 @@ struct ControlCenterModuleIdentityTests {
         #expect(acrossSections["alwaysHidden"] == [genuine])
     }
 
-    /// Snagit's own item really is `com.techsmith.snagit.capturehelper:Item-0`,
+    /// Snagit's own item really is com.techsmith.snagit.capturehelper:Item-0,
     /// and the prune must not orphan it.
     @Test("A generic slot under a foreign namespace survives the prune")
     func genericSlotSurvivesPrune() {

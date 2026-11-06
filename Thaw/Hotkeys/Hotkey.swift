@@ -24,8 +24,8 @@ final class Hotkey {
         }
     }
 
-    /// Callback invoked after ``keyCombination`` changes, with the new
-    /// value already stored and ``enable()``/``disable()`` already applied.
+    /// Callback invoked after keyCombination changes, with the new
+    /// value already stored and enable()/disable() already applied.
     /// Set by owners that need to persist or react to changes (e.g.
     /// HotkeysSettings, MenuBarManager, ProfileManager).
     @ObservationIgnored

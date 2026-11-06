@@ -10,8 +10,8 @@ import Observation
 
 /// Top-level model for the app's settings.
 ///
-/// Children are `@Observable`, so views track reads on the child property
-/// they access. See `AppState`'s note for the one caveat.
+/// Children are @Observable, so views track reads on the child property
+/// they access. See AppState's note for the one caveat.
 @MainActor
 @Observable
 final class AppSettings {

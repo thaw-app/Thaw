@@ -32,10 +32,10 @@ final class LayoutBarContainer: NSView {
 
     let section: MenuBarSection.Name
 
-    /// Reset to `true` after each layout pass.
+    /// Reset to true after each layout pass.
     var shouldAnimateNextLayoutPass = false
 
-    /// Going from `false` to `true` refreshes from the item cache, so updates
+    /// Going from false to true refreshes from the item cache, so updates
     /// that arrived meanwhile aren't lost.
     var canSetArrangedViews = true {
         didSet {
@@ -56,7 +56,7 @@ final class LayoutBarContainer: NSView {
         canSetArrangedViews = true
     }
 
-    /// Laid out left to right, separated by ``spacing``.
+    /// Laid out left to right, separated by spacing.
     var arrangedViews = [LayoutBarArrangedView]() {
         didSet {
             layoutArrangedViews(oldViews: oldValue)
@@ -111,7 +111,7 @@ final class LayoutBarContainer: NSView {
                 }
             }
 
-            // `@Observable`, so observed separately from the Combine chain.
+            // @Observable, so observed separately from the Combine chain.
             let advancedSettings = appState.settings.advanced
             enableAlwaysHiddenSectionObservationTask = Task { [weak self] in
                 let changes = observedValues { advancedSettings.enableAlwaysHiddenSection }
@@ -186,7 +186,7 @@ final class LayoutBarContainer: NSView {
     ///
     /// Removes views no longer arranged and animates moved ones.
     ///
-    /// - Parameter oldViews: Pass `nil` to use the current ``arrangedViews``.
+    /// oldViews: Pass nil to use the current arrangedViews.
     private func layoutArrangedViews(oldViews: [LayoutBarArrangedView]? = nil) {
         defer {
             shouldAnimateNextLayoutPass = true
@@ -231,7 +231,7 @@ final class LayoutBarContainer: NSView {
         heightConstraint.constant = maxHeight
     }
 
-    /// Does nothing while ``canSetArrangedViews`` is `false`.
+    /// Does nothing while canSetArrangedViews is false.
     func setArrangedViews(items: [MenuBarItem]?) {
         guard
             let appState,
@@ -298,7 +298,7 @@ final class LayoutBarContainer: NSView {
     /// Updates the positions of the container's arranged views using the
     /// specified dragging information and phase.
     ///
-    /// - Returns: A dragging operation.
+    /// Returns a dragging operation.
     @discardableResult
     func updateArrangedViewsForDrag(with draggingInfo: NSDraggingInfo, phase: DraggingPhase) -> NSDragOperation {
         guard let sourceView = draggingInfo.draggingSource as? LayoutBarArrangedView else {
@@ -430,7 +430,7 @@ final class LayoutBarContainer: NSView {
     }
 
     /// Returns the arranged view whose horizontal center is closest to
-    /// `xPosition`, in container coordinates.
+    /// xPosition, in container coordinates.
     func arrangedView(nearestTo xPosition: CGFloat, excludingBadge: Bool = false) -> LayoutBarArrangedView? {
         let candidates = excludingBadge ? arrangedViews.filter { !$0.isNewItemsBadge } : arrangedViews
         return candidates.min { view1, view2 in

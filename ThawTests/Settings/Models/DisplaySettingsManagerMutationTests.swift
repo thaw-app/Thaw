@@ -10,19 +10,19 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``DisplaySettingsManager``'s mutation and enumeration surface:
-/// `updateConfiguration`, the typed lookups built on it,
-/// `applyGlobalToAllKnownDisplays`, and the `allDisplays` ordering.
+/// Covers DisplaySettingsManager's mutation and enumeration surface:
+/// updateConfiguration, the typed lookups built on it,
+/// applyGlobalToAllKnownDisplays, and the allDisplays ordering.
 ///
 /// A display with no stored entry is read and edited through
-/// ``globalConfiguration``, so changing one field on it must not reset the
+/// globalConfiguration, so changing one field on it must not reset the
 /// others to the hardcoded defaults.
 ///
-/// `performSetup`, the spacing apply, and the notification observer need a
-/// live `AppState` and aren't covered here.
+/// performSetup, the spacing apply, and the notification observer need a
+/// live AppState and aren't covered here.
 ///
-/// The manager persists through `didSet`, so each case runs inside
-/// `withScratchDefaults`.
+/// The manager persists through didSet, so each case runs inside
+/// withScratchDefaults.
 @MainActor
 @Suite("Display settings mutation", .serialized)
 struct DisplaySettingsManagerMutationTests {

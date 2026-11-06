@@ -15,7 +15,7 @@ import SwiftUI
 @MainActor
 @Observable
 final class MenuBarSpacerManager {
-    /// Not under `Thaw.ControlItem.`, which marks Thaw's immovable anchors.
+    /// Not under Thaw.ControlItem., which marks Thaw's immovable anchors.
     /// Spacers are ordinary items: draggable, reorderable, concealable.
     static nonisolated let autosavePrefix = "Thaw.Spacer."
 

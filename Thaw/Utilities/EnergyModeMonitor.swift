@@ -10,12 +10,12 @@ import SystemConfiguration
 
 // MARK: - EnergyModeMonitor
 
-/// Reads the current ``EnergyMode`` and observes changes to it.
+/// Reads the current EnergyMode and observes changes to it.
 ///
-/// `HighPowerMode` has no API; it's read from
-/// `State:/IOKit/PowerManagement/CurrentSettings` in the dynamic store, which
+/// HighPowerMode has no API; it's read from
+/// State:/IOKit/PowerManagement/CurrentSettings in the dynamic store, which
 /// already switches with the power source, so the value is the effective mode.
-/// Low Power Mode comes from `ProcessInfo`, the documented source.
+/// Low Power Mode comes from ProcessInfo, the documented source.
 @MainActor
 final class EnergyModeMonitor {
     /// The dynamic store entry holding the settings in force for the active
@@ -23,21 +23,21 @@ final class EnergyModeMonitor {
     private static let currentSettingsKey = "State:/IOKit/PowerManagement/CurrentSettings" as CFString
 
     /// The key carrying High Power Mode within that entry. Present only on
-    /// Macs that offer the mode, which is what ``isHighPowerModeSupported``
+    /// Macs that offer the mode, which is what isHighPowerModeSupported
     /// keys off.
     private static let highPowerModeKey = "HighPowerMode"
 
     /// Whether this Mac offers High Power Mode. Read once; it's a hardware property.
     ///
     /// Key presence is the signal. Absence on Macs without the mode is inferred from
-    /// `pmset`, not confirmed; if wrong, the picker offers High Power and the
+    /// pmset, not confirmed; if wrong, the picker offers High Power and the
     /// condition never matches.
     static let isHighPowerModeSupported: Bool = currentSettings()?[highPowerModeKey] != nil
 
     private var store: SCDynamicStore?
 
-    /// `nonisolated(unsafe)` so `deinit` can unregister it, matching
-    /// ``PowerSourceMonitor``. Only ever touched on the main actor.
+    /// nonisolated(unsafe) so deinit can unregister it, matching
+    /// PowerSourceMonitor. Only ever touched on the main actor.
     private nonisolated(unsafe) var runLoopSource: CFRunLoopSource?
 
     private var changeHandler: (() -> Void)?
@@ -64,7 +64,7 @@ final class EnergyModeMonitor {
         return .automatic
     }
 
-    /// Begins observing power management setting changes, invoking `handler`
+    /// Begins observing power management setting changes, invoking handler
     /// on the main run loop whenever they change. Safe to call more than
     /// once; a later call replaces the handler without re-registering.
     func start(onChange handler: @escaping () -> Void) {
@@ -124,7 +124,7 @@ final class EnergyModeMonitor {
         changeHandler = nil
     }
 
-    /// Held rather than created per call: ``read`` runs on every power and thermal
+    /// Held rather than created per call: read runs on every power and thermal
     /// notification, and a dynamic store session is a port pair. Only ever polled.
     private static let readStore: SCDynamicStore? = SCDynamicStoreCreate(
         nil,

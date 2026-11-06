@@ -122,7 +122,7 @@ struct MenuBarAppearanceConfigurationTests {
         }
 
         /// Light and dark match so the result doesn't depend on the host's appearance;
-        /// this pins that a dynamic configuration never reads `staticConfiguration`.
+        /// this pins that a dynamic configuration never reads staticConfiguration.
         @Test("A dynamic configuration reads the mode pair, not the static one")
         func dynamicConfigurationIgnoresTheStaticConfiguration() {
             var configuration = MenuBarAppearanceConfigurationV2.defaultConfiguration
@@ -138,7 +138,7 @@ struct MenuBarAppearanceConfigurationTests {
 
     // MARK: - MenuBarAppearanceBorderTests
 
-    /// Tests for the border flags on ``MenuBarAppearancePartialConfiguration``,
+    /// Tests for the border flags on MenuBarAppearancePartialConfiguration,
     /// which the menu bar and the Thaw Bar read separately.
     @Suite("Border flags")
     struct MenuBarAppearanceBorderTests {
@@ -187,7 +187,7 @@ struct MenuBarAppearanceConfigurationTests {
             #expect(decoded.borderOnThawBar)
         }
 
-        /// Settings saved before the split carry only `hasBorder`, which drew a
+        /// Settings saved before the split carry only hasBorder, which drew a
         /// border in both places, so it has to seed both flags.
         @Test("A pre-split payload turns the border on in both places", arguments: [true, false])
         func decodeLegacyPayload(legacyHasBorder: Bool) throws {
@@ -217,7 +217,7 @@ struct MenuBarAppearanceConfigurationTests {
             #expect(decoded.borderOnThawBar)
         }
 
-        /// Downgrade safety: a build that only knows `hasBorder` has to keep
+        /// Downgrade safety: a build that only knows hasBorder has to keep
         /// showing a border for someone who enabled it on just one of the two.
         @Test("Encoding keeps the legacy key for older builds")
         func encodeKeepsLegacyKey() throws {
@@ -255,7 +255,7 @@ struct MenuBarAppearanceConfigurationTests {
 
         @Test("A shapeless configuration is never rounded")
         func noShapeIsNeverRounded() {
-            // Round end caps are supplied on purpose: `noShape` must ignore
+            // Round end caps are supplied on purpose: noShape must ignore
             // them rather than read through to the full-shape info.
             #expect(!configuration(shapeKind: .noShape, fullShapeInfo: .defaultValue).hasRoundedShape)
         }
@@ -285,7 +285,7 @@ struct MenuBarAppearanceConfigurationTests {
 
     // MARK: - MenuBarAppearanceV1MigrationTests
 
-    /// V1 appearance data (Ice before `0.11.10`) reaches Thaw only through the
+    /// V1 appearance data (Ice before 0.11.10) reaches Thaw only through the
     /// Ice importer.
     @MainActor
     @Suite("V1 migration")
@@ -377,8 +377,8 @@ struct MenuBarAppearanceConfigurationTests {
             #expect(resolved.borderWidth == 3)
         }
 
-        /// `MenuBarItemContainer` hardcoded this opacity, so reading the menu
-        /// bar's `tintOpacity` instead would restyle every existing install.
+        /// MenuBarItemContainer hardcoded this opacity, so reading the menu
+        /// bar's tintOpacity instead would restyle every existing install.
         @Test("The inherited tint keeps its own opacity")
         func inheritedTintOpacityIgnoresMenuBar() {
             let configuration = withMutableCopy(of: MenuBarAppearanceConfigurationV2.defaultConfiguration) { config in
@@ -390,7 +390,7 @@ struct MenuBarAppearanceConfigurationTests {
         }
 
         /// The border is the one property that was already forked, so the menu
-        /// bar's own `borderOnMenuBar` must not leak into the panel.
+        /// bar's own borderOnMenuBar must not leak into the panel.
         @Test("A menu-bar-only border does not reach the Thaw Bar")
         func menuBarOnlyBorderIsNotInherited() {
             let configuration = withMutableCopy(of: MenuBarAppearanceConfigurationV2.defaultConfiguration) { config in

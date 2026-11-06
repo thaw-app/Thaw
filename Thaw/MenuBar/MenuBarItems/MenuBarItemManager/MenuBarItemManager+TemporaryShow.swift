@@ -24,7 +24,7 @@ extension MenuBarItemManager {
         /// On macOS 26 Control Center owns the item's window while the app
         /// draws its menu, so either PID alone misses the open menu and the
         /// rehide tears it down (#924). Matches
-        /// ``ClickReactionVerifier/Snapshot/pids``.
+        /// ClickReactionVerifier/Snapshot/pids.
         let interfacePIDs: Set<pid_t>
 
         /// The display identifier where the item was shown.
@@ -33,7 +33,7 @@ extension MenuBarItemManager {
         /// Captured at show time; may be stale by rehide time.
         let returnDestination: MoveDestination
 
-        /// The neighbor opposite ``returnDestination``, a fallback for
+        /// The neighbor opposite returnDestination, a fallback for
         /// preserving order when that target is gone.
         let fallbackNeighbor: (tag: MenuBarItemTag, pid: pid_t)?
 
@@ -50,18 +50,18 @@ extension MenuBarItemManager {
         /// interaction. The user's hide-again delay counts from here.
         var closedSince: Date?
 
-        /// Separate from ``rehideAttempts`` to allow more retries: the app may
+        /// Separate from rehideAttempts to allow more retries: the app may
         /// be on another space or briefly invisible.
         var notFoundAttempts = 0
 
         /// The number of rehide checks that have found the interface
-        /// ``InterfaceState/unknown``.
+        /// InterfaceState/unknown.
         ///
-        /// Bounded by ``maxUndetectedInterfaceChecks`` so the item still goes
+        /// Bounded by maxUndetectedInterfaceChecks so the item still goes
         /// home eventually.
         var undetectedInterfaceChecks = 0
 
-        /// How many `unknown` readings to sit through before rehiding anyway.
+        /// How many unknown readings to sit through before rehiding anyway.
         ///
         /// Checks are three seconds apart. Lingering is far cheaper than a menu
         /// closing under the user.
@@ -82,7 +82,7 @@ extension MenuBarItemManager {
             /// has been closed or dismissed. Positive evidence.
             case absent
 
-            /// The interface was never identified. Unlike ``absent`` this is
+            /// The interface was never identified. Unlike absent this is
             /// ignorance, so rehiding on it can close an open menu (#924).
             case unknown
         }
@@ -120,14 +120,14 @@ extension MenuBarItemManager {
                 return .showing
             }
 
-            // A miss here isn't evidence the menu closed, so it's `unknown`.
+            // A miss here isn't evidence the menu closed, so it's unknown.
             return appHasVisiblePopup() ? .showing : .unknown
         }
 
         /// Checks whether any process that could own this item's interface has
         /// a visible menu window on screen.
         ///
-        /// See ``MenuBarItemManager/windowIsOpenInterface(ownerPID:layer:height:interfacePIDs:)``
+        /// See MenuBarItemManager/windowIsOpenInterface(ownerPID:layer:height:interfacePIDs:)
         /// for what counts.
         private func appHasVisiblePopup() -> Bool {
             WindowInfo.createWindows(option: .onScreen).contains { window in
@@ -165,7 +165,7 @@ extension MenuBarItemManager {
     /// Matches pop-up menu level, plus status and main-menu levels for
     /// windows taller than a menu bar item (DisplayLink draws its menu
     /// there). Matching anything above normal caught floating panels and
-    /// blocked rehide. See ``TemporarilyShownItemContext/interfacePIDs``.
+    /// blocked rehide. See TemporarilyShownItemContext/interfacePIDs.
     static nonisolated func windowIsOpenInterface(
         ownerPID: pid_t,
         layer: Int,
@@ -196,12 +196,12 @@ extension MenuBarItemManager {
     /// just opened, out of the windows that appeared around its click.
     ///
     /// Picking wrong is worse than picking nothing: a tracked window skips
-    /// the grace period and `unknown` budget, so latching onto a brief
+    /// the grace period and unknown budget, so latching onto a brief
     /// incidental window (Control Center opens some around a click) closes
     /// the menu within a second (#924).
     ///
     /// So take a menu-level window first, then one too tall to be a status
-    /// item. Nothing qualifying leaves the reading `unknown`.
+    /// item. Nothing qualifying leaves the reading unknown.
     static nonisolated func interfaceWindowToTrack(
         among candidates: [WindowInfo],
         interfacePIDs: Set<pid_t>
@@ -218,12 +218,12 @@ extension MenuBarItemManager {
         return menu ?? owned.first { $0.bounds.height > maxMenuBarItemHeight }
     }
 
-    /// Returns the item `temporarilyShow` should operate on, re-mapping the
+    /// Returns the item temporarilyShow should operate on, re-mapping the
     /// caller's item onto its freshly fetched counterpart when their tags
     /// have diverged.
     ///
     /// On a cold start the caller's item can carry a pre-resolution tag like
-    /// `com.apple.controlcenter:Item-0:N`, which the fresh fetch no longer
+    /// com.apple.controlcenter:Item-0:N, which the fresh fetch no longer
     /// has (#943). The window is stable, so match by windowID.
     static nonisolated func remappedItem(for item: MenuBarItem, in items: [MenuBarItem]) -> MenuBarItem {
         guard items.first(matching: item.tag) == nil else {
@@ -249,9 +249,9 @@ extension MenuBarItemManager {
     /// temporarily shown, along with the tag and PID of the neighbor on the
     /// opposite side (if any) for fallback ordering.
     ///
-    /// Only neighbors in `section` count: anchoring to another section's item
+    /// Only neighbors in section count: anchoring to another section's item
     /// returns it into that section, which macOS then persists. Transient
-    /// modules like `AudioVideoModule` are the usual culprit.
+    /// modules like AudioVideoModule are the usual culprit.
     private func getReturnDestination(
         for item: MenuBarItem,
         in items: [MenuBarItem],
@@ -335,10 +335,10 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Waits until the item's Window Server origin differs from `previousOrigin`,
-    /// or until `timeout` elapses.
+    /// Waits until the item's Window Server origin differs from previousOrigin,
+    /// or until timeout elapses.
     ///
-    /// The fast path's lighter alternative to `waitForItemPositionToSettle`.
+    /// The fast path's lighter alternative to waitForItemPositionToSettle.
     private nonisolated func waitForItemToLeaveOrigin(
         item: MenuBarItem,
         previousOrigin: CGPoint,
@@ -360,7 +360,7 @@ extension MenuBarItemManager {
     /// menu is still open, or while the user is still mid-interaction.
     ///
     /// Also how long the item lingers after the menu closes. Usually a single
-    /// window lookup; the `unknown` branch spaces out the expensive one.
+    /// window lookup; the unknown branch spaces out the expensive one.
     private static let rehidePollInterval: TimeInterval = 1
 
     /// Schedules a timer for the given interval that rehides the
@@ -380,7 +380,7 @@ extension MenuBarItemManager {
                 await self.rehideTemporarilyShownItems()
             }
         }
-        // Also rehide when the frontmost app changes. `dropFirst` because
+        // Also rehide when the frontmost app changes. dropFirst because
         // KVO replays the current value on every re-subscribe, which turned
         // each retry interval into 200 ms (#924). Debounced so Cmd-Tab spam
         // doesn't queue a costly window enumeration per switch.
@@ -396,7 +396,7 @@ extension MenuBarItemManager {
             }
     }
 
-    /// The result of a ``temporarilyShow(item:clickingWith:on:fastPath:)`` call.
+    /// The result of a temporarilyShow(item:clickingWith:on:fastPath:) call.
     enum TemporaryShowResult {
         /// The item was never moved and is still hidden; don't attempt a
         /// fallback click.
@@ -407,12 +407,12 @@ extension MenuBarItemManager {
         case movedButClickFailed
     }
 
-    /// Temporarily moves `item` into the visible area next to the Ice icon,
+    /// Temporarily moves item into the visible area next to the Ice icon,
     /// clicks it, then schedules a rehide.
     ///
-    /// - Returns: A ``TemporaryShowResult`` describing whether the move and
-    ///   click succeeded. Only act on ``TemporaryShowResult/movedButClickFailed``
-    ///   for fallback clicks; the item is hidden for every other non-success case.
+    /// Returns a TemporaryShowResult describing whether the move and
+    /// click succeeded. Only act on TemporaryShowResult/movedButClickFailed
+    /// for fallback clicks; the item is hidden for every other non-success case.
     @discardableResult
     func temporarilyShow(item: MenuBarItem, clickingWith mouseButton: CGMouseButton, on displayID: CGDirectDisplayID? = nil, fastPath: Bool = false) async -> TemporaryShowResult {
         guard let appState else {
@@ -540,7 +540,7 @@ extension MenuBarItemManager {
             // captured origin instead.
             let currentOrigin = Bridging.getWindowBounds(for: item.windowID)?.origin
             // Any nil counts as moved, the safe side. The explicit nil checks
-            // matter: `nil != nil` is false.
+            // matter: nil != nil is false.
             let itemHasMoved = currentOrigin == nil || preMoveOrigin == nil || currentOrigin != preMoveOrigin
 
             if itemHasMoved {
@@ -633,7 +633,7 @@ extension MenuBarItemManager {
         }
 
         // The click path's window gets the same test as a scan's:
-        // ``ClickReactionVerifier`` accepts any new window as a reaction,
+        // ClickReactionVerifier accepts any new window as a reaction,
         // which is a poor guess at the menu.
         context.shownInterfaceWindow = MenuBarItemManager.interfaceWindowToTrack(
             among: interfaceCandidates,
@@ -646,8 +646,8 @@ extension MenuBarItemManager {
     /// Resolves the best move destination for returning a temporarily shown
     /// item to its original section.
     ///
-    /// Tries ``TemporarilyShownItemContext/returnDestination``, then
-    /// ``TemporarilyShownItemContext/fallbackNeighbor``, then the original
+    /// Tries TemporarilyShownItemContext/returnDestination, then
+    /// TemporarilyShownItemContext/fallbackNeighbor, then the original
     /// section's control item.
     private func resolveReturnDestination(
         for context: TemporarilyShownItemContext,
@@ -696,8 +696,8 @@ extension MenuBarItemManager {
 
     /// Rehides all temporarily shown items.
     ///
-    /// - Parameter force: If `true`, skip the interface-showing and
-    ///   user-input guards and rehide all items immediately.
+    /// force: If true, skip the interface-showing and
+    /// user-input guards and rehide all items immediately.
     func rehideTemporarilyShownItems(force: Bool = false, isCalledFromTemporarilyShow: Bool = false) async {
         guard let appState else {
             MenuBarItemManager.diagLog.error("Missing AppState, so not rehiding")
@@ -952,7 +952,7 @@ extension MenuBarItemManager {
     /// opposed to the item having gone stale.
     ///
     /// With the menu bar auto-hidden, every item window reports
-    /// `kCGWindowIsOnscreen = false` but keeps its position, or slides up
+    /// kCGWindowIsOnscreen = false but keeps its position, or slides up
     /// above the display in a full-screen space. An item right of the hidden
     /// divider can't be parked, so reading as off screen while sitting at
     /// the top of a display means the bar is hidden.

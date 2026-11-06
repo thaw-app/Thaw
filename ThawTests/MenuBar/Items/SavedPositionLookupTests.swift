@@ -111,7 +111,7 @@ struct SavedPositionLookupTests {
 
     // MARK: - baseID(forIdentifier:) extraction contract
 
-    /// `namespace:title` is the key for every saved-position and stale-instance lookup.
+    /// namespace:title is the key for every saved-position and stale-instance lookup.
     @Test("baseID(forIdentifier:) extracts the namespace:title prefix")
     func baseIDExtractionContract() {
         // Typical multi-instance identifier: drops the trailing instanceIndex.

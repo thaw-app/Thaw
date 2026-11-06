@@ -11,18 +11,18 @@ import Foundation
 /// Trigger ownership of item placement.
 ///
 /// A trigger-held item's placement must not be persisted or dragged back by
-/// the reconciler. Matching tolerates `:N` suffix drift while it's held.
+/// the reconciler. Matching tolerates :N suffix drift while it's held.
 extension MenuBarItemManager {
     /// Updates the set of items whose temporary placement is currently owned
     /// by conditional triggers.
     ///
-    /// Removing an identifier schedules a cache cycle past `move`'s
+    /// Removing an identifier schedules a cache cycle past move's
     /// five-second cooldown, so the reconciler restores the saved layout
     /// without fighting an in-flight drag.
     func setTriggerControlledItemIdentifiers(_ identifiers: Set<String>) {
         guard triggerControlledItemIdentifiers != identifiers else { return }
 
-        // Not via the weak `appState`: a nil hop would empty both sets and
+        // Not via the weak appState: a nil hop would empty both sets and
         // report drifted, still-controlled items as released.
         let managedItems = itemCache.managedItems
         let knownBaseIdentifiers = Set(managedItems.map(\.tag.stableIdentifierBase))
@@ -141,8 +141,8 @@ extension MenuBarItemManager {
         return baseMatches.count == 1 ? Set(baseMatches) : []
     }
 
-    /// The live UIDs in `uids` that a trigger currently owns or is still
-    /// restoring, resolved drift-tolerantly against `items`.
+    /// The live UIDs in uids that a trigger currently owns or is still
+    /// restoring, resolved drift-tolerantly against items.
     ///
     /// Trigger-owned items are absent from the desired layout, so without
     /// this they read as unmanaged arrivals.
@@ -235,8 +235,8 @@ extension MenuBarItemManager {
     /// Moves the menu bar item identified by the given stable tag identifier
     /// into the given section, if the item is present and not already there.
     ///
-    /// - Returns: A ``TriggerMoveResult`` describing whether the move
-    ///   happened, was unnecessary, should be retried later, or failed.
+    /// Returns a TriggerMoveResult describing whether the move
+    /// happened, was unnecessary, should be retried later, or failed.
     @discardableResult
     func moveItem(
         withTagIdentifier tagIdentifier: String,

@@ -12,9 +12,9 @@ import Testing
 /// Resolves Focus Filter profiles against a real manifest in the test host's
 /// Application Support directory.
 ///
-/// ``ThawFocusModeStore`` caches the manifest by modification date, so tests
+/// ThawFocusModeStore caches the manifest by modification date, so tests
 /// set explicit dates to drive cache hits and misses. The static cache and
-/// Defaults are process-wide, hence `.serialized`.
+/// Defaults are process-wide, hence .serialized.
 @Suite("Thaw Focus mode store")
 @MainActor
 struct ThawFocusModeStoreTests {

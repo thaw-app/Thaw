@@ -9,17 +9,17 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers ``SettingsURIHandler``'s `set` and `toggle` actions and the
+/// Covers SettingsURIHandler's set and toggle actions and the
 /// notifications they post.
 ///
-/// These run on behalf of a third-party app that sent a `thaw://` URL, so a
+/// These run on behalf of a third-party app that sent a thaw:// URL, so a
 /// malformed key, an out-of-range double, or a non-finite value must be
-/// refused rather than written to `Defaults`. Each test runs inside
-/// `withScratchDefaults`, starting from an empty throwaway store.
+/// refused rather than written to Defaults. Each test runs inside
+/// withScratchDefaults, starting from an empty throwaway store.
 @MainActor
 @Suite("Settings URI handler apply", .serialized)
 struct SettingsURIHandlerApplyTests {
-    /// Collects the notifications posted on `name` while `body` runs.
+    /// Collects the notifications posted on name while body runs.
     private func notifications(
         named name: Notification.Name,
         during body: () -> Void
@@ -36,8 +36,8 @@ struct SettingsURIHandlerApplyTests {
     }
 
     /// Notifications are delivered synchronously on the posting thread, but
-    /// the observer closure is `@Sendable`, so the collector needs to be a
-    /// reference type rather than a captured `var`.
+    /// the observer closure is @Sendable, so the collector needs to be a
+    /// reference type rather than a captured var.
     private final class NotificationBox: @unchecked Sendable {
         private(set) var contents: [Notification] = []
         func append(_ notification: Notification) {
@@ -111,7 +111,7 @@ struct SettingsURIHandlerApplyTests {
         }
     }
 
-    /// A key in `supportedBooleanKeys` with no `keyMapping` entry is
+    /// A key in supportedBooleanKeys with no keyMapping entry is
     /// refused at run time and announces nothing. Asserting the
     /// notification rather than the return value catches that even for the
     /// per-display keys, which answer on the other channel.
@@ -132,7 +132,7 @@ struct SettingsURIHandlerApplyTests {
         }
     }
 
-    /// A `thaw://` URL is assembled by whoever sends it, and a stray space
+    /// A thaw:// URL is assembled by whoever sends it, and a stray space
     /// around the value is the easiest mistake to make. It has to be
     /// refused rather than trimmed, so the sender learns about it.
     @Test("A Boolean with surrounding whitespace is refused", arguments: [
@@ -316,7 +316,7 @@ struct SettingsURIHandlerApplyTests {
         }
     }
 
-    /// And they reach `Defaults` unaltered when they land inside the key's
+    /// And they reach Defaults unaltered when they land inside the key's
     /// range, so an unusual spelling is not quietly treated as malformed.
     @Test("An unusual spelling inside the range is stored verbatim", arguments: [
         ("0x1p3", 8.0),
@@ -337,8 +337,8 @@ struct SettingsURIHandlerApplyTests {
     }
 
     /// An unusual spelling gets no special treatment at the range check
-    /// either: `.5` is below `rehideInterval`'s floor and is clamped to it,
-    /// exactly as `0.5` would be.
+    /// either: .5 is below rehideInterval's floor and is clamped to it,
+    /// exactly as 0.5 would be.
     @Test("An unusual spelling below the range is clamped like any other", arguments: [".5", "+0.25", "0x1p-2"])
     func unusualSpellingsBelowTheRangeAreClamped(_ value: String) throws {
         try withScratchDefaults { _ in
@@ -347,7 +347,7 @@ struct SettingsURIHandlerApplyTests {
         }
     }
 
-    /// The infinities `Double.init` produces, spelled out or from exponent
+    /// The infinities Double.init produces, spelled out or from exponent
     /// overflow, must be caught by the finiteness check rather than clamped to
     /// the top of the range.
     @Test("Every infinity the parser produces is refused rather than clamped", arguments: [
@@ -605,7 +605,7 @@ struct SettingsURIHandlerApplyTests {
     }
 
     /// The Boolean per-display keys reach separate arms of
-    /// `handlePerDisplayToggle`. All must behave identically: a toggle carries
+    /// handlePerDisplayToggle. All must behave identically: a toggle carries
     /// the flag and no value, since the reader flips whatever it holds.
     @Test(
         "Any Boolean per-display key can be toggled on a named display",
@@ -661,7 +661,7 @@ struct SettingsURIHandlerApplyTests {
     }
 
     /// The Boolean per-display keys reach separate arms of
-    /// `handlePerDisplaySetForSpecificDisplay`, so each has to be driven
+    /// handlePerDisplaySetForSpecificDisplay, so each has to be driven
     /// with a display identifier: a set carries the parsed value and no
     /// toggle flag, and a value the arm cannot parse is refused before
     /// anything is posted.

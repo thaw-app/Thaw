@@ -9,7 +9,7 @@ import AppKit
 import Observation
 import SwiftUI
 
-/// Mirrors `MenuBarShapeKind`: "Full" and "Split", labelled "Pills" here.
+/// Mirrors MenuBarShapeKind: "Full" and "Split", labelled "Pills" here.
 private enum DemoBarStyle {
     case regular
     case gradient
@@ -144,7 +144,7 @@ private struct SlideHUD<Content: View>: View {
 // MARK: - Restart Helper
 
 /// Cancels a mockup's in-flight animation task and replaces it with one
-/// running `work`.
+/// running work.
 @MainActor
 func replaceRestartTask(
     _ task: inout Task<Void, Never>?,

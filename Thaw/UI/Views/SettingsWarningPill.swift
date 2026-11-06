@@ -8,8 +8,8 @@
 
 import SwiftUI
 
-/// Glass alert banner for settings form rows, in ``IceSlider``'s Liquid Glass
-/// chrome tinted with `tint` (the accent color by default).
+/// Glass alert banner for settings form rows, in IceSlider's Liquid Glass
+/// chrome tinted with tint (the accent color by default).
 struct SettingsWarningPill: View {
     private let title: LocalizedStringKey?
     private let message: LocalizedStringKey

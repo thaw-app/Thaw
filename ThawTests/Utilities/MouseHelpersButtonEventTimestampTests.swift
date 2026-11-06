@@ -10,8 +10,8 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers `MouseHelpers.lastPointerButtonEventOccurred` and its wiring into
-/// `physicalPointerInputOccurred`: the HID-timestamp detector that catches a
+/// Covers MouseHelpers.lastPointerButtonEventOccurred and its wiring into
+/// physicalPointerInputOccurred: the HID-timestamp detector that catches a
 /// click that landed mid-batch but was released before the check
 /// (isButtonPressed() alone misses those).
 ///

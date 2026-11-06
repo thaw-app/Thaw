@@ -14,7 +14,7 @@ import Foundation
 /// Saved orders keep closed apps on purpose, so they return to their slot.
 /// But an app that changes its bundle identifier leaves an entry nothing can
 /// match, and every such ghost ahead of a live entry inflates the index
-/// ``LayoutSolver/savedPositionByBaseID(for:in:)`` returns, pushing
+/// LayoutSolver/savedPositionByBaseID(for:in:) returns, pushing
 /// returning apps further right.
 ///
 /// A closed app comes back; a retired identity doesn't. This counts
@@ -71,7 +71,7 @@ final class StaleIdentifierLedger {
     /// Whether the given identifier should be left out of a plan.
     ///
     /// Canonicalizes here so callers can't check a different key than
-    /// ``recordApply(planned:matched:)`` recorded under.
+    /// recordApply(planned:matched:) recorded under.
     func isRetired(_ identifier: String) -> Bool {
         guard let count = missCounts[MenuBarItemTag.canonicalPersistentIdentifier(identifier)] else {
             return false
@@ -101,13 +101,12 @@ final class StaleIdentifierLedger {
     /// Call only from an apply that actually planned against the bar; an
     /// early return would count a skipped pass as evidence of absence.
     ///
-    /// - Parameters:
-    ///   - planned: Every identifier the layout asked for, control items
-    ///     excluded.
-    ///   - matched: The subset of `planned` that resolved to a live item.
+    /// planned: Every identifier the layout asked for, control items
+    /// excluded.
+    /// matched: The subset of planned that resolved to a live item.
     ///
-    /// - Returns: The identifiers newly retired by this apply, for logging.
-    ///   Already-retired identifiers are not returned again.
+    /// Returns the identifiers newly retired by this apply, for logging.
+    /// Already-retired identifiers are not returned again.
     @discardableResult
     func recordApply(planned: Set<String>, matched: Set<String>) -> Set<String> {
         guard !planned.isEmpty else {

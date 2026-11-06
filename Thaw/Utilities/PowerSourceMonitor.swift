@@ -11,7 +11,7 @@ import IOKit.ps
 
 // MARK: - PowerSourceMonitor
 
-/// Observes the system's power source and publishes a ``PowerState``
+/// Observes the system's power source and publishes a PowerState
 /// whenever it changes.
 ///
 /// Change notifications are delivered through an IOKit run-loop source on
@@ -42,7 +42,7 @@ final class PowerSourceMonitor: ObservableObject {
     /// Begins observing power source changes. Safe to call more than once;
     /// subsequent calls are no-ops while already running.
     func start() {
-        // Check both handles: if `IOPSNotificationCreateRunLoopSource` fails, the source
+        // Check both handles: if IOPSNotificationCreateRunLoopSource fails, the source
         // stays nil while the timer is scheduled, so a second call would leak a timer.
         guard runLoopSource == nil, safetyTimer == nil else { return }
 

@@ -76,13 +76,13 @@ final class AppState {
     /// Storage for internal observers.
     private var cancellables = Set<AnyCancellable>()
 
-    /// Observes `navigationState.isAppFrontmost` and `isSettingsPresented`.
+    /// Observes navigationState.isAppFrontmost and isSettingsPresented.
     private var navigationStateObservationTask: Task<Void, Never>?
 
-    /// Observes `hidEventManager.isDraggingMenuBarItem`.
+    /// Observes hidEventManager.isDraggingMenuBarItem.
     private var hidEventManagerObservationTask: Task<Void, Never>?
 
-    /// Observes `NSApplication.didChangeScreenParametersNotification`, debounced.
+    /// Observes NSApplication.didChangeScreenParametersNotification, debounced.
     private var screenParametersObservationTask: Task<Void, Never>?
 
     /// Track open windows to prevent duplicates
@@ -115,7 +115,7 @@ final class AppState {
     /// Diagnostic logger for the app state.
     let diagLog = DiagLog(category: "AppState")
 
-    /// `@ObservationIgnored`: the macro can't handle a `lazy` property, and no
+    /// @ObservationIgnored: the macro can't handle a lazy property, and no
     /// view reads it.
     @ObservationIgnored
     private lazy var setupTask = Task { @MainActor in
@@ -217,8 +217,8 @@ final class AppState {
 
     /// Performs app state setup.
     ///
-    /// - Parameter hasPermissions: If `true`, continues with setup normally.
-    ///   If `false`, prompts the user to grant permissions.
+    /// hasPermissions: If true, continues with setup normally.
+    /// If false, prompts the user to grant permissions.
     func performSetup(hasPermissions: Bool) {
         if hasPermissions {
             Task {
@@ -256,14 +256,11 @@ final class AppState {
         // Listen for changes to the active space. We need handle some special
         // cases that NSWorkspace.shared.notificationCenter seems to miss.
         //
-        // Special cases:
-        //
-        // * Changes to the frontmost application -- may indicate that a space
-        //   on another display was made active.
-        // * Left mouse down -- user may have clicked into a fullscreen space.
-        //   To account for variations in system timing, we publish a value
-        //   immediately upon receipt of the event, then publish another value
-        //   after a delay.
+        // A change of frontmost application may mean a space on another
+        // display was made active. A left mouse down may mean the user clicked
+        // into a fullscreen space; to account for variations in system timing,
+        // we publish a value immediately on the event, then another after a
+        // delay.
         NSWorkspace.shared.notificationCenter
             .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
             .discardMerge(NSWorkspace.shared.publisher(for: \.frontmostApplication))
@@ -336,7 +333,8 @@ final class AppState {
                 (navigationState.isAppFrontmost, navigationState.isSettingsPresented)
             }
             for await (isAppFrontmost, isSettingsPresented) in changes {
-                guard isAppFrontmost, isSettingsPresented else { continue }
+                // With app icons on, a capture only lights the screen recording indicator.
+                guard isAppFrontmost, isSettingsPresented, !self.settings.advanced.alwaysUseAppIconForMenuBarItems else { continue }
                 await self.imageCache.updateCacheWithoutChecks(sections: MenuBarSection.Name.allCases)
                 // Log cache status periodically (only if cache is getting full)
                 if self.imageCache.cacheSize > 15 {
@@ -353,7 +351,7 @@ final class AppState {
             }
         }
 
-        // Child models are `@Observable`, so views need no change forwarding.
+        // Child models are @Observable, so views need no change forwarding.
 
         // Notification isn't Sendable, so the stream carries Void and the
         // screen count is re-read per event.
@@ -468,9 +466,9 @@ final class AppState {
     /// The activation policy for a window the user opened: Settings,
     /// Permissions, onboarding, search or the Thaw Bar.
     ///
-    /// `nil` keeps the current policy. Any switch to `.regular`, however
+    /// nil keeps the current policy. Any switch to .regular, however
     /// brief, makes macOS add Thaw to the Dock's recent apps, so with the
-    /// Dock icon turned off the app stays `.accessory` and is only activated.
+    /// Dock icon turned off the app stays .accessory and is only activated.
     static nonisolated func activationPolicyForUserWindow(
         showDockIconWithSettings: Bool
     ) -> NSApplication.ActivationPolicy? {
@@ -522,7 +520,7 @@ final class AppState {
         (storedValue as? Bool) ?? Defaults.DefaultValue.showDockIconWithSettings
     }
 
-    /// Whether setup briefly switches to `.regular` to warm up activation.
+    /// Whether setup briefly switches to .regular to warm up activation.
     static nonisolated func warmsUpActivationPolicy(showDockIconWithSettings: Bool) -> Bool {
         showDockIconWithSettings
     }
@@ -530,8 +528,8 @@ final class AppState {
     /// Activates the app for a window the user opened, honouring the
     /// "Show Dock icon while Settings is open" setting.
     ///
-    /// - Parameter id: A window to make key and bring to the front when the
-    ///   app stays accessory. A regular activation already does that.
+    /// id: A window to make key and bring to the front when the
+    /// app stays accessory. A regular activation already does that.
     func activateForUserWindow(bringingToFront id: IceWindowIdentifier? = nil) {
         let policy = Self.activationPolicyForUserWindow(
             showDockIconWithSettings: showsDockIconWithUserWindows

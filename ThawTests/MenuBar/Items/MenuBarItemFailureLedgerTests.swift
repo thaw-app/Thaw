@@ -15,7 +15,7 @@ import Testing
 /// clears both; a failure that is not an unresponsive owner only extends the
 /// backoff.
 ///
-/// The ledger writes to `UserDefaults.standard`, so each test restores its key.
+/// The ledger writes to UserDefaults.standard, so each test restores its key.
 @MainActor
 @Suite("Menu bar item failure ledger", .serialized)
 final class MenuBarItemFailureLedgerTests {
@@ -30,7 +30,7 @@ final class MenuBarItemFailureLedgerTests {
     }
 
     /// Isolated so the non-Sendable snapshot is reachable here; the suite is
-    /// already `@MainActor`.
+    /// already @MainActor.
     @MainActor
     deinit {
         if let savedValue {
@@ -72,7 +72,7 @@ final class MenuBarItemFailureLedgerTests {
     }
 
     /// Records just enough unresponsive-owner failures to earn a mark. The
-    /// threshold is pinned by ``aThirdFailureMarksTheItem``.
+    /// threshold is pinned by aThirdFailureMarksTheItem.
     private func failUntilMarked(
         _ ledger: MenuBarItemFailureLedger,
         _ item: MenuBarItem,

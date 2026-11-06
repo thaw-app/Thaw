@@ -13,7 +13,7 @@ import Testing
 /// The display-wide setting sends every section. The always-hidden-only setting
 /// sends just always-hidden, so hidden still expands inline; reaching
 /// always-hidden inline would unfurl hidden too, since it sits left of hidden's
-/// control item. Notch overflow is in `NotchOverflowRevealTests`.
+/// control item. Notch overflow is in NotchOverflowRevealTests.
 @Suite("Thaw Bar section routing")
 struct ThawBarSectionRoutingTests {
     @Test(

@@ -26,7 +26,7 @@ class Permission: Identifiable {
         }
     }
 
-    /// Called after ``hasPermission`` changes, with the new value stored.
+    /// Called after hasPermission changes, with the new value stored.
     @ObservationIgnored
     var onChange: (() -> Void)?
 
@@ -80,7 +80,7 @@ class Permission: Identifiable {
         configureCancellables()
     }
 
-    /// Polls ``check`` on a timer until the permission is granted.
+    /// Polls check on a timer until the permission is granted.
     private func configureCancellables() {
         timerCancellable = Timer.publish(every: 3, tolerance: 0.5, on: .main, in: .default)
             .autoconnect()

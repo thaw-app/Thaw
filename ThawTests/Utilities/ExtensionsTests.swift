@@ -210,14 +210,14 @@ struct ExtensionsTests {
 
     // MARK: - Bundle
 
-    /// `Bundle`'s accessors are plain `Info.plist` lookups, but `displayName`
+    /// Bundle's accessors are plain Info.plist lookups, but displayName
     /// has a three-step fallback chain that is worth pinning down. Each case
     /// builds a throwaway bundle directory so the assertions never depend on
-    /// the test host's own `Info.plist`.
+    /// the test host's own Info.plist.
     @Suite("Bundle metadata")
     struct BundleMetadataTests {
-        /// Writes `info` as `Contents/Info.plist` inside a fresh
-        /// `<temp>/<uuid>/Test.bundle` directory and returns the bundle URL.
+        /// Writes info as Contents/Info.plist inside a fresh
+        /// <temp>/<uuid>/Test.bundle directory and returns the bundle URL.
         /// The caller is expected to delete the enclosing directory.
         private func makeBundleDirectory(info: [String: Any]) throws -> URL {
             let root = FileManager.default.temporaryDirectory
@@ -297,7 +297,7 @@ struct ExtensionsTests {
 
     // MARK: - OSAllocatedUnfairLock
 
-    /// `tryClaimOnce` exists so a continuation is resumed exactly once when a
+    /// tryClaimOnce exists so a continuation is resumed exactly once when a
     /// timeout and a callback race. The single-claimant case is the contract;
     /// the concurrent case is the reason the contract exists.
     @Suite("Single-shot claiming")
@@ -341,7 +341,7 @@ struct ExtensionsTests {
     // MARK: - Publisher
 
     /// The Combine helpers are all thin, but each one is wired into a live
-    /// pipeline in `MenuBarManager`, `ControlItem`, and `IceBarColorManager`,
+    /// pipeline in MenuBarManager, ControlItem, and IceBarColorManager,
     /// where a wrong arity (one event instead of one per element) or a dropped
     /// element would be invisible. Every case drives a real subscription.
     @MainActor
@@ -414,7 +414,7 @@ struct ExtensionsTests {
         }
 
         /// The variadic-tuple overload is the only way the codebase can
-        /// deduplicate a `combineLatest` pair, since tuples are not `Equatable`.
+        /// deduplicate a combineLatest pair, since tuples are not Equatable.
         @Test("Consecutive equal pairs are collapsed")
         func removeDuplicatesCollapsesEqualPairs() {
             let subject = PassthroughSubject<(Int, String), Never>()

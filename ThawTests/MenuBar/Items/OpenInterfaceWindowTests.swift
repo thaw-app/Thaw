@@ -9,7 +9,7 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Covers ``MenuBarItemManager/windowIsOpenInterface(ownerPID:layer:height:interfacePIDs:)``,
+/// Covers MenuBarItemManager/windowIsOpenInterface(ownerPID:layer:height:interfacePIDs:),
 /// the last-resort check for whether a temporarily shown item's menu is still
 /// open when no window was captured at click time.
 ///
@@ -82,7 +82,7 @@ struct OpenInterfaceWindowTests {
 
     // MARK: Which window levels count
 
-    /// Some menus sit a level below pop-up; ``WindowInfo/isMenuRelated`` allows the same slack.
+    /// Some menus sit a level below pop-up; WindowInfo/isMenuRelated allows the same slack.
     @Test("A window one level below pop-up counts")
     func oneLevelBelowPopUpCounts() {
         #expect(isOpenInterface(ownerPID: itemOwner, layer: popUpLevel - 1, interfacePIDs: [itemOwner]))
@@ -122,10 +122,10 @@ struct OpenInterfaceWindowTests {
     }
 }
 
-/// Covers ``MenuBarItemManager/interfaceWindowToTrack(among:interfacePIDs:)``,
+/// Covers MenuBarItemManager/interfaceWindowToTrack(among:interfacePIDs:),
 /// which picks the window a temporarily shown item's rehide check watches.
 ///
-/// A tracked window skips the grace period and the `unknown` budget, so tracking
+/// A tracked window skips the grace period and the unknown budget, so tracking
 /// a window that is not the menu drags the item home with the menu still open (#924).
 @Suite("Interface window to track")
 struct InterfaceWindowToTrackTests {
@@ -183,7 +183,7 @@ struct InterfaceWindowToTrackTests {
         #expect(tracked([incidental], pids: [itemOwner, menuOwner]) == nil)
     }
 
-    /// Tracking nothing leaves the reading `unknown`, which the grace period and
+    /// Tracking nothing leaves the reading unknown, which the grace period and
     /// bounded re-checks handle; better than answering from a non-menu window.
     @Test("Nothing worth tracking tracks nothing")
     func nothingQualifyingTracksNothing() {

@@ -15,7 +15,7 @@ import Testing
 @MainActor
 @Suite("Layout reset command", .serialized)
 struct LayoutResetCommandTests {
-    /// Runs `body` against a throwaway defaults suite.
+    /// Runs body against a throwaway defaults suite.
     private func withDefaults(_ body: (UserDefaults) throws -> Void) rethrows {
         let suiteName = "LayoutResetCommandTests.\(UUID().uuidString)"
         guard let suite = UserDefaults(suiteName: suiteName) else {
@@ -107,7 +107,7 @@ struct LayoutResetCommandTests {
     }
 
     /// The always-hidden divider has no seed value, and
-    /// `resetLayoutToFreshState()` leaves it alone too.
+    /// resetLayoutToFreshState() leaves it alone too.
     @Test("The always-hidden divider is left alone")
     func alwaysHiddenDividerIsLeftAlone() {
         withDefaults { _ in

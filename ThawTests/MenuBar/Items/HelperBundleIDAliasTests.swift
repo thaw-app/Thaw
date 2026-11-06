@@ -13,12 +13,12 @@ import Testing
 ///
 /// Some apps host their status item in a nested helper, so the namespace,
 /// saved position and name would name a process the user never installed
-/// (e.g. `at.obdev.littlesnitch.agent`).
+/// (e.g. at.obdev.littlesnitch.agent).
 ///
 /// These values are a stored format: changing one orphans saved positions.
 @Suite("Helper bundle ID aliases")
 struct HelperBundleIDAliasTests {
-    /// `at.obdev.littlesnitch.agent` owns the item; `at.obdev.littlesnitch`
+    /// at.obdev.littlesnitch.agent owns the item; at.obdev.littlesnitch
     /// is the installed app.
     @Test("The Little Snitch agent resolves to the Little Snitch app")
     func littleSnitchAgentResolvesToApp() {
@@ -38,7 +38,7 @@ struct HelperBundleIDAliasTests {
         )
     }
 
-    /// `com.microsoft.OneDrive-mac` looks like a suffixed variant, but it is
+    /// com.microsoft.OneDrive-mac looks like a suffixed variant, but it is
     /// the installed app's own identifier. Rewriting it orphans its saved
     /// position for good.
     @Test(

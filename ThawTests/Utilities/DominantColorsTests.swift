@@ -10,7 +10,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Exercises ``CGImage.dominantColors(maximumCount:alphaThreshold:)``, the
+/// Exercises CGImage.dominantColors(maximumCount:alphaThreshold:), the
 /// pixel-sampling front end of the Adaptive Gradient tint, against
 /// synthetic images with known pixel layouts.
 @Suite("Dominant color extraction")

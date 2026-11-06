@@ -14,7 +14,7 @@ extension MenuBarItemImageCache {
     /// Force-recaptures a section for a specific display, including off-screen
     /// (hidden / always-hidden) items via SkyLight.
     ///
-    /// For the Thaw Bar opening on another screen: ``updateCacheWithoutChecks``
+    /// For the Thaw Bar opening on another screen: updateCacheWithoutChecks
     /// skips off-screen items, and waiting for live refresh flashes the wrong tint.
     @MainActor
     func recaptureSection(
@@ -49,7 +49,7 @@ extension MenuBarItemImageCache {
         storeImages(for: screen.displayID, capturedTags: items.map(\.tag))
     }
 
-    /// Waits for, then claims, the live-refresh offscreen slot for `section`.
+    /// Waits for, then claims, the live-refresh offscreen slot for section.
     @MainActor
     private func awaitOffscreenRefreshSlot(for section: MenuBarSection.Name) async {
         let interval = Duration.seconds(
@@ -83,8 +83,8 @@ extension MenuBarItemImageCache {
     ///
     /// Call before ordering the panel front so it never paints another screen's icons.
     ///
-    /// - Returns: `true` when a background recapture is still needed (cold or
-    ///   incomplete warm restore).
+    /// Returns true when a background recapture is still needed (cold or
+    /// incomplete warm restore).
     @MainActor
     @discardableResult
     func prepareImagesForDisplay(_ displayID: CGDirectDisplayID, section: MenuBarSection.Name) -> Bool {
@@ -129,10 +129,10 @@ extension MenuBarItemImageCache {
         return !sectionHasCachedImages(section)
     }
 
-    /// Snapshots the tags a capture just produced for `displayID`.
+    /// Snapshots the tags a capture just produced for displayID.
     ///
-    /// Only the captured tags: `images` holds other sections' bitmaps, possibly
-    /// from another display. Entries gone from `images` are dropped.
+    /// Only the captured tags: images holds other sections' bitmaps, possibly
+    /// from another display. Entries gone from images are dropped.
     @MainActor
     func storeImages(
         for displayID: CGDirectDisplayID,
@@ -187,7 +187,7 @@ extension MenuBarItemImageCache {
         }
     }
 
-    /// Prepares icons for `displayID` and reports whether a fresh capture is needed.
+    /// Prepares icons for displayID and reports whether a fresh capture is needed.
     @MainActor
     func prepareImagesForThawBar(
         displayID: CGDirectDisplayID,

@@ -27,7 +27,7 @@ nonisolated struct IceGradient: Codable, Hashable {
     /// Returns a Cocoa representation of the gradient, converted to the
     /// given color space.
     ///
-    /// - Parameter colorSpace: The color space to convert the gradient to.
+    /// colorSpace: The color space to convert the gradient to.
     @MainActor
     func nsGradient(using colorSpace: NSColorSpace) -> NSGradient? {
         guard !stops.isEmpty else {
@@ -51,7 +51,7 @@ nonisolated struct IceGradient: Codable, Hashable {
     /// Returns a SwiftUI representation of the gradient, converted to the
     /// given color space.
     ///
-    /// - Parameter colorSpace: The color space to convert the gradient to.
+    /// colorSpace: The color space to convert the gradient to.
     @MainActor
     func swiftUIView(using colorSpace: Color.RGBColorSpace) -> some View {
         GeometryReader { geometry in
@@ -72,13 +72,12 @@ nonisolated struct IceGradient: Codable, Hashable {
     /// Returns the color at the given location in the gradient.
     ///
     /// This method does not simply return the color of the nearest color
-    /// stop. Instead, it computes the actual rendered color at `location`.
+    /// stop. Instead, it computes the actual rendered color at location.
     ///
-    /// - Parameters:
-    ///   - location: A value between 0 and 1 representing the location
-    ///     of the color to return.
-    ///   - colorSpace: The color space used to process the colors in the
-    ///     gradient. The returned color also uses this color space.
+    /// location: A value between 0 and 1 representing the location
+    /// of the color to return.
+    /// colorSpace: The color space used to process the colors in the
+    /// gradient. The returned color also uses this color space.
     @MainActor
     func color(at location: CGFloat, using colorSpace: CGColorSpace) -> CGColor? {
         guard
@@ -93,13 +92,13 @@ nonisolated struct IceGradient: Codable, Hashable {
     /// Returns the color at the given location in the gradient.
     ///
     /// This method does not simply return the color of the nearest color
-    /// stop. Instead, it computes the actual rendered color at `location`.
+    /// stop. Instead, it computes the actual rendered color at location.
     ///
     /// Uses extended Display P3 to process the colors and to create the result.
-    /// Prefer ``color(at:using:)`` if you need another color space.
+    /// Prefer color(at:using:) if you need another color space.
     ///
-    /// - Parameter location: A value between 0 and 1 representing the
-    ///   location of the color to return.
+    /// location: A value between 0 and 1 representing the
+    /// location of the color to return.
     @MainActor
     func color(at location: CGFloat) -> CGColor? {
         guard let space = Color.RGBColorSpace.displayP3.cgColorSpace else {
@@ -110,12 +109,11 @@ nonisolated struct IceGradient: Codable, Hashable {
 
     /// Returns the average color of the gradient.
     ///
-    /// - Parameters:
-    ///   - colorSpace: The color space used to process the colors in the
-    ///     gradient. The returned color also uses this color space. Must
-    ///     be an RGB color space, or this parameter is ignored. Pass `nil`
-    ///     to let the method decide the color space.
-    ///   - option: Options for computing the color.
+    /// colorSpace: The color space used to process the colors in the
+    /// gradient. The returned color also uses this color space. Must
+    /// be an RGB color space, or this parameter is ignored. Pass nil
+    /// to let the method decide the color space.
+    /// option: Options for computing the color.
     @MainActor
     func averageColor(using colorSpace: CGColorSpace? = nil, option: CGImage.ColorAveragingOption = []) -> CGColor? {
         guard !stops.isEmpty else {
@@ -160,7 +158,7 @@ nonisolated struct IceGradient: Codable, Hashable {
 
         // No sample contributed, so there's nothing to average. Dividing by zero
         // would return an all-NaN CGColor that callers treat as valid. Mirrors
-        // ``CGImage.averageColor``.
+        // CGImage.averageColor.
         guard count > 0 else {
             return nil
         }

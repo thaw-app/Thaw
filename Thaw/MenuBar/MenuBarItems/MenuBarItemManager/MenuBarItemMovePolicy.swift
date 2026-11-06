@@ -11,13 +11,13 @@ import Foundation
 // MARK: - Move Policy
 
 extension MenuBarItemManager {
-    /// The pure core of `move(item:to:)`.
+    /// The pure core of move(item:to:).
     ///
-    /// `move` posts events and reads the bar; what it decides lives here over
+    /// move posts events and reads the bar; what it decides lives here over
     /// plain values, so a field log's attempts can be replayed in a test.
     ///
-    /// Each attempt yields an ``Observation`` that
-    /// ``decide(after:state:configuration:)`` folds into ``State``. Stop
+    /// Each attempt yields an Observation that
+    /// decide(after:state:configuration:) folds into State. Stop
     /// reasons are specific because callers report them to the user.
     nonisolated enum MovePolicy {
         /// What one attempt observed.
@@ -25,8 +25,8 @@ extension MenuBarItemManager {
             /// The item was verified beside the target once the bar settled.
             case landed
             /// The owner answered the press and the release, but the item is
-            /// not beside the target. `revertedToStart` records a release that
-            /// put it exactly back where it started; `targetMinX` is where the
+            /// not beside the target. revertedToStart records a release that
+            /// put it exactly back where it started; targetMinX is where the
             /// target sits now.
             case displaced(revertedToStart: Bool, targetMinX: CGFloat?)
             /// The attempt threw before a landing could be judged.
@@ -56,7 +56,7 @@ extension MenuBarItemManager {
             case other
         }
 
-        /// What `move` does next.
+        /// What move does next.
         nonisolated enum Decision: Equatable {
             case succeed
             case retry
@@ -160,7 +160,7 @@ extension MenuBarItemManager {
             /// Whether the item names no owner of its own, so its events can
             /// only be delivered to the process that owns its window. Set for
             /// a Control Center generic slot with an unresolved source PID
-            /// (``MenuBarItem/ImmovabilityReason/unresolvedControlCenterPlaceholder``).
+            /// (MenuBarItem/ImmovabilityReason/unresolvedControlCenterPlaceholder).
             var itemOwnerIsUnattributable = false
             /// Consecutive silences from an unattributable owner that stop the
             /// move. Two: the second attempt is the source-anchored gesture,
@@ -184,7 +184,7 @@ extension MenuBarItemManager {
             var unattributableSilentRun = 0
             /// Whether any attempt's events displaced the item at all.
             var anyEventsSucceeded = false
-            /// The target's `minX` when the move was planned, then at the end
+            /// The target's minX when the move was planned, then at the end
             /// of every attempt that observed it.
             var targetMinXHistory: [CGFloat]
 
@@ -203,8 +203,8 @@ extension MenuBarItemManager {
             }
         }
 
-        /// Folds one attempt's observation into `state` and decides what
-        /// `move` does next.
+        /// Folds one attempt's observation into state and decides what
+        /// move does next.
         ///
         /// Check order matters: refusal (two reverted releases), then a moved
         /// target, then a retreat, and only then the attempt budget.
@@ -306,7 +306,7 @@ extension MenuBarItemManager {
             attempt <= 1 || anyEventsSucceeded || !itemIsControlItem
         }
 
-        /// Whether a move that has been running for `elapsed` may start
+        /// Whether a move that has been running for elapsed may start
         /// another attempt.
         ///
         /// Bounded attempts still add up; yield before the cursor watchdog and
@@ -316,7 +316,7 @@ extension MenuBarItemManager {
         }
 
         /// Maps an error thrown before posting, kept beside
-        /// ``decide(after:state:configuration:)``.
+        /// decide(after:state:configuration:).
         static func attemptFailure(for error: EventError) -> AttemptFailure {
             switch error {
             case .eventOperationTimeout, .itemResponseTimeout:
@@ -387,7 +387,7 @@ extension MenuBarItemManager {
         now - recordedAt < lifetime
     }
 
-    /// Records that macOS put `item` straight back after every release. While
+    /// Records that macOS put item straight back after every release. While
     /// the record stands, saved-order persistence keeps the intended slot
     /// instead of adopting the position left by the refusal.
     func noteRefusedMove(of item: MenuBarItem) {

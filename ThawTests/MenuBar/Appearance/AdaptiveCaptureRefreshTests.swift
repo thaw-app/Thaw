@@ -11,7 +11,7 @@ import Testing
 /// Covers what an appearance configuration asks the menu bar manager to sample,
 /// and what a change to it does to the running adaptive refresh.
 ///
-/// `.adaptive` and `.adaptiveGradient` are both adaptive, but only the
+/// .adaptive and .adaptiveGradient are both adaptive, but only the
 /// gradient renders from a palette. Treating them as one state leaves the bar
 /// on its average-color fallback until an unrelated poll fires.
 @Suite("Adaptive capture refresh")

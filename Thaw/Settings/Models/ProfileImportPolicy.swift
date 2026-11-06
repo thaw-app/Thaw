@@ -13,6 +13,13 @@ nonisolated enum ProfileImportPolicy {
     /// The most profiles one file may hold.
     static let maxEntries = 100
 
+    /// The longest Space or display label kept from a file; the manifest and the Space picker show it.
+    static let maxLabelLength = 256
+
+    static func cappedLabel(_ label: String?) -> String? {
+        label.map { String($0.prefix(maxLabelLength)) }
+    }
+
     enum ImportError: LocalizedError, Equatable {
         case tooManyProfiles(Int)
 

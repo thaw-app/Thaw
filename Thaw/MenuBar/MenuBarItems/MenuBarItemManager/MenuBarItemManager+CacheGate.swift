@@ -13,7 +13,7 @@ import Cocoa
 extension MenuBarItemManager {
     /// Records whether one specific cache attempt actually observed the menu
     /// bar. Layout-editor moves use this to distinguish an accepted cache pass
-    /// from one dropped by ``CacheGate`` while another pass was in flight.
+    /// from one dropped by CacheGate while another pass was in flight.
     @MainActor
     final class CacheAttempt {
         private(set) var didCompleteCycle = false
@@ -73,7 +73,7 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Serializes `cacheItemsRegardless` so a concurrent call can't snapshot
+    /// Serializes cacheItemsRegardless so a concurrent call can't snapshot
     /// positions mid-move and cache items in the wrong section.
     ///
     /// Concurrent calls are dropped; the next trigger picks up changes.

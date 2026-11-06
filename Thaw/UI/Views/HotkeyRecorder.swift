@@ -127,8 +127,8 @@ private final class HotkeyRecorderModel {
 
     let hotkey: Hotkey
 
-    /// `@ObservationIgnored`: the Observation macro cannot generate its
-    /// tracked-access init accessor for a `lazy` property.
+    /// @ObservationIgnored: the Observation macro cannot generate its
+    /// tracked-access init accessor for a lazy property.
     @ObservationIgnored
     private lazy var monitor = EventMonitor.local(for: .keyDown) { [weak self] event in
         guard let self else {

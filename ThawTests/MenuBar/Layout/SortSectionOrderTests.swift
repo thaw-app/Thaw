@@ -59,7 +59,7 @@ struct SortSectionOrderTests {
         #expect(LayoutSolver.sortedSectionIdentifiers([]) { $0.tag.title } == [])
     }
 
-    /// `applyProfileLayout` relaxes concealed order by default so background work
+    /// applyProfileLayout relaxes concealed order by default so background work
     /// leaves off-screen items alone; Sort A→Z enforces it so a concealed sort reaches the bar.
     @Test("A concealed-section sort plans moves only when enforced")
     func concealedSortPlansMovesOnlyWhenEnforced() {

@@ -8,8 +8,8 @@
 
 import SwiftUI
 
-/// The drag-to-arrange layout bars, shared by ``MenuBarLayoutSettingsPane``
-/// and ``SimpleModeSettingsPane``.
+/// The drag-to-arrange layout bars, shared by MenuBarLayoutSettingsPane
+/// and SimpleModeSettingsPane.
 struct LayoutBarsSection: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppState.self) private var appState: AppState
@@ -178,8 +178,8 @@ struct LayoutBarsSection: View {
     }
 }
 
-/// The layout reset flow, shared by ``MenuBarLayoutSettingsPane`` and
-/// ``SimpleModeSettingsPane``.
+/// The layout reset flow, shared by MenuBarLayoutSettingsPane and
+/// SimpleModeSettingsPane.
 struct LayoutResetControls: View {
     @Environment(AppState.self) private var appState: AppState
     let itemManager: MenuBarItemManager

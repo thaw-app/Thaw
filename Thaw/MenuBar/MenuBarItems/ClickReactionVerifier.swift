@@ -17,10 +17,8 @@ import Foundation
 /// so a delivered click proves nothing. Only a verified reaction may clear an
 /// unresponsive mark, or the item jitters through a retry loop every click.
 ///
-/// ## What counts as a reaction
-///
-/// - The owner put a new window on screen (menu, popover, panel).
-/// - The item's own window changed size or left the screen.
+/// A reaction is the owner putting a new window on screen (menu, popover,
+/// panel), or the item's own window changing size or leaving the screen.
 ///
 /// No reaction is not failure: a mute toggle can flip a glyph at fixed
 /// width. An unverified click can't clear a mark, but never earns one.
@@ -110,13 +108,13 @@ nonisolated enum ClickReactionVerifier {
     /// One look without waiting, for a caller that already blocked, such as
     /// an AX action that timed out.
     ///
-    /// - Returns: `nil` when nothing has been seen yet. Never
-    ///   ``Reaction/unobserved``, since it hasn't waited.
+    /// Returns nil when nothing has been seen yet. Never
+    /// Reaction/unobserved, since it hasn't waited.
     static func reactionSoFar(against snapshot: Snapshot) -> Reaction? {
         observe(snapshot)
     }
 
-    /// Returns `nil` when it's still too early to say.
+    /// Returns nil when it's still too early to say.
     private static func observe(_ snapshot: Snapshot) -> Reaction? {
         let newWindowIDs = Bridging.getWindowList(option: .onScreen)
             .filter { !snapshot.onScreenWindowIDs.contains($0) }
@@ -140,9 +138,8 @@ nonisolated enum ClickReactionVerifier {
     /// Picks the window that best represents what the click opened. Split
     /// out so it's testable without a window server.
     ///
-    /// - Parameters:
-    ///   - candidates: Windows that were not on screen at snapshot time.
-    ///   - pids: The processes whose windows count as a reaction.
+    /// candidates: Windows that were not on screen at snapshot time.
+    /// pids: The processes whose windows count as a reaction.
     static func interfaceWindow(
         among candidates: [WindowInfo],
         ownedBy pids: Set<pid_t>
@@ -160,9 +157,8 @@ nonisolated enum ClickReactionVerifier {
     ///
     /// Only size counts; the origin moves whenever the menu bar reflows.
     ///
-    /// - Parameters:
-    ///   - before: The item's bounds at snapshot time.
-    ///   - after: The item's bounds now, or `nil` if its window is gone.
+    /// before: The item's bounds at snapshot time.
+    /// after: The item's bounds now, or nil if its window is gone.
     static func itemChanged(from before: CGRect, to after: CGRect?) -> Bool {
         guard let after else {
             // Gone: removed or replaced, both by the owner.

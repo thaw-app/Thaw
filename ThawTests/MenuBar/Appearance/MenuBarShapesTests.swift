@@ -103,7 +103,7 @@ struct MenuBarShapesTests {
 
         @Test("No two shape kinds share a label")
         func localizedLabelsAreDistinct() {
-            // `LocalizedStringKey` is Equatable but not Hashable, so this
+            // LocalizedStringKey is Equatable but not Hashable, so this
             // cannot go through a Set.
             let labels = MenuBarShapeKind.allCases.map(\.localized)
             for (offset, label) in labels.enumerated() {
@@ -113,7 +113,7 @@ struct MenuBarShapesTests {
             }
         }
 
-        /// The decoder reads persisted `UserDefaults` data, so an unknown raw value must
+        /// The decoder reads persisted UserDefaults data, so an unknown raw value must
         /// fail loudly rather than fall back to a shape the user never chose.
         @Test("An out-of-range raw value is rejected rather than defaulted", arguments: [4, 99, -1])
         func decodingAnUnknownRawValueThrows(_ rawValue: Int) throws {

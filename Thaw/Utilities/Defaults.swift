@@ -12,9 +12,9 @@ import SwiftUI
 nonisolated enum Defaults {
     /// The store every accessor below reads and writes.
     ///
-    /// Production leaves it `.standard`. Tests point it at a scratch suite so they
-    /// don't rewrite the user's `com.stonerl.Thaw` domain, which per-key
-    /// snapshot/restore can't protect once tests run in parallel. `UserDefaults` is
+    /// Production leaves it .standard. Tests point it at a scratch suite so they
+    /// don't rewrite the user's com.stonerl.Thaw domain, which per-key
+    /// snapshot/restore can't protect once tests run in parallel. UserDefaults is
     /// thread-safe; the unchecked annotation covers only reassignment in test setup.
     static nonisolated(unsafe) var store: UserDefaults = .standard
 
@@ -65,7 +65,7 @@ nonisolated enum Defaults {
     }
 
     /// Retrieves the value for the given key, and, if it is
-    /// present, assigns it to the given `inout` parameter.
+    /// present, assigns it to the given inout parameter.
     static func ifPresent<Value>(key: Key, assign value: inout Value) {
         if let found = object(forKey: key) as? Value {
             value = found
@@ -266,39 +266,39 @@ nonisolated extension Defaults {
 
         /// The name each item last resolved to, used to label items during
         /// the window before source-PID resolution lands. Managed by
-        /// ``MenuBarItemNameMemory``; not exposed in Settings.
+        /// MenuBarItemNameMemory; not exposed in Settings.
         case menuBarItemResolvedNames = "MenuBarItemResolvedNames"
 
         // MARK: Internal (Event Delivery)
 
         /// Items whose owners have recently failed to answer synthetic
         /// events, keyed by namespace and title. Managed by
-        /// ``UnresponsiveItemStore``; not exposed in Settings.
+        /// UnresponsiveItemStore; not exposed in Settings.
         case unresponsiveMenuBarItems = "UnresponsiveMenuBarItems"
 
         /// The app build the persisted unresponsive-item marks were recorded
         /// against. A change drops the marks, so a fix that makes a
         /// previously stuck item movable is not hidden behind the two-week
-        /// mark lifetime. Managed by ``MenuBarItemFailureLedger``.
+        /// mark lifetime. Managed by MenuBarItemFailureLedger.
         case unresponsiveMenuBarItemsBuild = "UnresponsiveMenuBarItemsBuild"
 
         // MARK: Internal (Layout Identity)
 
         /// How many consecutive applies each saved identifier has been
         /// planned for without matching a live item, keyed by canonical
-        /// identifier. Managed by ``StaleIdentifierLedger``; not exposed in
+        /// identifier. Managed by StaleIdentifierLedger; not exposed in
         /// Settings.
         case staleIdentifierMissCounts = "StaleIdentifierMissCounts"
 
         /// The app build the persisted miss counts were accumulated under. A
         /// change drops them, so an improvement to identity resolution is not
         /// hidden behind counts earned against the old behavior. Managed by
-        /// ``StaleIdentifierLedger``.
+        /// StaleIdentifierLedger.
         case staleIdentifierMissCountsBuild = "StaleIdentifierMissCountsBuild"
 
         /// The app build whose pruning rules were last applied to the profile
         /// files on disk. Managed by
-        /// ``ProfileManager/repairPersistedLayoutsIfNeeded()``; not exposed in
+        /// ProfileManager/repairPersistedLayoutsIfNeeded(); not exposed in
         /// Settings.
         case profileLayoutRepairBuild = "ProfileLayoutRepairBuild"
 
@@ -337,6 +337,10 @@ nonisolated extension Defaults {
 
         case hasSeenOnboarding
 
+        // MARK: Homebrew Tap Notice
+
+        case hasSeenHomebrewTapNotice
+
         // MARK: Settings URI
 
         case settingsURIEnabled = "SettingsURIEnabled"
@@ -357,8 +361,8 @@ nonisolated extension Defaults {
         // MARK: Focus Filter
 
         /// Profile ID requested by the most recent Focus Filter
-        /// activation. Written by ``ThawFocusFilter`` and consumed by
-        /// ``ProfileManager/applyFocusFilterProfile()``.
+        /// activation. Written by ThawFocusFilter and consumed by
+        /// ProfileManager/applyFocusFilterProfile().
         case focusFilterRequestedProfileID = "FocusFilterRequestedProfileID"
 
         // MARK: Hidden Diagnostic Flags
@@ -372,7 +376,7 @@ nonisolated extension Defaults {
         /// Milliseconds of input inactivity required before an *automatic*
         /// bulk apply starts issuing its move sequence.
         ///
-        /// `inputPauseThresholdMs` gates each move; this gates the batch. A batch hides
+        /// inputPauseThresholdMs gates each move; this gates the batch. A batch hides
         /// the cursor for its whole length, so starting mid-interaction fights the user
         /// move by move. Set 0 to fall back to the per-move pause alone.
         ///
@@ -380,7 +384,7 @@ nonisolated extension Defaults {
         case bulkApplyIdleThresholdMs = "bulkApplyIdleThresholdMs"
 
         /// Maximum milliseconds an automatic bulk apply waits for the idle
-        /// window described by ``bulkApplyIdleThresholdMs``.
+        /// window described by bulkApplyIdleThresholdMs.
         ///
         /// The wait defers, never cancels: a user who never stops moving would otherwise
         /// starve the apply forever. After the cap the batch proceeds. Ignored when the
@@ -405,8 +409,8 @@ nonisolated extension Defaults {
         /// The escape hatch. False stands down the late-arrival re-sort and the
         /// saved-layout restore; applying a profile still works.
         ///
-        /// Try ``bulkApplyIdleThresholdMs``, ``enforceConcealedSectionOrder``, and the
-        /// unfinished-batch rationing in `MoveCircuitBreaker.bulkApplyPermitted` first.
+        /// Try bulkApplyIdleThresholdMs, enforceConcealedSectionOrder, and the
+        /// unfinished-batch rationing in MoveCircuitBreaker.bulkApplyPermitted first.
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: true.
         case automaticArrangementEnabled = "automaticArrangementEnabled"
@@ -415,11 +419,11 @@ nonisolated extension Defaults {
         /// the item's *window* rather than the app that owns the *item*.
         ///
         /// On macOS 26 Control Center hosts every status item window, so the window's CG
-        /// owner is Control Center while `sourcePID` names the item's app. Events sent to
-        /// `sourcePID` reach a process that doesn't own the dragged window, which caused
-        /// the `itemResponseTimeout` failures (#900, #923, #924). Targeting the host also
+        /// owner is Control Center while sourcePID names the item's app. Events sent to
+        /// sourcePID reach a process that doesn't own the dragged window, which caused
+        /// the itemResponseTimeout failures (#900, #923, #924). Targeting the host also
         /// lets a slot with no resolved owner move, so
-        /// ``MenuBarItem/ImmovabilityReason/unresolvedControlCenterPlaceholder`` stops
+        /// MenuBarItem/ImmovabilityReason/unresolvedControlCenterPlaceholder stops
         /// applying while this is on.
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: true.
@@ -446,20 +450,20 @@ nonisolated extension Defaults {
         /// Center. The teleport relies on Control Center relocating a passive item; with a
         /// cold source-app scene the drop can finish while the app never commits, and
         /// Control Center restores the autosaved slot (the "revert"). Pressing on the item
-        /// makes the app start the drag itself (`NSStatusItemStartDragAction`) with a warm
+        /// makes the app start the drag itself (NSStatusItemStartDragAction) with a warm
         /// scene. Used only for on-screen paths inside one safe notch segment; parked and
         /// cross-notch endpoints use named teleports, and invalid or cross-display geometry
         /// is rejected. Inferred from field logs, not confirmed on a live bar, so opt-in.
         ///
         /// Enable with:
-        ///   defaults write com.stonerl.Thaw faithfulDragMoves -bool YES
+        /// defaults write com.stonerl.Thaw faithfulDragMoves -bool YES
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: false.
         case faithfulDragMoves = "faithfulDragMoves"
 
         /// Seconds an accessibility message may block before it fails.
         ///
-        /// Applied to every element AXSwift6 creates. `0` restores the
+        /// Applied to every element AXSwift6 creates. 0 restores the
         /// system default of six seconds.
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: 1.0.

@@ -12,7 +12,7 @@ import os.lock
 import XPC
 
 extension MenuBarCaptureService {
-    /// A connection to the `MenuBarCaptureService` XPC service.
+    /// A connection to the MenuBarCaptureService XPC service.
     final class Connection: Sendable {
         static let shared = Connection()
 

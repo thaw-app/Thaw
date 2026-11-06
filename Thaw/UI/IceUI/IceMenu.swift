@@ -16,12 +16,11 @@ struct IceMenu<Title: View, Label: View, Content: View>: View {
 
     /// Creates a menu with the given content, title, and label.
     ///
-    /// - Parameters:
-    ///   - content: A group of menu items.
-    ///   - title: A view to display inside the menu.
-    ///   - label: A view to display as an external label for the menu.
-    ///   - primaryAction: An optional action invoked when the menu button is
-    ///     clicked (items still open via the menu indicator).
+    /// content: A group of menu items.
+    /// title: A view to display inside the menu.
+    /// label: A view to display as an external label for the menu.
+    /// primaryAction: An optional action invoked when the menu button is
+    /// clicked (items still open via the menu indicator).
     init(
         primaryAction: (() -> Void)? = nil,
         @ViewBuilder content: () -> Content,
@@ -36,10 +35,9 @@ struct IceMenu<Title: View, Label: View, Content: View>: View {
 
     /// Creates a menu with the given content, title, and label key.
     ///
-    /// - Parameters:
-    ///   - labelKey: A string key for the menu's external label.
-    ///   - content: A group of menu items.
-    ///   - title: A view to display inside the menu.
+    /// labelKey: A string key for the menu's external label.
+    /// content: A group of menu items.
+    /// title: A view to display inside the menu.
     init(
         _ labelKey: LocalizedStringKey,
         @ViewBuilder content: () -> Content,

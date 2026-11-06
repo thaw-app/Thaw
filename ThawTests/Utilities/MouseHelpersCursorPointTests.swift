@@ -145,19 +145,16 @@ struct MouseHelpersCursorPointTests {
         ))
     }
 
-    /// Frontmost-app triggers move without hiding the cursor. They leave an
-    /// on-screen warp alone, as before, but must undo an off-display event.
-    @Test("A move without cursor ownership restores only after off-display events")
-    func moveWithoutOwnershipRestoresOnlyOffDisplay() {
-        #expect(!MouseHelpers.shouldRestoreSavedCursorPosition(
-            physicalPointerInputOccurred: false,
-            postedEventsOffEveryDisplay: false,
-            tookCursorOwnership: false
-        ))
+    /// Frontmost-app triggers move without hiding the cursor, and an on-screen press left it at the top right.
+    @Test("A move with no user movement puts the cursor back, a move the user moved during keeps it")
+    func restoreFollowsUserMovement() {
         #expect(MouseHelpers.shouldRestoreSavedCursorPosition(
+            physicalPointerInputOccurred: false,
+            postedEventsOffEveryDisplay: false
+        ))
+        #expect(!MouseHelpers.shouldRestoreSavedCursorPosition(
             physicalPointerInputOccurred: true,
-            postedEventsOffEveryDisplay: true,
-            tookCursorOwnership: false
+            postedEventsOffEveryDisplay: false
         ))
     }
 }

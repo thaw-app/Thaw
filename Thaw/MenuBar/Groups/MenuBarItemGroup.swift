@@ -12,19 +12,19 @@ import Foundation
 
 /// A user-authored group of menu bar items.
 ///
-/// Unlike the automatic clusters ``MenuBarItemGrouping`` derives per bundle,
+/// Unlike the automatic clusters MenuBarItemGrouping derives per bundle,
 /// a user group has explicit identity, can span bundles, and is stored.
 nonisolated struct MenuBarItemGroup: Codable, Equatable, Sendable, Identifiable {
     /// Survives renames, membership changes, and having no live members.
     let id: UUID
 
-    /// `nil` derives a name from the members at display time, so an app
+    /// nil derives a name from the members at display time, so an app
     /// rename is picked up.
     var name: String?
 
-    /// Canonical `tagIdentifier` strings, in authored left-to-right order.
+    /// Canonical tagIdentifier strings, in authored left-to-right order.
     ///
-    /// Canonicalized with ``MenuBarItemTag/canonicalPersistentIdentifiers(_:)``,
+    /// Canonicalized with MenuBarItemTag/canonicalPersistentIdentifiers(_:),
     /// the same function as the persisted section order. If they disagree,
     /// membership silently dissolves for apps whose titles churn (iStat Menus).
     private(set) var memberIdentifiers: [String]
@@ -45,7 +45,7 @@ nonisolated struct MenuBarItemGroup: Codable, Equatable, Sendable, Identifiable 
         self.isCollapsed = isCollapsed
     }
 
-    /// Trims a name and maps blank to `nil`, like `MenuBarItem.customName`.
+    /// Trims a name and maps blank to nil, like MenuBarItem.customName.
     static func normalizedName(_ name: String?) -> String? {
         guard let trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines),
               !trimmed.isEmpty
@@ -55,7 +55,7 @@ nonisolated struct MenuBarItemGroup: Codable, Equatable, Sendable, Identifiable 
         return trimmed
     }
 
-    /// Inserts `identifier` at `index` (appending when `nil`), removing any
+    /// Inserts identifier at index (appending when nil), removing any
     /// existing occurrence first so a member can be repositioned in one call.
     mutating func insert(_ identifier: String, at index: Int? = nil) {
         let identifier = MenuBarItemTag.canonicalPersistentIdentifier(identifier)
@@ -131,12 +131,10 @@ nonisolated struct MenuBarItemGroupSet: Codable, Equatable, Sendable {
         self = normalized()
     }
 
-    /// Re-establishes every structural invariant:
-    ///
-    /// - member identifiers are canonicalized and de-duplicated within a group;
-    /// - an identifier belongs to at most one group (earlier group wins);
-    /// - a group left with fewer than two *stored* members is dropped;
-    /// - names are trimmed, blank becoming `nil`.
+    /// Re-establishes every structural invariant: member identifiers are
+    /// canonicalized and de-duplicated within a group; an identifier belongs to
+    /// at most one group (earlier group wins); a group left with fewer than two
+    /// stored members is dropped; names are trimmed, blank becoming nil.
     ///
     /// Prune on stored members, never on resolvable ones, or quitting an app
     /// deletes the user's group.
@@ -168,7 +166,7 @@ nonisolated struct MenuBarItemGroupSet: Codable, Equatable, Sendable {
         )
     }
 
-    /// Bypasses `init`'s normalization so `normalized()` cannot recurse.
+    /// Bypasses init's normalization so normalized() cannot recurse.
     private init(
         uncheckedVersion: Int,
         groups: [MenuBarItemGroup],
@@ -196,8 +194,8 @@ nonisolated struct MenuBarItemGroupSet: Codable, Equatable, Sendable {
 
     // MARK: Mutations
 
-    /// Creates a group from `memberIdentifiers`, stealing any of them from the
-    /// groups that currently hold them. Returns `nil` when fewer than two
+    /// Creates a group from memberIdentifiers, stealing any of them from the
+    /// groups that currently hold them. Returns nil when fewer than two
     /// distinct identifiers remain after canonicalization.
     @discardableResult
     mutating func createGroup(name: String?, memberIdentifiers: [String]) -> MenuBarItemGroup? {
@@ -220,7 +218,7 @@ nonisolated struct MenuBarItemGroupSet: Codable, Equatable, Sendable {
     }
 
     /// Removes a member. A group that drops below two members dissolves, which
-    /// `normalized()` handles.
+    /// normalized() handles.
     mutating func removeMember(_ identifier: String) {
         removeFromAllGroups(identifier)
         self = normalized()

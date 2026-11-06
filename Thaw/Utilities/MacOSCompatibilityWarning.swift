@@ -9,7 +9,7 @@ import AppKit
 
 enum MacOSCompatibilityWarning {
     /// The first macOS this build doesn't support, and the one the rewrite
-    /// targets. On it, ``UpdateChannel/beta`` also takes the rewrite's alpha
+    /// targets. On it, UpdateChannel/beta also takes the rewrite's alpha
     /// builds, so the channel the alert switches to always reaches one.
     static nonisolated let firstUnsupportedMajorVersion = 27
 
@@ -34,9 +34,9 @@ enum MacOSCompatibilityWarning {
         let action: Action
     }
 
-    /// The prompt for a system, or `nil` when it's supported.
+    /// The prompt for a system, or nil when it's supported.
     ///
-    /// `canSubscribe` says whether an updates manager reached the call. The copy
+    /// canSubscribe says whether an updates manager reached the call. The copy
     /// names the running macOS, since the warning fires on every release from the
     /// unsupported one onward.
     static nonisolated func prompt(

@@ -46,7 +46,7 @@ nonisolated enum ScreenCapture {
     /// capture permissions.
     ///
     /// This function caches its initial result and returns it on subsequent
-    /// calls. Pass `true` to the `reset` parameter to replace the cached
+    /// calls. Pass true to the reset parameter to replace the cached
     /// result with a newly computed value.
     static func cachedCheckPermissions(reset: Bool = false) -> Bool {
         enum Context {
@@ -87,13 +87,12 @@ nonisolated enum ScreenCapture {
     /// Captures a composite image of an array of windows.
     ///
     /// The windows are composited from front to back, according to the order
-    /// of the `windowIDs` parameter.
+    /// of the windowIDs parameter.
     ///
-    /// - Parameters:
-    ///   - windowIDs: The identifiers of the windows to capture.
-    ///   - screenBounds: The bounds to capture, specified in screen coordinates.
-    ///     Pass `nil` to capture the minimum rectangle that encloses the windows.
-    ///   - option: Options that specify which parts of the windows are captured.
+    /// windowIDs: The identifiers of the windows to capture.
+    /// screenBounds: The bounds to capture, specified in screen coordinates.
+    /// Pass nil to capture the minimum rectangle that encloses the windows.
+    /// option: Options that specify which parts of the windows are captured.
     static func captureWindows(with windowIDs: [CGWindowID], screenBounds: CGRect? = nil, option: CGWindowImageOption = []) -> CGImage? {
         // SkyLight instead of CGWindowListCreateImageFromArray, which is unavailable on
         // macOS 26+. SCK can't capture offscreen menu bar items or windows in other Spaces.
@@ -102,11 +101,10 @@ nonisolated enum ScreenCapture {
 
     /// Captures an image of a window.
     ///
-    /// - Parameters:
-    ///   - windowID: The identifier of the window to capture.
-    ///   - screenBounds: The bounds to capture, specified in screen coordinates.
-    ///     Pass `nil` to capture the minimum rectangle that encloses the window.
-    ///   - option: Options that specify which parts of the window are captured.
+    /// windowID: The identifier of the window to capture.
+    /// screenBounds: The bounds to capture, specified in screen coordinates.
+    /// Pass nil to capture the minimum rectangle that encloses the window.
+    /// option: Options that specify which parts of the window are captured.
     static func captureWindow(with windowID: CGWindowID, screenBounds: CGRect? = nil, option: CGWindowImageOption = []) -> CGImage? {
         captureWindows(with: [windowID], screenBounds: screenBounds, option: option)
     }
@@ -129,13 +127,12 @@ nonisolated enum ScreenCapture {
 
     /// Captures a composite image of all windows below the specified window using ScreenCaptureKit.
     ///
-    /// - Parameters:
-    ///   - windowID: The identifier of the window to exclude (capture everything below it).
-    ///   - screenBounds: The region in Core Graphics global display coordinates
-    ///     (top-left origin, as `CGDisplayBounds(_:)` returns). An AppKit rect from
-    ///     `NSScreen.frame` silently captures the mirrored band instead (#1033).
-    ///   - displayID: The display to capture from.
-    /// - Returns: The captured image, or nil if capture failed.
+    /// windowID: The identifier of the window to exclude (capture everything below it).
+    /// screenBounds: The region in Core Graphics global display coordinates
+    /// (top-left origin, as CGDisplayBounds(_:) returns). An AppKit rect from
+    /// NSScreen.frame silently captures the mirrored band instead (#1033).
+    /// displayID: The display to capture from.
+    /// Returns the captured image, or nil if capture failed.
     static func captureScreenBelowWindow(
         excludingWindowID windowID: CGWindowID,
         screenBounds: CGRect,
@@ -184,7 +181,7 @@ nonisolated enum ScreenCapture {
         configuration.showsCursor = false
         // Pin 32BGRA so the buffer matches on SDR and EDR displays; an HDR display can
         // otherwise return a 10-bit buffer that renders differently. Don't set
-        // `colorSpaceName`: it triggers a CoreGraphics tone-mapping pass that clips color.
+        // colorSpaceName: it triggers a CoreGraphics tone-mapping pass that clips color.
         configuration.pixelFormat = kCVPixelFormatType_32BGRA
         configuration.width = Int((screenBounds.width * scale).rounded())
         configuration.height = Int((screenBounds.height * scale).rounded())
@@ -227,7 +224,7 @@ nonisolated enum ScreenCapture {
         return image
     }
 
-    /// Shareable content via `ShareableContentCache`: calls within `maxAge` share one
+    /// Shareable content via ShareableContentCache: calls within maxAge share one
     /// fetch, since one capture tick can issue several full enumerations.
     static func getShareableContent(maxAge: Duration = .milliseconds(150)) async throws -> SCShareableContent {
         let snapshot = try await shareableContentCache.content(
@@ -239,10 +236,10 @@ nonisolated enum ScreenCapture {
 
     private static let shareableContentCache = ShareableContentCache<ShareableContentSnapshot>()
 
-    /// Performs the underlying enumeration for ``getShareableContent(maxAge:)``
+    /// Performs the underlying enumeration for getShareableContent(maxAge:)
     /// on a cache miss.
     ///
-    /// No cancellation handler: `awaitWithoutCancelling` shields the shared fetch
+    /// No cancellation handler: awaitWithoutCancelling shields the shared fetch
     /// from caller cancellation, so one would never fire.
     private static func fetchShareableContentUncached() async throws -> ShareableContentSnapshot {
         let content = try await SCShareableContent.current

@@ -95,7 +95,7 @@ final class MenuBarSearchModel {
         let windowIDs = [menuBarWindow.windowID, wallpaperWindow.windowID]
         let bounds = withMutableCopy(of: wallpaperWindow.bounds) { $0.size.height = 1 }
 
-        // Stamp the generation before suspending; see `captureGeneration`.
+        // Stamp the generation before suspending; see captureGeneration.
         captureGeneration += 1
         let generation = captureGeneration
 

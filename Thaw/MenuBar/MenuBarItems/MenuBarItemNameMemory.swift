@@ -14,22 +14,20 @@ import Foundation
 /// The remembered name covers that gap. Display only: identity, movability,
 /// and layout still wait for the real source PID.
 ///
-/// A wrong name is worse than a generic one; see ``isEligible(_:)``.
+/// A wrong name is worse than a generic one; see isEligible(_:).
 ///
-/// `nonisolated` to match `MenuBarItem/autoDetectedName`, and reads user
-/// defaults directly as `MenuBarItem/customName` does.
+/// nonisolated to match MenuBarItem/autoDetectedName, and reads user
+/// defaults directly as MenuBarItem/customName does.
 nonisolated enum MenuBarItemNameMemory {
     /// Only bounds growth over years of installs; a typical bar has ~25 items.
     private static let capacity = 512
 
     /// Whether an item's name may be remembered and restored.
     ///
-    /// Refuses:
-    ///
-    /// - UUID namespaces, which macOS reassigns every session.
-    /// - Control Center's `Item-N` slots, whose key reflects this boot's
-    ///   agent launch order, not an identity. A restored name could label
-    ///   one app's icon with another's.
+    /// Refuses UUID namespaces, which macOS reassigns every session, and
+    /// Control Center's Item-N slots, whose key reflects this boot's agent
+    /// launch order, not an identity. A restored name could label one app's
+    /// icon with another's.
     static func isEligible(_ item: MenuBarItem) -> Bool {
         guard case .string = item.tag.namespace else {
             return false
@@ -37,7 +35,7 @@ nonisolated enum MenuBarItemNameMemory {
         return !item.tag.isControlCenterGenericItem && !item.isControlItem
     }
 
-    /// The name the item resolved to on an earlier pass or launch, or `nil`
+    /// The name the item resolved to on an earlier pass or launch, or nil
     /// when nothing was remembered for it.
     static func rememberedName(for item: MenuBarItem) -> String? {
         guard isEligible(item) else {
@@ -51,7 +49,7 @@ nonisolated enum MenuBarItemNameMemory {
     ///
     /// Skips items without a running source application, whose name is the
     /// generic fallback. Checks the app rather than the PID because that's
-    /// what `MenuBarItem/autoDetectedName` checks.
+    /// what MenuBarItem/autoDetectedName checks.
     static func remember(_ items: [MenuBarItem]) {
         var names = Defaults.dictionary(forKey: .menuBarItemResolvedNames) as? [String: String] ?? [:]
         let before = names
@@ -76,7 +74,7 @@ nonisolated enum MenuBarItemNameMemory {
         Defaults.set(names, forKey: .menuBarItemResolvedNames)
     }
 
-    /// Derived exactly as `MenuBarItemFailureLedger` derives its key, so both
+    /// Derived exactly as MenuBarItemFailureLedger derives its key, so both
     /// agree on what counts as the same item.
     private static func key(for item: MenuBarItem) -> String {
         MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)

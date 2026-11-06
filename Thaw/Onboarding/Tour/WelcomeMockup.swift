@@ -10,7 +10,7 @@ import Observation
 import SwiftUI
 
 /// SF Symbol stand-ins for menu bar glyphs, one array per orbit ring. Real
-/// app icons would need Accessibility, since `CGWindowListCopyWindowInfo` no
+/// app icons would need Accessibility, since CGWindowListCopyWindowInfo no
 /// longer lists status items as separate windows.
 ///
 /// No "bluetooth": it isn't an SF Symbol, so it silently renders nothing.
@@ -98,8 +98,8 @@ private struct OrbitingGlyph: View {
 
 /// One ring of glyphs with its own radius, speed, direction, and squash.
 ///
-/// Rotation comes from `TimelineView` elapsed time. Animating an angle from 0
-/// to 360 with `withAnimation` stays frozen, since both endpoints are equal.
+/// Rotation comes from TimelineView elapsed time. Animating an angle from 0
+/// to 360 with withAnimation stays frozen, since both endpoints are equal.
 private struct OrbitRing: View {
     let symbols: [String]
     let glyphSize: CGFloat
@@ -156,7 +156,7 @@ private struct OrbitRing: View {
 }
 
 /// The welcome slide's mockup. Glyphs float out or collapse behind the icon
-/// as `model.itemsHidden` changes; the icon toggles it.
+/// as model.itemsHidden changes; the icon toggles it.
 struct ThawWelcomeMockup: View {
     let model: ThawWelcomeModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

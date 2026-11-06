@@ -35,7 +35,7 @@ struct IceForm<Content: View>: View {
         .accessibilityElement(children: .contain)
     }
 
-    /// Extra inset so grouped cards stay near ``SettingsDetailLayout/columnMaxWidth``
+    /// Extra inset so grouped cards stay near SettingsDetailLayout/columnMaxWidth
     /// on wide windows without pinning the scrollbar to that column.
     private var readingGutter: CGFloat {
         let available = formWidth - (SettingsDetailLayout.titleHorizontalInset * 2)

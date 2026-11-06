@@ -50,12 +50,11 @@ extension View {
     /// Returns a view that performs the given action when events corresponding
     /// to the given event type mask are received.
     ///
-    /// - Parameters:
-    ///   - mask: An event type mask specifying which events to monitor.
-    ///   - isEnabled: A Boolean value that determines whether the event monitor
-    ///     is enabled.
-    ///   - action: An action to perform when the event monitor receives events
-    ///     corresponding to `mask`.
+    /// mask: An event type mask specifying which events to monitor.
+    /// isEnabled: A Boolean value that determines whether the event monitor
+    /// is enabled.
+    /// action: An action to perform when the event monitor receives events
+    /// corresponding to mask.
     func localEventMonitor(mask: NSEvent.EventTypeMask, isEnabled: Bool = true, action: @escaping (NSEvent) -> NSEvent?) -> some View {
         modifier(LocalEventMonitorModifier(mask: mask, isEnabled: .constant(isEnabled), action: action))
     }

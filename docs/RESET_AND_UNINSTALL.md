@@ -27,7 +27,7 @@ This puts every setting back to its default. Your saved profiles are kept. It ca
 | Version | Where |
 |---|---|
 | Thaw 3 | **Settings → Troubleshooting → Reset Thaw…** |
-| Thaw 2 | **Settings → Advanced → Reset Thaw** |
+| Thaw 2 | **Settings → Troubleshooting → Reset Thaw** |
 
 ## More repairs in Thaw 3
 
@@ -38,7 +38,6 @@ This puts every setting back to its default. Your saved profiles are kept. It ca
 | An app's item is gone | Restore Missing Items… | Brings items back without touching your layout |
 | Apple's own items misbehave | Reset Control Center… | Quits Control Center and deletes its preference files so they rebuild |
 | Items will not stay where you put them | Reset Positions… | Deletes the layout macOS saved and restarts the menu bar. A backup is saved first. |
-| Icons look stale | Quit and Clear Cache… | Deletes Thaw's cache folder, then quits |
 | A permission is stuck | Reset Permissions… | Clears Accessibility and Screen Recording for Thaw, then quits so you can grant them again |
 
 ## Uninstall
@@ -51,6 +50,8 @@ This puts every setting back to its default. Your saved profiles are kept. It ca
    ```sh
    brew uninstall thaw
    brew uninstall thaw@beta
+   brew uninstall thaw-app/tap/thaw@2
+   brew uninstall thaw-app/tap/thaw@2-beta
    ```
 
    Without Homebrew, drag Thaw from Applications to the Trash.

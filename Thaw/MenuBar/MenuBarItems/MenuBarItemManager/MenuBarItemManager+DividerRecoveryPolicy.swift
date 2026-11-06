@@ -152,9 +152,9 @@ extension MenuBarItemManager {
     /// What a divider rebuild should stamp, given the bar it is rebuilding
     /// onto and the positions currently on disk.
     ///
-    /// - An empty bar takes the fresh-install seed.
-    /// - A populated, correctly ordered bar keeps its stored position.
-    /// - An inverted one gets a repaired position; keeping it survived relaunch (#978).
+    /// An empty bar takes the fresh-install seed, and a populated, correctly
+    /// ordered bar keeps its stored position. An inverted one gets a repaired
+    /// position; keeping it survived relaunch (#978).
     static nonisolated func seedForRebuiltDivider(
         managedItemCount: Int,
         storedPositions: StoredDividerPositions

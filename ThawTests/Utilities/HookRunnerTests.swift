@@ -9,13 +9,13 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers `HookRunner`, which launches user-supplied profile-apply scripts.
+/// Covers HookRunner, which launches user-supplied profile-apply scripts.
 ///
 /// Every case runs a real subprocess against a script in a per-test
 /// temporary directory, since the executable-bit check, osascript routing,
 /// context environment and timeout race only exist at the process boundary.
-/// `osascriptPath` is injected so the AppleScript route needs no real
-/// interpreter or `.scpt` compilation.
+/// osascriptPath is injected so the AppleScript route needs no real
+/// interpreter or .scpt compilation.
 @MainActor
 @Suite("Profile-apply hook execution")
 final class HookRunnerTests {
@@ -33,7 +33,7 @@ final class HookRunnerTests {
 
     // MARK: - Helpers
 
-    /// Writes `body` into the temp directory, optionally marking it
+    /// Writes body into the temp directory, optionally marking it
     /// executable, and returns its path.
     @discardableResult
     private func writeScript(
@@ -54,7 +54,7 @@ final class HookRunnerTests {
 
     /// Whether a process with the given identifier is still alive.
     ///
-    /// `EPERM` counts as alive: the process exists but is not ours to signal.
+    /// EPERM counts as alive: the process exists but is not ours to signal.
     private func isRunning(_ pid: pid_t) -> Bool {
         kill(pid, 0) == 0 || errno == EPERM
     }
@@ -77,10 +77,10 @@ final class HookRunnerTests {
         )
     }
 
-    /// Runs `hook`, expecting it to fail, and returns the `HookError` it
-    /// threw. Records an issue and returns `nil` on any other outcome, so
-    /// callers can pattern-match the associated values (`HookError` is not
-    /// `Equatable`, so `#expect(throws:)` cannot check them).
+    /// Runs hook, expecting it to fail, and returns the HookError it
+    /// threw. Records an issue and returns nil on any other outcome, so
+    /// callers can pattern-match the associated values (HookError is not
+    /// Equatable, so #expect(throws:) cannot check them).
     private func hookError(
         from hook: HookScript,
         osascriptPath: String = HookRunner.defaultOSAScriptPath,
@@ -260,7 +260,7 @@ final class HookRunnerTests {
     @Test("A hook killed by a signal is a failure")
     func signalledHookIsAFailure() async throws {
         // Termination by signal is reported through a different branch of
-        // `terminationStatus` than a plain exit code, and must not be read
+        // terminationStatus than a plain exit code, and must not be read
         // as success.
         let path = try writeScript("#!/bin/sh\nkill -TERM $$\n")
 
@@ -273,7 +273,7 @@ final class HookRunnerTests {
     @Test("A hook that outlives its timeout is reported as timed out")
     func timedOutHookIsReported() async throws {
         // The configured 0.1s is below the clamp floor, so the effective
-        // budget is 1s. `exec` replaces the shell with sleep, so the
+        // budget is 1s. exec replaces the shell with sleep, so the
         // teardown signal reaches the sleeping process directly.
         let path = try writeScript("#!/bin/sh\nexec sleep 30\n")
         let hook = HookScript(path: path, timeoutSeconds: 0.1)
@@ -287,8 +287,8 @@ final class HookRunnerTests {
 
     @Test("The timeout bounds the caller's wall-clock time", .timeLimit(.minutes(1)))
     func timeoutBoundsTheCallersWallClockTime() async throws {
-        // `sh` does not forward the teardown signal to its child and then waits
-        // for it, so signalling the wrapper alone cannot end the hook (`run` used
+        // sh does not forward the teardown signal to its child and then waits
+        // for it, so signalling the wrapper alone cannot end the hook (run used
         // to block 30s against a 1s budget). Teardown targets the hook's whole
         // process group, so the wait ends at the budget.
         let path = try writeScript("#!/bin/sh\nsleep 30\n")
@@ -312,7 +312,7 @@ final class HookRunnerTests {
     func timedOutHookLeavesNoDescendants() async throws {
         // A wrapper's child used to be orphaned at the budget and run to
         // completion. Teardown and its final kill target the process group, so the
-        // descendant dies too. `createSession` keeps those signals off Thaw's own
+        // descendant dies too. createSession keeps those signals off Thaw's own
         // process group.
         let pidFile = tempDirectory.appendingPathComponent("descendant.pid").path
         let path = try writeScript("#!/bin/sh\nsleep 30 &\necho $! > \(pidFile)\nwait\n")

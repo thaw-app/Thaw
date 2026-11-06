@@ -15,10 +15,10 @@ import Testing
 /// the default channel, so stable releases lose only because Sparkle offers
 /// the newest allowed item and 3.x outranks 2.x.
 ///
-/// Serialized: the migration writes through the process-wide `Defaults.store`.
+/// Serialized: the migration writes through the process-wide Defaults.store.
 @Suite("Update channels", .serialized)
 struct UpdateChannelTests {
-    /// Sparkle offers an item with no `sparkle:channel` to every subscriber,
+    /// Sparkle offers an item with no sparkle:channel to every subscriber,
     /// so stable is the absence of an opt-in rather than a channel of its own.
     @Test("Stable subscribes to no explicit channel")
     func stableAllowsNoChannels() {
@@ -53,8 +53,8 @@ struct UpdateChannelTests {
         #expect(UpdateChannel.alpha.allowedSparkleChannels == ["alpha"])
     }
 
-    /// No channel overrides the feed: all three read the `SUFeedURL` from
-    /// `Info.plist`, and the appcast's `sparkle:channel` tags do the sorting.
+    /// No channel overrides the feed: all three read the SUFeedURL from
+    /// Info.plist, and the appcast's sparkle:channel tags do the sorting.
     @Test("Every channel reads the same feed")
     func noChannelOverridesTheFeed() {
         #expect(UpdateChannel.beta.allowedSparkleChannels

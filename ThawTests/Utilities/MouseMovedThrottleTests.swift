@@ -10,7 +10,7 @@ import os
 import Testing
 @testable import Thaw
 
-/// Characterizes `HIDEventManager.shouldProcessMouseMoved`, a time-based
+/// Characterizes HIDEventManager.shouldProcessMouseMoved, a time-based
 /// gate: the processed-event rate is bounded by wall-clock time, not by the
 /// device's polling rate. A count-based "every 5th event" throttle made a
 /// 1000 Hz mouse do about 8x the work of a 125 Hz one.
@@ -34,12 +34,12 @@ struct MouseMovedThrottleTests {
         let lastProcessTime = OSAllocatedUnfairLock(initialState: TimeInterval(0))
         let interval = HIDEventManager.mouseMovedThrottleInterval
         let first: TimeInterval = 100
-        // `first + interval` does not round-trip: the interval is 1/30, and
+        // first + interval does not round-trip: the interval is 1/30, and
         // adding it to a timestamp of this magnitude drops low bits that
-        // subtracting `first` back out cannot recover, leaving the difference
+        // subtracting first back out cannot recover, leaving the difference
         // a couple of femtoseconds *under* one interval. Step to the next
         // representable value so "one interval later" is actually expressible.
-        // A strict `>` in the gate still fails this, which is the regression
+        // A strict > in the gate still fails this, which is the regression
         // the test is here to catch.
         let second = (first + interval).nextUp
 

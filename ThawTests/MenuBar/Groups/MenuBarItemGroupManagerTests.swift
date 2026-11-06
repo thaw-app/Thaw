@@ -10,7 +10,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Exercises ``MenuBarItemGroupManager``, the persistence and editing layer
+/// Exercises MenuBarItemGroupManager, the persistence and editing layer
 /// over the grouping rules, against an isolated defaults suite. Serialized
 /// because the store is process-wide.
 @Suite("Menu bar item group manager")

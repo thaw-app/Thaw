@@ -82,7 +82,7 @@ private extension MenuBarItemTriggerRuntimeStatus {
 
 // MARK: - TriggerRow
 
-/// An inline editor for a single ``MenuBarItemTrigger``.
+/// An inline editor for a single MenuBarItemTrigger.
 struct TriggerRow: View {
     @Binding var trigger: MenuBarItemTrigger
     let itemOptions: [TriggerItemOption]
@@ -515,7 +515,7 @@ struct TriggerRow: View {
         enabledKinds.contains(trigger.condition.kind) ? enabledKinds : enabledKinds + [trigger.condition.kind]
     }
 
-    /// Shown when compound conditions are available (`None of` is useful with one
+    /// Shown when compound conditions are available (None of is useful with one
     /// condition), and whenever the combinator isn't the default so it can be undone.
     private var showsCombinatorPicker: Bool {
         compoundEnabled || trigger.combinator != .all
@@ -546,7 +546,7 @@ struct TriggerRow: View {
             conditionEditor
 
             // Existing extra conditions render even with the compound flag off, since
-            // `shouldReveal` still evaluates them. Only the Add button is flag-gated.
+            // shouldReveal still evaluates them. Only the Add button is flag-gated.
             if compoundEnabled || !trigger.additionalConditions.isEmpty {
                 ForEach(Array(trigger.additionalConditions.indices), id: \.self) { index in
                     Divider()

@@ -8,7 +8,7 @@
 import Testing
 @testable import Thaw
 
-/// Covers ``LayoutReconciler/applyUnmanagedPlacementsToDesired(placements:unmanagedUIDs:desiredFiltered:sectionMap:savedSectionOrder:controlUIDs:)``,
+/// Covers LayoutReconciler/applyUnmanagedPlacementsToDesired(placements:unmanagedUIDs:desiredFiltered:sectionMap:savedSectionOrder:controlUIDs:),
 /// which splices unmanaged items into the desired sequence during a profile apply.
 ///
 /// It mutates a positional array while deriving section bounds from it, so each
@@ -294,13 +294,13 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     // MARK: - Pass 2: multiple anchored placements sharing one anchor
 
-    // `planUnmanagedPlacement` gives every unanchored item the same `.newItemAnchored`
+    // planUnmanagedPlacement gives every unanchored item the same .newItemAnchored
     // placement, so shared anchors are common. The group keeps its unmanagedUIDs order.
 
     @Test("Several rightOfAnchor placements sharing one anchor keep their unmanagedUIDs order")
     func rightOfAnchorPlacementsPreserveUnmanagedOrder() {
         // Inserting after the anchor does not shift it, so a naive pass reuses
-        // `anchorIdx + 1` and reverses the group; it must advance past placed items.
+        // anchorIdx + 1 and reverses the group; it must advance past placed items.
         let result = apply(
             placements: [
                 "app:first": .newItemAnchored(
@@ -371,7 +371,7 @@ struct LayoutReconcilerUnmanagedPlacementTests {
 
     @Test("An anchored placement with the sectionDefault relation ignores its anchor and lands at the section end")
     func anchoredSectionDefaultRelationLandsAtSectionEnd() {
-        // `.sectionDefault` ignores the anchor riding along, so the item goes after
+        // .sectionDefault ignores the anchor riding along, so the item goes after
         // "app:tail" as if the anchor had vanished.
         let result = apply(
             placements: [

@@ -7,14 +7,14 @@
 //
 //  libFuzzer harness for `SettingsURIParser`, the one parser in Thaw that
 //  consumes attacker-reachable input: any app on the system can hand it a
-//  `thaw://` URL via an Apple Event.
+//  thaw:// URL via an Apple Event.
 //
 //  The harness asserts properties, not just absence of crashes. A property
 //  failure is as much a finding as a segfault.
 //
-//  Swift's `-sanitize=fuzzer` is Linux-only — it is rejected on both
+//  Swift's -sanitize=fuzzer is Linux-only — it is rejected on both
 //  arm64 and x86_64 Apple targets — so real fuzzing runs in CI on Linux.
-//  Building with `-DFUZZ_REPLAY` instead produces a plain executable that
+//  Building with -DFUZZ_REPLAY instead produces a plain executable that
 //  replays a corpus directory, which keeps the harness and its properties
 //  runnable on macOS during development.
 //
@@ -66,7 +66,7 @@ public func LLVMFuzzerTestOneInput(_ start: UnsafeRawPointer, _ count: Int) -> C
         )
     }
 
-    // Property 4: the version bypass is exactly `get?key=version`. This is the
+    // Property 4: the version bypass is exactly get?key=version. This is the
     // only route that skips authorization, so any widening of it is a
     // privilege boundary change.
     if request.isVersionQuery {

@@ -23,7 +23,7 @@ final class MenuBarManager {
 
     /// Per-screen wallpaper palettes, used by the adaptive gradient tint.
     ///
-    /// Separate from ``averageColors``: a palette samples the whole wallpaper,
+    /// Separate from averageColors: a palette samples the whole wallpaper,
     /// or a small subject never survives bucketing.
     private(set) var wallpaperPalettes: [CGDirectDisplayID: WallpaperPalette] = [:]
 
@@ -55,19 +55,19 @@ final class MenuBarManager {
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
-    /// Task observing `DisplaySettingsManager.configurations`, which is
-    /// `@Observable` rather than a Combine `ObservableObject`.
+    /// Task observing DisplaySettingsManager.configurations, which is
+    /// @Observable rather than a Combine ObservableObject.
     private var displayConfigurationsObservationTask: Task<Void, Never>?
 
-    /// Task observing `settingsWindow`, re-subscribing the window's
-    /// `isVisible` KVO publisher for each new non-nil window.
+    /// Task observing settingsWindow, re-subscribing the window's
+    /// isVisible KVO publisher for each new non-nil window.
     private var settingsWindowObservationTask: Task<Void, Never>?
 
-    /// Task observing `appearanceManager.configuration` for adaptive-color
+    /// Task observing appearanceManager.configuration for adaptive-color
     /// refresh start/stop.
     private var appearanceConfigurationObservationTask: Task<Void, Never>?
 
-    /// Task observing `itemManager.itemCache`, debounced with AsyncAlgorithms.
+    /// Task observing itemManager.itemCache, debounced with AsyncAlgorithms.
     private var itemCacheHotkeyObservationTask: Task<Void, Never>?
 
     @MainActor
@@ -92,8 +92,8 @@ final class MenuBarManager {
     /// Cancellable for the periodic average-color refresh, active only while settings is visible.
     private var averageColorRefreshCancellable: AnyCancellable?
 
-    /// Cancellable for `settingsWindow`'s `isVisible` KVO stream, resubscribed
-    /// on each new non-nil `settingsWindow` value by `settingsWindowObservationTask`.
+    /// Cancellable for settingsWindow's isVisible KVO stream, resubscribed
+    /// on each new non-nil settingsWindow value by settingsWindowObservationTask.
     @ObservationIgnored
     private var settingsWindowVisibilityCancellable: AnyCancellable?
 
@@ -105,7 +105,7 @@ final class MenuBarManager {
     @ObservationIgnored
     private var areDisplaysAsleep = false
 
-    /// Task observing `imageCache.tagsSeekingAttention` for items that have
+    /// Task observing imageCache.tagsSeekingAttention for items that have
     /// started blinking while hidden.
     private var attentionObservationTask: Task<Void, Never>?
 
@@ -135,12 +135,12 @@ final class MenuBarManager {
     /// by a manual toggle (URL/hotkey), rather than automatically by section state.
     private var isManuallyHidingApplicationMenus = false
 
-    /// The delayed force-activation started by ``hideApplicationMenus(manual:)``.
-    /// Cancelled when explicit UI requests `.regular`, so the retry cannot
-    /// reapply `.accessory` and hide a settings window's Dock icon.
+    /// The delayed force-activation started by hideApplicationMenus(manual:).
+    /// Cancelled when explicit UI requests .regular, so the retry cannot
+    /// reapply .accessory and hide a settings window's Dock icon.
     private var hideApplicationMenusActivationTask: Task<Void, Never>?
 
-    /// Whether that pending retry would apply `.accessory`. `.regular`
+    /// Whether that pending retry would apply .accessory. .regular
     /// activations from the hide path itself must keep the 25 ms retry.
     private var pendingHideActivationIsAccessory = false
 
@@ -220,7 +220,7 @@ final class MenuBarManager {
                 .store(in: &c)
         }
 
-        // Handle the `focusedApp` and `smart` rehide strategies.
+        // Handle the focusedApp and smart rehide strategies.
         NSWorkspace.shared.notificationCenter.publisher(
             for: NSWorkspace.didActivateApplicationNotification
         )
@@ -509,13 +509,10 @@ final class MenuBarManager {
                     return
                 }
 
-                // Don't continue if:
-                //   * Hiding application menus isn't allowed (Advanced
-                //     setting off, or the Dock-icon setting on).
-                //   * Using the Thaw Bar.
-                //   * The menu bar is hidden by the system.
-                //   * The active space is fullscreen.
-                //   * The settings window is visible.
+                // Don't continue if hiding application menus isn't allowed
+                // (Advanced setting off, or the Dock-icon setting on), the
+                // Thaw Bar is in use, the system hid the menu bar, the active
+                // space is fullscreen, or the settings window is visible.
                 guard
                     MenuBarSection.allowsHidingApplicationMenus(
                         hideApplicationMenus: appState.settings.advanced.hideApplicationMenus,
@@ -666,7 +663,7 @@ final class MenuBarManager {
     }
 
     /// What the configuration the overlays actually render needs sampled, or
-    /// `nil` without app state to resolve it from.
+    /// nil without app state to resolve it from.
     ///
     /// Uses the effective configuration, so a per-Space override that turns
     /// on adaptive color gets its samples.
@@ -677,7 +674,7 @@ final class MenuBarManager {
         )
     }
 
-    /// Updates the ``averageColorInfo`` and ``averageColors`` properties with
+    /// Updates the averageColorInfo and averageColors properties with
     /// the current average color of the menu bar background per screen.
     ///
     /// Fire-and-forget. Callers that read the result must await
@@ -725,7 +722,9 @@ final class MenuBarManager {
         var inputs = [(displayID: CGDirectDisplayID, windowIDs: [CGWindowID], bounds: CGRect, fullBounds: CGRect)]()
         for screen in targetScreens {
             let displayID = screen.displayID
+            // Capturing over a full-screen app lights the screen recording indicator.
             guard
+                !SpaceInfo.isFullscreen(Bridging.getCurrentSpaceID(for: displayID)),
                 let menuBarWindow = WindowInfo.menuBarWindow(from: windows, for: displayID),
                 let wallpaperWindow = WindowInfo.wallpaperWindow(from: windows, for: displayID)
             else {
@@ -971,9 +970,9 @@ final class MenuBarManager {
 
     /// Chooses the activation policy used while hiding application menus.
     ///
-    /// Hiding menus needs `.regular`, which shows the Dock icon. With the
-    /// clean-Dock setting stay `.accessory`, unless explicit UI already asked
-    /// for `.regular`.
+    /// Hiding menus needs .regular, which shows the Dock icon. With the
+    /// clean-Dock setting stay .accessory, unless explicit UI already asked
+    /// for .regular.
     static nonisolated func activationPolicyForHidingApplicationMenus(
         hideDockIconWhenToggling: Bool,
         explicitUIWantsRegularActivation: Bool,
@@ -998,8 +997,8 @@ final class MenuBarManager {
     }
 
     /// Automatic overflow hiding must not survive turning on
-    /// ``GeneralSettings/hideDockIconWhenToggling``. A manual hide-menus
-    /// command is left alone. Settings and other explicit UI keep `.regular`.
+    /// GeneralSettings/hideDockIconWhenToggling. A manual hide-menus
+    /// command is left alone. Settings and other explicit UI keep .regular.
     static nonisolated func automaticHideReconcileAction(
         hideDockIconWhenToggling: Bool,
         isHidingApplicationMenus: Bool,
@@ -1012,9 +1011,9 @@ final class MenuBarManager {
         return explicitUIWantsRegularActivation ? .clearAutomaticHideState : .restoreApplicationMenus
     }
 
-    /// Cancels a pending accessory retry so a later `.regular` activation
+    /// Cancels a pending accessory retry so a later .regular activation
     /// cannot be overwritten. No-op when the pending hide itself requested
-    /// `.regular`, because that path must keep its 25 ms force-activation retry.
+    /// .regular, because that path must keep its 25 ms force-activation retry.
     func invalidatePendingAccessoryActivation() {
         guard pendingHideActivationIsAccessory else { return }
         cancelHideApplicationMenusActivationTask()
@@ -1022,10 +1021,10 @@ final class MenuBarManager {
 
     /// Hides the application menus.
     ///
-    /// - Important: Uses `.regular` activation, which briefly shows the Dock
-    ///   icon; a manual toggle always does. With
-    ///   ``GeneralSettings/hideDockIconWhenToggling`` on, a non-manual call
-    ///   stays `.accessory` unless explicit UI already requested `.regular`.
+    /// Uses .regular activation, which briefly shows the Dock
+    /// icon; a manual toggle always does. With
+    /// GeneralSettings/hideDockIconWhenToggling on, a non-manual call
+    /// stays .accessory unless explicit UI already requested .regular.
     func hideApplicationMenus(manual: Bool = false) {
         guard let appState else {
             diagLog.error("Error hiding application menus: Missing app state")
@@ -1248,15 +1247,15 @@ final class MenuBarManager {
 
     /// Updates the control item states for all sections.
     ///
-    /// - Parameter screen: The screen to use for the update. If `nil`, the
-    ///   best screen is determined automatically.
+    /// screen: The screen to use for the update. If nil, the
+    /// best screen is determined automatically.
     func updateControlItemStates(for screen: NSScreen? = nil) {
         for section in sections {
             section.updateControlItemState(for: screen)
         }
     }
 
-    /// The hidden or always-hidden section whose cache holds `tag`, whether
+    /// The hidden or always-hidden section whose cache holds tag, whether
     /// or not it is shown.
     private func concealingSection(
         containing tag: MenuBarItemTag,
@@ -1387,7 +1386,7 @@ struct MenuBarAverageColorInfo: Hashable {
     /// A Boolean value that indicates whether the menu bar has a
     /// bright color.
     ///
-    /// `true` above ``Constants.menuBarBrightnessThreshold``, where the menu
+    /// true above Constants.menuBarBrightnessThreshold, where the menu
     /// bar draws its items darker.
     var isBright: Bool {
         brightness > Constants.menuBarBrightnessThreshold
@@ -1395,8 +1394,8 @@ struct MenuBarAverageColorInfo: Hashable {
 
     /// Returns whether the menu bar has a bright color for the given screen.
     /// Uses a lower threshold for notched displays to bias toward black text.
-    /// - Parameter screen: The screen to check for notch presence
-    /// - Returns: `true` if the background is bright enough to require dark text
+    /// screen: The screen to check for notch presence
+    /// Returns true if the background is bright enough to require dark text
     func isBright(for screen: NSScreen?) -> Bool {
         let activeOrPassed = screen ?? NSScreen.screenWithActiveMenuBar
         let hasNotch = activeOrPassed?.hasNotch == true

@@ -8,13 +8,13 @@
 import Testing
 @testable import Thaw
 
-/// `LayoutSolver.partitionUnmanagedUIDs`, the filter applyProfileLayout uses to
+/// LayoutSolver.partitionUnmanagedUIDs, the filter applyProfileLayout uses to
 /// pick the UIDs that reach planUnmanagedPlacement.
 ///
-/// 1. All three Thaw control items are excluded. saveSectionOrder never saves
-///    them, so they would leak into NewItemsPlacement and make the LCS planner
-///    emit spurious control-item moves every cycle ("Thaw icon keeps moving").
-/// 2. Input order is preserved; the LCS planner iterates it for placement.
+/// All three Thaw control items are excluded. saveSectionOrder never saves
+/// them, so they would leak into NewItemsPlacement and make the LCS planner
+/// emit spurious control-item moves every cycle ("Thaw icon keeps moving").
+/// Input order is preserved; the LCS planner iterates it for placement.
 @Suite("Partition unmanaged UIDs")
 struct PartitionUnmanagedUIDsTests {
     /// The original bug missed the visible control item.

@@ -391,7 +391,7 @@ extension MenuBarItemManager {
 
     /// Moves a menu bar item to the given destination.
     ///
-    /// - Parameter options: The move tunables; every field defaults.
+    /// options: The move tunables; every field defaults.
     func move(
         item: MenuBarItem,
         to destination: MoveDestination,
@@ -636,8 +636,7 @@ extension MenuBarItemManager {
                 let postedOffDisplay = cursorTrace.postedEventsOffEveryDisplay
                 if MouseHelpers.shouldRestoreSavedCursorPosition(
                     physicalPointerInputOccurred: physicalInputOccurred,
-                    postedEventsOffEveryDisplay: postedOffDisplay,
-                    tookCursorOwnership: options.hideCursorAcrossAttempts
+                    postedEventsOffEveryDisplay: postedOffDisplay
                 ) {
                     if postedOffDisplay {
                         MenuBarItemManager.diagLog.debug(
@@ -645,7 +644,7 @@ extension MenuBarItemManager {
                         )
                     }
                     MouseHelpers.restoreCursorPosition(to: mouseLocation)
-                } else if options.hideCursorAcrossAttempts {
+                } else {
                     MenuBarItemManager.diagLog.debug(
                         "move: preserving physical pointer movement made during the transaction"
                     )

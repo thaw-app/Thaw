@@ -34,7 +34,7 @@ struct MoveFailureBackoffTests {
     }
 }
 
-/// Which failures `move` has already filed with the ledger when it throws, so a
+/// Which failures move has already filed with the ledger when it throws, so a
 /// catch clause does not charge one failed move twice.
 ///
 /// Double-filing consumed both halves of "wait for another failure before
@@ -49,7 +49,7 @@ struct MoveFailureDoubleFilingTests {
         )
     }
 
-    /// The three unresponsive-owner failures are exactly the three `move` files itself.
+    /// The three unresponsive-owner failures are exactly the three move files itself.
     @Test("Unresponsive-owner failures are already filed")
     func unresponsiveOwnerFailuresAreAlreadyFiled() {
         let item = makeItem()

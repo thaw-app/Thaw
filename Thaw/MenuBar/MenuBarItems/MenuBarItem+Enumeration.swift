@@ -86,9 +86,8 @@ nonisolated extension MenuBarItem {
 
     private static let diagLog = DiagLog(category: "MenuBarItem")
 
-    /// - Parameters:
-    ///   - display: Pass nil for all displays.
-    ///   - option: Pass an empty set for all windows.
+    /// display: Pass nil for all displays.
+    /// option: Pass an empty set for all windows.
     static func getMenuBarItemWindows(on display: CGDirectDisplayID? = nil, option: ListOption) -> [WindowInfo] {
         var bridgingOption: Bridging.MenuBarWindowListOption = .itemsOnly
 
@@ -418,9 +417,8 @@ nonisolated extension MenuBarItem {
         }
     }
 
-    /// - Parameters:
-    ///   - display: Pass nil for all displays.
-    ///   - option: Pass an empty set for all items.
+    /// display: Pass nil for all displays.
+    /// option: Pass an empty set for all items.
     @MainActor
     static func getMenuBarItems(
         on display: CGDirectDisplayID? = nil,

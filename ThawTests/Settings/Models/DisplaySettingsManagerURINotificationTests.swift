@@ -9,48 +9,45 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// A display UUID no real display can hold. Seeding `configurations` with it
-/// passes the handler's `hasConfig` guard, so the `specific:UUID` branch is
+/// A display UUID no real display can hold. Seeding configurations with it
+/// passes the handler's hasConfig guard, so the specific:UUID branch is
 /// reachable without a second monitor.
 private let offscreenUUID = "TEST-DISPLAY-UUID-A"
 
-/// Builds the notification `SettingsURIHandler.postPerDisplaySettingsDidChangeNotification`
-/// posts, so the tests exercise the same `userInfo` shape production does.
+/// Builds the notification SettingsURIHandler.postPerDisplaySettingsDidChangeNotification
+/// posts, so the tests exercise the same userInfo shape production does.
 @MainActor
 private func perDisplayChange(_ userInfo: [AnyHashable: Any]) -> Notification {
     Notification(name: .perDisplaySettingsDidChangeViaURI, object: nil, userInfo: userInfo)
 }
 
-/// Covers the Settings-URI side of ``DisplaySettingsManager``: `parseScope`
-/// and `handleExternalPerDisplaySettingsChange`. A hand-built `Notification`
-/// skips `performSetup(with:)`, which needs a live `AppState` and installs a
+/// Covers the Settings-URI side of DisplaySettingsManager: parseScope
+/// and handleExternalPerDisplaySettingsChange. A hand-built Notification
+/// skips performSetup(with:), which needs a live AppState and installs a
 /// one-second debounced observer.
 ///
-/// A `specific:UUID` scope reaches every setter without consulting `NSScreen`
-/// once `configurations` holds that UUID, so setters, clamps, and parse
-/// failures are asserted against ``offscreenUUID`` and behave the same on a
+/// A specific:UUID scope reaches every setter without consulting NSScreen
+/// once configurations holds that UUID, so setters, clamps, and parse
+/// failures are asserted against offscreenUUID and behave the same on a
 /// laptop, a docked desk, and a headless CI runner.
 ///
-/// Deliberately **not** covered:
+/// Deliberately not covered: the active scope's write path, which resolves
+/// through Bridging.getActiveMenuBarDisplayUUID(), so a test would only
+/// mean something on a machine with a menu bar; and relaunch and spacing
+/// consequences, since applyActiveDisplaySpacing returns early while
+/// appState is nil (DisplaySettingsManagerSpacingGateTests covers that gate).
 ///
-/// - The `active` scope's write path. It resolves through
-///   `Bridging.getActiveMenuBarDisplayUUID()`, so a test would only mean
-///   something on a machine with a menu bar.
-/// - Relaunch and spacing consequences. `applyActiveDisplaySpacing` returns
-///   early while `appState` is `nil`; `DisplaySettingsManagerSpacingGateTests`
-///   covers that gate.
-///
-/// Scope-wide broadcasts walk `NSScreen.screens`, so they're asserted over the
+/// Scope-wide broadcasts walk NSScreen.screens, so they're asserted over the
 /// attached displays (vacuously true with none) and as never reaching
-/// ``offscreenUUID``.
+/// offscreenUUID.
 ///
-/// `init` reads `Defaults` and its `didSet` observers write back, so every
-/// manager is built inside `withScratchDefaults`.
+/// init reads Defaults and its didSet observers write back, so every
+/// manager is built inside withScratchDefaults.
 @MainActor
 @Suite("Display settings URI notifications", .serialized)
 struct DisplaySettingsManagerURINotificationTests {
-    /// Builds a manager whose only configured display is `uuid`. Wiping
-    /// `configurations` puts every connected display on the global template,
+    /// Builds a manager whose only configured display is uuid. Wiping
+    /// configurations puts every connected display on the global template,
     /// so scope-wide tests start from a state the machine can't vary.
     private func makeManager(
         _ configuration: DisplayIceBarConfiguration = .defaultConfiguration,
@@ -64,8 +61,8 @@ struct DisplaySettingsManagerURINotificationTests {
 
     // MARK: Scope parsing
 
-    /// Asserted as a round-trip through `PerDisplayScope.rawValue`, which is
-    /// the encoding `SettingsURIHandler` posts. That ties the parse to the
+    /// Asserted as a round-trip through PerDisplayScope.rawValue, which is
+    /// the encoding SettingsURIHandler posts. That ties the parse to the
     /// producer rather than to a hand-copied table that could drift with it.
     @Test("Each plain scope string round-trips to its own case", arguments: [
         "active",
@@ -80,7 +77,7 @@ struct DisplaySettingsManagerURINotificationTests {
     }
 
     /// Matching is exact and case-sensitive, and anything unrecognised is
-    /// treated as `active` rather than rejected. That is the part worth
+    /// treated as active rather than rejected. That is the part worth
     /// pinning: an unknown scope must not silently become a UUID.
     @Test("An unrecognised scope falls back to the active display", arguments: [
         "",
@@ -99,8 +96,8 @@ struct DisplaySettingsManagerURINotificationTests {
         #expect(uuid == nil, "an unrecognised scope must not invent a display UUID")
     }
 
-    /// Everything after the first `specific:` is the UUID, verbatim: the
-    /// prefix is stripped by length, not split on `:`, so a colon survives.
+    /// Everything after the first specific: is the UUID, verbatim: the
+    /// prefix is stripped by length, not split on :, so a colon survives.
     @Test("A specific scope carries everything after the prefix as the UUID", arguments: [
         ("specific:ABC-123", "ABC-123"),
         ("specific:", ""),
@@ -164,8 +161,8 @@ struct DisplaySettingsManagerURINotificationTests {
         }
     }
 
-    /// `userInfo` is `[AnyHashable: Any]`, so a sender can put anything under
-    /// `key` or `scope`. Both are read with `as? String` and must bail rather
+    /// userInfo is [AnyHashable: Any], so a sender can put anything under
+    /// key or scope. Both are read with as? String and must bail rather
     /// than trap.
     @Test("A key or scope of the wrong type changes nothing")
     func notificationWithMistypedFieldsIsIgnored() throws {
@@ -189,8 +186,8 @@ struct DisplaySettingsManagerURINotificationTests {
         }
     }
 
-    /// `autoRehide` is a real setting, just not a per-display one, so it
-    /// reaches the switch and falls through to `default`.
+    /// autoRehide is a real setting, just not a per-display one, so it
+    /// reaches the switch and falls through to default.
     @Test("A key that is not a per-display setting changes nothing", arguments: [
         "autoRehide",
         "itemSpacingOffset",
@@ -238,7 +235,7 @@ struct DisplaySettingsManagerURINotificationTests {
     }
 
     /// A colon inside the UUID must not split the target: the entry keyed
-    /// `AB:CD` is the one that changes.
+    /// AB:CD is the one that changes.
     @Test("A UUID containing a colon still resolves to its own entry")
     func specificUUIDContainingAColonResolves() throws {
         try withScratchDefaults { _ in
@@ -287,8 +284,8 @@ struct DisplaySettingsManagerURINotificationTests {
         }
     }
 
-    /// The handler branches on `toggle == true`, not on `toggle` being
-    /// present. A sender that spells out `toggle: false` alongside a value
+    /// The handler branches on toggle == true, not on toggle being
+    /// present. A sender that spells out toggle: false alongside a value
     /// must get the value, not a flip.
     @Test("A false toggle alongside a value applies the value, not a flip", arguments: [true, false])
     func falseToggleFallsThroughToTheValue(value: Bool) throws {
@@ -438,9 +435,9 @@ struct DisplaySettingsManagerURINotificationTests {
 
     // MARK: iceBarLocation
 
-    /// The handler reads `stringValue` as an `Int` raw value, which is what
-    /// `SettingsURIHandler` posts after normalising a name like `mousePointer`
-    /// to `String(location.rawValue)`.
+    /// The handler reads stringValue as an Int raw value, which is what
+    /// SettingsURIHandler posts after normalising a name like mousePointer
+    /// to String(location.rawValue).
     @Test("An iceBarLocation raw value is written to the named display", arguments: [
         ("0", IceBarLocation.dynamic),
         ("1", IceBarLocation.mousePointer),
@@ -467,7 +464,7 @@ struct DisplaySettingsManagerURINotificationTests {
 
     /// Only the normalised raw value is accepted here. A case name, an
     /// out-of-range number, or a missing payload leaves the display alone
-    /// rather than falling back to `dynamic`.
+    /// rather than falling back to dynamic.
     @Test("An iceBarLocation the handler cannot parse changes nothing", arguments: [
         "mousePointer",
         "dynamic",
@@ -491,8 +488,8 @@ struct DisplaySettingsManagerURINotificationTests {
         }
     }
 
-    /// Location is carried in `stringValue`; a sender that puts the raw value
-    /// under `value` instead is a no-op, not a reset.
+    /// Location is carried in stringValue; a sender that puts the raw value
+    /// under value instead is a no-op, not a reset.
     @Test("An iceBarLocation notification with no stringValue changes nothing")
     func iceBarLocationWithoutStringValueIsIgnored() throws {
         try withScratchDefaults { _ in
@@ -511,7 +508,7 @@ struct DisplaySettingsManagerURINotificationTests {
 
     // MARK: iceBarLayout
 
-    /// Unlike `iceBarLocation`, layout goes through `IceBarLayout.fromString`,
+    /// Unlike iceBarLocation, layout goes through IceBarLayout.fromString,
     /// so it accepts both the case name and the raw value.
     @Test("An iceBarLayout is written to the named display", arguments: [
         ("horizontal", IceBarLayout.horizontal),
@@ -561,7 +558,7 @@ struct DisplaySettingsManagerURINotificationTests {
     // MARK: gridColumns
 
     /// The handler clamps to 2...10 before it reaches
-    /// `DisplayIceBarConfiguration.withGridColumns`, which clamps again. Both
+    /// DisplayIceBarConfiguration.withGridColumns, which clamps again. Both
     /// ends of the range are asserted here because a URI is an untrusted
     /// input path.
     @Test("A gridColumns value is clamped into range and written", arguments: [
@@ -615,9 +612,9 @@ struct DisplaySettingsManagerURINotificationTests {
 
     // MARK: Blast radius
 
-    /// Every setter goes through `updateConfiguration`, which rebuilds the
+    /// Every setter goes through updateConfiguration, which rebuilds the
     /// configuration from the current one. A URI that sets one field must not
-    /// reset the rest to `defaultConfiguration`.
+    /// reset the rest to defaultConfiguration.
     @Test("A change to one field leaves the display's other fields alone")
     func aChangeIsScopedToItsField() throws {
         try withScratchDefaults { _ in
@@ -663,7 +660,7 @@ struct DisplaySettingsManagerURINotificationTests {
         }
     }
 
-    /// A scope-wide change walks `NSScreen.screens`, so a configured but
+    /// A scope-wide change walks NSScreen.screens, so a configured but
     /// unplugged display sits it out and keeps the settings saved for it.
     @Test("A scope-wide change never reaches a display that is not connected", arguments: [
         "active",
@@ -686,10 +683,10 @@ struct DisplaySettingsManagerURINotificationTests {
         }
     }
 
-    /// The `allNonIceBar` broadcast. `makeManager` leaves every attached
-    /// display on the global template, whose `useIceBar` is `false`, so every
+    /// The allNonIceBar broadcast. makeManager leaves every attached
+    /// display on the global template, whose useIceBar is false, so every
     /// one of them is in scope. Vacuously true with no displays attached; the
-    /// assertion about ``offscreenUUID`` holds either way.
+    /// assertion about offscreenUUID holds either way.
     @Test("An allNonIceBar broadcast reaches the attached displays but not a stored one")
     func allNonIceBarBroadcastReachesAttachedDisplays() throws {
         try withScratchDefaults { _ in
@@ -711,10 +708,10 @@ struct DisplaySettingsManagerURINotificationTests {
         }
     }
 
-    /// The `allNonIceBar` broadcast of a `useThawBarForAlwaysHidden` value,
-    /// which walks the same non-Thaw-Bar filter as `alwaysShowHiddenItems`.
+    /// The allNonIceBar broadcast of a useThawBarForAlwaysHidden value,
+    /// which walks the same non-Thaw-Bar filter as alwaysShowHiddenItems.
     /// Vacuously true with no displays attached; the assertion about
-    /// ``offscreenUUID`` holds either way.
+    /// offscreenUUID holds either way.
     @Test("An allNonIceBar useThawBarForAlwaysHidden value reaches attached displays but not a stored one")
     func allNonIceBarUseThawBarForAlwaysHiddenValueReachesAttachedDisplays() throws {
         try withScratchDefaults { _ in
@@ -737,7 +734,7 @@ struct DisplaySettingsManagerURINotificationTests {
     }
 
     /// The toggle flavour of the same broadcast. Every attached display sits
-    /// on the global template, so a flip lands them all on `true`.
+    /// on the global template, so a flip lands them all on true.
     @Test("An allNonIceBar useThawBarForAlwaysHidden toggle flips attached displays but not a stored one")
     func allNonIceBarUseThawBarForAlwaysHiddenToggleFlipsAttachedDisplays() throws {
         try withScratchDefaults { _ in
@@ -759,7 +756,7 @@ struct DisplaySettingsManagerURINotificationTests {
         }
     }
 
-    /// `useThawBarForAlwaysHidden` only implements the `allNonIceBar` scope;
+    /// useThawBarForAlwaysHidden only implements the allNonIceBar scope;
     /// any other scope-wide request falls into the not-implemented arm and
     /// must change nothing, set or toggle alike.
     @Test("A useThawBarForAlwaysHidden broadcast on an unimplemented scope changes nothing", arguments: [
@@ -784,7 +781,7 @@ struct DisplaySettingsManagerURINotificationTests {
         }
     }
 
-    /// The `allEnabled` broadcast, which filters on `useIceBar`. The attached
+    /// The allEnabled broadcast, which filters on useIceBar. The attached
     /// displays are opted in first so the filter has something to match.
     @Test("An allEnabled broadcast reaches the attached displays but not a stored one")
     func allEnabledBroadcastReachesAttachedDisplays() throws {
@@ -811,7 +808,7 @@ struct DisplaySettingsManagerURINotificationTests {
     }
 
     /// The other half of the validation guard: an attached display with no
-    /// stored entry passes on `connectedUUIDs.contains`, not on `hasConfig`.
+    /// stored entry passes on connectedUUIDs.contains, not on hasConfig.
     /// Vacuously true with no displays attached.
     @Test("An attached display with no stored entry can still be targeted by UUID")
     func attachedDisplayWithoutAnEntryIsAccepted() throws {
@@ -834,7 +831,7 @@ struct DisplaySettingsManagerURINotificationTests {
 
     // MARK: Persistence
 
-    /// The URI path writes through the same `didSet` the settings UI does, so
+    /// The URI path writes through the same didSet the settings UI does, so
     /// an external change has to survive a relaunch rather than living only in
     /// memory until the next write.
     @Test("An external change is persisted")

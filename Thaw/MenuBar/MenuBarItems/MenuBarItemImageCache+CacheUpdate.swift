@@ -35,8 +35,8 @@ extension MenuBarItemImageCache {
 
     /// Updates the cache for the given sections unconditionally.
     ///
-    /// - Parameter preferredDisplayID: When set (e.g. the Thaw Bar's screen),
-    ///   capture from that display instead of the standing item-cache display.
+    /// preferredDisplayID: When set (e.g. the Thaw Bar's screen),
+    /// capture from that display instead of the standing item-cache display.
     @MainActor
     func updateCacheWithoutChecks(
         sections: [MenuBarSection.Name],
@@ -88,6 +88,12 @@ extension MenuBarItemImageCache {
             MenuBarItemImageCache.diagLog.warning(
                 "updateCacheWithoutChecks: cached displayID \(resolvedPreferred) is not connected; using displayID \(screen.displayID)"
             )
+        }
+
+        // Capturing over a full-screen app lights the screen recording indicator.
+        if SpaceInfo.isFullscreen(Bridging.getCurrentSpaceID(for: screen.displayID)) {
+            MenuBarItemImageCache.diagLog.debug("updateCacheWithoutChecks: display \(screen.displayID) shows a full-screen Space, skipping capture")
+            return
         }
 
         let scale = screen.backingScaleFactor

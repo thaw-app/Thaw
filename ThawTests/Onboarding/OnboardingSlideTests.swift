@@ -14,7 +14,7 @@ import Testing
 struct ThawTourSlideTests {
     // MARK: - Ordering invariant
 
-    // The tour needs `welcome` first and loops back to `menuBarManagement`
+    // The tour needs welcome first and loops back to menuBarManagement
     // after the last slide, so reordering the enum would break the loop.
 
     @Test("Welcome is the first slide")

@@ -11,7 +11,7 @@ import OSLog
 /// Writes log messages to a file when diagnostic logging is enabled, so users
 /// can capture debug logs without a debug build.
 ///
-/// Log files are written to `~/Library/Logs/Thaw/`.
+/// Log files are written to ~/Library/Logs/Thaw/.
 final nonisolated class DiagnosticLogger: @unchecked Sendable {
     static let shared = DiagnosticLogger()
 
@@ -22,7 +22,7 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
     var isEnabled: Bool {
         get { isEnabledLock.withLock { $0 } }
         set {
-            // Runs on `writeQueue`, ordered against queued writes: swapping the
+            // Runs on writeQueue, ordered against queued writes: swapping the
             // handle off-queue could drop an accepted message or send it to the
             // wrong file. Concurrent toggles can't interleave; the last one wins.
             writeQueue.sync {
@@ -124,9 +124,9 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
     /// Set by the app and sent to the XPC targets with the log path, so both
     /// prune by the same rules. Only the process that mints a file rotates it.
     struct RotationPolicy: Codable, Equatable, Sendable {
-        /// Rotate once the file reaches this size. `0` disables size rotation.
+        /// Rotate once the file reaches this size. 0 disables size rotation.
         var maxFileSizeBytes: UInt64 = 0
-        /// Rotate this many seconds after the segment was opened. `0` disables
+        /// Rotate this many seconds after the segment was opened. 0 disables
         /// time rotation.
         var rotationInterval: TimeInterval = 0
         /// Delete log files older than this many days.
@@ -148,7 +148,7 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
         ///
         /// A policy can arrive over XPC, and ad-hoc builds have no peer
         /// requirement. Unchecked, a negative retention or zero count deletes
-        /// every log, `Int.min` traps, and a non-finite interval breaks the timer.
+        /// every log, Int.min traps, and a non-finite interval breaks the timer.
         func sanitized() -> RotationPolicy {
             var policy = self
             policy.retentionDays = min(max(1, retentionDays), Self.maxRetentionDays)
@@ -179,13 +179,13 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
     }
 
     /// Whether this process owns rotation and pruning. True only in the process
-    /// that minted the file via `openLogFile()`; the XPC target attaches to a
+    /// that minted the file via openLogFile(); the XPC target attaches to a
     /// path handed to it and merely follows.
     private let isRotationOwnerLock = OSAllocatedUnfairLock(initialState: false)
 
     /// Called after the owner rotates, so the app can repoint the XPC service.
-    /// A closure because `Shared` can't reach the app-only connection. Takes no
-    /// argument: reading ``currentLogFile`` at send time avoids pushing a stale path.
+    /// A closure because Shared can't reach the app-only connection. Takes no
+    /// argument: reading currentLogFile at send time avoids pushing a stale path.
     private let onRotateLock = OSAllocatedUnfairLock<(@Sendable () -> Void)?>(initialState: nil)
 
     var onRotate: (@Sendable () -> Void)? {
@@ -193,19 +193,19 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
         set { onRotateLock.withLock { $0 = newValue } }
     }
 
-    /// Timer that polls file size and elapsed time. `writeQueue` only.
+    /// Timer that polls file size and elapsed time. writeQueue only.
     private var maintenanceTimer: DispatchSourceTimer?
 
     /// When the current segment was opened, on a clock that does not move when
-    /// the user or the network changes the system time. `writeQueue` only.
+    /// the user or the network changes the system time. writeQueue only.
     private var segmentOpenedAt = ContinuousClock.now
 
     /// Bytes this process has written since the last size check, used to
-    /// throttle `fstat` on the hot write path. `writeQueue` only.
+    /// throttle fstat on the hot write path. writeQueue only.
     private var bytesSinceSizeCheck = 0
 
     private init() {
-        // Intentionally empty: `DiagnosticLogger` is a singleton, and log file setup is deferred until logging is enabled.
+        // Intentionally empty: DiagnosticLogger is a singleton, and log file setup is deferred until logging is enabled.
     }
 
     // MARK: - File Management
@@ -214,14 +214,14 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
     /// services call this with the app's path so both append to one file.
     /// Safe to call repeatedly.
     ///
-    /// - Returns: Whether this process is now writing to `fileURL`. On `false`
-    ///   the previous segment is still in use, and the caller must report it.
+    /// Returns whether this process is now writing to fileURL. On false
+    /// the previous segment is still in use, and the caller must report it.
     @discardableResult
     func attachToFile(at fileURL: URL) -> Bool {
         // Attaching follows a path chosen elsewhere, so this process never owns
         // rotation or pruning.
         isRotationOwnerLock.withLock { $0 = false }
-        // Swap on the write queue (see `isEnabled`). A failed open keeps the
+        // Swap on the write queue (see isEnabled). A failed open keeps the
         // current segment.
         return writeQueue.sync {
             // The same path can arrive twice; re-opening would write a spurious
@@ -258,7 +258,7 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
     /// Opens the given file, writes the per-process header, and installs it as
     /// the current log file. Shared by minting, attaching, and rotation.
     ///
-    /// - Returns: Whether `fileURL` is now the file being written to.
+    /// Returns whether fileURL is now the file being written to.
     @discardableResult
     private func openLogFile(at fileURL: URL) -> Bool {
         guard installLogFile(at: fileURL, footerForPrevious: "Diagnostic logging stopped") else {
@@ -284,10 +284,10 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
         return true
     }
 
-    /// Opens `fileURL`, writes its header, then swaps it in as the current
-    /// handle and closes the previous one with `footerForPrevious`.
+    /// Opens fileURL, writes its header, then swaps it in as the current
+    /// handle and closes the previous one with footerForPrevious.
     ///
-    /// A failed open leaves the current segment untouched and returns `false`.
+    /// A failed open leaves the current segment untouched and returns false.
     private func installLogFile(at fileURL: URL, footerForPrevious: String) -> Bool {
         guard let newHandle = openHandle(at: fileURL) else {
             return false
@@ -314,8 +314,8 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
         return true
     }
 
-    /// Opens `fileURL` for appending, creating its directory if needed.
-    /// Returns `nil` when the directory or the file cannot be opened.
+    /// Opens fileURL for appending, creating its directory if needed.
+    /// Returns nil when the directory or the file cannot be opened.
     private func openHandle(at fileURL: URL) -> FileHandle? {
         let dir = fileURL.deletingLastPathComponent()
         do {
@@ -337,8 +337,8 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
         return FileHandle(fileDescriptor: fd, closeOnDealloc: true)
     }
 
-    /// Writes the per-process header into the given handle. `writeQueue` only:
-    /// `timestampFormatter` is not thread-safe.
+    /// Writes the per-process header into the given handle. writeQueue only:
+    /// timestampFormatter is not thread-safe.
     private func writeHeader(to handle: FileHandle) {
         // Each process writes its own header into the shared file.
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
@@ -383,7 +383,7 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
 
     /// Rotates to a freshly minted log file.
     ///
-    /// Owner-only, `writeQueue` only. The new file is opened before the old one
+    /// Owner-only, writeQueue only. The new file is opened before the old one
     /// is closed, so a failed open leaves the current segment in place.
     private func rotateLogFile() {
         guard isRotationOwnerLock.withLock({ $0 }) else { return }
@@ -406,7 +406,7 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
         // starts the round trip, and another queue hop could reorder notifications.
         onRotateLock.withLock { $0 }?()
 
-        // The XPC target keeps writing to `previous` until it re-attaches, so
+        // The XPC target keeps writing to previous until it re-attaches, so
         // that segment stays even when the policy would otherwise prune it.
         writeQueue.async { [weak self] in
             self?.cleanupOldLogFiles(in: dir, protecting: [newURL, previous])
@@ -415,7 +415,7 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
 
     /// Recreates the timer that polls file size and elapsed time.
     ///
-    /// Owner-only, `writeQueue` only. Also covers growth driven solely by the
+    /// Owner-only, writeQueue only. Also covers growth driven solely by the
     /// XPC target, which the app's own write path would never notice.
     private func rescheduleMaintenanceTimer() {
         maintenanceTimer?.cancel()
@@ -438,7 +438,7 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
     private static let maintenanceInterval: TimeInterval = 5
 
     /// Rotates when the file has outgrown the size limit or the segment has
-    /// outlived the interval. `writeQueue` only.
+    /// outlived the interval. writeQueue only.
     private func maintenanceTick() {
         let policy = policyLock.withLock { $0 }
 
@@ -453,9 +453,9 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
         }
     }
 
-    /// The current log file's size on disk, or `nil` when there is no handle.
+    /// The current log file's size on disk, or nil when there is no handle.
     ///
-    /// Read through `fstat` rather than a per-process byte counter so that
+    /// Read through fstat rather than a per-process byte counter so that
     /// bytes written by the XPC target into the same file count too.
     private func currentFileSize() -> UInt64? {
         fileHandleLock.withLock { handle -> UInt64? in
@@ -467,7 +467,7 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
     }
 
     /// Removes log files the retention policy no longer covers, never touching
-    /// `protected`. `writeQueue` only.
+    /// protected. writeQueue only.
     private func cleanupOldLogFiles(in directory: URL, protecting protected: [URL]) {
         let policy = policyLock.withLock { $0 }
         do {
@@ -513,8 +513,8 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
 
     /// Returns a bounded tail of the active or most recent diagnostic log.
     ///
-    /// The read is submitted to ``writeQueue`` so every write already accepted
-    /// by ``log(level:category:message:)`` is complete before the snapshot is
+    /// The read is submitted to writeQueue so every write already accepted
+    /// by log(level:category:message:) is complete before the snapshot is
     /// taken. File lookup and I/O also stay off the caller's executor.
     func tailSnapshot(maxBytes: Int) async -> TailSnapshot? {
         guard maxBytes > 0 else { return nil }
@@ -533,10 +533,10 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
         }
     }
 
-    /// Reads no more than `maxBytes` from the end of `fileURL`.
+    /// Reads no more than maxBytes from the end of fileURL.
     ///
     /// When the window begins inside a line, that incomplete line is dropped.
-    /// `String(decoding:as:)` deliberately tolerates a trailing partial UTF-8
+    /// String(decoding:as:) deliberately tolerates a trailing partial UTF-8
     /// scalar, which another process can expose while appending to the shared
     /// log file.
     static func readTail(from fileURL: URL, maxBytes: Int) throws -> String {
@@ -579,7 +579,7 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
     func log(level: Level, category: String, message: String) {
         guard isEnabled else { return }
 
-        // Capture the time here, format on the queue: `DateFormatter` isn't thread-safe.
+        // Capture the time here, format on the queue: DateFormatter isn't thread-safe.
         let now = Date()
 
         writeQueue.async { [weak self] in
@@ -617,9 +617,9 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
     }
 
     /// Rotates when this process's own writes have pushed the file past the
-    /// size limit. `writeQueue` only.
+    /// size limit. writeQueue only.
     ///
-    /// The accumulator keeps `fstat` off the per-line path: it runs once per
+    /// The accumulator keeps fstat off the per-line path: it runs once per
     /// 64 KB written rather than once per message. Growth driven by the XPC
     /// target is caught by the maintenance timer instead.
     private func checkSizeAfterWrite(byteCount: Int) {
@@ -636,7 +636,7 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
         }
     }
 
-    /// How many bytes this process writes between `fstat` size checks.
+    /// How many bytes this process writes between fstat size checks.
     private static let sizeCheckByteInterval = 64 * 1024
 }
 
@@ -647,9 +647,9 @@ final nonisolated class DiagnosticLogger: @unchecked Sendable {
 nonisolated extension DiagnosticLogger {
     /// Returns the log files that retention no longer covers.
     ///
-    /// A file is pruned when older than `retentionDays` or when newer files fill
-    /// `maxCount`; same-age ties go by path. `protected` files may still be open,
-    /// so they are always kept and count against `maxCount`. Ordered newest first.
+    /// A file is pruned when older than retentionDays or when newer files fill
+    /// maxCount; same-age ties go by path. protected files may still be open,
+    /// so they are always kept and count against maxCount. Ordered newest first.
     static func filesToPrune(
         _ files: [(url: URL, created: Date)],
         retentionDays: Int,
@@ -658,7 +658,7 @@ nonisolated extension DiagnosticLogger {
         protected: Set<URL>
     ) -> [URL] {
         let cutoff = now.addingTimeInterval(-Double(retentionDays) * 86400)
-        // A comparison, not a subtraction: an unsanitized `Int.min` would trap.
+        // A comparison, not a subtraction: an unsanitized Int.min would trap.
         let cap = max(0, maxCount)
         let allowance = cap > protected.count ? cap - protected.count : 0
 
@@ -682,8 +682,8 @@ nonisolated extension DiagnosticLogger {
         return stale
     }
 
-    /// Returns a log file URL in `directory` for `baseName` that no file
-    /// already occupies, appending `_2`, `_3`, … on collision.
+    /// Returns a log file URL in directory for baseName that no file
+    /// already occupies, appending _2, _3, … on collision.
     ///
     /// File name timestamps are second-granular, so two rotations in one second
     /// would otherwise reuse a name.
@@ -708,14 +708,12 @@ nonisolated extension DiagnosticLogger {
 
 // MARK: - DiagLog
 
-/// A lightweight diagnostic-aware logger that wraps `os.Logger` and
+/// A lightweight diagnostic-aware logger that wraps os.Logger and
 /// additionally writes to the diagnostic log file when enabled.
 ///
 /// Create one per component:
-/// ```
 /// private let log = DiagLog(category: "MenuBarItemManager")
 /// log.debug("something happened")
-/// ```
 nonisolated struct DiagLog {
     private let osLogger: Logger
     private let category: String

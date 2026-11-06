@@ -21,7 +21,7 @@ nonisolated enum Bridging {
 nonisolated extension Bridging {
     // MARK: Private Connection Helpers
 
-    /// The identifier for the `null` window server connection.
+    /// The identifier for the null window server connection.
     private static let nullConnection: CGSConnectionID = 0
 
     /// Returns the identifier for the main window server connection.
@@ -39,10 +39,9 @@ nonisolated extension Bridging {
 
     /// Sets a value in the main window server connection.
     ///
-    /// - Parameters:
-    ///   - value: A value to set.
-    ///   - key: A key to associate with `value` as a property in the
-    ///     main window server connection.
+    /// value: A value to set.
+    /// key: A key to associate with value as a property in the
+    /// main window server connection.
     static func setConnectionProperty(_ value: Any?, forKey key: String) {
         let result = cgsSetConnectionProperty(
             getMainConnection(),
@@ -95,8 +94,8 @@ nonisolated extension Bridging {
     // MARK: Public Display API
 
     /// Returns the UUID string for a given display ID.
-    /// - Parameter displayID: The display identifier.
-    /// - Returns: The UUID string for display, or nil if unavailable.
+    /// displayID: The display identifier.
+    /// Returns the UUID string for display, or nil if unavailable.
     static func getDisplayUUIDString(for displayID: CGDirectDisplayID) -> String? {
         guard let uuid = getDisplayUUID(for: displayID) else {
             return nil
@@ -105,7 +104,7 @@ nonisolated extension Bridging {
     }
 
     /// Returns the UUID string for the display with active menu bar.
-    /// - Returns: The UUID string of the active menu bar display, or nil if unavailable.
+    /// Returns the UUID string of the active menu bar display, or nil if unavailable.
     static func getActiveMenuBarDisplayUUID() -> String? {
         guard let displayID = getActiveMenuBarDisplayID() else {
             return nil
@@ -137,7 +136,7 @@ nonisolated extension Bridging {
     /// Returns a Boolean value indicating whether the given process
     /// is unresponsive.
     ///
-    /// - Parameter pid: An identifier for a process.
+    /// pid: An identifier for a process.
     static func isProcessUnresponsive(_ pid: pid_t) -> Bool {
         var psn = ProcessSerialNumber()
         let result = getProcessForPID(pid, &psn)
@@ -154,7 +153,7 @@ nonisolated extension Bridging {
 
     /// Sets the timeout used to determine if a process is unresponsive.
     ///
-    /// - Parameter timeout: An amount of time in seconds.
+    /// timeout: An amount of time in seconds.
     static func setProcessUnresponsiveTimeout(_ timeout: TimeInterval) {
         let result = cgsEventSetAppIsUnresponsiveNotificationTimeout(getMainConnection(), timeout)
         if result != .success {
@@ -174,7 +173,7 @@ nonisolated extension Bridging {
     /// Returns the identifier for the current space on the given
     /// display.
     ///
-    /// - Parameter displayID: An identifier for a display.
+    /// displayID: An identifier for a display.
     static func getCurrentSpaceID(for displayID: CGDirectDisplayID) -> CGSSpaceID? {
         guard let uuid = getDisplayUUID(for: displayID) else {
             return nil
@@ -189,10 +188,9 @@ nonisolated extension Bridging {
     /// Returns a list of identifiers for the spaces that contain the
     /// given window.
     ///
-    /// - Parameters:
-    ///   - windowID: An identifier for a window.
-    ///   - visibleSpacesOnly: A Boolean value that determines whether
-    ///     the returned list should only include visible spaces.
+    /// windowID: An identifier for a window.
+    /// visibleSpacesOnly: A Boolean value that determines whether
+    /// the returned list should only include visible spaces.
     static func getSpaceList(for windowID: CGWindowID, visibleSpacesOnly: Bool = false) -> [CGSSpaceID] {
         let mask: CGSSpaceMask = visibleSpacesOnly ? .allVisibleSpacesMask : .allSpacesMask
         guard let spaces = cgsCopySpacesForWindows(getMainConnection(), mask, [windowID] as CFArray) else {
@@ -209,7 +207,7 @@ nonisolated extension Bridging {
     /// Returns a Boolean value that indicates whether the given space
     /// is fullscreen.
     ///
-    /// - Parameter spaceID: An identifier for a space.
+    /// spaceID: An identifier for a space.
     static func isSpaceFullscreen(_ spaceID: CGSSpaceID) -> Bool {
         let type = cgsSpaceGetType(getMainConnection(), spaceID)
         return type == .fullscreen
@@ -230,8 +228,8 @@ nonisolated extension Bridging {
 
     /// Returns every space the window server currently knows about.
     ///
-    /// A `CGSSpaceID` is renumbered across logout, so the persistent key is
-    /// the space's `uuid` (stored in `com.apple.spaces`, survives reboot).
+    /// A CGSSpaceID is renumbered across logout, so the persistent key is
+    /// the space's uuid (stored in com.apple.spaces, survives reboot).
     /// Each display's default space reports an empty uuid, so it falls back to
     /// a key derived from its display; there is only one per display.
     static func getManagedSpaces() -> [ManagedSpace] {
@@ -248,7 +246,7 @@ nonisolated extension Bridging {
         for display in displays {
             let displayIdentifier = display["Display Identifier"] as? String ?? "unknown"
             guard let spaces = display["Spaces"] as? [[String: Any]] else {
-                // Entries without a `Spaces` array are collapsed records
+                // Entries without a Spaces array are collapsed records
                 // for displays that are not currently attached.
                 continue
             }
@@ -274,7 +272,7 @@ nonisolated extension Bridging {
 nonisolated extension Bridging {
     /// Returns the bounds for the given window.
     ///
-    /// - Parameter windowID: An identifier for a window.
+    /// windowID: An identifier for a window.
     static func getWindowBounds(for windowID: CGWindowID) -> CGRect? {
         var bounds = CGRect.zero
         let result = cgsGetScreenRectForWindow(getConnectionForThread(), windowID, &bounds)
@@ -287,7 +285,7 @@ nonisolated extension Bridging {
 
     /// Returns the level for the given window.
     ///
-    /// - Parameter windowID: An identifier for a window.
+    /// windowID: An identifier for a window.
     static func getWindowLevel(for windowID: CGWindowID) -> CGWindowLevel? {
         var level: CGWindowLevel = 0
         let result = cgsGetWindowLevel(getMainConnection(), windowID, &level)
@@ -301,9 +299,8 @@ nonisolated extension Bridging {
     /// Returns a Boolean value that indicates whether the given window
     /// is on the given space.
     ///
-    /// - Parameters:
-    ///   - windowID: An identifier for a window.
-    ///   - spaceID: An identifier for a space.
+    /// windowID: An identifier for a window.
+    /// spaceID: An identifier for a space.
     static func isWindowOnSpace(_ windowID: CGWindowID, _ spaceID: CGSSpaceID) -> Bool {
         let list = getSpaceList(for: windowID, visibleSpacesOnly: false)
         return list.contains(spaceID)
@@ -312,7 +309,7 @@ nonisolated extension Bridging {
     /// Returns a Boolean value that indicates whether the given window
     /// is on screen.
     ///
-    /// - Parameter windowID: An identifier for a window.
+    /// windowID: An identifier for a window.
     static func isWindowOnScreen(_ windowID: CGWindowID) -> Bool {
         // The on-screen list can include items hidden via drag-and-drop (macOS
         // bug?), so it only short-circuits the negative case before the display check.
@@ -422,8 +419,8 @@ nonisolated extension Bridging {
 
     /// Returns a list of window identifiers.
     ///
-    /// - Parameter option: Options that filter the returned list.
-    ///   Pass an empty option set to return all available windows.
+    /// option: Options that filter the returned list.
+    /// Pass an empty option set to return all available windows.
     static func getWindowList(option: WindowListOption = []) -> [CGWindowID] {
         let list = if option.contains(.onScreen) {
             getOnScreenWindowList()
@@ -442,8 +439,8 @@ nonisolated extension Bridging {
     /// Returns a list of window identifiers for elements in the
     /// menu bar.
     ///
-    /// - Parameter option: Options that filter the returned list.
-    ///   Pass an empty option set to return all available windows.
+    /// option: Options that filter the returned list.
+    /// Pass an empty option set to return all available windows.
     static func getMenuBarWindowList(option: MenuBarWindowListOption = []) -> [CGWindowID] {
         var predicates = [(CGWindowID) -> Bool]()
 
@@ -481,19 +478,19 @@ nonisolated extension Bridging {
 
     // MARK: - CGWindowList Helpers
 
-    /// Creates an `NSArray` containing the bit patterns of the given
+    /// Creates an NSArray containing the bit patterns of the given
     /// window list.
     ///
-    /// Pass the returned array into one of the `CGWindowList` APIs
-    /// from `CoreGraphics`.
+    /// Pass the returned array into one of the CGWindowList APIs
+    /// from CoreGraphics.
     ///
-    /// - Parameter windowIDs: A list of window identifiers. If the
-    ///   list is empty, or if none of its elements can represent a
-    ///   valid bit pattern, this function returns `nil`.
+    /// windowIDs: A list of window identifiers. If the
+    /// list is empty, or if none of its elements can represent a
+    /// valid bit pattern, this function returns nil.
     ///
-    /// - Returns: An `NSArray` where each element is a memory address
-    ///   with a bit pattern that matches an element from `windowIDs`,
-    ///   or `nil` if the array cannot be created.
+    /// Returns an NSArray where each element is a memory address
+    /// with a bit pattern that matches an element from windowIDs,
+    /// or nil if the array cannot be created.
     static func createCGWindowArray(with windowIDs: [CGWindowID]) -> NSArray? {
         var pointers: [UnsafeRawPointer?] = windowIDs.compactMap { windowID in
             UnsafeRawPointer(bitPattern: UInt(windowID))
@@ -518,14 +515,13 @@ nonisolated extension Bridging {
 nonisolated extension Bridging {
     /// Captures a composite image of an array of windows using SkyLight's private API.
     ///
-    /// Replaces `CGWindowListCreateImageFromArray`, unavailable when targeting macOS 26+.
+    /// Replaces CGWindowListCreateImageFromArray, unavailable when targeting macOS 26+.
     ///
-    /// - Parameters:
-    ///   - windowIDs: The identifiers of the windows to capture.
-    ///   - screenBounds: The bounds to capture, specified in screen coordinates.
-    ///     Pass `nil` to capture the minimum rectangle that encloses the windows.
-    ///   - options: Options that specify which parts of the windows are captured.
-    /// - Returns: The captured image, or `nil` if capture failed.
+    /// windowIDs: The identifiers of the windows to capture.
+    /// screenBounds: The bounds to capture, specified in screen coordinates.
+    /// Pass nil to capture the minimum rectangle that encloses the windows.
+    /// options: Options that specify which parts of the windows are captured.
+    /// Returns the captured image, or nil if capture failed.
     static func captureWindowsImage(
         windowIDs: [CGWindowID],
         screenBounds: CGRect? = nil,
@@ -560,11 +556,11 @@ nonisolated extension Bridging {
         return image
     }
 
-    /// The largest point-to-pixel scale among the active displays, or `1`
+    /// The largest point-to-pixel scale among the active displays, or 1
     /// when none can be read.
     ///
-    /// `SLWindowListCreateImageFromArray` allocates the *pixel* size, so a rect
-    /// safe in points can exceed ``maximumCaptureDimension`` on Retina. The
+    /// SLWindowListCreateImageFromArray allocates the *pixel* size, so a rect
+    /// safe in points can exceed maximumCaptureDimension on Retina. The
     /// capture rect often intersects no display (items parked at large negative
     /// x), so the largest scale in use is taken; overestimating fails safe.
     private static func maximumActiveDisplayScale() -> CGFloat {
@@ -585,28 +581,27 @@ nonisolated extension Bridging {
     /// capture, in pixels.
     ///
     /// Metal's texture limit on Apple silicon is 16384. Exceeding it makes
-    /// `-[MTLTextureDescriptorInternal validateWithDevice:]` call `abort()`
+    /// -[MTLTextureDescriptorInternal validateWithDevice:] call abort()
     /// inside WindowServer, taking down the whole session (#759).
     static let maximumCaptureDimension = 16384
 
-    /// Returns `true` if `bounds` is safe to send to the window server as a
+    /// Returns true if bounds is safe to send to the window server as a
     /// capture rectangle.
     ///
-    /// `CGRect.null` is allowed: both capture paths treat it as "compute the
+    /// CGRect.null is allowed: both capture paths treat it as "compute the
     /// bounds automatically". Anything else must be a real, drawable region;
     /// a degenerate rect crashes WindowServer for the whole machine (#759).
     ///
-    /// - Parameters:
-    ///   - bounds: The capture rectangle, in points.
-    ///   - scale: The point-to-pixel scale that will be applied. The window
-    ///     server allocates the *pixel* size, so the limit must be checked
-    ///     after scaling.
+    /// bounds: The capture rectangle, in points.
+    /// scale: The point-to-pixel scale that will be applied. The window
+    /// server allocates the *pixel* size, so the limit must be checked
+    /// after scaling.
     static func isValidCaptureBounds(_ bounds: CGRect, scale: CGFloat = 1.0) -> Bool {
         if bounds.isNull {
             return true
         }
-        // `CGRect.isFinite` is package-only in SwiftUICore. Checking each component
-        // rejects NaN and infinity, including `CGRect.infinite`.
+        // CGRect.isFinite is package-only in SwiftUICore. Checking each component
+        // rejects NaN and infinity, including CGRect.infinite.
         guard
             bounds.origin.x.isFinite,
             bounds.origin.y.isFinite,
@@ -617,9 +612,9 @@ nonisolated extension Bridging {
         else {
             return false
         }
-        // `width`/`height` return the standardized (absolute) extents, so a
-        // negatively-sized rect would pass a `> 0` test against them. Check
-        // the raw `size` components, which keep the sign.
+        // width/height return the standardized (absolute) extents, so a
+        // negatively-sized rect would pass a > 0 test against them. Check
+        // the raw size components, which keep the sign.
         guard bounds.size.width > 0, bounds.size.height > 0 else {
             return false
         }
@@ -644,14 +639,13 @@ nonisolated extension Bridging {
     /// a display. Hidden-section items (large negative x) must stay on
     /// captureWindowsImage: SCK returns -3812 or -3811 for them.
     ///
-    /// - Parameters:
-    ///   - windowIDs: The identifiers of the windows to capture.
-    ///   - screenBounds: The bounds to capture, specified in screen coordinates.
-    ///     Pass nil (or CGRect.null) to capture the minimum rectangle that
-    ///     encloses the selected windows.
-    ///   - options: Capture options. boundsIgnoreFraming maps to
-    ///     ignoreShadowsDisplay; nominalResolution forces 1x scale.
-    /// - Returns: The captured image, or nil if capture failed.
+    /// windowIDs: The identifiers of the windows to capture.
+    /// screenBounds: The bounds to capture, specified in screen coordinates.
+    /// Pass nil (or CGRect.null) to capture the minimum rectangle that
+    /// encloses the selected windows.
+    /// options: Capture options. boundsIgnoreFraming maps to
+    /// ignoreShadowsDisplay; nominalResolution forces 1x scale.
+    /// Returns the captured image, or nil if capture failed.
     static func captureWindowsImageSCK(
         windowIDs: [CGWindowID],
         screenBounds: CGRect? = nil,
@@ -671,7 +665,7 @@ nonisolated extension Bridging {
         }
 
         // Everything derived from one shareable-content snapshot, so a refresh
-        // never mixes a fresh `SCDisplay` with stale `SCWindow` frames.
+        // never mixes a fresh SCDisplay with stale SCWindow frames.
         struct Resolved {
             let windows: [SCWindow]
             let unionBounds: CGRect
@@ -743,7 +737,7 @@ nonisolated extension Bridging {
             guard let screenBounds, !screenBounds.isNull else {
                 return unionBounds
             }
-            // `isEmpty`, not `isNull`: edge-touching rects intersect to a zero-area
+            // isEmpty, not isNull: edge-touching rects intersect to a zero-area
             // rect that isn't null. The lint rule is for Set; CGRect has no isDisjoint.
             // swiftlint:disable:next is_disjoint
             if usedRefreshedTopology, screenBounds.intersection(unionBounds).isEmpty {
@@ -800,10 +794,10 @@ nonisolated extension Bridging {
     /// Cached equivalent of `SCShareableContent.excludingDesktopWindows(false,
     /// onScreenWindowsOnly: false)`.
     ///
-    /// `captureWindowsImageSCK` runs on the 4 fps live-refresh path, so calls
-    /// within `maxAge` coalesce into one enumeration.
+    /// captureWindowsImageSCK runs on the 4 fps live-refresh path, so calls
+    /// within maxAge coalesce into one enumeration.
     ///
-    /// Unlike `ScreenCapture.getShareableContent()` (`.current`), this includes
+    /// Unlike ScreenCapture.getShareableContent() (.current), this includes
     /// desktop and offscreen windows, which SCK still enumerates for menu bar
     /// items. Different content, so a separate cache. It lives here because this
     /// file is shared by the Thaw and MenuBarItemService targets.
@@ -830,8 +824,8 @@ nonisolated extension Bridging {
 /// fetch.
 ///
 /// Callers arriving mid-fetch await the in-flight task. Only the caller that
-/// started it records the result and clears `inFlightTask`, so joiners never
-/// race. Generic so tests can use a fake instead of `SCShareableContent`.
+/// started it records the result and clears inFlightTask, so joiners never
+/// race. Generic so tests can use a fake instead of SCShareableContent.
 actor ShareableContentCache<Content: Sendable> {
     private var cached: (content: Content, timestamp: ContinuousClock.Instant)?
     private var inFlightTask: Task<Content, any Error>?
@@ -876,7 +870,7 @@ actor ShareableContentCache<Content: Sendable> {
 
 /// An immutable ScreenCaptureKit snapshot passed across the cache actor.
 ///
-/// `SCShareableContent` lacks a Sendable annotation, but it is a completed
+/// SCShareableContent lacks a Sendable annotation, but it is a completed
 /// snapshot this wrapper never mutates, so sharing it is safe.
 nonisolated struct ShareableContentSnapshot: @unchecked Sendable {
     let content: SCShareableContent

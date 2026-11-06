@@ -12,7 +12,7 @@ import Testing
 /// refresh activeProfileLayout and activeProfileItemIdentifiers, or the next
 /// late-arrival re-sort drags items back to the last applied layout.
 ///
-/// Serialized: a real `MenuBarItemManager` reads shared `UserDefaults` keys.
+/// Serialized: a real MenuBarItemManager reads shared UserDefaults keys.
 @MainActor
 @Suite("Menu bar item manager re-arm", .serialized)
 struct MenuBarItemManagerRearmTests {

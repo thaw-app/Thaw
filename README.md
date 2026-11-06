@@ -127,7 +127,7 @@ Reveal an item when a condition is met, or hide it instead. Battery and power co
 
 - Simple Mode, which replaces the sidebar with one curated page and keeps every other pane's configuration intact
 - One per-display section driven by a picker, rather than a repeated block per display
-- A Tools pane for diagnostic logging, onboarding replay, per-app language override, cache clearing, and resets for settings, Control Center, the layout, and permissions
+- A Troubleshooting pane for diagnostic logging, onboarding replay, and resets for settings, Control Center, the layout, and permissions
 
 </details>
 

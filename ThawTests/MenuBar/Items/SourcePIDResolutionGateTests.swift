@@ -16,7 +16,7 @@ import Testing
 /// while tolerating the few system items (WiFi, Clock, BentoBox) that are always nil.
 @Suite("Source PID resolution gate")
 struct SourcePIDResolutionGateTests {
-    // The call sites need a live `appState` and WindowServer items, so only the
+    // The call sites need a live appState and WindowServer items, so only the
     // pure predicate is tested here.
 
     @Test("A healthy bar with system-item nils does not trip the gate")

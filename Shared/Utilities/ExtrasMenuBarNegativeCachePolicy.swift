@@ -14,7 +14,7 @@
 /// rungs catch late status items, later ones stop re-probing empty apps.
 nonisolated enum ExtrasMenuBarNegativeCachePolicy {
     /// How long an application that reported no extras menu bar is skipped,
-    /// after `misses` consecutive checks have come back empty (1 = the first
+    /// after misses consecutive checks have come back empty (1 = the first
     /// miss).
     ///
     /// Values at or below 1 clamp to the first rung, so errors mean more scanning.

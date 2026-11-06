@@ -10,7 +10,7 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Collects the notifications posted on `name` while `body` runs.
+/// Collects the notifications posted on name while body runs.
 /// File-scoped so the nested suites below share one copy.
 @MainActor
 private func notifications(
@@ -29,8 +29,8 @@ private func notifications(
 }
 
 /// Notifications are delivered synchronously on the posting thread, but the
-/// observer closure is `@Sendable`, so the collector has to be a reference type
-/// rather than a captured `var`.
+/// observer closure is @Sendable, so the collector has to be a reference type
+/// rather than a captured var.
 private final class NotificationBox: @unchecked Sendable {
     private(set) var contents: [Notification] = []
     func append(_ notification: Notification) {
@@ -38,28 +38,24 @@ private final class NotificationBox: @unchecked Sendable {
     }
 }
 
-/// Covers the parts of ``SettingsURIHandler`` the three sibling suites leave
-/// unreached:
+/// Covers the parts of SettingsURIHandler the three sibling suites leave
+/// unreached. A thaw:// URL with a bare display= must scope the change as
+/// if the parameter were omitted, not address a display named ""; sibling
+/// suites only pass nil or a real UUID. DisplaySettingsManager reads value,
+/// stringValue and toggle from a per-display change's userInfo to decide
+/// what kind of change it got, so exactly one must be present; siblings only
+/// assert the present key. The per-display keys iceBarLayout and gridColumns
+/// cannot be toggled and reach the same refusal as iceBarLocation.
+/// TeamIdentifierLookup.teamIdentifier and getAppIcon(for:) are only called
+/// from the modal promptForAuthorization. Removal must purge the stored
+/// signing identity, or a stale one is verified against next authorization.
 ///
-/// - **The empty-string display identifier.** A `thaw://` URL with a bare
-///   `display=` must scope the change as if the parameter were omitted, not
-///   address a display named "". Sibling suites only pass `nil` or a real UUID.
-/// - **The `userInfo` a per-display change carries.** `DisplaySettingsManager`
-///   reads `value`, `stringValue` and `toggle` to decide what kind of change
-///   it got, so exactly one must be present. Siblings only assert the present key.
-/// - **The per-display keys that cannot be toggled.** `iceBarLayout` and
-///   `gridColumns` reach the same refusal as `iceBarLocation`.
-/// - **`TeamIdentifierLookup.teamIdentifier` and `getAppIcon(for:)`**, only
-///   called from the modal `promptForAuthorization`.
-/// - **Removal purging the stored signing identity.** A stale identity would
-///   be verified against on the next authorization.
-///
-/// Not covered: `promptForAuthorization` (modal `NSAlert`), the success path
-/// of `sendCallbackResponse` (launches another app), and the
-/// display-enumerating halves of `getAllSettings`/`getAllDisplays`, which
+/// Not covered: promptForAuthorization (modal NSAlert), the success path
+/// of sendCallbackResponse (launches another app), and the
+/// display-enumerating halves of getAllSettings/getAllDisplays, which
 /// depend on the attached monitors.
 ///
-/// Every read or write runs inside `withScratchDefaults`, starting from an
+/// Every read or write runs inside withScratchDefaults, starting from an
 /// empty whitelist.
 @MainActor
 @Suite("Settings URI handler tail", .serialized)
@@ -69,7 +65,7 @@ struct SettingsURIHandlerTailTests {
     @MainActor
     @Suite("Signing identity lookups")
     struct SigningIdentityLookups {
-        /// The accessor exists so `promptForAuthorization` can show the team in
+        /// The accessor exists so promptForAuthorization can show the team in
         /// the alert. Both "no team" answers have to read as absent, and only
         /// the third has to hand a team back.
         @Test("Only a lookup that named a team reports one")
@@ -113,7 +109,7 @@ struct SettingsURIHandlerTailTests {
     @MainActor
     @Suite("An empty display identifier")
     struct EmptyDisplayIdentifier {
-        /// `display=` with nothing after it is not a display named "": it is a
+        /// display= with nothing after it is not a display named "": it is a
         /// request that named no display, and has to be scoped like one.
         @Test(
             "An empty display identifier scopes a set the same way omitting it does",
@@ -235,7 +231,7 @@ struct SettingsURIHandlerTailTests {
     @MainActor
     @Suite("The shape of a per-display announcement")
     struct AnnouncementPayloads {
-        /// `DisplaySettingsManager` decides what kind of change it was handed by
+        /// DisplaySettingsManager decides what kind of change it was handed by
         /// looking for these keys, so exactly one of the three has to be there.
         @Test("A Boolean change carries a value and neither of the other two")
         func booleanChangeCarriesOnlyItsValue() throws {
@@ -391,7 +387,7 @@ struct SettingsURIHandlerTailTests {
         }
     }
 
-    /// `display=` with nothing after it names no display, and no attached
+    /// display= with nothing after it names no display, and no attached
     /// screen can answer to it, so the request has to fail rather than fall
     /// back to the active display.
     @Test("A display get with an empty display identifier is refused")

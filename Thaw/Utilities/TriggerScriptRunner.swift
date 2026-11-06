@@ -147,15 +147,15 @@ private nonisolated final class ScriptOutputAccumulator: @unchecked Sendable {
 /// returns its exit code and combined output, with a wall-clock timeout.
 ///
 /// AppleScript files (.scpt / .applescript / .scptd) are routed through
-/// `osascript`; everything else is launched directly and must carry the
+/// osascript; everything else is launched directly and must carry the
 /// executable bit.
 enum TriggerScriptRunner {
     private static let diagLog = DiagLog(category: "TriggerScriptRunner")
 
     private static let appleScriptExtensions: Set<String> = ["scpt", "applescript", "scptd"]
 
-    /// Runs the script at `path`, returning its outcome, or `nil` on launch
-    /// failure. Times out after `timeout` seconds (the process is terminated
+    /// Runs the script at path, returning its outcome, or nil on launch
+    /// failure. Times out after timeout seconds (the process is terminated
     /// and a non-zero exit code is reported).
     static func run(
         path: String,
@@ -238,8 +238,8 @@ enum TriggerScriptRunner {
             process.interrupt()
             try? await Task.sleep(for: .milliseconds(100))
             process.kill()
-            // `kill` returns before the kernel tears the group down, so wait for it to
-            // drain. Poll `isRunning` too: it reaps the direct child, which otherwise stays a
+            // kill returns before the kernel tears the group down, so wait for it to
+            // drain. Poll isRunning too: it reaps the direct child, which otherwise stays a
             // zombie group member and burns the whole budget.
             var groupDrainAttempts = 0
             var groupDrained = false

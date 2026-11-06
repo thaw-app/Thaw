@@ -270,9 +270,9 @@ Fix:
 
 ### Hidden items still visible when the Thaw bar is off
 
-Disabling **Use Thaw Bar** stops Thaw from actively concealing items. Icons hidden while the bar was enabled may stay visible until Thaw manages the layout again.
+Switching **Show hidden items** away from the Thaw Bar stops Thaw from actively concealing items. Icons hidden while the bar was enabled may stay visible until Thaw manages the layout again.
 
-Fix: turn **Use Thaw Bar** back on, or open **Settings → Menu Bar Layout** and re-apply your sections.
+Fix: set **Show hidden items** back to the Thaw Bar, or open **Settings → Menu Bar Layout** and re-apply your sections.
 
 Related: [#610](https://github.com/thaw-app/Thaw/issues/610).
 

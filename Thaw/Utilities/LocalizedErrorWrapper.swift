@@ -8,9 +8,9 @@
 
 import Foundation
 
-/// A type that wraps the information of any error inside a `LocalizedError`.
+/// A type that wraps the information of any error inside a LocalizedError.
 ///
-/// If the error used to initialize the box is also a `LocalizedError`, its
+/// If the error used to initialize the box is also a LocalizedError, its
 /// information is passed through to the box. Otherwise, a description of the
 /// error is passed to the wrapper.
 struct LocalizedErrorWrapper: LocalizedError {

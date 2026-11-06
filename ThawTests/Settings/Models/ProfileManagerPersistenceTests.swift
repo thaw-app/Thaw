@@ -9,30 +9,28 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the parts of ``ProfileManager`` that survive a process restart:
+/// Covers the parts of ProfileManager that survive a process restart:
 /// the on-disk manifest, the per-profile JSON files, and the menu bar
-/// layout it captures out of ``Defaults``.
+/// layout it captures out of Defaults.
 ///
-/// `ProfileManagerCRUDTests` covers the happy paths. This suite covers the
-/// damaged-state and error half:
+/// ProfileManagerCRUDTests covers the happy paths. This suite covers the
+/// damaged-state and error half: a manifest that won't decode, or names a
+/// profile whose file is gone; a profiles directory that doesn't exist yet,
+/// whose path is a file, or whose parent is a file so it can never be
+/// created; a manifest write that fails after the profile files were
+/// written; the load-all-before-writing shape of the two broadcast writers,
+/// only visible when a profile mid-batch fails to load;
+/// ProfileManager/updateProfileLayout(id:itemManager:), the only capture
+/// path that needs no AppState; the display-clearing overload of
+/// setAssociatedDisplay; and the display-ownership reconciliation inside
+/// importProfile.
 ///
-/// - a manifest that won't decode, or names a profile whose file is gone;
-/// - a profiles directory that doesn't exist yet, whose path is a file, or
-///   whose parent is a file so it can never be created;
-/// - a manifest write that fails after the profile files were written;
-/// - the load-all-before-writing shape of the two broadcast writers, only
-///   visible when a profile mid-batch fails to load;
-/// - ``ProfileManager/updateProfileLayout(id:itemManager:)``, the only
-///   capture path that needs no `AppState`;
-/// - the display-clearing overload of `setAssociatedDisplay`;
-/// - the display-ownership reconciliation inside `importProfile`.
-///
-/// Every persisting test asserts through a second `ProfileManager` over the
+/// Every persisting test asserts through a second ProfileManager over the
 /// same directory, so an in-memory-only change fails. Anything that needs a
-/// live `AppState` is out of reach.
+/// live AppState is out of reach.
 ///
-/// `.serialized` because `withScratchDefaults` swaps the process-wide
-/// `Defaults.store`.
+/// .serialized because withScratchDefaults swaps the process-wide
+/// Defaults.store.
 @MainActor
 @Suite("Profile manager persistence", .serialized)
 struct ProfileManagerPersistenceTests {
@@ -181,9 +179,9 @@ struct ProfileManagerPersistenceTests {
             let unreachable = try makeUncreatableDirectoryURL(in: tmp)
             let manager = ProfileManager(profilesDirectory: unreachable)
 
-            // `deleteProfile` swallows only `CocoaError.fileNoSuchFile`. Here the
+            // deleteProfile swallows only CocoaError.fileNoSuchFile. Here the
             // parent isn't a directory, so removal fails with
-            // `NSFileWriteUnknownError` (512) and propagates, so a broken
+            // NSFileWriteUnknownError (512) and propagates, so a broken
             // profiles directory isn't reported as a clean delete.
             #expect(throws: (any Error).self) {
                 try manager.deleteProfile(id: UUID())
@@ -289,7 +287,7 @@ struct ProfileManagerPersistenceTests {
         ]
         let gone = makeProfile(named: "Gone")
 
-        // `gone` is second on purpose: `kept` loads and is mutated in memory
+        // gone is second on purpose: kept loads and is mutated in memory
         // before the failure, so a writer that saved as it went would have
         // already flushed it.
         try withManager(seeding: [kept, gone], omittingFilesFor: [gone.id]) { manager, tmp in
@@ -367,7 +365,7 @@ struct ProfileManagerPersistenceTests {
 
     // MARK: - Import
 
-    @Test("An import that claims a display takes it from the profile that held it")
+    @Test("An import that claims an owned display leaves it with the profile that holds it")
     func importReconcilesDisplayOwnership() throws {
         try withManager(seeding: [makeProfile(named: "Deskbound")]) { manager, tmp in
             let existingID = try #require(manager.profiles.first?.id)
@@ -394,17 +392,17 @@ struct ProfileManagerPersistenceTests {
             let reloaded = ProfileManager(profilesDirectory: tmp)
             let previousOwner = try #require(reloaded.profiles.first { $0.id == existingID })
             let imported = try #require(reloaded.profiles.first { $0.name == "Imported" })
-            #expect(previousOwner.associatedDisplayUUID == nil)
-            #expect(previousOwner.associatedDisplayName == nil)
-            #expect(imported.associatedDisplayUUID == "UUID-A")
-            #expect(imported.associatedDisplayName == "Studio Display")
+            #expect(previousOwner.associatedDisplayUUID == "UUID-A")
+            #expect(previousOwner.associatedDisplayName == "Studio Display")
+            #expect(imported.associatedDisplayUUID == nil)
+            #expect(imported.associatedDisplayName == nil)
         }
     }
 
     @Test("A bundle whose entries share an identifier imports as two distinct profiles")
     func importOfCollidingIdentifiersYieldsTwoProfiles() throws {
         let first = makeProfile(named: "First")
-        // Same `id` as `first`: `Profile.id` is a `let`, so copying the value
+        // Same id as first: Profile.id is a let, so copying the value
         // and renaming it reproduces a bundle hand-assembled from two exports
         // of the same profile.
         var second = first
@@ -511,7 +509,7 @@ struct ProfileManagerPersistenceTests {
     @Test("A layout update bumps the modification date in both the file and the manifest")
     func layoutUpdateBumpsTheModificationDateEverywhere() throws {
         var seed = makeProfile(named: "Desk")
-        // Whole seconds: ISO 8601 encoding drops fractions, so a `Date()`
+        // Whole seconds: ISO 8601 encoding drops fractions, so a Date()
         // wouldn't survive a round trip.
         seed.createdAt = Date(timeIntervalSince1970: 1_000_000)
         seed.modifiedAt = Date(timeIntervalSince1970: 1_000_000)
@@ -644,7 +642,7 @@ struct ProfileManagerPersistenceTests {
         }
     }
 
-    /// The short circuit only flips the private `focusFilterActive` flag. What
+    /// The short circuit only flips the private focusFilterActive flag. What
     /// is assertable: a repeat request leaves the active profile alone and
     /// schedules no second layout pass, which would churn every menu bar item.
     @Test("A focus filter request naming the already-active profile changes nothing")
@@ -705,7 +703,7 @@ struct ProfileManagerPersistenceTests {
 
     // MARK: - Helpers
 
-    /// Runs `body` against a fresh, empty temporary directory and removes it
+    /// Runs body against a fresh, empty temporary directory and removes it
     /// afterwards.
     private func withTemporaryDirectory(_ body: (URL) throws -> Void) throws {
         let tmp = FileManager.default.temporaryDirectory
@@ -716,7 +714,7 @@ struct ProfileManagerPersistenceTests {
         try body(tmp)
     }
 
-    /// Async counterpart to ``withTemporaryDirectory(_:)``.
+    /// Async counterpart to withTemporaryDirectory(_:).
     private func withTemporaryDirectory(_ body: (URL) async throws -> Void) async throws {
         let tmp = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -726,10 +724,10 @@ struct ProfileManagerPersistenceTests {
         try await body(tmp)
     }
 
-    /// Runs `body` against a `ProfileManager` pointed at a fresh temporary
-    /// directory seeded with `profiles`, and removes the directory after.
+    /// Runs body against a ProfileManager pointed at a fresh temporary
+    /// directory seeded with profiles, and removes the directory after.
     ///
-    /// Identifiers listed in `omitted` get a manifest entry but no JSON file,
+    /// Identifiers listed in omitted get a manifest entry but no JSON file,
     /// which is how a profile folder looks after an out-of-band deletion or a
     /// half-finished cloud sync.
     private func withManager(
@@ -743,8 +741,8 @@ struct ProfileManagerPersistenceTests {
         }
     }
 
-    /// Writes each profile's JSON plus a `profiles.json` manifest, so a
-    /// freshly constructed `ProfileManager` loads them the way it would in
+    /// Writes each profile's JSON plus a profiles.json manifest, so a
+    /// freshly constructed ProfileManager loads them the way it would in
     /// production.
     private func seedManifest(
         with profiles: [Profile],
@@ -775,9 +773,9 @@ struct ProfileManagerPersistenceTests {
     }
 
     /// Returns a URL whose parent component is a regular file, so
-    /// `createDirectory(withIntermediateDirectories:)` cannot succeed there.
+    /// createDirectory(withIntermediateDirectories:) cannot succeed there.
     ///
-    /// This leaves `fileExists` false and reaches the catch, and unlike a
+    /// This leaves fileExists false and reaches the catch, and unlike a
     /// permissions block it also fails for a root-run test host.
     private func makeUncreatableDirectoryURL(in directory: URL) throws -> URL {
         let blocker = directory.appendingPathComponent("occupied", isDirectory: false)
@@ -785,7 +783,7 @@ struct ProfileManagerPersistenceTests {
         return blocker.appendingPathComponent("Profiles", isDirectory: true)
     }
 
-    /// Replaces `profiles.json` with a non-empty directory, so every later
+    /// Replaces profiles.json with a non-empty directory, so every later
     /// manifest write fails: an atomic write renames its scratch file onto the
     /// destination, and a file can never be renamed over a directory.
     ///
@@ -820,7 +818,7 @@ struct ProfileManagerPersistenceTests {
         try makeEncoder().encode(bundle).write(to: url, options: .atomic)
     }
 
-    /// Mirrors the encoder `ProfileManager` builds in its own initializer, so
+    /// Mirrors the encoder ProfileManager builds in its own initializer, so
     /// seeded files decode through the manager's decoder.
     private func makeEncoder() -> JSONEncoder {
         let encoder = JSONEncoder()

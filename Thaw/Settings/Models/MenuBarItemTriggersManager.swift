@@ -49,7 +49,7 @@ enum MenuBarItemTriggerRuntimeStatus: Equatable {
 /// by revealing or hiding their target items as system conditions change.
 ///
 /// Each enabled trigger is re-evaluated whenever the aggregated
-/// ``SystemState`` changes (and periodically as a safety net, which also
+/// SystemState changes (and periodically as a safety net, which also
 /// covers time-of-day schedules). When a trigger's reveal decision flips,
 /// its target item is moved into the configured reveal or hide section
 /// after a short debounce, so brief fluctuations do not thrash the menu bar.
@@ -105,7 +105,7 @@ final class MenuBarItemTriggersManager {
     /// Exact live identifiers currently owned by enabled, available triggers.
     ///
     /// Stored on purpose: item views read it on every redraw, and only a
-    /// stored `@Observable` property is O(1) and registers a dependency on
+    /// stored @Observable property is O(1) and registers a dependency on
     /// every access. A memoized computed property's warm read registers none.
     private(set) var controlledIdentifiers = Set<String>()
 
@@ -174,7 +174,7 @@ final class MenuBarItemTriggersManager {
     /// conditions, keyed by tag identifier, injected into the system state.
     var imageHashes = [String: UInt64]()
 
-    /// Exact pixel hashes captured in the same pass as ``imageHashes``.
+    /// Exact pixel hashes captured in the same pass as imageHashes.
     var exactImageHashes = [String: UInt64]()
 
     /// Guards against overlapping image-capture passes.
@@ -350,12 +350,12 @@ final class MenuBarItemTriggersManager {
         }
     }
 
-    /// Recomputes ``controlledIdentifiers`` from the current triggers and
-    /// feature flags. The sole writer of ``controlledIdentifiers``; `init`
+    /// Recomputes controlledIdentifiers from the current triggers and
+    /// feature flags. The sole writer of controlledIdentifiers; init
     /// calls it too because property observers don't run there.
     ///
     /// Ownership means an enabled, available trigger targets the item, the
-    /// same question ``controllingTrigger(forIdentifier:)`` answers. It is not
+    /// same question controllingTrigger(forIdentifier:) answers. It is not
     /// "the item carries a plan action": an overridden trigger emits no
     /// action yet still owns its target.
     func refreshControlledIdentifiers() {
@@ -385,8 +385,8 @@ final class MenuBarItemTriggersManager {
 
     /// Whether any enabled trigger owns the given item's placement.
     ///
-    /// A set lookup is enough: ``refreshControlledIdentifiers`` already
-    /// resolved every target, including legacy `:N` ones, to its live
+    /// A set lookup is enough: refreshControlledIdentifiers already
+    /// resolved every target, including legacy :N ones, to its live
     /// identifier. Kept O(1) because the layout editor calls it per item on
     /// every redraw.
     func isControlledByTrigger(identifier: String) -> Bool {
@@ -401,11 +401,11 @@ final class MenuBarItemTriggersManager {
     }
 
     /// The enabled trigger that currently owns the given item's placement,
-    /// or `nil` when no trigger targets it.
+    /// or nil when no trigger targets it.
     ///
     /// An enabled trigger claims its targets as soon as it is configured, not
     /// only while its condition is met (see
-    /// `MenuBarItemManager.setTriggerControlledItemIdentifiers`). For as long
+    /// MenuBarItemManager.setTriggerControlledItemIdentifiers). For as long
     /// as it holds an item, that item's section is the trigger's to decide and
     /// the saved layout is neither consulted for it nor updated from it, so
     /// the layout editor must not present the item as freely placeable.
@@ -634,7 +634,7 @@ final class MenuBarItemTriggersManager {
         Defaults.set(data, forKey: .menuBarItemTriggers)
     }
 
-    /// Wrapper that decodes its element if possible, otherwise yields `nil`
+    /// Wrapper that decodes its element if possible, otherwise yields nil
     /// instead of failing the whole array decode.
     private struct FailableTrigger: Decodable {
         let value: MenuBarItemTrigger?
@@ -674,7 +674,7 @@ final class MenuBarItemTriggersManager {
     /// Repairs persisted trigger targets from before stable base identities
     /// were saved alongside their concrete identifiers.
     ///
-    /// The old `battery-item` test fixture is first restored to the real
+    /// The old battery-item test fixture is first restored to the real
     /// Control Center Battery identifier. Any legacy first-instance target
     /// whose title does not end in a numeric component can then safely use its
     /// full identifier as its stable namespace/title base. We intentionally
@@ -720,7 +720,7 @@ final class MenuBarItemTriggersManager {
         }
     }
 
-    /// The old tag format omits `:0` for the first instance. When an
+    /// The old tag format omits :0 for the first instance. When an
     /// identifier has no trailing number, it is therefore already its full
     /// namespace/title base. A trailing number remains ambiguous and must be
     /// resolved only from live tag data later.

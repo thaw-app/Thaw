@@ -11,7 +11,7 @@ import Testing
 /// The saved-layout lookup behind the saved-order restore gate.
 ///
 /// savedSectionOrder can split instances of one base identifier across
-/// sections (Control Center's `Item-0:1`, `Item-0:2`, ...). Collapsing them to
+/// sections (Control Center's Item-0:1, Item-0:2, ...). Collapsing them to
 /// one section lets app-launch churn trigger a bulk apply that visibly expands
 /// the hidden section.
 @Suite("Saved layout section lookup")

@@ -52,7 +52,7 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
 
     /// A Boolean value that indicates whether this tag represents a
     /// dynamically-named Control Center item (Live Activities, etc.)
-    /// with the pattern `controlCenter:Item-\d+`.
+    /// with the pattern controlCenter:Item-\d+.
     var isControlCenterGenericItem: Bool {
         namespace == .controlCenter && MarkerPairResolver.isGenericControlCenterTitle(title)
     }
@@ -61,7 +61,7 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
     /// which only a wrong source-PID resolution produces.
     ///
     /// Spatial AX matching can skew on multi-display setups and give a module
-    /// a neighboring app's PID (`com.techsmith.snagit.capturehelper:Battery`,
+    /// a neighboring app's PID (com.techsmith.snagit.capturehelper:Battery,
     /// #1027). Only the title reveals it. A false positive (an app titling its
     /// item "Battery") only loses its saved position.
     var isMisattributedControlCenterModule: Bool {
@@ -148,12 +148,12 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
 
     /// A lossless string encoding of this tag, suitable for persistence.
     ///
-    /// Unlike ``tagIdentifier``, round-trips the namespace kind and instance
+    /// Unlike tagIdentifier, round-trips the namespace kind and instance
     /// index. Excludes the window ID, which doesn't survive a relaunch.
     ///
-    /// Format: `<kind>:<namespaceValue>:<instanceIndex>:<title>`, where `kind`
-    /// is `n` (null), `s` (string) or `u` (uuid). The title is the remainder of
-    /// the string, so it may contain `:`.
+    /// Format: <kind>:<namespaceValue>:<instanceIndex>:<title>, where kind
+    /// is n (null), s (string) or u (uuid). The title is the remainder of
+    /// the string, so it may contain :.
     var persistenceKey: String {
         let kind: String
         let namespaceValue: String
@@ -171,10 +171,10 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
         return "\(kind):\(namespaceValue):\(instanceIndex):\(title)"
     }
 
-    /// Creates a tag from a string produced by ``persistenceKey``.
+    /// Creates a tag from a string produced by persistenceKey.
     ///
-    /// Returns `nil` if the string is not a valid encoding. The resulting tag
-    /// has a `nil` window identifier.
+    /// Returns nil if the string is not a valid encoding. The resulting tag
+    /// has a nil window identifier.
     init?(persistenceKey: String) {
         let components = persistenceKey.split(separator: ":", maxSplits: 3, omittingEmptySubsequences: false)
         guard components.count == 4 else { return nil }
@@ -211,7 +211,7 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
     ///
     /// iStat Menus titles items with the live value ("CPU 12%"), so anything
     /// keyed by the title stops matching on the next sample. Numbers become
-    /// `#` and byte units are normalized; "CPU" and "Network" stay distinct.
+    /// # and byte units are normalized; "CPU" and "Network" stay distinct.
     static func canonicalMetricTitle(_ raw: String) -> String {
         raw
             .replacing(/[-+]?\d+(?:[.,]\d+)?/, with: "#")
@@ -226,7 +226,7 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
     /// The titles Control Center gives its own menu bar modules.
     ///
     /// Under any other namespace, one of these means a misresolved PID.
-    /// `BentoBox` carries an instance suffix, so it's a prefix test. A closed
+    /// BentoBox carries an instance suffix, so it's a prefix test. A closed
     /// list in macOS's exact casing, not a heuristic.
     static let controlCenterModuleTitles: Set<String> = [
         "Accessibility",
@@ -247,8 +247,8 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
         "WiFi",
     ]
 
-    /// Whether `title` names one of Control Center's own modules, allowing
-    /// for the `BentoBox-<n>` instance suffix.
+    /// Whether title names one of Control Center's own modules, allowing
+    /// for the BentoBox-<n> instance suffix.
     static func isControlCenterModuleTitle(_ title: String) -> Bool {
         controlCenterModuleTitles.contains(title) || title.hasPrefix("BentoBox")
     }
@@ -258,9 +258,9 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
     ///
     /// Returns the Control Center spelling (title and instance index kept),
     /// or the input unchanged. Comparing with the input is the
-    /// misattribution test ``LayoutSolver`` prunes on.
+    /// misattribution test LayoutSolver prunes on.
     ///
-    /// `Item-N` titles are left alone: a third-party generic slot looks the
+    /// Item-N titles are left alone: a third-party generic slot looks the
     /// same, and guessing would orphan real items.
     static func canonicalControlCenterModuleIdentifier(_ identifier: String) -> String {
         guard let separator = identifier.firstIndex(of: ":") else {
@@ -311,7 +311,7 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
         return nil
     }
 
-    /// The canonical form of a `namespace:title[:index]` identifier.
+    /// The canonical form of a namespace:title[:index] identifier.
     ///
     /// A no-op except for volatile-title owners, so safe on any identifier.
     static func canonicalPersistentIdentifier(_ identifier: String) -> String {
@@ -320,7 +320,7 @@ nonisolated struct MenuBarItemTag: Hashable, CustomStringConvertible {
         }
 
         let suffix = String(identifier.dropFirst(prefix.count))
-        // Split off a trailing `:<digits>` instance index first.
+        // Split off a trailing :<digits> instance index first.
         if let separator = suffix.lastIndex(of: ":") {
             let title = String(suffix[..<separator])
             let instance = String(suffix[suffix.index(after: separator)...])
@@ -417,7 +417,7 @@ nonisolated extension MenuBarItemTag {
 nonisolated extension MenuBarItemTag {
     /// A type that represents a menu bar item namespace.
     enum Namespace: Hashable, CustomStringConvertible {
-        /// The `null` namespace.
+        /// The null namespace.
         case null
         /// A namespace represented by a string.
         case string(String)
@@ -433,7 +433,7 @@ nonisolated extension MenuBarItemTag {
         }
 
         /// A Boolean value that indicates whether this namespace is
-        /// the `null` namespace.
+        /// the null namespace.
         var isNull: Bool {
             switch self {
             case .null: true
@@ -461,10 +461,10 @@ nonisolated extension MenuBarItemTag {
 
         /// Creates a namespace with the given optional value.
         ///
-        /// - Parameter value: An optional value for the namespace.
+        /// value: An optional value for the namespace.
         ///
-        /// - Returns: A namespace represented by a string when `value`
-        ///   is not `nil`. Otherwise, the `null` namespace.
+        /// Returns a namespace represented by a string when value
+        /// is not nil. Otherwise, the null namespace.
         static func optional(_ value: String?) -> Namespace {
             value.map { .string($0) } ?? .null
         }
@@ -510,7 +510,7 @@ nonisolated extension MenuBarItemTag.Namespace {
     /// position once.
     ///
     /// Verify every entry against a live bar. OneDrive doesn't belong: its
-    /// own ID is `com.microsoft.OneDrive-mac` and the main app owns the item.
+    /// own ID is com.microsoft.OneDrive-mac and the main app owns the item.
     static let helperBundleIDAliases: [String: String] = [
         // Verified: Little Snitch Agent.app, inside the app bundle, owns the item.
         "at.obdev.littlesnitch.agent": "at.obdev.littlesnitch",
@@ -519,7 +519,7 @@ nonisolated extension MenuBarItemTag.Namespace {
     /// Returns the user-facing app's bundle identifier for a bundle
     /// identifier that may belong to one of its helpers.
     ///
-    /// The identity function for everything not in ``helperBundleIDAliases``.
+    /// The identity function for everything not in helperBundleIDAliases.
     static func canonicalBundleID(_ bundleID: String) -> String {
         helperBundleIDAliases[bundleID] ?? bundleID
     }

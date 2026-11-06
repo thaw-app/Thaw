@@ -11,7 +11,7 @@ import Foundation
 
 /// A custom color.
 nonisolated struct IceColor: Hashable {
-    /// The color, represented as a `CGColor`.
+    /// The color, represented as a CGColor.
     var cgColor: CGColor
 }
 

@@ -11,29 +11,28 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the parts of ``WindowInfo`` that work without a window server:
-/// the memberwise initializer, the refusal side of `Codable`, and the
+/// Covers the parts of WindowInfo that work without a window server:
+/// the memberwise initializer, the refusal side of Codable, and the
 /// derived properties the menu-bar rules read.
 ///
-/// - **Decoding refusals.** `WindowInfo` is persisted and replayed, so a
-///   truncated or mistyped payload must fail rather than decode into a zero
-///   rect. `bounds` decodes positionally from `[[x, y], [w, h]]`, so arity
-///   is the only guard against a silent misread.
-/// - **The memberwise initializer's defaults.**
-/// - **`isMenuRelated`'s off-by-one arm**, which also accepts the level one
-///   below the pop-up menu level.
+/// WindowInfo is persisted and replayed, so a truncated or mistyped payload
+/// must fail rather than decode into a zero rect. bounds decodes
+/// positionally from [[x, y], [w, h]], so arity is the only guard against a
+/// silent misread. It also covers the memberwise initializer's defaults and
+/// isMenuRelated's off-by-one arm, which accepts the level one below the
+/// pop-up menu level.
 ///
-/// Not covered here: the enumeration functions, `init?(windowID:)` and
-/// `currentBounds()`, which go through `Bridging` to the live window server;
-/// the private `init?(dictionary:)`; and `wallpaperWindow(from:for:)` and
-/// `menuBarWindow(from:for:)`, which read `CGDisplayBounds`.
+/// Not covered here: the enumeration functions, init?(windowID:) and
+/// currentBounds(), which go through Bridging to the live window server;
+/// the private init?(dictionary:); and wallpaperWindow(from:for:) and
+/// menuBarWindow(from:for:), which read CGDisplayBounds.
 @Suite("Window info decoding and derived rules")
 struct WindowInfoDecodingTests {
     // MARK: - Helpers
 
     /// A payload carrying every key the synthesized decoder reads, in the
-    /// shape `JSONEncoder` produces for a `WindowInfo`. Computed because
-    /// `[String: Any]` is not `Sendable`, which also keeps mutations per test.
+    /// shape JSONEncoder produces for a WindowInfo. Computed because
+    /// [String: Any] is not Sendable, which also keeps mutations per test.
     private static var wellFormedPayload: [String: Any] {
         [
             "windowID": 12345,
@@ -51,7 +50,7 @@ struct WindowInfoDecodingTests {
         return try JSONDecoder().decode(WindowInfo.self, from: data)
     }
 
-    /// Decodes `payload` expecting failure, and hands back the error so the
+    /// Decodes payload expecting failure, and hands back the error so the
     /// caller can assert *which* field the decoder objected to.
     private func decodingFailure(for payload: [String: Any]) throws -> DecodingError {
         let data = try JSONSerialization.data(withJSONObject: payload)
@@ -142,7 +141,7 @@ struct WindowInfoDecodingTests {
         #expect(key.stringValue == missingKey)
     }
 
-    /// `title` and `ownerName` are the only optional properties, so they are
+    /// title and ownerName are the only optional properties, so they are
     /// the only two a payload may leave out.
     @Test("A payload without a title or an owner name still decodes")
     func absentOptionalKeysDecodeAsUnset() throws {
@@ -164,8 +163,8 @@ struct WindowInfoDecodingTests {
     func wronglyTypedFieldIsRefused(_ field: String) throws {
         // Deliberately mixed: a string where a number belongs, a number and a
         // Boolean where a string belongs, an object where the nested pair
-        // belongs, and the JSON `1` that a laxer decoder would happily read
-        // back as `true`.
+        // belongs, and the JSON 1 that a laxer decoder would happily read
+        // back as true.
         let wrongValues: [String: Any] = [
             "windowID": "not a number",
             "ownerPID": "not a number",
@@ -182,7 +181,7 @@ struct WindowInfoDecodingTests {
         _ = try decodingFailure(for: payload)
     }
 
-    /// `CGRect` decodes positionally out of an unkeyed container, so a payload
+    /// CGRect decodes positionally out of an unkeyed container, so a payload
     /// that runs out of elements has to fail rather than fill the rest in.
     @Test(
         "A bounds payload of the wrong shape is refused",
@@ -201,7 +200,7 @@ struct WindowInfoDecodingTests {
         _ = try decodingFailure(for: payload)
     }
 
-    /// The complement of the arity check: `CGRect` stops after the origin and
+    /// The complement of the arity check: CGRect stops after the origin and
     /// the size, so trailing elements are ignored rather than rejected. Pinned
     /// because it is the difference between the two ends of the same guard.
     @Test("A bounds payload with trailing elements is tolerated")
@@ -214,7 +213,7 @@ struct WindowInfoDecodingTests {
         #expect(window.bounds == CGRect(x: 12, y: 34, width: 200, height: 24))
     }
 
-    /// `windowID` is a `CGWindowID`, which is unsigned. A negative number is
+    /// windowID is a CGWindowID, which is unsigned. A negative number is
     /// not a window identifier that merely wrapped around.
     @Test("A negative window identifier is refused")
     func negativeWindowIdentifierIsRefused() throws {
@@ -224,7 +223,7 @@ struct WindowInfoDecodingTests {
         _ = try decodingFailure(for: payload)
     }
 
-    /// A window description carries far more keys than `WindowInfo` reads, so
+    /// A window description carries far more keys than WindowInfo reads, so
     /// the decoder must not be tightened into rejecting the extras.
     @Test("Keys the window does not model are ignored")
     func unmodelledKeysAreIgnored() throws {
@@ -272,7 +271,7 @@ struct WindowInfoDecodingTests {
 
         /// Every source-PID match path anchors on the window's centre, so a
         /// window missing either dimension has nothing to match against. Seen in
-        /// the field (#956): a status item at `(-4323, 0, 0, 0)` that never
+        /// the field (#956): a status item at (-4323, 0, 0, 0) that never
         /// resolved and woke a full scan of every running app each time.
         @Test(
             "A window missing either dimension is degenerate",
@@ -309,7 +308,7 @@ struct WindowInfoDecodingTests {
         }
 
         /// The sibling suite's Window-Server case uses layer 25, which is the
-        /// status level and so satisfies `isMenuRelated` on its own. Layer 0 is
+        /// status level and so satisfies isMenuRelated on its own. Layer 0 is
         /// the normal window level, so only the Window-Server arm can carry
         /// this one.
         @Test("A Window Server window is menu related even at the normal window level")

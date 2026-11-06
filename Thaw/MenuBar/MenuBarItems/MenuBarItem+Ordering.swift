@@ -10,8 +10,8 @@ import Foundation
 nonisolated extension MenuBarItem {
     /// Leading-edge order with a stable identifier tie-break.
     ///
-    /// Items can tie on `minX` during a reflow, and Swift's sort isn't
-    /// stable, so ties would read as spontaneous swaps. `uniqueIdentifier` is
+    /// Items can tie on minX during a reflow, and Swift's sort isn't
+    /// stable, so ties would read as spontaneous swaps. uniqueIdentifier is
     /// stable across launches.
     static func sortByLeadingEdgeThenIdentifier(_ items: [MenuBarItem]) -> [MenuBarItem] {
         items.sorted { lhs, rhs in

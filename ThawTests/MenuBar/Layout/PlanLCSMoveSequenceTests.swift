@@ -56,7 +56,7 @@ struct PlanLCSMoveSequenceTests {
     }
 
     /// current=[v1, x], desired=[x, v1, h1]. The tie-break keeps {x}, so v1 moves,
-    /// and its only same-section anchor x sits to its left: `.rightOfUID(x)`.
+    /// and its only same-section anchor x sits to its left: .rightOfUID(x).
     @Test("The anchor scan stays inside the moving item's section")
     func anchorScanRespectsSectionBoundary() {
         let result = LayoutSolver.planLCSMoveSequence(
@@ -71,7 +71,7 @@ struct PlanLCSMoveSequenceTests {
     }
 
     /// current=[b, a, c], desired=[a, b, c]. LCS={a,c}, so b moves; forward scan
-    /// finds c first: `.leftOfUID(c)`.
+    /// finds c first: .leftOfUID(c).
     @Test("The forward anchor scan is preferred over the backward one")
     func forwardScanPreferredOverBackward() {
         let result = LayoutSolver.planLCSMoveSequence(
@@ -86,7 +86,7 @@ struct PlanLCSMoveSequenceTests {
     }
 
     /// current=[h1, x], desired=[x, h1]. LCS={x}; h1 is hidden and x visible, so
-    /// neither scan finds an anchor: `.sectionBoundary(.hidden)`.
+    /// neither scan finds an anchor: .sectionBoundary(.hidden).
     @Test("With no same-section anchor the planner falls back to the section boundary")
     func sectionBoundaryFallbackWhenNoAnchorInSection() {
         let result = LayoutSolver.planLCSMoveSequence(
@@ -105,8 +105,8 @@ struct PlanLCSMoveSequenceTests {
     }
 
     /// current=[a, b, c], desired=[c, b, a]. LCS={c}, so b then a move.
-    /// - b: forward finds unmoved a, backward finds c: `.rightOfUID(c)`.
-    /// - a: backward finds the now-moved b: `.rightOfUID(b)`.
+    /// For b, forward finds unmoved a and backward finds c: .rightOfUID(c).
+    /// For a, backward finds the now-moved b: .rightOfUID(b).
     @Test("An already-moved item becomes a stable anchor for later moves")
     func alreadyMovedItemBecomesStableAnchor() {
         let result = LayoutSolver.planLCSMoveSequence(
@@ -124,7 +124,7 @@ struct PlanLCSMoveSequenceTests {
 
     // MARK: - Preferred movers
 
-    /// The new item and `b` tie in a length-two LCS, and the plain backtrack keeps
+    /// The new item and b tie in a length-two LCS, and the plain backtrack keeps
     /// the new item, moving the established one instead (#885).
     @Test("An unmanaged arrival moves instead of an established item")
     func unmanagedArrivalIsPreferredMover() {

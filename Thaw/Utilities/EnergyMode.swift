@@ -10,9 +10,9 @@
 /// The macOS Energy Mode in effect for the active power source.
 ///
 /// System Settings > Battery offers up to three modes. Only Low Power Mode
-/// has a public API (`ProcessInfo.isLowPowerModeEnabled`); High Power Mode
+/// has a public API (ProcessInfo.isLowPowerModeEnabled); High Power Mode
 /// is offered on a subset of Macs and is published only through power
-/// management's dynamic store entry. ``EnergyModeMonitor`` reads both.
+/// management's dynamic store entry. EnergyModeMonitor reads both.
 enum EnergyMode: String, Codable, Hashable, CaseIterable, Identifiable {
     case low
     case automatic

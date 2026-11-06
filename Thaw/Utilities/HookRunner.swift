@@ -7,8 +7,8 @@
 
 import Foundation
 import Subprocess
-// Prefer the `System` module when available: Subprocess's API surface uses
-// `System.FilePath`, so both sides must resolve to the same module or the
+// Prefer the System module when available: Subprocess's API surface uses
+// System.FilePath, so both sides must resolve to the same module or the
 // types won't unify.
 #if canImport(System)
     import System
@@ -26,7 +26,7 @@ enum HookRunner {
     private static let diagLog = DiagLog(category: "HookRunner")
 
     /// Default path to the AppleScript interpreter on macOS. Overridable
-    /// per call via the `osascriptPath` parameter on `run` / `runIfEnabled`
+    /// per call via the osascriptPath parameter on run / runIfEnabled
     /// (used in tests; production callers take the default).
     static let defaultOSAScriptPath = "/usr/bin/osascript"
 
@@ -158,13 +158,13 @@ enum HookRunner {
 
         let clamped = hook.timeoutSeconds.clamped(to: 1.0 ... 300.0)
 
-        // Cancelling signals the hook's whole process group: a `#!/bin/sh` wrapper
+        // Cancelling signals the hook's whole process group: a #!/bin/sh wrapper
         // doesn't forward signals to its child, so signalling it alone left work running.
         //
-        // `createSession` is required. Without it the hook shares Thaw's process group
+        // createSession is required. Without it the hook shares Thaw's process group
         // and the signal would hit Thaw too.
         //
-        // SIGTERM, not SIGINT: non-interactive `sh` starts background jobs with SIGINT
+        // SIGTERM, not SIGINT: non-interactive sh starts background jobs with SIGINT
         // ignored, and Subprocess ends the sequence once the wrapper exits. A child that
         // traps SIGTERM can still outlive the run.
         let platformOptions: PlatformOptions = {
@@ -179,8 +179,8 @@ enum HookRunner {
         // Both arms report into a one-shot channel; the first value wins.
         //
         // The subprocess runs unstructured on purpose: as a task-group child it had to
-        // finish before `run` returned (a `sleep 30` behind a 1s budget blocked 30s), and
-        // awaiting `Task.value` isn't cancellable from the waiting side.
+        // finish before run returned (a sleep 30 behind a 1s budget blocked 30s), and
+        // awaiting Task.value isn't cancellable from the waiting side.
         let (outcomes, continuation) = AsyncStream.makeStream(of: RaceOutcome.self)
 
         let subprocessTask = Task {

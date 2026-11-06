@@ -10,8 +10,8 @@ import os.lock
 import Testing
 @testable import Thaw
 
-/// Covers the `Task` timeout helpers: `withTimeout`, the `Task(timeout:)`
-/// initializer, and `Task.detached(timeout:)`.
+/// Covers the Task timeout helpers: withTimeout, the Task(timeout:)
+/// initializer, and Task.detached(timeout:).
 ///
 /// Every case races a real sleep against a real budget, kept an order of
 /// magnitude apart (50 ms against 5 s, or 5 s against immediate work).
@@ -153,8 +153,8 @@ struct ConcurrencyHelpersTests {
     }
 }
 
-/// Covers `debouncedNotificationTask`: the observer → AsyncChannel →
-/// `.debounce(for:)` wiring that ProfileManager's setup builds its
+/// Covers debouncedNotificationTask: the observer → AsyncChannel →
+/// .debounce(for:) wiring that ProfileManager's setup builds its
 /// notification tasks from.
 ///
 /// Each case posts into a private NotificationCenter. Presence is asserted

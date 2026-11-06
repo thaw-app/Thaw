@@ -39,7 +39,7 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
     enum ImmovabilityReason {
         /// macOS doesn't allow it to move (Clock, Control Center).
         case prohibitedSystemItem
-        /// A generic Control Center slot (`Item-N`) with no resolved source.
+        /// A generic Control Center slot (Item-N) with no resolved source.
         /// Drag events to Control Center for it time out.
         case unresolvedControlCenterPlaceholder
 
@@ -56,16 +56,16 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
     /// Whether synthetic move events are posted to the window's owner.
     ///
     /// Also decides whether an unresolved item is movable at all. See
-    /// ``Defaults/Key/postMoveEventsToWindowOwner``.
+    /// Defaults/Key/postMoveEventsToWindowOwner.
     static var postsMoveEventsToWindowOwner: Bool {
         (Defaults.object(forKey: .postMoveEventsToWindowOwner) as? Bool)
             ?? Defaults.DefaultValue.postMoveEventsToWindowOwner
     }
 
-    /// The reason this item cannot be moved, or `nil` when it can.
+    /// The reason this item cannot be moved, or nil when it can.
     ///
     /// Pure, never reads defaults. See also
-    /// ``isMovableAddressingWindowOwner``.
+    /// isMovableAddressingWindowOwner.
     var immovabilityReason: ImmovabilityReason? {
         if !tag.isMovable {
             return .prohibitedSystemItem
@@ -79,8 +79,8 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
     /// Whether this item can be moved given where its events will be sent.
     ///
     /// Addressing the window's owner lifts
-    /// ``ImmovabilityReason/unresolvedControlCenterPlaceholder``, since the
-    /// owning app no longer matters. Separate so ``isMovable`` stays pure.
+    /// ImmovabilityReason/unresolvedControlCenterPlaceholder, since the
+    /// owning app no longer matters. Separate so isMovable stays pure.
     var isMovableAddressingWindowOwner: Bool {
         switch immovabilityReason {
         case nil:
@@ -118,7 +118,7 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
 
     /// A Boolean value that indicates whether this item can be moved.
     ///
-    /// Defined through ``immovabilityReason`` so they can't disagree.
+    /// Defined through immovabilityReason so they can't disagree.
     var isMovable: Bool {
         immovabilityReason == nil
     }
@@ -129,7 +129,7 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
     }
 
     /// A transient Control Center module (e.g. Live Activities) with a
-    /// generic `Item-\d+` title. Treated like screen recording indicators.
+    /// generic Item-\d+ title. Treated like screen recording indicators.
     var isTransientControlCenterItem: Bool {
         tag.isControlCenterGenericItem && sourcePID != nil
     }
@@ -162,17 +162,17 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
 
     /// The application that owns the item.
     ///
-    /// - Note: In macOS 26 and later, this property always returns the
-    ///   Control Center. To get the actual application that created the
-    ///   item, use ``sourceApplication``.
+    /// In macOS 26 and later, this property always returns the
+    /// Control Center. To get the actual application that created the
+    /// item, use sourceApplication.
     var owningApplication: NSRunningApplication? {
         NSRunningApplication(processIdentifier: ownerPID)
     }
 
     /// The application that created the item.
     ///
-    /// - Note: Prior to macOS 26, this property and ``owningApplication``
-    ///   are functionally equivalent.
+    /// Prior to macOS 26, this property and owningApplication
+    /// are functionally equivalent.
     var sourceApplication: NSRunningApplication? {
         guard let sourcePID else {
             return nil
@@ -261,7 +261,7 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
         "\(displayName) (\(tag))"
     }
 
-    /// `namespace:title:index`; windowID changes between restarts.
+    /// namespace:title:index; windowID changes between restarts.
     var uniqueIdentifier: String {
         if tag.instanceIndex > 0 {
             return "\(tag.namespace):\(tag.title):\(tag.instanceIndex)"
@@ -293,16 +293,16 @@ nonisolated struct MenuBarItem: CustomStringConvertible {
 
 // MARK: - UnresolvedPlaceholderAlias
 
-/// Re-tags an `unresolvedControlCenterPlaceholder` with the app identity
+/// Re-tags an unresolvedControlCenterPlaceholder with the app identity
 /// the AX tree already names, for one Layout editor drag (#905).
 ///
 /// The AppKit side lives in
-/// `LayoutBarItemView.aliasForUnresolvedControlCenterPlaceholder()`.
+/// LayoutBarItemView.aliasForUnresolvedControlCenterPlaceholder().
 nonisolated enum UnresolvedPlaceholderAlias {
     /// The bundle identifier carried by an AX identity, when one of its
     /// attributes names a non-host third-party app.
     ///
-    /// Checks `AXIdentifier`, then `AXTitle`, then `AXHelp`. Rejects values
+    /// Checks AXIdentifier, then AXTitle, then AXHelp. Rejects values
     /// without a dot, host processes, and Thaw.
     static nonisolated func appBundleID(
         from identity: AXIdentityCatalog.AXItemIdentity?,
@@ -320,7 +320,7 @@ nonisolated enum UnresolvedPlaceholderAlias {
         return nil
     }
 
-    /// Returns `nil` unless `item` is an unresolved placeholder, so no other
+    /// Returns nil unless item is an unresolved placeholder, so no other
     /// immovability case can be re-tagged.
     static nonisolated func aliasedItem(
         for item: MenuBarItem,

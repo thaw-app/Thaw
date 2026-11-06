@@ -8,11 +8,11 @@
 import Testing
 @testable import Thaw
 
-/// Verifies `SimpleSemaphore.wait(timeout:)` reconciles a lost-race acquire
-/// against a timeout: a permit won by `wait()` after the timeout has already
+/// Verifies SimpleSemaphore.wait(timeout:) reconciles a lost-race acquire
+/// against a timeout: a permit won by wait() after the timeout has already
 /// fired must be handed back, never leaked.
 ///
-/// The suite is `.serialized` because the race hammer drives 500 real
+/// The suite is .serialized because the race hammer drives 500 real
 /// timeout-against-release races back to back and would otherwise starve the
 /// rest of the parallel test plan. The time limit turns a reconciliation bug
 /// that deadlocks the semaphore into a failure rather than a hung run.
@@ -100,8 +100,8 @@ struct SimpleSemaphoreTests {
         await semaphore.signal()
     }
 
-    /// A caller blocked in `wait(timeout:)` that is cancelled must observe
-    /// `CancellationError`, not `TimeoutError`, and must leave the
+    /// A caller blocked in wait(timeout:) that is cancelled must observe
+    /// CancellationError, not TimeoutError, and must leave the
     /// semaphore's state clean for the next waiter.
     @Test("Cancelling a blocked waiter throws CancellationError and leaves clean state")
     func cancellationDuringWaitThrowsCancellationErrorAndLeavesCleanState() async throws {

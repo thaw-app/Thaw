@@ -13,11 +13,9 @@ import Foundation
 /// Engages zen mode while the screen is being shown to someone else.
 ///
 /// There's no public API to detect another process recording the screen
-/// (`CGDisplayIsCaptured` only reports legacy exclusive capture), so this
-/// covers:
-///
-/// - Mirroring: `CGDisplayIsInMirrorSet`, on screen-parameter changes.
-/// - Screen sharing: `screensharingd` running, polled only while enabled.
+/// (CGDisplayIsCaptured only reports legacy exclusive capture), so this
+/// covers mirroring (CGDisplayIsInMirrorSet, on screen-parameter changes) and
+/// screen sharing (screensharingd running, polled only while enabled).
 ///
 /// Local recording (QuickTime, OBS) isn't guessed from a bundle ID list;
 /// engaging for the wrong app is worse than not engaging.
@@ -93,7 +91,7 @@ final class PresentationMonitor {
         evaluateTask?.cancel()
         evaluateTask = nil
         // Withdraw anything this monitor engaged; a manual zen mode is left
-        // alone by `setAutomaticZenMode`.
+        // alone by setAutomaticZenMode.
         isPresenting = false
         appState?.menuBarManager.setAutomaticZenMode(false)
     }
@@ -123,22 +121,22 @@ final class PresentationMonitor {
     // MARK: - Signals
 
     /// Whether any active display is part of a mirror set. Main-actor bound:
-    /// it reads `NSScreen.screens`.
+    /// it reads NSScreen.screens.
     private static func isMirroring() -> Bool {
         NSScreen.screens.contains { CGDisplayIsInMirrorSet($0.displayID) != 0 }
     }
 
     /// Whether the system's screen-sharing daemon is running.
     ///
-    /// `screensharingd` isn't an application, so `NSWorkspace` can't see it.
+    /// screensharingd isn't an application, so NSWorkspace can't see it.
     private static nonisolated func isScreenBeingShared() -> Bool {
         runningProcessNames().contains("screensharingd")
     }
 
     /// Every running process's short name.
     ///
-    /// Uses `sysctl(KERN_PROC_ALL)` because `proc_name` can't name root
-    /// daemons like `screensharingd`. `p_comm` is truncated to 16 characters.
+    /// Uses sysctl(KERN_PROC_ALL) because proc_name can't name root
+    /// daemons like screensharingd. p_comm is truncated to 16 characters.
     private static nonisolated func runningProcessNames() -> Set<String> {
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0]
         var size = 0

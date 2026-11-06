@@ -9,7 +9,7 @@
 import Foundation
 import Observation
 
-/// The parts of ``AppPermissions`` views read, so previews can supply
+/// The parts of AppPermissions views read, so previews can supply
 /// lightweight stand-ins.
 @MainActor
 protocol PermissionsManaging: AnyObject, Observable {
@@ -26,9 +26,9 @@ protocol PermissionsManaging: AnyObject, Observable {
 final class AppPermissions: PermissionsManaging {
     /// Keys to access individual permissions.
     enum PermissionKey {
-        /// Identifies ``AppPermissions/accessibility``.
+        /// Identifies AppPermissions/accessibility.
         case accessibility
-        /// Identifies ``AppPermissions/screenRecording``.
+        /// Identifies AppPermissions/screenRecording.
         case screenRecording
     }
 

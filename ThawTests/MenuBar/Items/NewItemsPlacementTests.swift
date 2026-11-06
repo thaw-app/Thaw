@@ -11,9 +11,9 @@ import Testing
 
 // MARK: - NewItemsPlacement.Relation Tests
 
-/// Pins the raw values of `MenuBarItemManager.NewItemsPlacement.Relation`.
+/// Pins the raw values of MenuBarItemManager.NewItemsPlacement.Relation.
 ///
-/// They are persisted in `newItemsPlacementData`; changing one silently
+/// They are persisted in newItemsPlacementData; changing one silently
 /// discards a user's placement and falls back to the section default.
 ///
 /// Read-only, so safe to run in parallel.
@@ -115,11 +115,11 @@ struct NewItemsPlacementRelationTests {
 
 // MARK: - NewItemsPlacement Tests
 
-/// `MenuBarItemManager.NewItemsPlacement` construction, equality, and `Codable`.
+/// MenuBarItemManager.NewItemsPlacement construction, equality, and Codable.
 ///
-/// The placement is stored as JSON in `newItemsPlacementData` and compared
+/// The placement is stored as JSON in newItemsPlacementData and compared
 /// against the stored value to decide whether a new item must move, so both
-/// the encoded shape and `Equatable` are load-bearing.
+/// the encoded shape and Equatable are load-bearing.
 ///
 /// Read-only, so safe to run in parallel.
 @Suite("New items placement")

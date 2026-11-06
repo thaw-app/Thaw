@@ -9,13 +9,13 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Covers `IceGradient.averageColor(using:option:)`.
+/// Covers IceGradient.averageColor(using:option:).
 ///
-/// Dividing by a zero sample count yields an all-`NaN` `CGColor` that reads
+/// Dividing by a zero sample count yields an all-NaN CGColor that reads
 /// as valid and poisons whatever it is blended into; the guard mirrors
-/// ``CGImage.averageColor``. A non-empty `NSGradient` never yields a zero
+/// CGImage.averageColor. A non-empty NSGradient never yields a zero
 /// count, so the cases lock the reachable contracts: an empty gradient
-/// averages to `nil`, and a non-empty one has no `NaN` or infinite components.
+/// averages to nil, and a non-empty one has no NaN or infinite components.
 @Suite("IceGradient average color")
 @MainActor
 struct IceGradientAverageColorTests {

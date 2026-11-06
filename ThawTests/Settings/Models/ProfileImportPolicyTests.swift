@@ -131,7 +131,7 @@ struct ProfileImportPolicyTests {
             try manager.importProfile(from: url)
 
             #expect(manager.profiles.count == 2)
-            #expect(manager.profiles.filter { $0.associatedDisplayUUID == "UUID-A" }.map(\.name) == ["Second"])
+            #expect(manager.profiles.filter { $0.associatedDisplayUUID == "UUID-A" }.map(\.name) == ["First"])
             let importedFirst = try #require(manager.profiles.first { $0.name == "First" })
             let automation = manager.hooks(forProfileID: importedFirst.id)
             #expect(automation.preHook?.isEnabled == false)

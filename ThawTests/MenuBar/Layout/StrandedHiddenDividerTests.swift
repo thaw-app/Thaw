@@ -14,7 +14,7 @@ import Testing
 /// A divider displaced past every item (minX -2742) never recovered because
 /// "parked" was read off the leading edge alone, which every healthy collapsed
 /// bar also fails since H_ctrl expands into an offscreen-reaching spacer. These
-/// pin the both-edges check, on ``ParkedDividerLog``'s display geometry.
+/// pin the both-edges check, on ParkedDividerLog's display geometry.
 @Suite("Stranded hidden divider detection (#978)")
 struct StrandedHiddenDividerTests {
     /// H_ctrl expanded into its spacer, reaching offscreen while its trailing edge
@@ -75,7 +75,7 @@ struct StrandedHiddenDividerTests {
         ))
     }
 
-    /// With 36 to 40 items concealed and 1 to 5 visible, `shouldMoveHiddenDivider`
+    /// With 36 to 40 items concealed and 1 to 5 visible, shouldMoveHiddenDivider
     /// stays false (#978). The fix goes through the rebuild recovery; flipping this
     /// would re-open #958's full-bar drags.
     @Test("Both sections populated keeps planning per-item moves")
@@ -86,8 +86,8 @@ struct StrandedHiddenDividerTests {
     }
 
     /// A collapsed always-hidden section puts AH_ctrl's leading edge far offscreen,
-    /// so `.leftOfItem(AH_ctrl)` would click near minX -9189. The editor refuses the
-    /// drag when leading-edge `isOnScreen` says offscreen (#923).
+    /// so .leftOfItem(AH_ctrl) would click near minX -9189. The editor refuses the
+    /// drag when leading-edge isOnScreen says offscreen (#923).
     @Test("A collapsed-section divider's leading edge reads offscreen for the editor drag guard")
     func collapsedDividerLeadingEdgeIsOffscreen() {
         // AH_ctrl at minX -9189 with the 10000-wide spacer, on the same 2056-wide display.
@@ -101,7 +101,7 @@ struct StrandedHiddenDividerTests {
 
 /// The AH_ctrl placement's anchor guard (#978, #980).
 ///
-/// The AH_ctrl move anchored on `ControlItem.Hidden` while H_ctrl sat at -3596,
+/// The AH_ctrl move anchored on ControlItem.Hidden while H_ctrl sat at -3596,
 /// walked H_ctrl to -9322, and left the pair inverted with a zero-width hidden
 /// section. Anchoring beside a parked item strands the dragged item.
 ///

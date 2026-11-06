@@ -16,7 +16,7 @@ import Testing
 /// only safe where its key means the same item next launch; a wrong name
 /// gets clicked.
 ///
-/// Serialized: the tests swap the process-wide `menuBarItemResolvedNames`.
+/// Serialized: the tests swap the process-wide menuBarItemResolvedNames.
 @Suite(.serialized)
 struct MenuBarItemNameMemoryTests {
     @Test("An ordinary app item is eligible")
@@ -43,7 +43,7 @@ struct MenuBarItemNameMemoryTests {
 
     @Test("Control Center's generic slots are refused")
     func genericControlCenterSlotsAreRefused() {
-        // `Item-N` encodes a position in Control Center's hosting order, not
+        // Item-N encodes a position in Control Center's hosting order, not
         // an identity. Which slot is Item-0 depends on which agents launched
         // this boot, so a name restored here can land on another app's icon.
         for title in ["Item-0", "Item-1", "Item-12"] {

@@ -9,16 +9,16 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Covers the on-disk half of ``DiagnosticLogger``: attaching to a file,
+/// Covers the on-disk half of DiagnosticLogger: attaching to a file,
 /// appending instead of truncating, closing, and log retention. Shared
 /// verbatim with the MenuBarItemService XPC target.
 ///
 /// Every case drives the shared singleton at a temporary directory through
-/// `attachToFile(at:)`. `openLogFile()` and `isEnabled = true` stay uncovered
-/// because they would create a file in the real `~/Library/Logs/Thaw`.
+/// attachToFile(at:). openLogFile() and isEnabled = true stay uncovered
+/// because they would create a file in the real ~/Library/Logs/Thaw.
 ///
-/// `.serialized` because it mutates singleton state. Parallel suites may
-/// still write `DiagLog` lines into the attached file, so assertions check
+/// .serialized because it mutates singleton state. Parallel suites may
+/// still write DiagLog lines into the attached file, so assertions check
 /// containment, not exact contents.
 @Suite("Diagnostic logger file handling", .serialized)
 struct DiagnosticLoggerFileTests {
@@ -234,7 +234,7 @@ struct DiagnosticLoggerFileTests {
     // MARK: Retention
 
     /// Pins the retention policy for one test. The policy is shared, and
-    /// `withTemporaryLogDirectory` restores the previous one.
+    /// withTemporaryLogDirectory restores the previous one.
     private func useRetentionPolicy(retentionDays: Int, maxFileCount: Int = 50) {
         var policy = DiagnosticLogger.RotationPolicy()
         policy.retentionDays = retentionDays
@@ -312,7 +312,7 @@ struct DiagnosticLoggerFileTests {
             let stubborn = tmp.appendingPathComponent("seed-6.log")
             try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: stubborn.path)
             defer {
-                // The flag has to go before the enclosing helper deletes `tmp`,
+                // The flag has to go before the enclosing helper deletes tmp,
                 // or the temporary directory outlives the test.
                 try? FileManager.default.setAttributes([.immutable: false], ofItemAtPath: stubborn.path)
             }
@@ -393,8 +393,8 @@ struct DiagnosticLoggerFileTests {
             try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: locked.path)
             defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked.path) }
 
-            // The directory already exists, so `createDirectory` succeeds and
-            // it is `open(2)` itself that fails with EACCES.
+            // The directory already exists, so createDirectory succeeds and
+            // it is open(2) itself that fails with EACCES.
             DiagnosticLogger.shared.attachToFile(at: locked.appendingPathComponent("thaw.log"))
 
             #expect(!DiagnosticLogger.shared.isEnabled)
@@ -430,7 +430,7 @@ struct DiagnosticLoggerFileTests {
 
     // MARK: - Helpers
 
-    /// Runs `body` against a fresh temporary directory, then detaches the
+    /// Runs body against a fresh temporary directory, then detaches the
     /// shared logger and removes the directory.
     ///
     /// Detaching keeps the singleton from holding a handle on a deleted file.
@@ -451,7 +451,7 @@ struct DiagnosticLoggerFileTests {
         try await body(tmp)
     }
 
-    /// Creates `count` empty `.log` files dated one day apart, oldest first, and
+    /// Creates count empty .log files dated one day apart, oldest first, and
     /// returns their names in that order.
     ///
     /// Rotation orders by creation date and files written in a loop can share a
@@ -474,7 +474,7 @@ struct DiagnosticLoggerFileTests {
         return names
     }
 
-    /// The names of every `.log` file directly inside `directory`.
+    /// The names of every .log file directly inside directory.
     private func logFileNames(in directory: URL) -> [String] {
         let urls = (try? FileManager.default.contentsOfDirectory(
             at: directory,
@@ -493,7 +493,7 @@ struct DiagnosticLoggerFileTests {
         haystack.components(separatedBy: needle).count - 1
     }
 
-    /// Polls `condition` until it holds or `timeout` elapses, reporting whether
+    /// Polls condition until it holds or timeout elapses, reporting whether
     /// it ever held. The logger's serial queue cannot be joined, so this avoids
     /// betting on a fixed sleep.
     private func waitUntil(timeout: Duration = .seconds(5), _ condition: () -> Bool) async -> Bool {

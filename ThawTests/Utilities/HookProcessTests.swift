@@ -9,10 +9,10 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Exercises ``HookRunner.HookProcess`` with real child processes.
+/// Exercises HookRunner.HookProcess with real child processes.
 ///
-/// The suite launches short-lived system binaries only: `/bin/echo`,
-/// `/usr/bin/false`, and `/bin/sleep`. No app state is touched.
+/// The suite launches short-lived system binaries only: /bin/echo,
+/// /usr/bin/false, and /bin/sleep. No app state is touched.
 @Suite("Hook process")
 struct HookProcessTests {
     // MARK: - Launch & exit status
@@ -120,7 +120,7 @@ struct HookProcessTests {
             process.kill()
         }
 
-        // Reap first, then confirm the group drained. `hasLiveProcessGroup`
+        // Reap first, then confirm the group drained. hasLiveProcessGroup
         // can go false while an unreaped exit status is still outstanding, so
         // asserting on a sample taken before the reap is a race.
         try await Self.waitUntilTerminated(process)
@@ -297,14 +297,14 @@ struct HookProcessTests {
         timeout: Duration = pollTimeout
     ) async throws {
         try await poll(until: timeout) {
-            // Reaping on every pass keeps `isRunning` from reporting a child
+            // Reaping on every pass keeps isRunning from reporting a child
             // that has already exited, which is what the callers assert next.
             _ = process.isRunning
             return !process.hasLiveProcessGroup
         }
     }
 
-    /// Polls `condition` every 10 ms until it holds or `timeout` elapses.
+    /// Polls condition every 10 ms until it holds or timeout elapses.
     private static func poll(
         until timeout: Duration,
         condition: () -> Bool
