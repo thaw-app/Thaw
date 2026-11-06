@@ -43,6 +43,7 @@ the items under New and Fixed.
 - **Hidden items no longer collapse right after you point at them or show them again.** A timed rehide that was already finishing could still hide the section you had just reopened.
 - **Diagnostic logs no longer warn on every layout pass about apps that aren't running.** Saved items whose app is closed, and Thaw extras you have turned off, are left out of that warning.
 - **One click on Thaw's icon shows or hides your items again when double-click opens Always Hidden.** With a slow double-click speed in macOS, ordinary clicks a second apart counted as double-clicks and went to Always Hidden instead.
+- **Items from apps that hide from accessibility get their picture.** Thaw now finds icons like f.lux's on the menu bar macOS draws, so the Thaw Bar and Layout can show the real icon.
 - **The capsule border comes back after the Mac wakes.** A read of the bar taken while the screen slept could empty the shape around your items until Thaw restarted. Thaw now reads the bar again after waking or unlocking.
 - **Thaw reads a busy menu bar faster.** With many apps running, Thaw now asks several at once and leaves apps that can't show items for last, so it reads the whole bar in time instead of stopping partway.
 - **Items with a countdown or changing count no longer keep moving to Hidden.** Thaw now notices an item that changes its text even when many apps are running, instead of treating each new text as a new item.
