@@ -147,11 +147,8 @@ enum AXReader {
     ) -> AXItemObservation {
         let identifier = AXPrimitives.stringAttribute(child, kAXIdentifierAttribute)
         let accessibilityDescription = AXPrimitives.stringAttribute(child, kAXDescriptionAttribute)
-        // Some apps publish the stable identifier and description on the
-        // status-bar button rather than its container, so read one level
-        // deeper for the values the in-process walk falls back to. Only
-        // scan when the item's own value would not win, mirroring the
-        // in-process walk's lazy fallback.
+        // Some apps put the identifier and description on the button, not its container. Read one level
+        // deeper only when the item's own value wouldn't win, as the in-process walk does.
         let childElements = needsChildScan(identifier: identifier, description: accessibilityDescription)
             ? AXPrimitives.children(of: child)
             : []

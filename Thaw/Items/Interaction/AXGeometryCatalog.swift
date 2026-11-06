@@ -365,9 +365,8 @@ private nonisolated struct AXGeometryWalkScope {
 }
 
 nonisolated extension AXGeometryCatalog {
-    /// The frame MenuBarAgent draws for an item whose app answers no AX, or nil when it isn't clear.
-    /// An entry spans the bar's height, so only its horizontal place is compared; an app may draw
-    /// several entries, and the one at the item's place is used. Another app's entry over it leaves it unplaced.
+    /// The frame MenuBarAgent draws for an item whose app answers no AX, matched on its horizontal place.
+    /// Nil when no entry of that app sits there or another app's entry covers it.
     static func drawnFrame(ownerPID: pid_t, bounds: CGRect, in drawn: [MenuBarAgentWindow.Entry]) -> CGRect? {
         func level(_ frame: CGRect) -> CGRect {
             CGRect(x: frame.minX, y: bounds.minY, width: frame.width, height: bounds.height)
