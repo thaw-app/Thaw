@@ -32,11 +32,17 @@ nonisolated struct SettingsURISender: Equatable, Sendable {
 
     /// The sender of event, or nil when its code can't be found or validated.
     static func identify(from event: NSAppleEventDescriptor) -> SettingsURISender? {
+        guestAttributes(of: event).flatMap(identify(guestAttributes:))
+    }
+
+    /// What finds the code of the app that sent event: its audit token, or its PID when the
+    /// event has no token. Nil when the event names no sender.
+    static func guestAttributes(of event: NSAppleEventDescriptor) -> [CFString: Any]? {
         if let token = event.attributeDescriptor(forKeyword: AEKeyword(keySenderAuditTokenAttr))?.data, token.count == MemoryLayout<audit_token_t>.size {
-            return identify(guestAttributes: [kSecGuestAttributeAudit: token])
+            return [kSecGuestAttributeAudit: token]
         }
         guard let pid = senderPID(from: event) else { return nil }
-        return identify(guestAttributes: [kSecGuestAttributePid: NSNumber(value: pid)])
+        return [kSecGuestAttributePid: NSNumber(value: pid)]
     }
 
     /// The bundle identifier from the signed Info.plist, or the signing identifier for code
