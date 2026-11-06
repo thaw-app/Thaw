@@ -59,5 +59,14 @@ nonisolated extension SearchIndex {
             keywords: ["network", "release notes", "whats new", "what's new", "fetch", "changelog", "privacy", "offline"],
             property: .advanced("fetchReleaseNotes")
         ),
+        SearchEntry(
+            id: "privacy.showReleaseNotesAfterUpdate",
+            title: "Show release notes after an update",
+            descriptionText: String(localized: "Opens What’s New the first time \(Constants.displayName) starts after an update. You can still open it from \(Constants.displayName)’s menu or About."),
+            pane: .privacy,
+            section: "Network access",
+            keywords: ["release notes", "whats new", "what's new", "update", "changelog", "window", "after update"],
+            property: .advanced("showReleaseNotesAfterUpdate")
+        ),
     ]
 }
