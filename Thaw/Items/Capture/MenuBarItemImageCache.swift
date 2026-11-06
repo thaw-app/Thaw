@@ -68,13 +68,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// skipCaptureWhileScreenLocked(_:).
     @ObservationIgnored var screenLockTransitions = ScreenLockTransitions()
 
-    /// Whether a concealed-section prewarm is running, and the prewarms
-    /// queued behind it. Main actor only. See
-    /// prewarmConcealedImages(sections:onlyMissingImages:).
-    @ObservationIgnored var isConcealedPrewarmRunning = false
+    /// One concealed-section prewarm at a time. Taking it makes any pass admitted before it go stale.
+    @ObservationIgnored private(set) lazy var prewarmSlot = RevealCaptureSlot { [weak self] in self?.appState?.itemManager.layoutPublication.invalidate() }
+
     /// When recapture last asked for a fresh inventory walk; see requestInventoryRefresh(reason:).
     @ObservationIgnored var lastInventoryRefreshRequest: ContinuousClock.Instant?
-    @ObservationIgnored var concealedPrewarmWaiters = ConcealedPrewarmWaiters()
 
     /// Shares one recapture pass among overlapping requests. Main actor only.
     @ObservationIgnored let recaptureCoalescer = RecaptureCoalescer()
