@@ -10,7 +10,7 @@
 nonisolated struct BarReadRecord: Equatable, Sendable {
     /// What one cache pass learned about its read, noted when the pass ends.
     struct Read: Equatable, Sendable {
-        var walkCompleted: Bool
+        /// Whether every owner known to have items answered this read; a quick read can skip apps without items.
         var hasFreshKnownInventory: Bool
         /// Whether the pass filled the read's gaps from older cached items.
         var mergedWithOlderItems = false
@@ -18,13 +18,13 @@ nonisolated struct BarReadRecord: Equatable, Sendable {
 
     /// Goes up by one with every read, so the same number means the same read.
     private(set) var generation: UInt64 = 0
-    /// False until a first read, and after a walk that ran out of time or a merge with older items.
+    /// False until a first read, and after a read with stale owners or a merge with older items.
     private(set) var isComplete = false
 
     /// Nil, from a pass that ended before it read the bar, leaves the record as it was.
     mutating func note(_ read: Read?) {
         guard let read else { return }
         generation &+= 1
-        isComplete = read.walkCompleted && read.hasFreshKnownInventory && !read.mergedWithOlderItems
+        isComplete = read.hasFreshKnownInventory && !read.mergedWithOlderItems
     }
 }

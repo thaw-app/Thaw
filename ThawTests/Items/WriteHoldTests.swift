@@ -100,32 +100,47 @@ struct StructuralNormalizationHoldsTests {
 /// The record of the cache's last bar read, which the settle and the structural pass both trust.
 @Suite("Bar read record")
 struct BarReadRecordTests {
-    @Test("Each read gets a new number and is complete only when the walk finished with fresh answers")
+    @Test("Each read gets a new number and is complete only when every known owner answered it")
     func readsAreNumberedAndJudged() {
         var record = BarReadRecord()
         #expect(record.generation == 0)
         #expect(!record.isComplete)
 
-        record.note(.init(walkCompleted: true, hasFreshKnownInventory: true))
+        record.note(.init(hasFreshKnownInventory: true))
         #expect(record.generation == 1)
         #expect(record.isComplete)
 
-        record.note(.init(walkCompleted: false, hasFreshKnownInventory: true))
+        record.note(.init(hasFreshKnownInventory: false))
         #expect(record.generation == 2)
         #expect(!record.isComplete)
 
-        record.note(.init(walkCompleted: true, hasFreshKnownInventory: false))
-        #expect(!record.isComplete)
-
         record.note(nil)
-        #expect(record.generation == 3, "a pass that never read the bar")
+        #expect(record.generation == 2, "a pass that never read the bar")
+    }
+
+    @Test("A quick read that refreshed every known owner counts, though it skipped apps without items")
+    func quickFreshReadIsComplete() {
+        var record = BarReadRecord()
+
+        record.note(.init(hasFreshKnownInventory: true))
+
+        #expect(record.isComplete)
+    }
+
+    @Test("A truncated read with stale owners does not count")
+    func truncatedStaleReadIsIncomplete() {
+        var record = BarReadRecord()
+
+        record.note(.init(hasFreshKnownInventory: false))
+
+        #expect(!record.isComplete)
     }
 
     @Test("A read merged with older items is incomplete")
     func mergedReadIsIncomplete() {
         var record = BarReadRecord()
 
-        record.note(.init(walkCompleted: true, hasFreshKnownInventory: true, mergedWithOlderItems: true))
+        record.note(.init(hasFreshKnownInventory: true, mergedWithOlderItems: true))
 
         #expect(record.generation == 1)
         #expect(!record.isComplete)
