@@ -1430,6 +1430,11 @@ extension MenuBarItemManager {
         }
         var liveItems = liveItems
         var pass = BoundaryRepairPass()
+        var selection = StrandSelection(
+            memory: boundaryRepair,
+            experimentalSystemItemHiding: experimentalSystemItemHiding,
+            authoredSection: { controller.authoredSection(for: $0) }
+        )
 
         var itemsForControlDiscovery = liveItems
         guard var controlItems = ControlItemPair(
@@ -1453,8 +1458,7 @@ extension MenuBarItemManager {
         if let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main,
            MenuBarCapacitySnapshot.applicationMenuWrapsPastNotch(on: screen)
         {
-            if !isBoundaryRepairDeclinedForWrappedMenu {
-                isBoundaryRepairDeclinedForWrappedMenu = true
+            if boundaryRepair.declineForWrappedMenu() {
                 MenuBarItemManager.diagLog.notice(
                     "boundary repair: application menu wraps past the notch on display \(screen.displayID); " +
                         "declining drags until it retreats"
@@ -1462,95 +1466,21 @@ extension MenuBarItemManager {
             }
             return (liveItems, false, false)
         }
-        if isBoundaryRepairDeclinedForWrappedMenu {
-            isBoundaryRepairDeclinedForWrappedMenu = false
+        if boundaryRepair.endWrappedMenuDecline() {
             MenuBarItemManager.diagLog.notice(
                 "boundary repair: application menu no longer wraps past the notch; drags re-enabled"
             )
-        }
-
-        // A phantom frame is a seat something else already occupies; dragging
-        // from it grabs that other item. Logged once per pass per item.
-        var loggedPhantomIDs = Set<String>()
-        var loggedStaleDivider = false
-        // The position table as last read. Kept until a strand is attempted, since only an
-        // attempt writes; a pass with nothing to repair then reads the table once, not twice.
-        var weightTable: StoredWeights.Table?
-        func isPhantomStrand(_ item: MenuBarItem) -> Bool {
-            guard item.hasPhantomFrame(among: liveItems) else { return false }
-            if loggedPhantomIDs.insert(item.uniqueIdentifier).inserted {
-                // Name the occupant: a seat held by a second window of the same
-                // app needs a different fix from one held by another app.
-                let seatHolders = liveItems
-                    .filter { $0.windowID != item.windowID }
-                    .filter {
-                        abs($0.bounds.minX - item.bounds.minX)
-                            < MenuBarItemGeometry.phantomFrameXTolerance
-                    }
-                    .map(\.logString)
-                MenuBarItemManager.diagLog.debug(
-                    "boundary repair: \(item.logString) has a phantom frame " +
-                        "(x=\(Int(item.bounds.minX)) occupied by " +
-                        "\(seatHolders.isEmpty ? "an overlapping neighbour" : seatHolders.joined(separator: ", "))); " +
-                        "not draggable"
-                )
-            }
-            return true
-        }
-
-        func failingStrands() -> [MenuBarItem] {
-            let table = weightTable ?? .read()
-            weightTable = table
-            let seated = DividerSeat.settled(
-                items: liveItems, pair: controlItems, weight: StoredWeights(among: liveItems, table: table).weight(of:)
-            )
-            if seated.moved, !loggedStaleDivider {
-                loggedStaleDivider = true
-                MenuBarItemManager.diagLog.info(
-                    "boundary repair: the Hidden divider reports x=\(Int(controlItems.hidden.bounds.minX)) against its weight; " +
-                        "judging the boundary from x=\(Int(seated.pair.hidden.bounds.minX))"
-                )
-            }
-            return liveItems.filter { item in
-                !item.isControlItem &&
-                    !item.isSystemClone &&
-                    !item.isNativeOverflowControl &&
-                    !isPhantomStrand(item) &&
-                    !boundaryRepair.breaker.isSuppressed(PostRestrictionRepairItemID(item)) &&
-                    item.isPhysicallyOrderable(
-                        experimentalSystemItemHiding: experimentalSystemItemHiding
-                    ) &&
-                    controller.authoredSection(for: item.uniqueIdentifier) == .visible &&
-                    (
-                        // A pane transition owes a drag whatever the check
-                        // says: with the section collapsed the concealed
-                        // neighbours the item stands among are invisible to it.
-                        boundaryRepair.pendingPhysicalSeatIDs.contains(item.uniqueIdentifier) ||
-                            !MenuBarLayoutPlannerProvider.current.liveOrderSatisfiesSectionBoundary(
-                                items: seated.items,
-                                item: item,
-                                section: .visible,
-                                controlItems: seated.pair,
-                                experimentalSystemItemHiding: experimentalSystemItemHiding
-                            )
-                    )
-            }
         }
 
         // After an attempt, strands are picked and judged against the divider the refreshed walk read.
         // False when that walk lost the divider or misreads it, which leaves the strands for the bounded retry.
         func refreshDividers() -> Bool {
             guard !pass.attempted.isEmpty else { return true }
-            guard let refreshed = ControlOrderRules.refreshedControlItems(
+            guard let refreshed = StrandSelection.refreshedDividers(
                 in: liveItems,
                 hiddenControlItemWindowID: hiddenControlItemWindowID,
                 alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID
             ) else {
-                MenuBarItemManager.diagLog.debug("boundary repair: the refreshed walk lost the Hidden divider; stopping the pass")
-                return false
-            }
-            if let misplaced = ControlOrderRules.dividerMisplacement(refreshed, among: liveItems) {
-                MenuBarItemManager.diagLog.debug("boundary repair: \(misplaced); stopping the pass")
                 return false
             }
             controlItems = refreshed
@@ -1560,15 +1490,13 @@ extension MenuBarItemManager {
         // Re-read geometry after each attempt. Each strand gets one attempt
         // per pass, but remains eligible for a later pass until verified or
         // suppressed by the breaker.
-        var iterations = 0
         while true {
             guard refreshDividers() else { return (liveItems, false, true) }
-            guard let strand = pass.next(in: failingStrands()) else { break }
+            guard let strand = pass.next(in: selection.failingStrands(liveItems: liveItems, controlItems: controlItems)) else { break }
             guard !arrangementIsManual, !Task.isCancelled else { return (liveItems, true, false) }
-            iterations += 1
-            if iterations > 6 {
+            guard pass.takeTurn() else {
                 MenuBarItemManager.diagLog.error(
-                    "macOS 27 visible boundary repair gave up after \(iterations) strands for \(strand.logString)"
+                    "macOS 27 visible boundary repair gave up after \(pass.turns) strands for \(strand.logString)"
                 )
                 break
             }
@@ -1600,7 +1528,7 @@ extension MenuBarItemManager {
             }
 
             pass.recordAttempt(strand)
-            weightTable = nil
+            selection.forgetWeights()
             // Rung 1, targeted store write, judged by the bar: a respace can
             // report success while straddling the divider. True means the item
             // is on the correct side; negating it would loop forever.
@@ -1776,11 +1704,7 @@ extension MenuBarItemManager {
                 // The move may decline without throwing. An unchanged frame
                 // plus an unsatisfied boundary earns the same extra trip as
                 // the error path; movement alone is not proof of repair.
-                let after = liveItems.first { $0.windowID == dragItem.windowID }
-                    ?? liveItems.first { $0.uniqueIdentifier == dragItem.uniqueIdentifier }
-                if let after,
-                   abs(after.bounds.minX - dragItem.bounds.minX) < MenuBarItemGeometry.phantomFrameXTolerance
-                {
+                if StrandSelection.unmovedAfterDrag(dragItem, in: liveItems) != nil {
                     boundaryRepair.breaker.addTrip(for: strandTripsID)
                 }
                 MenuBarItemManager.diagLog.info(
@@ -1797,11 +1721,7 @@ extension MenuBarItemManager {
                 // bounced item; more drags will not change that, so it retires.
                 liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
                 guard !arrangementIsManual, !Task.isCancelled else { return (liveItems, true, false) }
-                let after = liveItems.first { $0.windowID == dragItem.windowID }
-                    ?? liveItems.first { $0.uniqueIdentifier == dragItem.uniqueIdentifier }
-                if let after,
-                   abs(after.bounds.minX - dragItem.bounds.minX) < MenuBarItemGeometry.phantomFrameXTolerance
-                {
+                if let after = StrandSelection.unmovedAfterDrag(dragItem, in: liveItems) {
                     boundaryRepair.breaker.addTrip(for: strandTripsID)
                     MenuBarItemManager.diagLog.info(
                         "boundary repair: \(strand.logString) never moved (x=\(Int(after.bounds.minX))); trapped or bounced"
@@ -1816,10 +1736,10 @@ extension MenuBarItemManager {
             attempted: pass.attempted,
             liveItems: liveItems,
             controlItems: controlItems,
-            experimentalSystemItemHiding: experimentalSystemItemHiding
+            selection: selection
         )
 
-        return (liveItems, false, pass.needsRetry(in: failingStrands()))
+        return (liveItems, false, pass.needsRetry(in: selection.failingStrands(liveItems: liveItems, controlItems: controlItems)))
     }
 
     /// The verdict of a repair write followed by its bar-side check. A write can
@@ -1866,67 +1786,32 @@ extension MenuBarItemManager {
         attempted: [MenuBarItem],
         liveItems: [MenuBarItem],
         controlItems: ControlItemPair,
-        experimentalSystemItemHiding: Bool
+        selection: StrandSelection
     ) {
         guard !arrangementIsManual, !Task.isCancelled else { return }
-        var scored = Set<PostRestrictionRepairItemID>()
-        for strand in attempted {
-            let id = PostRestrictionRepairItemID(strand)
-            guard scored.insert(id).inserted else { continue }
-
-            if MenuBarLayoutPlannerProvider.current.liveOrderSatisfiesSectionBoundary(
-                items: liveItems,
-                item: strand,
-                section: .visible,
-                controlItems: controlItems,
-                experimentalSystemItemHiding: experimentalSystemItemHiding
-            ) {
-                boundaryRepair.record(repaired: true, for: id)
-                continue
-            }
-
-            let outcome = boundaryRepair.record(repaired: false, for: id)
-            guard outcome.suppressed else { continue }
-            let trips = outcome.trips
-            boundaryRepair.seededStrandIDs.insert(id)
+        for suppression in selection.scoreOutcomes(attempted: attempted, liveItems: liveItems, controlItems: controlItems) {
+            let strand = suppression.strand
             failureLedger.recordStrand(for: strand)
             MenuBarItemManager.diagLog.error(
                 "post-restriction repair: suppressing boundary repair for persistently stranded " +
-                    "\(strand.logString) after \(trips) passes " +
+                    "\(strand.logString) after \(suppression.trips) passes " +
                     "\(boundaryRepairStrandDiagnostics(for: strand, liveItems: liveItems, controlItems: controlItems)) " +
                     ", check RuntimePositionStore.applyOrder re-seat"
             )
         }
     }
 
-    /// Logged once on trip. A visible-side weight still seated hidden points
-    /// at the axis inference, not the write.
+    /// Reads the position table only when the suppression line is logged.
     private func boundaryRepairStrandDiagnostics(
         for strand: MenuBarItem,
         liveItems: [MenuBarItem],
         controlItems: ControlItemPair
     ) -> String {
-        let frame = "frame=\(Int(strand.bounds.minX)),\(Int(strand.bounds.minY))" +
-            " \(Int(strand.bounds.width))x\(Int(strand.bounds.height))"
-
         let positions = MenuBarPositionStoreProvider.current.currentPositions()
-        guard !positions.isEmpty else {
-            return "\(frame) weights=unavailable"
-        }
-        let keys = Array(positions.keys)
-
-        func weight(of item: MenuBarItem) -> Int? {
-            MenuBarPositionStoreProvider.current.resolveKey(
-                for: item,
-                existingKeys: keys,
-                positions: positions,
-                liveItems: liveItems
-            ).flatMap { positions[$0] }
-        }
-
-        let strandWeight = weight(of: strand).map(String.init) ?? "none"
-        let dividerWeight = weight(of: controlItems.hidden).map(String.init) ?? "none"
-        return "\(frame) weight=\(strandWeight) hiddenDividerWeight=\(dividerWeight)"
+        let weights = StoredWeights(among: liveItems, table: StoredWeights.Table(isAvailable: true, positions: positions))
+        return StrandSelection.strandDiagnostics(
+            for: strand, hiddenDivider: controlItems.hidden, positions: positions, weight: { weights.weight(of: $0) }
+        )
     }
 
     /// Reads live weights, not the desired order, which can be gathered while

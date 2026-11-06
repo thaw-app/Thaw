@@ -51,6 +51,9 @@ final class BoundaryRepairMemory {
 
     private(set) var lastDisplayID: CGDirectDisplayID?
 
+    /// Whether the repair declines drags because the application menu wraps past the notch.
+    private(set) var isDecliningForWrappedMenu = false
+
     private let now: @MainActor () -> ContinuousClock.Instant
 
     init(now: @escaping @MainActor () -> ContinuousClock.Instant = { .now }) {
@@ -95,6 +98,18 @@ final class BoundaryRepairMemory {
 
         report.rearmedExpired = breaker.rearmExpired(now: now(), cooldown: Self.suppressionCooldown)
         return report
+    }
+
+    /// Starts declining drags; true only when it was not declining yet, so the caller logs once.
+    func declineForWrappedMenu() -> Bool {
+        defer { isDecliningForWrappedMenu = true }
+        return !isDecliningForWrappedMenu
+    }
+
+    /// Ends the decline; true only when it was declining.
+    func endWrappedMenuDecline() -> Bool {
+        defer { isDecliningForWrappedMenu = false }
+        return isDecliningForWrappedMenu
     }
 
     func suppressionHolds(for id: PostRestrictionRepairItemID) -> Bool {
