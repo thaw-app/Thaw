@@ -10,16 +10,17 @@ import Foundation
 
 /// Learns which single-item apps use their whole title as a live status.
 ///
-/// Only complete, fresh AX inventories belong here. A cached snapshot can hold several old
-/// titles of one app, so its one item looks like many and the rename goes unseen.
+/// Only fresh AX answers belong here, each listing all of an app's items. A cached snapshot can
+/// hold several old titles of one app, so its one item looks like many and the rename goes unseen.
 public struct FreshVolatileTitleLearner: Sendable {
     private struct Observation: Sendable {
         let title: String
         let slotX: CGFloat
         let sourcePID: pid_t
+        let read: UInt64
 
         /// The observation for an item with a title and a frame on the bar, or nil.
-        static func make(for item: MenuBarItem, sourcePID: pid_t) -> Self? {
+        static func make(for item: MenuBarItem, sourcePID: pid_t, read: UInt64) -> Self? {
             guard !item.tag.title.isEmpty, item.bounds.width > 0, item.bounds.midX >= 0
             else {
                 return nil
@@ -27,19 +28,31 @@ public struct FreshVolatileTitleLearner: Sendable {
             return Self(
                 title: item.tag.title,
                 slotX: item.bounds.midX,
-                sourcePID: sourcePID
+                sourcePID: sourcePID,
+                read: read
             )
         }
     }
 
+    /// A kept title older than this many reads is too old to compare, since the app may have replaced its item.
+    static let maxReadsBetweenTitles: UInt64 = 4
+
     private var lastObservationByOwner = [String: Observation]()
+    /// Bundles seen from two live processes. A read can skip one of them, so they are never learned.
+    private var sharedBundles = Set<String>()
+    private var reads: UInt64 = 0
 
     /// A learner that has seen no inventory yet.
     public init() {}
 
-    /// Returns owners whose title changed while their single menu bar slot
-    /// stayed in place and the same process kept publishing it.
-    public mutating func observe(_ freshItems: [MenuBarItem]) -> Set<String> {
+    /// Returns owners whose title changed while their single menu bar slot stayed in place and the
+    /// same process kept publishing it. An app a read skipped keeps its last title for a few reads.
+    /// - Parameter isAlive: Whether a process still runs, to tell a relaunch from a second process.
+    public mutating func observe(
+        _ freshItems: [MenuBarItem],
+        isAlive: (pid_t) -> Bool = { kill($0, 0) == 0 || errno == EPERM }
+    ) -> Set<String> {
+        reads &+= 1
         var itemsByOwner = [String: [MenuBarItem]]()
         for item in freshItems {
             guard !item.isControlItem, !item.isSystemClone, item.sourcePID != nil, case let .string(bundleID) = item.tag.namespace, !MenuBarItemTag.hasCanonicalizableTitles(bundleID)
@@ -50,18 +63,25 @@ public struct FreshVolatileTitleLearner: Sendable {
         }
 
         var learned = Set<String>()
-        var nextObservations = [String: Observation]()
-        for (bundleID, items) in itemsByOwner where items.count == 1 {
-            guard let item = items.first, let sourcePID = item.sourcePID, let observation = Observation.make(for: item, sourcePID: sourcePID)
+        for (bundleID, items) in itemsByOwner where !sharedBundles.contains(bundleID) {
+            let previous = lastObservationByOwner.removeValue(forKey: bundleID)
+            if Set(items.compactMap(\.sourcePID)).count > 1 {
+                sharedBundles.insert(bundleID)
+                continue
+            }
+            guard items.count == 1, let item = items.first, let sourcePID = item.sourcePID, let observation = Observation.make(for: item, sourcePID: sourcePID, read: reads)
             else {
                 continue
             }
-            if let previous = lastObservationByOwner[bundleID], Self.isRename(from: previous, to: observation) {
+            if let previous, previous.sourcePID != sourcePID, isAlive(previous.sourcePID) {
+                sharedBundles.insert(bundleID)
+                continue
+            }
+            if let previous, reads - previous.read <= Self.maxReadsBetweenTitles, Self.isRename(from: previous, to: observation) {
                 learned.insert(bundleID)
             }
-            nextObservations[bundleID] = observation
+            lastObservationByOwner[bundleID] = observation
         }
-        lastObservationByOwner = nextObservations
         return learned
     }
 

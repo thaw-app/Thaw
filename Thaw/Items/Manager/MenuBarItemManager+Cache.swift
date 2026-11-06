@@ -719,10 +719,8 @@ extension MenuBarItemManager {
             }
         }
 
-        // Partial scans can mistake alternating siblings for retitles; learn single-item owners only from complete, fresh inventory.
-        if inventory.completed, inventory.hasFreshKnownInventory {
-            learnVolatileTitleOwners(fresh: inventory.freshItems, current: &items)
-        }
+        // Each app in freshItems answered with all its items, so a read cut short can still show a retitle.
+        learnVolatileTitleOwners(fresh: inventory.freshItems, current: &items)
 
         // Seed corrected source-PID identities for known windows so relocation does not treat them as arrivals.
         // Skip unresolved PIDs to keep the placeholder Control Center namespace out of persisted identities.
