@@ -18,9 +18,8 @@ public enum BoundedWalkStep<Output: Sendable> {
 /// Asks several apps at once instead of one after another, so the walk's time is the slowest
 /// answers rather than the sum of them.
 public enum BoundedWalk {
-    /// Runs the jobs start hands back with at most limit running at once, and hands each output
-    /// to collect as it finishes. start and collect run one at a time on the caller, and start
-    /// is called only once a slot is free, so its deadline checks see the moment the job would start.
+    /// Runs start's jobs, at most limit at once, and hands each output to collect. Both run on the
+    /// caller, and start runs only when a slot is free, so its deadline check sees the real start time.
     /// start owns cancellation too: return stop when the task is cancelled.
     public static func run<Item, Output: Sendable>(
         _ items: [Item],
