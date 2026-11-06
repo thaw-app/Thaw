@@ -247,7 +247,8 @@ final class MenuBarOverlayPanel: NSPanel {
 
     /// Space changes reshow the panel and clear Mission Control state the probe may not detect.
     private func observeActiveSpaceChanges() -> AnyCancellable {
-        let task = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.activeSpaceDidChangeNotification, debounce: .seconds(0.1)) { [weak self] in
+        guard let changes = appState?.spaceChanges else { return AnyCancellable {} }
+        let task = changes.activeSpaceTask(debounce: .seconds(0.1)) { [weak self] _ in
             guard let self else { return }
             self.missionControlProbe.isActive = false
             self.needsShow = true

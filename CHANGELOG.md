@@ -32,6 +32,7 @@ the items under New and Fixed.
 ### Changed
 
 - **The Thaw Bar has its own switch again.** Show hidden items is now two switches, Thaw Bar and Always show hidden items. Your settings carry over.
+- **Profiles and menu bar looks follow a Space switch sooner.** Thaw hears about the switch as it starts, and a new Space can have its own profile right away.
 
 ### Fixed
 

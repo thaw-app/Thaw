@@ -340,3 +340,34 @@ public enum SkyLightAPI {
         return unsafeBitCast(symbol, to: CreateImageFromArrayFn.self)
     }()
 }
+
+// MARK: - Connection Notifications
+
+/// SLSRegisterConnectionNotifyProc, loaded at runtime so that a missing symbol
+/// leaves Space changes to the NSWorkspace notification instead of failing launch.
+public enum SLSConnectionNotifications {
+    /// Event id, payload, payload length, context, connection. Called on
+    /// whichever thread receives the window server's message.
+    public typealias Proc = @convention(c) (
+        UInt32,
+        UnsafeMutableRawPointer?,
+        Int,
+        UnsafeMutableRawPointer?,
+        CGSConnectionID
+    ) -> Void
+
+    /// Connection, callback, event id, context.
+    public typealias Register = @convention(c) (
+        CGSConnectionID,
+        Proc,
+        UInt32,
+        UnsafeMutableRawPointer?
+    ) -> CGError
+
+    public static let register: Register? = {
+        guard let handle = dlopen(SharedConstants.skyLightFrameworkPath, RTLD_LAZY), let symbol = dlsym(handle, "SLSRegisterConnectionNotifyProc") else {
+            return nil
+        }
+        return unsafeBitCast(symbol, to: Register.self)
+    }()
+}
