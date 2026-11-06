@@ -504,7 +504,7 @@ extension MenuBarItemManager {
                 return value
             case .otherDisplay, .invalid:
                 MenuBarItemManager.diagLog.warning(
-                    "Move rejected stale or cross-display endpoint geometry for \(endpoint.logString)"
+                    "Move rejected stale or cross-display endpoint geometry for \(endpoint.logString): disposition=\(String(describing: value)) bounds=\(NSStringFromRect(endpoint.bounds)) isOnScreen=\(endpoint.isOnScreen) dividerX=\(Double(dividerX)) dividers=\(dividers.count) parkedLaneY=\(parkedLaneYRange.map { "\(Double($0.lowerBound))...\(Double($0.upperBound))" } ?? "nil") display=\(NSStringFromRect(selectedBounds))"
                 )
                 throw EventError.staleDestination(item)
             }
