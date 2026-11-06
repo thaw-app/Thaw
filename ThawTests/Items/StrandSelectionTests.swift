@@ -13,7 +13,7 @@ import Testing
 @MainActor
 @Suite("Strand selection")
 struct StrandSelectionTests {
-    private static func app(_ name: String, x: CGFloat, width: CGFloat = 24, windowID: CGWindowID) -> MenuBarItem {
+    static func app(_ name: String, x: CGFloat, width: CGFloat = 24, windowID: CGWindowID) -> MenuBarItem {
         MenuBarItem(
             tag: MenuBarItemTag(namespace: .string("com.example.\(name)"), title: name, instanceIndex: 0),
             windowID: windowID,
@@ -25,7 +25,7 @@ struct StrandSelectionTests {
         )
     }
 
-    private static func hiddenDivider(x: CGFloat) -> MenuBarItem {
+    static func hiddenDivider(x: CGFloat) -> MenuBarItem {
         MenuBarItem(
             tag: .hiddenControlItem,
             windowID: 9,
@@ -37,7 +37,7 @@ struct StrandSelectionTests {
         )
     }
 
-    private static let visibleControl = MenuBarItem(
+    static let visibleControl = MenuBarItem(
         tag: .visibleControlItem,
         windowID: 8,
         ownerPID: 501,
