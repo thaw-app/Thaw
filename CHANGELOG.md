@@ -28,6 +28,7 @@ the items under New and Fixed.
 
 - **Items that appear late after a restart go back to their place.** When an app's menu bar item showed up after Thaw had arranged the bar at login, it stayed next to Thaw's icon until you relaunched Thaw.
 - **Opening a hidden item no longer opens the item next to it.** When macOS showed the item somewhere other than where it said, Thaw could open or click the neighboring item first and then the one you clicked. Thaw now clicks where the item is shown, and clicks nothing when it can't tell.
+- **Opening a hidden item works the first time.** The first time you opened a hidden item after Thaw started, Thaw could miss that its menu had opened. It then hid the item again, opened the menu a second time or refused to click it. Thaw now finds the item's app before opening it.
 
 ## [3.0.0-alpha.14] - 2026-11-11
 

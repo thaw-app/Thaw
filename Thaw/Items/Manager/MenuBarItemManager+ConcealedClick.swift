@@ -24,6 +24,7 @@ extension MenuBarItemManager {
         with mouseButton: CGMouseButton,
         on displayID: CGDirectDisplayID
     ) async -> MenuBarItemActivationOutcome {
+        let item = ItemOwnerLookup.resolving(item)
         repairs.interruptAutomaticWork(by: .userClickedItem)
         guard let controller = appState?.menuBarManager.sectionController else { return .activationFailed }
 
