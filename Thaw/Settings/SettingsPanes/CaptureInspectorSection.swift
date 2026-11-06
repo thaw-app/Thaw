@@ -142,8 +142,7 @@ struct CaptureInspectorSection: View {
         }
         .annotation {
             Text(
-                "Crop regions are the exact pixels Thaw reads for each menu bar item. "
-                    + "Frames are shown once and never saved to disk."
+                "Crop regions are the exact pixels Thaw reads for each menu bar item. Frames are shown once and never saved to disk."
             )
         }
     }
