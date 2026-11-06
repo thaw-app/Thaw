@@ -29,11 +29,11 @@ struct RevealPixelSettleTests {
     }
 
     private func wait(_ script: Script, budget: Duration = .seconds(3600)) async -> Bool {
-        await MenuBarItemImageCache.waitForSettledPixels(
+        await RevealCaptureSession.waitForSettledPixels(
             minimumSettle: .zero,
             interval: .zero,
             budget: budget,
-            sleep: { _ in await Task.yield() },
+            clock: .init(sleep: { _ in await Task.yield() }),
             read: { script.next() }
         )
     }
@@ -64,7 +64,7 @@ struct RevealPixelSettleTests {
     @Test("With the default sleep, an icon that keeps changing still runs out the budget")
     func realClockBudget() async {
         var value: UInt8 = 0
-        let settled = await MenuBarItemImageCache.waitForSettledPixels(
+        let settled = await RevealCaptureSession.waitForSettledPixels(
             minimumSettle: .zero,
             interval: .milliseconds(1),
             budget: .milliseconds(5),
@@ -79,11 +79,11 @@ struct RevealPixelSettleTests {
     @Test("An icon that never stops changing runs out the budget")
     func constantChangeHitsTheBudget() async {
         var value: UInt8 = 0
-        let settled = await MenuBarItemImageCache.waitForSettledPixels(
+        let settled = await RevealCaptureSession.waitForSettledPixels(
             minimumSettle: .zero,
             interval: .zero,
             budget: .milliseconds(20),
-            sleep: { _ in await Task.yield() },
+            clock: .init(sleep: { _ in await Task.yield() }),
             read: {
                 value &+= 1
                 return [Data([value])]
@@ -96,11 +96,11 @@ struct RevealPixelSettleTests {
     /// No wall-clock check: a stalled runner can't fail it.
     @Test("A read slower than the budget doesn't count, and doesn't hold the wait", .timeLimit(.minutes(1)))
     func slowReadEndsAtTheBudget() async {
-        let settled = await MenuBarItemImageCache.waitForSettledPixels(
+        let settled = await RevealCaptureSession.waitForSettledPixels(
             minimumSettle: .zero,
             interval: .zero,
             budget: .milliseconds(20),
-            sleep: { _ in await Task.yield() },
+            clock: .init(sleep: { _ in await Task.yield() }),
             read: {
                 try? await Task.sleep(for: .seconds(3600))
                 return [Data([1])]
@@ -115,14 +115,14 @@ struct RevealPixelSettleTests {
         let inPlace = try capture(inkAtX: 12)
         let sameAgain = try capture(inkAtX: 12)
         let moved = try capture(inkAtX: 14)
-        #expect(MenuBarItemImageCache.pixelFingerprint(of: [frame], in: inPlace)
-            == MenuBarItemImageCache.pixelFingerprint(of: [frame], in: sameAgain))
-        #expect(MenuBarItemImageCache.pixelFingerprint(of: [frame], in: inPlace)
-            != MenuBarItemImageCache.pixelFingerprint(of: [frame], in: moved))
+        #expect(RevealCaptureSession.pixelFingerprint(of: [frame], in: inPlace)
+            == RevealCaptureSession.pixelFingerprint(of: [frame], in: sameAgain))
+        #expect(RevealCaptureSession.pixelFingerprint(of: [frame], in: inPlace)
+            != RevealCaptureSession.pixelFingerprint(of: [frame], in: moved))
 
         let elsewhere = try capture(inkAtX: 12, extraInkAtX: 30)
-        #expect(MenuBarItemImageCache.pixelFingerprint(of: [frame], in: inPlace)
-            == MenuBarItemImageCache.pixelFingerprint(of: [frame], in: elsewhere))
+        #expect(RevealCaptureSession.pixelFingerprint(of: [frame], in: inPlace)
+            == RevealCaptureSession.pixelFingerprint(of: [frame], in: elsewhere))
     }
 
     @Test("A tag counts as captured across a window ID change")

@@ -530,90 +530,6 @@ extension MenuBarItemImageCache {
         )
     }
 
-    /// Waits only as long as MenuBarAgent needs to publish precise AX reveal
-    /// bounds for a whole revealed group, resolving every member from the same
-    /// enumeration.
-    ///
-    /// A fixed sleep would make an N-item reveal N × settle long even when the
-    /// live AX items are available almost immediately. Waiting per item would
-    /// cost one AX enumeration per poll attempt per item, and each enumeration
-    /// walks every running app; this pays one poll loop per group. AX can
-    /// publish an item before MenuBarAgent has finished recompositing its
-    /// glyph, so one stable poll interval is required per member before it is
-    /// trusted, and members settle at different times.
-    ///
-    /// Bounds stability does not imply the glyph is rendered, see the
-    /// Constants.MenuBarTuning/layoutPrewarmRenderSettle delay the caller
-    /// inserts before the SCK screenshot.
-    ///
-    /// Returns the members that reached stable bounds, paired with the request
-    /// they answer, in request order. Members that never settled are absent
-    /// rather than reported with untrustworthy bounds; the caller treats a
-    /// missing member the same way it treats a missed reveal.
-    private func waitForRevealedItems(
-        matching items: [MenuBarItem],
-        displayID: CGDirectDisplayID
-    ) async -> [(requested: MenuBarItem, live: MenuBarItem)] {
-        guard !items.isEmpty else { return [] }
-
-        // MenuBarAgent can take over a second to publish a revealed item.
-        // The loop leaves as soon as every member settles.
-        let maxAttempts = 20
-        var previousByIdentifier = [String: MenuBarItem]()
-        var settledByIdentifier = [String: MenuBarItem]()
-        let deadline = ContinuousClock.now + Constants.MenuBarTuning.revealCaptureSettleBudget
-
-        for attempt in 0 ..< maxAttempts {
-            guard !Task.isCancelled, ContinuousClock.now < deadline else { break }
-
-            let liveItems = await MenuBarItem.getMenuBarItems(
-                on: displayID,
-                option: [.onScreen, .activeSpace]
-            )
-
-            // Every member is offered to the match, settled ones included, so a
-            // member that settled on an earlier poll keeps its claim and cannot
-            // be paired with a second request.
-            let matches = Self.revealMatches(requests: items, live: liveItems)
-            let currentByIdentifier = Dictionary(
-                matches.enumerated().compactMap { index, liveItem in
-                    liveItem.map { (items[index].uniqueIdentifier, $0) }
-                },
-                uniquingKeysWith: { first, _ in first }
-            )
-
-            let advanced = Self.advanceRevealSettle(
-                settled: settledByIdentifier,
-                previous: previousByIdentifier,
-                current: currentByIdentifier,
-                hasStable: { AXCropRules.hasStableCaptureBounds(before: $0, after: $1) }
-            )
-            settledByIdentifier = advanced.settled
-            previousByIdentifier = advanced.previous
-
-            if settledByIdentifier.count == items.count {
-                break
-            }
-            if attempt < maxAttempts - 1 {
-                try? await Task.sleep(for: .milliseconds(100))
-            }
-        }
-
-        if settledByIdentifier.count < items.count {
-            let missing = items
-                .filter { settledByIdentifier[$0.uniqueIdentifier] == nil }
-                .map(\.logString)
-            let budgetEnding = ContinuousClock.now < deadline ? "in \(maxAttempts) polls" : "within the settle budget"
-            let ending = Task.isCancelled ? "before the wait was cancelled" : budgetEnding
-            MenuBarItemImageCache.diagLog.debug(
-                "waitForRevealedItems: \(missing.count) of \(items.count) revealed item(s) never settled \(ending); no capture for \(missing)"
-            )
-        }
-        return items.compactMap { item in
-            settledByIdentifier[item.uniqueIdentifier].map { (requested: item, live: $0) }
-        }
-    }
-
     /// Reveals concealed items a few at a time and captures each group from
     /// one screenshot pair.
     ///
@@ -674,8 +590,12 @@ extension MenuBarItemImageCache {
             missPolicy: missPolicy,
             appState: appState,
             sources: RevealCaptureSession.Sources(
-                settledItems: { await self.waitForRevealedItems(matching: $0, displayID: displayID) },
-                renderSettle: { await self.settleRevealedPixels($0, displayID: displayID) },
+                settledItems: { batch in
+                    await RevealCaptureSession.waitForRevealedItems(matching: batch) {
+                        await MenuBarItem.getMenuBarItems(on: displayID, option: [.onScreen, .activeSpace])
+                    }
+                },
+                renderSettle: { await RevealCaptureSession.settleRevealedPixels($0, displayID: displayID, reader: LiveMenuBarCaptureReader()) },
                 reader: LiveMenuBarCaptureReader(),
                 // Captures never see Thaw's own windows, so the cover hides the reveal from the user only.
                 cover: { appState.menuBarManager.revealCover.show(lifetime: Constants.MenuBarTuning.revealCaptureCoverLifetime) },
