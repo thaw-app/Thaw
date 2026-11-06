@@ -64,6 +64,11 @@ nonisolated struct RepublishAbsenceMemo {
         }
     }
 
+    /// The missing members worth a warning: those whose app is running or still has an item on the bar.
+    static func reportable(_ missing: Set<String>, liveNamespaces: Set<String>, runningBundleIDs: Set<String>) -> Set<String> {
+        missing.subtracting(unreachable(wanted: missing, liveNamespaces: liveNamespaces, runningBundleIDs: runningBundleIDs))
+    }
+
     /// Empties the memo so the next pass waits for every member again.
     mutating func forget() {
         missingSince.removeAll()

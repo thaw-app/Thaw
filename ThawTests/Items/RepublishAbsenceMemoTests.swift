@@ -119,6 +119,18 @@ struct RepublishAbsenceMemoTests {
         #expect(unreachable == ["com.old.floe:Floe"], "A running app may still publish, and a live app's item may still return")
     }
 
+    @Test("Only members whose app runs or has an item live are worth a warning, a stopped Thaw extra included")
+    func reportableSkipsStoppedApps() {
+        let reportable = RepublishAbsenceMemo.reportable(
+            ["com.old.floe:Floe", "com.stonerl.Thaw.extra.focus:Thaw.Extra.Focus", "com.stonerl.Thaw.extra.timer:Thaw.Extra.Timer",
+             "com.example.running:Item-0", "com.example.live:Second", "null:Item-0"],
+            liveNamespaces: ["com.example.live"],
+            runningBundleIDs: ["com.stonerl.Thaw", "com.stonerl.Thaw.extra.timer", "com.example.running"]
+        )
+
+        #expect(reportable == ["com.stonerl.Thaw.extra.timer:Thaw.Extra.Timer", "com.example.running:Item-0", "com.example.live:Second", "null:Item-0"])
+    }
+
     @Test("An item that is not named by an app's bundle is still waited for")
     func nonBundleNamespacesStayAwaited() {
         let unreachable = RepublishAbsenceMemo.unreachable(

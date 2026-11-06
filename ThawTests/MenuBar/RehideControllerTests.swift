@@ -25,6 +25,9 @@ private final class RehideWorld {
     /// Answers given before falling back to pointerInArea and menuOpen, oldest first.
     var pointerInAreaAnswers: [Bool] = []
     var menuOpenAnswers: [Bool] = []
+    var menuChecks = 0
+    /// Holds this numbered menu check, counting from one, until finishWaits.
+    var heldMenuCheck: Int?
     /// Lets a sleep move the clock and return at once instead of waiting for finishWaits.
     var sleepsReturnAtOnce = false
     var sectionHides: [MenuBarSection.Name] = []
@@ -34,7 +37,13 @@ private final class RehideWorld {
 
     lazy var controller: RehideController = .init(environment: RehideController.Environment(
         settings: { [unowned self] in settings },
-        isAnyMenuOpen: { [unowned self] in menuOpenAnswers.isEmpty ? menuOpen : menuOpenAnswers.removeFirst() },
+        isAnyMenuOpen: { [unowned self] in
+            menuChecks += 1
+            if menuChecks == heldMenuCheck {
+                await withCheckedContinuation { held.append($0) }
+            }
+            return menuOpenAnswers.isEmpty ? menuOpen : menuOpenAnswers.removeFirst()
+        },
         isPointerAwayFromBars: { [unowned self] in pointerAwayFromBars },
         activeSpaceID: { [unowned self] in spaceID },
         isPointerOverFrontmostApp: { [unowned self] in pointerOverFrontmostApp },
@@ -414,6 +423,23 @@ struct SectionRehideTests {
         #expect(world.monitorStarts == [.hidden, .hidden])
         #expect(world.sleeps.count == 16)
         #expect(world.sectionHides == [.hidden])
+    }
+
+    @Test("A countdown cancelled while it asks about open menus neither hides nor restarts", arguments: [false, true])
+    func cancelDuringMenuCheck(menuOpen: Bool) async {
+        let world = world(.timed)
+        world.heldMenuCheck = 9
+        world.controller.revealed(.hidden)
+        while world.menuChecks < 9 {
+            await world.settle()
+        }
+        world.movePointer(over: .hidden, inArea: true)
+        world.menuOpen = menuOpen
+        await world.finishWaits()
+        await world.settle()
+        await world.controller.waitUntilIdle()
+        #expect(world.sectionHides.isEmpty)
+        #expect(world.sleeps.count == 8)
     }
 
     @Test("The smart fallback gives up for good once the pointer reaches a bar")

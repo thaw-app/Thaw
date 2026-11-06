@@ -151,7 +151,7 @@ struct StrandRepairPass {
     private mutating func take(_ strand: MenuBarItem, controlItems: ControlItemPair, permit: borrowing StoreWritePermit) async -> Step {
         guard !isInterrupted else { return .finish((liveItems, true, false)) }
         guard pass.takeTurn() else {
-            MenuBarItemManager.diagLog.error("macOS 27 visible boundary repair gave up after \(pass.turns) strands for \(strand.logString)")
+            MenuBarItemManager.diagLog.error(pass.giveUpMessage(for: strand.logString))
             return .endLoop
         }
         if let reveal = revealedSection {
