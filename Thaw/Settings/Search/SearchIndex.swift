@@ -144,7 +144,7 @@ nonisolated enum SearchIndex {
             pane: .general,
             sectionKey: nil,
             sectionText: nil,
-            keywords: ["general", "launch", "startup", "login", "icon", "reveal", "show", "hide", "hover", "click", "scroll", "rehide", "gesture"],
+            keywords: ["general", "launch", "startup", "login", "language", "icon", "reveal", "show", "hide", "hover", "click", "scroll", "rehide", "gesture"],
             property: nil
         ),
         SearchEntry(
@@ -237,8 +237,8 @@ nonisolated enum SearchIndex {
         ),
         SearchEntry(
             id: "pane.tools",
-            titleKey: "Tools",
-            titleText: "Tools",
+            titleKey: "Troubleshooting",
+            titleText: "Troubleshooting",
             descriptionText: "Diagnostics, language override, resets, and troubleshooting tools.",
             pane: .tools,
             sectionKey: nil,
@@ -251,7 +251,7 @@ nonisolated enum SearchIndex {
             titleKey: "Trigger Sources",
             titleText: "Trigger Sources",
             descriptionText: "Turn trigger sources on or off and see the live system state.",
-            pane: .developer,
+            pane: .triggers,
             sectionKey: nil,
             sectionText: nil,
             keywords: ["developer", "dev mode", "flags", "experimental", "trigger sources", "diagnostics"],

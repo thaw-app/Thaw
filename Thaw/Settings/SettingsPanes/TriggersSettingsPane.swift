@@ -159,6 +159,8 @@ struct TriggersSettingsPane: View {
             }
 
             addButton
+
+            TriggerSourcesSections(manager: manager)
         }
         .contentShape(Rectangle())
         .onTapGesture { focusedField = nil }

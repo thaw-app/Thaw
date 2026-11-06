@@ -16,7 +16,7 @@ struct SettingsView: View {
     @State private var searchModel = SearchModel()
 
     private var allSections: [SettingsNavigationIdentifier] {
-        SettingsNavigationIdentifier.allCases
+        SettingsNavigationIdentifier.sidebar
     }
 
     private var currentSectionIndex: Int? {
@@ -115,7 +115,7 @@ struct SettingsView: View {
             if searchModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 List(selection: selection) {
                     Section {
-                        ForEach(SettingsNavigationIdentifier.allCases) { identifier in
+                        ForEach(SettingsNavigationIdentifier.sidebar) { identifier in
                             Label {
                                 Text(identifier.localized)
                             } icon: {
@@ -166,12 +166,10 @@ struct SettingsView: View {
             AdvancedSettingsPane(settings: appState.settings.advanced)
         case .automation:
             AutomationSettingsPane()
-        case .triggers:
+        case .triggers, .developer:
             TriggersSettingsPane(manager: appState.settings.triggers, itemManager: appState.itemManager)
         case .tools:
             ToolsSettingsPane(settings: appState.settings.advanced)
-        case .developer:
-            DeveloperSettingsPane(manager: appState.settings.triggers)
         case .about:
             AboutSettingsPane(updatesManager: appState.updatesManager)
         }

@@ -188,12 +188,13 @@ $(SRCROOT)/Thaw/Settings/Search/SettingsSearchNavigation.swift
 $(SRCROOT)/Thaw/Settings/SettingsDetailStyle.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/AboutSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/Advanced/CaptureInspectorSection.swift
+$(SRCROOT)/Thaw/Settings/SettingsPanes/Advanced/DiagnosticLoggingRows.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/AdvancedSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/AutomationSettingsPane.swift
-$(SRCROOT)/Thaw/Settings/SettingsPanes/DeveloperSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/DisplaySettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/General/GeneralSettingsRows.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/General/IceIconPicker.swift
+$(SRCROOT)/Thaw/Settings/SettingsPanes/General/LanguageRow.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/GeneralSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/HotkeysSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/Layout/LayoutBarsSection.swift
@@ -213,6 +214,7 @@ $(SRCROOT)/Thaw/Settings/SettingsPanes/Triggers/ImageConditionEditor.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/Triggers/ScheduleWeekdayPicker.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/Triggers/ScriptConditionEditor.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/Triggers/TriggerRow.swift
+$(SRCROOT)/Thaw/Settings/SettingsPanes/Triggers/TriggerSourcesSections.swift
 $(SRCROOT)/Thaw/Settings/SettingsPanes/TriggersSettingsPane.swift
 $(SRCROOT)/Thaw/Settings/SettingsView.swift
 $(SRCROOT)/Thaw/Settings/SettingsWindow.swift

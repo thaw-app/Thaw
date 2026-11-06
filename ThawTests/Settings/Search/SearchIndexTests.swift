@@ -88,10 +88,24 @@ struct SearchIndexTests {
         #expect(partitioned.count == SearchIndex.entries.count)
     }
 
-    @Test("New trigger panes have searchable pane rows")
+    @Test("Trigger Sources is found under Triggers")
     func triggerPanesAreSearchable() {
         #expect(SearchIndex.entries(for: .triggers).contains { $0.id == "pane.triggers" })
-        #expect(SearchIndex.entries(for: .developer).contains { $0.id == "pane.developer" })
+        #expect(SearchIndex.entries(for: .triggers).contains { $0.id == "pane.developer" })
+        #expect(SearchIndex.entries(for: .developer).isEmpty)
+    }
+
+    @Test("The sidebar lists every pane once, without Trigger Sources")
+    func sidebarListsEachPaneOnce() {
+        let sidebar = SettingsNavigationIdentifier.sidebar
+        #expect(Set(sidebar).count == sidebar.count)
+        #expect(Set(sidebar) == Set(SettingsNavigationIdentifier.allCases).subtracting([.developer]))
+    }
+
+    @Test("A saved Trigger Sources pane opens on Triggers")
+    func triggerSourcesOpensTriggers() {
+        #expect(SettingsNavigationIdentifier.developer.destination == .triggers)
+        #expect(SettingsNavigationIdentifier.tools.destination == .tools)
     }
 
     // MARK: - sortedByRelevance

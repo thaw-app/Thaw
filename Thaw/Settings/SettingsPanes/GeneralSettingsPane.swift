@@ -25,6 +25,9 @@ struct GeneralSettingsPane: View {
             IceSection {
                 appOptions
             }
+            IceSection("Language") {
+                LanguageRow()
+            }
             IceSection("\(Constants.displayName) icon") {
                 iceIconOptions
             }

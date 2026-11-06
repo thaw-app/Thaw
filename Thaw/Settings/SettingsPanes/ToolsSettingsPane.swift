@@ -12,9 +12,7 @@ struct ToolsSettingsPane: View {
     @Environment(AppState.self) private var appState: AppState
     @Bindable var settings: AdvancedSettings
 
-    @State private var currentLogFileName: String?
     @State private var pendingAction: MaintenanceToolAction?
-    @State private var languageOverrideChanged = false
     @State private var isBusy = false
     @State private var statusMessage: String?
     @State private var errorMessage: String?
@@ -32,7 +30,7 @@ struct ToolsSettingsPane: View {
             .listRowBackground(Color.clear)
 
             IceSection("Diagnostics") {
-                diagnosticLogging
+                DiagnosticLoggingRows(settings: settings)
             }
             IceSection("Onboarding") {
                 toolRow(
@@ -42,9 +40,6 @@ struct ToolsSettingsPane: View {
                 ) {
                     appState.isOnboardingPresented = true
                 }
-            }
-            IceSection("Language") {
-                languageRow
             }
             IceSection("Reset") {
                 toolRow(
@@ -101,13 +96,6 @@ struct ToolsSettingsPane: View {
             }
         }
         .disabled(isBusy)
-        .task(id: settings.enableDiagnosticLogging) {
-            try? await Task.sleep(for: .milliseconds(50))
-            currentLogFileName = (
-                DiagnosticLogger.shared.currentLogFile
-                    ?? DiagnosticLogger.shared.latestLogFile
-            )?.lastPathComponent
-        }
         .confirmationDialog(
             pendingAction?.confirmationTitle ?? "",
             isPresented: Binding(
@@ -147,140 +135,6 @@ struct ToolsSettingsPane: View {
         } message: {
             Text(errorMessage ?? "")
         }
-    }
-
-    private var diagnosticLogging: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Toggle(
-                "Enable diagnostic logging",
-                isOn: $settings.enableDiagnosticLogging
-            )
-            .annotation {
-                Text(
-                    """
-                    Writes detailed debug logs to a file for troubleshooting. \
-                    Log files are saved to ~/Library/Logs/Thaw/. \
-                    Disable when not needed to avoid unnecessary disk writes.
-                    """
-                )
-            }
-
-            HStack(spacing: 12) {
-                if settings.enableDiagnosticLogging || DiagnosticLogger.shared.hasLogFiles {
-                    Button("Show Log Files in Finder") {
-                        NSWorkspace.shared.open(DiagnosticLogger.shared.logDirectory)
-                    }
-                    .buttonStyle(.thawSecondary)
-                }
-
-                if let currentLogFileName {
-                    Text(currentLogFileName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-
-    /// Sentinel for following the system language (no override).
-    private static let systemLanguageTag = "system"
-
-    /// The app's per-app language override, via the standard `AppleLanguages`
-    /// mechanism. Not a `Defaults.Key`; the key name is owned by macOS.
-    private var currentLanguageOverride: String {
-        guard let stored = (UserDefaults.standard.array(forKey: "AppleLanguages") as? [String])?.first else {
-            return Self.systemLanguageTag
-        }
-        // The stored value is whatever macOS was handed, which need not be one
-        // of the picker's tags: `en-GB` selects our `en` localization at
-        // runtime but matches no tag, leaving the picker blank.
-        return Self.availableLocalization(matching: stored) ?? Self.systemLanguageTag
-    }
-
-    /// The bundle localization a stored `AppleLanguages` value resolves to, or
-    /// `nil` when this build ships nothing for it.
-    private static func availableLocalization(matching identifier: String) -> String? {
-        let localizations = Bundle.main.localizations.filter { $0 != "Base" }
-        if localizations.contains(identifier) {
-            return identifier
-        }
-        guard let languageCode = Locale(identifier: identifier).language.languageCode?.identifier else {
-            return nil
-        }
-        // The bare language first (`en` for `en-GB`), then any regional variant
-        // of it (`pt-BR` for `pt`), which is how macOS resolves it too.
-        return localizations.first { $0 == languageCode }
-            ?? localizations.first { Locale(identifier: $0).language.languageCode?.identifier == languageCode }
-    }
-
-    @ViewBuilder
-    private var languageRow: some View {
-        let localizations = Bundle.main.localizations
-            .filter { $0 != "Base" }
-            .sorted { lhs, rhs in
-                displayName(forLanguage: lhs) < displayName(forLanguage: rhs)
-            }
-
-        IcePicker(
-            "App language",
-            selection: Binding(
-                get: { currentLanguageOverride },
-                set: { newValue in
-                    if newValue == Self.systemLanguageTag {
-                        UserDefaults.standard.removeObject(forKey: "AppleLanguages")
-                    } else {
-                        UserDefaults.standard.set([newValue], forKey: "AppleLanguages")
-                    }
-                    languageOverrideChanged = true
-                }
-            )
-        ) {
-            Text("System Default").tag(Self.systemLanguageTag)
-            ForEach(localizations, id: \.self) { code in
-                Text(displayName(forLanguage: code)).tag(code)
-            }
-        }
-        .annotation("Use \(Constants.displayName) in a different language than the system. Takes effect after a relaunch.")
-
-        if languageOverrideChanged {
-            HStack {
-                Text("The language change applies after \(Constants.displayName) relaunches.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button("Relaunch Now") {
-                    relaunchApp()
-                }
-                .buttonStyle(.thawSecondary)
-            }
-        }
-    }
-
-    /// The language's own name for itself (endonym), falling back to the code.
-    private func displayName(forLanguage code: String) -> String {
-        let locale = Locale(identifier: code)
-        return locale.localizedString(forIdentifier: code)?.localizedCapitalized ?? code
-    }
-
-    private func relaunchApp() {
-        // Reopen only after this PID exits: a second instance launched during
-        // teardown can leave multiple copies running. Foundation Process, not
-        // Subprocess, because Subprocess ties the child to the awaiting task,
-        // which dies with the app.
-        let pid = ProcessInfo.processInfo.processIdentifier
-        let bundlePath = Bundle.main.bundlePath
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = [
-            "-c",
-            "while /bin/kill -0 \(pid) 2>/dev/null; do /bin/sleep 0.1; done; /usr/bin/open \"$1\"",
-            // `sh -c` assigns the first operand to $0, so the path goes second.
-            // As an argument, special characters in it stay out of the script.
-            "thaw-relaunch",
-            bundlePath,
-        ]
-        try? process.run()
-        NSApp.terminate(nil)
     }
 
     private func toolRow(
