@@ -122,24 +122,71 @@ struct ProfileManagerCRUDTests {
         }
     }
 
-    /// Verifies that a single-profile export retains its Space key and label
-    /// after import and after reloading the profile manager from disk.
-    @Test("A single-profile export preserves its Space association through import")
-    func exportImportPreservesSpaceAssociation() throws {
+    /// Importing a profile's own export must not unbind the original.
+    @Test("Importing a profile's export leaves its Space association on the original")
+    func importKeepsTheOriginalsSpaceAssociation() throws {
         try withManager(seeding: [makeProfile(named: "Desk")]) { manager, tmp in
             let originalID = try #require(manager.profiles.first?.id)
             manager.setAssociatedSpace(key: "SPACE-UUID-A", spaceName: "Desktop 2", forProfileID: originalID)
+            manager.setAssociatedDisplay(uuid: "DISPLAY-A", displayName: "Studio", forProfileID: originalID)
             let file = tmp.appendingPathComponent("export.json")
 
             try manager.exportProfile(id: originalID, to: file)
             try manager.importProfile(from: file)
 
             let imported = try #require(manager.profiles.first { $0.id != originalID })
-            #expect(imported.associatedSpaceKey == "SPACE-UUID-A")
-            #expect(imported.associatedSpaceName == "Desktop 2")
+            #expect(imported.associatedSpaceKey == nil)
+            #expect(imported.associatedDisplayUUID == nil)
+            let reloaded = ProfileManager(profilesDirectory: tmp)
+            #expect(reloaded.profile(forSpaceKey: "SPACE-UUID-A")?.id == originalID)
+            #expect(reloaded.profile(forSpaceKey: "SPACE-UUID-A")?.associatedSpaceName == "Desktop 2")
+            #expect(reloaded.profiles.first { $0.id == originalID }?.associatedDisplayUUID == "DISPLAY-A")
+        }
+    }
+
+    /// A single-profile export keeps its Space key, so importing it where no profile owns that Space binds it.
+    @Test("An imported profile takes a Space association no local profile owns")
+    func importTakesAFreeSpaceAssociation() throws {
+        try withManager(seeding: [makeProfile(named: "Desk")]) { manager, tmp in
+            let originalID = try #require(manager.profiles.first?.id)
+            manager.setAssociatedSpace(key: "SPACE-UUID-A", spaceName: "Desktop 2", forProfileID: originalID)
+            let file = tmp.appendingPathComponent("export.json")
+            try manager.exportProfile(id: originalID, to: file)
+            manager.setAssociatedSpace(key: nil, forProfileID: originalID)
+
+            try manager.importProfile(from: file)
+
+            let imported = try #require(manager.profiles.first { $0.id != originalID })
             let reloaded = ProfileManager(profilesDirectory: tmp)
             #expect(reloaded.profile(forSpaceKey: "SPACE-UUID-A")?.id == imported.id)
             #expect(reloaded.profile(forSpaceKey: "SPACE-UUID-A")?.associatedSpaceName == "Desktop 2")
+        }
+    }
+
+    /// A crafted file can't bloat the manifest with a huge label.
+    @Test("Imported Space and display labels are capped")
+    func importCapsLabels() throws {
+        try withManager(seeding: [makeProfile(named: "Desk")]) { manager, tmp in
+            let originalID = try #require(manager.profiles.first?.id)
+            let file = tmp.appendingPathComponent("export.json")
+            try manager.exportProfile(id: originalID, to: file)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            var bundle = try decoder.decode(ProfileExportBundle.self, from: Data(contentsOf: file))
+            let huge = String(repeating: "x", count: 100_000)
+            bundle.entries[0].associatedSpaceKey = "SPACE-UUID-B"
+            bundle.entries[0].associatedSpaceName = huge
+            bundle.entries[0].associatedDisplayUUID = "DISPLAY-B"
+            bundle.entries[0].associatedDisplayName = huge
+            try encoder.encode(bundle).write(to: file)
+
+            try manager.importProfile(from: file)
+
+            let imported = try #require(manager.profiles.first { $0.id != originalID })
+            #expect(imported.associatedSpaceName?.count == ProfileImportPolicy.maxLabelLength)
+            #expect(imported.associatedDisplayName?.count == ProfileImportPolicy.maxLabelLength)
         }
     }
 

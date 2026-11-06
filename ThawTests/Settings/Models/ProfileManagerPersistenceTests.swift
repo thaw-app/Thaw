@@ -367,7 +367,7 @@ struct ProfileManagerPersistenceTests {
 
     // MARK: - Import
 
-    @Test("An import that claims a display takes it from the profile that held it")
+    @Test("An import that claims an owned display leaves it with the profile that holds it")
     func importReconcilesDisplayOwnership() throws {
         try withManager(seeding: [makeProfile(named: "Deskbound")]) { manager, tmp in
             let existingID = try #require(manager.profiles.first?.id)
@@ -394,10 +394,10 @@ struct ProfileManagerPersistenceTests {
             let reloaded = ProfileManager(profilesDirectory: tmp)
             let previousOwner = try #require(reloaded.profiles.first { $0.id == existingID })
             let imported = try #require(reloaded.profiles.first { $0.name == "Imported" })
-            #expect(previousOwner.associatedDisplayUUID == nil)
-            #expect(previousOwner.associatedDisplayName == nil)
-            #expect(imported.associatedDisplayUUID == "UUID-A")
-            #expect(imported.associatedDisplayName == "Studio Display")
+            #expect(previousOwner.associatedDisplayUUID == "UUID-A")
+            #expect(previousOwner.associatedDisplayName == "Studio Display")
+            #expect(imported.associatedDisplayUUID == nil)
+            #expect(imported.associatedDisplayName == nil)
         }
     }
 

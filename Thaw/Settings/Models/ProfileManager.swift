@@ -418,14 +418,7 @@ final class ProfileManager {
     /// Exports a profile to a file, including display and Space associations.
     func exportProfile(id: UUID, to url: URL) throws {
         let profile = try loadProfile(id: id)
-        let meta = profiles.first { $0.id == id }
-        let entry = ProfileExportEntry(
-            profile: profile,
-            associatedDisplayUUID: meta?.associatedDisplayUUID,
-            associatedDisplayName: meta?.associatedDisplayName,
-            associatedSpaceKey: meta?.associatedSpaceKey,
-            associatedSpaceName: meta?.associatedSpaceName
-        )
+        let entry = ProfileExportEntry(profile: profile, metadata: profiles.first { $0.id == id })
         let bundle = ProfileExportBundle(entries: [entry])
         let data = try encoder.encode(bundle)
         try data.write(to: url, options: .atomic)
@@ -818,13 +811,7 @@ final class ProfileManager {
         var entries = [ProfileExportEntry]()
         for meta in profiles {
             guard let profile = try? loadProfile(id: meta.id) else { continue }
-            entries.append(ProfileExportEntry(
-                profile: profile,
-                associatedDisplayUUID: meta.associatedDisplayUUID,
-                associatedDisplayName: meta.associatedDisplayName,
-                associatedSpaceKey: meta.associatedSpaceKey,
-                associatedSpaceName: meta.associatedSpaceName
-            ))
+            entries.append(ProfileExportEntry(profile: profile, metadata: meta))
         }
         let bundle = ProfileExportBundle(entries: entries)
         guard let data = try? encoder.encode(bundle) else { return nil }
@@ -921,23 +908,23 @@ final class ProfileManager {
             )
             profiles.append(metadata)
 
-            // Reconcile display ownership through the setter so any existing
-            // profile that owns this display has its association cleared first.
-            if let displayUUID = entry.associatedDisplayUUID {
+            // An import only fills a free association. Taking one a local profile
+            // owns would silently unbind it, and display keys repeat across Macs.
+            if let displayUUID = entry.associatedDisplayUUID,
+               !profiles.contains(where: { $0.associatedDisplayUUID == displayUUID })
+            {
                 assignDisplay(
                     uuid: displayUUID,
-                    displayName: entry.associatedDisplayName,
+                    displayName: ProfileImportPolicy.cappedLabel(entry.associatedDisplayName),
                     toProfileID: imported.id
                 )
             }
-
-            // Same reconciliation for the Space association. A key exported
-            // from another Mac will not match any local Space, so it sits
-            // inert rather than binding the profile to the wrong desktop.
-            if let spaceKey = entry.associatedSpaceKey {
+            if let spaceKey = entry.associatedSpaceKey,
+               !profiles.contains(where: { $0.associatedSpaceKey == spaceKey })
+            {
                 assignSpace(
                     key: spaceKey,
-                    spaceName: entry.associatedSpaceName,
+                    spaceName: ProfileImportPolicy.cappedLabel(entry.associatedSpaceName),
                     toProfileID: imported.id
                 )
             }

@@ -590,10 +590,22 @@ nonisolated struct ProfileExportEntry: Codable {
     var profile: Profile
     var associatedDisplayUUID: String?
     var associatedDisplayName: String?
-    /// Space associations are exported too, but a key from another Mac will
-    /// never match locally, so importing one is harmless rather than useful.
+    /// An import takes a Space or display association only while no local profile owns it.
     var associatedSpaceKey: String?
     var associatedSpaceName: String?
+}
+
+nonisolated extension ProfileExportEntry {
+    /// The entry for a profile with the associations its manifest metadata holds.
+    init(profile: Profile, metadata: ProfileMetadata?) {
+        self.init(
+            profile: profile,
+            associatedDisplayUUID: metadata?.associatedDisplayUUID,
+            associatedDisplayName: metadata?.associatedDisplayName,
+            associatedSpaceKey: metadata?.associatedSpaceKey,
+            associatedSpaceName: metadata?.associatedSpaceName
+        )
+    }
 }
 
 /// Wrapper for exporting multiple profiles as a single file.
