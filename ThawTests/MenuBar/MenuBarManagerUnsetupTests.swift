@@ -97,7 +97,6 @@ struct MenuBarManagerUnsetupTests {
     func housekeeping() {
         let appState = AppState()
         let manager = appState.menuBarManager
-        manager.updateLastShowTimestamp()
         manager.noteUserRevealOwnership()
         manager.dismissLayoutEditorPanel()
         manager.dismissAppearanceEditorPanel()
