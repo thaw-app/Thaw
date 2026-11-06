@@ -99,7 +99,6 @@ struct RevealCapturePrewarm {
         let newlyCaptured = tally.tags
 
         let items = sections.flatMap { sectionItems($0) ?? [] }
-            .filter { MenuBarItemImageCache.isCapturable($0) && !MenuBarItemImageCache.isBlankItem($0.bounds) && !$0.tag.isControlCenterGovernable }
         return MenuBarItemImageCache.hiddenItemCaptureResult(items: items, alreadyGood: alreadyGood, newlyCaptured: newlyCaptured)
     }
 

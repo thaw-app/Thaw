@@ -39,6 +39,8 @@ the items under New and Fixed.
 
 ### Fixed
 
+- Capture Hidden Items now correctly counts pictures of items hidden with Native hiding.
+
 - **Hidden items no longer collapse right after you point at them or show them again.** A timed rehide that was already finishing could still hide the section you had just reopened.
 - **Diagnostic logs no longer warn on every layout pass about apps that aren't running.** Saved items whose app is closed, and Thaw extras you have turned off, are left out of that warning.
 - **Items with a countdown or changing count no longer keep moving to Hidden.** Thaw now notices an item that changes its text even when many apps are running, instead of treating each new text as a new item.
