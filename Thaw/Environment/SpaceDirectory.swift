@@ -20,7 +20,7 @@ final class SpaceDirectory {
     /// Waits this long after a Space list change before reading, so the window server has published it.
     static let settleDelay: Duration = .milliseconds(500)
 
-    init(read: @escaping () -> [Bridging.ManagedSpace] = { Bridging.getManagedSpaces() }) {
+    init(read: @escaping () -> [Bridging.ManagedSpace] = { SpaceLabels.liveSpaces() }) {
         self.read = read
         spaces = read()
     }
