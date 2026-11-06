@@ -28,6 +28,11 @@ struct BoundaryRepairPass {
         return turns <= Self.strandBudget
     }
 
+    /// The line logged when the pass has spent its budget on the strand named.
+    func giveUpMessage(for strand: String) -> String {
+        "macOS 27 visible boundary repair gave up after \(Self.strandBudget) strands for \(strand)"
+    }
+
     mutating func recordAttempt(_ item: MenuBarItem) {
         if attemptedIDs.insert(item.uniqueIdentifier).inserted {
             attempted.append(item)

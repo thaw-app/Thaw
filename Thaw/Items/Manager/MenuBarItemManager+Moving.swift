@@ -1845,9 +1845,11 @@ extension MenuBarItemManager {
         missingRepublishMemo.expire(now: now)
         // Wait only for members that can still arrive; an empty wait
         // set is satisfied by the first enumeration.
+        let liveNamespaces = Set(itemCache.managedItems.map(\.tag.namespace.description))
+        let runningBundleIDs = await RunningApplicationSnapshot.current().bundleIdentifiers
         let knownAbsent = wantedIDs.filter {
             missingRepublishMemo.isKnownAbsent($0) || MoveTargeting.namesPinnedSystemItem($0)
-        }.union(RepublishAbsenceMemo.unreachable(wanted: wantedIDs, liveNamespaces: Set(itemCache.managedItems.map(\.tag.namespace.description)), runningBundleIDs: await RunningApplicationSnapshot.current().bundleIdentifiers))
+        }.union(RepublishAbsenceMemo.unreachable(wanted: wantedIDs, liveNamespaces: liveNamespaces, runningBundleIDs: runningBundleIDs))
         let awaitedIDs = wantedIDs.subtracting(knownAbsent)
         if !knownAbsent.isEmpty {
             MenuBarItemManager.diagLog.debug(
@@ -1868,11 +1870,15 @@ extension MenuBarItemManager {
         let missing = RepublishAbsenceMemo.absentees(wanted: wantedIDs, live: liveIDs)
         if !missing.isEmpty {
             missingRepublishMemo.noteMissing(missing, at: .now)
-            // Named, not counted: a count cannot say which app lagged.
-            MenuBarItemManager.diagLog.warning(
-                "authored visible apply: \(missing.count) member(s) never republished; " +
-                    "placing the rest without \(missing.sorted().joined(separator: ", "))"
-            )
+            // Members of apps that are not running were already named at debug above.
+            let lagging = RepublishAbsenceMemo.reportable(missing, liveNamespaces: liveNamespaces, runningBundleIDs: runningBundleIDs)
+            if !lagging.isEmpty {
+                // Named, not counted: a count cannot say which app lagged.
+                MenuBarItemManager.diagLog.warning(
+                    "authored visible apply: \(lagging.count) member(s) never republished; " +
+                        "placing the rest without \(lagging.sorted().joined(separator: ", "))"
+                )
+            }
             updatedOrder.removeAll { missing.contains($0) }
         }
         return (refreshed, updatedOrder)

@@ -38,6 +38,8 @@ the items under New and Fixed.
 
 ### Fixed
 
+- **Hidden items no longer collapse right after you point at them or show them again.** A timed rehide that was already finishing could still hide the section you had just reopened.
+- **Diagnostic logs no longer warn on every layout pass about apps that aren't running.** Saved items whose app is closed, and Thaw extras you have turned off, are left out of that warning.
 - **Items no longer move at launch when Thaw can't read the whole bar in time.** With many apps running, Thaw now waits for a full read before it treats the bar as settled or re-lays it.
 - **Your saved layout is put back once the menu bar settles at launch,** also when Thaw re-applies your profile then and its spacing hasn't changed. Before, that re-apply could stop the final layout pass.
 
