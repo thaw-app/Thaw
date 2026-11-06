@@ -5,14 +5,26 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import CoreGraphics
+import MenuBarModel
 import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Layout shows one warning at a time, the most serious first")
+@Suite("Layout shows one warning at a time, the most serious first", .scratchDefaults)
 struct LayoutBannerTests {
-    private func banner(denied: Bool = false, outOfReach: Bool = false, recording: Bool = true) -> LayoutBanner? {
-        LayoutBanner.mostSerious(isDeniedBySystem: denied, hasItemsOutOfReach: outOfReach, hasScreenRecording: recording)
+    private func banner(
+        denied: Bool = false,
+        outOfReach: Bool = false,
+        outOfRoom: Bool = false,
+        recording: Bool = true
+    ) -> LayoutBanner? {
+        LayoutBanner.mostSerious(
+            isDeniedBySystem: denied,
+            hasItemsOutOfReach: outOfReach,
+            isOutOfRoom: outOfRoom,
+            hasScreenRecording: recording
+        )
     }
 
     @Test("Thaw switched off in System Settings outranks everything")
@@ -23,6 +35,34 @@ struct LayoutBannerTests {
     @Test("Items out of reach outrank a missing Screen Recording grant")
     func outOfReachComesSecond() {
         #expect(banner(outOfReach: true, recording: false) == .outOfReach)
+    }
+
+    @Test("macOS hiding items for lack of room ranks after items out of reach and before Screen Recording")
+    func outOfRoomComesThird() {
+        #expect(banner(outOfReach: true, outOfRoom: true) == .outOfReach)
+        #expect(banner(outOfRoom: true, recording: false) == .outOfRoom)
+        #expect(!LayoutBanner.allowsTips(beside: .outOfRoom))
+    }
+
+    @Test("The items macOS is not drawing are named in bar order, each name once")
+    func namesNotDrawn() {
+        let items = [item("Alpha", windowID: 1), item("Beta", windowID: 2), item("Gamma", windowID: 3), item("Beta", windowID: 4)]
+        let tags = Set([items[2].tag, items[1].tag, items[3].tag])
+        #expect(LayoutBanner.namesNotDrawn(visibleItems: items, notDrawnTags: tags) == ["Beta", "Gamma"])
+        #expect(LayoutBanner.namesNotDrawn(visibleItems: items, notDrawnTags: []).isEmpty)
+    }
+
+    private func item(_ title: String, windowID: CGWindowID) -> MenuBarItem {
+        MenuBarItem(
+            tag: MenuBarItemTag(namespace: .string("com.example.\(title)"), title: title, instanceIndex: Int(windowID)),
+            windowID: windowID,
+            // No process has these, so the name comes from the namespace.
+            ownerPID: 999_999,
+            sourcePID: 999_999,
+            bounds: CGRect(x: CGFloat(windowID) * 30, y: 3, width: 24, height: 24),
+            title: title,
+            isOnScreen: true
+        )
     }
 
     @Test("A missing Screen Recording grant shows when nothing worse is true")

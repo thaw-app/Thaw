@@ -51,6 +51,9 @@ final class AppState {
     /// The sections, their control items, and the show/hide state machine.
     let menuBarManager: MenuBarManager
 
+    /// The displays where macOS's own overflow arrow is showing, for Settings.
+    let nativeOverflowPresence = NativeOverflowPresence()
+
     /// Shared by the menu bar manager, which acts on a display move, and the
     /// event taps, which ask for a check.
     private let activeDisplayWatcher = ActiveMenuBarDisplayWatcher()
