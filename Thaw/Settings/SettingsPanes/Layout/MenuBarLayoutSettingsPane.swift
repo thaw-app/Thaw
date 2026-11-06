@@ -22,6 +22,9 @@ struct MenuBarLayoutSettingsPane: View {
     @State private var isDeniedBySystem = false
     /// Refresh hidden occupancy from tags, not geometry, to avoid jitter; see MenuBarLayoutGroupsSection.
     @State private var isNothingHidden = false
+    /// Set while macOS's own overflow is hiding items on the display the bars show.
+    @State private var isOutOfRoom = false
+    @State private var namesNotDrawn: [String] = []
 
     private var menuBarManager: MenuBarManager {
         appState.menuBarManager
@@ -76,6 +79,7 @@ struct MenuBarLayoutSettingsPane: View {
                 let banner = LayoutBanner.mostSerious(
                     isDeniedBySystem: isDeniedBySystem,
                     hasItemsOutOfReach: !itemManager.unseenHostBundleIDs.isEmpty,
+                    isOutOfRoom: isOutOfRoom,
                     hasScreenRecording: hasScreenRecordingPermission
                 )
                 switch banner {
@@ -95,6 +99,8 @@ struct MenuBarLayoutSettingsPane: View {
                             }
                         }
                     )
+                case .outOfRoom:
+                    OutOfRoomWarning(hiddenItemNames: namesNotDrawn)
                 case .noScreenRecording:
                     SettingsWarningPill(
                         title: "Showing app icons",
@@ -132,6 +138,12 @@ struct MenuBarLayoutSettingsPane: View {
         .modifier(
             HiddenSectionOccupancySync(itemManager: itemManager) {
                 syncHiddenSectionOccupancy()
+            }
+        )
+        .modifier(
+            OutOfRoomSync(itemManager: itemManager, presence: appState.nativeOverflowPresence) { isOutOfRoom, names in
+                self.isOutOfRoom = isOutOfRoom
+                namesNotDrawn = names
             }
         )
         .onAppear {
