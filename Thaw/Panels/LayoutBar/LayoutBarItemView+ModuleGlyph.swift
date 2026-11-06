@@ -14,10 +14,9 @@ extension LayoutBarItemView {
         item.tag.namespace == .menuBarAgent && SystemModuleGlyph.symbolName(forItemTitle: item.tag.title) != nil
     }
 
-    /// The centered square a bare module symbol is drawn in, the size it would have inside the box.
+    /// The centered square a bare module symbol is drawn in, the tile's full height as the previews draw it.
     static func bareGlyphRect(in bounds: CGRect) -> CGRect? {
-        let inset = 2 * MenuBarItemPlaceholderStyle.inset
-        let side = min(bounds.width, bounds.height) - 2 * inset
+        let side = min(bounds.width, bounds.height)
         guard side > 0 else { return nil }
         return CGRect(x: bounds.midX - side / 2, y: bounds.midY - side / 2, width: side, height: side)
     }
