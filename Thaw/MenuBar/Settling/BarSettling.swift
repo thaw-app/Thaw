@@ -109,8 +109,11 @@ final class BarSettling {
         expectedBundleIDs = merged
         let adopts = Self.adoptsObservedMembership(incoming: incoming, replacing: kind)
         kind = incoming
-        // The cancelled task exits without touching shared state.
-        task?.cancel()
+        // Only a settle still polling is cancelled, and it exits without touching shared state. Work owed by
+        // one that already settled runs to its end: it re-applies the profile, whose wave lands here.
+        if isSettling {
+            task?.cancel()
+        }
         isSettling = true
         host.didStart()
         Self.diagLog.debug("\(label): settling period started (max duration: \(maxDuration))")
@@ -232,7 +235,7 @@ final class BarSettling {
     /// or launch settle the preflight joined: a partial cache would report every item in place.
     private func callOff(_ disturbance: Disturbance) {
         let label = disturbance.label
-        guard isSettling || task != nil else { return }
+        guard isSettling else { return }
         if !expectedBundleIDs.isEmpty {
             Self.diagLog.debug("\(label): settling cancel ignored; \(expectedBundleIDs.count) expected bundle ID(s) still pending")
             return
