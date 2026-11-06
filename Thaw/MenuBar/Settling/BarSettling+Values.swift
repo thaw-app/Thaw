@@ -87,6 +87,10 @@ extension BarSettling {
         /// Whether MenuBarAgent or BentoBox items are cached yet.
         var hostReady = false
         var bundleIDs: Set<String> = []
+        /// Which read of the bar the sample came from, or nil when the host does not number its reads.
+        var readGeneration: UInt64?
+        /// False when the read ran out of time or was filled in from older items.
+        var readComplete = true
     }
 
     /// How a settle ended, for the work owed afterwards.
@@ -119,6 +123,8 @@ extension BarSettling {
     nonisolated struct Streak: Equatable, Sendable {
         var lastSeenCount = -1
         var stablePolls = 0
+        /// The read the last counted poll came from, so a coalesced poll of the same read is skipped.
+        var lastReadGeneration: UInt64?
     }
 
     nonisolated enum Verdict: Equatable, Sendable {
@@ -136,6 +142,10 @@ extension BarSettling {
         case barNotQuiet
         /// The count held but source PIDs are still unresolved.
         case pidsUnresolved
+        /// The poll saw the same read as the previous one, so it does not count.
+        case sameRead
+        /// The read missed part of the bar, so the streak starts over.
+        case readIncomplete
     }
 }
 

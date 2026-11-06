@@ -22,6 +22,9 @@ nonisolated enum WriteHold {
         /// macOS moved the bar to a display the cache has not followed yet,
         /// so frames read now mix two bars.
         case barOnUncachedDisplay
+        /// The cache came from a read that ran out of time or was filled in
+        /// from older items, so it can be missing items that are on the bar.
+        case barReadIncomplete
     }
 
     /// Which checks hold at one point in time, built by the calling pass.
@@ -36,6 +39,7 @@ nonisolated enum WriteHold {
         var sectionRevealed = false
         var revealTransitionActive = false
         var barOnUncachedDisplay = false
+        var barReadIncomplete = false
 
         /// Each condition paired with the check named after it.
         private var conditions: [(holds: Bool, check: Check)] {
@@ -50,6 +54,7 @@ nonisolated enum WriteHold {
                 (sectionRevealed, .sectionRevealed),
                 (revealTransitionActive, .revealTransitionActive),
                 (barOnUncachedDisplay, .barOnUncachedDisplay),
+                (barReadIncomplete, .barReadIncomplete),
             ]
         }
 
@@ -77,5 +82,17 @@ nonisolated enum StructuralNormalizationHolds {
         .sectionRevealed,
         .revealTransitionActive,
         .barOnUncachedDisplay,
+        .barReadIncomplete,
     ]
+
+    /// The line logged when the pass defers on this check, or nil for a check it defers on quietly.
+    static func deferralNote(for check: WriteHold.Check) -> String? {
+        check == .barReadIncomplete ? "structural normalization: the last bar read was incomplete; deferring" : nil
+    }
+
+    static func logDeferral(on check: WriteHold.Check) {
+        if let note = deferralNote(for: check) {
+            MenuBarItemManager.diagLog.debug("\(note)")
+        }
+    }
 }

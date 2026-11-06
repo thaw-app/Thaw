@@ -547,7 +547,8 @@ extension MenuBarItemManager {
             // laid from the old sections and put the dropped item back. The
             // reading schedules this pass again once it is done.
             guard manualMembershipTask == nil else { return }
-            guard WriteHold.first(StructuralNormalizationHolds.checks, in: situation) == nil else {
+            if let held = WriteHold.first(StructuralNormalizationHolds.checks, in: situation) {
+                StructuralNormalizationHolds.logDeferral(on: held)
                 readBarIfItMoved(situation)
                 rearm()
                 return
