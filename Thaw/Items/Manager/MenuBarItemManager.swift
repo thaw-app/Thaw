@@ -522,6 +522,9 @@ final class MenuBarItemManager {
     /// after a reveal ordering pass runs with the authored order.
     var authoredVisibleOrderPendingPhysicalApply = false
 
+    /// Keeps the applied profile's Visible order as the saved one until the bar can show it.
+    var profileOrderHold: ProfileOrderHold?
+
     /// The Visible items that were live when the order was last mirrored, so
     /// the next mirror can tell an arrival from a ⌘-drag.
     var lastMirroredLiveVisibleIdentifiers: Set<String>?
