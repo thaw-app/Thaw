@@ -65,13 +65,14 @@ nonisolated extension MenuBarHidingScope.Request {
     }
 }
 
-/// The picker for MenuBarHidingScope on Displays. The overrides are commands
-/// that last for this session and can't be read back, so the picker mirrors
-/// what was asked for and goes back when macOS declines.
+/// The picker for MenuBarHidingScope on Displays. macOS can't report the
+/// overrides, so the picker mirrors what was asked for and goes back when macOS declines.
 struct MenuBarHidingSection: View {
     let spaceID: UInt64
     @Binding var isHiddenInSpace: Bool
     @Binding var isHiddenEverywhere: Bool
+    /// Called for each override macOS accepted, with the Space it was sent for.
+    var onAccepted: (MenuBarHidingScope.Request, UInt64) -> Void = { _, _ in }
     @State private var failure: LocalizedStringResource?
 
     private var presentation: any MenuBarPresentationControlling {
@@ -135,6 +136,7 @@ struct MenuBarHidingSection: View {
                     failure = "The menu bar could not be hidden there right now."
                     return
                 }
+                onAccepted(request, spaceID)
             }
         }
     }

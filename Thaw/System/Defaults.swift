@@ -368,6 +368,7 @@ extension Defaults {
         case menuBarItemAlertReveals = "MenuBarItemAlertReveals"
         case autoZenWhileSharingScreen = "AutoZenWhileSharingScreen"
         case menuBarAppearanceSpaceOverrides = "MenuBarAppearanceSpaceOverrides"
+        case spaceMenuBarChoices = "SpaceMenuBarChoices"
         case lockThawBarPosition = "LockThawBarPosition"
         case openHiddenItemsInMenuBar = "OpenHiddenItemsInMenuBar"
         case roundScreenCorners = "RoundScreenCorners"

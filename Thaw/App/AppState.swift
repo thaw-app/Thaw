@@ -67,6 +67,9 @@ final class AppState {
     /// The current Space list, re-read when a Space is created or deleted.
     let spaceDirectory = SpaceDirectory()
 
+    /// The Spaces page's choices, sent to the menu bar agent again after it forgets them.
+    let spaceMenuBarKeeper = SpaceMenuBarKeeper()
+
     /// Runs the settle a display change owes, and the image cleanup after a removal, once per settled generation.
     @ObservationIgnored lazy var displayChangeCoordinator = DisplayChangeCoordinator(
         environment: displayEnvironment,
@@ -241,6 +244,7 @@ final class AppState {
         displayEnvironment.start()
         spaceChanges.start(feed: SpaceChanges.liveFeed())
         spaceDirectory.start(changes: spaceChanges)
+        spaceMenuBarKeeper.start(directory: spaceDirectory, agentRestarts: SpaceMenuBarKeeper.liveAgentRestarts())
         settings.performSetup(with: self)
         menuBarManager.performSetup(with: self, activeDisplayWatcher: activeDisplayWatcher, displays: displayEnvironment)
         barSettlingObservers.observe(revealedSections: menuBarManager.revealedSectionChanges)
