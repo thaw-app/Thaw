@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### New
+
+- **Layout warns when items don't fit.** When macOS hides items it has no room for, Layout names them until there's room again.
+
 ### Fixed
 
 - **Your saved layout is put back once the menu bar settles at launch,** also when Thaw re-applies your profile then and its spacing hasn't changed. Before, that re-apply could stop the final layout pass.
