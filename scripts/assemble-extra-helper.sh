@@ -11,6 +11,7 @@ case $role in
   nowplaying) name="Thaw Now Playing" symbol=play.circle ;;
   user) name="Thaw User Switcher" symbol=person.crop.circle ;;
   textinput) name="Thaw Text Input" symbol=keyboard ;;
+  space) name="Thaw Space" symbol=square.stack ;;
   slot[1-6]) name="Thaw Stand-In ${role#slot}" symbol=square.dashed ;;
   *) echo "unknown role $role" >&2; exit 1 ;;
 esac

@@ -166,7 +166,7 @@ nonisolated enum DisplaysTab: CaseIterable, ThawTab {
         switch section {
         case "Menu bar item spacing": self = .spacing
         case "Template for new displays": self = .template
-        case "This Space", "All Spaces": self = .spaces
+        case "Space indicator", "This Space", "All Spaces": self = .spaces
         case "Wide displays": self = .wideDisplays
         default: return nil
         }

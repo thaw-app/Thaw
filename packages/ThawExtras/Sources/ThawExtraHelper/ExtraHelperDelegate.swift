@@ -18,6 +18,7 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
     private var focus: FocusExtra?
     private var textInput: TextInputExtra?
     private var timeMachine: TimeMachineExtra?
+    private var spaceIndicator: SpaceIndicatorExtra?
     /// Whether Thaw asked for this stand-in to be hidden.
     private var isHiddenByThaw = false
     private var slotStandIn: SlotStandIn?
@@ -78,6 +79,8 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
             self.timeMachine = timeMachine
             timeMachine.start()
             updateVisibility()
+        } else if role == .space, let parentID = ExtraRole.parentBundleIdentifier(of: bundleID), let button = item.button {
+            spaceIndicator = SpaceIndicatorExtra(button: button, parentBundleIdentifier: parentID)
         } else if role == .airDrop {
             statusItem?.button?.image = AirDropGlyph.image(accessibilityDescription: role.displayName)
             statusItem?.button?.toolTip = role.displayName
@@ -121,6 +124,8 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
             UserSessionCommands.populate(menu)
         case .textInput:
             textInput?.populate(menu)
+        case .space:
+            spaceIndicator?.populate(menu)
         case .slot1, .slot2, .slot3, .slot4, .slot5, .slot6, nil:
             break
         }

@@ -12,7 +12,7 @@ import PlatformRuntimeKit
 // MARK: - Stand-in
 
 /// A Thaw-owned status item that takes the place of an Apple menu extra Thaw
-/// has removed natively.
+/// has removed natively, or, for the Space indicator, adds one macOS lacks.
 ///
 /// Each runs from its own bundle in Contents/Library/Extras because macOS 27
 /// conceals per bundle; inside Thaw it could not be hidden apart from Thaw.
@@ -24,6 +24,7 @@ enum SystemExtraStandIn: String, CaseIterable {
     case nowPlaying = "nowplaying"
     case userSwitcher = "user"
     case textInput = "textinput"
+    case space
 
     init(_ item: SystemExtraItem) {
         switch item {
@@ -47,6 +48,7 @@ enum SystemExtraStandIn: String, CaseIterable {
         case .nowPlaying: "Thaw.Extra.NowPlaying"
         case .userSwitcher: "Thaw.Extra.UserSwitcher"
         case .textInput: "Thaw.Extra.TextInput"
+        case .space: "Thaw.Extra.Space"
         }
     }
 
@@ -64,6 +66,7 @@ enum SystemExtraStandIn: String, CaseIterable {
         case .nowPlaying: "Thaw Now Playing"
         case .userSwitcher: "Thaw User Switcher"
         case .textInput: "Thaw Text Input"
+        case .space: "Thaw Space"
         }
     }
 

@@ -53,6 +53,7 @@ struct SpacesControlsContent: View {
 
     @ViewBuilder
     private var controls: some View {
+        SpaceIndicatorSection(settings: appState.settings.advanced)
         if presentation.isSupported {
             MenuBarHidingSection(
                 spaceID: activeSpaceID,
@@ -65,6 +66,20 @@ struct SpacesControlsContent: View {
             SessionScopeNotice()
         } else {
             UnsupportedSection()
+        }
+    }
+}
+
+/// Turns on the menu bar item that names the active Space. It works without the per-Space controls.
+private struct SpaceIndicatorSection: View {
+    @Bindable var settings: AdvancedSettings
+
+    var body: some View {
+        ThawSection {
+            Text("Space indicator")
+        } content: {
+            Toggle("Show the current Space in the menu bar", isOn: $settings.showSpaceIndicator)
+                .annotation("Adds a menu bar item with the name of the Space you're in. Its menu lists the Spaces on each display.")
         }
     }
 }
