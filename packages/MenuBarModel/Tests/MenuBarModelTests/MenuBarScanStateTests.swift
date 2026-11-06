@@ -41,6 +41,13 @@ struct MenuBarScanStateTests {
         #expect(Array(second.owners.prefix(2)) == [100, 500])
     }
 
+    @Test("Background-only owners are asked after every other owner, but still asked")
+    func backgroundOwnersGoLast() {
+        var state = MenuBarScanState<String>()
+        let pass = state.begin(owners: [1, 2, 3, 4, 5], priorityOwners: [5], deferredOwners: [2, 5])
+        #expect(pass.owners == [5, 1, 3, 4, 2])
+    }
+
     @Test("An unvisited owner survives, but a successful empty answer removes its items")
     func absenceRequiresAnObservation() {
         var state = MenuBarScanState<String>()
