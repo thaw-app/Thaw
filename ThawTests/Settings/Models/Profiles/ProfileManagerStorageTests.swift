@@ -242,6 +242,64 @@ struct ProfileManagerStorageTests {
         }
     }
 
+    @Test("Undoing duplication clears a copy that became active after it was created")
+    func undoActiveDuplicate() throws {
+        try ProfileTestDirectory.withManager(seeding: ["A"]) { manager, _ in
+            let original = try #require(manager.profiles.first)
+            try manager.duplicateProfile(id: original.id, newName: "Copy")
+            let copy = try #require(manager.profiles.last)
+            manager.activeProfileID = copy.id
+            let appState = AppState()
+            manager.appState = appState
+            appState.itemManager.rearmActiveProfileLayout(
+                pinnedHidden: [], pinnedAlwaysHidden: [], sectionOrder: [:], itemSectionMap: [:], itemOrder: [:]
+            )
+            #expect(appState.itemManager.activeProfileLayout != nil)
+
+            let restore = try ProfileUndoStep.delete(id: copy.id).apply(to: manager)
+
+            #expect(manager.activeProfileID == nil)
+            #expect(appState.itemManager.activeProfileLayout == nil)
+            #expect(manager.profiles.map(\.id) == [original.id])
+            _ = try restore.apply(to: manager)
+            #expect(manager.activeProfileID == copy.id)
+        }
+    }
+
+    @Test("Undoing creation keeps a different profile active")
+    func undoCreationPreservesCurrentProfile() throws {
+        try ProfileTestDirectory.withManager(seeding: ["Created", "Current"]) { manager, _ in
+            let created = manager.profiles[0].id
+            let current = manager.profiles[1].id
+            manager.activeProfileID = current
+
+            let restore = try ProfileUndoStep.delete(id: created).apply(to: manager)
+
+            #expect(manager.activeProfileID == current)
+            #expect(manager.profiles.map(\.id) == [current])
+            _ = try restore.apply(to: manager)
+            #expect(manager.activeProfileID == current)
+        }
+    }
+
+    @Test("Redoing deletion checks the active profile again")
+    func redoDeletionPreservesLaterProfile() throws {
+        try ProfileTestDirectory.withManager(seeding: ["A", "B"]) { manager, _ in
+            let first = manager.profiles[0].id
+            let second = manager.profiles[1].id
+            manager.activeProfileID = first
+            let restore = try ProfileUndoStep.delete(id: first).apply(to: manager)
+            let redo = try restore.apply(to: manager)
+            #expect(manager.activeProfileID == first)
+            manager.activeProfileID = second
+
+            _ = try redo.apply(to: manager)
+
+            #expect(manager.activeProfileID == second)
+            #expect(manager.profiles.map(\.id) == [second])
+        }
+    }
+
     @Test("Restoring a profile that is still listed replaces its entry and clamps the index")
     func restoreExistingProfile() throws {
         try ProfileTestDirectory.withManager(seeding: ["A"]) { manager, _ in
