@@ -5,7 +5,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Foundation
+import AppKit
+import Combine
 import MenuBarModel
 import ThawAXCore
 
@@ -72,6 +73,55 @@ enum MenuBarAppearanceItems {
     final class Memo {
         static let shared = Memo()
         fileprivate var last: (bar: [MenuBarAgentWindow.Entry], owners: Set<pid_t>, items: [MenuBarItem])?
+
+        /// Drops the last read, so the next one asks the owners again.
+        func forget() {
+            last = nil
+        }
+    }
+
+    private static let diagLog = DiagLog(category: "MenuBarAppearanceItems")
+
+    /// Forgets the last read and calls refresh after a wake or unlock, since a read kept from before
+    /// can hold frames off the bar.
+    static func rereadOnWake(
+        center: NotificationCenter = NSWorkspace.shared.notificationCenter,
+        memo: Memo = .shared,
+        refresh: @escaping @MainActor () -> Void
+    ) -> AnyCancellable {
+        wakePublisher(center: center).sink { _ in
+            MainActor.assumeIsolated {
+                memo.forget()
+                refresh()
+            }
+        }
+    }
+
+    /// Fires when the screens wake or the session becomes active again, on the main run loop.
+    static func wakePublisher(
+        center: NotificationCenter = NSWorkspace.shared.notificationCenter
+    ) -> AnyPublisher<Void, Never> {
+        center.publisher(for: NSWorkspace.screensDidWakeNotification)
+            .merge(with: center.publisher(for: NSWorkspace.sessionDidBecomeActiveNotification))
+            .map { _ in }
+            .receive(on: RunLoop.main)
+            .eraseToAnyPublisher()
+    }
+
+    /// Whether every owner the bar draws and the read asked has an item on a bar. A read taken while
+    /// the screen sleeps can answer with every frame off the bar, and the shape would come out empty.
+    /// An empty bar can't vouch for any read.
+    nonisolated static func matchesDrawnBar(
+        _ items: [MenuBarItem],
+        bar: [MenuBarAgentWindow.Entry],
+        asked owners: Set<pid_t>,
+        displayBounds: [CGRect]
+    ) -> Bool {
+        guard !bar.isEmpty else { return false }
+        let onBar = items.filter { MenuBarItemGeometry.barScreen(holding: $0.bounds, among: displayBounds) != nil }
+        return Set(bar.map(\.ownerPID)).intersection(owners).allSatisfy { owner in
+            onBar.contains { $0.ownerPID == owner || $0.sourcePID == owner }
+        }
     }
 
     /// - Parameters:
@@ -85,6 +135,7 @@ enum MenuBarAppearanceItems {
         notBefore minimumReadTime: ContinuousClock.Instant?,
         drawnBar: () async -> [MenuBarAgentWindow.Entry]? = { nil },
         memo: Memo? = nil,
+        displayBounds: [CGRect] = NSScreen.allDisplayBoundsCG,
         readOwners: (Set<pid_t>) async -> [MenuBarItem]?,
         discover: () async -> [MenuBarItem]
     ) async -> Snapshot? {
@@ -104,11 +155,19 @@ enum MenuBarAppearanceItems {
             return Snapshot(items: recentItems, readAt: recentAt, drawnBar: bar)
         }
         if !owners.isEmpty {
-            if let bar, let last = memo?.last, last.bar == bar, last.owners == owners {
+            if let bar, let last = memo?.last, last.bar == bar, last.owners == owners,
+               matchesDrawnBar(last.items, bar: bar, asked: owners, displayBounds: displayBounds)
+            {
                 return Snapshot(items: last.items, readAt: readAt, drawnBar: bar)
             }
             guard let fresh = await readOwners(owners) else { return nil }
-            memo?.last = bar.map { ($0, owners, fresh) }
+            memo?.last = bar.flatMap { bar in
+                if matchesDrawnBar(fresh, bar: bar, asked: owners, displayBounds: displayBounds) {
+                    return (bar, owners, fresh)
+                }
+                diagLog.debug("appearance items: read has drawn owners off the bar; not keeping it")
+                return nil
+            }
             return Snapshot(items: fresh, readAt: readAt, drawnBar: bar)
         }
         return await Snapshot(items: discover(), readAt: readAt, drawnBar: bar)
