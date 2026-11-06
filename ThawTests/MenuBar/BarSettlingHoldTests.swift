@@ -225,3 +225,118 @@ struct BarSettlingHoldTests {
         #expect(!manager.shouldSuppressMenuBarAgentNudge)
     }
 }
+
+// MARK: - Restriction, native bar and Thaw's own press
+
+@MainActor
+@Suite("Bar settling restriction and native bar holds")
+struct BarSettlingRestrictionHoldTests {
+    private let clock = TestClock()
+
+    private func makeSettling() -> BarSettling {
+        let clock = clock
+        return BarSettling(now: { clock.now })
+    }
+
+    @Test("A restriction change holds automatic reorders for the reflow window")
+    func restrictionHoldsReorders() {
+        let settling = makeSettling()
+        #expect(settling.hold(for: .layoutReorder) == nil)
+
+        settling.note(.restrictionChanged)
+        #expect(settling.hold(for: .layoutReorder) == .restrictionReflow)
+
+        clock.now += BarSettling.restrictionReflowWindow - .milliseconds(10)
+        #expect(settling.hold(for: .layoutReorder) == .restrictionReflow)
+
+        clock.now += .milliseconds(10)
+        #expect(settling.hold(for: .layoutReorder) == nil)
+    }
+
+    @Test("A restriction change holds the saved-order mirror for the quiet period, not the settle's quiet check")
+    func restrictionHoldsTheMirror() {
+        let settling = makeSettling()
+
+        settling.note(.restrictionChanged)
+        #expect(settling.hold(for: .savedOrderMirror) == .barNotQuiet)
+        #expect(settling.isBarQuiet(), "a display settle waits on wakes and shifts only")
+
+        clock.now += BarSettling.quietPeriod
+        #expect(settling.hold(for: .savedOrderMirror) == nil)
+    }
+
+    @Test("A wake holds the saved-order mirror")
+    func wakeHoldsTheMirror() {
+        let settling = makeSettling()
+
+        settling.note(.screensWoke)
+
+        #expect(settling.hold(for: .savedOrderMirror) == .barNotQuiet)
+    }
+
+    @Test("A native menu bar change holds bar mutations for its window")
+    func nativeBarHoldsMutations() {
+        let settling = makeSettling()
+        #expect(settling.hold(for: .barMutation) == nil)
+
+        settling.note(.nativeBarChanged)
+        #expect(settling.hold(for: .barMutation) == .nativeBarChanging)
+
+        clock.now += BarSettling.nativeBarChangeWindow
+        #expect(settling.hold(for: .barMutation) == nil)
+    }
+
+    @Test("The first display change after Thaw's own press is Thaw's, once")
+    func thawPressFlipIsUsedUp() {
+        let settling = makeSettling()
+        #expect(!settling.takeThawPressDisplayFlip())
+
+        settling.note(.thawPressFlipsDisplay)
+
+        #expect(settling.takeThawPressDisplayFlip())
+        #expect(!settling.takeThawPressDisplayFlip())
+    }
+
+    @Test("A display change long after Thaw's press is the user's")
+    func thawPressFlipExpires() {
+        let settling = makeSettling()
+
+        settling.note(.thawPressFlipsDisplay)
+        clock.now += BarSettling.thawPressFlipWindow
+
+        #expect(!settling.takeThawPressDisplayFlip())
+    }
+
+    @Test("None of these start a settle", arguments: [
+        BarSettling.Disturbance.restrictionChanged, .nativeBarChanged, .thawPressFlipsDisplay,
+    ])
+    func clockDisturbancesStartNoSettle(disturbance: BarSettling.Disturbance) {
+        let settling = makeSettling()
+
+        settling.note(disturbance)
+
+        #expect(!settling.isSettling)
+        #expect(disturbance.kind == nil)
+    }
+
+    @Test("The manager's defer flag follows the native-bar hold")
+    func managerDefersOnNativeBarChange() {
+        let manager = MenuBarManager(barSettling: makeSettling())
+        #expect(!manager.shouldDeferBarMutation)
+
+        manager.barSettling.note(.nativeBarChanged)
+
+        #expect(manager.shouldDeferBarMutation)
+    }
+
+    @Test("A restriction change reported to the item manager holds the resort signal")
+    func managerRestrictionSignal() {
+        let manager = MenuBarItemManager(barSettling: makeSettling())
+        defer { manager.postRestrictionRepairTask?.cancel() }
+
+        manager.noteRestrictionChange()
+
+        #expect(ControlResortHold.Signal(of: manager).restrictionChangedAt == clock.now)
+        #expect(manager.barSettling.hold(for: .layoutReorder) == .restrictionReflow)
+    }
+}

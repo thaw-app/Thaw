@@ -42,18 +42,33 @@ extension BarSettling {
         case revealedSectionChanged
         /// The kit started or finished laying out a reveal or hide.
         case revealTransition(active: Bool)
+        /// The kit tore down and rebuilt its restriction, so macOS reflows the whole bar.
+        case restrictionChanged
+        /// macOS hid or showed the menu bar for an app's presentation.
+        case nativeBarChanged
+        /// Thaw is about to open an item on another display, which makes that display active.
+        case thawPressFlipsDisplay
     }
 
     /// What a caller is about to do that a disturbed bar should hold off.
     nonisolated enum Purpose: Equatable, Sendable {
         /// Nudging MenuBarAgent to re-read item widths, which flickers while the bar is already reflowing.
         case agentNudge
+        /// Copying the live order into the saved order.
+        case savedOrderMirror
+        /// Moving items or writing positions while macOS may be hiding or showing the bar.
+        case barMutation
+        /// An automatic reorder or saved-layout re-apply, which would take a restriction reflow for drift.
+        case layoutReorder
     }
 
     /// Why a purpose is held off.
     nonisolated enum Hold: Equatable, Sendable {
         case revealReflow
         case revealTransition
+        case barNotQuiet
+        case nativeBarChanging
+        case restrictionReflow
     }
 
     nonisolated enum WaveOutcome: String, Sendable {
@@ -136,6 +151,9 @@ nonisolated extension BarSettling.Disturbance {
         case .barLayoutShifted: "barLayoutShifted"
         case .revealedSectionChanged: "revealedSectionChanged"
         case let .revealTransition(active): active ? "revealTransitionBegan" : "revealTransitionEnded"
+        case .restrictionChanged: "restrictionChanged"
+        case .nativeBarChanged: "nativeBarChanged"
+        case .thawPressFlipsDisplay: "thawPressFlipsDisplay"
         }
     }
 
@@ -148,7 +166,8 @@ nonisolated extension BarSettling.Disturbance {
         // Its own IDs, not the shared set: a launch that yielded leaves its ID there,
         // and a preflight counting it would replace the launch settle.
         case let .appsRelaunched(expecting, _): expecting.isEmpty ? .preflight : .expectedSet
-        case .spacingWaveEnded, .screensWoke, .displaysInvalidated, .barLayoutShifted, .revealedSectionChanged, .revealTransition: nil
+        case .spacingWaveEnded, .screensWoke, .displaysInvalidated, .barLayoutShifted, .revealedSectionChanged, .revealTransition,
+             .restrictionChanged, .nativeBarChanged, .thawPressFlipsDisplay: nil
         }
     }
 

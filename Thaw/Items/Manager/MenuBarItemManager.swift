@@ -292,14 +292,6 @@ final class MenuBarItemManager {
         }
     }
 
-    /// Timestamp of the most recent runtime-kit restriction reflow.
-    /// applySavedLayout is suppressed briefly afterward so a transient
-    /// post-reflow geometry pass is not mistaken for real layout drift.
-    var lastRestrictionChangeTimestamp: ContinuousClock.Instant?
-
-    /// How long to defer automatic visible-section reorders after a restriction reflow.
-    static let restrictionChangeLayoutSettleWindow: Duration = .seconds(10)
-
     /// Deferred repair after a restriction reflow. Concealing one bundle
     /// reshuffles the whole bar; visible-assigned neighbours from a multi-item
     /// bundle can land in the overflow/parked band and never recover
@@ -661,13 +653,6 @@ final class MenuBarItemManager {
     /// The display the last repair pass ran against, so a topology change can
     /// re-arm items that were only stranded by the old arrangement.
     var lastBoundaryRepairDisplayID: CGDirectDisplayID?
-
-    /// Set when Thaw's own press is expected to flip the active display.
-    ///
-    /// Pressing an item that lives on another display activates that display,
-    /// so the display change that follows is ours, not the user switching
-    /// displays. Consumed once by the repair above.
-    var selfInflictedDisplayChangeUntil: ContinuousClock.Instant?
 
     /// Mirrors a macOS 27 layout-bar drop into the legacy saved-order gate
     /// immediately. The AX window signature changes as the drop/reveal settles;

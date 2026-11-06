@@ -43,14 +43,14 @@ struct DisplayInvalidationReadersTests {
         let identifiers: Set = ["com.example.one"]
 
         Self.postScreenParametersChange(on: center)
-        #expect(gate.allowsMirror(identifiers: identifiers, restrictionChange: nil))
+        #expect(gate.allowsMirror(identifiers: identifiers))
 
         environment.start()
         defer { environment.stop() }
         Self.postScreenParametersChange(on: center)
-        #expect(!gate.allowsMirror(identifiers: identifiers, restrictionChange: nil))
+        #expect(!gate.allowsMirror(identifiers: identifiers))
         now += BarSettling.quietPeriod
-        #expect(gate.allowsMirror(identifiers: identifiers, restrictionChange: nil))
+        #expect(gate.allowsMirror(identifiers: identifiers))
     }
 
     @Test("A spent re-publish budget is restored in the posting turn of an invalidation, and not before the environment relays one")

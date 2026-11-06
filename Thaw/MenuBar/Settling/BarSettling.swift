@@ -33,6 +33,9 @@ final class BarSettling {
     private(set) var lastRevealChange: ContinuousClock.Instant?
     /// Set by the kit for the length of a reveal or hide layout.
     private(set) var isRevealTransitionActive = false
+    private(set) var lastRestrictionChange: ContinuousClock.Instant?
+    private(set) var lastNativeBarChange: ContinuousClock.Instant?
+    private var thawPressFlipsDisplayUntil: ContinuousClock.Instant?
 
     init(
         now: @escaping @MainActor () -> ContinuousClock.Instant = { .now },
@@ -63,11 +66,25 @@ final class BarSettling {
             lastRevealChange = now()
         case let .revealTransition(active):
             isRevealTransitionActive = active
+        case .restrictionChanged:
+            lastRestrictionChange = now()
+        case .nativeBarChanged:
+            lastNativeBarChange = now()
+        case .thawPressFlipsDisplay:
+            thawPressFlipsDisplayUntil = now().advanced(by: Self.thawPressFlipWindow)
         case .thawLaunched, .appLaunched, .displayChanged, .spacingWaveStarted, .appsRelaunched:
             if let incoming = disturbance.kind {
                 startSettle(disturbance, kind: incoming)
             }
         }
+    }
+
+    /// Whether the active display change about to be seen came from Thaw's own press. A yes is used up,
+    /// so only the first display change after the press is Thaw's.
+    func takeThawPressDisplayFlip() -> Bool {
+        guard let until = thawPressFlipsDisplayUntil, now() < until else { return false }
+        thawPressFlipsDisplayUntil = nil
+        return true
     }
 
     /// Follows any settle that replaces the awaited one, through the work its host owes afterwards.

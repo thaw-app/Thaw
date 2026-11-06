@@ -77,6 +77,6 @@ struct ControlResortHoldTests {
         let signal = ControlResortHold.Signal(of: MenuBarItemManager())
         #expect(signal.restrictionChangedAt == nil)
         #expect(!signal.isRestrictionBeingApplied)
-        #expect(signal.settleWindow == MenuBarItemManager.restrictionChangeLayoutSettleWindow)
+        #expect(signal.settleWindow == BarSettling.restrictionReflowWindow)
     }
 }

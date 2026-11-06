@@ -2290,8 +2290,8 @@ extension MenuBarItemManager {
             reason: reason,
             arrangementIsManual: arrangementIsManual,
             isExplicitLayoutEdit: ExplicitLayoutEdit.isActive,
-            nativeMenuBarDeferred: appState?.menuBarManager.shouldDeferBarMutation == true,
-            isWithinSettleWindow: isWithinRestrictionReflowSettleWindow,
+            nativeMenuBarDeferred: barSettling.hold(for: .barMutation) != nil,
+            isWithinSettleWindow: barSettling.hold(for: .layoutReorder) != nil,
             repairAfterRestriction: repairAfterRestriction,
             applicationMenuWrapsPastNotch: {
                 guard let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main,

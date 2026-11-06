@@ -35,7 +35,6 @@ struct SavedOrderMirrorGateTests {
     /// Asks the gate at the given second on the test's clock.
     private func allows(
         _ identifiers: Set<String>? = nil,
-        restrictionChange: ContinuousClock.Instant? = nil,
         sectionRevealed: Bool = false,
         transientFrame: String? = nil,
         at seconds: Double
@@ -43,7 +42,6 @@ struct SavedOrderMirrorGateTests {
         clock.now = at(seconds)
         return gate.allowsMirror(
             identifiers: identifiers ?? items,
-            restrictionChange: restrictionChange,
             sectionRevealed: sectionRevealed,
             transientFrame: transientFrame
         )
@@ -77,8 +75,10 @@ struct SavedOrderMirrorGateTests {
 
     @Test("A recent hiding change holds the mirror")
     func restrictionChangeHoldsTheMirror() {
-        #expect(!allows(restrictionChange: at(1), at: 2))
-        #expect(allows(restrictionChange: at(1), at: 14))
+        clock.now = at(1)
+        settling.note(.restrictionChanged)
+        #expect(!allows(at: 2))
+        #expect(allows(at: 14))
     }
 
     @Test("A wake or display change holds the mirror")

@@ -92,9 +92,9 @@ extension ControlResortHold.Signal {
     @MainActor
     init(of manager: MenuBarItemManager) {
         self.init(
-            restrictionChangedAt: manager.lastRestrictionChangeTimestamp,
+            restrictionChangedAt: manager.barSettling.lastRestrictionChange,
             isRestrictionBeingApplied: manager.isRunningPostRestrictionRepair,
-            settleWindow: MenuBarItemManager.restrictionChangeLayoutSettleWindow
+            settleWindow: BarSettling.restrictionReflowWindow
         )
     }
 }
