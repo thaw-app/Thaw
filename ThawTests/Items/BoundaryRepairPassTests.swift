@@ -90,4 +90,12 @@ struct BoundaryRepairPassTests {
         #expect(!pass.needsRetry(in: [hiddenByMacOS]))
         #expect(pass.needsRetry(in: [hiddenByMacOS, stranded]))
     }
+
+    @Test("A pass takes at most its strand budget of turns")
+    func strandBudget() {
+        var pass = BoundaryRepairPass()
+        let granted = (0 ... BoundaryRepairPass.strandBudget).map { _ in pass.takeTurn() }
+        #expect(granted == Array(repeating: true, count: BoundaryRepairPass.strandBudget) + [false])
+        #expect(pass.turns == BoundaryRepairPass.strandBudget + 1)
+    }
 }

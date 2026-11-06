@@ -592,8 +592,6 @@ final class MenuBarItemManager {
 
     @ObservationIgnored let boundaryRepair = BoundaryRepairMemory()
 
-    var isBoundaryRepairDeclinedForWrappedMenu = false
-
     /// Mirrors a macOS 27 layout-bar drop into the legacy saved-order gate
     /// immediately. The AX window signature changes as the drop/reveal settles;
     /// without this synchronous mirror, applySavedLayout can run before the

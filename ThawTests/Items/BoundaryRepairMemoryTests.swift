@@ -186,4 +186,14 @@ struct BoundaryRepairMemoryTests {
         try await clock.sleep(for: BoundaryRepairMemory.suppressionCooldown)
         #expect(!memory.suppressionHolds(for: id))
     }
+
+    @Test("The wrapped application menu decline is reported once when it starts and once when it ends")
+    func wrappedMenuDecline() {
+        let memory = makeMemory()
+        #expect(!memory.endWrappedMenuDecline())
+        #expect(memory.declineForWrappedMenu())
+        #expect(!memory.declineForWrappedMenu())
+        #expect(memory.endWrappedMenuDecline())
+        #expect(!memory.endWrappedMenuDecline())
+    }
 }
