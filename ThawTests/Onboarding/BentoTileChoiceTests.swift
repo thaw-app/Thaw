@@ -30,10 +30,24 @@ struct BentoTileChoiceTests {
 
     @Test("A card draws whether or not it opens a pane")
     func tileDrawsInBothModes() {
-        for opensPane in [true, false] {
-            let host = NSHostingView(rootView: BentoTile(demo: .find, index: 0, appeared: true, opensPane: opensPane) {}.frame(width: 300, height: 150))
+        let tiles = [
+            BentoTile(demo: .find, index: 0, appeared: true) {},
+            BentoTile(demo: .find, index: 0, appeared: true, opensPane: false) {},
+        ]
+        for tile in tiles {
+            let host = NSHostingView(rootView: tile.frame(width: 300, height: 150))
             host.layoutSubtreeIfNeeded()
             #expect(host.fittingSize.width > 0)
         }
+    }
+
+    @Test("A card click on a fresh screen keeps the preselected Simple Mode")
+    func clickKeepsPreselectedSimpleMode() {
+        var outcomes: [(OnboardingOutcome, SettingsNavigationIdentifier?)] = []
+        let view = OnboardingBentoView(finishesFlow: true) { outcomes.append(($0, $1)) }
+        view.chooseCard(.zen)
+        #expect(outcomes.count == 1)
+        #expect(outcomes.first?.0.simpleMode == true)
+        #expect(outcomes.first?.1 == nil)
     }
 }
