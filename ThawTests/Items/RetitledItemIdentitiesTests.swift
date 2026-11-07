@@ -45,6 +45,6 @@ struct RetitledItemIdentitiesTests {
         #expect(resolved.map(\.identityTitle) == ["calendar-events", "clipboard-history", "Renamed"])
         #expect(resolved[0].displayTitle == "Standup • in 51m", "the live title is still shown")
         #expect(resolved[0].bounds == fallback[0].bounds)
-        _ = RetitledItemIdentities.resolve([])
+        #expect(RetitledItemIdentities.resolve([]).isEmpty)
     }
 }

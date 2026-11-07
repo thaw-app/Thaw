@@ -53,4 +53,15 @@ struct RetitleIdentityMemoryTests {
         #expect(memory.resolve(owner: 1, slots: [Slot("Title", isStable: false)]) == ["Title"])
         #expect(memory.resolve(owner: 3, slots: [Slot("Title", isStable: false)]) == ["three"])
     }
+
+    @Test("An app read on every pass keeps its memory when others come and go")
+    func dropsTheLeastRecentlyRead() {
+        var memory = RetitleIdentityMemory(capacity: 2)
+        _ = memory.resolve(owner: 1, slots: [Slot("one", isStable: true)])
+        _ = memory.resolve(owner: 2, slots: [Slot("two", isStable: true)])
+        _ = memory.resolve(owner: 1, slots: [Slot("one", isStable: true)])
+        _ = memory.resolve(owner: 3, slots: [Slot("three", isStable: true)])
+        #expect(memory.resolve(owner: 1, slots: [Slot("Title", isStable: false)]) == ["one"])
+        #expect(memory.resolve(owner: 2, slots: [Slot("Title", isStable: false)]) == ["Title"])
+    }
 }

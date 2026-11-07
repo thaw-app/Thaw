@@ -43,10 +43,12 @@ public struct RetitleIdentityMemory: Sendable {
         return resolved.map(\.identity)
     }
 
+    /// The owner read last goes to the back, so the ones dropped at capacity are those not read for longest.
     private mutating func remember(_ slots: [Slot], for owner: pid_t) {
-        if lastSlots.updateValue(slots, forKey: owner) == nil {
-            owners.append(owner)
+        if lastSlots.updateValue(slots, forKey: owner) != nil {
+            owners.removeAll { $0 == owner }
         }
+        owners.append(owner)
         while owners.count > capacity {
             lastSlots.removeValue(forKey: owners.removeFirst())
         }

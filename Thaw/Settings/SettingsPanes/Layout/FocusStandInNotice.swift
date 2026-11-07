@@ -42,9 +42,10 @@ struct FocusStandInNotice: View {
     }
 
     /// Whether Control Center is set to show Focus in the menu bar.
-    static func focusShownInControlCenter() -> Bool {
-        SystemExtraTakeoverCoordinator.isShownInMenuBar(
-            MenuBarItemTag(namespace: .menuBarAgent, title: "com.apple.menuextra.focusmode").tagIdentifier
-        )
+    /// isShownInMenuBar reads this Mac's Control Center settings; tests pass their own.
+    static func focusShownInControlCenter(
+        isShownInMenuBar: @MainActor (String) -> Bool = SystemExtraTakeoverCoordinator.isShownInMenuBar
+    ) -> Bool {
+        isShownInMenuBar(MenuBarItemTag(namespace: .menuBarAgent, title: "com.apple.menuextra.focusmode").tagIdentifier)
     }
 }
