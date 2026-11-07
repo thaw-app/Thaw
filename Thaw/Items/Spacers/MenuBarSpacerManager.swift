@@ -113,12 +113,18 @@ final class MenuBarSpacerManager {
         reconcileStatusItems()
     }
 
-    /// Removes the spacer with an undo that puts it back with the same id, width and colour.
+    /// Removes the spacer with an undo that puts it back in the same slot, with the same width and colour.
     func removeSpacer(id: UUID, undoManager: UndoManager?) {
         guard let index = spacers.firstIndex(where: { $0.id == id }) else { return }
         let removed = spacers[index]
+        // Removal clears the saved slot, so undo writes it back before the spacer returns.
+        let name = Self.autosaveName(for: id)
+        let position: CGFloat? = ControlItemDefaults[.preferredPosition, name]
         removeSpacer(id: id)
         undoManager?.registerUndo(withTarget: self) { [weak undoManager] manager in
+            if let position {
+                ControlItemDefaults[.preferredPosition, name] = position
+            }
             manager.spacers.insert(removed, at: min(index, manager.spacers.count))
             manager.reconcileStatusItems()
             undoManager?.registerUndo(withTarget: manager) { $0.removeSpacer(id: removed.id, undoManager: undoManager) }
