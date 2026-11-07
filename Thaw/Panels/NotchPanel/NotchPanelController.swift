@@ -188,7 +188,7 @@ final class NotchPanelController {
 
             if model.isRevealed {
                 model.setRevealed(false)
-                try? await Task.sleep(for: NotchMetrics.revealDuration)
+                try? await Task.sleep(for: NotchMetrics.revealWait())
                 guard !Task.isCancelled else { return }
             }
 
@@ -214,7 +214,7 @@ final class NotchPanelController {
             guard let self else { return }
             model.setRevealed(false)
             panel.ignoresMouseEvents = true
-            try? await Task.sleep(for: NotchMetrics.revealDuration)
+            try? await Task.sleep(for: NotchMetrics.revealWait())
             guard !Task.isCancelled else { return }
             panel.orderOut(nil)
             model.stage(nil)
