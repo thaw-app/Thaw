@@ -58,6 +58,7 @@ the items under New and Fixed.
 #### Layout
 
 - **Moving an item to another section, ungrouping and removing a spacer can be undone.**
+- **Hidden items' pictures are no longer cut off.** Thaw waits for an icon to finish sliding in before it takes its picture.
 - **Layout says when a dragged item didn't land.**
 - **Layout items light up on hover and while pressed,** a small wobble no longer starts a drag, and a cancelled drag slides back.
 - **Items slide aside when you drag one away,** and the new-items badge grows in from its middle.

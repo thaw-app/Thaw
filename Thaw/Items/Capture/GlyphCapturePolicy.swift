@@ -24,8 +24,8 @@ extension MenuBarItemImageCache {
     /// Chooses between an existing cache entry and a newly captured candidate.
     ///
     /// Prefers keeping a settled non-blank glyph over blank or much-narrower
-    /// replacements (chevron bleed), while still allowing legitimate updates
-    /// when the candidate is at least as wide.
+    /// replacements (chevron bleed) and over one caught mid-slide, while still
+    /// allowing legitimate updates when the candidate is at least as wide.
     static nonisolated func preferredCachedImage(
         existing: MenuBarItemGlyphCapture,
         candidate: MenuBarItemGlyphCapture
@@ -36,7 +36,7 @@ extension MenuBarItemImageCache {
         if candidate.isEffectivelyBlank {
             return existing
         }
-        if candidate.pointSize.width < existing.pointSize.width * 0.75 {
+        if candidate.pointSize.width < existing.pointSize.width * 0.75 || isLeadingCut(candidate, of: existing) {
             return existing
         }
         return candidate
