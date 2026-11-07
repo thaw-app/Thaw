@@ -27,7 +27,7 @@ the items under New and Fixed.
 ### New
 
 - **The widget icon shows real readings.** Its Wi-Fi symbol shows the bars macOS would, the battery turns green while charging, yellow in Low Power Mode and red below 20%, and a Bluetooth audio center shows your headphones or speaker with the volume in blue while sound plays through them.
-- **The widget icon can be larger, with a thinner or thicker ring.** Choose under Appearance in the Widgets builder.
+- **The widget icon is drawn like the combined status indicator.** The ring is as tall as the icon and open at the bottom, with the dots along it. Large fills the menu bar's height, and the ring can be thinner or thicker under Appearance in the Widgets builder.
 - **The Thaw Bar drops in from the menu bar.** It fades in and settles a few points down in a sixth of a second, and still closes at once. With Reduce Motion on it only fades.
 - **Layout warns when items don't fit.** When macOS hides items it has no room for, Layout names them until there's room again.
 - **The out-of-room warning can make room.** Move to Hidden puts the items macOS is hiding into Hidden in one click.
