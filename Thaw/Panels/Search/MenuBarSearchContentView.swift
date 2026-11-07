@@ -71,6 +71,7 @@ private struct MenuBarSearchContentView: View {
     @Environment(MenuBarItemManager.self) private var itemManager
     @Environment(MenuBarSearchModel.self) private var model
     @FocusState private var queryFieldIsFocused: Bool
+    @AppStorage(Defaults.Key.showSearchShortcutBar.rawValue) private var showsShortcutBar = Defaults.DefaultValue.showSearchShortcutBar
     /// The pending refocus of the query field, replaced by the next one.
     @State private var focusTask: Task<Void, Never>?
     /// Recently activated items, shown when the query is empty. Storage is
@@ -197,6 +198,13 @@ private struct MenuBarSearchContentView: View {
             .writingToolsBehavior(.disabled)
             .focused($queryFieldIsFocused)
             .sectionedListKeys(selection: $model.selection, items: model.displayedItems, isEnabled: model.renameSession == nil)
+            // With the shortcut bar off, ⌘K's menu opens under the field.
+            .background(alignment: .bottomLeading) {
+                if !showsShortcutBar {
+                    ItemActionsMenuAnchor(panel: panel)
+                        .frame(width: 1, height: 1)
+                }
+            }
 
             if metrics.hasTrailingSpacer {
                 Spacer()

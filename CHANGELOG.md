@@ -55,6 +55,7 @@ the items under New and Fixed.
 - **Spaces settings stay after Thaw quits,** and come back when you add a Space or macOS restarts the menu bar.
 - **Profiles and menu bar looks follow a Space switch sooner.**
 - **Thaw reads a busy menu bar faster.** With many apps running it asks several at once, so it no longer stops partway.
+- **You can hide search's shortcut bar,** in Visibility, which now also has Remember last search. The keyboard shortcuts keep working.
 
 ### Fixed
 
