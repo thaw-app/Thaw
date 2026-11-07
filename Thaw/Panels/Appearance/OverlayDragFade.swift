@@ -14,8 +14,8 @@ nonisolated enum OverlayDragFade {
         CAMediaTimingFunction(controlPoints: 0.23, 1, 0.32, 1)
     }
 
-    /// Out takes 0.15 s and back in 0.2 s, each scaled by the distance left, so a reversal mid-fade
-    /// doesn't take the full time. Reduce Motion keeps the fade, which hides the bar's own colors, but caps it at 0.1 s.
+    /// Out takes 0.15 s and back in 0.2 s, scaled by the distance left so a reversal is quicker.
+    /// Reduce Motion caps it at 0.1 s rather than cutting, which would flash the bar's own colors.
     static func duration(from: Float, to: Float, reduceMotion: Bool) -> CFTimeInterval {
         let full: CFTimeInterval = to < from ? 0.15 : 0.2
         let capped = reduceMotion ? min(full, 0.1) : full

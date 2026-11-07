@@ -31,8 +31,8 @@ enum LayoutBarMotion {
         }
     }
 
-    /// Fades a view's layer to alpha. NSView's animator alpha finishes in one frame on macOS 27, so the layer
-    /// carries the fade. It starts from what is on screen, so a reversal doesn't jump.
+    /// NSView's animator alpha finishes in one frame on macOS 27, so the layer carries the fade.
+    /// It starts from what's on screen, so a reversal doesn't jump.
     static func fade(_ view: NSView, to alpha: CGFloat, duration: CFTimeInterval = 0.15) {
         view.wantsLayer = true
         guard let layer = view.layer else {
