@@ -38,7 +38,6 @@ nonisolated struct LayoutTilePointer: Equatable {
         return true
     }
 
-    /// Whether the release clicks.
     mutating func release() -> Bool {
         defer {
             isPressed = false
