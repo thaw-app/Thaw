@@ -75,7 +75,8 @@ extension LayoutBarArrangedView: NSDraggingSource {
         container?.acceptsViewUpdates = false
         frozenSourceContainer = container
 
-        session.animatesToStartingPositionsOnCancelOrFail = false
+        // A cancelled drag slides back to where it started, as a group's does.
+        session.animatesToStartingPositionsOnCancelOrFail = true
 
         Task { @MainActor in
             isDraggingPlaceholder = true
@@ -111,8 +112,7 @@ extension LayoutBarArrangedView: NSDraggingSource {
             guard let (container, index) = oldContainerInfo else {
                 return
             }
-            container.animatesNextLayoutPass = false
-            // Only self carries oldContainerInfo; rebuild from the unchanged cache to restore all removed group members.
+            // The neighbours slide apart to take it back. Only self carries oldContainerInfo; rebuild from the unchanged cache to restore all removed group members.
             if wasGroupDrag, container.appState != nil {
                 container.rebuildViews()
                 return
