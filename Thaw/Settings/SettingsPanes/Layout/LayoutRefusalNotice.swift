@@ -27,10 +27,9 @@ struct LayoutRefusalNotice: View {
                     message: LocalizedStringResource(String.LocalizationValue(refusal.message)),
                     systemImage: "exclamationmark.triangle.fill",
                     tint: .orange,
-                    actionTitle: "Dismiss"
-                ) {
-                    appState.layoutFeedback.clear()
-                }
+                    actionTitle: "Dismiss",
+                    action: appState.layoutFeedback.clear
+                )
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .transition(.fade(reduceMotion: reduceMotion, animation: ThawMotion.settle))
