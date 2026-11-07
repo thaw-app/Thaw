@@ -156,7 +156,7 @@ final class ThawBarColorManager {
             }
             await updateWindowImage(for: screen)
             if animated {
-                withThawAnimation(.default) {
+                withThawAnimation(ThawMotion.settle) {
                     self.updateColorInfo(with: frame, screen: screen)
                 }
             } else {

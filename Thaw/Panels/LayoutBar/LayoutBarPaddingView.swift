@@ -784,7 +784,7 @@ final class LayoutBarPaddingView: NSView {
     }
 
     private func setDimmed(_ visible: Bool) {
-        container.alphaValue = visible ? 0.6 : 1.0
+        LayoutBarMotion.fade(container, to: visible ? 0.6 : 1.0)
     }
 
     /// Whether items in the section currently have live AX elements to reorder.
