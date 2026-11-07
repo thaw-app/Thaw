@@ -126,6 +126,7 @@ struct ControlCenterReplacementsSection: View {
                     }
                 }
             }
+            FocusStandInNotice(settings: settings, focusShownInControlCenter: FocusStandInNotice.focusShownInControlCenter())
             if settings.controlCenterReplacements.isOn {
                 ForEach(ControlCenterReplacements.listed, id: \.self) { item in
                     Toggle(Self.name(of: item), isOn: Binding(
