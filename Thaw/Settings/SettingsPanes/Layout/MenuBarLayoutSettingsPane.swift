@@ -415,7 +415,7 @@ struct LayoutBarsSection: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .transition(.fade(reduceMotion: reduceMotion))
+            .transition(.fade(reduceMotion: reduceMotion, animation: ThawMotion.settle))
         }
     }
 }

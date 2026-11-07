@@ -18,6 +18,7 @@ struct LayoutEditorBars: View {
     }
 
     @Environment(\.undoManager) private var undoManager
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let appState: AppState
     @State private var model: LayoutEditorModel
     @State private var rowWidth: CGFloat = 0
@@ -52,6 +53,7 @@ struct LayoutEditorBars: View {
                 ) {
                     appState.layoutFeedback.clear()
                 }
+                .transition(.fade(reduceMotion: reduceMotion, animation: ThawMotion.settle))
             }
         }
         .reorderContainer(for: LayoutEditorOrder.Unit.self, in: MenuBarSection.Name.self) { difference in
