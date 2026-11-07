@@ -284,7 +284,7 @@ enum LayoutBarItemMenu {
         )
         menu.addItem(
             ClosureMenuItem(title: String(localized: "Ungroup “\(name)”")) {
-                manager.ungroup(group.origin)
+                UngroupUndo.ungroup(group.origin, name: name, manager: manager, folders: folders, undoManager: NSApp.keyWindow?.undoManager)
             }
         )
     }

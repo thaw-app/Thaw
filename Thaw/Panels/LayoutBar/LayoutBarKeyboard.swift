@@ -328,7 +328,7 @@ enum LayoutBarKeyboard {
     }
 
     /// Register reverse-move undo before using VoiceOver's shared refusal-aware move path.
-    private static func performSectionMove(
+    static func performSectionMove(
         tag: MenuBarItemTag,
         from source: MenuBarSection.Name,
         to target: MenuBarSection.Name,

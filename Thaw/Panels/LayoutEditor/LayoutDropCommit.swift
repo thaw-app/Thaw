@@ -74,10 +74,12 @@ enum LayoutDropCommit {
         orderedAs orderedItems: [MenuBarItem],
         from source: MenuBarSection.Name,
         to target: MenuBarSection.Name,
-        controller: (any MenuBarSectionControlling)?
+        controller: (any MenuBarSectionControlling)?,
+        appState: AppState? = nil,
+        undoManager: UndoManager? = nil
     ) {
         if source != target {
-            controller?.setSection(target, item: item)
+            LayoutSectionMoveUndo.setSection(target, of: item, from: source, controller: controller, appState: appState, undoManager: undoManager)
         }
         controller?.setSectionOrder(from: orderedItems, for: target)
     }

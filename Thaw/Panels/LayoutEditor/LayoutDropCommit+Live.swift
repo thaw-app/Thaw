@@ -16,7 +16,7 @@ extension LayoutDropCommit {
             return
         }
         ExplicitLayoutEdit.task {
-            await seatAndRecord(drop, appState: appState)
+            await seatAndRecord(drop, appState: appState, undoManager: undoManager)
             finished()
         }
     }
@@ -47,7 +47,7 @@ extension LayoutDropCommit {
     /// Seats the items before the assertion flips, as for a move from the item menu, then
     /// records the target's membership and order once. Returns whether the record was made.
     @discardableResult
-    private static func seatAndRecord(_ drop: Drop, appState: AppState) async -> Bool {
+    private static func seatAndRecord(_ drop: Drop, appState: AppState, undoManager: UndoManager? = nil) async -> Bool {
         let controller = appState.menuBarManager.sectionController
         var recorded = false
         await appState.itemManager.seatItemsForSectionTransition(
@@ -60,7 +60,7 @@ extension LayoutDropCommit {
                 return
             }
             if let item = drop.items.first, drop.items.count == 1 {
-                controller.setSection(drop.target, item: item)
+                LayoutSectionMoveUndo.setSection(drop.target, of: item, from: drop.source, controller: controller, appState: appState, undoManager: undoManager)
             } else if let refusal = appState.menuBarManager.setSection(drop.target, items: drop.items, atomically: true) {
                 diagLog.warning("Batch move to \(drop.target.logString) refused: \(refusal)")
                 return

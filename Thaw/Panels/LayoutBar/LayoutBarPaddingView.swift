@@ -345,7 +345,7 @@ final class LayoutBarPaddingView: NSView {
                 return false
             }
 
-            LayoutDropCommit.recordIntent(of: item, orderedAs: orderedItems, from: sourceSection, to: container.section, controller: controller)
+            LayoutDropCommit.recordIntent(of: item, orderedAs: orderedItems, from: sourceSection, to: container.section, controller: controller, appState: container.appState, undoManager: window?.undoManager)
             if let appState = container.appState {
                 appState.itemManager.scheduleSectionOrderApply(for: container.section)
                 Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
@@ -429,7 +429,7 @@ final class LayoutBarPaddingView: NSView {
                             )
                         }
                     } else {
-                        controller?.setSection(targetSection, item: item)
+                        LayoutSectionMoveUndo.setSection(targetSection, of: item, from: sourceSection, controller: controller, appState: container.appState, undoManager: self.window?.undoManager)
                         controller?.setSectionOrder(from: orderedForCommit, for: targetSection)
                         container.appState?.itemManager.scheduleSectionOrderApply(for: targetSection)
                     }
@@ -544,7 +544,7 @@ final class LayoutBarPaddingView: NSView {
 
             // Non-live sections record intent, not a completed move. Visible
             // intent needs an explicit apply; concealed sections wait for reveal.
-            LayoutDropCommit.recordIntent(of: item, orderedAs: orderedItems, from: sourceSection, to: container.section, controller: controller)
+            LayoutDropCommit.recordIntent(of: item, orderedAs: orderedItems, from: sourceSection, to: container.section, controller: controller, appState: container.appState, undoManager: window?.undoManager)
 
             if let appState = container.appState {
                 appState.itemManager.scheduleSectionOrderApply(for: container.section)
@@ -745,7 +745,7 @@ final class LayoutBarPaddingView: NSView {
                 // Verification must come from fresh AX order inside
                 // MenuBarItemManager. The layout cache may still contain the
                 // user's visual drop intent, so do not treat it as proof.
-                Self.diagLog.error("Reorder move failed for \(item.logString); visible order was not persisted")
+                await ReorderDropOutcome.reportFailure(of: item, to: destination, appState: appState, log: Self.diagLog)
             }
             watchdogTask.cancel()
             await MainActor.run {
