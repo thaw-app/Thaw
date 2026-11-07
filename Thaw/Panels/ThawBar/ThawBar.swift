@@ -390,7 +390,7 @@ final class ThawBarPanel: NSPanel {
         colorManager.updateAllProperties(with: frame, screen: screen)
 
         // Keep the frontmost app's focus; keyboard-triggered opens take key focus separately.
-        orderFrontRegardless()
+        ThawBarEntrance.present(self)
 
         // Shortcut opens highlight the first item and take key focus without activating Thaw.
         acceptsKeyboard = triggeredByHotkey
@@ -535,7 +535,7 @@ final class ThawBarPanel: NSPanel {
         let ownedSection = presentation == .section
         presentation = .section
         appState?.navigationState.isThawBarPresented = false
-        orderOut(nil)
+        ThawBarEntrance.dismiss(self)
         super.close()
         if ownedSection {
             resetSectionStateAfterClose(closingSection)
