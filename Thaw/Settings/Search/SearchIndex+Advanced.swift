@@ -32,7 +32,7 @@ nonisolated extension SearchIndex {
         SearchEntry(
             id: "layout.replaceControlCenterItems",
             title: "Replace Control Center items",
-            descriptionText: String(localized: "Puts Thaw icons in place of Focus, AirDrop, Now Playing, Fast User Switching, Time Machine and the Input menu, so you can move or hide them."),
+            descriptionText: String(localized: "Puts \(Constants.displayName) icons in place of Focus, AirDrop, Now Playing, Fast User Switching, Time Machine and the Input menu, so you can move or hide them."),
             pane: .menuBarLayout,
             section: "Apple’s items",
             keywords: [

@@ -78,7 +78,7 @@ struct HiddenItemCaptureButton: View {
 
     static func message(for result: HiddenItemCaptureResult?) -> String {
         guard let result else {
-            return String(localized: "Thaw needs Screen Recording permission to capture items.")
+            return String(localized: "\(Constants.displayName) needs Screen Recording permission to capture items.")
         }
         let kept = result.kept > 0
             ? " " + String(localized: "Left \(result.kept) good pictures as they were. Option-click to retake them too.")

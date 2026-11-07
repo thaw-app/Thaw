@@ -75,7 +75,7 @@ struct CaptureInspectorSection: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             Label {
-                Text("Thaw is capturing nothing. Screen Recording permission has not been granted.")
+                Text("\(Constants.displayName) is capturing nothing. Screen Recording permission has not been granted.")
             } icon: {
                 Image(systemName: "eye.slash")
             }
@@ -96,7 +96,7 @@ struct CaptureInspectorSection: View {
             )
         }
         guard let frame else {
-            return String(localized: "Thaw reads a band at the top of the display. Nothing else on screen is captured.")
+            return String(localized: "\(Constants.displayName) reads a band at the top of the display. Nothing else on screen is captured.")
         }
         return String(
             localized: "Thaw reads a \(Int(frame.width)) × \(Int(frame.height)) pt band at the top of the display. Nothing else on screen is captured."
@@ -171,7 +171,7 @@ struct CaptureInspectorSection: View {
                     title: "Your menu bar",
                     // Naming the incidental contents is the honest half of the
                     // claim: this really is a slice of the user's screen.
-                    subtitle: "The band Thaw reads, exactly as captured. That includes the "
+                    subtitle: "The band \(Constants.displayName) reads, exactly as captured. That includes the "
                         + "frontmost app's menus and the wallpaper behind the bar."
                 )
             }

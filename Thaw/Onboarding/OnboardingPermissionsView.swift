@@ -115,7 +115,7 @@ struct ThawPermissionsView: View {
                 }
                 .disabled(!requiredGranted)
 
-                Text("Accessibility is required to continue.")
+                Text(RequiredPermissionsNotice.text(for: permissions))
                     .font(ThawType.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
