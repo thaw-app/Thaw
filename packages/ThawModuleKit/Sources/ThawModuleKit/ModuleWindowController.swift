@@ -25,14 +25,25 @@ public final class ModuleWindowController {
         styleMask: NSWindow.StyleMask = [.titled, .closable, .miniaturizable],
         content: @escaping () -> some View
     ) {
-        makeWindow = {
-            let window = NSWindow(contentViewController: NSHostingController(rootView: content()))
-            window.title = title
-            window.styleMask = styleMask
-            window.isReleasedWhenClosed = false
-            window.center()
-            return window
-        }
+        makeWindow = { Self.makeWindow(title: title, styleMask: styleMask, content: content) }
+    }
+
+    /// A scrolling form reports no preferred size, so the window is sized from the view's fitting size instead.
+    static func makeWindow(title: String, styleMask: NSWindow.StyleMask, content: () -> some View) -> NSWindow {
+        let controller = NSHostingController(rootView: content())
+        let window = NSWindow(contentViewController: controller)
+        window.title = title
+        window.styleMask = styleMask
+        window.isReleasedWhenClosed = false
+        let visibleHeight = (window.screen ?? NSScreen.main)?.visibleFrame.height ?? 800
+        window.setContentSize(contentSize(fitting: controller.view.fittingSize, visibleHeight: visibleHeight))
+        window.center()
+        return window
+    }
+
+    /// The content's fitting size, at most 80% of the screen's height; the form scrolls for the rest.
+    static func contentSize(fitting: CGSize, visibleHeight: CGFloat) -> CGSize {
+        CGSize(width: fitting.width, height: min(fitting.height, (visibleHeight * 0.8).rounded()))
     }
 
     /// Brings the window to the front, activating the module.
