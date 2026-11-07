@@ -102,6 +102,7 @@ the items under New and Fixed.
 - **A move from search that fails stays up and is read aloud,** and shows in the same notice as Layout's.
 - **Layout and search show their shortcuts,** including ⌥-arrows to move and ⌘1–⌘3 from search, and new installs see the tip for selecting several items.
 - **Setup says what you give up without Accessibility** next to the button, not only in a tooltip.
+- **Onboarding's cards keep the Simple Mode you picked,** and the Zen Mode card opens Visibility, where Zen Mode lives.
 
 ## [3.0.0-alpha.13] - 2026-11-05
 

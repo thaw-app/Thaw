@@ -40,7 +40,7 @@ enum BentoDemo: CaseIterable {
         case .thawBar: .thawBar
         case .triggers: .triggers
         case .profiles: .profiles
-        case .zen: .hotkeys
+        case .zen: .visibility
         case .integrations: .privacy
         }
     }

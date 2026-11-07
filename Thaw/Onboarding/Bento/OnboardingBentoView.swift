@@ -95,11 +95,11 @@ struct OnboardingBentoView: View {
         }
     }
 
-    /// A card click leaves Simple Mode off whatever the picker says: the
-    /// pane it opens only exists in the full window.
+    /// A card click follows the picker: under All Settings it opens its pane, under Simple Mode it keeps Simple Mode.
     private func tile(_ demo: BentoDemo, index: Int, height: CGFloat) -> some View {
-        BentoTile(demo: demo, index: index, appeared: appeared) {
-            finish(simpleMode: false, pane: demo.pane)
+        BentoTile(demo: demo, index: index, appeared: appeared, opensPane: !simpleMode) {
+            let outcome = BentoTileChoice.outcome(for: demo, simpleMode: simpleMode)
+            finish(simpleMode: outcome.simpleMode, pane: outcome.pane)
         }
         .frame(maxWidth: .infinity)
         .frame(height: height)
