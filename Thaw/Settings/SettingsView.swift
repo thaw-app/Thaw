@@ -182,12 +182,10 @@ struct SettingsView: View {
         // material layers WindowServer composites for the whole fade, which
         // reads as pane-switch lag. Removing the old pane instantly keeps at
         // most one pane's worth of glass on screen.
-        reduceMotion
-            ? .identity
-            : .asymmetric(
-                insertion: .opacity.animation(ThawMotion.pane),
-                removal: .identity
-            )
+        .asymmetric(
+            insertion: .fade(reduceMotion: reduceMotion, animation: ThawMotion.pane),
+            removal: .identity
+        )
     }
 
     /// Brings the window to the size the incoming layout wants.

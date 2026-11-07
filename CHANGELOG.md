@@ -103,6 +103,8 @@ the items under New and Fixed.
 - **Layout and search show their shortcuts,** including ⌥-arrows to move and ⌘1–⌘3 from search, and new installs see the tip for selecting several items.
 - **Setup says what you give up without Accessibility** next to the button, not only in a tooltip.
 - **Onboarding's cards keep the Simple Mode you picked,** and the Zen Mode card opens Visibility, where Zen Mode lives.
+- **Reduce Motion keeps short fades.** Panels, notices and Settings pages still fade in quickly instead of appearing in one frame, with no movement.
+- **A granted permission's checkmark bounces once** in setup.
 
 ## [3.0.0-alpha.13] - 2026-11-05
 
