@@ -16,7 +16,7 @@ import Testing
 struct GlyphLeadingCutTests {
     private typealias Cache = MenuBarItemImageCache
 
-    /// A 16 pt tall crop width points wide, with ink from inkFrom to inkTo points across.
+    /// A 16 pt tall crop, with ink from inkFrom to inkTo points across its width.
     private static func crop(width: CGFloat, inkFrom: CGFloat, inkTo: CGFloat, scale: CGFloat = 2) throws -> MenuBarItemGlyphCapture {
         let pixelWidth = Int(width * scale), pixelHeight = Int(16 * scale)
         let context = try #require(CGContext(
