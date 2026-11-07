@@ -7,7 +7,7 @@
 
 import CoreGraphics
 
-/// Where each part of the icon sits in a square of side points. The arc follows the combined
+/// Where each part of the icon sits in a square of the given side. The arc follows the combined
 /// status indicator: the ring is as tall as the icon, open 120° at the bottom, with the bottom row on its circle.
 nonisolated struct StatusIconGeometry: Equatable {
     let center: CGPoint
