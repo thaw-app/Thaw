@@ -14,6 +14,8 @@ struct BentoTile: View {
     let demo: BentoDemo
     let index: Int
     let appeared: Bool
+    /// Whether a click opens the card's pane; under Simple Mode it only finishes setup.
+    var opensPane = true
     let action: () -> Void
 
     @Environment(\.appearsActive) private var appearsActive
@@ -56,7 +58,7 @@ struct BentoTile: View {
         .opacity(appeared ? 1 : 0)
         .offset(y: appeared ? 0 : 6)
         .thawAnimation(ThawMotion.settle.delay(BentoTile.entranceDelay(index: index)), value: appeared)
-        .accessibilityLabel(Text("\(Text(demo.title)), opens \(Text(demo.pane.localized))"))
+        .accessibilityLabel(opensPane ? Text("\(Text(demo.title)), opens \(Text(demo.pane.localized))") : Text(demo.title))
     }
 
     /// Captions shrink the demo stage, not the card; clip compact bars that intentionally extend past its edges.
