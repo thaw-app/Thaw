@@ -9,13 +9,14 @@ import MenuBarModel
 import SwiftUI
 import ThawUI
 
-/// What sits under the search list: the shortcut bar and the refusal
-/// notice, since a refused move from search has nothing else to show for
-/// itself.
+/// What sits under the search list: the shortcut bar, unless it is turned
+/// off in Settings, and the refusal notice either way, since a refused move
+/// from search has nothing else to show for itself.
 struct MenuBarSearchFooter: View {
     @Environment(AppState.self) private var appState
     @Environment(MenuBarSearchModel.self) private var model
     @AppStorage(Defaults.Key.rememberSearchQuery.rawValue) private var rememberSearchQuery = Defaults.DefaultValue.rememberSearchQuery
+    @AppStorage(Defaults.Key.showSearchShortcutBar.rawValue) private var showsShortcutBar = Defaults.DefaultValue.showSearchShortcutBar
 
     let panel: MenuBarSearchPanel
 
@@ -23,18 +24,24 @@ struct MenuBarSearchFooter: View {
     let showsDivider: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            if showsDivider {
-                Divider()
-                    .opacity(0.4)
+        if showsShortcutBar {
+            VStack(spacing: 0) {
+                if showsDivider {
+                    Divider()
+                        .opacity(0.4)
+                }
+                VStack(spacing: ThawSpacing.base) {
+                    LayoutRefusalNotice()
+                    actionRow
+                        .buttonStyle(SearchPanelButtonStyle())
+                }
+                .padding(ThawSpacing.compact)
+                .padding(.horizontal, ThawSpacing.tight)
             }
-            VStack(spacing: ThawSpacing.base) {
-                LayoutRefusalNotice()
-                actionRow
-                    .buttonStyle(SearchPanelButtonStyle())
-            }
-            .padding(ThawSpacing.compact)
-            .padding(.horizontal, ThawSpacing.tight)
+        } else if appState.layoutFeedback.refusal != nil {
+            LayoutRefusalNotice()
+                .padding(ThawSpacing.compact)
+                .padding(.horizontal, ThawSpacing.tight)
         }
     }
 
@@ -137,8 +144,8 @@ struct MenuBarSearchFooter: View {
     }
 }
 
-/// An empty AppKit view behind the Actions button, there so the panel has
-/// something to position the actions menu against.
+/// An empty AppKit view the panel positions the actions menu against: behind
+/// the Actions button, or under the query field while the shortcut bar is off.
 ///
 /// SwiftUI frames would need converting twice (hosting view, then screen) to
 /// reach NSMenu.popUp, and each step can misplace the menu. Handing over the

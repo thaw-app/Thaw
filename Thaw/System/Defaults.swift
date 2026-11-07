@@ -184,6 +184,7 @@ nonisolated enum Defaults {
 
             // Search
             .rememberSearchQuery: DefaultValue.rememberSearchQuery,
+            .showSearchShortcutBar: DefaultValue.showSearchShortcutBar,
             .menuBarSearchPresentation: DefaultValue.menuBarSearchPresentation.rawValue,
 
             // Display Settings
@@ -310,13 +311,6 @@ extension Defaults {
         /// presses through the bundled AX helper, so a hung app blocks the
         /// helper instead of Thaw. On unless a user turned it off.
         static let axEnumerationViaSubprocess = true
-
-        // MARK: Search
-
-        static let rememberSearchQuery = false
-        /// How the menu bar search panel opens. Stored as the case's raw
-        /// value; the default is the behavior the panel shipped with.
-        static let menuBarSearchPresentation = SearchPresentation.inspector
 
         // MARK: Hotkeys Settings
 
@@ -504,6 +498,7 @@ extension Defaults {
         // MARK: Search
 
         case rememberSearchQuery = "RememberSearchQuery"
+        case showSearchShortcutBar = "ShowSearchShortcutBar"
         case menuBarSearchRecents = "MenuBarSearchRecents"
         /// Where the search panel opens: remembered, centered, or at the
         /// pointer. Stored as the SearchPresentation case's raw value.

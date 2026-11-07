@@ -74,6 +74,24 @@ nonisolated extension SearchIndex {
             property: .advanced("menuBarSearchPresentation")
         ),
         SearchEntry(
+            id: "general.showSearchShortcutBar",
+            title: "Show shortcut bar",
+            descriptionText: String(localized: "The bar under the results with Settings, Rename, Actions and their keyboard shortcuts. The shortcuts work either way."),
+            pane: .visibility,
+            section: "Menu bar search",
+            keywords: ["search", "panel", "shortcut", "bar", "bottom", "footer", "hints", "keys", "rename", "actions", "hide", "minimal"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "general.rememberSearchQuery",
+            title: "Remember last search",
+            descriptionText: String(localized: "Open search with the text you last typed."),
+            pane: .visibility,
+            section: "Menu bar search",
+            keywords: ["search", "query", "remember", "last", "keep", "text", "restore"],
+            property: nil
+        ),
+        SearchEntry(
             id: "general.showMenuBarTooltips",
             title: "Show item names on hover",
             descriptionText: String(localized: "Show a tooltip when hovering over menu bar items in the actual menu bar."),

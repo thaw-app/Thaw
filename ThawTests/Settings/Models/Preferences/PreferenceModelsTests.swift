@@ -323,6 +323,7 @@ struct PreferenceModelsTests {
         settings.advanced.tooltipDelay = 9
         settings.advanced.skippedModuleStandIns = ["x"]
         settings.advanced.menuBarSearchPresentation = .assisted
+        Defaults.set(false, forKey: .showSearchShortcutBar)
         settings.displaySettings.configurations = ["X": DisplayThawBarConfiguration.defaultConfiguration.withUseThawBar(true)]
         settings.displaySettings.globalConfiguration = DisplayThawBarConfiguration.defaultConfiguration.withGridColumns(8)
         settings.displaySettings.confirmSpacingRelaunch = !Defaults.DefaultValue.confirmSpacingRelaunch
@@ -338,6 +339,7 @@ struct PreferenceModelsTests {
         #expect(settings.advanced.tooltipDelay == Defaults.DefaultValue.tooltipDelay)
         #expect(settings.advanced.skippedModuleStandIns == Set(Defaults.DefaultValue.skippedModuleStandIns))
         #expect(settings.advanced.menuBarSearchPresentation == Defaults.DefaultValue.menuBarSearchPresentation)
+        #expect(Defaults.bool(forKey: .showSearchShortcutBar) == Defaults.DefaultValue.showSearchShortcutBar)
         #expect(settings.displaySettings.configurations == Defaults.DefaultValue.displayThawBarConfigurations)
         #expect(settings.displaySettings.globalConfiguration == Defaults.DefaultValue.globalDisplayConfiguration)
         #expect(settings.displaySettings.confirmSpacingRelaunch == Defaults.DefaultValue.confirmSpacingRelaunch)

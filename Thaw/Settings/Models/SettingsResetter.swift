@@ -97,6 +97,7 @@ extension AppSettings {
         advanced.recordingWatchScreen = Defaults.DefaultValue.recordingWatchScreen
         advanced.enableDesktopMenuHiding = Defaults.DefaultValue.enableDesktopMenuHiding
         advanced.menuBarSearchPresentation = Defaults.DefaultValue.menuBarSearchPresentation
+        Defaults.set(Defaults.DefaultValue.showSearchShortcutBar, forKey: .showSearchShortcutBar)
     }
 
     func resetHotkeys() {
