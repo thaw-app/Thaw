@@ -180,7 +180,8 @@ extension MenuBarItemAXProvider {
             guard let item = derived.item else { continue }
             raw.append(item)
         }
-        return assemble(raw + extra(raw))
+        let kept = RetitledItemIdentities.resolve(raw)
+        return assemble(kept + extra(kept))
     }
 
     private static nonisolated func nilIfBlank(_ value: String?) -> String? {

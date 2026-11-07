@@ -58,6 +58,7 @@ the items under New and Fixed.
 - **The capsule border comes back after the Mac wakes.** A read of the bar taken while the screen slept could empty the shape around your items until Thaw restarted. Thaw now reads the bar again after waking or unlocking.
 - **Thaw reads a busy menu bar faster.** With many apps running, Thaw now asks several at once and leaves apps that can't show items for last, so it reads the whole bar in time instead of stopping partway. Capture Hidden Items no longer waits on a read of every app when one has launched since the last.
 - **Items with a countdown or changing count no longer keep moving to Hidden.** Thaw now notices an item that changes its text even when many apps are running, instead of treating each new text as a new item.
+- **Raycast's calendar countdown no longer piles up copies in Hidden and the Thaw Bar.** An item with a fixed name keeps it when a read sees only its changing title.
 - **Items no longer move at launch when Thaw can't read the whole bar in time.** With many apps running, Thaw now waits for a full read before it treats the bar as settled or re-lays it.
 - **Your saved layout is put back once the menu bar settles at launch,** also when Thaw re-applies your profile then and its spacing hasn't changed. Before, that re-apply could stop the final layout pass.
 
