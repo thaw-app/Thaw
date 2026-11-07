@@ -162,8 +162,8 @@ struct ThawPermissionsView: View {
                 : "\(Constants.displayName) needs Accessibility to see and move your menu bar items. Permission checks stay on your Mac."
         }
         return finishesFlow
-            ? "One last thing: \(Constants.displayName) needs Menu Bar Layout Access to reorder items without taking over your cursor. It can open only the layout file you choose."
-            : "\(Constants.displayName) needs Menu Bar Layout Access to reorder items without taking over your cursor. It can open only the layout file you choose."
+            ? "One last thing: \(Constants.displayName) needs Menu Bar Layout Access to put items in their sections and order. It can open only the layout file you choose."
+            : "\(Constants.displayName) needs Menu Bar Layout Access to put items in their sections and order. It can open only the layout file you choose."
     }
 
     /// The page's action, its waiting state, and the System Settings route
