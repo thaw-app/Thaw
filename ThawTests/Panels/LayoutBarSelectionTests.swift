@@ -133,7 +133,7 @@ struct LayoutBarSelectionTests {
     @Test("Section names use existing catalog translations in menus and VoiceOver", arguments: [
         (MenuBarSectionName.visible, "Visible"),
         (.hidden, "Hidden"),
-        (.alwaysHidden, "Always-Hidden"),
+        (.alwaysHidden, "Always Hidden"),
     ])
     func sectionNamesUseCatalogTranslations(section: MenuBarSectionName, key: String) {
         let expected = Bundle.main.localizedString(forKey: key, value: nil, table: nil)

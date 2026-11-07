@@ -48,6 +48,8 @@ the items under New and Fixed.
 
 - **Hold Option on Capture Hidden Items to retake every picture.** The button reads Retake All Pictures while you do.
 - **Extras is now Modules.**
+- **One name for each section: Visible, Hidden and Always Hidden.**
+- **Apply to All Displays always asks first,** since it overwrites every display's own settings.
 - **The Thaw Bar has its own switch again.** Show hidden items is now two switches, Thaw Bar and Always show hidden items.
 - **Double-clicking Thaw's icon for Always Hidden has its own switch,** in Menu Bar Access. By @malash in [#1339](https://github.com/thaw-app/Thaw/pull/1339).
 - **Spaces settings stay after Thaw quits,** and come back when you add a Space or macOS restarts the menu bar.
@@ -65,6 +67,7 @@ the items under New and Fixed.
 - **Items slide aside when you drag one away,** and the new-items badge grows in from its middle.
 - **Bluetooth and other switched-off system items show their own symbol,** not a grey box.
 - **An item whose app isn't responding shows an hourglass,** with a tooltip and a VoiceOver description.
+- **Refused moves point to the right setting.** Apple's items move with the Standard hiding method, and the note about system items shows only when it applies.
 
 #### Items
 
@@ -94,6 +97,8 @@ the items under New and Fixed.
 - **The Widgets and Scripts windows open at full size,** not as an empty title bar.
 - **The Swap Bar's ✕ is labelled Turn Off Swap Bar** and says where to turn it back on.
 - **Diagnostic logs no longer warn on every layout pass** about apps that aren't running.
+- **Setup names the permission it's waiting for,** and Menu Bar Layout Access no longer suggests Thaw works without it.
+- **Search offers Clear Search when nothing matches.**
 
 ## [3.0.0-alpha.13] - 2026-11-05
 

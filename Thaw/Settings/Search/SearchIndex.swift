@@ -100,7 +100,7 @@ nonisolated enum SearchIndex {
         SearchEntry(
             id: "advanced.menuBarArrangementMode",
             title: "Item arrangement",
-            descriptionText: String(localized: "Let Thaw keep items in your Layout order, or arrange them yourself by ⌘-dragging in the menu bar."),
+            descriptionText: String(localized: "Let \(Constants.displayName) keep items in your Layout order, or arrange them yourself by ⌘-dragging in the menu bar."),
             pane: .menuBarLayout,
             section: "Sections",
             keywords: ["arrangement", "arrange", "manual", "automatic", "who", "order", "layout"],

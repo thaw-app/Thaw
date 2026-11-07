@@ -261,11 +261,7 @@ private struct MenuBarSearchContentView: View {
             )
         }
         if hasNoMatches {
-            return ThawEmptyState(
-                systemImage: "magnifyingglass",
-                title: "No items match",
-                caption: "Try part of the item's name or the app that owns it."
-            )
+            return .noSearchMatches { model.searchText = "" }
         }
         return nil
     }

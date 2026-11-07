@@ -154,7 +154,7 @@ nonisolated struct ProfileLayoutDiff: Equatable {
 extension ProfileLayoutDiff {
     /// Unlisted keys fall back to word-split names so new settings remain visible without extending this table.
     private static let settingLabels: [String: String] = [
-        "enableAlwaysHiddenSection": "Always-Hidden section",
+        "enableAlwaysHiddenSection": "Always Hidden section",
         "hideApplicationMenus": "Hide application menus",
         "showOnHover": "Show on hover",
         "showOnClick": "Show on click",

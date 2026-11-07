@@ -306,7 +306,7 @@ struct ThawBarContentView: View {
             openPermissionsSettings()
         } label: {
             // Link blue may miss 4.5:1 on sampled wallpaper; use an underline for the affordance.
-            Text("Check permissions")
+            Text("Check Permissions")
                 .underline()
                 .padding(.horizontal, ThawSpacing.tight)
                 .padding(.vertical, ThawSpacing.hairline)

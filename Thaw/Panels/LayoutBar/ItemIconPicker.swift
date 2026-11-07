@@ -99,7 +99,7 @@ struct ItemIconPickerView: View {
                 }
                 .buttonStyle(.settingsGlass)
                 .disabled(!MenuBarItemIconChoices.shared.hasChoice(for: item))
-                .help("Use the app's own menu bar icon when Thaw finds one, and the app icon otherwise")
+                .help("Use the app's own menu bar icon when \(Constants.displayName) finds one, and the app icon otherwise")
                 Button("Choose Image…") {
                     isImporting = true
                 }

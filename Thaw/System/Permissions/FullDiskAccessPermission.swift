@@ -31,12 +31,12 @@ final class FullDiskAccessPermission: Permission {
             iconName: "checkmark.shield",
             iconColor: .indigo,
             details: [
-                String(localized: "Lets \(Constants.displayName) update macOS's saved menu bar layout directly, so items move into place without your pointer moving."),
+                String(localized: "Lets \(Constants.displayName) update macOS's saved menu bar layout, which is how it puts items in their sections and order."),
                 String(localized: "macOS keeps that layout in one protected file (~/Library/Group Containers/com.apple.MenuBar). \(Constants.displayName) reads it to place items and writes it only when you reorder."),
-                String(localized: "Choosing that file gives \(Constants.displayName) access to it alone. Without it, \(Constants.displayName) moves items with the pointer, which takes over your cursor while it works. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
+                String(localized: "Choosing that file gives \(Constants.displayName) access to it alone. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
             ],
             shortDetails: [
-                String(localized: "Items move into place without your pointer moving, because \(Constants.displayName) updates macOS's saved menu bar layout. It touches only that one file. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
+                String(localized: "\(Constants.displayName) puts items in place by updating macOS's saved menu bar layout. It touches only that one file. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
             ],
             isRequired: true,
             settingsURL: Self.settingsPane,

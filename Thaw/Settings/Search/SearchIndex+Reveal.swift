@@ -25,7 +25,7 @@ nonisolated extension SearchIndex {
         SearchEntry(
             id: "advanced.showAlwaysHiddenOnIconDoubleClick",
             title: "Double-click Thaw icon",
-            descriptionText: String(localized: "Double-click the Thaw icon to show Always Hidden items."),
+            descriptionText: String(localized: "Double-click the \(Constants.displayName) icon to show Always Hidden items."),
             pane: .visibility,
             section: "Reveal hidden items",
             keywords: ["double-click", "double click", "icon", "always hidden", "reveal"],

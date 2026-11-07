@@ -13,7 +13,7 @@ nonisolated extension MenuBarSectionName {
         switch self {
         case .visible: "Visible"
         case .hidden: "Hidden"
-        case .alwaysHidden: "Always-Hidden"
+        case .alwaysHidden: "Always Hidden"
         }
     }
 
@@ -28,7 +28,7 @@ nonisolated extension MenuBarSectionName {
         switch self {
         case .visible: String(localized: "Visible", bundle: bundle)
         case .hidden: String(localized: "Hidden", bundle: bundle)
-        case .alwaysHidden: String(localized: "Always-Hidden", bundle: bundle)
+        case .alwaysHidden: String(localized: "Always Hidden", bundle: bundle)
         }
     }
 }
