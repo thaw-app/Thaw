@@ -48,6 +48,9 @@ struct FocusStandInNoticeTests {
 
         FocusStandInNotice.replaceFocus(in: &settings.controlCenterReplacements)
         #expect(settings.controlCenterReplacements.isReplaced(.focus))
-        _ = FocusStandInNotice.focusShownInControlCenter()
+        var asked: String?
+        #expect(FocusStandInNotice.focusShownInControlCenter { asked = $0; return true })
+        #expect(asked?.contains("focusmode") == true)
+        #expect(!FocusStandInNotice.focusShownInControlCenter { _ in false })
     }
 }
