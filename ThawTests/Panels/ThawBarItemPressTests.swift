@@ -5,7 +5,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import CoreGraphics
+import AppKit
+import MenuBarModel
 import Testing
 @testable import Thaw
 
@@ -35,5 +36,38 @@ struct ThawBarItemPressTests {
         press.ended()
         #expect(!press.isActive)
         #expect(!press.isClick(at: .zero))
+    }
+}
+
+/// The click view reports a press as it starts and clears it on release, then clicks.
+@MainActor
+@Suite("Thaw Bar item click view")
+struct ThawBarItemClickViewTests {
+    @Test("A press in place shows pressed, then clicks on release")
+    func pressThenRelease() throws {
+        var clicks = 0
+        var pressed: [Bool] = []
+        let item = MenuBarItem(
+            tag: MenuBarItemTag(namespace: .string("com.example.press"), title: "Press", instanceIndex: 0),
+            windowID: 3, ownerPID: 42, sourcePID: 42,
+            bounds: CGRect(x: 0, y: 0, width: 22, height: 22), title: "Press", isOnScreen: true
+        )
+        let view = ThawBarItemClickView.Represented(
+            item: item, tooltipDelay: 1,
+            leftClickAction: { clicks += 1 }, rightClickAction: { /* Not exercised here. */ },
+            onHover: { _ in /* Not exercised here. */ }
+        )
+        view.onPress = { pressed.append($0) }
+        func event(_ type: NSEvent.EventType) throws -> NSEvent {
+            try #require(NSEvent.mouseEvent(
+                with: type, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0,
+                context: nil, eventNumber: 0, clickCount: 1, pressure: 1
+            ))
+        }
+        try view.mouseDown(with: event(.leftMouseDown))
+        try view.mouseDragged(with: event(.leftMouseDragged))
+        try view.mouseUp(with: event(.leftMouseUp))
+        #expect(pressed == [true, false])
+        #expect(clicks == 1)
     }
 }
