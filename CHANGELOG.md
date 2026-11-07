@@ -46,6 +46,12 @@ the items under New and Fixed.
 ### Fixed
 
 - **The Widgets and Scripts windows open at full size.** They opened as an empty title bar.
+- **Layout says when a dragged item didn't land.** If macOS puts it back, a notice names the item instead of the move failing silently.
+- **Layout items respond to the pointer.** They light up on hover and while pressed, a small wobble no longer starts a drag, and a cancelled drag slides back.
+- **A long click on a Thaw Bar item still opens it.** Holding the button for more than half a second used to do nothing, and items now show when they're pressed.
+- **Moving an item to another section, ungrouping and removing a spacer can be undone.** Use Edit › Undo or Command-Z, as for other Layout changes.
+- **The Swap Bar's close button says what it does.** It's labelled Turn Off Swap Bar and tells you where to turn it back on.
+- **An item whose app isn't responding says so.** Its badge is an hourglass, with a tooltip and a VoiceOver description.
 - **Items in Layout slide aside when you drag one away.** Before, the gap snapped shut, and the slides used an untuned default.
 - **The new-items badge in Layout grows in from its middle.** It used to bounce in from a corner.
 - **Smaller motion fixes.** The Thaw Bar preview follows its size and column sliders closely, the bars fade instead of flickering while a drop settles, onboarding's tiles settle in as one motion, and the "Waiting for access" line fades in.
