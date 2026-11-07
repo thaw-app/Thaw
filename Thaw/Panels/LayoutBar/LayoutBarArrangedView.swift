@@ -112,7 +112,8 @@ extension LayoutBarArrangedView: NSDraggingSource {
             guard let (container, index) = oldContainerInfo else {
                 return
             }
-            // The neighbours slide apart to take it back. Only self carries oldContainerInfo; rebuild from the unchanged cache to restore all removed group members.
+            // The neighbours slide apart to take it back.
+            // Only self carries oldContainerInfo; rebuild from the unchanged cache to restore all removed group members.
             if wasGroupDrag, container.appState != nil {
                 container.rebuildViews()
                 return
