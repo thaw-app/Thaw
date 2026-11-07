@@ -246,9 +246,17 @@ struct LayoutBarItemViewTests {
         let bar = try Bar([alpha])
         let view = try bar.view(alpha)
         let plain = try pixels(of: view)
-        view.pointerEntered()
+        let entered = try #require(NSEvent.enterExitEvent(
+            with: .mouseEntered, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: bar.window.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil
+        ))
+        view.mouseEntered(with: entered)
         #expect(try pixels(of: view) != plain)
-        view.pointerExited()
+        let exited = try #require(NSEvent.enterExitEvent(
+            with: .mouseExited, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: bar.window.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil
+        ))
+        view.mouseExited(with: exited)
         #expect(try pixels(of: view) == plain)
     }
 
