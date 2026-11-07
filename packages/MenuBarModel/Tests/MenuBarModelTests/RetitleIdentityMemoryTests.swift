@@ -13,7 +13,7 @@ import Testing
 struct RetitleIdentityMemoryTests {
     private typealias Slot = RetitleIdentityMemory.Slot
 
-    /// #1489: Raycast's calendar item is "calendar-events" with titles like "Standup • in 52m".
+    /// Raycast's calendar item is "calendar-events" with titles like "Standup • in 52m".
     @Test("A read that falls back to the title keeps the slot's last stable identity")
     func titleFallbackKeepsTheIdentity() {
         var memory = RetitleIdentityMemory()

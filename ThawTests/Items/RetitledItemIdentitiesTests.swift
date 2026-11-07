@@ -10,7 +10,7 @@ import MenuBarModel
 import Testing
 @testable import Thaw
 
-/// A read that misses an item's identifier keeps the identity the item had, per app (#1489).
+/// A read that misses an item's identifier keeps the identity the item had, per app.
 @Suite("Retitled item identities")
 struct RetitledItemIdentitiesTests {
     private typealias RawItem = MenuBarItemAXProvider.RawItem

@@ -17,7 +17,7 @@ nonisolated enum RetitledItemIdentities {
         shared.withLock { resolve(raw, with: &$0) }
     }
 
-    /// raw with each item whose identity fell back to its live title given back the identity its slot had.
+    /// The items, with any identity that fell back to the title replaced by the one its slot had before.
     /// An identity that differs from the displayed text came from an identifier or a canonical title.
     static func resolve(
         _ raw: [MenuBarItemAXProvider.RawItem],
