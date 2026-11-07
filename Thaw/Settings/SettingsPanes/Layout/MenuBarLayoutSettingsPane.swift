@@ -320,7 +320,7 @@ private struct LayoutSpacersRows: View {
                             .monospacedDigit()
                     }
                     Button {
-                        spacerManager.removeSpacer(id: spacer.id)
+                        spacerManager.removeSpacer(id: spacer.id, undoManager: NSApp.keyWindow?.undoManager)
                     } label: {
                         Image(systemName: "trash")
                     }
