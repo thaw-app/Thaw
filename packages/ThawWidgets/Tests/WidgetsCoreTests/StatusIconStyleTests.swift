@@ -12,7 +12,7 @@ import Testing
 /// The rules that make the icon show real readings: Wi-Fi bars, battery colours and its size.
 @Suite("Status icon style")
 struct StatusIconStyleTests {
-    /// #1378: three arcs of signal showed as two, because the raw strength didn't land on whole bars.
+    /// Three arcs of signal showed as two, because the raw strength didn't land on whole bars.
     @Test("Wi-Fi strength becomes the bars macOS shows", arguments: [
         (-45, 3), (-60, 3), (-61, 2), (-70, 2), (-71, 1), (-90, 1),
     ])

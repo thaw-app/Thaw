@@ -24,7 +24,7 @@ final class StatusItemPublisher: NSObject {
 
     static let autosaveName = MenuBarItemTag.thawWidgetIdentifier
     private var statusItem: NSStatusItem?
-    /// What the icon shows now, redrawn when the menu bar's appearance changes.
+    /// What the icon shows now.
     var lastState: StatusIconPreviewState?
     private var appearanceObservation: NSKeyValueObservation?
 
@@ -106,8 +106,7 @@ final class StatusItemPublisher: NSObject {
         statusItem?.isVisible = false
     }
 
-    /// The icon as a template that follows the menu bar, or, once a reading is coloured, in the menu bar's
-    /// own ink with the colours kept, since a template drops them.
+    /// A template that follows the menu bar, or in the bar's own ink once a reading is coloured, since a template drops colour.
     static func image(for state: StatusIconPreviewState, darkMenuBar: Bool) -> NSImage {
         let icon = CompositeStatusIcon(composition: state.composition, samples: state.samples, style: state.style)
         let isColored = state.style.hasColor(composition: state.composition, samples: state.samples)
