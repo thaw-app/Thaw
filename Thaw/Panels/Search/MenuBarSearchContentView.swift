@@ -71,7 +71,8 @@ private struct MenuBarSearchContentView: View {
     @Environment(MenuBarItemManager.self) private var itemManager
     @Environment(MenuBarSearchModel.self) private var model
     @FocusState private var queryFieldIsFocused: Bool
-    @AppStorage(Defaults.Key.rememberSearchQuery.rawValue) private var rememberSearchQuery = Defaults.DefaultValue.rememberSearchQuery
+    /// The pending refocus of the query field, replaced by the next one.
+    @State private var focusTask: Task<Void, Never>?
     /// Recently activated items, shown when the query is empty. Storage is
     /// UserDefaults-backed; this instance is a stateless lens onto it.
     private let recents = MenuBarSearchRecents()
@@ -93,25 +94,25 @@ private struct MenuBarSearchContentView: View {
             .onChange(of: appState.navigationState.isSearchPresented, initial: true) { _, isPresented in
                 // The panel keeps this view between showings, so onAppear runs once.
                 guard isPresented else { return }
+                model.selectFirstSelectableRow()
                 focusQueryField()
             }
-            .onChange(of: hasNoMatches) {
-                // Swapping the rows for the empty state can cost the field the keyboard.
-                guard model.renameSession == nil else { return }
-                focusQueryField()
+            .onChange(of: model.renameSession == nil) { _, renameEnded in
+                // The rename field had the keyboard, and nothing else takes it back.
+                panel.placesQueryCaretAtEnd = false
+                guard renameEnded, appState.navigationState.isSearchPresented else { return }
+                focusQueryField(caretAtEnd: true)
             }
             .onChange(of: model.searchText, initial: true) {
                 rebuildDisplayedItems()
-                selectFirstSelectableRow()
+                model.selectFirstSelectableRow()
             }
             .onChange(of: itemManager.itemCache, initial: true) {
                 // The launcher's inventory is derived from this cache, so it
                 // dies with it and is rebuilt on the next row build.
                 model.launcherCandidates = []
                 rebuildDisplayedItems()
-                if model.selection == nil {
-                    selectFirstSelectableRow()
-                }
+                model.revalidateSelection()
             }
     }
 
@@ -131,7 +132,7 @@ private struct MenuBarSearchContentView: View {
             GlassEffectContainer {
                 contentArea
                     .safeAreaBar(edge: .top, spacing: 0) { queryField }
-                    .safeAreaBar(edge: .bottom, spacing: 0) { bottomBar }
+                    .safeAreaBar(edge: .bottom, spacing: 0) { MenuBarSearchFooter(panel: panel, showsDivider: false) }
             }
             .scrollEdgeEffectStyle(.automatic, for: .vertical)
             // Clear panel glass over an interactive control capsule: the field
@@ -146,9 +147,7 @@ private struct MenuBarSearchContentView: View {
                 Divider()
                     .opacity(0.4)
                 contentArea
-                Divider()
-                    .opacity(0.4)
-                bottomBar
+                MenuBarSearchFooter(panel: panel, showsDivider: true)
             }
             .frame(width: presentation.contentSize.width, height: presentation.contentSize.height)
             .thawGlass(.panel, in: panelShape)
@@ -159,10 +158,14 @@ private struct MenuBarSearchContentView: View {
 
     /// A non-activating panel hands a SwiftUI field first responder late, so the delay is load-bearing.
     /// The flag is dropped first: it can read true after the field lost the keyboard.
-    private func focusQueryField() {
+    /// With caretAtEnd the field keeps its text unselected, so typing adds to the query.
+    private func focusQueryField(caretAtEnd: Bool = false) {
+        focusTask?.cancel()
         queryFieldIsFocused = false
-        Task { @MainActor in
+        focusTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
+            panel.placesQueryCaretAtEnd = caretAtEnd
             queryFieldIsFocused = true
         }
     }
@@ -220,15 +223,35 @@ private struct MenuBarSearchContentView: View {
 
     // MARK: Content area
 
-    /// Either the matching rows or the state that explains why there are none.
-    @ViewBuilder
+    /// The rows, with whatever explains their absence laid over them. The
+    /// list stays mounted: swapping it out cost the query field the keyboard.
     private var contentArea: some View {
-        switch presentation {
-        case .inspector:
-            inspectorContentArea
-        case .launcher, .assisted:
-            launcherContentArea
+        let emptyState = emptyState
+        return rowList
+            .opacity(emptyState == nil ? 1 : 0)
+            .accessibilityHidden(emptyState != nil)
+            .overlay {
+                if let emptyState {
+                    emptyState
+                }
+            }
+    }
+
+    /// What covers the rows, or nil while they show. The launchers add a
+    /// rung: with an empty query they list only recents, so an empty list
+    /// there means nothing has been opened from search yet.
+    private var emptyState: ThawEmptyState? {
+        if let unavailableState {
+            return unavailableState
         }
+        if presentation != .inspector, model.displayedItems.isEmpty {
+            return ThawEmptyState(
+                systemImage: "clock",
+                title: "Start typing to find an item",
+                caption: "Items you open from here show up as recents."
+            )
+        }
+        return nil
     }
 
     /// The same ladder the launcher walks, minus its "start typing" rung: the
@@ -266,30 +289,6 @@ private struct MenuBarSearchContentView: View {
         return nil
     }
 
-    @ViewBuilder
-    private var inspectorContentArea: some View {
-        if let unavailableState {
-            unavailableState
-        } else {
-            rowList
-        }
-    }
-
-    @ViewBuilder
-    private var launcherContentArea: some View {
-        if let unavailableState {
-            unavailableState
-        } else if model.displayedItems.isEmpty {
-            ThawEmptyState(
-                systemImage: "clock",
-                title: "Start typing to find an item",
-                caption: "Items you open from here show up as recents."
-            )
-        } else {
-            rowList
-        }
-    }
-
     /// The rows, and the keyboard navigation over them, for both surfaces.
     /// Section headers ride in the list as non-selectable rows, so arrowing
     /// steps over them.
@@ -308,101 +307,6 @@ private struct MenuBarSearchContentView: View {
     /// search. The two want different empty states.
     private var hasNoMatches: Bool {
         !model.searchText.trimmingCharacters(in: .whitespaces).isEmpty && model.displayedItems.isEmpty
-    }
-
-    // MARK: Bottom bar
-
-    private var bottomBar: some View {
-        VStack(spacing: ThawSpacing.base) {
-            // The pane's notice: a refused move from search has nothing else to show for itself.
-            LayoutRefusalNotice()
-            actionRow
-                .buttonStyle(SearchPanelButtonStyle())
-        }
-        .padding(ThawSpacing.compact)
-        .padding(.horizontal, ThawSpacing.tight)
-    }
-
-    private var actionRow: some View {
-        HStack {
-            Button {
-                panel.close()
-                openSettingsWindow()
-            } label: {
-                Image(systemName: "gearshape")
-                    .resizable()
-                    .scaledToFit()
-                    .foregroundStyle(.secondary)
-                    .padding(ThawSpacing.hairline)
-            }
-            .help("Open Settings")
-            .accessibilityLabel("Open Settings")
-
-            Toggle("Remember last search", isOn: $rememberSearchQuery)
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-
-            Spacer()
-
-            if let selection = model.selection, let item = panel.cachedItem(for: selection) {
-                if model.renameSession == nil {
-                    ShortcutHintButton(title: String(localized: "Rename…")) {
-                        panel.beginRenamingSelection()
-                    } hint: {
-                        KeyCapView(text: "⌘")
-                        Text(verbatim: "+")
-                        KeyCapView(text: "E")
-                    }
-                    ShortcutHintButton(title: String(localized: "Actions…")) {
-                        panel.presentItemActions()
-                    } hint: {
-                        KeyCapView(text: "⌘")
-                        Text(verbatim: "+")
-                        KeyCapView(text: "K")
-                    }
-                    .help("Rename, group or move the item. ⌘1, ⌘2 and ⌘3 move it to Visible, Hidden or Always Hidden.")
-                    // The actions menu hangs off this button, so it has to be
-                    // reachable as an AppKit view: the anchor sits behind the
-                    // button and takes its frame.
-                    .background { ItemActionsMenuAnchor(panel: panel) }
-                    ShortcutHintButton(
-                        title: isEffectivelyVisible(item)
-                            ? String(localized: "Click Item")
-                            : String(localized: "Show Item")
-                    ) {
-                        performAction(for: item)
-                    } hint: {
-                        KeyCapView(systemImage: "return")
-                    }
-                } else {
-                    ShortcutHintButton(title: String(localized: "Cancel")) {
-                        model.renameSession = nil
-                    } hint: {
-                        KeyCapView(text: "⎋", font: ThawType.detail)
-                    }
-                    .keyboardShortcut(.cancelAction)
-                    ShortcutHintButton(title: String(localized: "Rename")) {
-                        panel.commitRename()
-                    } hint: {
-                        KeyCapView(systemImage: "return")
-                    }
-                    .keyboardShortcut(.defaultAction)
-                }
-            }
-        }
-    }
-
-    /// Brings the app to the front and opens its settings window.
-    private func openSettingsWindow() {
-        appState.activate(withPolicy: .regular)
-        appState.openWindow(.settings)
-    }
-
-    // MARK: Selection
-
-    /// Highlights the topmost row that can actually be acted on.
-    private func selectFirstSelectableRow() {
-        model.selection = model.displayedItems.first(where: \.isSelectable)?.id
     }
 
     // MARK: Row building
@@ -566,23 +470,6 @@ private struct MenuBarSearchContentView: View {
 
     // MARK: Activation
 
-    /// Whether item is where the user can already see it, which is what
-    /// separates "Click Item" from "Show Item".
-    ///
-    /// Mirrors the dispatch in MenuBarItemManager.clickConcealedItem(item:with:on:)
-    /// so the label describes what Return will actually do. A window-server
-    /// on-screen check cannot answer this: macOS 27 status items carry
-    /// synthetic window IDs that are never in the on-screen list.
-    private func isEffectivelyVisible(_ item: MenuBarItem) -> Bool {
-        let controller = appState.menuBarManager.sectionController
-        guard controller.section(for: item) == .visible else {
-            return false
-        }
-        // A visible-authored item can still be concealed by the automatic
-        // overflow assertion, which the menu bar overlay also drives.
-        return !controller.isEffectivelyConcealed(item)
-    }
-
     /// Dismisses the panel, then shows or clicks item.
     ///
     /// The panel has to be down before the click lands: a key-taking panel over
@@ -600,32 +487,5 @@ private struct MenuBarSearchContentView: View {
             await panel.waitUntilClosed(timeout: .milliseconds(200))
             await itemManager.activate(item: item, on: displayID)
         }
-    }
-}
-
-// MARK: - Bottom bar pieces
-
-/// A bottom bar action labeled with the key combination that also
-/// triggers it.
-/// An empty AppKit view behind the actions button, there so the panel has
-/// something to position the actions menu against.
-///
-/// SwiftUI frames would need converting twice (hosting view, then screen) to
-/// reach NSMenu.popUp, and each step can misplace the menu. Handing over the
-/// view itself avoids coordinate conversion.
-private struct ItemActionsMenuAnchor: NSViewRepresentable {
-    let panel: MenuBarSearchPanel
-
-    func makeNSView(context _: Context) -> NSView {
-        let view = NSView()
-        panel.itemActionsAnchor = view
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context _: Context) {
-        // Re-registered rather than set once: the bottom bar rebuilds this
-        // subtree whenever the selection comes and goes, and the panel would
-        // otherwise keep a reference to a view that is no longer on screen.
-        panel.itemActionsAnchor = nsView
     }
 }

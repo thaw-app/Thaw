@@ -135,6 +135,20 @@ struct MenuBarSearchContentViewTests {
         #expect(harness.ids.contains(Self.itemID(beta)))
     }
 
+    @Test("A turned-over cache that drops the highlighted row highlights the first row")
+    func cacheTurnoverReplacesStaleHighlight() async {
+        let alpha = World.item("Alpha")
+        let beta = World.item("Beta")
+        let harness = Harness(.inspector, visible: [alpha, beta])
+        await harness.settle { harness.ids.contains(Self.itemID(beta)) }
+        harness.model.selection = Self.itemID(beta)
+
+        harness.world.seat([alpha])
+        await harness.settle { harness.model.selection == Self.itemID(alpha) }
+        #expect(!harness.ids.contains(Self.itemID(beta)))
+        #expect(harness.model.selection == Self.itemID(alpha), "arrows and Return need a listed highlight")
+    }
+
     @Test("The inspector draws its bottom bar for the highlighted row, and the rename buttons while renaming")
     func inspectorBottomBarStates() async throws {
         let alpha = World.item("Alpha")
