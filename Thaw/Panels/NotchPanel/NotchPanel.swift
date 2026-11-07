@@ -27,6 +27,13 @@ enum NotchMetrics {
 
     /// How long a descender takes to grow out of the bar or retract into it.
     static let revealDuration: Duration = .milliseconds(240)
+
+    /// How long to wait for the body to grow or retract. Reduce Motion cuts the spring, so nothing is left to wait for.
+    static func revealWait(
+        reduceMotion: Bool = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+    ) -> Duration {
+        reduceMotion ? .zero : revealDuration
+    }
 }
 
 // MARK: - NotchPresentation

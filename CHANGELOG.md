@@ -41,6 +41,10 @@ the items under New and Fixed.
 
 ### Fixed
 
+- **Arrow keys move the Thaw Bar highlight at once.** The item under the keyboard no longer springs up on every key press; the pointer still lifts it.
+- **The layout warning fades in and out.** When Thaw can't move an item, the notice in Layout, the pop-out editor and search no longer pops in and vanishes after a few seconds.
+- **The menu bar shape gets out of the way faster when you drag an item.** It fades out in 0.15 s instead of 0.25 s, and a drag that stops partway fades back sooner.
+- **With Reduce Motion on, the notch panel switches without a pause.** It no longer waits for an animation that Reduce Motion has already turned off.
 - **Layout shows Bluetooth and other switched-off system items as their own symbol.** Items Thaw hides by switching their Control Center module off used to sit in a grey box.
 - **Hidden items no longer collapse right after you point at them or show them again.** A timed rehide that was already finishing could still hide the section you had just reopened.
 - **Diagnostic logs no longer warn on every layout pass about apps that aren't running.** Saved items whose app is closed, and Thaw extras you have turned off, are left out of that warning.
