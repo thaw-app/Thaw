@@ -45,6 +45,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- **The Widgets and Scripts windows open at full size.** They opened as an empty title bar.
 - **Items in Layout slide aside when you drag one away.** Before, the gap snapped shut, and the slides used an untuned default.
 - **The new-items badge in Layout grows in from its middle.** It used to bounce in from a corner.
 - **Smaller motion fixes.** The Thaw Bar preview follows its size and column sliders closely, the bars fade instead of flickering while a drop settles, onboarding's tiles settle in as one motion, and the "Waiting for access" line fades in.
