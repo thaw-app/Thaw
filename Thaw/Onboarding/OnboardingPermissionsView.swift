@@ -290,6 +290,7 @@ private struct PermissionCard: View {
         } control: {
             if showsRequestButton || permission.hasPermission {
                 PermissionStatusControl(permission: permission, layout: .filled)
+                    .modifier(GrantedBounce())
             }
         }
     }
