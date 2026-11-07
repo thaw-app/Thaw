@@ -25,11 +25,11 @@ struct StatusIconStyle: Equatable {
             }
         }
 
-        /// Large grows the ring and the centre symbol inside the same square, so it fits any menu bar.
-        var scale: CGFloat {
+        /// How much of the icon's height the ring fills. Large fills it, Standard leaves a little air.
+        var fill: CGFloat {
             switch self {
-            case .standard: 1
-            case .large: 1.12
+            case .standard: 0.9
+            case .large: 1
             }
         }
     }
@@ -46,23 +46,14 @@ struct StatusIconStyle: Equatable {
             }
         }
 
-        /// The ring's stroke as a fraction of the icon's side.
+        /// The ring's stroke as a fraction of its diameter; Regular is the indicator's own weight.
         var lineWidth: CGFloat {
             switch self {
-            case .thin: 0.05
-            case .regular: 0.065
-            case .thick: 0.085
+            case .thin: 0.045
+            case .regular: 0.057
+            case .thick: 0.075
             }
         }
-    }
-
-    /// The ring's radius as a fraction of the icon's side.
-    var arcRadius: CGFloat {
-        0.35 * size.scale
-    }
-
-    var lineWidth: CGFloat {
-        thickness.lineWidth
     }
 
     /// The colour a reading is drawn in, or nil for the menu bar's own ink.

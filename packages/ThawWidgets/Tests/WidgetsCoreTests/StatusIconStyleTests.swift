@@ -63,16 +63,11 @@ struct StatusIconStyleTests {
         #expect(style.tint(for: .battery, samples: samples) == nil)
     }
 
-    @Test("Large draws the arc and symbol bigger, and every thickness keeps the ring inside the icon")
+    @Test("Large draws the arc and symbol bigger, and Regular is the indicator's own weight")
     func sizeAndThickness() {
-        #expect(StatusIconStyle.Size.standard.scale == 1)
-        #expect(StatusIconStyle.Size.large.scale > 1)
-        for size in StatusIconStyle.Size.allCases {
-            for thickness in StatusIconStyle.Thickness.allCases {
-                let style = StatusIconStyle(size: size, thickness: thickness)
-                #expect(style.arcRadius + style.lineWidth / 2 <= 0.5, "the ring stays inside the square")
-            }
-        }
+        #expect(StatusIconStyle.Size.standard.fill < StatusIconStyle.Size.large.fill)
+        #expect(StatusIconStyle.Size.large.fill == 1)
+        #expect(StatusIconStyle.Thickness.regular.lineWidth == 0.057)
         #expect(StatusIconStyle.Thickness.thin.lineWidth < StatusIconStyle.Thickness.regular.lineWidth)
         #expect(StatusIconStyle.Thickness.regular.lineWidth < StatusIconStyle.Thickness.thick.lineWidth)
         #expect(!StatusIconStyle.Size.large.title.isEmpty && !StatusIconStyle.Thickness.thick.title.isEmpty)
