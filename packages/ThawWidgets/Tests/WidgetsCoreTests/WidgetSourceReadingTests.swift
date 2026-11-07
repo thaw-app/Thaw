@@ -25,6 +25,16 @@ struct WidgetSourceReadingTests {
         #expect(BatteryLevelSource.level(from: [:]) == 0)
     }
 
+    @Test("The battery reads as charging only while the power source says so")
+    func batteryCharging() {
+        #expect(BatteryLevelSource.isCharging(from: [kIOPSIsChargingKey: true]))
+        #expect(!BatteryLevelSource.isCharging(from: [kIOPSIsChargingKey: false, kIOPSPowerSourceStateKey: kIOPSACPowerValue]))
+        #expect(!BatteryLevelSource.isCharging(from: [:]))
+        let reading = BatteryLevelSource.reading()
+        #expect((0 ... 1).contains(reading.level))
+        #expect(BatteryLevelSource.level() == reading.level)
+    }
+
     @Test("The CPU source reads one counter per logical processor")
     func cpuTicks() throws {
         let source = CPUSource()

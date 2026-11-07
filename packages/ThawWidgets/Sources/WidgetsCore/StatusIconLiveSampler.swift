@@ -20,6 +20,7 @@ final class StatusIconLiveSampler: ObservableObject {
 
     private var timer: Timer?
     private var networkTask: Task<Void, Never>?
+    private var audioTask: Task<Void, Never>?
     private let cpuSource = CPUSource()
     private let wifiSource = WiFiSource()
     private var previousCpuTicks: (user: UInt64, system: UInt64, total: UInt64) = (0, 0, 0)
@@ -48,14 +49,28 @@ final class StatusIconLiveSampler: ObservableObject {
     func stop() {
         networkTask?.cancel()
         networkTask = nil
+        audioTask?.cancel()
+        audioTask = nil
         timer?.invalidate()
         timer = nil
     }
 
     private func poll() {
-        samples.battery = BatteryLevelSource.level()
+        let battery = BatteryLevelSource.reading()
+        samples.battery = battery.level
+        samples.isCharging = battery.isCharging
+        samples.isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
         samples.wifi = wifiStrength()
         samples.cpu = cpuUsage()
+        // A sleeping Bluetooth device can make CoreAudio slow to answer, so it's read off the main actor.
+        // A read still running is left to finish, so a slow device can't pile them up or starve the reading.
+        guard audioTask == nil else { return }
+        audioTask = Task { [weak self] in
+            let output = await Task.detached { AudioOutputSource.defaultOutput() }.value
+            guard !Task.isCancelled, let self else { return }
+            samples.audioOutput = output
+            audioTask = nil
+        }
     }
 
     // MARK: Wi-Fi

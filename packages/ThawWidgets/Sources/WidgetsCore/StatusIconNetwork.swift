@@ -59,6 +59,7 @@ struct StatusIconPreviewState: Equatable {
     var composition: StatusIconComposition
     var samples: StatusIconSamples
     var isLive: Bool
+    var style = StatusIconStyle()
 
     var title: String {
         isLive ? String(localized: "Thaw widget · Live readings") : String(localized: "Thaw widget · Sample readings")
@@ -66,15 +67,18 @@ struct StatusIconPreviewState: Equatable {
 
     var sources: [StatusIconComposition.Source] {
         StatusIconComposition.Source.allCases.filter { source in
-            composition.activeSources.contains(source) || (source == .wifi && composition.center == .wifi && samples.network == .wifi)
+            composition.activeSources.contains(source)
+                || (source == .wifi && composition.center.showsNetwork(for: samples) && samples.network == .wifi)
         }
     }
 
     var details: [String] {
         guard !composition.isEmpty else { return [String(localized: "No indicators selected")] }
         var parts = [String]()
-        if composition.center == .wifi {
+        if composition.center.showsNetwork(for: samples) {
             parts.append(String(localized: "Connection: \(samples.network.title)"))
+        } else if composition.center == .bluetooth, let output = samples.audioOutput {
+            parts.append(String(localized: "Playing through \(output.name)"))
         } else if composition.center != .none {
             parts.append(String(localized: "Symbol: \(composition.center.title)"))
         }

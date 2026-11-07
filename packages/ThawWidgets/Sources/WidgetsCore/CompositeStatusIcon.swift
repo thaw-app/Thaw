@@ -12,6 +12,7 @@ import SwiftUI
 struct CompositeStatusIcon: View {
     let composition: StatusIconComposition
     let samples: StatusIconSamples
+    var style = StatusIconStyle()
 
     var body: some View {
         GeometryReader { geometry in
@@ -22,22 +23,21 @@ struct CompositeStatusIcon: View {
                         .stroke(.primary.opacity(0.2), style: stroke(side: side))
                     if samples[composition.outerSource] > 0 {
                         indicator(progress: samples[composition.outerSource])
-                            .stroke(.primary, style: stroke(side: side))
+                            .stroke(ink(for: composition.outerSource), style: stroke(side: side))
                     }
                 }
-                if composition.center == .wifi, samples.network == .ethernet {
+                let showsNetwork = composition.center.showsNetwork(for: samples)
+                let glyphScale = style.size.scale
+                if showsNetwork, samples.network == .ethernet {
                     EthernetPacketGlyph()
-                        .frame(width: side * 0.48, height: side * 0.48 / 1.972)
+                        .frame(width: side * 0.48 * glyphScale, height: side * 0.48 * glyphScale / 1.972)
                         .position(x: side * 0.5, y: side * 0.43)
                 } else if let symbolName = composition.center.symbolName(for: samples) {
-                    Image(
-                        systemName: symbolName,
-                        variableValue: composition.center == .wifi && samples.network == .wifi ? samples[.wifi] : nil
-                    )
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: side * 0.4, height: side * 0.35)
-                    .position(x: side * 0.5, y: side * 0.43)
+                    Image(systemName: symbolName, variableValue: wifiVariableValue(showsNetwork: showsNetwork))
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: side * 0.4 * glyphScale, height: side * 0.35 * glyphScale)
+                        .position(x: side * 0.5, y: side * 0.43)
                 }
                 if composition.bottom != .none {
                     segments(side: side)
@@ -51,11 +51,27 @@ struct CompositeStatusIcon: View {
     }
 
     private func indicator(progress: Double) -> StatusIconArc {
-        StatusIconArc(isRing: composition.outer == .ring, progress: progress)
+        StatusIconArc(isRing: composition.outer == .ring, progress: progress, radius: style.arcRadius)
     }
 
     private func stroke(side: CGFloat) -> StrokeStyle {
-        StrokeStyle(lineWidth: side * 0.065, lineCap: .round)
+        StrokeStyle(lineWidth: side * style.lineWidth, lineCap: .round)
+    }
+
+    private func ink(for source: StatusIconComposition.Source) -> Color {
+        switch style.tint(for: source, samples: samples) {
+        case .green: .green
+        case .yellow: .yellow
+        case .red: .red
+        case .blue: .blue
+        case nil: .primary
+        }
+    }
+
+    /// Whole bars, as macOS shows them, for the Wi-Fi symbol; nil for every other symbol.
+    private func wifiVariableValue(showsNetwork: Bool) -> Double? {
+        guard showsNetwork, samples.network == .wifi else { return nil }
+        return StatusIconSignal.variableValue(bars: StatusIconSignal.bars(strength: samples[.wifi]))
     }
 
     private func segments(side: CGFloat) -> some View {
@@ -63,7 +79,8 @@ struct CompositeStatusIcon: View {
         HStack(alignment: .bottom, spacing: side * 0.055) {
             ForEach(0 ..< 4) { segment in
                 RoundedRectangle(cornerRadius: side * 0.045)
-                    .fill(.primary.opacity(segment < samples.litSegments(for: composition.bottomSource) ? 1 : 0.2))
+                    .fill(segment < samples.litSegments(for: composition.bottomSource)
+                        ? ink(for: composition.bottomSource) : .primary.opacity(0.2))
                     .frame(
                         width: side * 0.085,
                         height: composition.bottom == .dots ? side * 0.085 : side * (0.06 + Double(segment) * 0.03)
@@ -118,6 +135,7 @@ private nonisolated struct EthernetPacketGlyph: View {
 private nonisolated struct StatusIconArc: Shape {
     let isRing: Bool
     let progress: Double
+    let radius: CGFloat
 
     func path(in rect: CGRect) -> Path {
         let side = min(rect.width, rect.height)
@@ -126,7 +144,7 @@ private nonisolated struct StatusIconArc: Shape {
         var path = Path()
         path.addArc(
             center: CGPoint(x: side * 0.5, y: side * 0.43),
-            radius: side * 0.35,
+            radius: side * radius,
             startAngle: .degrees(start),
             endAngle: .degrees(start + sweep * progress),
             clockwise: false
