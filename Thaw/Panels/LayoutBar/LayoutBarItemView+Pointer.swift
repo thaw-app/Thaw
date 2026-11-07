@@ -122,7 +122,7 @@ extension LayoutBarItemView {
             ? Self.unresponsiveHelp(appName: item.owningApplication?.localizedName ?? item.displayName)
             : visibilityLimit?.explanation
         toolTip = help
-        setAccessibilityHelp(help)
+        setAccessibilityHelp(help ?? appWideOverride?.tooltip(itemName: item.displayName))
         needsDisplay = true
     }
 

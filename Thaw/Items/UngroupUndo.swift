@@ -20,12 +20,16 @@ enum UngroupUndo {
     ) {
         let previous = manager.groupSet
         let folderID: UUID? = if case let .user(id) = origin, folders?.isFolder(origin) == true { id } else { nil }
+        let folderStyle = folderID.flatMap { folders?.style(for: $0) }
         manager.ungroup(origin)
         guard let undoManager, manager.groupSet != previous else { return }
         undoManager.registerUndo(withTarget: manager) { [weak folders, weak undoManager] manager in
             manager.apply(previous)
             if let folderID {
                 folders?.restoreFolder(folderID)
+                if let folderStyle {
+                    folders?.setStyle(folderStyle, for: folderID)
+                }
             }
             undoManager?.registerUndo(withTarget: manager) { [weak folders] manager in
                 ungroup(origin, name: name, manager: manager, folders: folders, undoManager: undoManager)
