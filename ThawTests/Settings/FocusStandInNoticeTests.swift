@@ -9,7 +9,7 @@ import SwiftUI
 import Testing
 @testable import Thaw
 
-/// #1477: macOS hides Focus while items are hidden, and the stand-in that brings it back was off.
+/// macOS hides Focus while items are hidden, and the stand-in that brings it back was off by default.
 @MainActor
 @Suite("Focus stand-in notice", .serialized, .scratchDefaults)
 struct FocusStandInNoticeTests {

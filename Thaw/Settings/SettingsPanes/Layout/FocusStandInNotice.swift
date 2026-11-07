@@ -10,7 +10,7 @@ import SwiftUI
 import ThawUI
 
 /// macOS 27 hides Focus while any item is hidden. When Control Center is set to show it and Thaw isn't
-/// standing in for it, Layout says so and offers the stand-in (#1477).
+/// standing in for it, Layout says so and offers the stand-in.
 struct FocusStandInNotice: View {
     @Bindable var settings: AdvancedSettings
     /// Read by the caller, so tests don't depend on this Mac's Control Center settings.

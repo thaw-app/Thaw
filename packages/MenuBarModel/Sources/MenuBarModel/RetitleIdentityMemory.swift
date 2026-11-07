@@ -7,11 +7,8 @@
 
 import Darwin
 
-/// Keeps an item's identifier-based identity on a read that misses the identifier and falls back to the
-/// item's live title, so a countdown title doesn't save a new item every minute (#1489).
-///
-/// Slots are an app's items in its extras-bar order. A slot takes back its last stable identity only when
-/// the same process lists the same number of items, so a changed item set is never relabelled.
+/// Keeps an item's identifier-based identity when a read misses the identifier and falls back to its title.
+/// A slot takes it back only when the same process lists the same number of items, so a changed set isn't relabelled.
 public struct RetitleIdentityMemory: Sendable {
     /// One item's identity in a read, and whether it came from a stable identifier rather than the title.
     public struct Slot: Equatable, Sendable {
