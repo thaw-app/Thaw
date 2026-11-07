@@ -30,7 +30,7 @@ final class MenuBarSearchPanel: NSPanel {
     /// up cannot make close() save the wrong face's frame.
     private(set) var presentation: SearchPresentation = .inspector
 
-    private weak var appState: AppState?
+    private(set) weak var appState: AppState?
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -80,46 +80,14 @@ final class MenuBarSearchPanel: NSPanel {
         return event
     }
 
-    /// ⌘, opens Settings, ⌘E renames, ⌘K opens the actions menu, ⌘1 to ⌘3
-    /// move the item between sections, ⌘L opens its layout pane.
+    /// Handles list moves and the Command shortcuts; see handleKeyDown(_:).
     private lazy var shortcutMonitor = EventMonitor.universal(for: [.keyDown]) { [weak self] event in
-        guard let self, Modifiers(nsEventFlags: event.modifierFlags) == .command else {
-            return event
-        }
-        let keyCode = KeyCode(rawValue: Int(event.keyCode))
-        if keyCode == .comma {
-            close()
-            appState?.activate(withPolicy: .regular)
-            appState?.openWindow(.settings)
-            return nil
-        }
-        if keyCode == .e {
-            beginRenamingSelection()
-            return nil
-        }
-        // With no highlighted row these keys pass through.
-        guard
-            model.renameSession == nil,
-            let appState,
-            selectedItem != nil
-        else {
-            return event
-        }
-        if keyCode == .k {
-            presentItemActions()
-            return nil
-        }
-        if keyCode == .l {
-            close()
-            MenuBarSearchItemActions.openSettings(appState: appState)
-            return nil
-        }
-        if let index = [KeyCode.one, .two, .three].firstIndex(of: keyCode) {
-            moveSelection(toDestinationAt: index)
-            return nil
-        }
-        return event
+        self?.handleKeyDown(event) ?? event
     }
+
+    /// Set before the query field is refocused after a rename, so it gets
+    /// the insertion point at the end rather than all its text selected.
+    var placesQueryCaretAtEnd = false
 
     override var canBecomeKey: Bool {
         true
