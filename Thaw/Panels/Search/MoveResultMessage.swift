@@ -10,6 +10,23 @@
 nonisolated struct MoveResultMessage: Equatable {
     let symbol: String
     let text: String
+    /// What the notice adds for a failure: a move macOS undid, or one that never went through.
+    var detail: String?
+
+    var isFailure: Bool {
+        symbol != "checkmark"
+    }
+
+    /// A failure stays up long enough to read; a success clears at the usual pace.
+    var displayDuration: Duration {
+        isFailure ? .seconds(3) : .milliseconds(1200)
+    }
+
+    /// A failure also goes to the Layout notice, which lasts longer and VoiceOver announces.
+    var refusal: LayoutBarFeedbackCenter.Refusal? {
+        guard isFailure, let detail else { return nil }
+        return LayoutBarFeedbackCenter.Refusal(title: text, message: detail)
+    }
 
     /// - Parameters:
     ///   - committed: Whether the section change was made at all.
@@ -21,10 +38,15 @@ nonisolated struct MoveResultMessage: Equatable {
         case (true, false):
             MoveResultMessage(
                 symbol: "exclamationmark.triangle",
-                text: String(localized: "\(itemName) didn’t stay in \(sectionTitle)")
+                text: String(localized: "\(itemName) didn’t stay in \(sectionTitle)"),
+                detail: String(localized: "macOS put it back. Try again, or move it in Settings \(Constants.menuArrow) Layout.")
             )
         case (false, _):
-            MoveResultMessage(symbol: "exclamationmark.triangle", text: String(localized: "Couldn’t move \(itemName)"))
+            MoveResultMessage(
+                symbol: "exclamationmark.triangle",
+                text: String(localized: "Couldn’t move \(itemName)"),
+                detail: String(localized: "The move didn’t go through. Try again, or move it in Settings \(Constants.menuArrow) Layout.")
+            )
         }
     }
 }

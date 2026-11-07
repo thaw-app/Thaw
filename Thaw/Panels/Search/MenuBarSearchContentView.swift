@@ -314,33 +314,13 @@ private struct MenuBarSearchContentView: View {
 
     private var bottomBar: some View {
         VStack(spacing: ThawSpacing.base) {
-            refusalNotice
+            // The pane's notice: a refused move from search has nothing else to show for itself.
+            LayoutRefusalNotice()
             actionRow
                 .buttonStyle(SearchPanelButtonStyle())
         }
         .padding(ThawSpacing.compact)
         .padding(.horizontal, ThawSpacing.tight)
-    }
-
-    /// Why a move asked for here did not happen.
-    ///
-    /// The same notice the layout pane shows, reading the same feedback
-    /// centre. A refused move from search has nothing else to show for itself,
-    /// and the pane that would otherwise explain it is not open.
-    @ViewBuilder
-    private var refusalNotice: some View {
-        if let refusal = appState.layoutFeedback.refusal {
-            SettingsWarningPill(
-                title: LocalizedStringResource(String.LocalizationValue(refusal.title)),
-                message: LocalizedStringResource(String.LocalizationValue(refusal.message)),
-                systemImage: "exclamationmark.triangle.fill",
-                tint: .orange,
-                actionTitle: "Dismiss"
-            ) {
-                appState.layoutFeedback.clear()
-            }
-            .transition(.fade(reduceMotion: reduceMotion, animation: ThawMotion.settle))
-        }
     }
 
     private var actionRow: some View {
@@ -380,6 +360,7 @@ private struct MenuBarSearchContentView: View {
                         Text(verbatim: "+")
                         KeyCapView(text: "K")
                     }
+                    .help("Rename, group or move the item. ⌘1, ⌘2 and ⌘3 move it to Visible, Hidden or Always Hidden.")
                     // The actions menu hangs off this button, so it has to be
                     // reachable as an AppKit view: the anchor sits behind the
                     // button and takes its frame.

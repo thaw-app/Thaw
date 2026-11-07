@@ -362,7 +362,7 @@ struct LayoutBarsSection: View {
                 .containerRelativeFrame(.horizontal) { width, _ in width - 40 }.frame(minWidth: 0, maxWidth: .infinity)
         } footer: {
             HStack(alignment: .firstTextBaseline, spacing: ThawSpacing.base) {
-                Text("Drag items between sections. Hold ⌘ Command to drag in the menu bar.")
+                Text("Drag items between sections, or ⌥-arrows to move the selected one. ⌘- or ⇧-click selects several. Hold ⌘ Command to drag in the menu bar.")
                     .font(ThawType.footnote)
                     .foregroundStyle(ThawInk.supporting)
                     .fixedSize(horizontal: false, vertical: true)

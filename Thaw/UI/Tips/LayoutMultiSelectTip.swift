@@ -9,7 +9,7 @@ import SwiftUI
 import ThawUI
 import TipKit
 
-/// Tells upgraders that Layout can now select and move several items, never over the limitations card.
+/// Tells new installs and upgraders that Layout can select and move several items, never over the limitations card.
 /// It has no display limit, since the pane rebuilds as it loads; the close button or a first multi-selection retires it.
 struct LayoutMultiSelectTip: Tip {
     /// The first version with multi-select. Anyone whose last version is older is an upgrader.
@@ -23,7 +23,7 @@ struct LayoutMultiSelectTip: Tip {
     @Parameter static var isUpgrade: Bool = false
 
     nonisolated static let titleResource = LocalizedStringResource(
-        "New: select several items",
+        "Select several items",
         comment: "Title of the Layout tip that announces selecting several menu bar items at once"
     )
 
@@ -60,5 +60,10 @@ struct LayoutMultiSelectTip: Tip {
             return ReleaseVersionOrder.precedes(previousVersion, betaIntroducedIn)
         }
         return ReleaseVersionOrder.precedes(previousVersion, introducedIn)
+    }
+
+    /// Whether to offer the tip: to an upgrader, and to a new install, which no recorded version marks.
+    nonisolated static func shouldShow(previousVersion: String?) -> Bool {
+        isUpgrade(previousVersion: previousVersion) || (previousVersion ?? "").isEmpty
     }
 }
