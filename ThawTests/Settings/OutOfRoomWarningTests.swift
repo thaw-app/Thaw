@@ -37,6 +37,25 @@ struct OutOfRoomWarningTests {
         #expect(try named.pixels() != plainPixels)
     }
 
+    @Test("Move to Hidden shows only when the warning names items and the pane can move them")
+    func offersMoveToHidden() async throws {
+        #expect(!OutOfRoomWarning.offersMove(namedItems: [], canMove: true))
+        #expect(!OutOfRoomWarning.offersMove(namedItems: ["Alpha"], canMove: false))
+        #expect(OutOfRoomWarning.offersMove(namedItems: ["Alpha"], canMove: true))
+
+        let appState = AppState()
+        let bare = OffscreenRender(OutOfRoomWarning(hiddenItemNames: ["Alpha"]).frame(width: Self.size.width), size: Self.size)
+        let withAction = OffscreenRender(
+            OutOfRoomWarning(hiddenItemNames: ["Alpha"]).frame(width: Self.size.width).environment(appState),
+            size: Self.size
+        )
+        let barePixels = try bare.pixels()
+        await withAction.settle { (try? withAction.pixels()) != barePixels }
+        #expect(try withAction.pixels() != barePixels, "the button is drawn")
+        // No item is out of room in a fresh state, so the move has nothing to do.
+        OutOfRoomWarning.moveNotDrawnItemsToHidden(appState: appState)
+    }
+
     @Test("The watcher reports overflow on the bars' display, with the names, and clears when it ends")
     func watcherFollowsOverflow() async {
         let display = CGMainDisplayID()
