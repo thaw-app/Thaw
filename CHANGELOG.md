@@ -28,6 +28,7 @@ the items under New and Fixed.
 
 - **The Thaw Bar drops in from the menu bar.** It fades in and settles a few points down in a sixth of a second, and still closes at once. With Reduce Motion on it only fades.
 - **Layout warns when items don't fit.** When macOS hides items it has no room for, Layout names them until there's room again.
+- **The out-of-room warning can make room.** Move to Hidden puts the items macOS is hiding into Hidden in one click.
 - **Release notes can stay closed after an update.** Turn off Show release notes after an update in Privacy. What's New still opens from Thaw's menu and About.
 - **Profiles name Spaces the way Mission Control does.** Pick any Space for a profile, grouped by display, with full screen apps by name. A Space that's gone shows as missing, and the display with the menu bar is marked.
 - **The menu bar can show which Space you're in.** Turn on Show the current Space in the menu bar under Displays › Spaces. Its menu lists the Spaces on each display.

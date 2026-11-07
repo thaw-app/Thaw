@@ -12,14 +12,35 @@ import ThawUI
 struct OutOfRoomWarning: View {
     /// The Visible items macOS is not drawing, or empty when Thaw cannot tell which.
     let hiddenItemNames: [String]
+    @Environment(AppState.self) private var appState: AppState?
 
     var body: some View {
+        let offersMove = Self.offersMove(namedItems: hiddenItemNames, canMove: appState != nil)
         SettingsWarningPill(
             title: "Some items don’t fit in the menu bar",
             message: Self.message(naming: hiddenItemNames),
             systemImage: "exclamationmark.triangle.fill",
-            tint: .orange
+            tint: .orange,
+            actionTitle: offersMove ? "Move to Hidden" : nil,
+            action: offersMove ? {
+                if let appState { Self.moveNotDrawnItemsToHidden(appState: appState) }
+            } : nil
         )
+    }
+
+    /// The button needs items to move: an overflow Thaw can't attribute names nothing.
+    static func offersMove(namedItems: [String], canMove: Bool) -> Bool {
+        canMove && !namedItems.isEmpty
+    }
+
+    /// Moves the Visible items macOS is hiding for lack of room into Hidden, as the pane's other hints do.
+    static func moveNotDrawnItemsToHidden(appState: AppState) {
+        let items = LayoutBanner.itemsNotDrawn(
+            visibleItems: appState.itemManager.managedItems(for: .visible),
+            notDrawnTags: appState.itemManager.itemsNotShownOnBarTags
+        )
+        guard !items.isEmpty else { return }
+        MenuBarSearchItemActions.move(items, to: .hidden, appState: appState)
     }
 
     static func message(naming names: [String]) -> LocalizedStringResource {
