@@ -172,8 +172,8 @@ struct ThawBarPreview: View {
         }
         .thawShadow(.raised, isVisible: appearance.hasShadow || appearance.backgroundHasShadow)
         .thawAnimation(ThawMotion.settle, value: layout)
-        .thawAnimation(ThawMotion.settle, value: gridColumns)
-        .thawAnimation(ThawMotion.settle, value: itemScale)
+        .thawAnimation(ThawMotion.quick, value: gridColumns)
+        .thawAnimation(ThawMotion.quick, value: itemScale)
         .thawAnimation(ThawMotion.settle, value: appearance.cornerRoundness)
         .thawAnimation(ThawMotion.settle, value: appearance.hasBorder)
     }

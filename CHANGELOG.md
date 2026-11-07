@@ -41,6 +41,9 @@ the items under New and Fixed.
 
 ### Fixed
 
+- **Items in Layout slide aside when you drag one away.** Before, the gap snapped shut, and the slides used an untuned default.
+- **The new-items badge in Layout grows in from its middle.** It used to bounce in from a corner.
+- **Smaller motion fixes.** The Thaw Bar preview follows its size and column sliders closely, the bars fade instead of flickering while a drop settles, onboarding's tiles settle in as one motion, and the "Waiting for access" line fades in.
 - **Arrow keys move the Thaw Bar highlight at once.** The item under the keyboard no longer springs up on every key press; the pointer still lifts it.
 - **The layout warning fades in and out.** When Thaw can't move an item, the notice in Layout, the pop-out editor and search no longer pops in and vanishes after a few seconds.
 - **The menu bar shape gets out of the way faster when you drag an item.** It fades out in 0.15 s instead of 0.25 s, and a drag that stops partway fades back sooner.

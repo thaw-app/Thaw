@@ -375,23 +375,22 @@ final class LayoutBarContainer: NSView {
 
         var sweepX: CGFloat = 0
         for (index, arranged) in arrangedViews.enumerated() {
-            let placed: NSView
+            let slides: Bool
             if subviews.contains(arranged) {
-                placed = animatesNextLayoutPass ? arranged.animator() : arranged
+                slides = animatesNextLayoutPass
             } else {
                 addSubview(arranged)
                 arranged.hasContainer = true
-                placed = arranged
+                slides = false
             }
 
             if clusterLeaders.contains(index) {
                 sweepX += GroupChrome.handleReservation
             }
-            placed.setFrameOrigin(
-                CGPoint(
-                    x: sweepX,
-                    y: (rowHeight / 2) - arranged.bounds.midY
-                )
+            LayoutBarMotion.place(
+                arranged,
+                sliding: slides,
+                at: CGPoint(x: sweepX, y: (rowHeight / 2) - arranged.bounds.midY)
             )
             sweepX += arranged.bounds.width
         }
@@ -861,8 +860,7 @@ final class LayoutBarContainer: NSView {
         guard arrangedViews.contains(sourceView) else {
             return
         }
-        animatesNextLayoutPass = false
-        // Pull the whole unit out, or the cluster splits on screen.
+        // Pull the whole unit out, or the cluster splits on screen; the rest slide to close the gap.
         let unit = Set(dragUnitViews(for: sourceView).map(ObjectIdentifier.init))
         arrangedViews.removeAll { unit.contains(ObjectIdentifier($0)) }
     }

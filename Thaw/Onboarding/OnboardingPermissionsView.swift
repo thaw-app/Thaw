@@ -213,6 +213,7 @@ struct ThawPermissionsView: View {
         }
         .thawAnimation(ThawMotion.settle, value: permission.wasDeclined)
         .thawAnimation(ThawMotion.settle, value: permission.hasPermission)
+        .thawAnimation(ThawMotion.settle, value: hasRequested)
     }
 
     private func onboardingActionTitle(for permission: Permission) -> LocalizedStringResource {
