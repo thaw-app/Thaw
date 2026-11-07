@@ -19,7 +19,7 @@ struct BentoDemoPaneTests {
         (BentoDemo.thawBar, SettingsNavigationIdentifier.thawBar),
         (BentoDemo.triggers, SettingsNavigationIdentifier.triggers),
         (BentoDemo.profiles, SettingsNavigationIdentifier.profiles),
-        (BentoDemo.zen, SettingsNavigationIdentifier.hotkeys),
+        (BentoDemo.zen, SettingsNavigationIdentifier.visibility),
         (BentoDemo.integrations, SettingsNavigationIdentifier.privacy),
     ])
     func cardOpensItsPane(demo: BentoDemo, pane: SettingsNavigationIdentifier) {
