@@ -37,7 +37,7 @@ enum ThawBarEntrance {
         return animation
     }
 
-    /// Orders the panel in and plays the entrance. A reopen mid-entrance fades on from the alpha already shown.
+    /// A reopen while the panel is still visible fades on from the alpha it shows, without a second drop.
     static func present(
         _ panel: NSWindow,
         reduceMotion: Bool = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
