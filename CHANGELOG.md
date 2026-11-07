@@ -99,6 +99,9 @@ the items under New and Fixed.
 - **Diagnostic logs no longer warn on every layout pass** about apps that aren't running.
 - **Setup names the permission it's waiting for,** and Menu Bar Layout Access no longer suggests Thaw works without it.
 - **Search offers Clear Search when nothing matches.**
+- **A move from search that fails stays up and is read aloud,** and shows in the same notice as Layout's.
+- **Layout and search show their shortcuts,** including ⌥-arrows to move and ⌘1–⌘3 from search, and new installs see the tip for selecting several items.
+- **Setup says what you give up without Accessibility** next to the button, not only in a tooltip.
 
 ## [3.0.0-alpha.13] - 2026-11-05
 

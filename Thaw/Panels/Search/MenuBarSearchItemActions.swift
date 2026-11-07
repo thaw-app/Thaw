@@ -166,7 +166,8 @@ enum MenuBarSearchItemActions {
                 observed: observed
             )
         )
-        ThawHUD.show(symbol: message.symbol, text: "\(message.text)")
+        ThawHUD.show(symbol: message.symbol, text: "\(message.text)", displayDuration: message.displayDuration)
+        if let refusal = message.refusal { appState.layoutFeedback.post(refusal) } else { AccessibilityAnnouncements.post(message.text) }
     }
 
     /// Assigns several ungrouped items to section in one pass, for the

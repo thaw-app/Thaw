@@ -28,4 +28,19 @@ struct MoveResultMessageTests {
         let message = MoveResultMessage.make(itemName: "Slack", sectionTitle: "Hidden", committed: false, landed: landed)
         #expect(message.text == "Couldn’t move Slack")
     }
+
+    /// Search showed a failed move as briefly as a success, and VoiceOver heard neither.
+    @Test("A failure stays up longer than a success and becomes a Layout notice")
+    func failureStandsOut() {
+        let success = MoveResultMessage.make(itemName: "Slack", sectionTitle: "Hidden", committed: true, landed: true)
+        let failure = MoveResultMessage.make(itemName: "Slack", sectionTitle: "Hidden", committed: false, landed: false)
+        let drifted = MoveResultMessage.make(itemName: "Slack", sectionTitle: "Hidden", committed: true, landed: false)
+        #expect(!success.isFailure && failure.isFailure && drifted.isFailure)
+        #expect(failure.displayDuration > success.displayDuration)
+        #expect(success.refusal == nil)
+        let refusal = failure.refusal
+        #expect(refusal?.title == failure.text)
+        #expect(refusal?.isAboutSystemItems == false)
+        #expect(failure.refusal?.message != drifted.refusal?.message, "a move never made isn't one macOS undid")
+    }
 }
