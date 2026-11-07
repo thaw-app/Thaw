@@ -98,8 +98,7 @@ struct OnboardingBentoView: View {
     /// A card click follows the picker: under All Settings it opens its pane, under Simple Mode it keeps Simple Mode.
     private func tile(_ demo: BentoDemo, index: Int, height: CGFloat) -> some View {
         BentoTile(demo: demo, index: index, appeared: appeared, opensPane: !simpleMode) {
-            let outcome = BentoTileChoice.outcome(for: demo, simpleMode: simpleMode)
-            finish(simpleMode: outcome.simpleMode, pane: outcome.pane)
+            chooseCard(demo)
         }
         .frame(maxWidth: .infinity)
         .frame(height: height)
@@ -128,6 +127,11 @@ struct OnboardingBentoView: View {
                 Text(finishesFlow ? "Open \(Constants.displayName)" : "Continue")
             }
         }
+    }
+
+    func chooseCard(_ demo: BentoDemo) {
+        let outcome = BentoTileChoice.outcome(for: demo, simpleMode: simpleMode)
+        finish(simpleMode: outcome.simpleMode, pane: outcome.pane)
     }
 
     private func finish(simpleMode: Bool, pane: SettingsNavigationIdentifier?) {
