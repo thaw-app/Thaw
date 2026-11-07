@@ -77,6 +77,7 @@ the items under New and Fixed.
 - **Hidden items no longer collapse right after you point at them or show them again.**
 - **f.lux and other apps that hide from accessibility get their picture.**
 - **Capture Hidden Items no longer waits on a read of every app.**
+- **Capture Hidden Items counts the pictures of items Native hiding parks.** By @Belligerently in [#1488](https://github.com/thaw-app/Thaw/pull/1488).
 
 #### Thaw's icon and the Thaw Bar
 
@@ -94,6 +95,7 @@ the items under New and Fixed.
 
 #### Other
 
+- **Undoing a new or duplicated profile keeps the profile you're on.** By @Belligerently in [#1487](https://github.com/thaw-app/Thaw/pull/1487).
 - **The Widgets and Scripts windows open at full size,** not as an empty title bar.
 - **The Swap Bar's ✕ is labelled Turn Off Swap Bar** and says where to turn it back on.
 - **Diagnostic logs no longer warn on every layout pass** about apps that aren't running.
