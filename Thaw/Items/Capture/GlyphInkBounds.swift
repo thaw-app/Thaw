@@ -47,8 +47,8 @@ extension MenuBarItemImageCache {
         )
     }
 
-    /// Whether candidate is existing caught mid-slide: same crop and right ink edge, left part missing. Shorter
-    /// text and a narrower centred symbol don't count, and identical bytes, the common case, skip the scan.
+    /// Whether candidate is the existing picture caught mid-slide: same crop and right edge, left part missing.
+    /// Shorter text or a narrower centred symbol doesn't count; identical bytes skip the scan.
     static nonisolated func isLeadingCut(_ candidate: MenuBarItemGlyphCapture, of existing: MenuBarItemGlyphCapture) -> Bool {
         guard abs(candidate.pointSize.width - existing.pointSize.width) < 1,
               candidate.cgImage !== existing.cgImage,
