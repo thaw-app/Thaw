@@ -85,7 +85,7 @@ struct StatusIconStyle: Equatable {
 enum StatusIconTint: Equatable {
     case green, yellow, red, blue
 
-    /// Charging wins over Low Power Mode, which the user chose to see, and both win over a low charge.
+    /// Charging wins over Low Power Mode, and both win over a low charge.
     static func battery(_ samples: StatusIconSamples) -> StatusIconTint? {
         if samples.isCharging {
             return .green
