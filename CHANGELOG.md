@@ -108,6 +108,7 @@ the items under New and Fixed.
 
 #### Layout
 
+- **Hiding an item from Layout no longer sends Visible items to Always Hidden after Thaw restarts.**
 - **Moving an item to another section, ungrouping and removing a spacer can be undone.**
 - **Hidden items' pictures are no longer cut off.** Thaw waits for an icon to finish sliding in before it takes its picture.
 - **Layout says when a dragged item didn't land.**
