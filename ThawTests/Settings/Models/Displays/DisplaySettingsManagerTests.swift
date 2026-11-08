@@ -293,11 +293,14 @@ struct DisplayThawBarConfigurationTests {
         #expect(wild.thawBarItemScale == ThawBarItemSize.minimumScale)
     }
 
-    @Test("Encoding keeps the Ice-era keys")
+    @Test("Encoding keeps the Ice-era and Thaw 2 keys")
     func encodedKeys() throws {
         let data = try JSONEncoder().encode(DisplayThawBarConfiguration.defaultConfiguration)
         let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
-        #expect(Set(object.keys) == ["useIceBar", "iceBarLocation", "alwaysShowHiddenItems", "iceBarLayout", "gridColumns", "itemSpacingOffset", "thawBarItemScale"])
+        #expect(Set(object.keys) == [
+            "useIceBar", "iceBarLocation", "alwaysShowHiddenItems", "iceBarLayout", "gridColumns",
+            "itemSpacingOffset", "thawBarItemScale", "useThawBarForAlwaysHidden",
+        ])
     }
 
     @Test("Configurations built for connected screens cover each one with the chosen location")

@@ -89,12 +89,11 @@ struct ThawBarPreview: View {
     var body: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.base) {
             if isAlwaysHiddenOn {
-                ThawPicker("Preview", selection: $previewSection) {
-                    Text("Hidden").tag(MenuBarSection.Name.hidden)
-                    Text("Always Hidden").tag(MenuBarSection.Name.alwaysHidden)
-                }
-                .pickerStyle(.segmented)
-                .fixedSize()
+                ThawPillPicker(
+                    "Preview",
+                    selection: $previewSection,
+                    values: [MenuBarSection.Name.hidden, .alwaysHidden]
+                ) { $0 == .hidden ? "Hidden" : "Always Hidden" }
             }
             ThawBarPreviewStage(displayID: displayID) {
                 previewBar
