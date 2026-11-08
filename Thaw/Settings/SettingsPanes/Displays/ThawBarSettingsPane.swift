@@ -144,7 +144,18 @@ struct ThawBarSettingsPane: View {
                     set: { appState.settings.thawBar.thawBarLocationOnHotkey = $0.opensAtPointer }
                 ),
                 context: .display
-            )
+            ) {
+                // Only matters while the bar is off here and Always Hidden is on.
+                if !displaySettings.configuration(forUUID: uuid).useThawBar,
+                   appState.settings.layout.isAlwaysHiddenSectionEnabled
+                {
+                    Toggle(
+                        "Open Always Hidden in the \(Constants.displayName) Bar",
+                        isOn: displaySettings.binding(for: target, \.useThawBarForAlwaysHidden) { $0.withUseThawBarForAlwaysHidden($1) }
+                    )
+                    .annotation("Hidden items still show in the menu bar. Showing Always Hidden there would open Hidden too.")
+                }
+            }
         }
     }
 
