@@ -183,7 +183,7 @@ struct ThawBarSettingsPane: View {
         .annotation("When you open a hidden item from the \(Constants.displayName) Bar or search, \(Constants.displayName) shows it in the menu bar and opens its menu under its icon. Turn off to open the menu without showing the item.")
 
         Toggle(
-            "Open items the notch pushes out",
+            "Open items the notch pushes out in the Thaw Bar",
             isOn: Binding(
                 get: { appState.settings.thawBar.useThawBarOnNotchOverflow },
                 set: { appState.settings.thawBar.useThawBarOnNotchOverflow = $0 }
