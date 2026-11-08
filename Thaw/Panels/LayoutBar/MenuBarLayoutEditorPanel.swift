@@ -49,18 +49,21 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
     /// The invisible window that hangs the popover off the top of the screen.
     private let anchor = PopoverAnchor()
 
-    /// The window the reorder editor opens in.
-    private lazy var reorderWindow = LayoutEditorWindow { [weak self] in
+    /// The Layout window Pop Out Editor opens.
+    private lazy var dashboardWindow = LayoutDashboardWindow { [weak self] in
         self?.appState?.navigationState.isLayoutEditorPresented = false
-        MemoryReclaimer.scheduleRelief(reason: "layout editor closed")
+        MemoryReclaimer.scheduleRelief(reason: "layout window closed")
     }
+
+    /// Kept for the Layout window, which follows Space and display changes.
+    private var displayInvalidations: AnyPublisher<Void, Never> = Empty().eraseToAnyPublisher()
 
     /// Whether the editor is currently on screen.
     ///
     /// Drives toggle(on:onDone:): a summon gesture while the panel is up puts
     /// it away, like every other toggling surface in Thaw.
     var isShown: Bool {
-        popover?.isShown ?? false || reorderWindow.isShown
+        popover?.isShown ?? false || dashboardWindow.isShown
     }
 
     /// Dismisses the panel when a click lands genuinely outside it.
@@ -100,19 +103,22 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
 
     func performSetup(with appState: AppState, displayInvalidations: some Publisher<Void, Never>) {
         self.appState = appState
+        self.displayInvalidations = displayInvalidations.eraseToAnyPublisher()
         configureObservers(displayInvalidations: displayInvalidations)
     }
 
-    /// usesReorderEditor nil follows the hidden default; the Layout pane's button passes true.
-    func show(on screen: NSScreen, usesReorderEditor: Bool? = nil, onDone: (() -> Void)? = nil) {
+    /// Opens the Layout window, pinned to the menu bar the person is on.
+    func showWindow(on screen: NSScreen) {
         guard let appState else { return }
-        if usesReorderEditor ?? Defaults.bool(forKey: .useReorderLayoutEditor) {
-            closePopover()
-            appState.navigationState.isLayoutEditorPresented = true
-            appState.imageCache.prepareForPresentation()
-            reorderWindow.show(appState: appState, on: screen)
-            return
-        }
+        closePopover()
+        appState.navigationState.isLayoutEditorPresented = true
+        appState.imageCache.prepareForPresentation()
+        dashboardWindow.show(appState: appState, on: screen, displayInvalidations: displayInvalidations)
+    }
+
+    /// Shows the quick-edit popover under the menu bar.
+    func show(on screen: NSScreen, onDone: (() -> Void)? = nil) {
+        guard let appState else { return }
         guard let anchorView = anchor.view(atTopOf: screen) else { return }
         close()
         appState.navigationState.isLayoutEditorPresented = true
@@ -150,7 +156,7 @@ final class MenuBarLayoutEditorPanel: NSObject, NSPopoverDelegate {
     }
 
     func close() {
-        reorderWindow.close()
+        dashboardWindow.close()
         closePopover()
     }
 
