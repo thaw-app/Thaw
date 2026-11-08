@@ -44,6 +44,13 @@ the items under New and Fixed.
 - **The Thaw Bar drops in from the menu bar.** It still closes at once, and only fades with Reduce Motion.
 - **Release notes can stay closed after an update,** in Privacy.
 
+#### Privacy and Troubleshooting
+
+- **Privacy shows the Notifications permission,** so you can see and fix it when it's off.
+- **Export Logs zips the logs and capture samples** into one file for a bug report, in Troubleshooting. Save Item List and Show Capture Samples sit beside it.
+- **Log size, retention and rotation are back,** under Detailed logging. Settings from Thaw 2 carry over.
+- **Switch to Reduced mode from Troubleshooting,** not only during setup.
+
 ### Changed
 
 - **Hold Option on Capture Hidden Items to retake every picture.** The button reads Retake All Pictures while you do.
@@ -58,6 +65,9 @@ the items under New and Fixed.
 - **Search is now Floe's launcher,** in your menu bar's glass, tint and border. Items are grouped under Visible, Hidden and Always Hidden with their menu bar picture, and Tab moves between sections.
 - **Search has two layouts in Visibility:** Extended always lists your items, Compact shows only the field until you type. Detailed and Large become Extended.
 - **You can hide search's shortcut bar,** in Visibility, which now also has Remember last search. The keyboard shortcuts keep working.
+- **Reset Thaw clears everything it should:** allowed apps, the welcome and What's New, dismissed tips and the item picture cache. Your layout and profiles stay.
+- **Reset permissions also forgets the files you picked** for the layout table and Control Center's app list.
+- **Old logs go after the retention you set, or past 50 files,** instead of past the 5 newest.
 
 ### Fixed
 
