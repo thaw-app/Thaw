@@ -96,9 +96,8 @@ extension MigrationManager {
 // MARK: - Migrate Per-Space Looks to Persistent Keys
 
 extension MigrationManager {
-    /// Per-Space looks were keyed by the raw Space ID, which macOS renumbers at
-    /// logout. Rewrites each one the live list resolves to the Space's persistent
-    /// key; unresolved ones stay for a later launch, and a persistent entry wins.
+    /// Rekeys per-Space looks from raw Space IDs, which macOS renumbers at logout, to
+    /// persistent keys. Unresolved ones wait for a later launch; a persistent entry wins.
     func migrateSpaceAppearanceKeys(in defaults: UserDefaults, spaces: [Bridging.ManagedSpace]) {
         let key = Defaults.Key.menuBarAppearanceSpaceOverrides.rawValue
         guard
