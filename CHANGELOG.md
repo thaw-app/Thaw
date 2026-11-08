@@ -44,6 +44,12 @@ the items under New and Fixed.
 - **The Thaw Bar drops in from the menu bar.** It still closes at once, and only fades with Reduce Motion.
 - **Release notes can stay closed after an update,** in Privacy.
 
+#### Settings
+
+- **Settings that only worked through links now have rows.** Visibility has Hover delay, Name delay, a timed Hide after of up to 5 minutes, Click the Thaw icon to swap, and alerts when the camera or microphone turns on. Layout has Show every section while dragging.
+- **The Dock icon can stay away while Settings is open,** in General, as in Thaw 2. Your Thaw 2 choice carries over.
+- **Simple Mode has the reveal gestures, the Thaw icon and Check Now back,** and its help names a way to show hidden items that works when the icon is hidden.
+
 #### Privacy and Troubleshooting
 
 - **Privacy shows the Notifications permission,** so you can see and fix it when it's off.
