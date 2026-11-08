@@ -30,21 +30,13 @@ struct MenuBarAppearanceEditor: View {
     let onDone: (() -> Void)?
 
     /// Read shorthand only; bindings go through $appearanceManager.editedConfiguration.
-    private var configuration: MenuBarAppearanceConfigurationV2 {
-        appearanceManager.editedConfiguration
-    }
+    private var configuration: MenuBarAppearanceConfigurationV2 { appearanceManager.editedConfiguration }
 
-    private var hasShape: Bool {
-        configuration.shapeKind != .noShape
-    }
+    private var hasShape: Bool { configuration.shapeKind != .noShape }
 
-    private var isMenuBarHiddenBySystem: Bool {
-        appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults
-    }
+    private var isMenuBarHiddenBySystem: Bool { appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults }
 
-    private var hasCustomConfiguration: Bool {
-        configuration != .defaultConfiguration
-    }
+    private var hasCustomConfiguration: Bool { configuration != .defaultConfiguration }
 
     var body: some View {
         switch location {
@@ -117,6 +109,7 @@ struct MenuBarAppearanceEditor: View {
             // Shape determines which fill controls are available.
             ThawSection {
                 ThawTabStrip(selection: $appearanceManager.editedConfiguration.shapeKind, tabs: MenuBarShapeKind.allCases)
+                    .settingsSearchAnchor("appearance.shape")
                     .frame(maxWidth: .infinity)
                     .accessibilityLabel("Shape")
             } content: {
@@ -183,6 +176,7 @@ struct MenuBarAppearanceEditor: View {
                     Button("Reset Appearance…", role: .destructive) {
                         isResetAlertPresented = true
                     }
+                    .settingsSearchAnchor("appearance.reset")
                 }
             }
         } footer: {
@@ -224,6 +218,7 @@ struct MenuBarAppearanceEditor: View {
             Text("Screen corners")
         } content: {
             Toggle("Round screen corners", isOn: $corners.roundScreenCorners)
+                .settingsSearchAnchor("appearance.roundScreenCorners")
             if corners.roundScreenCorners {
                 LabeledContent("Radius") {
                     ThawSlider(value: $corners.screenCornerRadius, in: 4 ... 24, step: 1) {
@@ -238,6 +233,7 @@ struct MenuBarAppearanceEditor: View {
 
     private var dynamicAppearanceToggle: some View {
         Toggle("Separate looks for Light and Dark Mode", isOn: $appearanceManager.editedConfiguration.isDynamic)
+            .settingsSearchAnchor("appearance.isDynamic")
             .annotation("Choose which one you're editing at the top of this pane.")
     }
 
@@ -340,6 +336,7 @@ struct MenuBarAppearanceEditor: View {
     private var insetToggle: some View {
         if hasShape {
             Toggle("Inset on notched displays", isOn: $appearanceManager.editedConfiguration.isInset)
+                .settingsSearchAnchor("appearance.isInset")
                 .annotation("Shrinks the shape slightly so it sits below the notch.")
         }
     }
@@ -457,12 +454,14 @@ private struct UnlabeledAppearanceFillEditor: View {
                                 Text(kind.localized).tag(kind)
                             }
                         }
+                        .settingsSearchAnchor("appearance.background")
                     case .shapeFill:
                         ThawPicker("Shape fill", selection: $configuration.tintKind) {
                             ForEach(MenuBarTintKind.allCases) { kind in
                                 Text(kind.localized).tag(kind)
                             }
                         }
+                        .settingsSearchAnchor("appearance.shapeFill")
                     }
                 }
                 .labelsHidden()

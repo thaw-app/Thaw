@@ -17,8 +17,10 @@ struct ZenModeWhileRow: View {
     var body: some View {
         ToggleButtonRow("Turn on Zen Mode while") {
             Toggle("Sharing the screen", isOn: $settings.autoZenWhileSharingScreen)
+                .settingsSearchAnchor("advanced.autoZenWhileSharingScreen")
                 .help("While you share your screen or mirror a display. macOS offers no way to see that another app is recording the screen, so recordings are not covered.")
             Toggle("Camera or microphone", isOn: $settings.zenModeWhileRecording)
+                .settingsSearchAnchor("lab.zenModeWhileRecording")
                 .help("While any app uses the camera or microphone, such as during a call.")
         }
         .annotation(

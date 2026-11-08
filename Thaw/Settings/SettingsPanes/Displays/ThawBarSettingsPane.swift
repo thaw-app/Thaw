@@ -171,6 +171,7 @@ struct ThawBarSettingsPane: View {
                 set: { appState.settings.thawBar.lockThawBarPosition = $0 }
             )
         )
+        .settingsSearchAnchor("general.lockThawBarPosition")
         .annotation("Keeps the \(Constants.displayName) Bar where it opens. Turn off to drag it by its background; it opens in its usual place again next time.")
 
         Toggle(
@@ -180,6 +181,7 @@ struct ThawBarSettingsPane: View {
                 set: { appState.settings.thawBar.openHiddenItemsInMenuBar = $0 }
             )
         )
+        .settingsSearchAnchor("general.openHiddenItemsInMenuBar")
         .annotation("When you open a hidden item from the \(Constants.displayName) Bar or search, \(Constants.displayName) shows it in the menu bar and opens its menu under its icon. Turn off to open the menu without showing the item.")
 
         Toggle(

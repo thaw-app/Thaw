@@ -52,9 +52,11 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
 
     var body: some View {
         Toggle("\(Constants.displayName) Bar", isOn: thawBarSwitch)
+            .settingsSearchAnchor("displays.useThawBar")
             .annotation { thawBarAnnotation }
 
         Toggle("Always show hidden items", isOn: alwaysShowSwitch)
+            .settingsSearchAnchor("displays.alwaysShowHiddenItems")
             .disabled(isAlwaysShowDisabled)
             .annotation { alwaysShowAnnotation }
 
@@ -66,6 +68,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
                     Text(location.localized).tag(location)
                 }
             }
+            .settingsSearchAnchor("displays.thawBarLocation")
             .annotation { locationAnnotation }
 
             if let shortcutPlacement {
@@ -74,6 +77,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
                         Text(placement.localized).tag(placement)
                     }
                 }
+                .settingsSearchAnchor("general.thawBarLocationOnHotkey")
                 .annotation { shortcutPlacementAnnotation(shortcutPlacement.wrappedValue) }
             }
 
@@ -82,6 +86,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
                 selection: $layout,
                 options: ThawBarLayout.allCases.map { ThawPillPicker.Option($0, title: $0.localized, systemImage: $0.systemImage) }
             )
+            .settingsSearchAnchor("displays.thawBarLayout")
             .annotation { layoutAnnotation }
 
             if layout == .grid {
@@ -96,6 +101,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
             }
 
             ThawBarItemSizeRow(scale: $itemScale)
+                .settingsSearchAnchor("displays.thawBarItemSize")
         }
     }
 

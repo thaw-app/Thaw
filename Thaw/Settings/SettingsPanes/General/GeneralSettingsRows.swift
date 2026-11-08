@@ -25,6 +25,7 @@ struct LaunchAtLoginRow: View {
                 Task { await setting.setEnabled(enabled) }
             }
         ))
+        .settingsSearchAnchor("general.launchAtLogin")
         .disabled(!setting.isLoaded || setting.isUpdating)
         .task {
             let activations = NotificationCenter.default.notifications(named: NSApplication.didBecomeActiveNotification)
@@ -63,6 +64,7 @@ struct ShowThawIconRow: View {
 
     var body: some View {
         Toggle("Show \(Constants.displayName) icon", isOn: $settings.showThawIcon)
+            .settingsSearchAnchor("general.showThawIcon")
             .annotation(gestureSummary)
             .task {
                 guard let item = appState.menuBarManager.controlItem(withName: .visible) else { return }
@@ -72,6 +74,7 @@ struct ShowThawIconRow: View {
             }
         if settings.showThawIcon {
             ThawIconPicker(settings: settings)
+                .settingsSearchAnchor("general.thawIcon")
             if let placementBlock {
                 ThawPlacementWarning(block: placementBlock)
             }
@@ -120,10 +123,13 @@ struct ShowHiddenItemsOnRow: View {
     var body: some View {
         ToggleButtonRow("Show hidden items on") {
             Toggle("Click", isOn: $settings.showOnClick)
+                .settingsSearchAnchor("general.showOnClick")
                 .help("Click an empty area of the menu bar to show hidden menu bar items.")
             Toggle("Hover", isOn: $settings.showOnHover)
+                .settingsSearchAnchor("general.showOnHover")
                 .help("Hover over an empty area of the menu bar or the \(Constants.displayName) icon to show hidden menu bar items.")
             Toggle("Scroll", isOn: $settings.showOnScroll)
+                .settingsSearchAnchor("general.showOnScroll")
                 .help("Scroll or swipe in the menu bar to show hidden menu bar items.")
         }
         .annotation("Show hidden menu bar items by clicking, hovering, or scrolling in an empty area of the menu bar.")
@@ -179,6 +185,7 @@ struct RehideChoiceRow: View {
                 Text(option.title).tag(option)
             }
         }
+        .settingsSearchAnchor("general.autoRehide")
         .annotation(choice.explanation)
     }
 }

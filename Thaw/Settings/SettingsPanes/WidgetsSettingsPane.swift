@@ -37,6 +37,7 @@ struct WidgetsSettingsPane: View {
         Toggle(isOn: $settings.enableControlItemPanel) {
             HStack(spacing: ThawSpacing.compact) {
                 Text("Panel instead of the status menu")
+                    .settingsSearchAnchor("lab.enableControlItemPanel")
                 ThawBadge.alpha
             }
         }

@@ -51,6 +51,7 @@ struct OtherAppsSection: View {
                 }
             }
         }
+        .settingsSearchAnchor("privacy.otherApps")
         .fileImporter(isPresented: $isChoosingApp, allowedContentTypes: [.application]) { result in
             addChosenApp(result)
         }

@@ -133,6 +133,7 @@ struct ToolsSettingsPane: View {
             ) {
                 pendingAction = .restartMenuBar
             }
+            .settingsSearchAnchor("tools.restartMenuBar")
 
             toolRow(
                 title: "macOS's saved layout",
@@ -143,6 +144,7 @@ struct ToolsSettingsPane: View {
             ) {
                 pendingAction = .resetMenuBarLayoutPositions
             }
+            .settingsSearchAnchor("tools.resetMenuBarLayoutPositions")
 
             toolRow(
                 title: "Permissions",
@@ -153,6 +155,7 @@ struct ToolsSettingsPane: View {
             ) {
                 pendingAction = .resetPermissions
             }
+            .settingsSearchAnchor("tools.resetPermissions")
 
             toolRow(
                 title: "Reduced mode",
@@ -177,6 +180,7 @@ struct ToolsSettingsPane: View {
             ) {
                 pendingAction = .resetSettings
             }
+            .settingsSearchAnchor("tools.resetAllSettings")
         }
     }
 
@@ -192,6 +196,7 @@ struct ToolsSettingsPane: View {
                     """
                 )
             }
+            .settingsSearchAnchor("advanced.enableDiagnosticLogging")
     }
 
     private func toolRow(
