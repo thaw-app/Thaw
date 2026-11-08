@@ -7,10 +7,8 @@
 
 import CoreGraphics
 
-/// Where one section's items sit when the bar wraps them onto as many rows as its width needs.
-///
-/// Every view also keeps its place in the single-row sweep, and a point on the wrapped bar maps
-/// back to that sweep, so the drag and drop rules, written for one row, read several the same way.
+/// A section's items wrapped onto as many rows as the width needs. Points map back to the
+/// single-row sweep, so the one-row drag and drop rules work unchanged.
 nonisolated struct LayoutBarRowFlow: Equatable {
     static let rowSpacing: CGFloat = 4
 
@@ -91,10 +89,8 @@ nonisolated struct LayoutBarRowFlow: Equatable {
         return min(max(line, 0), rowCount - 1)
     }
 
-    /// Where a point on the wrapped bar falls in the single row.
-    ///
-    /// Kept a hair inside the row's own span, so the edge of a row never reads as the item
-    /// that ends the row above or starts the row below.
+    /// Where a point on the wrapped bar falls in the single row, kept just inside its own row's
+    /// span so a row's edge never reads as the neighbouring row's item.
     func sweepPosition(at point: CGPoint) -> CGFloat {
         let line = row(atY: point.y)
         guard let first = row.firstIndex(of: line), let last = row.lastIndex(of: line) else {

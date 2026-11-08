@@ -274,9 +274,8 @@ private struct LayoutItemListRowView: View {
         .accessibilityValue(Text(row.section.localizedName))
     }
 
-    /// Checked is Visible; unchecked is Hidden or Always Hidden, which the badge tells apart.
-    /// Checking an Always Hidden item makes it Visible, and unchecking it again makes it Hidden.
-    /// One of several selected rows applies to them all.
+    /// Checked is Visible; unchecking hides into Hidden, so an Always Hidden item checked and
+    /// unchecked again ends in Hidden. With several rows selected, one checkbox moves them all.
     private var visibilityCheckbox: some View {
         let lock = LayoutItemVisibility.lockReason(
             for: row.item,
