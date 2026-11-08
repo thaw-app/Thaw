@@ -24,12 +24,14 @@ struct MenuBarItemRowImage: View {
     private static let maxWidth: CGFloat = 120
 
     let item: MenuBarItem
+    /// A fixed column the picture is centred in and scaled down to fit, so names line up.
+    var columnWidth: CGFloat?
 
-    /// The glyph's height-fitted size, scaled down whole when it is wider than maxWidth.
-    private static func drawnSize(of image: MenuBarItemDisplayImage) -> CGSize {
+    /// The glyph's height-fitted size, scaled down whole when it is wider than limit.
+    private static func drawnSize(of image: MenuBarItemDisplayImage, limit: CGFloat) -> CGSize {
         let size = image.targetSize(fittingHeight: glyphHeight)
-        guard size.width > maxWidth else { return size }
-        return CGSize(width: maxWidth, height: size.height * maxWidth / size.width)
+        guard size.width > limit else { return size }
+        return CGSize(width: limit, height: size.height * limit / size.width)
     }
 
     var body: some View {
@@ -45,13 +47,14 @@ struct MenuBarItemRowImage: View {
                     image: image,
                     fittingHeight: Self.glyphHeight,
                     reinksCaptures: true,
-                    drawnSize: Self.drawnSize(of: image)
+                    drawnSize: Self.drawnSize(of: image, limit: columnWidth ?? Self.maxWidth)
                 )
                 .foregroundStyle(.primary)
             } else {
                 MenuBarItemSourceIcon(item: item, length: iconBox)
             }
         }
+        .frame(width: columnWidth)
         .frame(minWidth: iconBox, minHeight: iconBox)
     }
 }

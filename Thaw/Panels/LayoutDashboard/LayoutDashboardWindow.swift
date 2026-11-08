@@ -37,7 +37,7 @@ final class LayoutDashboardWindow: NSObject, NSWindowDelegate {
         let model = LayoutDashboardModel.live(appState: appState, displayInvalidations: displayInvalidations)
         let window = NSWindow(
             contentRect: NSRect(origin: .zero, size: Self.defaultSize),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -45,7 +45,11 @@ final class LayoutDashboardWindow: NSObject, NSWindowDelegate {
         window.isReleasedWhenClosed = false
         window.contentMinSize = LayoutDashboardMetrics.windowMinSize
         window.delegate = self
-        window.contentViewController = NSHostingController(rootView: LayoutDashboardView(appState: appState, model: model))
+        let host = NSHostingController(rootView: LayoutDashboardView(appState: appState, model: model))
+        // Lets the view's .toolbar, title and subtitle reach the window, as a native toolbar.
+        host.sceneBridgingOptions = [.toolbars, .title]
+        window.contentViewController = host
+        window.toolbarStyle = .unified
         window.setContentSize(Self.defaultSize)
         if !window.setFrameUsingName(Self.frameName) {
             let visible = screen.visibleFrame

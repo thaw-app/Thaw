@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import MenuBarModel
 import SwiftUI
 import ThawUI
 
@@ -15,10 +16,13 @@ struct LayoutDashboardView: View {
     let appState: AppState
     let model: LayoutDashboardModel
 
+    private var enabledSectionCount: Int {
+        MenuBarSectionName.allCases.count { appState.menuBarManager.section(withName: $0)?.isEnabled == true }
+    }
+
     var body: some View {
+        @Bindable var model = model
         VStack(spacing: 0) {
-            LayoutDashboardToolbar(model: model)
-            Divider()
             if case let .elsewhere(current) = model.pin.state {
                 SettingsWarningPill(
                     title: "Not the menu bar you're editing",
@@ -29,20 +33,26 @@ struct LayoutDashboardView: View {
                 )
                 .padding(ThawSpacing.inset)
             }
-            // The list beside the Layout page's bars and lists, both sharing one selection.
-            HSplitView {
-                LayoutItemListPane(selection: model.selection, query: model.filterText)
-                    .frame(minWidth: LayoutDashboardMetrics.listMinWidth, idealWidth: LayoutDashboardMetrics.listIdealWidth)
+            // The bars across the window, sized to their sections; the list and the tabs take the rest.
+            VStack(spacing: 0) {
                 ThawForm(readingWidth: .full) {
-                    LayoutBarsSection(itemManager: appState.itemManager, selection: model.selection)
-                    LayoutDetailTabs(
-                        itemManager: appState.itemManager,
-                        canArrangeLayout: !appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults,
-                        isHidingUnavailable: false,
-                        includesOptions: false
-                    )
+                    LayoutBarsSection(itemManager: appState.itemManager, selection: model.selection, isInLayoutWindow: true)
                 }
-                .frame(minWidth: LayoutDashboardMetrics.barsMinWidth)
+                .frame(height: LayoutDashboardMetrics.barsHeight(sections: enabledSectionCount))
+                Divider()
+                HSplitView {
+                    LayoutItemListPane(selection: model.selection, query: $model.filterText)
+                        .frame(minWidth: LayoutDashboardMetrics.listMinWidth, idealWidth: LayoutDashboardMetrics.listIdealWidth)
+                    ThawForm(readingWidth: .full) {
+                        LayoutDetailTabs(
+                            itemManager: appState.itemManager,
+                            canArrangeLayout: !appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults,
+                            isHidingUnavailable: false,
+                            includesOptions: false
+                        )
+                    }
+                    .frame(minWidth: LayoutDashboardMetrics.tabsMinWidth)
+                }
             }
             // The bars always show the live bar, so away from the target they only show it.
             .disabled(!model.pin.isEditable)
@@ -52,57 +62,39 @@ struct LayoutDashboardView: View {
                 .padding(.bottom, ThawSpacing.base)
         }
         .frame(minWidth: LayoutDashboardMetrics.windowMinSize.width, minHeight: LayoutDashboardMetrics.windowMinSize.height)
+        .navigationTitle("Layout")
+        .navigationSubtitle(LayoutDashboardText.title(profileName: model.profileName))
+        .toolbar { LayoutDashboardToolbar(model: model) }
         .environment(appState)
     }
 }
 
-/// The window toolbar: target, filter, capture and undo.
-private struct LayoutDashboardToolbar: View {
+/// The window toolbar: what it edits, then capture and undo.
+private struct LayoutDashboardToolbar: ToolbarContent {
     let model: LayoutDashboardModel
 
-    var body: some View {
-        HStack(spacing: ThawSpacing.row) {
-            VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
-                Text(LayoutDashboardText.title(profileName: model.profileName))
-                    .font(ThawType.body.weight(.semibold))
-                Text(LayoutDashboardText.target(model.pin.pinned))
-                    .font(ThawType.caption)
-                    .foregroundStyle(ThawInk.supporting)
-            }
-            .accessibilityElement(children: .combine)
-
+    var body: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
             Menu {
                 Button("Edit the Menu Bar You're On") { model.retargetToCurrent() }
                     .disabled(model.pin.isEditable)
             } label: {
-                Label("Target", systemImage: "scope")
+                Label(LayoutDashboardText.target(model.pin.pinned), systemImage: "scope")
+                    .labelStyle(.titleAndIcon)
             }
-            .fixedSize()
             .help("The display and Space this window edits.")
-
-            Spacer(minLength: ThawSpacing.row)
-
-            @Bindable var model = model
-            TextField("Filter", text: $model.filterText, prompt: Text("Filter items"))
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 180)
-
-            HiddenItemCaptureButton()
-
-            ThawActionGroup {
-                Button("Undo", systemImage: "arrow.uturn.backward") { model.undo.undo() }
-                    .help(model.undo.undoTitle)
-                    .disabled(!model.undo.canUndo)
-                Button("Redo", systemImage: "arrow.uturn.forward") { model.undo.redo() }
-                    .help(model.undo.redoTitle)
-                    .disabled(!model.undo.canRedo)
-            }
-            .labelStyle(.iconOnly)
-            .buttonStyle(.thawGrouped)
-            .disabled(!model.pin.isEditable)
         }
-        .padding(.horizontal, ThawSpacing.inset)
-        .padding(.vertical, ThawSpacing.base)
+        ToolbarItem(placement: .primaryAction) {
+            HiddenItemCaptureButton()
+        }
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button("Undo", systemImage: "arrow.uturn.backward") { model.undo.undo() }
+                .help(model.undo.undoTitle)
+                .disabled(!model.pin.isEditable || !model.undo.canUndo)
+            Button("Redo", systemImage: "arrow.uturn.forward") { model.undo.redo() }
+                .help(model.undo.redoTitle)
+                .disabled(!model.pin.isEditable || !model.undo.canRedo)
+        }
     }
 }
 

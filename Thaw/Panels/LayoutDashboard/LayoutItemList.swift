@@ -59,8 +59,16 @@ enum LayoutItemList {
 
     private static func row(_ item: MenuBarItem) -> LayoutItemListRow {
         let name = MenuBarItemDisplayName.displayName(for: item)
-        let owner = MenuBarItemDisplayName.ownerName(for: item)
-        return LayoutItemListRow(id: item.uniqueIdentifier, item: item, name: name, ownerName: owner == name ? nil : owner)
+        return LayoutItemListRow(id: item.uniqueIdentifier, item: item, name: name, ownerName: shownOwner(for: item))
+    }
+
+    /// The owning app when it adds something: Apple's items name internal processes
+    /// such as MenuBarAgent, which mean nothing to a person, so they show none.
+    static func shownOwner(for item: MenuBarItem) -> String? {
+        guard case let .string(bundleID) = item.tag.namespace, !bundleID.hasPrefix("com.apple.") else {
+            return nil
+        }
+        return MenuBarItemDisplayName.subtitle(for: item)
     }
 
     private static func matches(_ row: LayoutItemListRow, _ needle: String) -> Bool {
@@ -79,9 +87,19 @@ enum LayoutItemList {
 
 /// The Layout window's measures, so the list and the bars both keep a usable width.
 enum LayoutDashboardMetrics {
-    static let listMinWidth: CGFloat = 300
-    static let listIdealWidth: CGFloat = 380
-    static let barsMinWidth: CGFloat = 560
-    /// The list and the bars at their minimum, with room for the divider.
-    static let windowMinSize = NSSize(width: listMinWidth + barsMinWidth + 40, height: 560)
+    static let listMinWidth: CGFloat = 340
+    static let listIdealWidth: CGFloat = 480
+    static let tabsMinWidth: CGFloat = 360
+    /// The bars span the window, so the window is as wide as the list and tabs below them.
+    static let windowMinSize = NSSize(width: listMinWidth + tabsMinWidth + 48, height: barsHeight(sections: 3) + 340)
+    /// The bars' pane fits its sections: each is a heading and a bar, plus the hint,
+    /// the form's insets and the toolbar the content runs under.
+    static func barsHeight(sections: Int) -> CGFloat {
+        CGFloat(max(sections, 1)) * 80 + 90
+    }
+
+    /// A Finder-sidebar row, still a comfortable click target.
+    static let rowHeight: CGFloat = 28
+    /// Wide pictures such as the clock scale down into it, so names line up.
+    static let pictureColumnWidth: CGFloat = 44
 }
