@@ -78,6 +78,11 @@ struct DisplaySpatialSelector: View {
         displays.filter(\.isConnected)
     }
 
+    /// Saved displays that aren't connected; they have no place on the desk to draw.
+    private var disconnected: [DisplaySettingsManager.DisplayInfo] {
+        displays.filter { !$0.isConnected }
+    }
+
     /// Screen frames for the connected displays, resolved through
     /// DisplayInfo.displayID, the CGDirectDisplayID the manager already
     /// carries alongside the UUID, which is the only mapping needed here.
@@ -113,10 +118,26 @@ struct DisplaySpatialSelector: View {
                 .help(Text("Briefly flash each connected display's name on that display"))
                 .disabled(connected.isEmpty)
             }
+            if !disconnected.isEmpty {
+                ThawPicker("Not connected", selection: disconnectedSelection) {
+                    Text("None").tag(String?.none)
+                    ForEach(disconnected) { display in
+                        Text(display.name).tag(String?.some(display.id))
+                    }
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("Display"))
+    }
+
+    /// The selection when it is a disconnected display, otherwise None.
+    private var disconnectedSelection: Binding<String?> {
+        Binding(
+            get: { disconnected.contains { $0.id == selectedDisplayID } ? selectedDisplayID : nil },
+            set: { selectedDisplayID = $0 ?? connected.first?.id }
+        )
     }
 
     @ViewBuilder

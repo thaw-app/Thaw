@@ -638,39 +638,6 @@ final class DisplaySettingsManager {
         }
     }
 
-    /// Returns info about all known displays, currently connected ones plus
-    /// previously-seen ones whose name/notch state was cached. Connected
-    /// displays come first (alphabetical within each group), then
-    /// disconnected ones (alphabetical).
-    ///
-    /// UUIDs with a saved configuration but no cached name are not surfaced:
-    /// a placeholder row is one the user can't identify. The data is kept, and
-    /// the display appears normally once it reconnects and its name is captured.
-    ///
-    /// - Complexity: O(n) in the number of connected screens plus known
-    ///   displays; walks NSScreen.managedScreens and the stored profile
-    ///   data on every access.
-    var displays: [DisplayInfo] {
-        let connected = connectedDisplays()
-        let connectedIDs = Set(connected.map(\.id))
-
-        let disconnected: [DisplayInfo] = knownDisplays
-            .filter { !connectedIDs.contains($0.key) }
-            .filter { !$0.value.name.trimmingCharacters(in: .whitespaces).isEmpty }
-            .map { uuid, known in
-                DisplayInfo(
-                    id: uuid,
-                    displayID: nil,
-                    name: known.name,
-                    hasNotch: known.hasNotch,
-                    isConnected: false
-                )
-            }
-
-        return connected.sorted { $0.name < $1.name }
-            + disconnected.sorted { $0.name < $1.name }
-    }
-
     /// Returns the configuration for a given display UUID, falling back to
     /// the global profile template when no explicit configuration exists.
     func configuration(forUUID uuid: String) -> DisplayThawBarConfiguration {
