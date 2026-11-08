@@ -157,6 +157,9 @@ extension AppSettings {
 
     func resetTools() {
         tools.enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
+        tools.diagnosticLogMaxSizeMB = Defaults.DefaultValue.diagnosticLogMaxSizeMB
+        tools.diagnosticLogRetentionDays = Defaults.DefaultValue.diagnosticLogRetentionDays
+        tools.diagnosticLogRotationInterval = Defaults.DefaultValue.diagnosticLogRotationInterval
     }
 
     func resetHotkeys() {

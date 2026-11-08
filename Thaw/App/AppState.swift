@@ -227,15 +227,7 @@ final class AppState {
     /// Keep dependency order: each setup assumes preceding subsystems are live.
     @ObservationIgnored
     private lazy var bootstrapTask = Task { @MainActor [self] in
-        #if DEBUG
-            // Debug builds always have diagnostic logging on so logs are
-            // captured during development without depending on the toggle.
-            DiagnosticLogger.shared.isEnabled = true
-        #else
-            if Defaults.bool(forKey: .enableDiagnosticLogging) {
-                DiagnosticLogger.shared.isEnabled = true
-            }
-        #endif
+        ToolsSettings.startDiagnosticLogging()
 
         diagLog.debug("bootstrap: starting AppState setup sequence")
 

@@ -177,6 +177,10 @@ struct ToolsSettingsPane: View {
                 )
             }
 
+            if settings.enableDiagnosticLogging {
+                DiagnosticLogRotationRows(settings: settings)
+            }
+
             if let currentLogFileName {
                 Text(currentLogFileName)
                     .font(ThawType.caption)

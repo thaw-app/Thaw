@@ -77,6 +77,25 @@ public final class DiagnosticLogger: Sendable {
     /// The file handle for writing.
     private let fileHandleLock = OSAllocatedUnfairLock<FileHandle?>(initialState: nil)
 
+    /// Set by the app only, so a helper sharing the file never rotates or prunes it.
+    private let policyLock = OSAllocatedUnfairLock<RotationPolicy?>(initialState: nil)
+
+    /// When the current file was opened, for rotation by time.
+    private let segmentOpenedAtLock = OSAllocatedUnfairLock<Date?>(initialState: nil)
+
+    /// The app's rotation and retention, or nil in a process that only appends.
+    public var rotationPolicy: RotationPolicy? {
+        policyLock.withLock { $0 }
+    }
+
+    /// Sets how files rotate and how long they are kept, and prunes by it now.
+    public func setRotationPolicy(_ policy: RotationPolicy) {
+        policyLock.withLock { $0 = policy.sanitized() }
+        if isEnabled {
+            pruneOldLogFiles(in: logDirectory)
+        }
+    }
+
     /// Internal logger for DiagnosticLogger's own messages.
     private let osLog = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "com.stonerl.Thaw",
@@ -141,8 +160,11 @@ public final class DiagnosticLogger: Sendable {
             return
         }
 
-        let fileName = "thaw_\(Self.fileNameStyle.format(Date())).log"
-        openLogFile(at: dir.appendingPathComponent(fileName))
+        // Second-granular names would collide on two rotations in one second.
+        let fileURL = Self.uniqueLogFileURL(in: dir, baseName: "thaw_\(Self.fileNameStyle.format(Date()))") {
+            FileManager.default.fileExists(atPath: $0.path)
+        }
+        openLogFile(at: fileURL)
     }
 
     /// Opens the given file with O_APPEND and writes the per-process
@@ -173,6 +195,7 @@ public final class DiagnosticLogger: Sendable {
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
         fileHandleLock.withLock { $0 = handle }
         currentLogFileLock.withLock { $0 = fileURL }
+        segmentOpenedAtLock.withLock { $0 = Date() }
 
         // Each process writes its own header into the shared file. The
         // Process line distinguishes them; the per-line timestamps keep
@@ -197,7 +220,7 @@ public final class DiagnosticLogger: Sendable {
 
         osLog.info("Diagnostic logging started: \(fileURL.path, privacy: .public)")
 
-        cleanupOldLogFiles(in: dir, keepCount: 5)
+        pruneOldLogFiles(in: dir)
     }
 
     private func closeLogFile() {
@@ -216,33 +239,41 @@ public final class DiagnosticLogger: Sendable {
         osLog.info("Diagnostic logging stopped")
     }
 
-    private func cleanupOldLogFiles(in directory: URL, keepCount: Int) {
+    /// Deletes the files the app's retention no longer covers; the current file always stays.
+    private func pruneOldLogFiles(in directory: URL) {
+        guard let policy = rotationPolicy else { return }
         writeQueue.async { [weak self] in
             guard let self else { return }
-            do {
-                let files = try FileManager.default.contentsOfDirectory(
-                    at: directory,
-                    includingPropertiesForKeys: [.creationDateKey],
-                    options: .skipsHiddenFiles
-                )
-                let logFiles = files
-                    .filter { $0.pathExtension == "log" }
-                    .sorted { a, b in
-                        let dateA = (try? a.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? .distantPast
-                        let dateB = (try? b.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? .distantPast
-                        return dateA > dateB
-                    }
-
-                if logFiles.count > keepCount {
-                    for file in logFiles.dropFirst(keepCount) {
-                        try FileManager.default.removeItem(at: file)
-                        osLog.debug("Removed old log file: \(file.lastPathComponent, privacy: .public)")
-                    }
+            let files = (try? FileManager.default.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: [.creationDateKey],
+                options: .skipsHiddenFiles
+            )) ?? []
+            let logs = files.filter { $0.pathExtension == "log" }.map { url in
+                (url: url, created: (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? .distantPast)
+            }
+            let protected = Set([currentLogFile].compactMap(\.self))
+            for file in Self.filesToPrune(logs, retentionDays: policy.retentionDays, maxCount: policy.maxFileCount, now: Date(), protected: protected) {
+                do {
+                    try FileManager.default.removeItem(at: file)
+                    osLog.debug("Removed old log file: \(file.lastPathComponent, privacy: .public)")
+                } catch {
+                    osLog.warning("Failed to remove old log file: \(error)")
                 }
-            } catch {
-                osLog.warning("Failed to clean up old log files: \(error)")
             }
         }
+    }
+
+    /// Starts a new file once the current one is too big or too old. Runs on the write queue.
+    private func rotateIfNeeded() {
+        guard let policy = rotationPolicy, policy.maxFileSizeBytes > 0 || policy.rotationInterval > 0,
+              let file = currentLogFile
+        else { return }
+        let size = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? UInt64) ?? 0
+        let openedAt = segmentOpenedAtLock.withLock { $0 } ?? Date()
+        guard Self.shouldRotate(policy: policy, fileSize: size, openFor: Date().timeIntervalSince(openedAt)) else { return }
+        closeLogFile()
+        openLogFile()
     }
 
     // MARK: - Logging
@@ -276,6 +307,7 @@ public final class DiagnosticLogger: Sendable {
             self?.fileHandleLock.withLock { handle in
                 handle?.write(data)
             }
+            self?.rotateIfNeeded()
         }
     }
 

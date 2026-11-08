@@ -154,6 +154,9 @@ nonisolated enum Defaults {
             .iconRefreshInterval: DefaultValue.iconRefreshInterval,
             .autoZenWhileSharingScreen: DefaultValue.autoZenWhileSharingScreen,
             .enableDiagnosticLogging: DefaultValue.enableDiagnosticLogging,
+            .diagnosticLogMaxSizeMB: DefaultValue.diagnosticLogMaxSizeMB,
+            .diagnosticLogRetentionDays: DefaultValue.diagnosticLogRetentionDays,
+            .diagnosticLogRotationInterval: DefaultValue.diagnosticLogRotationInterval.rawValue,
             .enableMenuBarItemOverflow: DefaultValue.enableMenuBarItemOverflow,
             .menuBarArrangementMode: DefaultValue.menuBarArrangementMode.rawValue,
             .enableExperimentalOverflowPrevention: DefaultValue.enableExperimentalOverflowPrevention,
@@ -271,6 +274,9 @@ extension Defaults {
         #else
             static let enableDiagnosticLogging = false
         #endif
+        static let diagnosticLogMaxSizeMB = 10
+        static let diagnosticLogRetentionDays = 2
+        static let diagnosticLogRotationInterval = LogRotationInterval.off
         static let enableMenuBarItemOverflow = false
         static let menuBarArrangementMode = MenuBarArrangementMode.automatic
         static let enableExperimentalOverflowPrevention = false
@@ -418,6 +424,10 @@ extension Defaults {
         case iconRefreshInterval = "IconRefreshInterval"
         case showMenuBarTooltips = "ShowMenuBarTooltips"
         case enableDiagnosticLogging = "EnableDiagnosticLogging"
+        /// Thaw 2's three log settings, under its key names so they carry over.
+        case diagnosticLogMaxSizeMB = "DiagnosticLogMaxSizeMB"
+        case diagnosticLogRetentionDays = "DiagnosticLogRetentionDays"
+        case diagnosticLogRotationInterval = "DiagnosticLogRotationInterval"
         case enableMenuBarItemOverflow = "EnableMenuBarItemOverflow"
         case enableExperimentalSystemItemHiding = "EnableExperimentalSystemItemHiding"
         /// Who arranges the menu bar: Thaw (MenuBarArrangementMode.automatic)
