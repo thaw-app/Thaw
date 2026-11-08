@@ -322,7 +322,7 @@ private enum MaintenanceToolAction: Identifiable {
         case .restartMenuBar:
             "The menu bar will disappear for a moment and come back. Your layout is kept. \(Constants.displayName) relaunches afterward."
         case .resetPermissions:
-            "Accessibility and Screen Recording permissions will be cleared for \(Constants.displayName). The app will quit so you can grant them again on next launch."
+            "Accessibility and Screen Recording are cleared for \(Constants.displayName), and so is its access to the files you picked: the menu bar layout table and Control Center's app list. \(Constants.displayName) quits so you can grant them again on next launch."
         }
     }
 }

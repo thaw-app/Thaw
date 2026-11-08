@@ -20,6 +20,31 @@ struct MaintenanceToolsCommandsTests {
         ])
     }
 
+    @Test("Resetting permissions forgets every picked file, and nothing else")
+    @MainActor
+    func pickedFileGrantsAreForgotten() throws {
+        let suiteName = ScratchDefaults.name("MaintenanceToolsCommandsTests")
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { ScratchDefaults.remove(suiteName) }
+        for key in MaintenanceTools.pickedFileBookmarkKeys {
+            defaults.set(Data([1]), forKey: key)
+        }
+        defaults.set(true, forKey: "RememberSearchQuery")
+
+        MaintenanceTools.removePickedFileGrants(from: defaults)
+        for key in MaintenanceTools.pickedFileBookmarkKeys {
+            #expect(defaults.object(forKey: key) == nil, "\(key) stays granted")
+        }
+        #expect(defaults.bool(forKey: "RememberSearchQuery"))
+    }
+
+    @Test("Every picked file Thaw asks for has its grant cleared")
+    func pickedFileKeysCoverEveryPicker() {
+        #expect(Set(MaintenanceTools.pickedFileBookmarkKeys) == [
+            "MenuBarLayoutTableBookmark", "NativeAppHidingAppListBookmark", "NativeVisibilityRecoveryFileBookmark",
+        ])
+    }
+
     @Test("A failed command names itself and its exit status, with its output when there is any")
     func failureText() {
         let quiet = MaintenanceTools.ToolError.commandFailed("tccutil", 1, "  \n")

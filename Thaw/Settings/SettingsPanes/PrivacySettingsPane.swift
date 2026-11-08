@@ -33,6 +33,7 @@ struct PrivacySettingsPane: View {
                 ForEach(appState.permissions.allPermissions) { permission in
                     permissionRow(permission)
                 }
+                notificationsRow(appState.userNotificationManager.permission)
             }
 
             OtherAppsSection(settings: appState.settings.privacy)
@@ -66,6 +67,26 @@ struct PrivacySettingsPane: View {
         }
         .annotation {
             Text(permission.details.joined(separator: " "))
+        }
+    }
+
+    /// Asked for only when Thaw first notifies, so a refusal would otherwise never show.
+    private func notificationsRow(_ permission: NotificationPermission) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            PermissionLabel(permission: permission)
+            Spacer()
+            PermissionStatusControl(permission: permission)
+        }
+        .annotation {
+            Text(Self.notificationsNote(permission.authorization))
+        }
+    }
+
+    static func notificationsNote(_ authorization: NotificationAuthorization) -> LocalizedStringResource {
+        switch authorization {
+        case .allowed: "\(Constants.displayName) tells you when an update is ready and when a shortcut changes a setting."
+        case .off: "Notifications are off. \(Constants.displayName) can't tell you about updates or shortcut changes."
+        case .notAsked: "\(Constants.displayName) asks the first time it has something to tell you."
         }
     }
 
