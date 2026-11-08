@@ -8,9 +8,8 @@
 import AppKit
 
 extension AppState {
-    /// The policy for a window you open, such as Settings: regular puts Thaw in
-    /// the Dock, nil only activates it. Even a moment as regular adds Thaw to
-    /// the Dock's recent apps, so with the Dock icon off the policy is left alone.
+    /// Regular puts Thaw in the Dock; nil only activates it. Even a moment as regular
+    /// adds Thaw to the Dock's recent apps, so with the icon off the policy stays.
     var userWindowActivationPolicy: NSApplication.ActivationPolicy? {
         Self.userWindowActivationPolicy(showDockIcon: Self.storedShowDockIconWithSettings)
     }

@@ -34,7 +34,7 @@ nonisolated extension SearchIndex {
         SearchEntry(
             id: "visibility.swapOnThawIconClick",
             title: "Click the Thaw icon to swap",
-            descriptionText: String(localized: "A click on the icon trades your shown and hidden items."),
+            descriptionText: String(localized: "A click on the icon swaps your shown and hidden items."),
             pane: .visibility,
             section: "Swap shown and hidden",
             keywords: ["swap", "click", "icon", "trade"],
