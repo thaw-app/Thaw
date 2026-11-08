@@ -50,6 +50,7 @@ extension AppSettings {
         general.customThawIconIsTemplate = Defaults.DefaultValue.customThawIconIsTemplate
         general.simpleMode = Defaults.DefaultValue.simpleMode
         general.simpleModeShowsPreview = Defaults.DefaultValue.simpleModeShowsPreview
+        general.showDockIconWithSettings = Defaults.DefaultValue.showDockIconWithSettings
         general.showSettingDescriptions = Defaults.DefaultValue.showSettingDescriptions
         general.settingsAppearance = .system
         general.hideApplicationMenus = Defaults.DefaultValue.hideApplicationMenus

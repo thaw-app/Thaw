@@ -39,6 +39,15 @@ nonisolated extension SearchIndex {
             property: .thawBar("lockThawBarPosition")
         ),
         SearchEntry(
+            id: "general.showDockIconWithSettings",
+            title: "Show Dock icon while Settings is open",
+            descriptionText: String(localized: "Off, Thaw stays out of the Dock and its recent apps."),
+            pane: .general,
+            section: "App",
+            keywords: ["dock", "icon", "recent apps", "app switcher"],
+            property: .general("showDockIconWithSettings")
+        ),
+        SearchEntry(
             id: "general.showSettingDescriptions",
             title: "Show setting descriptions",
             descriptionText: String(localized: "Explains what a setting does directly beneath it."),

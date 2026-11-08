@@ -118,6 +118,7 @@ nonisolated enum Defaults {
         [
             // General Settings
             .showThawIcon: DefaultValue.showThawIcon,
+            .showDockIconWithSettings: DefaultValue.showDockIconWithSettings,
             .customThawIconIsTemplate: DefaultValue.customThawIconIsTemplate,
             .simpleMode: DefaultValue.simpleMode,
             .showSettingDescriptions: DefaultValue.showSettingDescriptions,
@@ -222,14 +223,8 @@ nonisolated enum Defaults {
 
 extension Defaults {
     nonisolated enum DefaultValue {
-        // MARK: General Settings
+        // MARK: General Settings (see Defaults+General.swift)
 
-        static let showThawIcon = true
-        static let thawIcon = ControlItemImageSet.defaultThawIcon
-        static let customThawIconIsTemplate = false
-        static let simpleMode = false
-        static let showSettingDescriptions = true
-        static let simpleModeShowsPreview = true
         static let lockThawBarPosition = true
         static let openHiddenItemsInMenuBar = false
         static let roundScreenCorners = false
@@ -347,6 +342,8 @@ extension Defaults {
         // MARK: General Settings
 
         case showThawIcon = "ShowIceIcon"
+        /// Thaw 2's key, so a migrated choice carries over.
+        case showDockIconWithSettings = "ShowDockIconWithSettings"
         case thawIcon = "IceIcon"
         case customThawIconIsTemplate = "CustomIceIconIsTemplate"
         case simpleMode = "SimpleMode"

@@ -206,7 +206,7 @@ struct ControlItemPanelView: View {
     private var settingsRow: some View {
         PanelCommandRow(symbol: "gearshape", title: "Settings…") {
             dismiss()
-            appState.activate(withPolicy: .regular)
+            appState.activate(withPolicy: appState.userWindowActivationPolicy)
             appState.openWindow(.settings)
         }
     }
