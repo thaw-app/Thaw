@@ -80,13 +80,11 @@ struct UXRefreshNavigationTests {
         #expect(panes["automation.menuBarItemAlertReveals"] == .triggers)
         #expect(panes["lab.enableDesktopMenuHiding"] == .general)
         #expect(panes["lab.zenModeWhileRecording"] == .visibility)
-        #expect(!SearchIndex.advancedEntries.contains { $0.pane == .theLab }, "Experiments is gone, so nothing searches to it")
     }
 
     @Test("Links and saved panes that name Experiments open General")
     func experimentsOpensGeneral() {
-        #expect(SettingsNavigationIdentifier.theLab.destination == .general)
-        #expect(!SettingsSidebarPanes.all.contains(.theLab))
+        #expect(SettingsNavigationIdentifier(storedValue: "The Lab") == .general)
     }
 
     @Test("The arrow keys step over headings and stop at the ends")
@@ -98,7 +96,6 @@ struct UXRefreshNavigationTests {
         #expect(page(moving: .up, from: .profiles) == .hotkeys)
         #expect(page(moving: .up, from: .general) == nil)
         #expect(page(moving: .down, from: .about) == nil)
-        #expect(page(moving: .down, from: .spaces) == nil)
         #expect(page(moving: .left, from: .hotkeys) == nil)
     }
 
@@ -106,7 +103,6 @@ struct UXRefreshNavigationTests {
     func searchDeselectsTheSidebar() {
         #expect(SettingsSidebarPanes.showsSelection(current: .visibility, isSearching: false))
         #expect(!SettingsSidebarPanes.showsSelection(current: .visibility, isSearching: true))
-        #expect(!SettingsSidebarPanes.showsSelection(current: .spaces, isSearching: false))
     }
 
     @Test("About is last")
@@ -114,18 +110,9 @@ struct UXRefreshNavigationTests {
         #expect(SettingsSidebarPanes.rows.last == .page(.about))
     }
 
-    @Test("Panes folded into others stay outside the sidebar")
-    func panesOutsideTheSidebar() {
-        let all = Set(SettingsSidebarPanes.all)
-        #expect(!all.contains(.advanced), "Advanced was folded into General and Layout")
-        #expect(!all.contains(.spaces), "Spaces is a section of Displays")
-        #expect(SettingsNavigationIdentifier.spaces.destination == .displays)
-        #expect(!all.contains(.automation), "Automation split into Triggers and Scripts")
-        #expect(SettingsNavigationIdentifier.automation.destination == .triggers)
-        #expect(SettingsNavigationIdentifier.general.destination == .general)
-        // All remain valid identifiers for saved selections, thaw:// and other routes.
-        #expect(SettingsNavigationIdentifier(rawValue: "About") == .about)
-        #expect(SettingsNavigationIdentifier(rawValue: "Scripts") == .scripts)
+    @Test("Every identifier is a page in the sidebar")
+    func everyIdentifierIsAPage() {
+        #expect(Set(SettingsSidebarPanes.all) == Set(SettingsNavigationIdentifier.allCases))
     }
 
     @Test("Every sidebar pane is a direct destination, no hub indirection")
@@ -147,22 +134,22 @@ struct UXRefreshNavigationTests {
             "Visibility": .visibility,
             "Thaw Bar": .thawBar,
             "Displays": .displays,
-            "Spaces": .spaces,
+            "Spaces": .displays,
             "Menu Bar Appearance": .menuBarAppearance,
             "Hotkeys": .hotkeys,
             "Profiles": .profiles,
-            "Advanced": .advanced,
-            "Automation": .automation,
+            "Advanced": .menuBarLayout,
+            "Automation": .triggers,
             "Triggers": .triggers,
             "Scripts": .scripts,
             "Widgets": .widgets,
-            "The Lab": .theLab,
+            "The Lab": .general,
             "Tools": .tools,
             "Privacy": .privacy,
             "About": .about,
         ]
         for (raw, expected) in legacy {
-            #expect(SettingsNavigationIdentifier(rawValue: raw) == expected, "Legacy raw value \(raw) no longer decodes")
+            #expect(SettingsNavigationIdentifier(storedValue: raw) == expected, "Legacy raw value \(raw) no longer decodes")
         }
     }
 
