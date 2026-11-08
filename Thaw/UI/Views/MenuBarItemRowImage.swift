@@ -19,17 +19,18 @@ struct MenuBarItemRowImage: View {
     @ScaledMetric(relativeTo: .body) private var iconBox = PanelRow.iconBox
 
     /// A menu bar glyph's height, so pictures sit in the row as on the bar.
-    private static let glyphHeight: CGFloat = 18
+    static let defaultGlyphHeight: CGFloat = 18
     /// The widest a picture is drawn, so a long text item leaves room for its name.
     private static let maxWidth: CGFloat = 120
 
     let item: MenuBarItem
     /// A fixed column the picture is centred in and scaled down to fit, so names line up.
     var columnWidth: CGFloat?
+    var glyphHeight: CGFloat = Self.defaultGlyphHeight
 
     /// The glyph's height-fitted size, scaled down whole when it is wider than limit.
-    private static func drawnSize(of image: MenuBarItemDisplayImage, limit: CGFloat) -> CGSize {
-        let size = image.targetSize(fittingHeight: glyphHeight)
+    private static func drawnSize(of image: MenuBarItemDisplayImage, height: CGFloat, limit: CGFloat) -> CGSize {
+        let size = image.targetSize(fittingHeight: height)
         guard size.width > limit else { return size }
         return CGSize(width: limit, height: size.height * limit / size.width)
     }
@@ -45,9 +46,9 @@ struct MenuBarItemRowImage: View {
             if let image {
                 MenuBarItemGlyph(
                     image: image,
-                    fittingHeight: Self.glyphHeight,
+                    fittingHeight: glyphHeight,
                     reinksCaptures: true,
-                    drawnSize: Self.drawnSize(of: image, limit: columnWidth ?? Self.maxWidth)
+                    drawnSize: Self.drawnSize(of: image, height: glyphHeight, limit: columnWidth ?? Self.maxWidth)
                 )
                 .foregroundStyle(.primary)
             } else {
