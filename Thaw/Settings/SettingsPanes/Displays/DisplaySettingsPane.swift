@@ -22,6 +22,8 @@ struct DisplaySettingsPane: View {
     @State var pendingGlobalApply: PendingGlobalApply?
     @State var errorMessage: String?
     @State var selectedDisplayID: String?
+    /// Non-nil while forgetting a disconnected display awaits confirmation.
+    @State var displayToForget: DisplaySettingsManager.DisplayInfo?
 
     @State private var tab = DisplaysTab.spacing
 
@@ -87,6 +89,22 @@ struct DisplaySettingsPane: View {
             item: $pendingGlobalApply,
             actions: { pending in globalConfirmationButtons(for: pending) },
             message: { pending in Text(globalConfirmationMessage(for: pending)) }
+        )
+        .alert(
+            String(localized: "Forget this display?"),
+            item: $displayToForget,
+            actions: { display in
+                Button("Forget", role: .destructive) {
+                    displaySettings.forgetDisplay(uuid: display.id)
+                    selectedDisplayID = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    // The alert dismisses itself.
+                }
+            },
+            message: { display in
+                Text("\(display.name)’s settings are removed. If it connects again, it starts from the template for new displays.")
+            }
         )
         .errorAlert("Couldn’t save display settings", message: $errorMessage)
     }
