@@ -108,6 +108,8 @@ final class SpaceIndicatorExtra: NSObject {
             case let .space(label, isCurrent):
                 let item = NSMenuItem(title: label, action: nil, keyEquivalent: "")
                 item.state = isCurrent ? .on : .off
+                // macOS has no public way to switch Spaces, so the list reads as status, not buttons.
+                item.isEnabled = false
                 menu.addItem(item)
             case .separator:
                 menu.addItem(.separator())

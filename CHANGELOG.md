@@ -71,6 +71,13 @@ the items under New and Fixed.
 
 ### Fixed
 
+#### Spaces
+
+- **A Space's own menu bar look survives a logout.** It was saved under a number macOS changes; existing looks move over at the next launch.
+- **Editing the menu bar look in a Space with its own look changes that Space,** not the shared look, and a display change keeps it.
+- **A Spaces page choice made right after creating a Space is kept,** instead of being lost while macOS lists the new Space.
+- **The Space indicator's list no longer looks clickable,** since macOS has no supported way to switch Spaces from it.
+
 #### Layout
 
 - **Moving an item to another section, ungrouping and removing a spacer can be undone.**
