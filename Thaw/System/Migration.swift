@@ -129,9 +129,8 @@ extension MigrationManager {
     /// Marks that the alerts' saved switch was reset once.
     static let recordingAlertsReturnedKey = "RecordingAlertsReturned"
 
-    /// The camera and microphone alerts stayed off while hidden, whatever was
-    /// saved. Clearing the old switch once keeps them off until it's turned on
-    /// again in Visibility.
+    /// The alerts stayed off while hidden, whatever was saved. Clearing the old switch
+    /// once keeps them off until it's turned on again in Visibility.
     func resetRecordingAlertsOnReturn(in defaults: UserDefaults) {
         guard !defaults.bool(forKey: Self.recordingAlertsReturnedKey) else {
             return

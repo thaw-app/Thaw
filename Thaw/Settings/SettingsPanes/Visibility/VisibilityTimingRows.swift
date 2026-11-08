@@ -49,6 +49,6 @@ struct SwapOnIconClickToggle: View {
 
     var body: some View {
         Toggle("Click the \(Constants.displayName) icon to swap", isOn: $settings.swapOnThawIconClick)
-            .annotation("A click on the icon trades your shown and hidden items instead of showing the hidden ones.")
+            .annotation("A click on the icon swaps your shown and hidden items instead of showing the hidden ones.")
     }
 }
