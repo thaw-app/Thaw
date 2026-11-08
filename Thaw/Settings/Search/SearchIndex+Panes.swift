@@ -153,6 +153,46 @@ nonisolated extension SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "modules.profiles",
+            title: "Profiles",
+            descriptionText: String(localized: "Turn saved layouts that switch by display, Space, Focus or shortcut on or off."),
+            pane: .modules,
+            keywords: ["profiles", "module", "layouts", "switch", "on", "off"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "modules.scripts",
+            title: "Scripts",
+            descriptionText: String(localized: "Turn the Scripts module on or off."),
+            pane: .modules,
+            keywords: ["scripts", "module", "automation", "on", "off"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "modules.triggers",
+            title: "Triggers",
+            descriptionText: String(localized: "Turn the Triggers module on or off."),
+            pane: .modules,
+            keywords: ["triggers", "module", "app running", "icon changes", "on", "off"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "modules.widgets",
+            title: "Widgets",
+            descriptionText: String(localized: "Turn the Widgets module on or off."),
+            pane: .modules,
+            keywords: ["widgets", "module", "battery", "wi-fi", "status icon", "on", "off"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "scripts.profileSwitch",
+            title: "Before and after a profile switches",
+            descriptionText: String(localized: "Opens the Scripts module, where you edit the scripts that run when a profile switches."),
+            pane: .scripts,
+            keywords: ["scripts", "before", "after", "profile switch", "hook", "shell", "applescript", "edit"],
+            property: nil
+        ),
+        SearchEntry(
             id: "pane.about",
             title: "About",
             descriptionText: nil,

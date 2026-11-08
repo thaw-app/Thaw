@@ -25,6 +25,7 @@ struct ScriptsSettingsPane: View {
                 title: "Before and after a profile switches",
                 detail: "Scripts run in the Scripts module, which comes with \(Constants.displayName)."
             )
+            .settingsSearchAnchor("scripts.profileSwitch")
         }
     }
 }
