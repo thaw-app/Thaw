@@ -15,7 +15,7 @@ import ThawUI
 struct LayoutItemListPane: View {
     @Environment(AppState.self) private var appState
     let selection: LayoutSelectionModel
-    let query: String
+    @Binding var query: String
 
     @State private var anchors = LayoutItemListAnchors()
     @FocusState private var isFocused: Bool
@@ -25,11 +25,22 @@ struct LayoutItemListPane: View {
         _ = appState.itemManager.itemCache
         let sections = LayoutItemList.sections(appState: appState, query: query)
         let rows = sections.flatMap(\.rows)
-        return ScrollViewReader { proxy in
+        return VStack(spacing: 0) {
+            SettingsFilterField(prompt: "Filter items", clearLabel: "Clear filter", text: $query)
+                .padding(ThawSpacing.base)
+            Divider()
+            list(sections: sections, rows: rows)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Menu bar items")
+    }
+
+    private func list(sections: [LayoutItemListSection], rows: [LayoutItemListRow]) -> some View {
+        ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(sections) { section in
-                        ListSectionHeading(title: section.name.localizedName, isFirst: section.id == sections.first?.id)
+                        heading(section.name, isFirst: section.id == sections.first?.id)
                         ForEach(section.rows) { row in
                             rowView(row, in: section.name)
                                 .id(row.id)
@@ -71,14 +82,23 @@ struct LayoutItemListPane: View {
                 return .handled
             }
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Menu bar items")
+    }
+
+    /// The bars' heading style, so a section reads the same in both.
+    private func heading(_ name: MenuBarSectionName, isFirst: Bool) -> some View {
+        Text(name.localizedName)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.top, isFirst ? 0 : ThawSpacing.row)
+            .padding(.bottom, ThawSpacing.tight)
+            .padding(.leading, PanelRow.inset)
+            .accessibilityAddTraits(.isHeader)
     }
 
     private func rowView(_ row: LayoutItemListRow, in section: MenuBarSectionName) -> some View {
         let isSelected = selection.contains(row.id)
         return HStack(spacing: PanelRow.iconSpacing) {
-            MenuBarItemRowImage(item: row.item)
+            MenuBarItemRowImage(item: row.item, columnWidth: LayoutDashboardMetrics.pictureColumnWidth)
             Text(row.name)
                 .font(ThawType.body)
                 .lineLimit(1)
@@ -91,7 +111,7 @@ struct LayoutItemListPane: View {
             }
         }
         .padding(.horizontal, PanelRow.inset)
-        .frame(minHeight: PanelRow.height)
+        .frame(minHeight: LayoutDashboardMetrics.rowHeight)
         .modifier(SearchRowBackground(selected: isSelected))
         .background {
             LayoutItemListMenuHost(rowID: row.id, anchors: anchors) { menu(for: row, in: section) }

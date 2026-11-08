@@ -174,12 +174,14 @@ struct LayoutDashboardListTests {
         _ = host
     }
 
-    @Test("At its minimum size the window gives the list and the bars each a usable width")
-    func minimumSizeFitsBoth() {
+    @Test("At its minimum size the bars span the window, and the list and the tabs below each get a usable width")
+    func minimumSizeFitsAll() {
         let minimum = LayoutDashboardMetrics.windowMinSize
-        #expect(minimum.width >= LayoutDashboardMetrics.listMinWidth + LayoutDashboardMetrics.barsMinWidth)
-        #expect(LayoutDashboardMetrics.listMinWidth >= 280, "room for an icon, a name and an app name")
-        #expect(LayoutDashboardMetrics.barsMinWidth >= 520, "room for a section bar's items")
+        #expect(minimum.width >= LayoutDashboardMetrics.listMinWidth + LayoutDashboardMetrics.tabsMinWidth)
+        #expect(LayoutDashboardMetrics.listMinWidth >= 280, "room for a picture, a name and an app name")
+        #expect(LayoutDashboardMetrics.tabsMinWidth >= 320, "room for the Groups, Spacers and Apple's items tabs")
+        #expect(minimum.width >= 600, "the bars span the window, so they get its whole width")
+        #expect(minimum.height >= LayoutDashboardMetrics.barsHeight(sections: 3) + 280, "room for all three bars and a useful list under them")
 
         let world = World()
         world.seat(Self.items(["Alpha"]), in: .visible)
