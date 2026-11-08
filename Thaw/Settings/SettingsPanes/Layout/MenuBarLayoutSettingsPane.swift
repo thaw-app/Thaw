@@ -175,47 +175,7 @@ private struct HiddenSectionOccupancySync: ViewModifier {
     }
 }
 
-/// The lists under the bars, one at a time: Options, Groups, Spacers and Apple's Items.
-/// Search results switch to the tab that holds them.
-private struct LayoutDetailTabs: View {
-    @Environment(AppState.self) private var appState
-    let itemManager: MenuBarItemManager
-    let canArrangeLayout: Bool
-    let isHidingUnavailable: Bool
-
-    @State private var tab = LayoutDetailTab.options
-
-    var body: some View {
-        let settings = appState.settings.layout
-        // Groups and Apple's items need the bars, so without them only Options and Spacers are offered.
-        let tabs = canArrangeLayout ? LayoutDetailTab.allCases : [.options, .spacers]
-        SettingsPaneTabs(selection: $tab, tabs: tabs, tabForDisclosure: { LayoutDetailTab.tab(for: $0) })
-        switch tabs.contains(tab) ? tab : .options {
-        case .groups:
-            MenuBarLayoutGroupsSection()
-        case .spacers:
-            ThawSection("Spacers") {
-                LayoutSpacersRows(spacerManager: appState.spacerManager, undoManager: appState.layoutUndo)
-            }
-            .settingsSearchAnchor("layout.spacers")
-        case .appleItems:
-            ControlCenterReplacementsSection(settings: settings)
-        case .options:
-            LayoutSectionOptions(settings: settings, isHidingUnavailable: isHidingUnavailable)
-            HidingMethodSection(settings: settings)
-            LayoutOverflowSection(settings: settings)
-            if canArrangeLayout {
-                LayoutResetControls(
-                    itemManager: itemManager,
-                    controlItemsDisabled: itemManager.areControlItemsMissing,
-                    alwaysHiddenEnabled: settings.enableAlwaysHiddenSection
-                )
-            }
-        }
-    }
-}
-
-private struct LayoutOverflowSection: View {
+struct LayoutOverflowSection: View {
     @Bindable var settings: LayoutSettings
 
     var body: some View {
@@ -237,7 +197,7 @@ private struct LayoutOverflowSection: View {
 }
 
 /// Spacer rows use a collapsed disclosure rather than a separate card because tuning is infrequent.
-private struct LayoutSpacersRows: View {
+struct LayoutSpacersRows: View {
     let spacerManager: MenuBarSpacerManager
     let undoManager: UndoManager
 
