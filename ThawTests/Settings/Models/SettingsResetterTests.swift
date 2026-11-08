@@ -15,6 +15,52 @@ import ThawUI
 struct SettingsResetterTests {
     private let suites = ScratchSuites(prefix: "SettingsResetterTests")
 
+    @Test("Reset brings back the welcome and What's New, asks TipKit to clear at the next launch, and keeps setup and update consent")
+    func resetFirstRunState() throws {
+        let defaults = try #require(suites.make())
+        defaults.set(true, forKey: Defaults.Key.hasSeenOnboarding.rawValue)
+        defaults.set(3, forKey: Defaults.Key.onboardingVersion.rawValue)
+        defaults.set("3.0.0", forKey: Defaults.Key.lastWhatsNewVersion.rawValue)
+        defaults.set(true, forKey: Defaults.Key.hasCompletedFirstLaunch.rawValue)
+        defaults.set(true, forKey: Defaults.Key.hasSeenUpdateConsent.rawValue)
+
+        AppSettings.resetFirstRunState(in: defaults)
+
+        for key in AppSettings.firstRunKeys {
+            #expect(defaults.object(forKey: key) == nil, "\(key) survived the reset")
+        }
+        #expect(defaults.bool(forKey: Defaults.Key.resetsTipsAtNextLaunch.rawValue))
+        #expect(defaults.bool(forKey: Defaults.Key.hasCompletedFirstLaunch.rawValue), "setup does not run again")
+        #expect(defaults.bool(forKey: Defaults.Key.hasSeenUpdateConsent.rawValue), "update consent is not asked again")
+    }
+
+    @Test("Reset turns thaw:// off and forgets every allowed app")
+    func resetAllowedApps() {
+        Defaults.set(["com.example.app"], forKey: .settingsURIWhitelist)
+        Defaults.set(["com.example.app": "TEAM"], forKey: .settingsURISigningIdentities)
+        Defaults.set(true, forKey: .settingsURIEnabled)
+        let settings = AppSettings()
+        settings.privacy.isSettingsURIEnabled = true
+
+        settings.resetAllowedApps()
+
+        #expect(!settings.privacy.isSettingsURIEnabled)
+        #expect(!Defaults.bool(forKey: .settingsURIEnabled))
+        #expect(Defaults.stringArray(forKey: .settingsURIWhitelist) == nil)
+        #expect(Defaults.store.object(forKey: Defaults.Key.settingsURISigningIdentities.rawValue) == nil)
+        #expect(settings.privacy.whitelistedApps.isEmpty)
+    }
+
+    @Test("Reset brings every first-run hint back")
+    func resetHints() {
+        var stored = [FirstRunHint.allCases.first.map(\.rawValue) ?? ""]
+        let store = FirstRunHintStore(read: { stored }, write: { stored = $0 }, onFirstHide: {})
+        #expect(!store.dismissed.isEmpty)
+        store.reset()
+        #expect(store.dismissed.isEmpty)
+        #expect(stored.isEmpty)
+    }
+
     @Test("Resetting General puts back every default and forgets the UI zoom")
     func resetGeneral() throws {
         let zoom = try #require(suites.make())

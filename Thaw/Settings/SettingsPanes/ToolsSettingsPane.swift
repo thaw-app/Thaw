@@ -150,7 +150,7 @@ struct ToolsSettingsPane: View {
         ThawSection("Reset") {
             toolRow(
                 title: "All settings",
-                detail: "Restore \(Constants.displayName) settings to their defaults. Saved profiles, allowed apps, and user data are not deleted. This cannot be undone.",
+                detail: "Restore \(Constants.displayName) settings to their defaults, and clear the apps allowed to change them, the welcome and What's New flags, dismissed tips and the item picture cache. Your menu bar layout and saved profiles stay. This cannot be undone.",
                 buttonTitle: "Reset \(Constants.displayName)…",
                 role: .destructive,
                 statusFor: .resetSettings
@@ -311,7 +311,7 @@ private enum MaintenanceToolAction: Identifiable {
     var confirmationMessage: LocalizedStringResource {
         switch self {
         case .resetSettings:
-            "This will reset app settings to their default values. Saved profiles, allowed apps, and user data will not be deleted. This action cannot be undone."
+            "Every setting goes back to its default. The apps allowed to change settings, the welcome and What's New flags, dismissed tips and the item picture cache are cleared. Your menu bar layout and saved profiles stay. This can't be undone."
         case .resetMenuBarLayoutPositions:
             "Every menu bar item's saved position will be deleted and the menu bar will restart, so your whole arrangement is rebuilt from scratch. A backup is saved first, and Layout backups on this page can put it back. \(Constants.displayName) relaunches afterward."
         case .restartMenuBar:

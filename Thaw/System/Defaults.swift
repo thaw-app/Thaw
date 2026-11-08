@@ -628,6 +628,10 @@ extension Defaults {
         /// dismissal, which reads as an empty array.
         case dismissedFirstRunHints
 
+        /// Set by Reset: TipKit can only clear its store before it is configured,
+        /// so the next launch does it and removes this key.
+        case resetsTipsAtNextLaunch
+
         // MARK: Settings URI
 
         case settingsURIEnabled = "SettingsURIEnabled"

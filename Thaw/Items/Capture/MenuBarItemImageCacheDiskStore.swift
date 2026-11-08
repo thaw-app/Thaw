@@ -39,6 +39,16 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
         cachesDirectory.map { Self.cacheFileURL(cachesDirectory: $0, bundleIdentifier: Constants.bundleIdentifier) }
     }
 
+    /// Deletes the cache files after any save already queued, so none writes them back.
+    nonisolated func removeCacheFiles() {
+        let files = [cacheFileURL, legacyCacheFileURL].compactMap(\.self)
+        queue.async {
+            for file in files {
+                try? FileManager.default.removeItem(at: file)
+            }
+        }
+    }
+
     nonisolated var legacyCacheFileURL: URL? {
         cachesDirectory.map { Self.legacyCacheFileURL(cachesDirectory: $0, bundleIdentifier: Constants.bundleIdentifier) }
     }
