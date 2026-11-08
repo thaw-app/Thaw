@@ -149,7 +149,7 @@ struct ProfileSnapshotCodableTests {
     // MARK: Fixtures
 
     /// Non-default fields expose dropped keys in the re-encoded comparison.
-    private static func generalSnapshot() -> GeneralSettingsSnapshot {
+    static func generalSnapshot() -> GeneralSettingsSnapshot {
         GeneralSettingsSnapshot(
             showThawIcon: false,
             thawIcon: alternateIcon,
@@ -169,7 +169,7 @@ struct ProfileSnapshotCodableTests {
         )
     }
 
-    private static func advancedSnapshot() -> AdvancedSettingsSnapshot {
+    static func advancedSnapshot() -> AdvancedSettingsSnapshot {
         AdvancedSettingsSnapshot(
             enableAlwaysHiddenSection: true,
             showAllSectionsOnUserDrag: false,
@@ -205,3 +205,37 @@ struct ProfileSnapshotCodableTests {
     }
 }
 
+/// Saved profiles still name General and Advanced snapshots, though the
+/// settings now live in one model per page. Applying a profile and capturing
+/// it again has to give back exactly the bytes that were saved.
+@MainActor
+@Suite("Profile snapshots across the page models", .serialized, .scratchDefaults)
+struct ProfileSnapshotPageModelTests {
+    private let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return encoder
+    }()
+
+    @Test("A General snapshot applied to the page models captures back byte for byte")
+    func generalSnapshotSurvivesThePageModels() throws {
+        let saved = ProfileSnapshotCodableTests.generalSnapshot()
+        let settings = AppSettings()
+        saved.apply(to: settings)
+        let recaptured = GeneralSettingsSnapshot.capture(from: settings)
+        #expect(try encoder.encode(recaptured) == encoder.encode(saved))
+    }
+
+    @Test("An Advanced snapshot applied to the page models captures back byte for byte")
+    func advancedSnapshotSurvivesThePageModels() throws {
+        let saved = ProfileSnapshotCodableTests.advancedSnapshot()
+        let settings = AppSettings()
+        saved.apply(to: settings)
+        let recaptured = AdvancedSettingsSnapshot.capture(from: settings)
+        #expect(try encoder.encode(recaptured) == encoder.encode(saved))
+        #expect(settings.layout.iconRefreshInterval == saved.iconRefreshInterval)
+        #expect(settings.visibility.tooltipDelay == saved.tooltipDelay)
+        #expect(settings.general.hideApplicationMenus == saved.hideApplicationMenus)
+        #expect(settings.tools.enableDiagnosticLogging == saved.enableDiagnosticLogging)
+    }
+}
