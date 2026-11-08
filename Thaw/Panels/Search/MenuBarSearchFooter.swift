@@ -20,77 +20,72 @@ struct MenuBarSearchFooter: View {
 
     let panel: MenuBarSearchPanel
 
-    /// Whether a hairline separates the bar from the rows, as in the launchers.
-    let showsDivider: Bool
-
     var body: some View {
-        if showsShortcutBar {
-            VStack(spacing: 0) {
-                if showsDivider {
-                    Divider()
-                        .opacity(0.4)
-                }
-                VStack(spacing: ThawSpacing.base) {
-                    LayoutRefusalNotice()
-                    actionRow
-                        .buttonStyle(SearchPanelButtonStyle())
-                }
-                .padding(ThawSpacing.compact)
-                .padding(.horizontal, ThawSpacing.tight)
-            }
-        } else if appState.layoutFeedback.refusal != nil {
+        VStack(spacing: 0) {
+            // Shows only while a move from search was refused.
             LayoutRefusalNotice()
-                .padding(ThawSpacing.compact)
-                .padding(.horizontal, ThawSpacing.tight)
-        }
-    }
-
-    private var actionRow: some View {
-        HStack {
-            Button {
-                panel.close()
-                appState.activate(withPolicy: .regular)
-                appState.openWindow(.settings)
-            } label: {
-                Image(systemName: "gearshape")
-                    .resizable()
-                    .scaledToFit()
-                    .foregroundStyle(.secondary)
-                    .padding(ThawSpacing.hairline)
-            }
-            .help("Open Settings")
-            .accessibilityLabel("Open Settings")
-
-            Toggle("Remember last search", isOn: $rememberSearchQuery)
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-
-            Spacer()
-
-            if let selection = model.selection, let item = panel.cachedItem(for: selection) {
-                if model.renameSession == nil {
-                    browsingButtons(for: item, selection: selection)
-                } else {
-                    renamingButtons
+                .padding(.horizontal, ThawSpacing.inset)
+            if showsShortcutBar {
+                PanelBottomBar {
+                    actionRow
                 }
             }
         }
     }
 
     @ViewBuilder
-    private func browsingButtons(for item: MenuBarItem, selection: MenuBarSearchModel.ItemID) -> some View {
+    private var actionRow: some View {
+        Button {
+            panel.close()
+            appState.activate(withPolicy: .regular)
+            appState.openWindow(.settings)
+        } label: {
+            Image(systemName: "gearshape")
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(.secondary)
+                .padding(ThawSpacing.hairline)
+        }
+        .help("Open Settings")
+        .accessibilityLabel("Open Settings")
+
+        Toggle("Remember last search", isOn: $rememberSearchQuery)
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .fixedSize()
+
+        Spacer(minLength: 0)
+
+        if let item = model.selectedResult?.item {
+            if model.renameSession == nil {
+                browsingButtons(for: item)
+            } else {
+                renamingButtons
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func browsingButtons(for item: MenuBarItem) -> some View {
+        // Tab only means something while the list has sections.
+        if model.results.first?.section != nil {
+            ShortcutHintButton(title: String(localized: "Next Section")) {
+                model.moveSelection(toSectionFromCurrentBy: 1)
+            } hint: {
+                KeyCapView(text: "⇥")
+            }
+            .help("Tab moves to the next section, Shift-Tab to the previous one.")
+        }
         ShortcutHintButton(title: String(localized: "Rename…")) {
             panel.beginRenamingSelection()
         } hint: {
             KeyCapView(text: "⌘")
-            Text(verbatim: "+")
             KeyCapView(text: "E")
         }
         ShortcutHintButton(title: String(localized: "Actions…")) {
             panel.presentItemActions()
         } hint: {
             KeyCapView(text: "⌘")
-            Text(verbatim: "+")
             KeyCapView(text: "K")
         }
         .help("Rename, group or move the item. ⌘1, ⌘2 and ⌘3 move it to Visible, Hidden or Always Hidden.")
@@ -103,8 +98,7 @@ struct MenuBarSearchFooter: View {
                 ? String(localized: "Click Item")
                 : String(localized: "Show Item")
         ) {
-            // The row's own action, the one Return runs.
-            model.displayedItems.first { $0.id == selection }?.action?()
+            panel.activate(item)
         } hint: {
             KeyCapView(systemImage: "return")
         }

@@ -64,14 +64,13 @@ enum MemoryBench {
     }
 
     private static func benchSearch(_ appState: AppState) {
-        let search = window(size: CGSize(width: 640, height: 480))
+        let search = window(size: SearchPanelGeometry.windowSize(isCollapsed: false))
         let model = MenuBarSearchModel()
         search.contentView = NSHostingView(rootView: MenuBarSearchRootView(
             appState: appState,
             model: model,
-            displayID: CGMainDisplayID(),
             panel: MenuBarSearchPanel(),
-            presentation: .inspector
+            presentation: .extended
         ))
         render(search)
         for query in ["wi", "wifi", "battery", ""] {

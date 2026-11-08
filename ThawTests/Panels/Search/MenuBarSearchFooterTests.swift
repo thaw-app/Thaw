@@ -22,7 +22,7 @@ struct MenuBarSearchFooterTests {
         let panel: MenuBarSearchPanel
 
         var body: some View {
-            MenuBarSearchFooter(panel: panel, showsDivider: false)
+            MenuBarSearchFooter(panel: panel)
                 .environment(world.appState)
                 .environment(panel.model)
                 .defaultAppStorage(Defaults.store)
@@ -41,7 +41,8 @@ struct MenuBarSearchFooterTests {
         world.seat([alpha])
         let panel = MenuBarSearchPanel()
         panel.performSetup(with: world.appState, displayInvalidations: PassthroughSubject<Void, Never>())
-        panel.model.selection = .item(alpha.tag, windowID: alpha.windowID)
+        panel.model.results = [MenuBarSearchResult(item: alpha, ownerName: nil, section: nil)]
+        panel.model.selection = MenuBarSearchModel.ItemID(alpha)
         let render = Self.render(world, panel)
         #expect(render.host.fittingSize.height == 0, "no bar, no notice")
         #expect(panel.itemActionsAnchor == nil, "the Actions button is not there to anchor ⌘K")
@@ -59,7 +60,8 @@ struct MenuBarSearchFooterTests {
         world.seat([alpha])
         let panel = MenuBarSearchPanel()
         panel.performSetup(with: world.appState, displayInvalidations: PassthroughSubject<Void, Never>())
-        panel.model.selection = .item(alpha.tag, windowID: alpha.windowID)
+        panel.model.results = [MenuBarSearchResult(item: alpha, ownerName: nil, section: nil)]
+        panel.model.selection = MenuBarSearchModel.ItemID(alpha)
         let render = Self.render(world, panel)
         await render.settle { panel.itemActionsAnchor != nil }
         #expect(render.host.fittingSize.height > 0)

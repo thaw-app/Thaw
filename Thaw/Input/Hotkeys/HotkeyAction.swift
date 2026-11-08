@@ -20,9 +20,8 @@ nonisolated enum HotkeyAction: String, Codable, CaseIterable {
 
     // MARK: Menu Bar Items
 
-    /// Summons the search panel, in whichever face
-    /// AdvancedSettings.menuBarSearchPresentation asks for. The item palettes
-    /// are modes of this panel, so this is the only way in.
+    /// Summons the search panel, in the layout
+    /// AdvancedSettings.menuBarSearchPresentation asks for.
     case searchMenuBarItems = "SearchMenuBarItems"
 
     /// Puts a letter under every item on the menu bar; typing one opens that
@@ -65,8 +64,7 @@ nonisolated enum HotkeyAction: String, Codable, CaseIterable {
             }
         case .toggleAlwaysHiddenSection:
             guard
-                let section = appState.menuBarManager.section(withName: .alwaysHidden),
-                section.isEnabled
+                let section = appState.menuBarManager.section(withName: .alwaysHidden), section.isEnabled
             else {
                 return
             }

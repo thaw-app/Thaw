@@ -105,7 +105,7 @@ struct MenuBarAccessPane: View {
     // MARK: - Search
 
     private var searchPresentationPicker: some View {
-        ThawPicker("Panel style", selection: $advancedSettings.menuBarSearchPresentation) {
+        ThawPicker("Panel layout", selection: $advancedSettings.menuBarSearchPresentation) {
             ForEach(SearchPresentation.allCases) { presentation in
                 Text(presentation.localized).tag(presentation)
             }

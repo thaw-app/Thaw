@@ -14,5 +14,5 @@ nonisolated extension Defaults.DefaultValue {
     static let showSearchShortcutBar = true
     /// How the menu bar search panel opens. Stored as the case's raw
     /// value; the default is the behavior the panel shipped with.
-    static let menuBarSearchPresentation = SearchPresentation.inspector
+    static let menuBarSearchPresentation = SearchPresentation.extended
 }
