@@ -73,7 +73,7 @@ enum MenuBarSearchListContent: View {
 ///
 /// The same icon the Thaw Bar and Layout fall back to, so a system module such as
 /// Bluetooth shows its own symbol. An unresolved owner gets a placeholder.
-private struct MenuBarItemSourceIcon: View {
+struct MenuBarItemSourceIcon: View {
     /// Inset for a symbol, so it doesn't look larger than the app icons beside it.
     private static let symbolInset: CGFloat = 4
 
@@ -160,7 +160,7 @@ private struct MenuBarItemRow: View {
 // MARK: - Rename field
 
 /// The field a row shows in place of its name while renaming, shared by every mode so Return and Escape behave the same.
-private struct MenuBarItemRenameField: View {
+struct MenuBarItemRenameField: View {
     @Environment(\.menuBarSearchPanel) private var panel
     @Environment(MenuBarSearchModel.self) private var model
     @FocusState private var isEditing: Bool

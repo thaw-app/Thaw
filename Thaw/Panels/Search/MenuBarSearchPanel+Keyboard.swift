@@ -9,13 +9,28 @@ import AppKit
 import ThawUI
 
 extension MenuBarSearchPanel {
-    /// The panel's key monitor: list moves, then the Command shortcuts.
-    /// Returns nil for a key it handled.
+    /// The panel's key monitor: list moves and Return, then the Command
+    /// shortcuts. Returns nil for a key it handled. The one place the panel's
+    /// row keys are read, as in Floe: a second handler on the query field
+    /// wrote a stale highlight back after each held-arrow repeat.
     func handleKeyDown(_ event: NSEvent) -> NSEvent? {
-        if handleListMove(event) {
+        if handleListMove(event) || handleReturn(event) {
             return nil
         }
         return handleCommandShortcut(event)
+    }
+
+    /// Return, or the keypad's Enter, opens the highlighted row. A rename
+    /// keeps them, for its own field.
+    private func handleReturn(_ event: NSEvent) -> Bool {
+        let key = KeyCode(rawValue: Int(event.keyCode))
+        guard
+            event.window === self, model.renameSession == nil, key == .returnKey || key == .keypadEnter, Modifiers(nsEventFlags: event.modifierFlags).isEmpty, let action = model.displayedItems.first(where: { $0.id == model.selection && $0.isSelectable })?.action
+        else {
+            return false
+        }
+        action()
+        return true
     }
 
     /// Moves the highlight for the arrows, Page Up, Page Down, Home and End,
@@ -23,9 +38,7 @@ extension MenuBarSearchPanel {
     /// global half of the monitor cannot move it twice.
     private func handleListMove(_ event: NSEvent) -> Bool {
         guard
-            event.window === self,
-            model.renameSession == nil,
-            let move = SearchListMove(
+            event.window === self, model.renameSession == nil, let move = SearchListMove(
                 key: KeyCode(rawValue: Int(event.keyCode)),
                 modifiers: Modifiers(nsEventFlags: event.modifierFlags)
             )
@@ -55,9 +68,7 @@ extension MenuBarSearchPanel {
         }
         // With no highlighted row these keys pass through.
         guard
-            model.renameSession == nil,
-            let appState,
-            selectedItem != nil
+            model.renameSession == nil, let appState, selectedItem != nil
         else {
             return event
         }
@@ -84,9 +95,7 @@ extension MenuBarSearchPanel {
     /// before the field selects its text.
     override func makeFirstResponder(_ responder: NSResponder?) -> Bool {
         let accepted = super.makeFirstResponder(responder)
-        if accepted, placesQueryCaretAtEnd, responder is NSTextField,
-           let editor = firstResponder as? NSTextView, editor.isFieldEditor
-        {
+        if accepted, placesQueryCaretAtEnd, responder is NSTextField, let editor = firstResponder as? NSTextView, editor.isFieldEditor {
             placesQueryCaretAtEnd = false
             editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
         }

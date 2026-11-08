@@ -8,6 +8,7 @@
 import SwiftUI
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// The contract between the three search panel faces.
 @MainActor
@@ -43,7 +44,7 @@ struct SearchPresentationTests {
     @Test("Each face has its own size, placement and log label")
     func sizesAndPlacements() {
         #expect(SearchPresentation.inspector.contentSize == CGSize(width: 600, height: 400))
-        #expect(SearchPresentation.launcher.contentSize == CGSize(width: 620, height: 420))
+        #expect(SearchPresentation.launcher.contentSize == CGSize(width: 750, height: 474), "Floe's launcher")
         #expect(SearchPresentation.assisted.contentSize == CGSize(width: 680, height: 560))
         #expect(SearchPresentation.inspector.placement == .remembered)
         #expect(SearchPresentation.launcher.placement == .centered)
@@ -63,8 +64,10 @@ struct SearchPresentationTests {
             let metrics = presentation.queryFieldMetrics
             #expect(!metrics.isCapsule)
             #expect(!metrics.hasTrailingSpacer)
-            #expect(metrics.padding.leading == 18)
         }
+        #expect(SearchPresentation.assisted.queryFieldMetrics.padding.leading == 18)
+        // Floe's field: centred in its own piece, inset as far as the panel's field is.
+        #expect(SearchPresentation.launcher.queryFieldMetrics.padding.leading == ThawSpacing.inset + 14)
         #expect(SearchPresentation.assisted.queryFieldMetrics.padding.top > SearchPresentation.launcher.queryFieldMetrics.padding.top)
     }
 

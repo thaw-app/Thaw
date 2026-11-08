@@ -122,9 +122,19 @@ private struct MenuBarSearchContentView: View {
     /// The panel surface the shared row list sits in.
     ///
     /// The inspector is a window: a glass panel with the field floating in a
-    /// capsule above the list and an action bar below it. The launcher is a
-    /// slab, headline field, hairline, results, hairline, the same action bar,
-    /// so its rows can be renamed and moved without switching modes.
+    /// capsule above the list and an action bar below it. The launcher is
+    /// Floe's: the field in a piece of glass of its own, a gap, then the
+    /// results over the action bar. The assisted face is one slab, headline
+    /// field, hairline, results, hairline, the same action bar, so its rows
+    /// can be renamed and moved without switching modes.
+    private static let launcherLook = LauncherLook(hasShadow: false)
+
+    private static let launcherPieces = PanelPieces(
+        look: launcherLook,
+        corners: .rounded,
+        heights: .launcher(height: SearchPresentation.launcher.contentSize.height)
+    )
+
     @ViewBuilder
     private var chrome: some View {
         let panelShape = RoundedRectangle(cornerRadius: MenuBarSearchPanel.cornerRadius, style: .continuous)
@@ -142,7 +152,18 @@ private struct MenuBarSearchContentView: View {
             .thawGlass(.panel, in: panelShape)
             .frame(width: presentation.contentSize.width, height: presentation.contentSize.height)
             .fixedSize()
-        case .launcher, .assisted:
+        case .launcher:
+            PanelSections {
+                queryField
+            } content: {
+                contentArea
+                MenuBarSearchFooter(panel: panel, showsDivider: false)
+            }
+            // The window draws the shadow: it ends at the panel's edge, where
+            // a piece's own would be cut off.
+            .modifier(PanelLook(look: Self.launcherLook, pieces: Self.launcherPieces))
+            .frame(width: presentation.contentSize.width, height: presentation.contentSize.height)
+        case .assisted:
             VStack(spacing: 0) {
                 queryField
                 Divider()
@@ -197,7 +218,6 @@ private struct MenuBarSearchContentView: View {
             .autocorrectionDisabled(true)
             .writingToolsBehavior(.disabled)
             .focused($queryFieldIsFocused)
-            .sectionedListKeys(selection: $model.selection, items: model.displayedItems, isEnabled: model.renameSession == nil)
             // With the shortcut bar off, ⌘K's menu opens under the field.
             .background(alignment: .bottomLeading) {
                 if !showsShortcutBar {
@@ -245,28 +265,14 @@ private struct MenuBarSearchContentView: View {
             }
     }
 
-    /// What covers the rows, or nil while they show. The launchers add a
-    /// rung: with an empty query they list only recents, so an empty list
-    /// there means nothing has been opened from search yet.
+    /// What covers the rows, or nil while they show. Every surface lists
+    /// the whole inventory with an empty query, so the rows only go missing
+    /// when the walk found nothing or nothing matched.
     private var emptyState: ThawEmptyState? {
-        if let unavailableState {
-            return unavailableState
-        }
-        if presentation != .inspector, model.displayedItems.isEmpty {
-            return ThawEmptyState(
-                systemImage: "clock",
-                title: "Start typing to find an item",
-                caption: "Items you open from here show up as recents."
-            )
-        }
-        return nil
+        unavailableState
     }
 
-    /// The same ladder the launcher walks, minus its "start typing" rung: the
-    /// inspector lists everything with an empty query, so an empty list there
-    /// means the walk found nothing, not that the user has not asked yet.
-    ///
-    /// What both surfaces show while there is nothing to list yet, or nil once there is.
+    /// What every surface shows while there is nothing to list yet, or nil once there is.
     ///
     /// Screen Recording is deliberately absent: without it the rows render
     /// owning-app icons (the same fallback used for failed captures), so the
@@ -300,12 +306,24 @@ private struct MenuBarSearchContentView: View {
     /// The rows, and the keyboard navigation over them, for both surfaces.
     /// Section headers ride in the list as non-selectable rows, so arrowing
     /// steps over them.
+    @ViewBuilder
     private var rowList: some View {
+        if presentation == .launcher {
+            LauncherSearchResults()
+        } else {
+            sectionedRowList
+        }
+    }
+
+    private var sectionedRowList: some View {
         @Bindable var model = model
         return SectionedList(
             selection: $model.selection,
             items: $model.displayedItems,
-            isEditing: model.renameSession != nil
+            // Only turns the list's own arrow and Return handling off: the
+            // panel's key monitor owns those keys, and a second handler wrote
+            // a stale highlight back after each held-arrow repeat.
+            isEditing: true
         )
         .contentPadding(ThawSpacing.base)
         .scrollContentBackground(.hidden)
@@ -324,8 +342,7 @@ private struct MenuBarSearchContentView: View {
     private func rebuildDisplayedItems() {
         switch presentation {
         case .inspector: rebuildSectionedRows()
-        case .launcher: rebuildRankedRows(recentsOnlyWhenEmpty: true)
-        case .assisted: rebuildRankedRows(recentsOnlyWhenEmpty: false)
+        case .launcher, .assisted: rebuildRankedRows()
         }
     }
 
@@ -340,20 +357,15 @@ private struct MenuBarSearchContentView: View {
             // Recents ride on top of the unfiltered list, Spotlight-style.
             // They only render when resolvable, stale identifiers expire
             // silently (see MenuBarSearchRecents).
-            let recentItems = recents.resolve(in: inventory)
-            var items = [ListItem]()
-            if !recentItems.isEmpty {
-                items.append(recentsHeaderRow)
-                items += recentItems.map { item in
-                    ListItem(
-                        content: .item(item),
-                        id: .item(item.tag, windowID: item.windowID),
-                        isSelectable: true,
-                        action: { performAction(for: item) }
-                    )
-                }
+            let recentRows = recents.resolve(in: inventory).map { item in
+                ListItem(
+                    content: .item(item),
+                    id: .item(item.tag, windowID: item.windowID),
+                    isSelectable: true,
+                    action: { performAction(for: item) }
+                )
             }
-            model.displayedItems = items + rows.map(\.listItem)
+            model.displayedItems = ListItem.recentsAbove(recentRows, rows.map(\.listItem), restHeader: nil)
             return
         }
 
@@ -397,24 +409,16 @@ private struct MenuBarSearchContentView: View {
         return rows
     }
 
-    /// Rebuilds the ranked launchers' rows: what you last opened until you
-    /// type, then the ranked matches, unless recentsOnlyWhenEmpty is
-    /// false, which is the assisted face's policy: the whole inventory in
-    /// menu bar order, with recents on top when there are any.
-    ///
-    /// The standard launcher assumes a user who can see the bar, so the empty
-    /// field stays quiet. For the assisted face reading the bar is the hard
-    /// part, so reading the list is the interaction and typing the
-    /// accelerator.
-    private func rebuildRankedRows(recentsOnlyWhenEmpty: Bool) {
+    /// Rebuilds the ranked launchers' rows: until you type, the whole
+    /// inventory in menu bar order with recents on top, so the arrows have
+    /// something to move through as soon as the panel opens; then the
+    /// ranked matches.
+    private func rebuildRankedRows() {
         let query = model.searchText.trimmingCharacters(in: .whitespaces)
         let retained = DisplayedItemInventory.cache(appState: appState)
         let inventory = launcherInventory(from: retained)
 
         guard !query.isEmpty else {
-            // A launcher opens on recents unless the presentation lists the
-            // full inventory.
-            //
             // Recents are matched back against the inventory rather than
             // rebuilt, so they carry the owning-app name without a second
             // lookup. Recents the launcher cannot open (spacers, control
@@ -424,12 +428,11 @@ private struct MenuBarSearchContentView: View {
                 uniquingKeysWith: { first, _ in first }
             )
             let recentCandidates = recents.resolve(in: retained).compactMap { byIdentity[$0.uniqueIdentifier] }
-            let recentRows = recentCandidates.isEmpty
-                ? []
-                : [recentsHeaderRow] + candidateRows(for: recentCandidates)
-            model.displayedItems = recentsOnlyWhenEmpty
-                ? recentRows
-                : recentRows + candidateRows(for: inventory)
+            model.displayedItems = ListItem.recentsAbove(
+                candidateRows(for: recentCandidates),
+                candidateRows(for: inventory),
+                restHeader: .allItemsHeader
+            )
             return
         }
 
@@ -450,15 +453,6 @@ private struct MenuBarSearchContentView: View {
             model.launcherCandidates = PaletteCandidate.inventory(from: retained)
         }
         return model.launcherCandidates
-    }
-
-    private var recentsHeaderRow: ListItem {
-        ListItem(
-            content: .label(String(localized: "Recent")),
-            id: .recentsHeader,
-            isSelectable: false,
-            action: nil
-        )
     }
 
     private func candidateRows(for candidates: [PaletteCandidate]) -> [ListItem] {

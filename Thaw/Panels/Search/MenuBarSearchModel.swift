@@ -27,6 +27,8 @@ final class MenuBarSearchModel {
         /// The recents heading, shown above recently activated items when
         /// the query is empty.
         case recentsHeader
+        /// Heads the launchers' full list when recents sit above it.
+        case allItemsHeader
         case item(MenuBarItemTag, windowID: CGWindowID?)
     }
 
@@ -153,10 +155,7 @@ final class MenuBarSearchModel {
                 for: displayID,
                 from: onScreenWindows
             )?.image
-            guard let color = image?.averageColor(option: .ignoreAlpha) else {
-                return
-            }
-            guard let self, self.captureSlot.isCurrent(ticket) else { return }
+            guard let color = image?.averageColor(option: .ignoreAlpha), let self, self.captureSlot.isCurrent(ticket) else { return }
             let info = MenuBarAverageColorInfo(color: color, source: .menuBarWindow)
             if self.averageColorInfo != info {
                 self.averageColorInfo = info

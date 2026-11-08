@@ -105,6 +105,9 @@ the items under New and Fixed.
 - **A move from search that fails stays up and is read aloud,** and shows in the same notice as Layout's.
 - **A wrong letter in search no longer clears what you typed,** and keys typed just after it are kept.
 - **Arrow keys in search keep working** after the menu bar changes or a rename, and repeat when held. Page Up, Page Down, Home and End move through the results too.
+- **Compact search opens on every item,** with your recent ones on top, so the arrow keys work before you type.
+- **Search lists a recent item once,** not again in the full list below.
+- **Compact search looks like Floe,** with the search field apart from the results.
 - **Layout and search show their shortcuts,** including ⌥-arrows to move and ⌘1–⌘3 from search, and new installs see the tip for selecting several items.
 - **Setup says what you give up without Accessibility** next to the button, not only in a tooltip.
 - **Onboarding's cards keep the Simple Mode you picked,** and the Zen Mode card opens Visibility, where Zen Mode lives.
