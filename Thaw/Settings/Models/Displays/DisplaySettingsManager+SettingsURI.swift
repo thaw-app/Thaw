@@ -15,11 +15,7 @@ extension DisplaySettingsManager {
     /// Handles per-display settings changed externally via Settings URI scheme.
     func handleExternalPerDisplaySettingsChange(_ notification: Notification) {
         guard
-            let userInfo = notification.userInfo,
-            let key = userInfo["key"] as? String,
-            let scope = userInfo["scope"] as? String,
-            let update = Self.update(forKey: key, userInfo: userInfo),
-            let uuids = displayUUIDs(forScope: scope)
+            let userInfo = notification.userInfo, let key = userInfo["key"] as? String, let scope = userInfo["scope"] as? String, let update = Self.update(forKey: key, userInfo: userInfo), let uuids = displayUUIDs(forScope: scope)
         else {
             return
         }
@@ -61,32 +57,38 @@ extension DisplaySettingsManager {
         let toggles = userInfo["toggle"] as? Bool == true
         let flag = userInfo["value"] as? Bool
         let text = userInfo["stringValue"] as? String
-        switch key {
-        case "useThawBar":
-            return flagUpdate(toggles, flag, \.useThawBar) { $0.withUseThawBar($1) }
-        case "alwaysShowHiddenItems":
-            return flagUpdate(toggles, flag, \.alwaysShowHiddenItems) { $0.withAlwaysShowHiddenItems($1) }
-        case "useThawBarForAlwaysHidden":
-            return flagUpdate(toggles, flag, \.useThawBarForAlwaysHidden) { $0.withUseThawBarForAlwaysHidden($1) }
-        case "thawBarLocation":
-            guard let location = text.flatMap(Int.init).flatMap(ThawBarLocation.init(rawValue:)) else { return nil }
-            return { $0.withThawBarLocation(location) }
-        case "thawBarLayout":
-            guard let layout = text.flatMap(ThawBarLayout.fromString) else { return nil }
-            return { $0.withThawBarLayout(layout) }
-        case "gridColumns":
-            guard let columns = text.flatMap(Int.init) else { return nil }
-            return { $0.withGridColumns(Swift.max(2, Swift.min(columns, 10))) }
-        case "thawBarItemScale":
-            guard let scale = text.flatMap(Double.init) else { return nil }
-            return { $0.withThawBarItemScale(ThawBarItemSize.clampedScale(scale)) }
-        case "itemSpacingOffset":
-            guard let offset = text.flatMap(Double.init) else { return nil }
-            return { $0.withItemSpacingOffset(Swift.max(-16, Swift.min(offset.rounded(), 16))) }
-        default:
-            return nil
+        if let (keyPath, apply) = flagKeys[key] {
+            return flagUpdate(toggles, flag, keyPath, apply)
         }
+        guard let text, let parse = valueKeys[key] else { return nil }
+        return parse(text)
     }
+
+    /// The keys with a value, each parsing its text into a change, or nil for a bad value.
+    private static let valueKeys: [String: (String) -> ConfigurationUpdate?] = [
+        "thawBarLocation": { text in
+            Int(text).flatMap(ThawBarLocation.init(rawValue:)).map { location in { $0.withThawBarLocation(location) } }
+        },
+        "thawBarLayout": { text in
+            ThawBarLayout.fromString(text).map { layout in { $0.withThawBarLayout(layout) } }
+        },
+        "gridColumns": { text in
+            Int(text).map { columns in { $0.withGridColumns(Swift.max(2, Swift.min(columns, 10))) } }
+        },
+        "thawBarItemScale": { text in
+            Double(text).map { scale in { $0.withThawBarItemScale(ThawBarItemSize.clampedScale(scale)) } }
+        },
+        "itemSpacingOffset": { text in
+            Double(text).map { offset in { $0.withItemSpacingOffset(Swift.max(-16, Swift.min(offset.rounded(), 16))) } }
+        },
+    ]
+
+    /// The Boolean keys: the value each reads and how each writes it.
+    private static let flagKeys: [String: (KeyPath<DisplayThawBarConfiguration, Bool>, (DisplayThawBarConfiguration, Bool) -> DisplayThawBarConfiguration)] = [
+        "useThawBar": (\.useThawBar, { $0.withUseThawBar($1) }),
+        "alwaysShowHiddenItems": (\.alwaysShowHiddenItems, { $0.withAlwaysShowHiddenItems($1) }),
+        "useThawBarForAlwaysHidden": (\.useThawBarForAlwaysHidden, { $0.withUseThawBarForAlwaysHidden($1) }),
+    ]
 
     /// A Boolean key's change: a toggle flips the current value, a set writes it.
     private static func flagUpdate(
