@@ -26,6 +26,8 @@ enum LayoutItemListCommand: Equatable {
     case menu
     /// Space: the item's editor, as Space opens the bars' inspector.
     case showEditor
+    /// Escape: empties the filter, then closes the window.
+    case escape
 
     /// The command for a key, or nil to let it through. Shift extends a step.
     static func command(for key: KeyEquivalent, characters: String, modifiers: EventModifiers) -> (command: Self, extends: Bool)? {
@@ -53,6 +55,7 @@ enum LayoutItemListCommand: Equatable {
         case .end: .edge(first: false)
         case .return where !shift: .menu
         case .space where !shift: .showEditor
+        case .escape where !shift: .escape
         default: nil
         }
     }
@@ -94,7 +97,8 @@ enum LayoutItemListPlacement {
     ) -> LayoutBatchMove.Placement? {
         let movingSet = Set(moving)
         guard !moving.isEmpty, movingSet.isSubset(of: entries.map(\.id)) else { return nil }
-        let remaining = entries.filter { !movingSet.contains($0.id) }
+        // Control items have no row, so a step never spends a press on one.
+        let remaining = entries.filter { !movingSet.contains($0.id) && !$0.isControlItem }
         let blocks = blocks(of: remaining)
         guard let firstMoving = entries.firstIndex(where: { movingSet.contains($0.id) }) else { return nil }
         // How many blocks sit left of the moving items now.
@@ -103,7 +107,27 @@ enum LayoutItemListPlacement {
         }
         let target = left ? before - 1 : before + 1
         guard target >= 0, target <= blocks.count else { return nil }
-        return target == 0 ? .start : blocks[target - 1].last.map(LayoutBatchMove.Placement.after)
+        let placement: LayoutBatchMove.Placement? = target == 0 ? .start : blocks[target - 1].last.map(LayoutBatchMove.Placement.after)
+        // A move that leaves the order as it is would still be undoable, so it isn't made.
+        guard let placement, order(entries.map(\.id), moving: moving, to: placement) != entries.map(\.id) else { return nil }
+        return placement
+    }
+
+    /// The order once moving lands at placement, the moving items keeping their own order.
+    static func order(_ ids: [String], moving: [String], to placement: LayoutBatchMove.Placement) -> [String] {
+        let movingSet = Set(moving)
+        var remaining = ids.filter { !movingSet.contains($0) }
+        let ordered = ids.filter(movingSet.contains)
+        switch placement {
+        case .start:
+            remaining.insert(contentsOf: ordered, at: 0)
+        case let .after(id):
+            let index = remaining.firstIndex(of: id).map { $0 + 1 } ?? remaining.count
+            remaining.insert(contentsOf: ordered, at: index)
+        case .end:
+            remaining.append(contentsOf: ordered)
+        }
+        return remaining
     }
 
     /// A drop on a row: the moving items land just left of it. Nil when the row is one of them.

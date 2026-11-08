@@ -21,14 +21,17 @@ struct LayoutItemListPane: View {
     let isEditable: Bool
     /// Space on a row: bring the item's editor forward.
     let showEditor: () -> Void
+    /// Escape with an empty filter.
+    var close: () -> Void = {}
 
     @State private var anchors = LayoutItemListAnchors()
     @State private var pageSize = 10
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        // Reading the item cache here keeps the list current as the bar changes.
+        // Reading the item cache and the names' revision keeps the list current as the bar changes or an item is renamed.
         _ = appState.itemManager.itemCache
+        _ = MenuBarItemCustomNamesRevision.shared.value
         let enabled = LayoutItemList.enabledSections(appState: appState)
         let shownScope = scope.section.map(enabled.contains) ?? true ? scope : .all
         let sections = LayoutItemList.sections(appState: appState, query: query, scope: shownScope)
@@ -108,9 +111,16 @@ struct LayoutItemListPane: View {
         }
     }
 
-    /// ThawUI's list heading, as search's sections use. Dropping rows on it moves them to that section.
+    /// Spaced as ThawUI's list heading, in the bars' sentence case. Dropping rows on it moves them to that section.
     private func heading(_ name: MenuBarSectionName, isFirst: Bool) -> some View {
-        ListSectionHeading(title: name.localizedName, isFirst: isFirst)
+        Text(name.localizedName)
+            .font(ThawType.sublabel.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, isFirst ? ThawSpacing.tight : ThawSpacing.gutter)
+            .padding(.bottom, ThawSpacing.tight)
+            .padding(.leading, ThawSpacing.row)
             .accessibilityAddTraits(.isHeader)
             .onDrop(of: [LayoutItemListDrop.type], isTargeted: nil) { providers in
                 guard isEditable else { return false }
@@ -134,9 +144,21 @@ struct LayoutItemListPane: View {
             showEditorForSelection()
         case .menu:
             popUpMenu()
+        case .escape:
+            escape()
         case .undo, .redo, .nudge, .adjacentSection, .sectionNumber:
             change(command)
         }
+    }
+
+    /// The window's own key handler takes Escape first; this covers a responder it reads as typing.
+    private func escape() -> Bool {
+        if query.isEmpty {
+            close()
+        } else {
+            query = ""
+        }
+        return true
     }
 
     private func selectAll(_ rows: [LayoutItemListRow]) -> Bool {

@@ -55,7 +55,8 @@ struct LayoutItemListActions {
 /// its divider; on a row they land just left of it.
 @MainActor
 enum LayoutItemListDrop {
-    static let type = UTType(importedAs: NSPasteboard.PasteboardType.layoutBarSelection.rawValue)
+    /// Declared in Info.plist: SwiftUI drops on macOS only match a declared type.
+    static let type = UTType(exportedAs: NSPasteboard.PasteboardType.layoutBarSelection.rawValue, conformingTo: .data)
 
     /// What a drag of rowID carries: the selection when the row is in it, otherwise the row alone,
     /// which it selects so the bars show what is moving.
