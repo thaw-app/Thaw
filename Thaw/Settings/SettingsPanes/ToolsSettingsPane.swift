@@ -331,7 +331,7 @@ private enum MaintenanceToolAction: Identifiable {
     var confirmationMessage: LocalizedStringResource {
         switch self {
         case .resetSettings:
-            "Every setting goes back to its default. The apps allowed to change settings, the welcome and What's New flags, dismissed tips and the item picture cache are cleared. Your menu bar layout and saved profiles stay. This can't be undone."
+            "Every setting goes back to its default, and Thaw forgets the apps allowed to change settings, the welcome and What's New, dismissed tips and item pictures. Your menu bar layout and saved profiles stay. This can't be undone."
         case .resetMenuBarLayoutPositions:
             "Every menu bar item's saved position will be deleted and the menu bar will restart, so your whole arrangement is rebuilt from scratch. A backup is saved first, and Layout backups on this page can put it back. \(Constants.displayName) relaunches afterward."
         case .restartMenuBar:

@@ -19,7 +19,6 @@ final class UserNotificationManager: NSObject {
     /// Thaw becomes active. Optimistic until the first read returns.
     private(set) var canAlert = true
 
-    /// The Privacy row for this permission.
     let permission = NotificationPermission()
 
     var notificationCenter: UNUserNotificationCenter {

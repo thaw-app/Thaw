@@ -30,7 +30,7 @@ struct DiagnosticLogRotationRows: View {
                     .monospacedDigit()
             }
         }
-        .annotation("Older log files are deleted, and so are any past the 50 newest. The file being written always stays.")
+        .annotation("Thaw also deletes logs past the 50 newest. The current file always stays.")
 
         ThawPicker("Rotate by time", selection: $settings.diagnosticLogRotationInterval) {
             ForEach(LogRotationInterval.allCases) { interval in
