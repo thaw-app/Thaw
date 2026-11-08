@@ -105,6 +105,7 @@ extension AppSettings {
     func resetThawBar() {
         thawBar.lockThawBarPosition = Defaults.DefaultValue.lockThawBarPosition
         thawBar.openHiddenItemsInMenuBar = Defaults.DefaultValue.openHiddenItemsInMenuBar
+        thawBar.useThawBarOnNotchOverflow = Defaults.DefaultValue.useThawBarOnNotchOverflow
         thawBar.useThawBar = Defaults.DefaultValue.useThawBar
         thawBar.useThawBarOnlyOnNotchedDisplay = Defaults.DefaultValue.useThawBarOnlyOnNotchedDisplay
         thawBar.thawBarLocation = Defaults.DefaultValue.thawBarLocation

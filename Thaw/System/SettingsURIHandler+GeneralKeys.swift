@@ -16,6 +16,7 @@ extension SettingsURIHandler {
         "blackSettingsBackground": SettingURIEntry(defaultsKey: .blackSettingsBackground, kind: .boolean, isWritable: true),
         "lockThawBarPosition": SettingURIEntry(defaultsKey: .lockThawBarPosition, kind: .boolean, isWritable: true),
         "openHiddenItemsInMenuBar": SettingURIEntry(defaultsKey: .openHiddenItemsInMenuBar, kind: .boolean, isWritable: true),
+        "useThawBarOnNotchOverflow": SettingURIEntry(defaultsKey: .useThawBarOnNotchOverflow, kind: .boolean, isWritable: true),
         "useThawBarOnlyOnNotchedDisplay": SettingURIEntry(defaultsKey: .useThawBarOnlyOnNotchedDisplay, kind: .boolean, isWritable: true),
         "thawBarLocationOnHotkey": SettingURIEntry(defaultsKey: .thawBarLocationOnHotkey, kind: .boolean, isWritable: true),
         "showOnClick": SettingURIEntry(defaultsKey: .showOnClick, kind: .boolean, isWritable: true),

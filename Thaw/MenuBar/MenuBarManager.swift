@@ -200,8 +200,7 @@ final class MenuBarManager {
             || sectionController.isNativeOverflowActive(on: displayID) == true
             || MenuBarSection.forcesThawBarForNotchOverflow(
                 overflowEnabled: configuration.enableMenuBarItemOverflow,
-                // No preference exists yet; keep the parameter to add one without changing the rule or tests.
-                useThawBarOnOverflow: true,
+                useThawBarOnOverflow: appState?.settings.thawBar.useThawBarOnNotchOverflow ?? true,
                 hasEjectedItems: !sectionController.overflowHiddenIdentifiers.isEmpty
             )
     }

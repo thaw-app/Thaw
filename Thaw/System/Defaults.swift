@@ -126,6 +126,7 @@ nonisolated enum Defaults {
             .simpleModeShowsPreview: DefaultValue.simpleModeShowsPreview,
             .lockThawBarPosition: DefaultValue.lockThawBarPosition,
             .openHiddenItemsInMenuBar: DefaultValue.openHiddenItemsInMenuBar,
+            .useThawBarOnNotchOverflow: DefaultValue.useThawBarOnNotchOverflow,
             .roundScreenCorners: DefaultValue.roundScreenCorners,
             .screenCornerRadius: DefaultValue.screenCornerRadius,
             .useThawBar: DefaultValue.useThawBar,
@@ -225,19 +226,13 @@ extension Defaults {
     nonisolated enum DefaultValue {
         // MARK: General Settings (see Defaults+General.swift)
 
-        static let lockThawBarPosition = true
-        static let openHiddenItemsInMenuBar = false
         static let roundScreenCorners = false
         static let screenCornerRadius = 10.0
-        static let useThawBar = false
-        static let useThawBarOnlyOnNotchedDisplay = false
 
         /// Native Always-Hidden: writes NSStatusItem VisibleCC <label> = false
         /// into the owning app's domain so the host stops publishing the item.
         /// Touches other apps' domains, so off until validated. Default: false.
         static let useNativeAlwaysHide = false
-        static let thawBarLocation: ThawBarLocation = .dynamic
-        static let thawBarLocationOnHotkey = false
         static let showOnClick = true
         static let showOnHover = false
         static let showOnScroll = true
@@ -361,6 +356,7 @@ extension Defaults {
         case spaceMenuBarChoices = "SpaceMenuBarChoices"
         case lockThawBarPosition = "LockThawBarPosition"
         case openHiddenItemsInMenuBar = "OpenHiddenItemsInMenuBar"
+        case useThawBarOnNotchOverflow = "UseThawBarOnNotchOverflow"
         case roundScreenCorners = "RoundScreenCorners"
         case screenCornerRadius = "ScreenCornerRadius"
         case menuBarSpacers = "MenuBarSpacers"
