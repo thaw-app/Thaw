@@ -364,11 +364,15 @@ final class ProfileManager {
     /// Returns whether the apply may restart apps for its spacing.
     private func applySnapshot(_ profile: Profile, to appState: AppState, relaunchesApps: Bool, spacingRelaunchApproved: Bool) -> Bool {
         profile.generalSettings.apply(to: appState.settings)
-        profile.advancedSettings.merged(onto: .capture(from: appState.settings)).apply(to: appState.settings)
+        profile.advancedSettings.merged(onto: .capture(from: appState.settings), storesAlwaysHiddenSection: profile.storesAlwaysHiddenSection)
+            .apply(to: appState.settings)
 
-        Defaults.set(profile.hotkeys, forKey: .hotkeys)
+        let hotkeys = ProfileHotkeyMerge.merged(
+            current: Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:], profile: profile.hotkeys, knownActions: profile.hotkeyActions
+        )
+        Defaults.set(hotkeys, forKey: .hotkeys)
         for hotkey in appState.settings.hotkeys.hotkeys {
-            guard let data = profile.hotkeys[hotkey.action.rawValue] else {
+            guard let data = hotkeys[hotkey.action.rawValue] else {
                 hotkey.keyCombination = nil
                 continue
             }
@@ -524,17 +528,7 @@ final class ProfileManager {
 
     /// Exports a profile to a file, including display associations.
     func exportProfile(id: UUID, to url: URL) throws {
-        let profile = try loadProfile(id: id).withCurrentScripts(moduleDefaults: .scriptsModule)
-        let meta = profiles.first { $0.id == id }
-        let entry = ProfileExportEntry(
-            profile: profile,
-            associatedDisplayUUID: meta?.associatedDisplayUUID,
-            associatedDisplayName: meta?.associatedDisplayName,
-            associatedSpaceKey: meta?.associatedSpaceKey,
-            associatedSpaceName: meta?.associatedSpaceName,
-            keepsLayoutChanges: meta?.keepsLayoutChangesSetting,
-            reappliesAtLaunch: meta?.reappliesAtLaunchSetting
-        )
+        let entry = try ProfileExportBuilder.entry(for: loadProfile(id: id), meta: profiles.first { $0.id == id })
         let bundle = ProfileExportBundle(entries: [entry])
         let data = try encoder.encode(bundle)
         try data.write(to: url, options: .atomic)
@@ -576,6 +570,7 @@ final class ProfileManager {
             generalSettings: GeneralSettingsSnapshot.capture(from: appState.settings),
             advancedSettings: AdvancedSettingsSnapshot.capture(from: appState.settings),
             hotkeys: Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:],
+            hotkeyActions: ProfileHotkeyMerge.currentActions,
             displayConfigurations: appState.settings.displaySettings.configurations,
             globalDisplayConfiguration: appState.settings.displaySettings.globalConfiguration,
             confirmSpacingRelaunch: appState.settings.displaySettings.confirmSpacingRelaunch,
@@ -808,24 +803,10 @@ final class ProfileManager {
         try saveManifest()
     }
 
-    /// Exports all profiles as a single JSON file including metadata.
-    func exportAllProfiles() -> String? {
-        var entries = [ProfileExportEntry]()
-        for meta in profiles {
-            guard let profile = try? loadProfile(id: meta.id) else { continue }
-            entries.append(ProfileExportEntry(
-                profile: profile,
-                associatedDisplayUUID: meta.associatedDisplayUUID,
-                associatedDisplayName: meta.associatedDisplayName,
-                associatedSpaceKey: meta.associatedSpaceKey,
-                associatedSpaceName: meta.associatedSpaceName,
-                keepsLayoutChanges: meta.keepsLayoutChangesSetting,
-                reappliesAtLaunch: meta.reappliesAtLaunchSetting
-            ))
-        }
-        let bundle = ProfileExportBundle(entries: entries)
-        guard let data = try? encoder.encode(bundle) else { return nil }
-        return String(data: data, encoding: .utf8)
+    /// Exports all profiles as one JSON file, with the names of any that couldn't be read.
+    func exportAllProfiles() -> (json: String?, unreadableNames: [String]) {
+        let all = ProfileExportBuilder.all(profiles, load: loadProfile(id:))
+        return ((try? encoder.encode(all.bundle)).flatMap { String(data: $0, encoding: .utf8) }, all.unreadableNames)
     }
 
     // MARK: - Space Association
@@ -1057,6 +1038,7 @@ final class ProfileManager {
                 keepsLayoutChangesSetting: entry.keepsLayoutChanges,
                 reappliesAtLaunchSetting: entry.reappliesAtLaunch
             ))
+            ProfileApplyShortcuts().adopt(entry.applyShortcut, for: imported.id)
 
             // Any existing profile that owns this display or Space gives it up; foreign-Mac Space keys stay inert.
             if let displayUUID = entry.associatedDisplayUUID {

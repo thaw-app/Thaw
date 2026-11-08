@@ -326,6 +326,8 @@ nonisolated struct ProfileContent {
     var generalSettings: GeneralSettingsSnapshot
     var advancedSettings: AdvancedSettingsSnapshot
     var hotkeys: [String: Data]
+    /// The shortcut actions that existed at save, so apply leaves newer ones alone. Nil in older profiles.
+    var hotkeyActions: [String]?
     var displayConfigurations: [String: DisplayThawBarConfiguration]
     var globalDisplayConfiguration: DisplayThawBarConfiguration = Defaults.DefaultValue.globalDisplayConfiguration
     var confirmSpacingRelaunch: Bool = Defaults.DefaultValue.confirmSpacingRelaunch
@@ -348,6 +350,7 @@ nonisolated struct Profile: Codable, Identifiable {
     var generalSettings: GeneralSettingsSnapshot
     var advancedSettings: AdvancedSettingsSnapshot
     var hotkeys: [String: Data]
+    var hotkeyActions: [String]?
     var displayConfigurations: [String: DisplayThawBarConfiguration]
     var globalDisplayConfiguration: DisplayThawBarConfiguration = Defaults.DefaultValue.globalDisplayConfiguration
     var confirmSpacingRelaunch: Bool = Defaults.DefaultValue.confirmSpacingRelaunch
@@ -357,6 +360,8 @@ nonisolated struct Profile: Codable, Identifiable {
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2
     var menuBarLayout: MenuBarLayoutSnapshot
     var automation: ProfileAutomation?
+    /// Whether the saved file stores the Always Hidden switch; older ones read it as off. Never encoded.
+    var storesAlwaysHiddenSection = true
 
     /// Returns lightweight metadata for this profile.
     var metadata: ProfileMetadata {
@@ -374,6 +379,7 @@ nonisolated struct Profile: Codable, Identifiable {
             generalSettings: generalSettings,
             advancedSettings: advancedSettings,
             hotkeys: hotkeys,
+            hotkeyActions: hotkeyActions,
             displayConfigurations: displayConfigurations,
             globalDisplayConfiguration: globalDisplayConfiguration,
             confirmSpacingRelaunch: confirmSpacingRelaunch,
@@ -395,6 +401,7 @@ nonisolated struct Profile: Codable, Identifiable {
         case generalSettings
         case advancedSettings
         case hotkeys
+        case hotkeyActions
         case displayConfigurations
         case globalDisplayConfiguration
         case confirmSpacingRelaunch
@@ -403,6 +410,10 @@ nonisolated struct Profile: Codable, Identifiable {
         case appearanceConfiguration
         case menuBarLayout
         case automation
+    }
+
+    private enum AlwaysHiddenKey: String, CodingKey {
+        case enableAlwaysHiddenSection
     }
 
     init(
@@ -419,6 +430,7 @@ nonisolated struct Profile: Codable, Identifiable {
         self.generalSettings = content.generalSettings
         self.advancedSettings = content.advancedSettings
         self.hotkeys = content.hotkeys
+        self.hotkeyActions = content.hotkeyActions
         self.displayConfigurations = content.displayConfigurations
         self.globalDisplayConfiguration = content.globalDisplayConfiguration
         self.confirmSpacingRelaunch = content.confirmSpacingRelaunch
@@ -446,11 +458,11 @@ nonisolated struct Profile: Codable, Identifiable {
             AdvancedSettingsSnapshot.self,
             forKey: .advancedSettings
         ) ?? .defaults
+        storesAlwaysHiddenSection = (try? container.nestedContainer(keyedBy: AlwaysHiddenKey.self, forKey: .advancedSettings))?
+            .contains(.enableAlwaysHiddenSection) ?? false
 
-        hotkeys = try container.decodeIfPresent(
-            [String: Data].self,
-            forKey: .hotkeys
-        ) ?? [:]
+        hotkeys = try container.decodeIfPresent([String: Data].self, forKey: .hotkeys) ?? [:]
+        hotkeyActions = try container.decodeIfPresent([String].self, forKey: .hotkeyActions)
 
         displayConfigurations = try container.decodeIfPresent(
             [String: DisplayThawBarConfiguration].self,
@@ -462,10 +474,7 @@ nonisolated struct Profile: Codable, Identifiable {
             forKey: .globalDisplayConfiguration
         ) ?? Defaults.DefaultValue.globalDisplayConfiguration
 
-        confirmSpacingRelaunch = try container.decodeIfPresent(
-            Bool.self,
-            forKey: .confirmSpacingRelaunch
-        ) ?? Defaults.DefaultValue.confirmSpacingRelaunch
+        confirmSpacingRelaunch = try container.decodeIfPresent(Bool.self, forKey: .confirmSpacingRelaunch) ?? Defaults.DefaultValue.confirmSpacingRelaunch
 
         unconfirmedSpacingProfileScope = try container.decodeIfPresent(
             SpacingProfileSaveScope.self,
@@ -491,29 +500,6 @@ nonisolated struct Profile: Codable, Identifiable {
 
         automation = try container.decodeIfPresent(ProfileAutomation.self, forKey: .automation)
     }
-}
-
-// MARK: - ProfileExportEntry
-
-/// A single profile bundled with its metadata for export/import.
-/// Preserves display associations that live on the manifest.
-nonisolated struct ProfileExportEntry: Codable {
-    var profile: Profile
-    var associatedDisplayUUID: String?
-    var associatedDisplayName: String?
-    /// Space associations are exported too, but a key from another Mac will
-    /// never match locally, so importing one is harmless rather than useful.
-    var associatedSpaceKey: String?
-    var associatedSpaceName: String?
-    /// The profile's layout switches. Nil in files exported before them.
-    var keepsLayoutChanges: Bool?
-    var reappliesAtLaunch: Bool?
-}
-
-/// Wrapper for exporting multiple profiles as a single file.
-nonisolated struct ProfileExportBundle: Codable {
-    var version: Int = 1
-    var entries: [ProfileExportEntry]
 }
 
 // MARK: - Default-backed decoding
