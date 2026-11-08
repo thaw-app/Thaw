@@ -75,6 +75,7 @@ the items under New and Fixed.
 - **Group several selected items at once.** Right-click a selection, or use the editor beside the list, to group them, add them to a group, show them as a folder, or have them show when their icons change.
 - **The Layout window's Groups tab finds a group's items.** Select a group to select its items in the list and the bars, or drop items on a group to add them.
 - **A section with more items than fit scrolls to whatever you select,** from the bars, the keyboard or the Layout window's list.
+- **In the Layout window, a long section wraps onto more rows** instead of scrolling sideways. The bars grow to fit, up to about half the window, and scroll past that.
 - **The experimental reorder editor is gone,** with its hidden setting.
 - **Hold Option on Capture Hidden Items to retake every picture.** The button reads Retake All Pictures while you do.
 - **Extras is now Modules.**

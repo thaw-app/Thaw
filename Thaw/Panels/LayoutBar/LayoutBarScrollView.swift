@@ -39,14 +39,20 @@ final class LayoutBarScrollView: NSScrollView {
     ///   - appState: The shared app state instance.
     ///   - section: The section whose items are represented.
     ///   - selection: The pane's selection, shared by every section's bar.
-    init(appState: AppState, section: MenuBarSection.Name, selection: LayoutSelectionModel? = nil) {
-        self.paddingView = LayoutBarPaddingView(appState: appState, section: section)
+    ///   - wrapsRows: Whether items wrap onto as many rows as the width needs, rather than scroll.
+    init(
+        appState: AppState,
+        section: MenuBarSection.Name,
+        selection: LayoutSelectionModel? = nil,
+        wrapsRows: Bool = false
+    ) {
+        self.paddingView = LayoutBarPaddingView(appState: appState, section: section, wrapsRows: wrapsRows)
         self.selection = selection
 
         super.init(frame: .zero)
 
         self.documentView = paddingView
-        self.hasHorizontalScroller = true
+        self.hasHorizontalScroller = !wrapsRows
         self.hasVerticalScroller = false
         self.verticalScrollElasticity = .none
         self.autohidesScrollers = true
@@ -55,9 +61,17 @@ final class LayoutBarScrollView: NSScrollView {
 
         NSLayoutConstraint.activate([
             paddingView.heightAnchor.constraint(equalTo: contentView.heightAnchor),
-            paddingView.widthAnchor.constraint(greaterThanOrEqualTo: contentView.widthAnchor),
+            wrapsRows
+                ? paddingView.widthAnchor.constraint(equalTo: contentView.widthAnchor)
+                : paddingView.widthAnchor.constraint(greaterThanOrEqualTo: contentView.widthAnchor),
             paddingView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
         ])
+        if wrapsRows {
+            // Narrow until the first layout, so the items' single row never sets the bar's width.
+            paddingView.container.rowWidth = 1
+            setContentHuggingPriority(.required, for: .vertical)
+            setContentCompressionResistancePriority(.required, for: .vertical)
+        }
 
         if let selection {
             selectionInteraction = LayoutSelectionInteraction(scrollView: self, selection: selection)
@@ -78,6 +92,32 @@ final class LayoutBarScrollView: NSScrollView {
     required init?(coder _: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+
+    /// The clip view takes its width here, before the bar's items lay out, so rows follow it in the same pass.
+    override func tile() {
+        super.tile()
+        paddingView.wrapRows(toWidth: contentView.frame.width)
+    }
+
+    /// A bar that wraps is as tall as its rows; one that scrolls takes the height it is given.
+    override var intrinsicContentSize: NSSize {
+        guard paddingView.wrapsRows else { return super.intrinsicContentSize }
+        return NSSize(width: NSView.noIntrinsicMetric, height: height(forWidth: bounds.width))
+    }
+
+    /// The single-row bar's height, which a wrapped bar of one row keeps.
+    static let barHeight: CGFloat = 48
+
+    /// The bar's height at a width, from its items before it lays out there.
+    func height(forWidth width: CGFloat) -> CGFloat {
+        guard paddingView.wrapsRows else { return Self.barHeight }
+        let items = paddingView.wrappedItemsHeight(width: width)
+        // One row keeps the single-row bar's 12pt above and below its items.
+        return max(Self.barHeight, items + (Self.barHeight - Self.rowItemHeight))
+    }
+
+    /// An item's height on the bar, which barHeight frames.
+    private static let rowItemHeight: CGFloat = 24
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -102,6 +142,11 @@ final class LayoutBarScrollView: NSScrollView {
             .compactMap({ $0 as? LayoutBarItemView })
             .first(where: { $0.item.uniqueIdentifier == anchorID })
         else { return }
+        guard !paddingView.wrapsRows else {
+            // Every row shows, so only the pane around the bars may need to scroll, down to the item's row.
+            view.scrollToVisible(view.bounds.insetBy(dx: 0, dy: -Self.revealMargin / 2))
+            return
+        }
         // In the clip view's space, where its bounds are what shows and the document's frame is what can.
         let target = contentView.convert(view.bounds, from: view)
         guard let originX = Self.revealOriginX(

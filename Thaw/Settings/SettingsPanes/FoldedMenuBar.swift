@@ -30,6 +30,8 @@ struct FoldedMenuBar: View {
     @State private var ownSelection = LayoutSelectionModel(onMultiSelect: { FeatureTips.shared.noteMultiSelect() })
     /// The Layout window's selection, shared with its item list; nil uses this surface's own.
     var sharedSelection: LayoutSelectionModel?
+    /// Spaced bars wrap their items onto rows instead of scrolling, as the Layout window's do.
+    var wrapsRows = false
 
     private var selection: LayoutSelectionModel {
         sharedSelection ?? ownSelection
@@ -68,7 +70,7 @@ struct FoldedMenuBar: View {
                         sortMenu(section)
                     }
                     .padding(.horizontal, ThawSpacing.tight)
-                    LayoutBar(imageCache: appState.imageCache, section: section, chrome: .card, selection: selection)
+                    LayoutBar(imageCache: appState.imageCache, section: section, chrome: .card, selection: selection, wrapsRows: wrapsRows)
                 }
                 .onReceive(
                     NotificationCenter.default.publisher(for: .layoutBarDragTargetChanged)

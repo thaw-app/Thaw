@@ -14,8 +14,10 @@ import MenuBarModel
 final class LayoutBarPaddingView: NSView {
     private static let diagLog = DiagLog(category: "LayoutBarPaddingView")
 
-    private let container: LayoutBarContainer
+    let container: LayoutBarContainer
     private var isStabilizing = false
+    /// Whether the bar wraps its items onto rows as wide as this view, rather than scrolling one row.
+    let wrapsRows: Bool
 
     private var notchView: NotchIndicatorView?
     private var notchWidthConstraint: NSLayoutConstraint?
@@ -24,26 +26,6 @@ final class LayoutBarPaddingView: NSView {
     private var containerLeadingAfterNotchConstraint: NSLayoutConstraint?
     private var containerLeadingInsetConstraint: NSLayoutConstraint?
     private var notchObservers = Set<AnyCancellable>()
-
-    /// Whether an item may be used as a layout-bar drag source on macOS 27.
-    /// The visible Thaw control is a real movable status item; the zero-width
-    /// divider controls remain structural and must never be reordered.
-    static func acceptsLayoutDrag(of item: MenuBarItem) -> Bool {
-        !item.isControlItem || item.tag.matchesVisibleControlItem
-    }
-
-    /// Whether anchored Apple system items may be freely reordered in the
-    /// layout editor. Without Thaw Bar, hidden anchored items still mirror the
-    /// real menu bar's trailing system-control placement.
-    static func allowsAnchoredSystemItemReordering(appState: AppState?) -> Bool {
-        guard let appState else {
-            return false
-        }
-        if let displayID = appState.itemManager.itemDisplayID {
-            return appState.settings.displaySettings.useThawBar(for: displayID)
-        }
-        return appState.settings.displaySettings.configurationForActiveDisplay().useThawBar
-    }
 
     private static func anchoredSystemItemsTrail(in items: [MenuBarItem]) -> [MenuBarItem] {
         MenuBarBackendProvider.current.anchoredSystemItemsTrail(in: items)
@@ -100,8 +82,10 @@ final class LayoutBarPaddingView: NSView {
     /// - Parameters:
     ///   - appState: The shared app state instance.
     ///   - section: The section whose items are represented.
-    init(appState: AppState, section: MenuBarSection.Name) {
+    ///   - wrapsRows: Whether items wrap onto rows as wide as this view.
+    init(appState: AppState, section: MenuBarSection.Name, wrapsRows: Bool = false) {
         self.container = LayoutBarContainer(appState: appState, section: section)
+        self.wrapsRows = wrapsRows
 
         super.init(frame: .zero)
 
@@ -867,7 +851,7 @@ final class LayoutBarPaddingView: NSView {
     /// fall out of a handle drag.
     private func performGroupHandleDrop(_ handle: LayoutBarGroupHandleView, sender: NSDraggingInfo) -> Bool {
         if handle.sourceSection == container.section {
-            let dropX = container.convert(sender.draggingLocation, from: nil).x
+            let dropX = container.sweepX(at: sender.draggingLocation)
             // The reorder path restores view updates itself (immediately for a
             // concealed section, or after its async move task for a live one).
             return performGroupHandleReorder(handle, dropX: dropX)
@@ -1333,7 +1317,9 @@ final class LayoutBarPaddingView: NSView {
     }
 
     private func updateNotchPresentation() {
+        // Rows that wrap are not the menu bar's shape, so the notch has no place among them.
         guard
+            !wrapsRows,
             container.section == .visible,
             let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main,
             screen.hasNotch,
