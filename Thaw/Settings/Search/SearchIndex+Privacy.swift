@@ -32,6 +32,15 @@ nonisolated extension SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "privacy.notifications",
+            title: "Notifications",
+            descriptionText: String(localized: "Lets Thaw tell you when an update is ready and when a shortcut changes a setting. Optional."),
+            pane: .privacy,
+            section: "Permissions",
+            keywords: ["notifications", "alerts", "permission", "banner", "update", "optional"],
+            property: nil
+        ),
+        SearchEntry(
             id: "privacy.captureInspector",
             // The row is the section itself: "What Thaw sees" is the pane's
             // section header, so no separate section is attached.
