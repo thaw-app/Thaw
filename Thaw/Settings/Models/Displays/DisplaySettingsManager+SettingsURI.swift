@@ -43,12 +43,15 @@ extension DisplaySettingsManager {
         // "allNonIceBar" is the Ice-era spelling, kept for script compatibility.
         case "allNonThawBar", "allNonIceBar":
             return connected.filter { !configuration(forUUID: $0).useThawBar }
-        default:
+        case "active":
             guard let uuid = Bridging.getActiveMenuBarDisplayUUID() else {
-                diagLog.warning("DisplaySettingsManager: No active menu bar display for \(scope)")
+                diagLog.warning("DisplaySettingsManager: No active menu bar display")
                 return nil
             }
             return [uuid]
+        default:
+            diagLog.warning("DisplaySettingsManager: Ignoring unknown scope '\(scope)'")
+            return nil
         }
     }
 
