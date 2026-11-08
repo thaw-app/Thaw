@@ -15,15 +15,22 @@ struct LayoutDashboardSidePane: View {
 
     @State private var pane = Pane.item
 
-    enum Pane: CaseIterable {
+    enum Pane: CaseIterable, ThawTab {
         case item, groups, spacers, appleItems
 
-        var title: LocalizedStringKey {
+        var title: LocalizedStringResource {
             switch self {
             case .item: "Item"
             case .groups: "Groups"
             case .spacers: "Spacers"
-            case .appleItems: "Apple"
+            case .appleItems: "Apple’s Items"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .item: "slider.horizontal.3"
+            default: tab?.systemImage ?? "circle"
             }
         }
 
@@ -39,12 +46,8 @@ struct LayoutDashboardSidePane: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("Show", selection: $pane) {
-                ForEach(Pane.allCases, id: \.self) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .padding(ThawSpacing.base)
+            ThawTabStrip(selection: $pane, tabs: Pane.allCases)
+                .padding(ThawSpacing.base)
             Divider()
             if let tab = pane.tab {
                 ThawForm(readingWidth: .full) {

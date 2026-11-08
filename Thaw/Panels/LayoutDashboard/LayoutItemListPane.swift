@@ -84,14 +84,9 @@ struct LayoutItemListPane: View {
         }
     }
 
-    /// The bars' heading style, so a section reads the same in both.
+    /// ThawUI's list heading, as search's sections use.
     private func heading(_ name: MenuBarSectionName, isFirst: Bool) -> some View {
-        Text(name.localizedName)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .padding(.top, isFirst ? 0 : ThawSpacing.row)
-            .padding(.bottom, ThawSpacing.tight)
-            .padding(.leading, PanelRow.inset)
+        ListSectionHeading(title: name.localizedName, isFirst: isFirst)
             .accessibilityAddTraits(.isHeader)
     }
 
@@ -101,12 +96,12 @@ struct LayoutItemListPane: View {
             visibilityCheckbox(row, in: section)
             MenuBarItemRowImage(item: row.item, columnWidth: LayoutDashboardMetrics.pictureColumnWidth)
             Text(row.name)
-                .font(ThawType.body)
+                .font(ThawType.label)
                 .lineLimit(1)
             Spacer(minLength: 0)
             if let owner = row.ownerName {
                 Text(verbatim: owner)
-                    .font(ThawType.caption)
+                    .font(ThawType.detail)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -143,6 +138,7 @@ struct LayoutItemListPane: View {
             EmptyView()
         }
         .toggleStyle(.thawCheckbox)
+        .controlSize(.large)
         .accessibilityLabel(Text("Show \(row.name) in the menu bar"))
         .fixedSize()
         .disabled(lock != nil)

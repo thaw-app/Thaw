@@ -42,13 +42,13 @@ struct LayoutDashboardView: View {
                 Divider()
                 HSplitView {
                     LayoutItemListPane(selection: model.selection, query: $model.filterText)
-                        .frame(minWidth: LayoutDashboardMetrics.listMinWidth, idealWidth: LayoutDashboardMetrics.listIdealWidth)
-                    LayoutDashboardSidePane(selection: model.selection)
                         .frame(
-                            minWidth: LayoutDashboardMetrics.editorMinWidth,
-                            idealWidth: LayoutDashboardMetrics.editorIdealWidth,
-                            maxWidth: LayoutDashboardMetrics.editorMaxWidth
+                            minWidth: LayoutDashboardMetrics.listMinWidth,
+                            idealWidth: LayoutDashboardMetrics.listIdealWidth,
+                            maxWidth: LayoutDashboardMetrics.listMaxWidth
                         )
+                    LayoutDashboardSidePane(selection: model.selection)
+                        .frame(minWidth: LayoutDashboardMetrics.editorMinWidth, maxWidth: .infinity)
                 }
             }
             // The bars always show the live bar, so away from the target they only show it.
