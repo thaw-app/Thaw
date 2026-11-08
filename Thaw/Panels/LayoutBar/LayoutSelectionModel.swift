@@ -119,6 +119,16 @@ final class LayoutSelectionModel {
         change { $0.selectAll(among: itemIDs, in: units) }
     }
 
+    /// Selects the items the bars show among itemIDs, such as a group's members.
+    func select(_ itemIDs: [String]) {
+        change { $0.select(Set(itemIDs), in: units) }
+    }
+
+    /// The sections holding a selected item.
+    var sections: Set<MenuBarSectionName> {
+        selection.sections
+    }
+
     /// The units a section's bar last reported, left to right.
     func units(in section: MenuBarSectionName) -> [Unit] {
         units[section] ?? []

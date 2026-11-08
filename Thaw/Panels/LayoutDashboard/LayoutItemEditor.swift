@@ -39,6 +39,46 @@ struct LayoutItemEditor: View {
                 ThawSection("\(count) items selected") {
                     LayoutSectionPicker(section: section, selection: selection, isLocked: !isEditable)
                 }
+                if let grouping = LayoutSelectionGrouping.make(selection: selection, appState: appState) {
+                    LayoutSelectionGroupingSection(grouping: grouping)
+                }
+            }
+        }
+    }
+}
+
+/// Group Selected, Add to Group and Make Folder for several selected items, as in their menu.
+private struct LayoutSelectionGroupingSection: View {
+    @Environment(AppState.self) private var appState
+    let grouping: LayoutSelectionGrouping
+
+    var body: some View {
+        ThawSection("Group") {
+            if let refusal = grouping.refusal {
+                Text(LayoutSelectionGrouping.explanation(for: refusal))
+                    .font(ThawType.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                LabeledContent("Selected items") {
+                    ThawActionGroup {
+                        Button("Group") { grouping.group() }
+                            .disabled(!grouping.canGroup)
+                        Button("Make Folder") { grouping.makeFolder(folders: appState.groupFolders) }
+                            .disabled(grouping.isFolder(appState.groupFolders))
+                    }
+                    .buttonStyle(.thawGrouped)
+                }
+                let joinable = grouping.joinableGroups
+                if !joinable.isEmpty {
+                    LabeledContent("Add to group") {
+                        Menu("Choose") {
+                            ForEach(joinable, id: \.origin) { group in
+                                Button(grouping.name(of: group)) { grouping.add(to: group) }
+                            }
+                        }
+                        .fixedSize()
+                    }
+                }
             }
         }
     }

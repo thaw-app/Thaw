@@ -57,7 +57,8 @@ struct LayoutDashboardSidePane: View {
                         canArrangeLayout: !appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults,
                         isHidingUnavailable: appState.menuBarManager.sectionController.isHidingUnavailable,
                         includesOptions: false,
-                        fixedTab: tab
+                        fixedTab: tab,
+                        groupNavigation: LayoutGroupNavigation(selection: selection, appState: appState)
                     )
                     // On the rows, not the form, so the pane still scrolls.
                     .disabled(!isEditable)
