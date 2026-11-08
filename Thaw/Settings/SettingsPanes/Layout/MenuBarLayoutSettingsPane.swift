@@ -342,13 +342,10 @@ struct LayoutBarsSection: View {
     private var popOutButton: some View {
         Button("Pop Out Editor", systemImage: "rectangle.portrait.and.arrow.right") {
             guard let screen = MenuBarLayoutEditorPanel.defaultScreen else { return }
-            let menuBarManager = appState.menuBarManager
-            menuBarManager.layoutEditorPanel.show(on: screen, usesReorderEditor: true) {
-                menuBarManager.dismissLayoutEditorPanel()
-            }
+            appState.menuBarManager.layoutEditorPanel.showWindow(on: screen)
         }
         .buttonStyle(.settingsGlass)
-        .help("Opens the reorder editor in its own window.")
+        .help("Opens Layout in a window that stays on this menu bar while you work.")
     }
 }
 

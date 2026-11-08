@@ -200,7 +200,6 @@ nonisolated enum Defaults {
             .axMessagingTimeout: DefaultValue.axMessagingTimeout,
             .useLCSSectionOrderPlanner: DefaultValue.useLCSSectionOrderPlanner,
             .inputPauseThresholdMs: DefaultValue.inputPauseThresholdMs,
-            .useReorderLayoutEditor: DefaultValue.useReorderLayoutEditor,
         ]
     }
 
@@ -328,7 +327,6 @@ extension Defaults {
         static let inputPauseThresholdMs = 50
 
         /// Edit Layout opens the SwiftUI reorder editor, in its own window, in place of the Layout pane pop-out. Default: false.
-        static let useReorderLayoutEditor = false
     }
 }
 
@@ -562,10 +560,6 @@ extension Defaults {
         ///
         /// Hidden escape hatch; not exposed in Settings. Default: 50.
         case inputPauseThresholdMs
-
-        /// Whether Edit Layout opens the SwiftUI reorder editor (see DefaultValue.useReorderLayoutEditor).
-        /// Hidden; not exposed in Settings. Default: false.
-        case useReorderLayoutEditor
 
         /// Whether Always-Hidden members are natively hidden via their
         /// owners' preference domains (see DefaultValue.useNativeAlwaysHide).
