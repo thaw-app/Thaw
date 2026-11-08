@@ -43,7 +43,7 @@ nonisolated enum SearchPresentation: String, CaseIterable, Identifiable {
     /// The picker's note.
     var summary: LocalizedStringKey {
         switch self {
-        case .extended: "The list of items is always shown under the search field."
+        case .extended: "Always lists your items under the search field."
         case .compact: "Only the search field until you type."
         }
     }

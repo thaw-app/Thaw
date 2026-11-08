@@ -9,9 +9,8 @@ import MenuBarModel
 import SwiftUI
 import ThawUI
 
-/// What sits under the search list: the shortcut bar, unless it is turned
-/// off in Settings, and the refusal notice either way, since a refused move
-/// from search has nothing else to show for itself.
+/// The shortcut bar under the list, when it is on, and the refusal notice
+/// either way: a refused move from search has nowhere else to show.
 struct MenuBarSearchFooter: View {
     @Environment(AppState.self) private var appState
     @Environment(MenuBarSearchModel.self) private var model
@@ -89,9 +88,8 @@ struct MenuBarSearchFooter: View {
             KeyCapView(text: "K")
         }
         .help("Rename, group or move the item. ⌘1, ⌘2 and ⌘3 move it to Visible, Hidden or Always Hidden.")
-        // The actions menu hangs off this button, so it has to be
-        // reachable as an AppKit view: the anchor sits behind the
-        // button and takes its frame.
+        // The actions menu hangs off this button, so an AppKit anchor sits
+        // behind it and takes its frame.
         .background { ItemActionsMenuAnchor(panel: panel) }
         ShortcutHintButton(
             title: isEffectivelyVisible(item)
@@ -120,13 +118,8 @@ struct MenuBarSearchFooter: View {
         .keyboardShortcut(.defaultAction)
     }
 
-    /// Whether item is where the user can already see it, which is what
-    /// separates "Click Item" from "Show Item".
-    ///
-    /// Mirrors the dispatch in MenuBarItemManager.clickConcealedItem(item:with:on:)
-    /// so the label describes what Return will actually do. A window-server
-    /// on-screen check cannot answer this: macOS 27 status items carry
-    /// synthetic window IDs that are never in the on-screen list.
+    /// "Click Item" or "Show Item", mirroring MenuBarItemManager.clickConcealedItem.
+    /// The window list can't tell: macOS 27 items have synthetic window IDs.
     private func isEffectivelyVisible(_ item: MenuBarItem) -> Bool {
         let controller = appState.menuBarManager.sectionController
         guard controller.section(for: item) == .visible else {
@@ -138,12 +131,8 @@ struct MenuBarSearchFooter: View {
     }
 }
 
-/// An empty AppKit view the panel positions the actions menu against: behind
-/// the Actions button, or under the query field while the shortcut bar is off.
-///
-/// SwiftUI frames would need converting twice (hosting view, then screen) to
-/// reach NSMenu.popUp, and each step can misplace the menu. Handing over the
-/// view itself avoids coordinate conversion.
+/// The AppKit view the actions menu pops up from, behind the Actions button or
+/// under the field. A view needs no frame conversion, which can misplace the menu.
 struct ItemActionsMenuAnchor: NSViewRepresentable {
     let panel: MenuBarSearchPanel
 
@@ -154,9 +143,8 @@ struct ItemActionsMenuAnchor: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSView, context _: Context) {
-        // Re-registered rather than set once: the bottom bar rebuilds this
-        // subtree whenever the selection comes and goes, and the panel would
-        // otherwise keep a reference to a view that is no longer on screen.
+        // Re-registered on each update: the bar rebuilds this view as the
+        // selection comes and goes.
         panel.itemActionsAnchor = nsView
     }
 }
