@@ -8,9 +8,8 @@
 import AppKit
 import MenuBarModel
 
-/// Undo for moving a multi-selection. Undo puts each item back after its old left neighbour,
-/// through the same batch move path; the redo is registered before the async moves run, so it
-/// lands as a redo and not as a new edit.
+/// Undo for a multi-selection move: each item goes back after its old left neighbour. The redo is
+/// registered before the async moves run, so it lands as a redo, not a new edit.
 @MainActor
 enum LayoutBatchMoveUndo {
     static func register(forward: LayoutBatchMove, restoring: [LayoutBatchMove], appState: AppState) {
