@@ -147,13 +147,13 @@ public extension ScreenCapture {
     ///
     /// Cropping AX point-space bounds with a pixel-backed frame (or multiplying
     /// that frame by pointPixelScale again) vertically half-slices every glyph.
+    /// Only the width tells the units apart: the strip spans the display, and bars can be 45 pt or taller.
     static func windowFrameAppearsPixelBacked(
         _ windowFrame: CGRect,
         displayFrame: CGRect
     ) -> Bool {
         guard displayFrame.width > 0 else { return false }
-        return windowFrame.height > 40
-            || windowFrame.width > displayFrame.width * 1.5
+        return windowFrame.width > displayFrame.width * 1.5
     }
 
     /// Pixel size to request from ScreenCaptureKit for the hosting window.

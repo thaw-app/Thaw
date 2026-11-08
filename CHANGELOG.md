@@ -126,6 +126,7 @@ the items under New and Fixed.
 - **f.lux and other apps that hide from accessibility get their picture.**
 - **Capture Hidden Items no longer waits on a read of every app.**
 - **Capture Hidden Items counts the pictures of items Native hiding parks.** By @Belligerently in [#1488](https://github.com/thaw-app/Thaw/pull/1488).
+- **Item pictures on Macs with a taller menu bar, such as OLED models,** are no longer cut in half.
 
 #### Thaw's icon and the Thaw Bar
 
