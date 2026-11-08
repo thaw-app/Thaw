@@ -70,6 +70,10 @@ the items under New and Fixed.
 - **Old logs go after the retention you set, or past 50 files,** instead of past the 5 newest.
 
 ### Fixed
+- **Applying a profile no longer clears shortcuts it doesn't know about,** such as ones for actions added after it was saved.
+- **A profile saved with Always Hidden off now turns it off.** Profiles saved before this release still only turn it on.
+- **Export All includes each profile's scripts and the shortcut that applies it,** and names any profile it couldn't read instead of leaving it out. Importing restores the shortcut unless another profile already uses it.
+- **A profile's preview lists everything applying it changes,** including appearance, shortcuts, the Thaw Bar on each display, groups and item names.
 
 #### Spaces
 
