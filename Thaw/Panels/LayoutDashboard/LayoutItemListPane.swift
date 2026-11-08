@@ -98,6 +98,7 @@ struct LayoutItemListPane: View {
     private func rowView(_ row: LayoutItemListRow, in section: MenuBarSectionName) -> some View {
         let isSelected = selection.contains(row.id)
         return HStack(spacing: PanelRow.iconSpacing) {
+            visibilityCheckbox(row, in: section)
             MenuBarItemRowImage(item: row.item, columnWidth: LayoutDashboardMetrics.pictureColumnWidth)
             Text(row.name)
                 .font(ThawType.body)
@@ -125,6 +126,30 @@ struct LayoutItemListPane: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+
+    /// Checked is Visible. One of several selected rows applies to them all.
+    private func visibilityCheckbox(_ row: LayoutItemListRow, in section: MenuBarSectionName) -> some View {
+        let lock = LayoutItemVisibility.lockReason(
+            for: row.item,
+            in: section,
+            experimentalSystemItemHiding: appState.settings.layout.enableExperimentalSystemItemHiding
+        )
+        let isShown = LayoutItemVisibility.isShown(section)
+        return Toggle(isOn: Binding(get: { isShown }, set: { shown in
+            LayoutItemVisibility.setShown(shown, rowID: row.id, in: section, selection: selection, appState: appState)
+        })) {
+            // The style draws any label beside the box; the name is already in the row.
+            EmptyView()
+        }
+        .toggleStyle(.thawCheckbox)
+        .accessibilityLabel(Text("Show \(row.name) in the menu bar"))
+        .fixedSize()
+        .disabled(lock != nil)
+        // On a wrapper, so a disabled checkbox still explains itself.
+        .frame(width: LayoutDashboardMetrics.checkboxColumnWidth)
+        .contentShape(Rectangle())
+        .help(lock ?? (isShown ? String(localized: "Shown in the menu bar") : String(localized: "Hidden")))
     }
 
     private func select(_ row: LayoutItemListRow, in _: [LayoutItemListRow], sections: [LayoutItemListSection], kind: LayoutSelection.Click) {
