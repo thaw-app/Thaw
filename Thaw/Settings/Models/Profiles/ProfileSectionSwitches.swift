@@ -5,9 +5,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-/// A profile sets Always Hidden only when its file stores the switch: older
-/// files read it as off, so they may turn it on but never off. The overflow
-/// switch stays the user's.
+/// Older files without the Always Hidden switch read it as off, so they only turn it
+/// on. The overflow switch stays the user's.
 nonisolated extension AdvancedSettingsSnapshot {
     func merged(onto current: AdvancedSettingsSnapshot, storesAlwaysHiddenSection: Bool) -> AdvancedSettingsSnapshot {
         var merged = self
