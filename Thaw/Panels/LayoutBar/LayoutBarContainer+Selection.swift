@@ -66,33 +66,27 @@ extension LayoutBarContainer {
 
     /// The menu for a right click on one of several selected items, or nil to show the item's own menu.
     func selectionMenu(for view: LayoutBarItemView) -> NSMenu? {
-        guard isPartOfSelection(view), let count = selection?.count else { return nil }
-        let menu = NSMenu()
-        let header = NSMenuItem(
-            title: String(localized: "\(count) Items Selected", comment: "Header of the menu for several selected Layout items"),
-            action: nil,
-            keyEquivalent: ""
-        )
-        header.isEnabled = false
-        menu.addItem(header)
-        menu.addItem(.separator())
-        for move in selectionMoves(for: view) {
-            menu.addItem(ClosureMenuItem(title: move.title, handler: move.perform))
-        }
-        return menu
+        guard isPartOfSelection(view) else { return nil }
+        return selectionActions?.menu()
     }
 
     /// One move of the whole selection per section it can go to, when view is one of several selected items.
     func selectionMoves(for view: LayoutBarItemView) -> [(title: String, perform: @MainActor () -> Void)] {
-        guard isPartOfSelection(view), let selection, let appState else { return [] }
-        let count = selection.count
-        return selection.moveTargets(in: LayoutBatchMoveExecutor.snapshot(appState: appState)).map { target in
+        guard isPartOfSelection(view), let actions = selectionActions else { return [] }
+        let count = actions.selection.count
+        return actions.moveTargets().map { target in
             let title = String(
                 localized: "Move \(count) Items to \(target.localizedName)",
                 comment: "Menu entry that moves every selected Layout item to a section"
             )
-            return (title, { [weak self] in self?.moveSelection(to: target, placement: .end) })
+            return (title, { actions.move(to: target, placement: .end) })
         }
+    }
+
+    /// The bars' share of the selection's moves, nil without a selection or app state.
+    private var selectionActions: LayoutSelectionActions? {
+        guard let selection, let appState else { return nil }
+        return LayoutSelectionActions(selection: selection, appState: appState)
     }
 
     /// Whether this section would take the whole selection.
@@ -114,30 +108,9 @@ extension LayoutBarContainer {
         moveSelection(to: section, placement: placement)
     }
 
-    /// One batch through the move path thaw://move-item uses, counted as a user edit.
+    /// Moves the selection through LayoutSelectionActions, the path the Layout window's list uses too.
     private func moveSelection(to target: MenuBarSection.Name, placement: LayoutBatchMove.Placement) {
-        guard let selection, let appState else { return }
-        let restoring = selection.restoringMoves()
-        let forward = selection.command(to: target, placement: placement)
-        ExplicitLayoutEdit.task {
-            let outcome = await selection.move(to: target, placement: placement, using: selection.makeMover(appState))
-            if LayoutBatchMoveUndo.records(outcome), let forward {
-                LayoutBatchMoveUndo.register(forward: forward, restoring: restoring, appState: appState)
-            }
-            guard let outcome,
-                  let refusal = LayoutSelectionModel.refusal(for: outcome, section: target, itemName: { id in
-                      Self.displayName(of: id, appState: appState)
-                  })
-            else {
-                return
-            }
-            appState.layoutFeedback.post(refusal)
-        }
-    }
-
-    /// The name a refusal gives the item with this identifier.
-    private static func displayName(of identifier: String, appState: AppState) -> String? {
-        appState.itemManager.managedItems.first { $0.uniqueIdentifier == identifier }?.displayName
+        selectionActions?.move(to: target, placement: placement)
     }
 }
 

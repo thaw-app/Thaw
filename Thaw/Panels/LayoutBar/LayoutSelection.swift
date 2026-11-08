@@ -72,6 +72,14 @@ nonisolated struct LayoutSelection: Equatable, Sendable {
         anchor = nil
     }
 
+    /// Selects every selectable item in layout, keeping the anchor.
+    mutating func selectAll(in layout: [MenuBarSectionName: [Unit]]) {
+        itemIDs = layout.compactMapValues { units in
+            let ids = Set(units.filter(\.isSelectable).flatMap(\.memberIDs))
+            return ids.isEmpty ? nil : ids
+        }
+    }
+
     /// Applies a click on itemID in section, whose units are listed left to right.
     mutating func click(_ itemID: String, in section: MenuBarSectionName, units: [Unit], kind: Click) {
         guard let index = units.firstIndex(where: { $0.memberIDs.contains(itemID) }), units[index].isSelectable else {

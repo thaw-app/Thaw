@@ -41,6 +41,14 @@ final class LayoutSelectionModel {
         selection.count
     }
 
+    /// The item the last plain or Command click landed on, where the keyboard works from.
+    var anchorItemID: String? {
+        selection.anchor?.itemID
+    }
+
+    /// How many times the selection changed; tests use it to catch a feedback loop.
+    @ObservationIgnored private(set) var changeCount = 0
+
     func contains(_ itemID: String) -> Bool {
         selection.contains(itemID)
     }
@@ -72,6 +80,16 @@ final class LayoutSelectionModel {
 
     func clear() {
         change { $0.clear() }
+    }
+
+    /// Selects every item the bars show.
+    func selectAll() {
+        change { $0.selectAll(in: units) }
+    }
+
+    /// The units a section's bar last reported, left to right.
+    func units(in section: MenuBarSectionName) -> [Unit] {
+        units[section] ?? []
     }
 
     /// The move of the whole selection to section, or nil when nothing is selected.
@@ -122,6 +140,7 @@ final class LayoutSelectionModel {
         body(&updated)
         guard updated != selection else { return }
         let previousCount = selection.count
+        changeCount += 1
         selection = updated
         if announcing, updated.count != previousCount {
             announce(Self.announcement(count: updated.count))
