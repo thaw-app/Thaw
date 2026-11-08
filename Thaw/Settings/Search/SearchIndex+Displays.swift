@@ -35,6 +35,14 @@ nonisolated extension SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "displays.useThawBarForAlwaysHidden",
+            title: "Open Always Hidden in the \(Constants.displayName) Bar",
+            descriptionText: String(localized: "Hidden items still show in the menu bar. Showing Always Hidden there would open Hidden too."),
+            pane: .thawBar,
+            keywords: ["always hidden", "ice bar", "thaw bar", "only", "section"],
+            property: nil
+        ),
+        SearchEntry(
             id: "displays.thawBarLocation",
             titleKey: "Location",
             titleText: "\(Constants.displayName) Bar location",

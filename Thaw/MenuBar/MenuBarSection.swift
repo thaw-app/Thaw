@@ -26,7 +26,7 @@ final class MenuBarSection {
     /// Whether a reveal on screen uses the Thaw Bar, by that display's own setting.
     private func usesThawBar(on screen: NSScreen?) -> Bool {
         guard let appState else { return false }
-        return appState.menuBarManager.shouldUseThawBar(for: screen?.displayID ?? CGMainDisplayID())
+        return appState.menuBarManager.shouldUseThawBar(for: screen?.displayID ?? CGMainDisplayID(), section: name)
     }
 
     /// The gap that macOS leaves to the left and right of the notch (in points).
@@ -224,7 +224,7 @@ final class MenuBarSection {
         }
 
         let displaySettings = appState.settings.displaySettings
-        let useThawBar = appState.menuBarManager.shouldUseThawBar(for: activeScreen.displayID)
+        let useThawBar = appState.menuBarManager.shouldUseThawBar(for: activeScreen.displayID, section: name)
         let alwaysShow = !appState.menuBarManager.isZenModeActive
             && displaySettings.alwaysShowHiddenItems(for: activeScreen.displayID)
 
