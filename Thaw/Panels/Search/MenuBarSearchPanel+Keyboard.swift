@@ -41,6 +41,7 @@ extension MenuBarSearchPanel {
             return false
         }
         model.moveSelection(toSectionFromCurrentBy: modifiers == .shift ? -1 : 1)
+        announceSelection()
         return true
     }
 
@@ -53,6 +54,7 @@ extension MenuBarSearchPanel {
             return false
         }
         model.moveSelection(by: delta)
+        announceSelection()
         return true
     }
 
