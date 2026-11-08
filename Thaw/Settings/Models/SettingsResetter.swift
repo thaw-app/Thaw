@@ -152,7 +152,7 @@ extension AppSettings {
         for key in firstRunKeys {
             defaults.removeObject(forKey: key)
         }
-        defaults.set(true, forKey: Defaults.Key.resetsTipsAtNextLaunch.rawValue)
+        defaults.set(true, forKey: FeatureTips.resetAtNextLaunchKey)
     }
 
     func resetTools() {
