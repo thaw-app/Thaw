@@ -24,9 +24,9 @@ final class LayoutUndoState {
 
     init(undoManager: UndoManager) {
         self.undoManager = undoManager
+        // Not the checkpoint notification: reading canRedo posts it, so refreshing on it loops.
         let names: [Notification.Name] = [
-            .NSUndoManagerDidCloseUndoGroup, .NSUndoManagerDidUndoChange,
-            .NSUndoManagerDidRedoChange, .NSUndoManagerCheckpoint,
+            .NSUndoManagerDidCloseUndoGroup, .NSUndoManagerDidUndoChange, .NSUndoManagerDidRedoChange,
         ]
         for name in names {
             NotificationCenter.default.publisher(for: name, object: undoManager)
@@ -37,11 +37,18 @@ final class LayoutUndoState {
         refresh()
     }
 
+    /// How many times the state was read from the history; tests use it to catch a feedback loop.
+    @ObservationIgnored private(set) var refreshCount = 0
+
     func refresh() {
-        canUndo = undoManager.canUndo
-        canRedo = undoManager.canRedo
-        undoTitle = undoManager.undoMenuItemTitle
-        redoTitle = undoManager.redoMenuItemTitle
+        refreshCount += 1
+        // Unchanged values aren't written, so they don't redraw the toolbar.
+        let (undo, redo) = (undoManager.canUndo, undoManager.canRedo)
+        let (undoName, redoName) = (undoManager.undoMenuItemTitle, undoManager.redoMenuItemTitle)
+        if canUndo != undo { canUndo = undo }
+        if canRedo != redo { canRedo = redo }
+        if undoTitle != undoName { undoTitle = undoName }
+        if redoTitle != redoName { redoTitle = redoName }
     }
 
     func undo() {
