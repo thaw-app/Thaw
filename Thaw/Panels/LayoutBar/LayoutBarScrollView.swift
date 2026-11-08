@@ -89,6 +89,43 @@ final class LayoutBarScrollView: NSScrollView {
             view.needsDisplay = true
             NSAccessibility.post(element: view, notification: .valueChanged)
         }
+        revealAnchor()
+    }
+
+    /// Room left beside a revealed item, so its neighbours show which way the bar continues.
+    static let revealMargin: CGFloat = 24
+
+    /// Scrolls the item the selection works from into view when this bar holds it,
+    /// so an item picked in the list or reached by the keyboard is never off screen.
+    func revealAnchor() {
+        guard let anchorID = selection?.anchorItemID, let documentView, let view = arrangedViews.lazy
+            .compactMap({ $0 as? LayoutBarItemView })
+            .first(where: { $0.item.uniqueIdentifier == anchorID })
+        else { return }
+        // In the clip view's space, where its bounds are what shows and the document's frame is what can.
+        let target = contentView.convert(view.bounds, from: view)
+        guard let originX = Self.revealOriginX(
+            for: target.insetBy(dx: -Self.revealMargin, dy: 0),
+            visible: contentView.bounds,
+            document: documentView.frame
+        ) else { return }
+        // Only this bar scrolls; scrollToVisible would also scroll the page around it.
+        contentView.scroll(to: CGPoint(x: originX, y: contentView.bounds.minY))
+        reflectScrolledClipView(contentView)
+    }
+
+    /// The clip origin that shows target, or nil when it already shows. Kept inside the document.
+    static nonisolated func revealOriginX(for target: CGRect, visible: CGRect, document: CGRect) -> CGFloat? {
+        let originX: CGFloat
+        if target.width >= visible.width || target.minX < visible.minX {
+            originX = target.minX
+        } else if target.maxX > visible.maxX {
+            originX = target.maxX - visible.width
+        } else {
+            return nil
+        }
+        let clamped = min(max(originX, document.minX), max(document.minX, document.maxX - visible.width))
+        return clamped == visible.minX ? nil : clamped
     }
 }
 
