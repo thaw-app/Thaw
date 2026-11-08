@@ -39,7 +39,6 @@ nonisolated extension MaintenanceTools {
         return root
     }
 
-    /// Zips the logs and capture samples into destination.
     @concurrent
     static func exportDiagnostics(logs: URL, samples: URL, to destination: URL) async throws {
         let staging = FileManager.default.temporaryDirectory.appending(path: "ThawDiagnosticsExport-\(UUID().uuidString)", directoryHint: .isDirectory)
