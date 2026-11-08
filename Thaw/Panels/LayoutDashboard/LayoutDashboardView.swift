@@ -29,9 +29,15 @@ struct LayoutDashboardView: View {
                 )
                 .padding(ThawSpacing.inset)
             }
-            ScrollView([.horizontal, .vertical]) {
-                FoldedMenuBar(itemManager: appState.itemManager, arrangement: .spaced)
-                    .padding(ThawSpacing.gutter)
+            // The Layout page's bars and lists, without its Options, at the window's width.
+            ThawForm(readingWidth: .full) {
+                LayoutBarsSection(itemManager: appState.itemManager)
+                LayoutDetailTabs(
+                    itemManager: appState.itemManager,
+                    canArrangeLayout: !appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults,
+                    isHidingUnavailable: false,
+                    includesOptions: false
+                )
             }
             // The bars always show the live bar, so away from the target they only show it.
             .disabled(!model.pin.isEditable)
@@ -40,7 +46,7 @@ struct LayoutDashboardView: View {
                 .padding(.horizontal, ThawSpacing.inset)
                 .padding(.bottom, ThawSpacing.base)
         }
-        .frame(minWidth: 640, minHeight: 360)
+        .frame(minWidth: 760, minHeight: 520)
         .environment(appState)
     }
 }
