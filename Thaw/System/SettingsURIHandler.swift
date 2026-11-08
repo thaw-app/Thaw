@@ -114,15 +114,6 @@ enum SettingsURIHandler {
         }.sorted()
     }
 
-    /// Per-display settings keys (stored in DisplaySettingsManager, not Defaults)
-    static let perDisplayKeys: [String] = [
-        "useThawBar",
-        "thawBarLocation",
-        "alwaysShowHiddenItems",
-        "thawBarLayout",
-        "gridColumns",
-    ]
-
     // MARK: - Security
 
     /// Apps from the same developer that may control settings without the authorization prompt.
@@ -561,9 +552,9 @@ enum SettingsURIHandler {
         }
 
         switch key {
-        case "useThawBar": return .activeDisplay
-        case "alwaysShowHiddenItems": return .allNonThawBarDisplays
-        case "thawBarLocation", "thawBarLayout", "gridColumns": return .allEnabledDisplays
+        case "useThawBar", "itemSpacingOffset": return .activeDisplay
+        case "alwaysShowHiddenItems", "useThawBarForAlwaysHidden": return .allNonThawBarDisplays
+        case "thawBarLocation", "thawBarLayout", "gridColumns", "thawBarItemScale": return .allEnabledDisplays
         default: return nil
         }
     }
@@ -621,7 +612,7 @@ enum SettingsURIHandler {
             return true
 
         default:
-            return false
+            return handleDisplayLookSet(key: key, value: value, scope: scope)
         }
     }
 
@@ -661,9 +652,9 @@ enum SettingsURIHandler {
     }
 
     /// Handles toggling a per-display configuration value.
-    /// Currently only supports useThawBar and alwaysShowHiddenItems.
+    /// Supports the Boolean per-display keys.
     private static func handlePerDisplayToggle(key: String, displayUUID: String?) -> Bool {
-        guard key == "useThawBar" || key == "alwaysShowHiddenItems" else {
+        guard ["useThawBar", "alwaysShowHiddenItems", "useThawBarForAlwaysHidden"].contains(key) else {
             diagLog.warning("Settings URI: Toggle not supported for '\(key)'")
             return false
         }
@@ -711,7 +702,7 @@ enum SettingsURIHandler {
         )
     }
 
-    private static func postPerDisplaySettingsDidChangeNotification(
+    static func postPerDisplaySettingsDidChangeNotification(
         key: String,
         value: Bool? = nil,
         stringValue: String? = nil,
@@ -903,7 +894,7 @@ enum SettingsURIHandler {
                     "range": ["min": 2, "max": 10],
                 ]
             default:
-                return nil
+                return displayLookValue(key: key, config: config)
             }
         }
 
@@ -1036,6 +1027,9 @@ enum SettingsURIHandler {
             "alwaysShowHiddenItems": config.alwaysShowHiddenItems,
             "thawBarLayout": String(describing: config.thawBarLayout),
             "gridColumns": config.gridColumns,
+            "thawBarItemScale": config.thawBarItemScale,
+            "itemSpacingOffset": config.itemSpacingOffset,
+            "useThawBarForAlwaysHidden": config.useThawBarForAlwaysHidden,
         ]
     }
 
