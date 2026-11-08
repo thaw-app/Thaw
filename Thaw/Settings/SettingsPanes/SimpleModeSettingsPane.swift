@@ -31,12 +31,15 @@ struct SimpleModeSettingsPane: View {
             }
             ThawSection {
                 LaunchAtLoginRow()
+                Toggle("Show \(Constants.displayName) icon", isOn: $settings.showThawIcon)
                 arrangementPicker
+                ShowHiddenItemsOnRow(settings: appState.settings.visibility)
                 RehideChoiceRow(settings: appState.settings.visibility)
+                RehideDelayRow(settings: appState.settings.visibility)
                 alwaysHiddenToggle
                 previewToggle
                 hiddenSectionHotkeyRow
-                updatesToggle
+                updatesRow
             }
         }
     }
@@ -77,7 +80,7 @@ struct SimpleModeSettingsPane: View {
 
     private var howItWorks: some View {
         Label {
-            Text("Hold ⌘ and drag icons to the left of the divider in your menu bar to hide them. Click \(Constants.displayName)'s icon to show them again.")
+            Text(SimpleModeHowItWorks.text(showsIcon: settings.showThawIcon, showsOnClick: appState.settings.visibility.showOnClick))
                 .fixedSize(horizontal: false, vertical: true)
         } icon: {
             Image(systemName: "hand.draw")
@@ -123,9 +126,15 @@ struct SimpleModeSettingsPane: View {
         }
     }
 
-    private var updatesToggle: some View {
+    @ViewBuilder
+    private var updatesRow: some View {
         @Bindable var updatesManager = updatesManager
-        return Toggle("Check for updates automatically", isOn: $updatesManager.automaticallyChecksForUpdates)
+        Toggle("Check for updates automatically", isOn: $updatesManager.automaticallyChecksForUpdates)
+        LabeledContent("Check for updates now") {
+            Button("Check Now") { updatesManager.checkForUpdates() }
+                .buttonStyle(.settingsGlass)
+                .disabled(!updatesManager.canCheckNow)
+        }
     }
 
     // MARK: Permissions
