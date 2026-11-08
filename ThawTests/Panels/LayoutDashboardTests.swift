@@ -143,6 +143,13 @@ struct LayoutDashboardTests {
 @MainActor
 @Suite("Layout window undo")
 struct LayoutDashboardUndoTests {
+    @Test("Reading the history doesn't make the state read it again, so an idle window stays idle")
+    func noFeedbackLoop() async throws {
+        let state = LayoutUndoState(undoManager: UndoManager())
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(state.refreshCount < 5, "refreshed \(state.refreshCount) times while idle")
+    }
+
     @Test("The toolbar follows the layout history: enabled with a step, named after it, and undo then redo work")
     func followsTheHistory() {
         let history = UndoManager()
