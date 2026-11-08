@@ -15,7 +15,7 @@ import Testing
 struct SwapBarTurnOffTests {
     @Test("Turning it off clears the setting and says where to turn it back on")
     func turnOffSaysWhereToComeBack() {
-        let settings = AppState().settings.advanced
+        let settings = AppState().settings.visibility
         settings.enableSwapBar = true
         var shown: (symbol: String, text: String)?
         SwapBarTurnOff.turnOff(settings) { shown = ($0, String(localized: $1)) }

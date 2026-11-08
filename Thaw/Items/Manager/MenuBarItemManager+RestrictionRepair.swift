@@ -288,7 +288,7 @@ extension MenuBarItemManager {
             let strand = await repairVisibleItemsSeatedAmongHidden(
                 liveItems: liveItems,
                 controller: controller,
-                experimentalSystemItemHiding: appState.settings.advanced.enableExperimentalSystemItemHiding,
+                experimentalSystemItemHiding: appState.settings.layout.enableExperimentalSystemItemHiding,
                 hiddenControlItemWindowID: controlItemWindowIDs.hidden,
                 alwaysHiddenControlItemWindowID: controlItemWindowIDs.alwaysHidden,
                 whileRevealing: nil,
@@ -377,7 +377,7 @@ extension MenuBarItemManager {
         for anchor: MenuBarItem,
         among liveItems: [MenuBarItem]
     ) -> [MoveDestination] {
-        let experimentalSystemItemHiding = appState?.settings.advanced
+        let experimentalSystemItemHiding = appState?.settings.layout
             .enableExperimentalSystemItemHiding ?? false
         let screens = BarAxis.liveDisplayBounds()
         let ordered = MenuBarItem.sortByLeadingEdge(

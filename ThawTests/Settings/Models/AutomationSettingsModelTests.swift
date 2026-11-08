@@ -14,8 +14,8 @@ import Testing
 struct AutomationSettingsModelTests {
     @Test("An allowed app is named by its app name, or by its bundle ID when it has none")
     func whitelistedAppNames() {
-        let named = AutomationSettings.WhitelistedApp(bundleId: "com.example.a", appName: "Alpha", icon: nil)
-        let unnamed = AutomationSettings.WhitelistedApp(bundleId: "com.example.b", appName: nil, icon: nil)
+        let named = PrivacySettings.WhitelistedApp(bundleId: "com.example.a", appName: "Alpha", icon: nil)
+        let unnamed = PrivacySettings.WhitelistedApp(bundleId: "com.example.b", appName: nil, icon: nil)
         #expect(named.id == "com.example.a")
         #expect(named.displayName == "Alpha")
         #expect(unnamed.displayName == "com.example.b")
@@ -27,7 +27,7 @@ struct AutomationSettingsModelTests {
         let removed = "com.example.thawtests.removed.\(UUID().uuidString)"
         SettingsURIHandler.addToWhitelist(bundleId: kept, codeHash: "c0ffee")
         SettingsURIHandler.addToWhitelist(bundleId: removed, codeHash: "beef")
-        let settings = AutomationSettings()
+        let settings = PrivacySettings()
         #expect(Set(settings.whitelistedApps.map(\.bundleId)) == [kept, removed])
 
         settings.removeFromWhitelist(bundleId: removed)

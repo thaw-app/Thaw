@@ -182,7 +182,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
         self.isOwnerUnresponsive = Bridging.isProcessUnresponsive(item.ownerPID)
 
-        let experimentalSystemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
+        let experimentalSystemItemHiding = appState.settings.layout.enableExperimentalSystemItemHiding
         isEnabled = LayoutBarPaddingView.acceptsLayoutDrag(of: item) &&
             item.isMovable(experimentalSystemItemHiding: experimentalSystemItemHiding)
 
@@ -212,7 +212,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
         cachedImage = appState.imageCache.image(for: item.tag)
 
-        let experimentalSystemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
+        let experimentalSystemItemHiding = appState.settings.layout.enableExperimentalSystemItemHiding
         isEnabled = LayoutBarPaddingView.acceptsLayoutDrag(of: item) &&
             item.isMovable(experimentalSystemItemHiding: experimentalSystemItemHiding)
 
@@ -305,7 +305,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     var tooltipDelay: TimeInterval {
-        appState?.settings.advanced.tooltipDelay ?? 0.5
+        appState?.settings.visibility.tooltipDelay ?? 0.5
     }
 
     private var desiredSystemItemHorizontalPadding: CGFloat {
@@ -580,10 +580,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 }
             }
 
-            let advancedSettings = appState.settings.advanced
+            let layoutSettings = appState.settings.layout
             alwaysUseAppIconObservationTask?.cancel()
             alwaysUseAppIconObservationTask = Task { @MainActor [weak self] in
-                let changes = Observations { advancedSettings.alwaysUseAppIconForMenuBarItems }.removeDuplicates()
+                let changes = Observations { layoutSettings.alwaysUseAppIconForMenuBarItems }.removeDuplicates()
                 for await alwaysUseAppIcon in changes {
                     guard let self else { return }
                     let oldSize = frame.size
@@ -599,7 +599,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             // Observe system-item hiding so draggability follows setting changes and corrects init before preferences load.
             systemItemHidingObservationTask?.cancel()
             systemItemHidingObservationTask = Task { @MainActor [weak self] in
-                let changes = Observations { advancedSettings.enableExperimentalSystemItemHiding }.removeDuplicates()
+                let changes = Observations { layoutSettings.enableExperimentalSystemItemHiding }.removeDuplicates()
                 for await enabled in changes {
                     guard let self else { return }
                     self.isEnabled = LayoutBarPaddingView.acceptsLayoutDrag(of: self.item) &&

@@ -89,7 +89,7 @@ struct SwapBarViewTests {
         let profiles = try ProfileTestDirectory.make(seeding: [])
         defer { try? FileManager.default.removeItem(at: profiles) }
         let appState = ProfileManager.$directoryOverride.withValue(profiles) { AppState() }
-        appState.settings.advanced.enableSwapBar = false
+        appState.settings.visibility.enableSwapBar = false
         let manager = SwapBarManager()
         manager.performSetup(with: appState, displaySettlements: PassthroughSubject<EnvironmentChange, Never>())
         #expect(!NSApp.windows.contains { $0 is SwapBarPanel && $0.isVisible })

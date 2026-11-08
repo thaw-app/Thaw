@@ -36,7 +36,7 @@ struct ThawIconDoubleClickSettingsTests {
             #expect(Defaults.Key.showAlwaysHiddenOnIconDoubleClick.rawValue == "ShowAlwaysHiddenOnIconDoubleClick")
             #expect(Defaults.object(forKey: .showAlwaysHiddenOnIconDoubleClick) as? Bool == true)
 
-            let settings = AdvancedSettings()
+            let settings = VisibilitySettings()
             settings.loadInitialState()
 
             #expect(settings.showAlwaysHiddenOnIconDoubleClick)
@@ -46,37 +46,38 @@ struct ThawIconDoubleClickSettingsTests {
     @Test("Disabling or re-enabling double-click reveal persists across reloads", arguments: [false, true])
     func preferencePersists(value: Bool) throws {
         try withScratchDefaults {
-            let settings = AdvancedSettings()
+            let settings = VisibilitySettings()
             settings.showAlwaysHiddenOnIconDoubleClick = false
             settings.showAlwaysHiddenOnIconDoubleClick = value
 
             #expect(Defaults.bool(forKey: .showAlwaysHiddenOnIconDoubleClick) == value)
 
-            let reloaded = AdvancedSettings()
+            let reloaded = VisibilitySettings()
             reloaded.loadInitialState()
 
             #expect(reloaded.showAlwaysHiddenOnIconDoubleClick == value)
         }
     }
 
-    @Test("Resetting advanced settings restores double-click reveal")
+    @Test("Resetting Layout and Visibility restores double-click reveal")
     func resetRestoresTrue() throws {
         try withScratchDefaults {
             // Prevent display settings initialization from reading the user's system spacing.
             Defaults.set(Data("{}".utf8), forKey: .displayThawBarConfigurations)
             let settings = AppSettings()
-            settings.advanced.enableAlwaysHiddenSection = true
+            settings.layout.enableAlwaysHiddenSection = true
             #expect(settings.usesIconDoubleClickForAlwaysHidden)
-            settings.advanced.showAlwaysHiddenOnIconDoubleClick = false
+            settings.visibility.showAlwaysHiddenOnIconDoubleClick = false
             #expect(!settings.usesIconDoubleClickForAlwaysHidden)
 
-            settings.resetAdvanced()
+            settings.resetLayout()
+            settings.resetVisibility()
 
-            #expect(settings.advanced.showAlwaysHiddenOnIconDoubleClick)
+            #expect(settings.visibility.showAlwaysHiddenOnIconDoubleClick)
             #expect(Defaults.bool(forKey: .showAlwaysHiddenOnIconDoubleClick))
             #expect(!settings.usesIconDoubleClickForAlwaysHidden)
 
-            let reloaded = AdvancedSettings()
+            let reloaded = VisibilitySettings()
             reloaded.loadInitialState()
             #expect(reloaded.showAlwaysHiddenOnIconDoubleClick)
         }
@@ -85,7 +86,7 @@ struct ThawIconDoubleClickSettingsTests {
     @Test("External Boolean changes update the model and persistence", arguments: [false, true])
     func externalChangesApply(value: Bool) throws {
         try withScratchDefaults {
-            let settings = AdvancedSettings()
+            let settings = VisibilitySettings()
             settings.showAlwaysHiddenOnIconDoubleClick = !value
 
             settings.handleExternalSettingsChange(Notification(
@@ -118,7 +119,7 @@ struct ThawIconDoubleClickSettingsTests {
     @Test("Search routes double-click reveal to the Visibility pane")
     func searchRoutesToVisibility() throws {
         let entries = SearchIndex.entries.filter {
-            $0.property == .advanced("showAlwaysHiddenOnIconDoubleClick")
+            $0.property == .visibility("showAlwaysHiddenOnIconDoubleClick")
         }
         #expect(entries.count == 1)
         let entry = try #require(entries.first)

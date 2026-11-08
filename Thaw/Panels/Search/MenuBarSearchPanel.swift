@@ -252,7 +252,7 @@ final class MenuBarSearchPanel: NSPanel {
             Self.diagLog.error("Missing screen for the search panel")
             return
         }
-        presentation = appState.settings.advanced.menuBarSearchPresentation
+        presentation = appState.settings.visibility.menuBarSearchPresentation
         displayID = screen.displayID
 
         if !keepsQuery {

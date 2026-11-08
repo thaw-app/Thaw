@@ -41,7 +41,7 @@ struct MenuBarHistoryRemovalTests {
 
     @Test("History is no longer searchable or writable through settings URLs")
     func retiredSettingIsNotExposed() {
-        #expect(!SearchIndex.entries.contains { $0.property == .advanced("enableBarHygieneAudit") })
+        #expect(!SearchIndex.entries.contains { "\(String(describing: $0.property))".contains("enableBarHygieneAudit") })
         #expect(SettingsURIHandler.keyTable["enableBarHygieneAudit"] == nil)
     }
 }

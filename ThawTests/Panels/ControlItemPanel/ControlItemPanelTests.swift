@@ -31,9 +31,9 @@ struct ControlItemPanelTests {
         let appState = AppState()
         let controller = ControlItemPanelController()
         controller.performSetup(with: appState)
-        appState.settings.advanced.enableControlItemPanel = false
+        appState.settings.widgets.enableControlItemPanel = false
         #expect(!controller.isEnabled)
-        appState.settings.advanced.enableControlItemPanel = true
+        appState.settings.widgets.enableControlItemPanel = true
         #expect(controller.isEnabled)
     }
 

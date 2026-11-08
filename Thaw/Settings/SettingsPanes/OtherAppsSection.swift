@@ -13,7 +13,7 @@ import UniformTypeIdentifiers
 /// The apps allowed to change settings with thaw:// links. It sits on
 /// Privacy because each entry is a grant, like a permission.
 struct OtherAppsSection: View {
-    @Bindable var settings: AutomationSettings
+    @Bindable var settings: PrivacySettings
     @State private var isChoosingApp = false
     @State private var isShowingAddError = false
     @State private var addErrorMessage = ""
@@ -56,7 +56,7 @@ struct OtherAppsSection: View {
         }
     }
 
-    private func allowedAppRow(_ app: AutomationSettings.WhitelistedApp) -> some View {
+    private func allowedAppRow(_ app: PrivacySettings.WhitelistedApp) -> some View {
         HStack(spacing: ThawSpacing.row) {
             Group {
                 if let icon = app.icon {
@@ -97,7 +97,7 @@ struct OtherAppsSection: View {
             }
         }
         let bundleID = Bundle(url: url)?.bundleIdentifier
-        switch AutomationSettings.choice(forBundleID: bundleID, allowed: settings.whitelistedApps.map(\.bundleId)) {
+        switch PrivacySettings.choice(forBundleID: bundleID, allowed: settings.whitelistedApps.map(\.bundleId)) {
         case let .add(bundleID):
             guard settings.addToWhitelist(appAt: url, bundleID: bundleID) else {
                 showError("“\(FileManager.default.displayName(atPath: url.path))” has no valid code signature, so Thaw can't tell it apart from another app.")

@@ -75,7 +75,7 @@ enum MenuBarSearchItemActions {
     /// closes: see postAssignmentRefusal(for:to:experimentalSystemItemHiding:appState:)
     /// for why the same refusal is worth two different sentences.
     static func move(_ item: MenuBarItem, to section: MenuBarSection.Name, appState: AppState) {
-        let experimentalSystemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
+        let experimentalSystemItemHiding = appState.settings.layout.enableExperimentalSystemItemHiding
         guard MenuBarBackendProvider.current.canAssign(
             item,
             to: section,
@@ -174,7 +174,7 @@ enum MenuBarSearchItemActions {
     /// Layout pane's suggestions. Items the section cannot take are skipped
     /// rather than refused one by one: a suggestion never offers them.
     static func move(_ items: [MenuBarItem], to section: MenuBarSection.Name, appState: AppState) {
-        let experimentalSystemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
+        let experimentalSystemItemHiding = appState.settings.layout.enableExperimentalSystemItemHiding
         let assignable = items.filter {
             MenuBarBackendProvider.current.canAssign($0, to: section, experimentalSystemItemHiding: experimentalSystemItemHiding)
         }

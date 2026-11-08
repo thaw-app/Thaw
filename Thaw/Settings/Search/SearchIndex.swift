@@ -9,12 +9,19 @@ import SwiftUI
 
 // MARK: - SettingsProperty
 
-/// Links a search entry to the @Published property it represents on a
-/// settings model, so the drift-guard test can assert every user-facing
-/// property has a matching entry.
+/// Links a search entry to the property it represents on a page's settings
+/// model, so the drift-guard test can assert every user-facing property has
+/// a matching entry.
 nonisolated enum SettingsProperty: Hashable {
     case general(String)
-    case advanced(String)
+    case layout(String)
+    case visibility(String)
+    case thawBar(String)
+    case appearance(String)
+    case spaces(String)
+    case privacy(String)
+    case tools(String)
+    case widgets(String)
 }
 
 // MARK: - SearchEntry
@@ -104,7 +111,7 @@ nonisolated enum SearchIndex {
             pane: .menuBarLayout,
             section: "Sections",
             keywords: ["arrangement", "arrange", "manual", "automatic", "who", "order", "layout"],
-            property: .advanced("menuBarArrangementMode")
+            property: .layout("menuBarArrangementMode")
         ),
         SearchEntry(
             id: "advanced.alwaysUseAppIconForMenuBarItems",
@@ -113,7 +120,7 @@ nonisolated enum SearchIndex {
             pane: .menuBarLayout,
             section: "Overflow and previews",
             keywords: ["app icon", "live preview", "screenshot", "capture", "overflow", "notch", "advanced layout controls"],
-            property: .advanced("alwaysUseAppIconForMenuBarItems")
+            property: .layout("alwaysUseAppIconForMenuBarItems")
         ),
         SearchEntry(
             id: "layout.captureHiddenItems",
@@ -159,7 +166,7 @@ nonisolated enum SearchIndex {
             pane: .displays,
             section: "Space indicator",
             keywords: ["space", "desktop", "indicator", "current space", "mission control", "number"],
-            property: .advanced("showSpaceIndicator")
+            property: .spaces("showSpaceIndicator")
         ),
         SearchEntry(
             id: "spaces.fullScreenAppearanceEverywhere",
@@ -182,40 +189,44 @@ nonisolated enum SearchIndex {
     /// of the UI. The drift-guard test allows these.
     private static let baseNonSearchableProperties: Set<SettingsProperty> = [
         .general("lastCustomThawIcon"),
-        .general("useThawBar"),
-        .general("useThawBarOnlyOnNotchedDisplay"),
-        .general("thawBarLocation"),
+        .thawBar("useThawBar"),
+        .thawBar("useThawBarOnlyOnNotchedDisplay"),
+        .thawBar("thawBarLocation"),
         // An error channel, not a setting.
         .general("thawIconPersistenceError"),
         // The radius slider shows only under Round screen corners.
-        .general("screenCornerRadius"),
+        .appearance("screenCornerRadius"),
         // Its switch is on Simple Mode's one page, which has no search.
         .general("simpleModeShowsPreview"),
         // Shown under Section divider style only while Custom is chosen; search finds that.
-        .advanced("customSectionDividerImage"),
-        .advanced("customSectionDividerIsTemplate"),
+        .layout("customSectionDividerImage"),
+        .layout("customSectionDividerIsTemplate"),
         // Its row is commented out of Layout: the timeout has no effect on macOS 27.
-        .advanced("menuBarOrderFulfillmentTimeout"),
-        // Set by Replace Control Center items, indexed under advanced.enableModuleStandIns.
-        .advanced("enableTimeMachineTakeover"),
-        .advanced("enableTextInputTakeover"),
-        .advanced("skippedModuleStandIns"),
+        .layout("menuBarOrderFulfillmentTimeout"),
+        // Set by Replace Control Center items, indexed under layout.enableModuleStandIns.
+        .layout("enableTimeMachineTakeover"),
+        .layout("enableTextInputTakeover"),
+        .layout("skippedModuleStandIns"),
         // Experimental toggles with no Settings UI.
-        .advanced("enableExperimentalOverflowPrevention"),
-        .advanced("enableTimerTakeover"),
-        // Set by Hide items again, indexed under general.autoRehide.
-        .general("rehideStrategy"),
-        .general("rehideInterval"),
+        .layout("enableExperimentalOverflowPrevention"),
+        .layout("enableTimerTakeover"),
+        // Set by Hide items again, indexed under visibility.autoRehide.
+        .visibility("rehideStrategy"),
+        .visibility("rehideInterval"),
         // Tuning kept out of Settings on purpose; settings URIs still reach it.
-        .advanced("swapOnThawIconClick"),
-        .advanced("showAllSectionsOnUserDrag"),
-        .advanced("showOnHoverDelay"),
-        .advanced("tooltipDelay"),
-        .advanced("iconRefreshInterval"),
+        .visibility("swapOnThawIconClick"),
+        .layout("showAllSectionsOnUserDrag"),
+        .visibility("showOnHoverDelay"),
+        .visibility("tooltipDelay"),
+        .layout("iconRefreshInterval"),
         // The camera and microphone alerts, hidden for now with no Settings UI.
-        .advanced("enableRecordingWatch"),
-        .advanced("recordingWatchScreen"),
-        .advanced("recordingWatchPlacement"),
+        .visibility("enableRecordingWatch"),
+        .visibility("recordingWatchScreen"),
+        .visibility("recordingWatchPlacement"),
+        // Under Apps that change settings, which the pane entry finds; the
+        // allowed apps are a list, not a setting.
+        .privacy("isSettingsURIEnabled"),
+        .privacy("whitelistedApps"),
     ]
 
     static var nonSearchableProperties: Set<SettingsProperty> {

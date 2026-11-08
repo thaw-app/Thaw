@@ -809,7 +809,7 @@ extension MenuBarItemManager {
         // The agent ignores the new weight when re-allowing an item, so verify
         // against the bar once the reflow settles.
         let controller = appState.menuBarManager.sectionController
-        let experimentalSystemItemHiding = appState.settings.advanced
+        let experimentalSystemItemHiding = appState.settings.layout
             .enableExperimentalSystemItemHiding
         // Read once: this runs on every poll of the settle wait, and nothing of Thaw's writes meanwhile.
         let weightTable = StoredWeights.Table.read()
@@ -980,7 +980,7 @@ extension MenuBarItemManager {
         let assignments = controller.sectionAssignment
             .filter { sectionsToReconcile.contains($0.value) }
             .sorted { lhs, rhs in lhs.key < rhs.key }
-        let experimentalSystemItemHiding = appState.settings.advanced
+        let experimentalSystemItemHiding = appState.settings.layout
             .enableExperimentalSystemItemHiding
 
         for (identifier, section) in assignments {

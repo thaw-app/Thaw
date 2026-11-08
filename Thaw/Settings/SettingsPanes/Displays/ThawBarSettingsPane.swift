@@ -140,8 +140,8 @@ struct ThawBarSettingsPane: View {
                 gridColumns: displaySettings.binding(for: target, \.gridColumns) { $0.withGridColumns($1) },
                 itemScale: displaySettings.binding(for: target, \.thawBarItemScale) { $0.withThawBarItemScale($1) },
                 shortcutPlacement: Binding(
-                    get: { ThawBarShortcutPlacement(opensAtPointer: appState.settings.general.thawBarLocationOnHotkey) },
-                    set: { appState.settings.general.thawBarLocationOnHotkey = $0.opensAtPointer }
+                    get: { ThawBarShortcutPlacement(opensAtPointer: appState.settings.thawBar.thawBarLocationOnHotkey) },
+                    set: { appState.settings.thawBar.thawBarLocationOnHotkey = $0.opensAtPointer }
                 ),
                 context: .display
             )
@@ -156,8 +156,8 @@ struct ThawBarSettingsPane: View {
         Toggle(
             "Lock \(Constants.displayName) Bar position",
             isOn: Binding(
-                get: { appState.settings.general.lockThawBarPosition },
-                set: { appState.settings.general.lockThawBarPosition = $0 }
+                get: { appState.settings.thawBar.lockThawBarPosition },
+                set: { appState.settings.thawBar.lockThawBarPosition = $0 }
             )
         )
         .annotation("Keeps the \(Constants.displayName) Bar where it opens. Turn off to drag it by its background; it opens in its usual place again next time.")
@@ -165,8 +165,8 @@ struct ThawBarSettingsPane: View {
         Toggle(
             "Show clicked items in the menu bar",
             isOn: Binding(
-                get: { appState.settings.general.openHiddenItemsInMenuBar },
-                set: { appState.settings.general.openHiddenItemsInMenuBar = $0 }
+                get: { appState.settings.thawBar.openHiddenItemsInMenuBar },
+                set: { appState.settings.thawBar.openHiddenItemsInMenuBar = $0 }
             )
         )
         .annotation("When you open a hidden item from the \(Constants.displayName) Bar or search, \(Constants.displayName) shows it in the menu bar and opens its menu under its icon. Turn off to open the menu without showing the item.")

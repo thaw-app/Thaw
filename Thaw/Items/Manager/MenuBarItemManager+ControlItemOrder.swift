@@ -445,7 +445,7 @@ extension MenuBarItemManager {
             didRestoreOrder = true
         }
 
-        let experimentalSystemItemHiding = appState?.settings.advanced
+        let experimentalSystemItemHiding = appState?.settings.layout
             .enableExperimentalSystemItemHiding ?? false
         guard hidden.isPhysicallyOrderable(
             experimentalSystemItemHiding: experimentalSystemItemHiding

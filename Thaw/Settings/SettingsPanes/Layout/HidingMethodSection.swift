@@ -12,7 +12,7 @@ import ThawUI
 ///
 /// Native rewrites another app's settings, so it stays opt-in.
 struct HidingMethodSection: View {
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: LayoutSettings
     @Environment(AppState.self) private var appState
     @State private var confirmsSetAside = false
     @State private var setAsideError: String?

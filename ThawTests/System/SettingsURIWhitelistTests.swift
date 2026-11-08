@@ -277,7 +277,7 @@ struct SettingsURIWhitelistTests {
 
     @Test("An app added by hand is pinned to its own signature, so its requests pass", .scratchDefaults)
     func manualAddIsPinned() {
-        let settings = AutomationSettings()
+        let settings = PrivacySettings()
         let teamApp = unclaimedBundleID("manual-team")
         let adhocApp = unclaimedBundleID("manual-adhoc")
         let url = URL(fileURLWithPath: "/Applications/Example.app")
@@ -294,7 +294,7 @@ struct SettingsURIWhitelistTests {
 
     @Test("A hand-picked app whose signature can't be read or names another app is not added", .scratchDefaults)
     func manualAddRefusesUnsignedOrMismatched() {
-        let settings = AutomationSettings()
+        let settings = PrivacySettings()
         let bundleID = unclaimedBundleID("manual-refused")
         let url = URL(fileURLWithPath: "/Applications/Example.app")
 

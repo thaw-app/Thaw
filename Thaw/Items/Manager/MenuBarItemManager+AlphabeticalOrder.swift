@@ -64,7 +64,7 @@ extension MenuBarItemManager {
         let items = MenuBarBackendProvider.current.rebucket(
             itemCache,
             hider: controller,
-            allowsAlwaysHidden: appState.settings.advanced.enableAlwaysHiddenSection
+            allowsAlwaysHidden: appState.settings.layout.enableAlwaysHiddenSection
         ).managedItems(for: section)
         let sorted = MenuBarItemAlphabeticalOrder.sorted(
             items,

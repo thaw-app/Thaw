@@ -12,7 +12,7 @@ import ThawUI
 /// are showing, to make room for them, and while the desktop is in front,
 /// where the Finder's menus would otherwise sit.
 struct AppMenuHidingRow: View {
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: GeneralSettings
 
     var body: some View {
         ToggleButtonRow("Hide app menus") {

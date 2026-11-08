@@ -48,7 +48,7 @@ final class LayoutEditorModel {
                 (
                     appState.itemManager.itemCache,
                     appState.itemGroupManager.groupSet,
-                    appState.settings.advanced.enableAlwaysHiddenSection,
+                    appState.settings.layout.enableAlwaysHiddenSection,
                     appState.settings.general.showThawIcon
                 )
             }

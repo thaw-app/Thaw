@@ -18,7 +18,7 @@ nonisolated extension SearchIndex {
             pane: .menuBarLayout,
             section: "Sections",
             keywords: ["always hidden", "always-hidden", "section", "enable", "enable the always-hidden section"],
-            property: .advanced("enableAlwaysHiddenSection")
+            property: .layout("enableAlwaysHiddenSection")
         ),
         SearchEntry(
             id: "advanced.sectionDividerStyle",
@@ -27,7 +27,7 @@ nonisolated extension SearchIndex {
             pane: .menuBarLayout,
             section: "Sections",
             keywords: ["divider", "style", "chevron", "line", "dot", "slash", "custom", "image", "separator", "section"],
-            property: .advanced("sectionDividerStyle")
+            property: .layout("sectionDividerStyle")
         ),
         SearchEntry(
             id: "layout.spacers",

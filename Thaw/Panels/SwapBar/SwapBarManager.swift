@@ -24,7 +24,7 @@ final class SwapBarManager {
     @ObservationIgnored private weak var appState: AppState?
 
     /// The settings slice this manager observes, injected at setup.
-    @ObservationIgnored private var advancedSettings: AdvancedSettings?
+    @ObservationIgnored private var visibilitySettings: VisibilitySettings?
     @ObservationIgnored private var panel: SwapBarPanel?
     @ObservationIgnored private var cancellables = Set<AnyCancellable>()
     @ObservationIgnored private var pointerMonitor: EventMonitor?
@@ -37,12 +37,12 @@ final class SwapBarManager {
 
     /// Read live from settings so the bar tracks the switch.
     private var isEnabled: Bool {
-        advancedSettings?.enableSwapBar ?? false
+        visibilitySettings?.enableSwapBar ?? false
     }
 
     func performSetup(with appState: AppState, displaySettlements: some Publisher<EnvironmentChange, Never>) {
         self.appState = appState
-        advancedSettings = appState.settings.advanced
+        visibilitySettings = appState.settings.visibility
         cancellables = [
             observeSettingFlips(),
             observeDisplayChanges(displaySettlements),
@@ -52,8 +52,8 @@ final class SwapBarManager {
     // MARK: Observation
 
     private func observeSettingFlips() -> AnyCancellable {
-        guard let advanced = advancedSettings else { return AnyCancellable { /* Nothing was observed, so there is nothing to cancel. */ } }
-        return advanced.observe(\.enableSwapBar) { [weak self] _ in
+        guard let visibility = visibilitySettings else { return AnyCancellable { /* Nothing was observed, so there is nothing to cancel. */ } }
+        return visibility.observe(\.enableSwapBar) { [weak self] _ in
             self?.refresh()
         }
     }
@@ -319,7 +319,7 @@ struct SwapBarView: View {
     /// The ✕ turns the feature off, so a notice says where to turn it back on.
     private var closeButton: some View {
         Button {
-            SwapBarTurnOff.turnOff(appState.settings.advanced)
+            SwapBarTurnOff.turnOff(appState.settings.visibility)
         } label: {
             Image(systemName: "xmark")
                 .font(ThawType.caption.weight(.semibold))

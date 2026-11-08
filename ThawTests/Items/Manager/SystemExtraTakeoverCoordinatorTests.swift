@@ -17,7 +17,7 @@ final class TakeoverRig {
     let fake = FakeStandInSystem()
     let sections = FakeStandInSections()
     let journal = MemoryExtraJournal()
-    let settings = AdvancedSettings()
+    let settings = LayoutSettings()
     let switches = Dictionary(uniqueKeysWithValues: SystemExtraItem.allCases.map { ($0, FakeNativeSwitch(item: $0)) })
     let launcher: SystemExtraStandInLauncher
     var shownInControlCenter: Set<String> = []

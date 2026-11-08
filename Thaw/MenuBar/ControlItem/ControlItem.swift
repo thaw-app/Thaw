@@ -111,7 +111,7 @@ final class ControlItem: NSObject {
 
     /// Tasks backing the settings-observation reactions in
     /// observeSettings(appState:). GeneralSettings and
-    /// AdvancedSettings are @Observable (not Combine
+    /// LayoutSettings are @Observable (not Combine
     /// ObservableObjects), so their property changes are observed via the
     /// Observations async sequence instead of $property publishers.
     private var showThawIconObservationTask: Task<Void, Never>?
@@ -780,7 +780,7 @@ extension ControlItem {
         AnyCancellable { dragTask.cancel() }
             .store(in: &cancellables)
 
-        // GeneralSettings and AdvancedSettings are @Observable, so
+        // The settings models are @Observable, so
         // their properties are watched via Observations sequences rather
         // than the old $property Combine projections. Each sequence
         // delivers the current value first, matching the old subscriptions'
@@ -815,10 +815,10 @@ extension ControlItem {
             // enableAlwaysHiddenSection setting (an Observations sequence) both
             // re-derive the same add/remove decision, so a section switched on
             // while the item is absent still brings it back.
-            let advancedSettings = appState.settings.advanced
+            let layoutSettings = appState.settings.layout
             let reactToAlwaysHiddenSectionState: () -> Void = { [weak self] in
                 guard let self else { return }
-                if advancedSettings.enableAlwaysHiddenSection {
+                if layoutSettings.enableAlwaysHiddenSection {
                     addToMenuBar()
                 } else {
                     removeFromMenuBar()
@@ -834,7 +834,7 @@ extension ControlItem {
 
             alwaysHiddenSectionObservationTask?.cancel()
             alwaysHiddenSectionObservationTask = Task { @MainActor in
-                let changes = Observations { advancedSettings.enableAlwaysHiddenSection }
+                let changes = Observations { layoutSettings.enableAlwaysHiddenSection }
                 for await _ in changes {
                     reactToAlwaysHiddenSectionState()
                 }
@@ -845,11 +845,11 @@ extension ControlItem {
         }
 
         if isSectionDivider {
-            let advancedSettings = appState.settings.advanced
+            let layoutSettings = appState.settings.layout
             sectionDividerStyleObservationTask?.cancel()
             sectionDividerStyleObservationTask = Task { @MainActor [weak self] in
                 let changes = Observations {
-                    (advancedSettings.sectionDividerStyle, advancedSettings.customSectionDividerImage, advancedSettings.customSectionDividerIsTemplate)
+                    (layoutSettings.sectionDividerStyle, layoutSettings.customSectionDividerImage, layoutSettings.customSectionDividerIsTemplate)
                 }
                 for await _ in changes {
                     guard let self else { return }

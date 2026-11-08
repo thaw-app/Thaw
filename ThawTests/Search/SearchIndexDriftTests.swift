@@ -30,6 +30,34 @@ struct SearchIndexDriftTests {
         return names
     }
 
+    /// One page's model: its name in messages, how a property name becomes
+    /// its SettingsProperty, and the stored properties it has.
+    private struct Page {
+        let name: String
+        let property: (String) -> SettingsProperty
+        let stored: Set<String>
+    }
+
+    /// Every page model the index links into.
+    private var pages: [Page] {
+        [
+            Page(name: "GeneralSettings", property: SettingsProperty.general, stored: observedPropertyNames(of: GeneralSettings())),
+            Page(name: "LayoutSettings", property: SettingsProperty.layout, stored: observedPropertyNames(of: LayoutSettings())),
+            Page(name: "VisibilitySettings", property: SettingsProperty.visibility, stored: observedPropertyNames(of: VisibilitySettings())),
+            Page(name: "ThawBarSettings", property: SettingsProperty.thawBar, stored: observedPropertyNames(of: ThawBarSettings())),
+            Page(name: "AppearanceSettings", property: SettingsProperty.appearance, stored: observedPropertyNames(of: AppearanceSettings())),
+            Page(name: "SpacesSettings", property: SettingsProperty.spaces, stored: observedPropertyNames(of: SpacesSettings())),
+            Page(name: "PrivacySettings", property: SettingsProperty.privacy, stored: observedPropertyNames(of: PrivacySettings())),
+            Page(name: "ToolsSettings", property: SettingsProperty.tools, stored: observedPropertyNames(of: ToolsSettings())),
+            Page(name: "WidgetsSettings", property: SettingsProperty.widgets, stored: observedPropertyNames(of: WidgetsSettings())),
+        ]
+    }
+
+    /// Every SettingsProperty a stored property of some page model maps to.
+    private var allStoredProperties: Set<SettingsProperty> {
+        Set(pages.flatMap { page in page.stored.map(page.property) })
+    }
+
     /// Every property link declared by the current index.
     private var indexedProperties: Set<SettingsProperty> {
         Set(SearchIndex.entries.compactMap(\.property))
@@ -37,54 +65,27 @@ struct SearchIndexDriftTests {
 
     // MARK: - Model → index coverage
 
-    @Test("every GeneralSettings stored property is searchable or opted out")
-    func generalSettingsCoverage() {
+    @Test("every page model's stored property is searchable or opted out")
+    func pageModelCoverage() {
         let covered = indexedProperties.union(SearchIndex.nonSearchableProperties)
-        let missing = observedPropertyNames(of: GeneralSettings())
-            .filter { !covered.contains(.general($0)) }
-            .sorted()
-
-        #expect(
-            missing.isEmpty,
-            """
-            GeneralSettings properties with no SearchEntry and no opt-out: \(missing). \
-            Add a SearchEntry with `property: .general(...)`, or a commented \
-            opt-out in SearchIndex.nonSearchableProperties if deliberately unsearchable.
-            """
-        )
-    }
-
-    @Test("every AdvancedSettings stored property is searchable or opted out")
-    func advancedSettingsCoverage() {
-        let covered = indexedProperties.union(SearchIndex.nonSearchableProperties)
-        let missing = observedPropertyNames(of: AdvancedSettings())
-            .filter { !covered.contains(.advanced($0)) }
-            .sorted()
-
-        #expect(
-            missing.isEmpty,
-            """
-            AdvancedSettings properties with no SearchEntry and no opt-out: \(missing). \
-            Add a SearchEntry with `property: .advanced(...)`, or a commented \
-            opt-out in SearchIndex.nonSearchableProperties if deliberately unsearchable.
-            """
-        )
+        for page in pages {
+            let missing = page.stored.filter { !covered.contains(page.property($0)) }.sorted()
+            #expect(
+                missing.isEmpty,
+                """
+                \(page.name) properties with no SearchEntry and no opt-out: \(missing). \
+                Add a SearchEntry linking the property, or a commented opt-out in \
+                SearchIndex.nonSearchableProperties if deliberately unsearchable.
+                """
+            )
+        }
     }
 
     // MARK: - Index → model integrity
 
     @Test("every property link in the index names a real stored property")
     func indexLinksResolveToStoredProperties() {
-        let general = observedPropertyNames(of: GeneralSettings())
-        let advanced = observedPropertyNames(of: AdvancedSettings())
-
-        let dangling = indexedProperties.filter { property in
-            switch property {
-            case let .general(name): !general.contains(name)
-            case let .advanced(name): !advanced.contains(name)
-            }
-        }
-
+        let dangling = indexedProperties.subtracting(allStoredProperties)
         #expect(
             dangling.isEmpty,
             """
@@ -96,16 +97,9 @@ struct SearchIndexDriftTests {
 
     @Test("opt-outs name real stored properties and never shadow a live entry")
     func optOutsAreConsistent() {
-        let general = observedPropertyNames(of: GeneralSettings())
-        let advanced = observedPropertyNames(of: AdvancedSettings())
-
+        let stored = allStoredProperties
         for property in SearchIndex.nonSearchableProperties {
-            switch property {
-            case let .general(name):
-                #expect(general.contains(name), "Stale opt-out for removed property .general(\(name))")
-            case let .advanced(name):
-                #expect(advanced.contains(name), "Stale opt-out for removed property .advanced(\(name))")
-            }
+            #expect(stored.contains(property), "Stale opt-out for removed property \(property)")
             #expect(
                 !indexedProperties.contains(property),
                 "\(property) is opted out but also has a SearchEntry, the opt-out is stale"
@@ -120,13 +114,14 @@ struct SearchIndexDriftTests {
         // Canary: if a toolchain renames the backing stores, the coverage
         // tests would pass vacuously.
         let general = observedPropertyNames(of: GeneralSettings())
-        let advanced = observedPropertyNames(of: AdvancedSettings())
+        let layout = observedPropertyNames(of: LayoutSettings())
+        let visibility = observedPropertyNames(of: VisibilitySettings())
 
         #expect(general.contains("showThawIcon"))
-        #expect(general.contains("showOnClick"))
-        #expect(advanced.contains("enableAlwaysHiddenSection"))
-        #expect(advanced.contains("tooltipDelay"))
-        #expect(!general.contains("cancellables"), "@ObservationIgnored members must not count as user-facing")
-        #expect(!advanced.contains("appState"), "@ObservationIgnored members must not count as user-facing")
+        #expect(visibility.contains("showOnClick"))
+        #expect(layout.contains("enableAlwaysHiddenSection"))
+        #expect(visibility.contains("tooltipDelay"))
+        #expect(!general.contains("settingsURIChanges"), "@ObservationIgnored members must not count as user-facing")
+        #expect(!layout.contains("appState"), "@ObservationIgnored members must not count as user-facing")
     }
 }

@@ -17,7 +17,7 @@ enum DisplayedItemInventory {
         MenuBarBackendProvider.current.rebucket(
             appState.itemManager.itemCache,
             hider: appState.menuBarManager.sectionController,
-            allowsAlwaysHidden: appState.settings.advanced.enableAlwaysHiddenSection
+            allowsAlwaysHidden: appState.settings.layout.enableAlwaysHiddenSection
         ).retainingRunningOwners(
             processIDs: Set(runningApplications.map(\.processIdentifier)),
             bundleIdentifiers: Set(runningApplications.compactMap(\.bundleIdentifier))

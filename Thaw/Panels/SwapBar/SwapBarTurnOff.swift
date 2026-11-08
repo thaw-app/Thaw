@@ -18,7 +18,7 @@ enum SwapBarTurnOff {
     }
 
     static func turnOff(
-        _ settings: AdvancedSettings,
+        _ settings: VisibilitySettings,
         showHUD: (String, LocalizedStringResource) -> Void = { ThawHUD.show(symbol: $0, text: $1) }
     ) {
         settings.enableSwapBar = false

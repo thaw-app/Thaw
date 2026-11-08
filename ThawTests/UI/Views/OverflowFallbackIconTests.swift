@@ -165,7 +165,7 @@ struct OverflowFallbackIconTests {
     @Test("The always-use-app-icon setting prefers the app icon over a good capture")
     func alwaysUseAppIcon() throws {
         let appState = AppState()
-        appState.settings.advanced.alwaysUseAppIconForMenuBarItems = true
+        appState.settings.layout.alwaysUseAppIconForMenuBarItems = true
         let item = Self.item(.string("com.example"))
         #expect(OverflowFallbackIcon.shouldPreferAppIcon(for: item, in: .visible, appState: appState, hasUsableCapture: true))
         #expect(!OverflowFallbackIcon.shouldPreferAppIcon(for: Self.item(.controlCenter), in: .visible, appState: appState, hasUsableCapture: true))

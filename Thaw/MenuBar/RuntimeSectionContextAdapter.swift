@@ -200,9 +200,9 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     }
 
     func enableAlwaysHiddenSectionRevealIfNeeded() {
-        guard let advanced = appState?.settings.advanced else { return }
-        if !advanced.enableAlwaysHiddenSection {
-            advanced.enableAlwaysHiddenSection = true
+        guard let layout = appState?.settings.layout else { return }
+        if !layout.enableAlwaysHiddenSection {
+            layout.enableAlwaysHiddenSection = true
         }
     }
 
