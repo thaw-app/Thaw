@@ -81,6 +81,18 @@ final class LayoutSelectionModel {
         return LayoutBatchMove(itemIDs: itemIDs, section: section, placement: placement)
     }
 
+    /// One move per selected item that puts it back after its current left neighbour,
+    /// left to right, so each neighbour is already back in place when it's needed.
+    func restoringMoves() -> [LayoutBatchMove] {
+        let selected = Set(orderedItemIDs)
+        return MenuBarSectionName.allCases.flatMap { section in
+            let ids = (units[section] ?? []).flatMap(\.memberIDs)
+            return ids.indices.filter { selected.contains(ids[$0]) }.map { index in
+                LayoutBatchMove(itemIDs: [ids[index]], section: section, placement: index == 0 ? .start : .after(ids[index - 1]))
+            }
+        }
+    }
+
     /// Whether section would take the whole selection.
     func accepts(_ section: MenuBarSectionName, in snapshot: LayoutBatchMoveSnapshot) -> Bool {
         guard let command = command(to: section, placement: .end) else { return false }

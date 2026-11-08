@@ -134,6 +134,7 @@ struct MenuBarLayoutSettingsPane: View {
             )
         }
         .thawAnimation(ThawMotion.settle, value: showsHideByDragHint)
+        .modifier(LayoutUndoShortcuts(undoManager: appState.layoutUndo))
         .errorAlert("Couldn’t relaunch \(Constants.displayName)", message: $relaunchErrorMessage)
         .modifier(
             HiddenSectionOccupancySync(itemManager: itemManager) {
@@ -194,7 +195,7 @@ private struct LayoutDetailTabs: View {
             MenuBarLayoutGroupsSection()
         case .spacers:
             ThawSection("Spacers") {
-                LayoutSpacersRows(spacerManager: appState.spacerManager)
+                LayoutSpacersRows(spacerManager: appState.spacerManager, undoManager: appState.layoutUndo)
             }
             .settingsSearchAnchor("layout.spacers")
         case .appleItems:
@@ -238,6 +239,7 @@ private struct LayoutOverflowSection: View {
 /// Spacer rows use a collapsed disclosure rather than a separate card because tuning is infrequent.
 private struct LayoutSpacersRows: View {
     let spacerManager: MenuBarSpacerManager
+    let undoManager: UndoManager
 
     var body: some View {
         if let failure = spacerManager.lastPersistenceFailure {
@@ -265,10 +267,7 @@ private struct LayoutSpacersRows: View {
                     .labelsHidden()
                     .help("Fill the spacer with a color. Fully transparent renders as an empty gap.")
                     ThawSlider(
-                        value: Binding(
-                            get: { Double(spacer.width) },
-                            set: { spacerManager.setWidth(CGFloat($0), for: spacer.id) }
-                        ),
+                        value: Binding(get: { Double(spacer.width) }, set: { spacerManager.setWidth(CGFloat($0), for: spacer.id, undoManager: undoManager) }),
                         in: Double(MenuBarSpacer.minWidth) ... Double(MenuBarSpacer.maxWidth),
                         step: 4
                     ) {
@@ -276,7 +275,7 @@ private struct LayoutSpacersRows: View {
                             .monospacedDigit()
                     }
                     Button {
-                        spacerManager.removeSpacer(id: spacer.id, undoManager: NSApp.keyWindow?.undoManager)
+                        spacerManager.removeSpacer(id: spacer.id, undoManager: undoManager)
                     } label: {
                         Image(systemName: "trash")
                     }
@@ -290,7 +289,7 @@ private struct LayoutSpacersRows: View {
         }
 
         Button("Add Spacer") {
-            spacerManager.addSpacer()
+            spacerManager.addSpacer(undoManager: undoManager)
         }
         .buttonStyle(.settingsGlass)
         .annotation(

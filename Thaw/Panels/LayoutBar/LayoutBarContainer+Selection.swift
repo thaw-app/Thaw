@@ -117,8 +117,13 @@ extension LayoutBarContainer {
     /// One batch through the move path thaw://move-item uses, counted as a user edit.
     private func moveSelection(to target: MenuBarSection.Name, placement: LayoutBatchMove.Placement) {
         guard let selection, let appState else { return }
+        let restoring = selection.restoringMoves()
+        let forward = selection.command(to: target, placement: placement)
         ExplicitLayoutEdit.task {
             let outcome = await selection.move(to: target, placement: placement, using: selection.makeMover(appState))
+            if LayoutBatchMoveUndo.records(outcome), let forward {
+                LayoutBatchMoveUndo.register(forward: forward, restoring: restoring, appState: appState)
+            }
             guard let outcome,
                   let refusal = LayoutSelectionModel.refusal(for: outcome, section: target, itemName: { id in
                       Self.displayName(of: id, appState: appState)
