@@ -107,14 +107,13 @@ final class AppState {
     let itemGroupManager = MenuBarItemGroupManager()
 
     /// Saves layout changes into the active profile when it keeps them.
-    @ObservationIgnored private(set) lazy var profileLayoutKeeper = ProfileLayoutKeeper(
-        profileManager: profileManager,
-        itemManager: itemManager,
-        groupManager: itemGroupManager
-    )
+    @ObservationIgnored private(set) lazy var profileLayoutKeeper = ProfileLayoutKeeper(profileManager: profileManager, itemManager: itemManager, groupManager: itemGroupManager)
 
     /// Transient, user-facing explanations for refused layout actions.
     let layoutFeedback = LayoutBarFeedbackCenter()
+
+    /// One undo history for layout edits, whichever window or tile made them.
+    let layoutUndo = UndoManager()
 
     // System services.
 
