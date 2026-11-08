@@ -182,13 +182,14 @@ struct MenuBarSearchContentViewTests {
         #expect(harness.model.renameSession != nil)
     }
 
-    @Test("The launcher lists nothing until the user types, then the ranked matches")
-    func launcherWaitsForAQuery() async {
+    @Test("The launcher opens on every item with one highlighted, then lists the ranked matches")
+    func launcherListsEverythingThenRanks() async {
         let alpha = World.item("Alpha")
         let beta = World.item("Beta")
         let harness = Harness(.launcher, visible: [alpha, beta])
-        await harness.settle(within: .milliseconds(200)) { false }
-        #expect(harness.model.displayedItems.isEmpty)
+        await harness.settle { harness.model.displayedItems.count == 2 }
+        #expect(Set(harness.ids) == [Self.itemID(alpha), Self.itemID(beta)])
+        #expect(harness.model.selection != nil, "the arrows have a row to start from")
 
         harness.model.searchText = "Alpha"
         await harness.settle { harness.ids.first == Self.itemID(alpha) }
@@ -254,19 +255,39 @@ struct MenuBarSearchContentViewTests {
         #expect(harness.model.selection == Self.itemID(beta), "the heading is skipped for the recent item")
         #expect(harness.model.displayedItems.first?.isSelectable == false)
 
+        #expect(harness.ids.count(where: { $0 == Self.itemID(beta) }) == 1, "a recent item is listed once")
+
         harness.model.searchText = "Alpha"
         await harness.settle { !harness.ids.contains(.recentsHeader) }
         #expect(!harness.ids.contains(.recentsHeader))
     }
 
-    @Test("The launcher opens on the recently opened items only")
-    func launcherShowsRecents() async {
+    @Test("The launcher lists recents above the whole inventory")
+    func launcherShowsRecentsAboveEverything() async {
         let alpha = World.item("Alpha")
         let beta = World.item("Beta")
         MenuBarSearchRecents().record(alpha)
         let harness = Harness(.launcher, visible: [alpha, beta])
-        await harness.settle { !harness.model.displayedItems.isEmpty }
-        #expect(harness.ids == [.recentsHeader, Self.itemID(alpha)])
+        await harness.settle { harness.model.displayedItems.count == 4 }
+        #expect(harness.ids == [.recentsHeader, Self.itemID(alpha), .allItemsHeader, Self.itemID(beta)])
+    }
+
+    @Test("The arrows walk from the recents down through every item, once each")
+    func arrowsWalkPastTheRecents() async {
+        let items = ["Alpha", "Beta", "Gamma"].map { World.item($0) }
+        MenuBarSearchRecents().record(items[1])
+        let harness = Harness(.launcher, visible: items)
+        await harness.settle { harness.model.displayedItems.count == 5 }
+        #expect(harness.model.selection == Self.itemID(items[1]))
+
+        var visited = [harness.model.selection]
+        for _ in 0 ..< 4 {
+            harness.model.moveSelection(.down)
+            visited.append(harness.model.selection)
+        }
+        let selectable = harness.model.displayedItems.filter(\.isSelectable).map(\.id)
+        #expect(Array(visited.prefix(selectable.count)) == selectable)
+        #expect(visited.last == selectable.last, "the last row holds at the end")
     }
 
     @Test("The assisted face lists recents above the whole inventory")
@@ -276,8 +297,7 @@ struct MenuBarSearchContentViewTests {
         MenuBarSearchRecents().record(beta)
         let harness = Harness(.assisted, visible: [alpha, beta])
         await harness.settle { harness.model.displayedItems.count == 4 }
-        #expect(Array(harness.ids.prefix(2)) == [.recentsHeader, Self.itemID(beta)])
-        #expect(Set(harness.ids.dropFirst(2)) == [Self.itemID(alpha), Self.itemID(beta)])
+        #expect(harness.ids == [.recentsHeader, Self.itemID(beta), .allItemsHeader, Self.itemID(alpha)])
     }
 
     @Test("A recent item that is no longer on the bar leaves no recents heading behind")
@@ -285,7 +305,7 @@ struct MenuBarSearchContentViewTests {
         let alpha = World.item("Alpha")
         MenuBarSearchRecents().record(World.item("Gone"))
         let harness = Harness(.launcher, visible: [alpha])
-        await harness.settle(within: .milliseconds(200)) { false }
-        #expect(harness.model.displayedItems.isEmpty)
+        await harness.settle { !harness.model.displayedItems.isEmpty }
+        #expect(harness.ids == [Self.itemID(alpha)])
     }
 }

@@ -28,8 +28,9 @@ nonisolated enum SearchPresentation: String, CaseIterable, Identifiable {
     /// and highlights the selection in the menu bar.
     case inspector
 
-    /// Opens centered, Spotlight-fashion, listing recents until the user
-    /// types and then the ranked matches. Rows show the owning app's icon.
+    /// Opens centered, Spotlight-fashion, listing every item with recents on
+    /// top until the user types, then the ranked matches. Rows show the
+    /// owning app's icon.
     case launcher
 
     /// Opens at the pointer, listing the whole inventory in large type so
@@ -63,8 +64,8 @@ nonisolated enum SearchPresentation: String, CaseIterable, Identifiable {
             """
         case .launcher:
             """
-            Opens in the middle of the screen, like Spotlight, and shows your recent items \
-            until you type. Rows show the app's icon, and the selected item isn't \
+            Opens in the middle of the screen, like Spotlight, and lists every item with \
+            your recent ones on top. Rows show the app's icon, and the selected item isn't \
             highlighted in the menu bar.
             """
         case .assisted:
@@ -87,7 +88,8 @@ extension SearchPresentation {
     var contentSize: CGSize {
         switch self {
         case .inspector: CGSize(width: 600, height: 400)
-        case .launcher: CGSize(width: 620, height: 420)
+        // Floe's launcher.
+        case .launcher: CGSize(width: 750, height: 474)
         case .assisted: CGSize(width: 680, height: 560)
         }
     }
@@ -210,9 +212,11 @@ extension SearchPresentation {
                 isCapsule: true
             )
         case .launcher:
+            // Floe's field: the panel's inset plus a field's own, centred in
+            // its piece of glass.
             QueryFieldMetrics(
-                font: .title.weight(.light),
-                padding: EdgeInsets(top: 14, leading: 18, bottom: 14, trailing: 18),
+                font: .title2,
+                padding: EdgeInsets(top: 0, leading: ThawSpacing.inset + 14, bottom: 0, trailing: ThawSpacing.inset + 14),
                 hasTrailingSpacer: false,
                 isCapsule: false
             )
