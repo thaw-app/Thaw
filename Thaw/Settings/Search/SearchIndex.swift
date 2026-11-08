@@ -49,7 +49,7 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
         case "layout.spacers":
             .layoutSpacers
         // Layout's Options tab.
-        case "advanced.menuBarArrangementMode", "advanced.enableAlwaysHiddenSection", "advanced.sectionDividerStyle",
+        case "advanced.menuBarArrangementMode", "advanced.enableAlwaysHiddenSection", "advanced.sectionDividerStyle", "layout.showAllSectionsOnUserDrag",
              "advanced.enableNativeAppHiding", "advanced.enableMenuBarItemOverflow",
              "advanced.alwaysUseAppIconForMenuBarItems", "layout.resetMenuBarLayout":
             .layoutOptions
@@ -214,13 +214,8 @@ nonisolated enum SearchIndex {
         .visibility("rehideStrategy"),
         .visibility("rehideInterval"),
         // Tuning kept out of Settings on purpose; settings URIs still reach it.
-        .visibility("swapOnThawIconClick"),
-        .layout("showAllSectionsOnUserDrag"),
-        .visibility("showOnHoverDelay"),
-        .visibility("tooltipDelay"),
         .layout("iconRefreshInterval"),
-        // The camera and microphone alerts, hidden for now with no Settings UI.
-        .visibility("enableRecordingWatch"),
+        // Shown under the alerts switch, which search finds.
         .visibility("recordingWatchScreen"),
         .visibility("recordingWatchPlacement"),
         // Under Apps that change settings, which the pane entry finds; the
