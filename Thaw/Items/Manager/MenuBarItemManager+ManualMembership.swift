@@ -130,14 +130,34 @@ extension MenuBarItemManager {
         let desiredOrder = (controller.sectionItemOrder[section] ?? [])
             .filter { controller.section(for: $0) == section && cachedIdentifiers.contains($0) }
         guard desiredOrder.count > 1 else { return }
-        let changed = repairs.writeNow(.manualLayoutEdit, cause: .userEdit) { permit in
-            MenuBarPositionStoreProvider.forLayoutEdit.respaceOrder(
+        let store = MenuBarPositionStoreProvider.forLayoutEdit
+        let members = Set(desiredOrder)
+        let changed = repairs.writeNow(.manualLayoutEdit, cause: .userEdit) { permit -> [String] in
+            let before = store.readPositions()
+            let keys = Array(before.keys)
+            let memberKeys = Set(cachedItems.filter { members.contains($0.uniqueIdentifier) }.compactMap {
+                store.resolveKey(for: $0, existingKeys: keys, positions: before, liveItems: cachedItems)
+            })
+            let changed = store.respaceOrder(
                 desiredOrder: desiredOrder,
                 liveItems: cachedItems,
                 experimentalSystemItemHiding: configuration.enableExperimentalSystemItemHiding,
-                mayRewriteAroundUnplaceableItems: true,
+                mayRewriteAroundUnplaceableItems: false,
                 permit: permit
             )
+            guard let restored = ConcealedOrderGuard.rollback(
+                changed: changed,
+                memberKeys: memberKeys,
+                before: before,
+                current: store.readPositions()
+            ) else {
+                return changed
+            }
+            store.writePositions(restored, permit: permit)
+            MenuBarItemManager.diagLog.error(
+                "manual arrangement: undid a concealed \(section.logString) write that renumbered other sections' items"
+            )
+            return []
         }
         guard !changed.isEmpty else { return }
         commitPreferredPositionWrite(controller: controller)
