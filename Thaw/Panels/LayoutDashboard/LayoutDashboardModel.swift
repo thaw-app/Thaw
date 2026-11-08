@@ -19,16 +19,21 @@ final class LayoutDashboardModel {
     /// The profile in use when the window opened, shown beside the target.
     private(set) var profileName: String?
 
+    /// The layout history the toolbar's Undo and Redo act on.
+    let undo: LayoutUndoState
+
     @ObservationIgnored private let readTarget: @MainActor () -> LayoutEditTarget
     @ObservationIgnored private var cancellable: AnyCancellable?
 
     init(
         profileName: String? = nil,
+        undoManager: UndoManager = UndoManager(),
         readTarget: @escaping @MainActor () -> LayoutEditTarget,
         changes: some Publisher<Void, Never> = Empty<Void, Never>()
     ) {
         self.readTarget = readTarget
         self.profileName = profileName
+        undo = LayoutUndoState(undoManager: undoManager)
         pin = LayoutTargetPin(readTarget())
         cancellable = changes
             .receive(on: DispatchQueue.main)
@@ -53,6 +58,7 @@ extension LayoutDashboardModel {
             : nil
         return LayoutDashboardModel(
             profileName: profileName,
+            undoManager: appState.layoutUndo,
             readTarget: { liveTarget(spaces: appState.spaceDirectory.spaces) },
             changes: DisplayEnvironment.spaceOrDisplayChanges(merging: displayInvalidations)
         )

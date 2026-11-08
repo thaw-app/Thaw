@@ -139,3 +139,52 @@ struct LayoutDashboardTests {
         #expect(!world.appState.navigationState.isLayoutEditorPresented)
     }
 }
+
+@MainActor
+@Suite("Layout window undo")
+struct LayoutDashboardUndoTests {
+    @Test("The toolbar follows the layout history: enabled with a step, named after it, and undo then redo work")
+    func followsTheHistory() {
+        let history = UndoManager()
+        history.groupsByEvent = false
+        let state = LayoutUndoState(undoManager: history)
+        #expect(!state.canUndo)
+        #expect(!state.canRedo)
+
+        let box = UndoBox(history: history)
+        history.beginUndoGrouping()
+        box.set(1)
+        history.endUndoGrouping()
+        state.refresh()
+        #expect(state.canUndo)
+        #expect(state.undoTitle == history.undoMenuItemTitle)
+
+        state.undo()
+        #expect(box.value == 0)
+        #expect(state.canRedo)
+        #expect(!state.canUndo)
+
+        state.redo()
+        #expect(box.value == 1)
+    }
+}
+
+/// A value whose every change registers its inverse, as layout edits do, so redo has something to run.
+@MainActor
+private final class UndoBox {
+    private(set) var value = 0
+    let history: UndoManager
+
+    init(history: UndoManager) {
+        self.history = history
+    }
+
+    func set(_ new: Int) {
+        let old = value
+        value = new
+        history.registerUndo(withTarget: self) { box in
+            MainActor.assumeIsolated { box.set(old) }
+        }
+        history.setActionName("Move Item")
+    }
+}

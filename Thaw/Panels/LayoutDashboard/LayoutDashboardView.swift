@@ -80,10 +80,12 @@ private struct LayoutDashboardToolbar: View {
             HiddenItemCaptureButton()
 
             ThawActionGroup {
-                Button("Undo", systemImage: "arrow.uturn.backward") { send("undo:") }
-                    .help("Undo")
-                Button("Redo", systemImage: "arrow.uturn.forward") { send("redo:") }
-                    .help("Redo")
+                Button("Undo", systemImage: "arrow.uturn.backward") { model.undo.undo() }
+                    .help(model.undo.undoTitle)
+                    .disabled(!model.undo.canUndo)
+                Button("Redo", systemImage: "arrow.uturn.forward") { model.undo.redo() }
+                    .help(model.undo.redoTitle)
+                    .disabled(!model.undo.canRedo)
             }
             .labelStyle(.iconOnly)
             .buttonStyle(.thawGrouped)
@@ -91,11 +93,6 @@ private struct LayoutDashboardToolbar: View {
         }
         .padding(.horizontal, ThawSpacing.inset)
         .padding(.vertical, ThawSpacing.base)
-    }
-
-    /// Through the responder chain, so the focused bar's undo manager answers.
-    private func send(_ action: String) {
-        NSApp.sendAction(Selector((action)), to: nil, from: nil)
     }
 }
 
