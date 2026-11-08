@@ -75,7 +75,7 @@ extension ReducedModeController {
 
     @objc func switchToFullApp() {
         guard let appState else { return }
-        Self.isChosen = false
+        Self.leave()
         stop()
         // With the permission granted this starts the full app; without it, it opens the window that asks.
         appState.completeFirstLaunchSetup()

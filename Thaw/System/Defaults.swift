@@ -612,6 +612,8 @@ extension Defaults {
         // MARK: Reduced Mode
 
         case reducedModeChosen
+        /// Set from Troubleshooting, where Reduced mode is chosen with Accessibility granted.
+        case reducedModeKeptWithAccessibility
         case reducedModeHiddenBundleIDs
 
         // MARK: Updates Consent

@@ -142,6 +142,15 @@ struct ToolsSettingsPane: View {
             ) {
                 pendingAction = .resetPermissions
             }
+
+            toolRow(
+                title: "Reduced mode",
+                detail: "Run \(Constants.displayName) as one icon that hides whole apps, without reading the menu bar. Switch back from its menu.",
+                buttonTitle: "Switch to Reduced Mode…",
+                statusFor: .enterReducedMode
+            ) {
+                pendingAction = .enterReducedMode
+            }
         }
         MenuBarLayoutBackupsSection(refreshToken: backupsRefreshToken)
     }
@@ -262,6 +271,9 @@ struct ToolsSettingsPane: View {
                 try await MaintenanceTools.resetAppPermissions()
                 reportSuccess(String(localized: "Permissions cleared. Quitting…"))
                 ApplicationTermination.request()
+            case .enterReducedMode:
+                ReducedModeController.choose(keepingWithAccessibility: true)
+                appState.restartSelf()
             }
         } catch {
             failedAction = action
@@ -280,6 +292,7 @@ private enum MaintenanceToolAction: Identifiable {
     case resetMenuBarLayoutPositions
     case restartMenuBar
     case resetPermissions
+    case enterReducedMode
 
     var id: Self {
         self
@@ -291,6 +304,7 @@ private enum MaintenanceToolAction: Identifiable {
         case .resetMenuBarLayoutPositions: String(localized: "Rebuild macOS's saved layout?")
         case .restartMenuBar: String(localized: "Restart the menu bar?")
         case .resetPermissions: String(localized: "Reset permissions?")
+        case .enterReducedMode: String(localized: "Switch to Reduced mode?")
         }
     }
 
@@ -300,6 +314,7 @@ private enum MaintenanceToolAction: Identifiable {
         case .resetMenuBarLayoutPositions: "Couldn’t rebuild macOS's saved layout"
         case .restartMenuBar: "Couldn’t restart the menu bar"
         case .resetPermissions: "Couldn’t reset permissions"
+        case .enterReducedMode: "Couldn’t switch to Reduced mode"
         }
     }
 
@@ -309,6 +324,7 @@ private enum MaintenanceToolAction: Identifiable {
         case .resetMenuBarLayoutPositions: "Rebuild Saved Layout"
         case .restartMenuBar: "Restart Menu Bar"
         case .resetPermissions: "Reset Permissions"
+        case .enterReducedMode: "Switch"
         }
     }
 
@@ -322,6 +338,8 @@ private enum MaintenanceToolAction: Identifiable {
             "The menu bar will disappear for a moment and come back. Your layout is kept. \(Constants.displayName) relaunches afterward."
         case .resetPermissions:
             "Accessibility and Screen Recording are cleared for \(Constants.displayName), and so is its access to the files you picked: the menu bar layout table and Control Center's app list. \(Constants.displayName) quits so you can grant them again on next launch."
+        case .enterReducedMode:
+            "\(ReducedModeOfferButton.consequence) \(Constants.displayName) relaunches as one icon; switch back from its menu."
         }
     }
 }
