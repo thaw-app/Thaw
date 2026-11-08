@@ -41,6 +41,7 @@ the items under New and Fixed.
 
 - **Layout warns when items don't fit,** names the ones macOS hid, and Move to Hidden makes room in one click.
 - **Layout tells you when macOS hides Focus** and turns on Thaw's own Focus icon in one click. Reported by @JosefGvirt in [#1477](https://github.com/thaw-app/Thaw/issues/1477).
+- **Every Layout edit can be undone,** including drags within a section, moving several items, grouping, folders, spacers, names and icons. ⌘Z works anywhere in the Layout page, and undoing a keyboard move then redoing it no longer crashes.
 - **The Thaw Bar drops in from the menu bar.** It still closes at once, and only fades with Reduce Motion.
 - **Release notes can stay closed after an update,** in Privacy.
 - **The Thaw Bar can open only Always Hidden,** per display, as in Thaw 2. Hidden items still show in the menu bar, and your Thaw 2 choice carries over.
