@@ -26,8 +26,14 @@ struct FoldedMenuBar: View {
     /// Drag target published by LayoutBarContainer through layoutBarDragTargetChanged.
     @State private var dragTargetSection: MenuBarSection.Name?
 
-    /// The items selected across this surface's bars.
-    @State private var selection = LayoutSelectionModel(onMultiSelect: { FeatureTips.shared.noteMultiSelect() })
+    /// The items selected across this surface's bars, unless a host shares its own.
+    @State private var ownSelection = LayoutSelectionModel(onMultiSelect: { FeatureTips.shared.noteMultiSelect() })
+    /// The Layout window's selection, shared with its item list; nil uses this surface's own.
+    var sharedSelection: LayoutSelectionModel?
+
+    private var selection: LayoutSelectionModel {
+        sharedSelection ?? ownSelection
+    }
 
     /// Fits "Always Hidden" at caption size in the shipped languages.
     private let gutterWidth: CGFloat = 92

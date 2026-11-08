@@ -263,13 +263,13 @@ struct LayoutBarsSection: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppState.self) private var appState
     let itemManager: MenuBarItemManager
+    /// The Layout window's selection, shared with its item list.
+    var selection: LayoutSelectionModel?
 
     var body: some View {
         // A header avoids row clipping 20pt below the card's top edge; no rows means no card obscuring the first bar.
-        Section {
-            EmptyView()
-        } header: {
-            FoldedMenuBar(itemManager: itemManager, arrangement: .spaced)
+        Section {} header: {
+            FoldedMenuBar(itemManager: itemManager, arrangement: .spaced, sharedSelection: selection)
                 .textCase(nil)
                 .font(nil)
                 .foregroundStyle(.primary)
