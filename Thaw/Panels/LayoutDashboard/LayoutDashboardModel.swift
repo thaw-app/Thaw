@@ -22,6 +22,12 @@ final class LayoutDashboardModel {
     /// The layout history the toolbar's Undo and Redo act on.
     let undo: LayoutUndoState
 
+    /// The selection the bars and the item list share.
+    let selection = LayoutSelectionModel(onMultiSelect: { FeatureTips.shared.noteMultiSelect() })
+
+    /// The toolbar's filter for the item list.
+    var filterText = ""
+
     @ObservationIgnored private let readTarget: @MainActor () -> LayoutEditTarget
     @ObservationIgnored private var cancellable: AnyCancellable?
 

@@ -67,6 +67,7 @@ the items under New and Fixed.
 ### Changed
 
 - **Pop Out Editor opens Layout in a window that stays on its menu bar.** Switch Space or display and the bars go read-only, naming where you are, until you switch back or edit that bar instead. It has Capture Hidden Items and Undo in its toolbar.
+- **The Layout window lists every item beside the bars,** with a filter, ⌘- and ⇧-click and ⌘A to select several, the arrow keys, and each item's menu on a right click or Return. A selection in the list shows in the bars and the other way round.
 - **The experimental reorder editor is gone,** with its hidden setting.
 - **Hold Option on Capture Hidden Items to retake every picture.** The button reads Retake All Pictures while you do.
 - **Extras is now Modules.**
