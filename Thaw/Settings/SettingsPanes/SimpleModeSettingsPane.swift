@@ -31,15 +31,12 @@ struct SimpleModeSettingsPane: View {
             }
             ThawSection {
                 LaunchAtLoginRow()
-                Toggle("Show \(Constants.displayName) icon", isOn: $settings.showThawIcon)
                 arrangementPicker
-                ShowHiddenItemsOnRow(settings: appState.settings.visibility)
                 RehideChoiceRow(settings: appState.settings.visibility)
-                RehideDelayRow(settings: appState.settings.visibility)
                 alwaysHiddenToggle
                 previewToggle
                 hiddenSectionHotkeyRow
-                updatesRow
+                updatesToggle
             }
         }
     }
@@ -126,15 +123,9 @@ struct SimpleModeSettingsPane: View {
         }
     }
 
-    @ViewBuilder
-    private var updatesRow: some View {
+    private var updatesToggle: some View {
         @Bindable var updatesManager = updatesManager
-        Toggle("Check for updates automatically", isOn: $updatesManager.automaticallyChecksForUpdates)
-        LabeledContent("Check for updates now") {
-            Button("Check Now") { updatesManager.checkForUpdates() }
-                .buttonStyle(.settingsGlass)
-                .disabled(!updatesManager.canCheckNow)
-        }
+        return Toggle("Check for updates automatically", isOn: $updatesManager.automaticallyChecksForUpdates)
     }
 
     // MARK: Permissions
