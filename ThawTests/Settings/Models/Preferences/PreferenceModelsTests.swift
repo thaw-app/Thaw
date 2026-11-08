@@ -185,7 +185,7 @@ struct PreferenceModelsTests {
         settings.enableExperimentalOverflowPrevention = !Defaults.DefaultValue.enableExperimentalOverflowPrevention
         settings.alwaysUseAppIconForMenuBarItems = !Defaults.DefaultValue.alwaysUseAppIconForMenuBarItems
         settings.menuBarOrderFulfillmentTimeout = 9
-        settings.menuBarSearchPresentation = .launcher
+        settings.menuBarSearchPresentation = .compact
 
         #expect(Defaults.stringArray(forKey: .skippedModuleStandIns) == ["a", "b"])
         #expect(Defaults.string(forKey: .recordingWatchScreen) == "mainDisplay")
@@ -226,7 +226,7 @@ struct PreferenceModelsTests {
         #expect(reloaded.enableExperimentalOverflowPrevention == settings.enableExperimentalOverflowPrevention)
         #expect(reloaded.alwaysUseAppIconForMenuBarItems == settings.alwaysUseAppIconForMenuBarItems)
         #expect(reloaded.menuBarOrderFulfillmentTimeout == 9)
-        #expect(reloaded.menuBarSearchPresentation == .launcher)
+        #expect(reloaded.menuBarSearchPresentation == .compact)
 
         settings.customSectionDividerImage = nil
         #expect(Defaults.data(forKey: .customSectionDividerImage) == nil)
@@ -322,7 +322,7 @@ struct PreferenceModelsTests {
         settings.advanced.customSectionDividerImage = Data([1])
         settings.advanced.tooltipDelay = 9
         settings.advanced.skippedModuleStandIns = ["x"]
-        settings.advanced.menuBarSearchPresentation = .assisted
+        settings.advanced.menuBarSearchPresentation = .compact
         Defaults.set(false, forKey: .showSearchShortcutBar)
         settings.displaySettings.configurations = ["X": DisplayThawBarConfiguration.defaultConfiguration.withUseThawBar(true)]
         settings.displaySettings.globalConfiguration = DisplayThawBarConfiguration.defaultConfiguration.withGridColumns(8)

@@ -12,7 +12,7 @@ import SwiftUI
 import Testing
 @testable import Thaw
 
-/// The search interface hosted off screen in each face, read through the rows it builds.
+/// The search panel hosted off screen in each layout, read through the results it lists.
 @MainActor
 @Suite("Search panel content", .serialized, .scratchDefaults)
 struct MenuBarSearchContentViewTests {
@@ -29,25 +29,19 @@ struct MenuBarSearchContentViewTests {
             panel.model
         }
 
-        init(_ presentation: SearchPresentation, visible: [MenuBarItem] = [], hidden: [MenuBarItem] = []) {
+        init(_ presentation: SearchPresentation = .extended, visible: [MenuBarItem] = [], hidden: [MenuBarItem] = []) {
             world.seat(visible, in: .visible)
             world.seat(hidden, in: .hidden)
             // Items owned by the test process all take its name, so each gets its title as a custom name to search by.
             let names = Dictionary((visible + hidden).map { ($0.uniqueIdentifier, $0.title ?? "") }, uniquingKeysWith: { first, _ in first })
             Defaults.set(names, forKey: .menuBarItemCustomNames)
             panel.performSetup(with: world.appState, displayInvalidations: PassthroughSubject<Void, Never>())
-            let root = MenuBarSearchRootView(
-                appState: world.appState,
-                model: panel.model,
-                displayID: CGMainDisplayID(),
-                panel: panel,
-                presentation: presentation
-            )
-            render = OffscreenRender(root, size: presentation.contentSize)
+            let root = MenuBarSearchRootView(appState: world.appState, model: panel.model, panel: panel, presentation: presentation)
+            render = OffscreenRender(root, size: SearchPanelGeometry.windowSize(isCollapsed: false))
         }
 
         var ids: [MenuBarSearchModel.ItemID] {
-            model.displayedItems.map(\.id)
+            model.results.map(\.id)
         }
 
         func settle(within timeout: Duration = .seconds(10), _ condition: () -> Bool) async {
@@ -56,256 +50,179 @@ struct MenuBarSearchContentViewTests {
     }
 
     private static func itemID(_ item: MenuBarItem) -> MenuBarSearchModel.ItemID {
-        .item(item.tag, windowID: item.windowID)
+        MenuBarSearchModel.ItemID(item)
     }
 
-    @Test("The inspector lists every section under its heading, items right to left")
-    func inspectorListsSections() async {
+    @Test("Every item is listed under its section before anything is typed, and the first is highlighted")
+    func listsEverythingBeforeTyping() async {
         let alpha = World.item("Alpha")
         let beta = World.item("Beta")
         let gamma = World.item("Gamma")
-        let harness = Harness(.inspector, visible: [alpha, beta, World.item(.visibleControlItem)], hidden: [gamma])
-        await harness.settle { !harness.model.displayedItems.isEmpty }
-
-        // With no section engine in the test every item reads as Visible, as it does in the Layout previews.
-        let ids = harness.ids
-        #expect(ids.first == .header(.visible))
-        #expect(Set(ids.dropFirst().prefix(3)) == [Self.itemID(alpha), Self.itemID(beta), Self.itemID(gamma)])
-        #expect(ids.contains(.header(.hidden)))
-        #expect(!harness.model.displayedItems.contains { $0.id == .header(.visible) && $0.isSelectable })
-        #expect(harness.model.selection == ids.dropFirst().first, "the first item row is highlighted")
+        let harness = Harness(visible: [alpha, beta], hidden: [gamma])
+        await harness.settle { harness.model.results.count == 3 }
+        #expect(Set(harness.ids) == [Self.itemID(alpha), Self.itemID(beta), Self.itemID(gamma)])
+        // With no section engine in the test every item reads as Visible, as in the Layout previews.
+        #expect(harness.model.results.allSatisfy { $0.section == MenuBarSection.Name.visible.localizedName })
+        #expect(harness.model.selection == harness.ids.first)
     }
 
-    @Test("The inspector lists what the Layout previews list and leaves out apps that quit")
-    func inspectorListsTheLayoutInventory() async {
-        let alpha = World.item("Alpha")
-        let quit = World.item(
-            MenuBarItemTag(namespace: .string("com.example.Quit"), title: "Quit", instanceIndex: 0),
-            ownerPID: pid_t.max
-        )
-        let harness = Harness(.inspector, visible: [alpha, quit, World.item(.visibleControlItem)])
-        await harness.settle { !harness.model.displayedItems.isEmpty }
-
-        let layout = LayoutDisplayedItems.items(
-            in: .visible,
-            appState: harness.world.appState,
-            runningApplications: NSWorkspace.shared.runningApplications
-        )
-        #expect(layout.contains(alpha))
-        #expect(!layout.contains(quit))
-        #expect(harness.ids.contains(Self.itemID(alpha)))
-        #expect(!harness.ids.contains(Self.itemID(quit)), "the previews drop it, so Search does too")
-        #expect(!harness.ids.contains { id in
-            if case let .item(tag, _) = id {
-                tag.matchesVisibleControlItem
-            } else {
-                false
-            }
-        }, "control items stay out of Search")
-    }
-
-    @Test("A query in the inspector ranks matching items and drops the headings")
-    func inspectorQueryRanks() async {
+    @Test("Items group under their sections in order, right to left within each, and a section turned off is left out")
+    func groupsBySection() {
         let alpha = World.item("Alpha")
         let beta = World.item("Beta")
-        let harness = Harness(.inspector, visible: [alpha, beta])
-        await harness.settle { !harness.model.displayedItems.isEmpty }
+        let gamma = World.item("Gamma")
+        let delta = World.item("Delta")
+        var cache = MenuBarItemCache(displayID: nil)
+        cache[.visible] = [alpha, beta]
+        cache[.hidden] = [gamma]
+        cache[.alwaysHidden] = [delta]
+        let candidates = [alpha, beta, gamma, delta].map {
+            PaletteCandidate(item: $0, displayName: $0.title ?? "", ownerName: "", identityKey: $0.uniqueIdentifier)
+        }
+
+        let all = MenuBarSearchModel.grouped([], in: cache, sections: MenuBarSection.Name.allCases, candidates: candidates)
+        #expect(all.map(\.id) == [beta, alpha, gamma, delta].map(Self.itemID))
+        #expect(all.map(\.section) == [
+            MenuBarSection.Name.visible, .visible, .hidden, .alwaysHidden,
+        ].map(\.localizedName))
+
+        let withoutAlwaysHidden = MenuBarSearchModel.grouped([gamma], in: cache, sections: [.visible, .hidden], candidates: candidates)
+        #expect(withoutAlwaysHidden.map(\.id) == [gamma, beta, alpha].map(Self.itemID), "a recent item leaves its section")
+        #expect(withoutAlwaysHidden.first?.section == String(localized: "Recent"))
+    }
+
+    @Test("A query lists the ranked matches, highlighting the best")
+    func queryRanks() async {
+        let alpha = World.item("Alpha")
+        let beta = World.item("Beta")
+        let harness = Harness(visible: [alpha, beta])
+        await harness.settle { harness.model.results.count == 2 }
 
         harness.model.searchText = "Beta"
         await harness.settle { harness.ids.first == Self.itemID(beta) }
         #expect(harness.ids.first == Self.itemID(beta))
-        #expect(!harness.ids.contains(.header(.visible)))
+        #expect(harness.model.results.allSatisfy { $0.section == nil }, "matches carry no headings")
         #expect(harness.model.selection == Self.itemID(beta))
+        #expect(!harness.model.candidates.isEmpty, "the inventory is cached for the next keystroke")
 
-        harness.model.searchText = "zzzzqqqq"
-        await harness.settle { harness.model.displayedItems.isEmpty }
-        #expect(harness.model.displayedItems.isEmpty)
+        harness.model.searchText = "zzzz"
+        await harness.settle { harness.model.results.isEmpty }
+        #expect(harness.model.results.isEmpty)
         #expect(harness.model.selection == nil)
     }
 
-    @Test("A turned-over item cache rebuilds the rows")
+    @Test("Recent items are listed once, under Recent, above their sections")
+    func recentsOnTop() async {
+        let alpha = World.item("Alpha")
+        let beta = World.item("Beta")
+        MenuBarSearchRecents().record(beta)
+        let harness = Harness(visible: [alpha, beta])
+        await harness.settle { harness.model.results.count == 2 }
+        #expect(harness.ids == [Self.itemID(beta), Self.itemID(alpha)])
+        #expect(harness.model.results.map(\.section) == [String(localized: "Recent"), MenuBarSection.Name.visible.localizedName])
+
+        harness.model.searchText = "Alpha"
+        await harness.settle { harness.model.results.allSatisfy { $0.section == nil } }
+        #expect(harness.ids.first == Self.itemID(alpha))
+    }
+
+    @Test("A recent item that is no longer on the bar leaves no heading behind")
+    func staleRecentsAreSkipped() async {
+        let alpha = World.item("Alpha")
+        MenuBarSearchRecents().record(World.item("Gone"))
+        let harness = Harness(visible: [alpha])
+        await harness.settle { !harness.model.results.isEmpty }
+        #expect(harness.ids == [Self.itemID(alpha)])
+        #expect(harness.model.results.first?.section == MenuBarSection.Name.visible.localizedName, "no Recent heading")
+    }
+
+    @Test("The arrows walk from the recents down through every row once, and stop at the end")
+    func arrowsWalkEveryRow() async {
+        let items = ["Alpha", "Beta", "Gamma"].map { World.item($0) }
+        MenuBarSearchRecents().record(items[1])
+        let harness = Harness(visible: items)
+        await harness.settle { harness.model.results.count == 3 }
+
+        var visited = [harness.model.selection]
+        for _ in 0 ..< 3 {
+            harness.model.moveSelection(by: 1)
+            visited.append(harness.model.selection)
+        }
+        #expect(Array(visited.prefix(3)) == harness.ids.map(Optional.some))
+        #expect(visited.last == harness.ids.last, "the last row holds at the end")
+
+        harness.model.moveSelection(by: -(Int.max / 2))
+        #expect(harness.model.selection == harness.ids.first, "Home goes to the first row")
+    }
+
+    @Test("Tab jumps to the next section's first row and Shift-Tab back, wrapping; matches have no sections")
+    func tabJumpsSections() {
+        let model = MenuBarSearchModel()
+        let items = ["Alpha", "Beta", "Gamma", "Delta"].map { World.item($0) }
+        let sections = ["Visible", "Visible", "Hidden", "Always Hidden"]
+        model.results = zip(items, sections).map { MenuBarSearchResult(item: $0, ownerName: nil, section: $1) }
+        model.selection = Self.itemID(items[1])
+
+        model.moveSelection(toSectionFromCurrentBy: 1)
+        #expect(model.selection == Self.itemID(items[2]))
+        model.moveSelection(toSectionFromCurrentBy: 1)
+        #expect(model.selection == Self.itemID(items[3]))
+        model.moveSelection(toSectionFromCurrentBy: 1)
+        #expect(model.selection == Self.itemID(items[0]), "past the last section it wraps to the first")
+        model.moveSelection(toSectionFromCurrentBy: -1)
+        #expect(model.selection == Self.itemID(items[3]), "and back")
+
+        model.results = items.map { MenuBarSearchResult(item: $0, ownerName: nil, section: nil) }
+        model.selection = Self.itemID(items[1])
+        model.moveSelection(toSectionFromCurrentBy: 1)
+        #expect(model.selection == Self.itemID(items[1]), "ranked matches stay put")
+    }
+
+    @Test("A turnover of the item cache rebuilds the list and keeps a highlight that is still listed")
     func cacheTurnoverRebuilds() async {
         let alpha = World.item("Alpha")
-        let harness = Harness(.inspector, visible: [alpha])
-        await harness.settle { harness.ids.contains(Self.itemID(alpha)) }
-
         let beta = World.item("Beta")
-        harness.world.seat([alpha, beta])
-        await harness.settle { harness.ids.contains(Self.itemID(beta)) }
-        #expect(harness.ids.contains(Self.itemID(beta)))
-    }
-
-    @Test("A turned-over cache that drops the highlighted row highlights the first row")
-    func cacheTurnoverReplacesStaleHighlight() async {
-        let alpha = World.item("Alpha")
-        let beta = World.item("Beta")
-        let harness = Harness(.inspector, visible: [alpha, beta])
-        await harness.settle { harness.ids.contains(Self.itemID(beta)) }
+        let harness = Harness(visible: [alpha, beta])
+        await harness.settle { harness.model.results.count == 2 }
         harness.model.selection = Self.itemID(beta)
 
-        harness.world.seat([alpha])
-        await harness.settle { harness.model.selection == Self.itemID(alpha) }
-        #expect(!harness.ids.contains(Self.itemID(beta)))
-        #expect(harness.model.selection == Self.itemID(alpha), "arrows and Return need a listed highlight")
+        let gamma = World.item("Gamma")
+        Defaults.set(["\(gamma.uniqueIdentifier)": "Gamma", "\(beta.uniqueIdentifier)": "Beta"], forKey: .menuBarItemCustomNames)
+        harness.world.seat([beta, gamma], in: .visible)
+        await harness.settle { harness.ids.contains(Self.itemID(gamma)) }
+        #expect(Set(harness.ids) == [Self.itemID(beta), Self.itemID(gamma)])
+        #expect(harness.model.selection == Self.itemID(beta), "the highlight stays on its row")
+
+        harness.world.seat([gamma], in: .visible)
+        await harness.settle { !harness.ids.contains(Self.itemID(beta)) }
+        #expect(harness.model.selection == Self.itemID(gamma), "a highlight that is gone moves to the first row")
     }
 
-    @Test("The inspector draws its bottom bar for the highlighted row, and the rename buttons while renaming")
-    func inspectorBottomBarStates() async throws {
+    @Test("Opening a row does nothing while that row is being renamed")
+    func activateIgnoredWhileRenaming() async {
         let alpha = World.item("Alpha")
-        let harness = Harness(.inspector, visible: [alpha])
-        await harness.settle { harness.model.selection != nil }
-        let browsing = try harness.render.pixels()
-
-        harness.model.renameSession = .init(tag: alpha.tag, windowID: alpha.windowID, draft: "Draft")
-        await harness.settle { (try? harness.render.pixels()) != browsing }
-        #expect(try harness.render.pixels() != browsing, "the rename swaps the row and the buttons")
-
-        harness.world.appState.layoutFeedback.post(LayoutBarFeedbackCenter.itemNotMovable(itemName: "Alpha"))
-        harness.model.renameSession = nil
-        let withNotice = try harness.render.pixels()
-        harness.world.appState.layoutFeedback.clear()
-        await harness.settle { (try? harness.render.pixels()) != withNotice }
-        #expect(try harness.render.pixels() != withNotice, "dismissing the refusal redraws the bar")
-    }
-
-    @Test("A row's action does nothing while that row is being renamed")
-    func actionIgnoredWhileRenaming() async throws {
-        let alpha = World.item("Alpha")
-        let harness = Harness(.inspector, visible: [alpha])
+        let harness = Harness(visible: [alpha])
         await harness.settle { harness.ids.contains(Self.itemID(alpha)) }
         harness.world.appState.navigationState.isSearchPresented = true
         harness.model.renameSession = .init(tag: alpha.tag, windowID: alpha.windowID, draft: "")
 
-        let row = try #require(harness.model.displayedItems.first { $0.id == Self.itemID(alpha) })
-        row.action?()
+        harness.panel.activate(alpha)
         #expect(harness.world.appState.navigationState.isSearchPresented, "the panel stays up")
         #expect(harness.model.renameSession != nil)
     }
 
-    @Test("The launcher opens on every item with one highlighted, then lists the ranked matches")
-    func launcherListsEverythingThenRanks() async {
-        let alpha = World.item("Alpha")
-        let beta = World.item("Beta")
-        let harness = Harness(.launcher, visible: [alpha, beta])
-        await harness.settle { harness.model.displayedItems.count == 2 }
-        #expect(Set(harness.ids) == [Self.itemID(alpha), Self.itemID(beta)])
-        #expect(harness.model.selection != nil, "the arrows have a row to start from")
-
-        harness.model.searchText = "Alpha"
-        await harness.settle { harness.ids.first == Self.itemID(alpha) }
-        #expect(harness.ids.first == Self.itemID(alpha))
-        #expect(!harness.model.launcherCandidates.isEmpty, "the inventory is cached for the next keystroke")
-        #expect(harness.model.selection == Self.itemID(alpha))
-    }
-
-    @Test("The assisted face lists the whole inventory before anything is typed")
-    func assistedListsEverything() async {
-        let alpha = World.item("Alpha")
-        let beta = World.item("Beta")
-        let harness = Harness(.assisted, visible: [alpha, beta])
-        await harness.settle { harness.model.displayedItems.count == 2 }
-        #expect(Set(harness.ids) == [Self.itemID(alpha), Self.itemID(beta)])
-
-        harness.model.searchText = "Beta"
-        await harness.settle { harness.ids == [Self.itemID(beta)] }
-        #expect(harness.ids.first == Self.itemID(beta))
-    }
-
-    @Test("Each face draws a different surface for the same items")
-    func facesDrawDifferently() async throws {
+    @Test("Both layouts draw, and Compact draws less until something is typed")
+    func layoutsDraw() async throws {
         let items = [World.item("Alpha"), World.item("Beta")]
-        var drawn = [Data]()
-        for presentation in SearchPresentation.allCases {
-            let harness = Harness(presentation, visible: items)
-            harness.model.searchText = "a"
-            await harness.settle { !harness.model.displayedItems.isEmpty }
-            let pixels = try harness.render.pixels()
-            #expect(pixels.contains { $0 != 0 }, "the \(presentation) face draws something")
-            drawn.append(pixels)
-        }
-        #expect(Set(drawn).count == drawn.count)
-    }
+        let extended = Harness(.extended, visible: items)
+        await extended.settle { extended.model.results.count == 2 }
+        let compact = Harness(.compact, visible: items)
+        await compact.settle { compact.model.results.count == 2 }
 
-    @Test("The hosting view hands the content the whole frame, with no safe area insets")
-    func hostingViewHasNoInsets() {
-        let harness = Harness(.inspector)
-        let root = MenuBarSearchRootView(
-            appState: harness.world.appState,
-            model: harness.model,
-            displayID: CGMainDisplayID(),
-            panel: harness.panel,
-            presentation: .inspector
-        )
-        let insets = MenuBarSearchHostingView(rootView: root).safeAreaInsets
-        #expect(insets.top == 0)
-        #expect(insets.left == 0)
-        #expect(insets.bottom == 0)
-        #expect(insets.right == 0)
-    }
-
-    @Test("The inspector puts recently opened items on top of the full list until the user types")
-    func inspectorShowsRecents() async {
-        let alpha = World.item("Alpha")
-        let beta = World.item("Beta")
-        MenuBarSearchRecents().record(beta)
-        let harness = Harness(.inspector, visible: [alpha, beta])
-        await harness.settle { harness.ids.first == .recentsHeader }
-
-        #expect(Array(harness.ids.prefix(3)) == [.recentsHeader, Self.itemID(beta), .header(.visible)])
-        #expect(harness.model.selection == Self.itemID(beta), "the heading is skipped for the recent item")
-        #expect(harness.model.displayedItems.first?.isSelectable == false)
-
-        #expect(harness.ids.count(where: { $0 == Self.itemID(beta) }) == 1, "a recent item is listed once")
-
-        harness.model.searchText = "Alpha"
-        await harness.settle { !harness.ids.contains(.recentsHeader) }
-        #expect(!harness.ids.contains(.recentsHeader))
-    }
-
-    @Test("The launcher lists recents above the whole inventory")
-    func launcherShowsRecentsAboveEverything() async {
-        let alpha = World.item("Alpha")
-        let beta = World.item("Beta")
-        MenuBarSearchRecents().record(alpha)
-        let harness = Harness(.launcher, visible: [alpha, beta])
-        await harness.settle { harness.model.displayedItems.count == 4 }
-        #expect(harness.ids == [.recentsHeader, Self.itemID(alpha), .allItemsHeader, Self.itemID(beta)])
-    }
-
-    @Test("The arrows walk from the recents down through every item, once each")
-    func arrowsWalkPastTheRecents() async {
-        let items = ["Alpha", "Beta", "Gamma"].map { World.item($0) }
-        MenuBarSearchRecents().record(items[1])
-        let harness = Harness(.launcher, visible: items)
-        await harness.settle { harness.model.displayedItems.count == 5 }
-        #expect(harness.model.selection == Self.itemID(items[1]))
-
-        var visited = [harness.model.selection]
-        for _ in 0 ..< 4 {
-            harness.model.moveSelection(.down)
-            visited.append(harness.model.selection)
-        }
-        let selectable = harness.model.displayedItems.filter(\.isSelectable).map(\.id)
-        #expect(Array(visited.prefix(selectable.count)) == selectable)
-        #expect(visited.last == selectable.last, "the last row holds at the end")
-    }
-
-    @Test("The assisted face lists recents above the whole inventory")
-    func assistedShowsRecentsAboveEverything() async {
-        let alpha = World.item("Alpha")
-        let beta = World.item("Beta")
-        MenuBarSearchRecents().record(beta)
-        let harness = Harness(.assisted, visible: [alpha, beta])
-        await harness.settle { harness.model.displayedItems.count == 4 }
-        #expect(harness.ids == [.recentsHeader, Self.itemID(beta), .allItemsHeader, Self.itemID(alpha)])
-    }
-
-    @Test("A recent item that is no longer on the bar leaves no recents heading behind")
-    func staleRecentsAreSkipped() async {
-        let alpha = World.item("Alpha")
-        MenuBarSearchRecents().record(World.item("Gone"))
-        let harness = Harness(.launcher, visible: [alpha])
-        await harness.settle { !harness.model.displayedItems.isEmpty }
-        #expect(harness.ids == [Self.itemID(alpha)])
+        let extendedPixels = try extended.render.pixels()
+        let compactPixels = try compact.render.pixels()
+        #expect(extendedPixels.contains { $0 != 0 })
+        #expect(compactPixels.contains { $0 != 0 })
+        #expect(extendedPixels.count(where: { $0 != 0 }) > compactPixels.count(where: { $0 != 0 }))
     }
 }

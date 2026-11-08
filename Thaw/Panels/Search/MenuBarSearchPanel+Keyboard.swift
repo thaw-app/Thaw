@@ -14,7 +14,7 @@ extension MenuBarSearchPanel {
     /// row keys are read, as in Floe: a second handler on the query field
     /// wrote a stale highlight back after each held-arrow repeat.
     func handleKeyDown(_ event: NSEvent) -> NSEvent? {
-        if handleListMove(event) || handleReturn(event) {
+        if handleListMove(event) || handleSectionJump(event) || handleReturn(event) {
             return nil
         }
         return handleCommandShortcut(event)
@@ -25,27 +25,38 @@ extension MenuBarSearchPanel {
     private func handleReturn(_ event: NSEvent) -> Bool {
         let key = KeyCode(rawValue: Int(event.keyCode))
         guard
-            event.window === self, model.renameSession == nil, key == .returnKey || key == .keypadEnter, Modifiers(nsEventFlags: event.modifierFlags).isEmpty, let action = model.displayedItems.first(where: { $0.id == model.selection && $0.isSelectable })?.action
+            event.window === self, model.renameSession == nil, key == .returnKey || key == .keypadEnter, Modifiers(nsEventFlags: event.modifierFlags).isEmpty, let item = model.selectedResult?.item
         else {
             return false
         }
-        action()
+        activate(item)
+        return true
+    }
+
+    /// Tab moves the highlight to the next section, Shift-Tab to the previous
+    /// one. Taken either way, so Tab never moves the keyboard out of the field.
+    private func handleSectionJump(_ event: NSEvent) -> Bool {
+        let modifiers = Modifiers(nsEventFlags: event.modifierFlags)
+        guard
+            event.window === self, model.renameSession == nil, KeyCode(rawValue: Int(event.keyCode)) == .tab, modifiers.isEmpty || modifiers == .shift
+        else {
+            return false
+        }
+        model.moveSelection(toSectionFromCurrentBy: modifiers == .shift ? -1 : 1)
         return true
     }
 
     /// Moves the highlight for the arrows, Page Up, Page Down, Home and End,
     /// repeats included. Only for this panel's own key events, so the
-    /// global half of the monitor cannot move it twice.
+    /// global half of the monitor cannot move it twice. A key held with
+    /// Shift, Option, Command or Control is the search field's.
     private func handleListMove(_ event: NSEvent) -> Bool {
         guard
-            event.window === self, model.renameSession == nil, let move = SearchListMove(
-                key: KeyCode(rawValue: Int(event.keyCode)),
-                modifiers: Modifiers(nsEventFlags: event.modifierFlags)
-            )
+            event.window === self, model.renameSession == nil, Modifiers(nsEventFlags: event.modifierFlags).isEmpty, let delta = LauncherListStep.delta(for: KeyCode(rawValue: Int(event.keyCode)))
         else {
             return false
         }
-        model.moveSelection(move)
+        model.moveSelection(by: delta)
         return true
     }
 

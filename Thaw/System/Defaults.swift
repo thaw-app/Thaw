@@ -500,13 +500,11 @@ extension Defaults {
         case rememberSearchQuery = "RememberSearchQuery"
         case showSearchShortcutBar = "ShowSearchShortcutBar"
         case menuBarSearchRecents = "MenuBarSearchRecents"
-        /// Where the search panel opens: remembered, centered, or at the
-        /// pointer. Stored as the SearchPresentation case's raw value.
+        /// The search layout's raw value; old styles migrate in
+        /// SearchPresentation(storedValue:).
         case menuBarSearchPresentation = "MenuBarSearchPresentation"
 
         // MARK: Internal
-
-        case menuBarSearchPanelFrameWithConfig = "MenuBarSearchPanelFrame_"
 
         /// The marketing version whose release notes the user has been shown
         /// (or implicitly skipped). Absent until first recorded, and absence
