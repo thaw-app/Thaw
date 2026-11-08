@@ -20,6 +20,13 @@ final class SpaceMenuBarKeeper {
     @ObservationIgnored private let save: (SpaceMenuBarChoices) -> Void
     @ObservationIgnored private let presentation: () -> any MenuBarPresentationControlling
     @ObservationIgnored private var tasks: [Task<Void, Never>] = []
+    /// Changes to Spaces the directory didn't list yet, applied once it does.
+    @ObservationIgnored private var pending: [UInt64: [PendingChange]] = [:]
+
+    private enum PendingChange {
+        case update((inout SpaceMenuBarChoice) -> Void)
+        case forget
+    }
 
     private static nonisolated let diagLog = DiagLog(category: "SpaceMenuBarKeeper")
 
@@ -41,6 +48,7 @@ final class SpaceMenuBarKeeper {
             var previous = directory.spaces
             await self?.reapply(.everything, spaces: previous)
             for await spaces in Observations({ directory.spaces }) {
+                self?.resolvePending(in: spaces)
                 let keys = SpaceMenuBarReapply.newKeys(from: previous, to: spaces)
                 previous = spaces
                 if !keys.isEmpty {
@@ -117,16 +125,50 @@ final class SpaceMenuBarKeeper {
         SpaceMenuBarReapply.key(forSpaceID: spaceID, in: spaces).map(choices.choice(forKey:)) ?? SpaceMenuBarChoice()
     }
 
-    /// Stores a choice macOS accepted for the Space with spaceID. Does nothing when the Space isn't listed.
-    func record(spaceID: UInt64, in spaces: [Bridging.ManagedSpace], _ change: (inout SpaceMenuBarChoice) -> Void) {
-        guard let key = SpaceMenuBarReapply.key(forSpaceID: spaceID, in: spaces) else { return }
+    /// Stores a choice macOS accepted for the Space with spaceID. A Space not
+    /// listed yet keeps the change until the directory lists it.
+    func record(spaceID: UInt64, in spaces: [Bridging.ManagedSpace], _ change: @escaping (inout SpaceMenuBarChoice) -> Void) {
+        guard let key = SpaceMenuBarReapply.key(forSpaceID: spaceID, in: spaces) else {
+            hold(.update(change), forSpaceID: spaceID)
+            return
+        }
         update { $0.update(key: key, change) }
     }
 
     /// Drops what was stored for the Space with spaceID, as Reset This Space does.
     func forget(spaceID: UInt64, in spaces: [Bridging.ManagedSpace]) {
-        guard let key = SpaceMenuBarReapply.key(forSpaceID: spaceID, in: spaces) else { return }
+        guard let key = SpaceMenuBarReapply.key(forSpaceID: spaceID, in: spaces) else {
+            hold(.forget, forSpaceID: spaceID)
+            return
+        }
         update { $0.spaces[key] = nil }
+    }
+
+    /// Whether a change waits for its Space to be listed.
+    var hasPendingChanges: Bool {
+        !pending.isEmpty
+    }
+
+    private func hold(_ change: PendingChange, forSpaceID spaceID: UInt64) {
+        guard spaceID != 0 else { return }
+        Self.diagLog.debug("Space \(spaceID) isn't listed yet; keeping its choice until it is")
+        pending[spaceID, default: []].append(change)
+    }
+
+    /// Stores the held changes whose Space spaces now lists.
+    func resolvePending(in spaces: [Bridging.ManagedSpace]) {
+        for (spaceID, changes) in pending {
+            guard let key = SpaceMenuBarReapply.key(forSpaceID: spaceID, in: spaces) else { continue }
+            pending[spaceID] = nil
+            update { choices in
+                for change in changes {
+                    switch change {
+                    case let .update(apply): choices.update(key: key, apply)
+                    case .forget: choices.spaces[key] = nil
+                    }
+                }
+            }
+        }
     }
 
     func recordHiddenEverywhere(_ hidden: Bool) {

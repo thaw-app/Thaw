@@ -160,6 +160,32 @@ private final class RecordingPresentation: MenuBarPresentationControlling {
 @MainActor
 @Suite("Spaces page keeper")
 struct SpaceMenuBarKeeperTests {
+    @Test("A choice for a Space not listed yet is kept and saved once the directory lists it")
+    func holdsUnlistedSpaces() {
+        var saved: [SpaceMenuBarChoices] = []
+        let keeper = SpaceMenuBarKeeper(load: { saved.last }, save: { saved.append($0) }, presentation: { RecordingPresentation() })
+        keeper.record(spaceID: 7, in: []) { $0.isHidden = true }
+        #expect(keeper.hasPendingChanges)
+        #expect(saved.isEmpty, "nothing to key it by yet")
+
+        keeper.resolvePending(in: [space(8, "OTHER")])
+        #expect(keeper.hasPendingChanges, "still not listed")
+
+        keeper.resolvePending(in: [space(7, "NEW")])
+        #expect(!keeper.hasPendingChanges)
+        #expect(keeper.choices.spaces["NEW"]?.isHidden == true)
+        #expect(saved.last?.spaces["NEW"]?.isHidden == true, "saved, so launch reapplies it")
+    }
+
+    @Test("Forgetting a Space not listed yet applies after its held choices")
+    func holdsForgetInOrder() {
+        let keeper = SpaceMenuBarKeeper(load: { nil }, save: { _ in }, presentation: { RecordingPresentation() })
+        keeper.record(spaceID: 7, in: []) { $0.isHidden = true }
+        keeper.forget(spaceID: 7, in: [])
+        keeper.resolvePending(in: [space(7, "NEW")])
+        #expect(keeper.choices.spaces["NEW"] == nil)
+    }
+
     @Test("Recorded choices are saved by key and reset clears them")
     func recordsAndForgets() {
         var saved: [SpaceMenuBarChoices] = []
