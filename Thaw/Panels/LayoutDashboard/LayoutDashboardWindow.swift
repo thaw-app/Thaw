@@ -14,7 +14,7 @@ import SwiftUI
 @MainActor
 final class LayoutDashboardWindow: NSObject, NSWindowDelegate {
     private static let frameName = "ThawLayoutDashboard"
-    private static let defaultSize = NSSize(width: 900, height: 520)
+    private static let defaultSize = NSSize(width: 1100, height: 640)
 
     private var window: NSWindow?
     private(set) var model: LayoutDashboardModel?
@@ -43,7 +43,7 @@ final class LayoutDashboardWindow: NSObject, NSWindowDelegate {
         )
         window.title = String(localized: "Layout")
         window.isReleasedWhenClosed = false
-        window.contentMinSize = NSSize(width: 640, height: 360)
+        window.contentMinSize = LayoutDashboardMetrics.windowMinSize
         window.delegate = self
         window.contentViewController = NSHostingController(rootView: LayoutDashboardView(appState: appState, model: model))
         window.setContentSize(Self.defaultSize)

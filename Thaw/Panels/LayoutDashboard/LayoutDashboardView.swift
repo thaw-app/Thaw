@@ -29,15 +29,20 @@ struct LayoutDashboardView: View {
                 )
                 .padding(ThawSpacing.inset)
             }
-            // The Layout page's bars and lists, without its Options, at the window's width.
-            ThawForm(readingWidth: .full) {
-                LayoutBarsSection(itemManager: appState.itemManager)
-                LayoutDetailTabs(
-                    itemManager: appState.itemManager,
-                    canArrangeLayout: !appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults,
-                    isHidingUnavailable: false,
-                    includesOptions: false
-                )
+            // The list beside the Layout page's bars and lists, both sharing one selection.
+            HSplitView {
+                LayoutItemListPane(selection: model.selection, query: model.filterText)
+                    .frame(minWidth: LayoutDashboardMetrics.listMinWidth, idealWidth: LayoutDashboardMetrics.listIdealWidth)
+                ThawForm(readingWidth: .full) {
+                    LayoutBarsSection(itemManager: appState.itemManager, selection: model.selection)
+                    LayoutDetailTabs(
+                        itemManager: appState.itemManager,
+                        canArrangeLayout: !appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults,
+                        isHidingUnavailable: false,
+                        includesOptions: false
+                    )
+                }
+                .frame(minWidth: LayoutDashboardMetrics.barsMinWidth)
             }
             // The bars always show the live bar, so away from the target they only show it.
             .disabled(!model.pin.isEditable)
@@ -46,7 +51,7 @@ struct LayoutDashboardView: View {
                 .padding(.horizontal, ThawSpacing.inset)
                 .padding(.bottom, ThawSpacing.base)
         }
-        .frame(minWidth: 760, minHeight: 520)
+        .frame(minWidth: LayoutDashboardMetrics.windowMinSize.width, minHeight: LayoutDashboardMetrics.windowMinSize.height)
         .environment(appState)
     }
 }
@@ -77,11 +82,10 @@ private struct LayoutDashboardToolbar: View {
 
             Spacer(minLength: ThawSpacing.row)
 
-            // A home for the item list's filter, which arrives with the list.
-            TextField("Filter", text: .constant(""))
+            @Bindable var model = model
+            TextField("Filter", text: $model.filterText, prompt: Text("Filter items"))
                 .textFieldStyle(.roundedBorder)
-                .frame(width: 160)
-                .disabled(true)
+                .frame(width: 180)
 
             HiddenItemCaptureButton()
 
