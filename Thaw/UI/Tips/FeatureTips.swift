@@ -88,6 +88,10 @@ final class FeatureTips {
 
     private static func applyToTipKit(_ setup: Setup) throws {
         try FileManager.default.createDirectory(at: setup.datastoreURL, withIntermediateDirectories: true)
+        if Defaults.bool(forKey: .resetsTipsAtNextLaunch) {
+            try? Tips.resetDatastore()
+            Defaults.removeObject(forKey: .resetsTipsAtNextLaunch)
+        }
         try Tips.configure([
             .datastoreLocation(.url(setup.datastoreURL)),
             .displayFrequency(.immediate),
