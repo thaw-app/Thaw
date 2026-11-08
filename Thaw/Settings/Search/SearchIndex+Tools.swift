@@ -26,7 +26,7 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "tools.diagnosticLogMaxSizeMB",
-            title: "Maximum log file size",
+            title: "Maximum file size",
             descriptionText: String(localized: "A new log file starts once the current one reaches this size."),
             pane: .tools,
             section: "Diagnostics",
@@ -35,7 +35,7 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "tools.diagnosticLogRetentionDays",
-            title: "Keep logs for",
+            title: "Delete logs after",
             descriptionText: String(localized: "Older log files are deleted after this many days."),
             pane: .tools,
             section: "Diagnostics",
@@ -44,7 +44,7 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "tools.diagnosticLogRotationInterval",
-            title: "Rotate logs by time",
+            title: "Start a new file",
             descriptionText: String(localized: "Start a new log file every hour or day, on top of the size limit."),
             pane: .tools,
             section: "Diagnostics",
@@ -56,7 +56,7 @@ nonisolated extension SearchIndex {
             title: "Export logs",
             descriptionText: String(localized: "Zip the logs and any capture samples into one file to attach to a bug report."),
             pane: .tools,
-            section: "Diagnostics",
+            section: "Files for a bug report",
             keywords: ["export", "logs", "zip", "bug report", "attach", "capture samples", "diagnostics"],
             property: nil
         ),
@@ -65,7 +65,7 @@ nonisolated extension SearchIndex {
             title: "Save item list",
             descriptionText: String(localized: "Save a list of every menu bar item Thaw can see."),
             pane: .tools,
-            section: "Diagnostics",
+            section: "Files for a bug report",
             keywords: ["item list", "dump", "items", "menu bar items", "bug report", "diagnostics"],
             property: nil
         ),

@@ -8,7 +8,7 @@
 import SwiftUI
 import ThawUI
 
-/// Thaw 2's log size, retention and rotation settings, in its ranges.
+/// Thaw 2's log size, retention and rotation settings, one native row each.
 struct DiagnosticLogRotationRows: View {
     @Bindable var settings: ToolsSettings
 
@@ -16,27 +16,33 @@ struct DiagnosticLogRotationRows: View {
     static let retentionRange = 1 ... 30
 
     var body: some View {
-        LabeledContent("Maximum log file size") {
+        LabeledContent("Maximum file size") {
             Stepper(value: $settings.diagnosticLogMaxSizeMB, in: Self.sizeRange) {
                 Text("\(settings.diagnosticLogMaxSizeMB) MB")
                     .monospacedDigit()
             }
+            .fixedSize()
+            .help("1 to 100 MB")
         }
-        .annotation("A new log file starts once the current one reaches this size.")
 
-        LabeledContent("Keep logs for") {
+        LabeledContent("Delete logs after") {
             Stepper(value: $settings.diagnosticLogRetentionDays, in: Self.retentionRange) {
-                Text("\(settings.diagnosticLogRetentionDays) days")
+                Text(Self.days(settings.diagnosticLogRetentionDays))
                     .monospacedDigit()
             }
+            .fixedSize()
+            .help("1 to 30 days")
         }
-        .annotation("Thaw also deletes logs past the 50 newest. The current file always stays.")
 
-        ThawPicker("Rotate by time", selection: $settings.diagnosticLogRotationInterval) {
+        ThawPicker("Start a new file", selection: $settings.diagnosticLogRotationInterval) {
             ForEach(LogRotationInterval.allCases) { interval in
                 Text(interval.localized).tag(interval)
             }
         }
-        .annotation("A new log file also starts after an hour or a day. The size limit still applies.")
+        .annotation("Thaw keeps at most the 50 newest logs, and never deletes the one it is writing.")
+    }
+
+    static func days(_ count: Int) -> String {
+        String(AttributedString(localized: "^[\(count) day](inflect: true)").characters)
     }
 }

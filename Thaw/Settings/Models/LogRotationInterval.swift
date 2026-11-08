@@ -27,9 +27,9 @@ nonisolated enum LogRotationInterval: String, CaseIterable, Identifiable, Sendab
 
     var localized: LocalizedStringKey {
         switch self {
-        case .off: "Off"
-        case .hourly: "Hourly"
-        case .daily: "Daily"
+        case .off: "Only at the size limit"
+        case .hourly: "Also every hour"
+        case .daily: "Also every day"
         }
     }
 }

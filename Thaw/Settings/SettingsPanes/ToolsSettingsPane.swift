@@ -92,8 +92,19 @@ struct ToolsSettingsPane: View {
     @ViewBuilder
     private var diagnosticsTab: some View {
         ThawSection("Diagnostics") {
-            diagnosticLogging
+            diagnosticLoggingToggle
+            if settings.enableDiagnosticLogging {
+                DiagnosticLogRotationRows(settings: settings)
+                if let currentLogFileName {
+                    LabeledContent("Current file") {
+                        Text(currentLogFileName)
+                            .foregroundStyle(ThawInk.supporting)
+                            .textSelection(.enabled)
+                    }
+                }
+            }
         }
+        DiagnosticFilesSection()
         // The move record is the log's live view, so it shows only while
         // the log is being written.
         if settings.enableDiagnosticLogging {
@@ -159,7 +170,7 @@ struct ToolsSettingsPane: View {
         ThawSection("Reset") {
             toolRow(
                 title: "All settings",
-                detail: "Restore \(Constants.displayName) settings to their defaults, and clear the apps allowed to change them, the welcome and What's New flags, dismissed tips and the item picture cache. Your menu bar layout and saved profiles stay. This cannot be undone.",
+                detail: "Restore every setting to its default and clear the apps allowed to change them, the welcome and What's New, dismissed tips and item pictures. Your menu bar layout and saved profiles stay. This can't be undone.",
                 buttonTitle: "Reset \(Constants.displayName)…",
                 role: .destructive,
                 statusFor: .resetSettings
@@ -169,12 +180,8 @@ struct ToolsSettingsPane: View {
         }
     }
 
-    private var diagnosticLogging: some View {
-        VStack(alignment: .leading, spacing: ThawSpacing.inset) {
-            Toggle(
-                "Detailed logging",
-                isOn: $settings.enableDiagnosticLogging
-            )
+    private var diagnosticLoggingToggle: some View {
+        Toggle("Detailed logging", isOn: $settings.enableDiagnosticLogging)
             .annotation {
                 Text(
                     """
@@ -185,19 +192,6 @@ struct ToolsSettingsPane: View {
                     """
                 )
             }
-
-            if settings.enableDiagnosticLogging {
-                DiagnosticLogRotationRows(settings: settings)
-            }
-
-            if let currentLogFileName {
-                Text(currentLogFileName)
-                    .font(ThawType.caption)
-                    .foregroundStyle(ThawInk.supporting)
-            }
-
-            DiagnosticFilesRow()
-        }
     }
 
     private func toolRow(
@@ -352,7 +346,7 @@ nonisolated enum TroubleshootingTab: CaseIterable, ThawTab {
     /// The tab holding a search result's section.
     init?(section: String) {
         switch section {
-        case "Diagnostics": self = .diagnostics
+        case "Diagnostics", "Files for a bug report": self = .diagnostics
         case "Repair": self = .repair
         case "Reset": self = .reset
         default: return nil
