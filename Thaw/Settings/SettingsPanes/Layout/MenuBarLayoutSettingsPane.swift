@@ -238,47 +238,6 @@ private struct LayoutOverflowSection: View {
     }
 }
 
-private struct LayoutSectionOptions: View {
-    @Bindable var settings: LayoutSettings
-    let isHidingUnavailable: Bool
-
-    var body: some View {
-        ThawSection {
-            Text("Sections")
-        } content: {
-            // Arrangement leads because it gates the section controls.
-            ThawPillPicker(
-                "Item arrangement",
-                selection: $settings.menuBarArrangementMode,
-                values: MenuBarArrangementMode.allCases,
-                title: \.localized
-            )
-            .annotation(settings.menuBarArrangementMode.explanation)
-
-            Toggle(
-                "Always Hidden",
-                isOn: $settings.enableAlwaysHiddenSection
-            )
-            .annotation("Adds a third section for items you rarely need. They stay out of sight when you show your Hidden items.")
-            ThawPicker("Section divider style", selection: $settings.sectionDividerStyle) {
-                ForEach(SectionDividerStyle.allCases) { style in
-                    Text(style.localized).tag(style)
-                }
-            }
-            if settings.sectionDividerStyle == .custom {
-                CustomSectionDividerControls(settings: settings)
-            }
-        } footer: {
-            if isHidingUnavailable {
-                SettingsWarningPill(
-                    title: "Hiding unavailable",
-                    message: "This version of macOS doesn't let \(Constants.displayName) hide items. You can still reorder them in the bars above."
-                )
-            }
-        }
-    }
-}
-
 /// Spacer rows use a collapsed disclosure rather than a separate card because tuning is infrequent.
 private struct LayoutSpacersRows: View {
     let spacerManager: MenuBarSpacerManager

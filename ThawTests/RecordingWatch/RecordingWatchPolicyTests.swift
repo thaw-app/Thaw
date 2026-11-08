@@ -135,12 +135,13 @@ struct RecordingWatchPolicyTests {
         #expect(!RecordingActivity(microphoneUsers: [user(42, "Zoom")]).isIdle)
     }
 
-    // MARK: - Hidden alerts
+    // MARK: - Alerts switch
 
-    @Test("The alerts stay off while they are hidden, whatever was saved")
-    func hiddenAlertsStayOff() {
-        #expect(!RecordingWatchPolicy.alertsAvailable)
-        #expect(!RecordingWatchPolicy.alertsOn(saved: true))
+    @Test("The alerts follow the saved switch while they are available")
+    func alertsFollowTheSwitch() {
+        #expect(RecordingWatchPolicy.alertsAvailable)
+        #expect(RecordingWatchPolicy.alertsOn(saved: true))
+        #expect(!RecordingWatchPolicy.alertsOn(saved: true, available: false))
         #expect(RecordingWatchPolicy.alertsOn(saved: true, available: true))
         #expect(!RecordingWatchPolicy.alertsOn(saved: false, available: true))
     }

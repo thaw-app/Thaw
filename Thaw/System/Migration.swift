@@ -27,6 +27,7 @@ extension MigrationManager {
         migrateSearchPresentation(in: Defaults.store)
         migrateLastSettingsPane(in: Defaults.store)
         migrateSpaceAppearanceKeys(in: Defaults.store, spaces: Bridging.getManagedSpaces())
+        resetRecordingAlertsOnReturn(in: Defaults.store)
         let results = [
             migratePerDisplayThawBar(),
         ]
@@ -119,6 +120,24 @@ extension MigrationManager {
             return
         }
         defaults.set(rewritten, forKey: key)
+    }
+}
+
+// MARK: - Reset Returning Recording Alerts
+
+extension MigrationManager {
+    /// Marks that the alerts' saved switch was reset once.
+    static let recordingAlertsReturnedKey = "RecordingAlertsReturned"
+
+    /// The camera and microphone alerts stayed off while hidden, whatever was
+    /// saved. Clearing the old switch once keeps them off until it's turned on
+    /// again in Visibility.
+    func resetRecordingAlertsOnReturn(in defaults: UserDefaults) {
+        guard !defaults.bool(forKey: Self.recordingAlertsReturnedKey) else {
+            return
+        }
+        defaults.removeObject(forKey: Defaults.Key.enableRecordingWatch.rawValue)
+        defaults.set(true, forKey: Self.recordingAlertsReturnedKey)
     }
 }
 

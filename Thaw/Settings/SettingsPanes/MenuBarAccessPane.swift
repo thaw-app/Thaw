@@ -19,21 +19,25 @@ struct MenuBarAccessPane: View {
         ThawForm {
             ThawSection("Reveal hidden items") {
                 ShowHiddenItemsOnRow(settings: settings)
+                HoverDelayRow(settings: settings)
                 alwaysHiddenGestures
             }
             .thawAnimation(ThawMotion.settle, value: appState.settings.layout.isAlwaysHiddenSectionEnabled)
 
             ThawSection("After revealing") {
                 RehideChoiceRow(settings: settings)
+                RehideDelayRow(settings: settings)
                 tempShowIntervalRow
             }
 
             ThawSection("Zen Mode") {
                 ZenModeWhileRow(settings: settings)
+                RecordingAlertRows(settings: settings)
             }
 
             ThawSection("Swap shown and hidden") {
                 swapBarToggle
+                SwapOnIconClickToggle(settings: settings)
             }
 
             ThawSection("Menu bar search") {
@@ -46,6 +50,7 @@ struct MenuBarAccessPane: View {
 
             ThawSection("On hover") {
                 HoverReadoutsRow(settings: settings)
+                TooltipDelayRow(settings: settings)
             }
         }
         .sliderLabelAlignment()
