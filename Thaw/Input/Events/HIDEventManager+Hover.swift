@@ -240,7 +240,7 @@ extension HIDEventManager {
             }
             self.cancelSmartRehide()
             Self.diagLog.debug("hover show: revealing")
-            hiddenSection.show()
+            hiddenSection.show(on: screen)
             self.isHoverReveal = true
             Self.thawIconHoverGate.noteHoverReveal(at: .now)
         }
@@ -335,7 +335,7 @@ extension HIDEventManager {
         let delta = (event.scrollingDeltaX + event.scrollingDeltaY) / 2
         if delta > threshold {
             cancelSmartRehide()
-            hiddenSection.show()
+            hiddenSection.show(on: screen)
         } else if delta < -threshold {
             hiddenSection.hide()
         }

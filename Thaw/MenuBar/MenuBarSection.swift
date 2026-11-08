@@ -23,11 +23,10 @@ final class MenuBarSection {
 
     private nonisolated let diagLog = DiagLog(category: "MenuBarSection")
 
-    private var useThawBar: Bool {
+    /// Whether a reveal on screen uses the Thaw Bar, by that display's own setting.
+    private func usesThawBar(on screen: NSScreen?) -> Bool {
         guard let appState else { return false }
-        let screen = screenForThawBar
-        let displayID = screen?.displayID ?? CGMainDisplayID()
-        return appState.menuBarManager.shouldUseThawBar(for: displayID)
+        return appState.menuBarManager.shouldUseThawBar(for: screen?.displayID ?? CGMainDisplayID())
     }
 
     /// The gap that macOS leaves to the left and right of the notch (in points).
@@ -237,7 +236,8 @@ final class MenuBarSection {
         controlItem.applyAppearanceNow()
     }
 
-    func show(triggeredByHotkey: Bool = false, forcingInline: Bool = false) {
+    /// eventScreen is the display a pointer reveal happened on; without one, the active menu bar's.
+    func show(triggeredByHotkey: Bool = false, forcingInline: Bool = false, on eventScreen: NSScreen? = nil) {
         // User reveals own the state; a racing capture prewarm must leave the section open.
         menuBarManager?.noteUserRevealOwnership()
         // Only the hover path marks its reveal after return to select the shorter hover hide.
@@ -253,11 +253,13 @@ final class MenuBarSection {
 
         // ThawBarPanel captures glyphs during a brief reveal and forwards clicks through revealClickAndConceal.
         // Use it when requested or when inline items would be unreachable behind native overflow.
-        let overflowsInline = !useThawBar && (screenForThawBar.map { overflowsInline(on: $0) } ?? false)
+        let revealScreen = eventScreen ?? screenForThawBar
+        let useThawBar = usesThawBar(on: revealScreen)
+        let overflowsInline = !useThawBar && (revealScreen.map { overflowsInline(on: $0) } ?? false)
         if overflowsInline {
             diagLog.info("show(\(name.logString)): the items do not fit inline; using the Thaw Bar")
         }
-        if !forcingInline, useThawBar || overflowsInline, let screen = screenForThawBar {
+        if !forcingInline, useThawBar || overflowsInline, let screen = revealScreen {
             for section in menuBarManager.sections {
                 section.desiredState = section.name == .visible ? .showSection : .hideSection
                 section.updateControlItemState(for: nil)
