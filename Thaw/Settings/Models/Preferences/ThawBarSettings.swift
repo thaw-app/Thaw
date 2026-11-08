@@ -33,6 +33,15 @@ final class ThawBarSettings: SettingsURIHandling {
         }
     }
 
+    /// Whether items notch overflow pushes out of the menu bar open in the Thaw Bar.
+    /// Off, they stay out of reach until the bar has room.
+    var useThawBarOnNotchOverflow = Defaults.DefaultValue.useThawBarOnNotchOverflow {
+        didSet {
+            guard oldValue != useThawBarOnNotchOverflow else { return }
+            Defaults.set(useThawBarOnNotchOverflow, forKey: .useThawBarOnNotchOverflow)
+        }
+    }
+
     // MARK: - Deprecated (Per-Display Migration)
 
     // These properties are kept for one release cycle for downgrade safety.
@@ -85,6 +94,7 @@ final class ThawBarSettings: SettingsURIHandling {
     func loadInitialState() {
         Defaults.ifPresent(key: .lockThawBarPosition, assign: &lockThawBarPosition)
         Defaults.ifPresent(key: .openHiddenItemsInMenuBar, assign: &openHiddenItemsInMenuBar)
+        Defaults.ifPresent(key: .useThawBarOnNotchOverflow, assign: &useThawBarOnNotchOverflow)
         Defaults.ifPresent(key: .useThawBar, assign: &useThawBar)
         Defaults.ifPresent(key: .useThawBarOnlyOnNotchedDisplay, assign: &useThawBarOnlyOnNotchedDisplay)
         Defaults.ifPresent(key: .thawBarLocationOnHotkey, assign: &thawBarLocationOnHotkey)
@@ -99,6 +109,7 @@ final class ThawBarSettings: SettingsURIHandling {
     private static let uriBoolKeys: [String: ReferenceWritableKeyPath<ThawBarSettings, Bool>] = [
         "lockThawBarPosition": \.lockThawBarPosition,
         "openHiddenItemsInMenuBar": \.openHiddenItemsInMenuBar,
+        "useThawBarOnNotchOverflow": \.useThawBarOnNotchOverflow,
         "useThawBarOnlyOnNotchedDisplay": \.useThawBarOnlyOnNotchedDisplay,
         "thawBarLocationOnHotkey": \.thawBarLocationOnHotkey,
     ]

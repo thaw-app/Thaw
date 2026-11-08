@@ -112,5 +112,14 @@ nonisolated extension SearchIndex {
             keywords: ["ice bar", "thaw bar", "click", "open", "menu", "reveal", "show", "hidden", "open hidden items in the menu bar"],
             property: .thawBar("openHiddenItemsInMenuBar")
         ),
+        SearchEntry(
+            id: "general.useThawBarOnNotchOverflow",
+            title: "Open items the notch pushes out",
+            descriptionText: String(localized: "When items don't fit beside the notch, the \(Constants.displayName) Bar shows the ones macOS pushed out."),
+            pane: .thawBar,
+            section: "Options for all displays",
+            keywords: ["ice bar", "thaw bar", "notch", "overflow", "fit", "pushed out", "too many items"],
+            property: .thawBar("useThawBarOnNotchOverflow")
+        ),
     ]
 }
