@@ -48,7 +48,7 @@ the items under New and Fixed.
 
 - **Settings that only worked through links now have rows.** Visibility has Hover delay, Name delay, a timed Hide after of up to 5 minutes, Click the Thaw icon to swap, and alerts when the camera or microphone turns on. Layout has Show every section while dragging.
 - **Settings can open without a Dock icon,** in General, as in Thaw 2. Your Thaw 2 choice carries over.
-- **Simple Mode has the reveal gestures, the Thaw icon and Check Now back,** and its help names a way to show hidden items that works when the icon is hidden.
+- **Simple Mode's help names a way to show hidden items that works** when the Thaw icon is hidden.
 
 #### Privacy and Troubleshooting
 
