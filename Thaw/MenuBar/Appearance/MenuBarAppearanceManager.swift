@@ -44,8 +44,8 @@ final class MenuBarAppearanceManager {
         }
     }
 
-    /// Overrides keyed by stringified CGSSpaceID.
-    /// Launch restore also triggers didSet, harmlessly persisting the just-loaded data.
+    /// Overrides keyed by the Space's persistent key. An all-digit key is a raw
+    /// Space ID from before the migration, still read until it is rewritten.
     private(set) var spaceOverrides: [String: MenuBarAppearanceConfigurationV2] = [:] {
         didSet {
             guard oldValue != spaceOverrides else { return }
@@ -66,7 +66,8 @@ final class MenuBarAppearanceManager {
         Self.effectiveConfiguration(
             base: configuration,
             overrides: spaceOverrides,
-            activeSpaceID: activeSpaceID
+            activeSpaceID: activeSpaceID,
+            activeSpaceKey: activeSpaceKey
         )
     }
 
@@ -140,22 +141,24 @@ final class MenuBarAppearanceManager {
     static nonisolated func effectiveConfiguration(
         base: MenuBarAppearanceConfigurationV2,
         overrides: [String: MenuBarAppearanceConfigurationV2],
-        activeSpaceID: CGSSpaceID
+        activeSpaceID: CGSSpaceID,
+        activeSpaceKey: String? = nil
     ) -> MenuBarAppearanceConfigurationV2 {
-        overrides[String(activeSpaceID)] ?? base
+        activeSpaceKey.flatMap { overrides[$0] } ?? overrides[String(activeSpaceID)] ?? base
     }
 
     var activeSpaceHasOverride: Bool {
-        spaceOverrides[String(activeSpaceID)] != nil
+        activeSpaceKey.flatMap { spaceOverrides[$0] } != nil || spaceOverrides[String(activeSpaceID)] != nil
     }
 
     /// Uses shared settings, not the current preview, for the Space override.
+    /// Stored under the persistent key once the Space has one, so it survives a logout.
     func saveOverrideForActiveSpace() {
-        spaceOverrides[String(activeSpaceID)] = configuration
+        spaceOverrides = Self.overrides(spaceOverrides, setting: configuration, spaceID: activeSpaceID, key: activeSpaceKey)
     }
 
     func removeOverrideForActiveSpace() {
-        spaceOverrides[String(activeSpaceID)] = nil
+        spaceOverrides = Self.overrides(spaceOverrides, setting: nil, spaceID: activeSpaceID, key: activeSpaceKey)
     }
 
     func removeAllSpaceOverrides() {
@@ -211,7 +214,8 @@ final class MenuBarAppearanceManager {
             return
         }
         closeOverlayPanels()
-        configureOverlayPanels(with: configuration)
+        // The Space's own look, so a display change doesn't drop it.
+        configureOverlayPanels(with: effectiveConfiguration)
     }
 
     private func closeOverlayPanels() {
@@ -279,10 +283,8 @@ final class MenuBarAppearanceManager {
             if overlayPanels.isEmpty, needsPanels {
                 configureOverlayPanels(with: configuration, force: true)
             }
-        } else {
-            if !needsOverlayPanels(for: configuration) {
-                closeOverlayPanels()
-            }
+        } else if !needsOverlayPanels(for: configuration) {
+            closeOverlayPanels()
         }
     }
 
@@ -306,8 +308,7 @@ final class MenuBarAppearanceManager {
         closeOverlayPanels()
 
         guard
-            let appState,
-            force || needsOverlayPanels(for: configuration)
+            let appState, force || needsOverlayPanels(for: configuration)
         else {
             lastConfiguredScreenLayout = [:]
             return
@@ -319,5 +320,44 @@ final class MenuBarAppearanceManager {
             return panel
         })
         lastConfiguredScreenLayout = Self.currentScreenLayout()
+    }
+}
+
+// MARK: - Per-Space Looks by Persistent Key
+
+extension MenuBarAppearanceManager {
+    /// The look the editor changes: the active Space's own look when it has
+    /// one, so an edit shows where it is made, otherwise the shared look.
+    var editedConfiguration: MenuBarAppearanceConfigurationV2 {
+        get { effectiveConfiguration }
+        set {
+            if activeSpaceHasOverride {
+                spaceOverrides = Self.overrides(spaceOverrides, setting: newValue, spaceID: activeSpaceID, key: activeSpaceKey)
+            } else {
+                configuration = newValue
+            }
+        }
+    }
+
+    /// The active Space's persistent key, nil until the window server lists it.
+    var activeSpaceKey: String? {
+        appState?.spaceDirectory.spaces.first { $0.spaceID == activeSpaceID }?.persistentKey
+    }
+
+    /// overrides with the Space's entry set or removed, dropping its raw-ID entry once a key exists.
+    static nonisolated func overrides(
+        _ overrides: [String: MenuBarAppearanceConfigurationV2],
+        setting configuration: MenuBarAppearanceConfigurationV2?,
+        spaceID: CGSSpaceID,
+        key: String?
+    ) -> [String: MenuBarAppearanceConfigurationV2] {
+        var result = overrides
+        if let key {
+            result[String(spaceID)] = nil
+            result[key] = configuration
+        } else {
+            result[String(spaceID)] = configuration
+        }
+        return result
     }
 }
