@@ -25,6 +25,24 @@ nonisolated extension SearchIndex {
             property: .tools("enableDiagnosticLogging")
         ),
         SearchEntry(
+            id: "tools.exportLogs",
+            title: "Export logs",
+            descriptionText: String(localized: "Zip the logs and any capture samples into one file to attach to a bug report."),
+            pane: .tools,
+            section: "Diagnostics",
+            keywords: ["export", "logs", "zip", "bug report", "attach", "capture samples", "diagnostics"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "tools.saveItemList",
+            title: "Save item list",
+            descriptionText: String(localized: "Save a list of every menu bar item Thaw can see."),
+            pane: .tools,
+            section: "Diagnostics",
+            keywords: ["item list", "dump", "items", "menu bar items", "bug report", "diagnostics"],
+            property: nil
+        ),
+        SearchEntry(
             id: "tools.resetAllSettings",
             title: "Reset all settings",
             descriptionText: String(localized: "Restore every \(Constants.displayName) setting to its default value."),

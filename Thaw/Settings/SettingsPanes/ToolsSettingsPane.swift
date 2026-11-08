@@ -135,7 +135,7 @@ struct ToolsSettingsPane: View {
 
             toolRow(
                 title: "Permissions",
-                detail: "Clear Accessibility and Screen Recording decisions for \(Constants.displayName), then quit so you can grant them again on next launch.",
+                detail: "Clear Accessibility, Screen Recording and the files you picked for \(Constants.displayName), then quit so you can grant them again on next launch.",
                 buttonTitle: "Reset Permissions…",
                 role: .destructive,
                 statusFor: .resetPermissions
@@ -177,18 +177,13 @@ struct ToolsSettingsPane: View {
                 )
             }
 
-            HStack(spacing: ThawSpacing.inset) {
-                Button("Show Log Files in Finder") {
-                    NSWorkspace.shared.open(DiagnosticLogger.shared.logDirectory)
-                }
-                .buttonStyle(.settingsGlass)
-
-                if let currentLogFileName {
-                    Text(currentLogFileName)
-                        .font(ThawType.caption)
-                        .foregroundStyle(ThawInk.supporting)
-                }
+            if let currentLogFileName {
+                Text(currentLogFileName)
+                    .font(ThawType.caption)
+                    .foregroundStyle(ThawInk.supporting)
             }
+
+            DiagnosticFilesRow()
         }
     }
 

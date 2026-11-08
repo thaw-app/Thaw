@@ -141,7 +141,7 @@ nonisolated enum MaintenanceTools {
     }
 
     @concurrent
-    private static func run(path: String, arguments: [String]) async throws {
+    static func run(path: String, arguments: [String]) async throws {
         let result = try await Subprocess.run(
             .path(FilePath(path)),
             arguments: Arguments(arguments),
