@@ -55,7 +55,8 @@ the items under New and Fixed.
 - **Spaces settings stay after Thaw quits,** and come back when you add a Space or macOS restarts the menu bar.
 - **Profiles and menu bar looks follow a Space switch sooner.**
 - **Thaw reads a busy menu bar faster.** With many apps running it asks several at once, so it no longer stops partway.
-- **Search is now Floe's launcher,** in your menu bar's glass, tint and border, with the search field apart from the results. Items are listed under Visible, Hidden and Always Hidden, each with its menu bar picture, or its app's icon when there is none, and Tab jumps between sections. Visibility has two layouts: Extended always lists your items, Compact shows only the field until you type. Detailed and Large become Extended.
+- **Search is now Floe's launcher,** in your menu bar's glass, tint and border. Items are grouped under Visible, Hidden and Always Hidden with their menu bar picture, and Tab moves between sections.
+- **Search has two layouts in Visibility:** Extended always lists your items, Compact shows only the field until you type. Detailed and Large become Extended.
 - **You can hide search's shortcut bar,** in Visibility, which now also has Remember last search. The keyboard shortcuts keep working.
 
 ### Fixed
@@ -106,7 +107,7 @@ the items under New and Fixed.
 - **A move from search that fails stays up and is read aloud,** and shows in the same notice as Layout's.
 - **A wrong letter in search no longer clears what you typed,** and keys typed just after it are kept.
 - **Arrow keys in search keep working** after the menu bar changes or a rename, and repeat when held. Page Up, Page Down, Home and End move through the results too.
-- **Search lists a recent item once,** not again in the full list below.
+- **Search lists a recent item once.**
 - **Layout and search show their shortcuts,** including ⌥-arrows to move and ⌘1–⌘3 from search, and new installs see the tip for selecting several items.
 - **Setup says what you give up without Accessibility** next to the button, not only in a tooltip.
 - **Onboarding's cards keep the Simple Mode you picked,** and the Zen Mode card opens Visibility, where Zen Mode lives.

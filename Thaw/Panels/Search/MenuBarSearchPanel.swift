@@ -60,7 +60,7 @@ final class MenuBarSearchPanel: NSPanel {
         return event
     }
 
-    /// Handles list moves and the Command shortcuts; see handleKeyDown(_:).
+    /// The panel's keys; see handleKeyDown(_:).
     private lazy var shortcutMonitor = EventMonitor.universal(for: [.keyDown]) { [weak self] event in
         self?.handleKeyDown(event) ?? event
     }

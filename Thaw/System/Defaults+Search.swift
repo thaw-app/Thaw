@@ -12,7 +12,6 @@ nonisolated extension Defaults.DefaultValue {
     /// The bar under the search list with Settings, Remember last search and
     /// the Rename, Actions and Return hints.
     static let showSearchShortcutBar = true
-    /// How the menu bar search panel opens. Stored as the case's raw
-    /// value; the default is the behavior the panel shipped with.
+    /// The search panel's layout.
     static let menuBarSearchPresentation = SearchPresentation.extended
 }

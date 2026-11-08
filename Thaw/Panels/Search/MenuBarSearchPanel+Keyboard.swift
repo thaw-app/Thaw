@@ -9,10 +9,8 @@ import AppKit
 import ThawUI
 
 extension MenuBarSearchPanel {
-    /// The panel's key monitor: list moves and Return, then the Command
-    /// shortcuts. Returns nil for a key it handled. The one place the panel's
-    /// row keys are read, as in Floe: a second handler on the query field
-    /// wrote a stale highlight back after each held-arrow repeat.
+    /// The one place the panel's keys are read, as in Floe: a second handler
+    /// wrote a stale highlight back on held-arrow repeats. Nil when handled.
     func handleKeyDown(_ event: NSEvent) -> NSEvent? {
         if handleListMove(event) || handleSectionJump(event) || handleReturn(event) {
             return nil
@@ -46,10 +44,8 @@ extension MenuBarSearchPanel {
         return true
     }
 
-    /// Moves the highlight for the arrows, Page Up, Page Down, Home and End,
-    /// repeats included. Only for this panel's own key events, so the
-    /// global half of the monitor cannot move it twice. A key held with
-    /// Shift, Option, Command or Control is the search field's.
+    /// Arrows, Page Up, Page Down, Home and End, repeats included. Only the
+    /// panel's own events, so the global monitor can't move it twice.
     private func handleListMove(_ event: NSEvent) -> Bool {
         guard
             event.window === self, model.renameSession == nil, Modifiers(nsEventFlags: event.modifierFlags).isEmpty, let delta = LauncherListStep.delta(for: KeyCode(rawValue: Int(event.keyCode)))
@@ -99,11 +95,8 @@ extension MenuBarSearchPanel {
         return event
     }
 
-    /// Refocusing a text field selects all its text, so the next keystroke
-    /// would replace the query. When placesQueryCaretAtEnd is set, the
-    /// insertion point goes to the end instead. Matched on the outer call,
-    /// whose target is the field: the inner one, for the field editor, comes
-    /// before the field selects its text.
+    /// Refocusing a field selects its text, so typing would replace the query.
+    /// Matched on the outer call: the inner one comes before the selection.
     override func makeFirstResponder(_ responder: NSResponder?) -> Bool {
         let accepted = super.makeFirstResponder(responder)
         if accepted, placesQueryCaretAtEnd, responder is NSTextField, let editor = firstResponder as? NSTextView, editor.isFieldEditor {
