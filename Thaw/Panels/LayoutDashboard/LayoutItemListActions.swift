@@ -49,10 +49,8 @@ struct LayoutItemListActions {
     }
 }
 
-/// Rows dragged in the list. A drag carries the pasteboard type the bars' selection drags use, holding
-/// the dragged items' identifiers one per line, or nothing to mean the shared selection, so the bars,
-/// the list and the Groups tab read the same drag. On a heading the items join that section beside
-/// its divider; on a row they land just left of it.
+/// Rows dragged in the list, carried as the bars' selection drag (identifiers one per line, empty for
+/// the shared selection) so the bars, the list and the Groups tab read the same drag.
 @MainActor
 enum LayoutItemListDrop {
     /// Declared in Info.plist: SwiftUI drops on macOS only match a declared type.

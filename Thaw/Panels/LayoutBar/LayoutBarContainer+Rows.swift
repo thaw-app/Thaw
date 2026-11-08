@@ -58,17 +58,9 @@ extension LayoutBarContainer {
         groupDropMarkerX = LayoutBarDropMarker.x(insertingAt: boundary, among: frames)
     }
 
-    /// The arranged view sitting closest to xPosition, comparing horizontal
-    /// centers along the single-row sweep, which wrapped rows map back onto.
-    ///
-    /// Center, not edge, so a wide view does not swallow its neighbours' slots.
-    /// Ties go to the leftmost view.
-    ///
-    /// - Parameters:
-    ///   - xPosition: The sweep position to measure from, usually a dragging
-    ///     location passed through sweepX(at:).
-    ///   - excludingBadge: Pass true to keep the new-items badge out of the
-    ///     running, so an ordinary drag never shoves it aside.
+    /// The arranged view whose center is closest to xPosition on the single-row sweep; ties go left.
+    /// Centers, not edges, so a wide view doesn't swallow its neighbours' slots. excludingBadge
+    /// keeps the new-items badge out, so an ordinary drag never shoves it aside.
     func closestView(toX xPosition: CGFloat, excludingBadge: Bool = false) -> LayoutBarArrangedView? {
         arrangedViews.indices
             .filter { !excludingBadge || !arrangedViews[$0].isNewItemsBadge }
