@@ -160,7 +160,7 @@ struct ProfileSpaceAssociationTests {
             manager.setAssociatedSpace(key: "SPACE-UUID-A", spaceName: "Desktop 1", forProfileID: first)
             manager.setAssociatedSpace(key: "SPACE-UUID-B", spaceName: "Desktop 2", forProfileID: second)
 
-            let json = try #require(manager.exportAllProfiles())
+            let json = try #require(manager.exportAllProfiles().json)
             let file = tmp.appendingPathComponent("bundle.json")
             try Data(json.utf8).write(to: file)
 
