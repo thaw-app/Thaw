@@ -10,7 +10,7 @@ import MenuBarModel
 import SwiftUI
 import ThawUI
 
-/// Preview the bound layout using Hidden items in editor order and LayoutBarItemView tiles, without a second inventory.
+/// Preview the bound layout with the items the real bar shows, in LayoutBarItemView tiles.
 /// Center on wallpaper at real-panel proportions; bound height and scroll overflow instead of widening the page.
 struct ThawBarPreview: View {
     @Environment(AppState.self) private var appState
@@ -29,6 +29,9 @@ struct ThawBarPreview: View {
     let itemScale: Double
 
     private let maxBarHeight: CGFloat = 180
+
+    /// The section previewed; Always Hidden is offered only while it is on.
+    @State private var previewSection = MenuBarSection.Name.hidden
 
     /// The display the preview draws for, falling back to the first known
     /// screen for the new-display template.
@@ -85,6 +88,14 @@ struct ThawBarPreview: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.base) {
+            if isAlwaysHiddenOn {
+                ThawPicker("Preview", selection: $previewSection) {
+                    Text("Hidden").tag(MenuBarSection.Name.hidden)
+                    Text("Always Hidden").tag(MenuBarSection.Name.alwaysHidden)
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
             ThawBarPreviewStage(displayID: displayID) {
                 previewBar
             }
@@ -101,7 +112,7 @@ struct ThawBarPreview: View {
 
     @ViewBuilder
     private var previewBar: some View {
-        let items = hiddenItems
+        let items = previewItems
         let images = resolvedImages(for: items)
         let appearance = appState.appearanceManager.configuration.resolvedThawBarAppearance
         let screen = previewScreen
@@ -114,7 +125,9 @@ struct ThawBarPreview: View {
         Group {
             if items.isEmpty {
                 VStack(spacing: ThawSpacing.base) {
-                    Text("Nothing in Hidden to preview. Drag items into Hidden in Layout to see them here.")
+                    Text(shownSection == .alwaysHidden
+                        ? "Nothing in Always Hidden to preview. Drag items into Always Hidden in Layout to see them here."
+                        : "Nothing in Hidden to preview. Drag items into Hidden in Layout to see them here.")
                         .font(ThawType.detail)
                         .foregroundStyle(ThawInk.supporting)
                         .multilineTextAlignment(.center)
@@ -245,14 +258,27 @@ struct ThawBarPreview: View {
 
     // MARK: - Item sourcing
 
-    private var hiddenItems: [MenuBarItem] {
-        itemManager.managedItems(for: .hidden)
+    private var isAlwaysHiddenOn: Bool {
+        appState.settings.layout.isAlwaysHiddenSectionEnabled
+    }
+
+    /// The section shown, falling back to Hidden once Always Hidden is turned off.
+    private var shownSection: MenuBarSection.Name {
+        isAlwaysHiddenOn ? previewSection : .hidden
+    }
+
+    private var previewItems: [MenuBarItem] {
+        ThawBarItems.items(
+            in: shownSection,
+            itemManager: itemManager,
+            switchedOff: appState.menuBarManager.nativeAppHidingExperiment.userSwitchedOffBundleIDs
+        )
     }
 
     /// Share the editor renderer's captures, app-icon fallback, oversize rule, system-item padding, and tint.
     private func resolvedImages(for items: [MenuBarItem]) -> [MenuBarItemTag: NSImage] {
         items.reduce(into: [MenuBarItemTag: NSImage]()) { result, item in
-            result[item.tag] = LayoutBarItemView.renderedTile(for: item, in: .hidden, appState: appState)
+            result[item.tag] = LayoutBarItemView.renderedTile(for: item, in: shownSection, appState: appState)
         }
     }
 }
