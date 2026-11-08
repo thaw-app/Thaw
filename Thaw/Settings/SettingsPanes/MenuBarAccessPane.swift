@@ -43,8 +43,10 @@ struct MenuBarAccessPane: View {
             ThawSection("Menu bar search") {
                 searchPresentationPicker
                 Toggle("Show shortcut bar", isOn: $showSearchShortcutBar)
+                    .settingsSearchAnchor("general.showSearchShortcutBar")
                     .annotation("The bar under the results with Settings, Rename, Actions and their keyboard shortcuts. The shortcuts work either way.")
                 Toggle("Remember last search", isOn: $rememberSearchQuery)
+                    .settingsSearchAnchor("general.rememberSearchQuery")
                     .annotation("Open search with the text you last typed.")
             }
 
@@ -61,6 +63,7 @@ struct MenuBarAccessPane: View {
     /// The Swap Bar makes swapping one click; the note names the other ways so the toggle doesn't read as the only one.
     private var swapBarToggle: some View {
         Toggle("Show Swap Bar", isOn: $settings.enableSwapBar)
+            .settingsSearchAnchor("advanced.enableSwapBar")
             .annotation(
                 "A strip under the menu bar that trades your shown and hidden items in one click.",
                 more: """
@@ -82,6 +85,7 @@ struct MenuBarAccessPane: View {
             in: 0 ... 30,
             step: 1
         )
+        .settingsSearchAnchor("general.tempShowInterval")
         .annotation("How long a hidden menu bar item you open from search or the Thaw Bar stays in the menu bar before it hides again.")
     }
 
@@ -91,6 +95,7 @@ struct MenuBarAccessPane: View {
     private var alwaysHiddenGestures: some View {
         if appState.settings.layout.isAlwaysHiddenSectionEnabled {
             Toggle("Double-click the \(Constants.displayName) icon to show Always Hidden", isOn: $settings.showAlwaysHiddenOnIconDoubleClick)
+                .settingsSearchAnchor("advanced.showAlwaysHiddenOnIconDoubleClick")
                 .annotation("Option-click and gestures in empty menu bar space are unchanged.")
         } else {
             LabeledContent("Always Hidden is off") {
@@ -114,6 +119,7 @@ struct MenuBarAccessPane: View {
                 Text(presentation.localized).tag(presentation)
             }
         }
+        .settingsSearchAnchor("general.menuBarSearchPresentation")
         .annotation {
             Text(settings.menuBarSearchPresentation.summary)
         }

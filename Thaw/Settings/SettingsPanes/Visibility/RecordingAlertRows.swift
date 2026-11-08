@@ -16,6 +16,7 @@ struct RecordingAlertRows: View {
 
     var body: some View {
         Toggle("Alert when the camera or microphone turns on", isOn: $settings.enableRecordingWatch)
+            .settingsSearchAnchor("visibility.enableRecordingWatch")
             .annotation("A short notice under the menu bar names the app using the microphone. macOS doesn't say which app uses the camera.")
         if settings.enableRecordingWatch {
             ThawPicker("Show alerts on", selection: $settings.recordingWatchScreen) {

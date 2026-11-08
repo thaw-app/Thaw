@@ -15,6 +15,7 @@ struct HoverDelayRow: View {
     var body: some View {
         if settings.showOnHover {
             SecondsSliderRow("Hover delay", value: $settings.showOnHoverDelay, in: 0 ... 5, step: 0.1)
+                .settingsSearchAnchor("visibility.showOnHoverDelay")
                 .annotation("How long the pointer rests on the menu bar before hidden items show.")
         }
     }
@@ -27,6 +28,7 @@ struct TooltipDelayRow: View {
     var body: some View {
         if settings.showMenuBarTooltips {
             SecondsSliderRow("Name delay", value: $settings.tooltipDelay, in: 0 ... 5, step: 0.1)
+                .settingsSearchAnchor("visibility.tooltipDelay")
                 .annotation("How long the pointer rests on an item before its name shows.")
         }
     }
@@ -49,6 +51,7 @@ struct SwapOnIconClickToggle: View {
 
     var body: some View {
         Toggle("Click the \(Constants.displayName) icon to swap", isOn: $settings.swapOnThawIconClick)
+            .settingsSearchAnchor("visibility.swapOnThawIconClick")
             .annotation("A click on the icon swaps your shown and hidden items instead of showing the hidden ones.")
     }
 }

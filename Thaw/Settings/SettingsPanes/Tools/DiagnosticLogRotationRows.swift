@@ -24,6 +24,7 @@ struct DiagnosticLogRotationRows: View {
             .fixedSize()
             .help("1 to 100 MB")
         }
+        .settingsSearchAnchor("tools.diagnosticLogMaxSizeMB")
 
         LabeledContent("Delete logs after") {
             Stepper(value: $settings.diagnosticLogRetentionDays, in: Self.retentionRange) {
@@ -33,6 +34,7 @@ struct DiagnosticLogRotationRows: View {
             .fixedSize()
             .help("1 to 30 days")
         }
+        .settingsSearchAnchor("tools.diagnosticLogRetentionDays")
 
         ThawPicker("Start a new file", selection: $settings.diagnosticLogRotationInterval) {
             ForEach(LogRotationInterval.allCases) { interval in
@@ -40,6 +42,7 @@ struct DiagnosticLogRotationRows: View {
             }
         }
         .annotation("Thaw keeps at most the 50 newest logs, and never deletes the one it is writing.")
+        .settingsSearchAnchor("tools.diagnosticLogRotationInterval")
     }
 
     static func days(_ count: Int) -> String {

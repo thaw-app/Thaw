@@ -196,6 +196,7 @@ private struct LayoutDetailTabs: View {
             ThawSection("Spacers") {
                 LayoutSpacersRows(spacerManager: appState.spacerManager)
             }
+            .settingsSearchAnchor("layout.spacers")
         case .appleItems:
             ControlCenterReplacementsSection(settings: settings)
         case .options:
@@ -218,18 +219,14 @@ private struct LayoutOverflowSection: View {
 
     var body: some View {
         ThawSection("Overflow and previews") {
-            Toggle(
-                "Move items that don’t fit into Hidden",
-                isOn: $settings.enableMenuBarItemOverflow
-            )
+            Toggle("Move items that don’t fit into Hidden", isOn: $settings.enableMenuBarItemOverflow)
+            .settingsSearchAnchor("advanced.enableMenuBarItemOverflow")
             .annotation(
                 "When the menu bar is full, move the Visible items that don’t fit into Hidden and open them from the \(Constants.displayName) Bar.",
                 more: "Leave this off if you prefer macOS’s » button: macOS keeps the items that don’t fit there, and your layout stays exactly as you arranged it."
             )
-            Toggle(
-                "Use app icons instead of live previews",
-                isOn: $settings.alwaysUseAppIconForMenuBarItems
-            )
+            Toggle("Use app icons instead of live previews", isOn: $settings.alwaysUseAppIconForMenuBarItems)
+            .settingsSearchAnchor("advanced.alwaysUseAppIconForMenuBarItems")
             .annotation(
                 "Show each item's app icon in the Thaw Bar and Layout instead of a live screenshot.",
                 more: "Turn this on if macOS's overflow arrow shows up in item previews. The real menu bar is unaffected."
@@ -327,6 +324,7 @@ struct LayoutBarsSection: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: ThawSpacing.base)
                 HiddenItemCaptureButton()
+                    .settingsSearchAnchor("layout.captureHiddenItems")
                 if showsPopOutButton {
                     popOutButton
                 }
@@ -368,6 +366,7 @@ struct LayoutResetControls: View {
                 controlItemsDisabled: controlItemsDisabled,
                 alwaysHiddenEnabled: alwaysHiddenEnabled
             )
+            .settingsSearchAnchor("layout.resetMenuBarLayout")
         }
     }
 }

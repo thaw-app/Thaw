@@ -27,6 +27,7 @@ struct TriggersSettingsPane: View {
                 ThawSection("When an icon changes") {
                     AlertRevealItemList()
                 }
+                .settingsSearchAnchor("automation.menuBarItemAlertReveals")
             }
         }
     }

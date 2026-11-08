@@ -58,6 +58,7 @@ struct DisplaySettingsPane: View {
                 ThawSection("Menu bar item spacing") {
                     confirmSpacingRelaunchControls
                 }
+                .settingsSearchAnchor("displays.itemSpacing")
                 if selectedDisplay != nil {
                     ThawSection {
                         Text("Per display")
@@ -71,6 +72,7 @@ struct DisplaySettingsPane: View {
                     templateThawBarControls
                     globalSection()
                 }
+                .settingsSearchAnchor("displays.template")
             case .spaces:
                 // Spaces belong to displays in macOS, so their controls follow the display's.
                 SpacesControlsContent(activeSpaceID: UInt64(bitPattern: Int64(appState.activeSpace.spaceID)))
@@ -125,6 +127,7 @@ struct DisplaySettingsPane: View {
             Text("Restart menu bar apps right away").tag(SpacingApplyChoice.relaunchNow)
             Text("Wait until the apps restart").tag(SpacingApplyChoice.waitForRestart)
         }
+        .settingsSearchAnchor("displays.spacingApplyMode")
 
         // Without a question to ask, the change needs to know which profiles it is saved to.
         // Waiting asks nothing for one display either, so it needs the choice too.
@@ -157,6 +160,7 @@ private struct WideDisplayRuleSection: View {
     var body: some View {
         ThawSection("Wide displays") {
             Toggle("Show every item on wide displays", isOn: $rule.isEnabled)
+                .settingsSearchAnchor("displays.wideDisplayRule")
                 .annotation("While the menu bar is on a display at least this wide, hidden items stay in the menu bar, as if Always show hidden items were on for that display.")
 
             if rule.isEnabled {

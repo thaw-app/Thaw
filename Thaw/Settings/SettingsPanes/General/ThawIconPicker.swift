@@ -64,6 +64,7 @@ struct ThawIconPicker: View {
 
         if case .custom = settings.thawIcon.name {
             Toggle("Custom icon uses dynamic appearance", isOn: $settings.customThawIconIsTemplate)
+                .settingsSearchAnchor("general.customThawIconIsTemplate")
                 .annotation {
                     Text(
                         """

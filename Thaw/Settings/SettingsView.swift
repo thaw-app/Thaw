@@ -115,9 +115,8 @@ struct SettingsView: View {
             sidebar
         } detail: {
             detailContent
-                .onChange(of: navigationState.settingsNavigationIdentifier) { previous, _ in
-                    paneHistory.record(leaving: previous)
-                }
+                .modifier(SettingsSearchScroller(navigationState: navigationState))
+                .onChange(of: navigationState.settingsNavigationIdentifier) { previous, _ in paneHistory.record(leaving: previous) }
                 .background {
                     // History's shortcuts live in the content, not on the
                     // toolbar buttons: a toolbar item that carries a

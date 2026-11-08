@@ -25,6 +25,7 @@ struct ProfileSwitchesSection: View {
             if let hotkey = profileManager.profileHotkeys[profile.id] {
                 HotkeyRecorder(hotkey: hotkey) {
                     Text("Keyboard shortcut")
+                        .settingsSearchAnchor("profiles.shortcuts")
                 }
                 // The recorder keeps its capture in State, so a new profile needs a new recorder.
                 .id(profile.id)
@@ -37,6 +38,7 @@ struct ProfileSwitchesSection: View {
                 .font(ThawType.footnote)
                 .foregroundStyle(ThawInk.supporting)
         }
+        .settingsSearchAnchor("profiles.switching")
     }
 
     // MARK: Display

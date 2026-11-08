@@ -184,6 +184,10 @@ nonisolated enum SearchIndex {
     /// Resolved once, since search reads it per keystroke.
     static let entries: [SearchEntry] = sharedEntries + platformEntries
 
+    static func entry(withID id: String) -> SearchEntry? {
+        entries.first { $0.id == id }
+    }
+
     /// @Published property names that are intentionally absent from the
     /// index because they are deprecated, internal, or currently commented out
     /// of the UI. The drift-guard test allows these.

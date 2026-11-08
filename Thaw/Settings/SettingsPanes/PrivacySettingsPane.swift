@@ -32,8 +32,10 @@ struct PrivacySettingsPane: View {
             ThawSection("Permissions") {
                 ForEach(appState.permissions.allPermissions) { permission in
                     permissionRow(permission)
+                        .settingsSearchAnchor(Self.searchAnchor(for: permission))
                 }
                 notificationsRow(appState.userNotificationManager.permission)
+                    .settingsSearchAnchor("privacy.notifications")
             }
 
             OtherAppsSection(settings: appState.settings.privacy)
@@ -71,6 +73,11 @@ struct PrivacySettingsPane: View {
     }
 
     /// Asked for only when Thaw first notifies, so a refusal would otherwise never show.
+    /// The search entry for a permission's row.
+    private static func searchAnchor(for permission: Permission) -> String {
+        permission is ScreenRecordingPermission ? "privacy.screenRecording" : "privacy.accessibility"
+    }
+
     private func notificationsRow(_ permission: NotificationPermission) -> some View {
         HStack(alignment: .firstTextBaseline) {
             PermissionLabel(permission: permission)
@@ -101,18 +108,21 @@ struct PrivacySettingsPane: View {
                     Text(mode.localized).tag(mode)
                 }
             }
+            .settingsSearchAnchor("privacy.automaticUpdates")
             .annotation {
                 Text("Checking asks \(updateHost) whether a newer version exists. Downloading also fetches it in the background; without it, the download starts only after you accept an update. The release notes shown with an update come from the same server.")
             }
 
             Toggle(isOn: $privacySettings.fetchReleaseNotes) {
                 Text("What’s New notes")
+                    .settingsSearchAnchor("privacy.fetchReleaseNotes")
             }
             .annotation {
                 Text("Fetches the latest release notes from \(changelogHost) when you open What’s New and keeps a copy for offline use. When this is off, What’s New shows the last copy it fetched, if there is one.")
             }
 
             Toggle("Show release notes after an update", isOn: $privacySettings.showReleaseNotesAfterUpdate)
+                .settingsSearchAnchor("privacy.showReleaseNotesAfterUpdate")
                 .annotation {
                     Text("Opens What’s New the first time \(Constants.displayName) starts after an update. You can still open it from \(Constants.displayName)’s menu or About.")
                 }

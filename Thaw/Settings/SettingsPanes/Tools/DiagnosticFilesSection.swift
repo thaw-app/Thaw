@@ -40,6 +40,7 @@ struct DiagnosticFilesSection: View {
             } label: {
                 ThawRowLabel("Logs", detail: "Export zips the logs and any capture samples into one file to attach.")
             }
+            .settingsSearchAnchor("tools.exportLogs")
 
             LabeledContent {
                 ThawActionGroup {
@@ -55,6 +56,7 @@ struct DiagnosticFilesSection: View {
             } label: {
                 ThawRowLabel("Item list", detail: "Every menu bar item Thaw can see. Samples are the pictures it captured.")
             }
+            .settingsSearchAnchor("tools.saveItemList")
         }
         .onAppear {
             hasCaptureSamples = MaintenanceTools.hasCaptureSamples(in: CaptureDiagnostics.sampleDirectory)
