@@ -24,7 +24,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
 
     /// The save's wall clock, and its serial disk queue (background QoS: nothing on screen waits for a save).
     private let now: @Sendable () -> Date
-    private let queue: DispatchQueue
+    let queue: DispatchQueue
 
     init(cachesDirectory: URL? = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first, now: @escaping @Sendable () -> Date = Date.init, queue: DispatchQueue = DispatchQueue(label: "MenuBarItemImageCacheDiskStore", qos: .background)) {
         self.cachesDirectory = cachesDirectory
@@ -37,16 +37,6 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
     /// Path to the cache file in Caches directory.
     nonisolated var cacheFileURL: URL? {
         cachesDirectory.map { Self.cacheFileURL(cachesDirectory: $0, bundleIdentifier: Constants.bundleIdentifier) }
-    }
-
-    /// Deletes the cache files after any save already queued, so none writes them back.
-    nonisolated func removeCacheFiles() {
-        let files = [cacheFileURL, legacyCacheFileURL].compactMap(\.self)
-        queue.async {
-            for file in files {
-                try? FileManager.default.removeItem(at: file)
-            }
-        }
     }
 
     nonisolated var legacyCacheFileURL: URL? {

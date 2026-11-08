@@ -44,6 +44,57 @@ public extension DiagnosticLogger {
     }
 }
 
+extension DiagnosticLogger {
+    /// The app's rotation and retention, or nil in a process that only appends.
+    public var rotationPolicy: RotationPolicy? {
+        policyLock.withLock { $0 }
+    }
+
+    /// Sets how files rotate and how long they are kept, and prunes by it now.
+    public func setRotationPolicy(_ policy: RotationPolicy) {
+        policyLock.withLock { $0 = policy.sanitized() }
+        if isEnabled {
+            pruneOldLogFiles(in: logDirectory)
+        }
+    }
+
+    /// Deletes the files the app's retention no longer covers; the current file always stays.
+    func pruneOldLogFiles(in directory: URL) {
+        guard let policy = rotationPolicy else { return }
+        writeQueue.async { [weak self] in
+            guard let self else { return }
+            let files = (try? FileManager.default.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: [.creationDateKey],
+                options: .skipsHiddenFiles
+            )) ?? []
+            let logs = files.filter { $0.pathExtension == "log" }.map { url in
+                (url: url, created: (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? .distantPast)
+            }
+            let protected = Set([currentLogFile].compactMap(\.self))
+            for file in Self.filesToPrune(logs, retentionDays: policy.retentionDays, maxCount: policy.maxFileCount, now: Date(), protected: protected) {
+                do {
+                    try FileManager.default.removeItem(at: file)
+                    osLog.debug("Removed old log file: \(file.lastPathComponent, privacy: .public)")
+                } catch {
+                    osLog.warning("Failed to remove old log file: \(error)")
+                }
+            }
+        }
+    }
+
+    /// Starts a new file once the current one is too big or too old. Runs on the write queue.
+    func rotateIfNeeded() {
+        guard let policy = rotationPolicy, policy.maxFileSizeBytes > 0 || policy.rotationInterval > 0, let file = currentLogFile
+        else { return }
+        let size = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? UInt64) ?? 0
+        let openedAt = segmentOpenedAtLock.withLock { $0 } ?? Date()
+        guard Self.shouldRotate(policy: policy, fileSize: size, openFor: Date().timeIntervalSince(openedAt)) else { return }
+        closeLogFile()
+        openLogFile()
+    }
+}
+
 nonisolated extension DiagnosticLogger {
     static func shouldRotate(policy: RotationPolicy, fileSize: UInt64, openFor: TimeInterval) -> Bool {
         (policy.maxFileSizeBytes > 0 && fileSize >= policy.maxFileSizeBytes)

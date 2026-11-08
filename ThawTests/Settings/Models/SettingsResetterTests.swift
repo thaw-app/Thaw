@@ -29,7 +29,7 @@ struct SettingsResetterTests {
         for key in AppSettings.firstRunKeys {
             #expect(defaults.object(forKey: key) == nil, "\(key) survived the reset")
         }
-        #expect(defaults.bool(forKey: Defaults.Key.resetsTipsAtNextLaunch.rawValue))
+        #expect(defaults.bool(forKey: FeatureTips.resetAtNextLaunchKey))
         #expect(defaults.bool(forKey: Defaults.Key.hasCompletedFirstLaunch.rawValue), "setup does not run again")
         #expect(defaults.bool(forKey: Defaults.Key.hasSeenUpdateConsent.rawValue), "update consent is not asked again")
     }

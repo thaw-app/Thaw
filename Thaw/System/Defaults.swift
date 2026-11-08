@@ -154,9 +154,6 @@ nonisolated enum Defaults {
             .iconRefreshInterval: DefaultValue.iconRefreshInterval,
             .autoZenWhileSharingScreen: DefaultValue.autoZenWhileSharingScreen,
             .enableDiagnosticLogging: DefaultValue.enableDiagnosticLogging,
-            .diagnosticLogMaxSizeMB: DefaultValue.diagnosticLogMaxSizeMB,
-            .diagnosticLogRetentionDays: DefaultValue.diagnosticLogRetentionDays,
-            .diagnosticLogRotationInterval: DefaultValue.diagnosticLogRotationInterval.rawValue,
             .enableMenuBarItemOverflow: DefaultValue.enableMenuBarItemOverflow,
             .menuBarArrangementMode: DefaultValue.menuBarArrangementMode.rawValue,
             .enableExperimentalOverflowPrevention: DefaultValue.enableExperimentalOverflowPrevention,
@@ -269,14 +266,6 @@ extension Defaults {
         static let iconRefreshInterval: TimeInterval = 0.25
         /// Minimum seconds between two alert reveals of the same item.
         static let autoZenWhileSharingScreen = false
-        #if DEBUG
-            static let enableDiagnosticLogging = true
-        #else
-            static let enableDiagnosticLogging = false
-        #endif
-        static let diagnosticLogMaxSizeMB = 10
-        static let diagnosticLogRetentionDays = 2
-        static let diagnosticLogRotationInterval = LogRotationInterval.off
         static let enableMenuBarItemOverflow = false
         static let menuBarArrangementMode = MenuBarArrangementMode.automatic
         static let enableExperimentalOverflowPrevention = false
@@ -424,7 +413,6 @@ extension Defaults {
         case iconRefreshInterval = "IconRefreshInterval"
         case showMenuBarTooltips = "ShowMenuBarTooltips"
         case enableDiagnosticLogging = "EnableDiagnosticLogging"
-        /// Thaw 2's three log settings, under its key names so they carry over.
         case diagnosticLogMaxSizeMB = "DiagnosticLogMaxSizeMB"
         case diagnosticLogRetentionDays = "DiagnosticLogRetentionDays"
         case diagnosticLogRotationInterval = "DiagnosticLogRotationInterval"
@@ -612,8 +600,6 @@ extension Defaults {
         // MARK: Reduced Mode
 
         case reducedModeChosen
-        /// Set from Troubleshooting, where Reduced mode is chosen with Accessibility granted.
-        case reducedModeKeptWithAccessibility
         case reducedModeHiddenBundleIDs
 
         // MARK: Updates Consent
@@ -639,10 +625,6 @@ extension Defaults {
         /// written only through FirstRunHintStore. Absent until the first
         /// dismissal, which reads as an empty array.
         case dismissedFirstRunHints
-
-        /// Set by Reset: TipKit can only clear its store before it is configured,
-        /// so the next launch does it and removes this key.
-        case resetsTipsAtNextLaunch
 
         // MARK: Settings URI
 
