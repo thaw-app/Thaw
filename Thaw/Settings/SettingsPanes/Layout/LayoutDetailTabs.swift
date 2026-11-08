@@ -18,6 +18,8 @@ struct LayoutDetailTabs: View {
     var includesOptions = true
     /// Shows this tab without the tab bar, for a window that switches tabs itself.
     var fixedTab: LayoutDetailTab?
+    /// Makes the Groups list a navigator for the Layout window's selection.
+    var groupNavigation: LayoutGroupNavigation?
 
     @State private var tab: LayoutDetailTab?
 
@@ -36,7 +38,7 @@ struct LayoutDetailTabs: View {
         }
         switch selected {
         case .groups:
-            MenuBarLayoutGroupsSection()
+            MenuBarLayoutGroupsSection(navigation: groupNavigation)
         case .spacers:
             ThawSection("Spacers") {
                 LayoutSpacersRows(spacerManager: appState.spacerManager, undoManager: appState.layoutUndo)

@@ -89,6 +89,23 @@ nonisolated struct LayoutSelection: Equatable, Sendable {
         }
     }
 
+    /// Selects exactly the selectable units that hold any of itemIDs, such as a group's members,
+    /// anchored on the leftmost one.
+    mutating func select(_ itemIDs: Set<String>, in layout: [MenuBarSectionName: [Unit]]) {
+        self.itemIDs = layout.compactMapValues { units in
+            let ids = Set(units.filter { $0.isSelectable && !itemIDs.isDisjoint(with: $0.memberIDs) }.flatMap(\.memberIDs))
+            return ids.isEmpty ? nil : ids
+        }
+        anchor = nil
+        for section in Self.barOrder {
+            let selected = self.itemIDs[section] ?? []
+            if let first = (layout[section] ?? []).flatMap(\.memberIDs).first(where: selected.contains) {
+                anchor = Anchor(section: section, itemID: first)
+                return
+            }
+        }
+    }
+
     /// Applies a click on itemID in section, whose units are listed left to right.
     mutating func click(_ itemID: String, in section: MenuBarSectionName, units: [Unit], kind: Click) {
         guard let index = units.firstIndex(where: { $0.memberIDs.contains(itemID) }), units[index].isSelectable else {

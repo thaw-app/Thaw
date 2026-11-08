@@ -72,6 +72,8 @@ the items under New and Fixed.
 - **The Layout window's list filters like search,** forgiving typos and ranking the closest names first, shows how many items match, and can show one section at a time. ⌘A selects only the items the filter shows.
 - **The Layout window's list works from the keyboard like the bars:** ⌥-arrows move the selected items, ⌘1 to ⌘3 send them to a section, ⌘Z undoes, and Home, End, Page Up and Page Down jump through the list. Drag rows onto another row or a section's name to move them. Escape clears the filter, then closes the window, and so does ⌘W.
 - **Away from the bar it edits, the Layout window still lets you read and select items;** only the changes are turned off. Always Hidden items carry a badge, and the window's title follows a profile change.
+- **Group several selected items at once.** Right-click a selection, or use the editor beside the list, to group them, add them to a group, show them as a folder, or have them show when their icons change.
+- **The Layout window's Groups tab finds a group's items.** Select a group to select its items in the list and the bars, or drop items on a group to add them.
 - **The experimental reorder editor is gone,** with its hidden setting.
 - **Hold Option on Capture Hidden Items to retake every picture.** The button reads Retake All Pictures while you do.
 - **Extras is now Modules.**
