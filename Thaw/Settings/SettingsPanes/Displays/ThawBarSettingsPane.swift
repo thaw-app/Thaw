@@ -154,6 +154,7 @@ struct ThawBarSettingsPane: View {
                         isOn: displaySettings.binding(for: target, \.useThawBarForAlwaysHidden) { $0.withUseThawBarForAlwaysHidden($1) }
                     )
                     .annotation("Hidden items still show in the menu bar. Showing Always Hidden there would open Hidden too.")
+                    .settingsSearchAnchor("displays.useThawBarForAlwaysHidden")
                 }
             }
         }
@@ -192,6 +193,7 @@ struct ThawBarSettingsPane: View {
             )
         )
         .annotation("When items don't fit beside the notch, the \(Constants.displayName) Bar shows the ones macOS pushed out. Turn off to reveal inline only; pushed-out items stay hidden until there's room.")
+        .settingsSearchAnchor("general.useThawBarOnNotchOverflow")
     }
 }
 
