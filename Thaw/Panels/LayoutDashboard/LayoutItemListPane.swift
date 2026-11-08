@@ -197,14 +197,19 @@ private struct LayoutItemListRowView: View {
         let isSelected = selection.contains(row.id)
         HStack(spacing: PanelRow.iconSpacing) {
             visibilityCheckbox
-            MenuBarItemRowImage(item: row.item, columnWidth: LayoutDashboardMetrics.pictureColumnWidth)
+            MenuBarItemRowImage(
+                item: row.item,
+                columnWidth: LayoutDashboardMetrics.pictureColumnWidth,
+                glyphHeight: LayoutDashboardMetrics.pictureHeight
+            )
+            // ThawType has no step between body and display; Title 3 still follows Larger Text.
             Text(row.name)
-                .font(ThawType.label)
+                .font(.title3)
                 .lineLimit(1)
             Spacer(minLength: 0)
             if let owner = row.ownerName {
                 Text(verbatim: owner)
-                    .font(ThawType.detail)
+                    .font(ThawType.body)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }

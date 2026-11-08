@@ -159,9 +159,9 @@ enum LayoutItemList {
 /// The Layout window's measures, so the list and the bars both keep a usable width.
 enum LayoutDashboardMetrics {
     /// The list is a sidebar; the editor takes the rest of the window.
-    static let listMinWidth: CGFloat = 300
-    static let listIdealWidth: CGFloat = 360
-    static let listMaxWidth: CGFloat = 440
+    static let listMinWidth: CGFloat = 380
+    static let listIdealWidth: CGFloat = 460
+    static let listMaxWidth: CGFloat = 600
     static let editorMinWidth: CGFloat = 440
     /// The bars span the window, so the window is as wide as the list and the editor below them.
     static let windowMinSize = NSSize(width: listMinWidth + editorMinWidth + 48, height: barsHeight(sections: 3) + 340)
@@ -171,9 +171,11 @@ enum LayoutDashboardMetrics {
         CGFloat(max(sections, 1)) * 80 + 90
     }
 
-    /// Settings-sized rows, so the list reads at the same scale as the editor beside it.
-    static let rowHeight: CGFloat = 36
+    /// Large rows, so a long list of small menu bar pictures stays easy to read and click.
+    static let rowHeight: CGFloat = 44
     /// Wide pictures such as the clock scale down into it, so names line up.
-    static let pictureColumnWidth: CGFloat = 52
-    static let checkboxColumnWidth: CGFloat = 22
+    static let pictureColumnWidth: CGFloat = 72
+    /// A real menu bar's glyph height, larger than search's rows.
+    static let pictureHeight: CGFloat = 22
+    static let checkboxColumnWidth: CGFloat = 24
 }
