@@ -16,6 +16,8 @@ struct LayoutDetailTabs: View {
     let canArrangeLayout: Bool
     let isHidingUnavailable: Bool
     var includesOptions = true
+    /// Shows this tab without the tab bar, for a window that switches tabs itself.
+    var fixedTab: LayoutDetailTab?
 
     @State private var tab: LayoutDetailTab?
 
@@ -24,12 +26,14 @@ struct LayoutDetailTabs: View {
         // Groups and Apple's items need the bars, so without them only Options and Spacers are offered.
         let offered = canArrangeLayout ? LayoutDetailTab.allCases : [.options, .spacers]
         let tabs = includesOptions ? offered : offered.filter { $0 != .options }
-        let selected = tab.flatMap { tabs.contains($0) ? $0 : nil } ?? tabs[0]
-        SettingsPaneTabs(
-            selection: Binding(get: { selected }, set: { tab = $0 }),
-            tabs: tabs,
-            tabForDisclosure: { LayoutDetailTab.tab(for: $0) }
-        )
+        let selected = fixedTab ?? tab.flatMap { tabs.contains($0) ? $0 : nil } ?? tabs[0]
+        if fixedTab == nil {
+            SettingsPaneTabs(
+                selection: Binding(get: { selected }, set: { tab = $0 }),
+                tabs: tabs,
+                tabForDisclosure: { LayoutDetailTab.tab(for: $0) }
+            )
+        }
         switch selected {
         case .groups:
             MenuBarLayoutGroupsSection()

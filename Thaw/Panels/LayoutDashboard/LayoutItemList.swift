@@ -89,9 +89,11 @@ enum LayoutItemList {
 enum LayoutDashboardMetrics {
     static let listMinWidth: CGFloat = 340
     static let listIdealWidth: CGFloat = 480
-    static let tabsMinWidth: CGFloat = 360
-    /// The bars span the window, so the window is as wide as the list and tabs below them.
-    static let windowMinSize = NSSize(width: listMinWidth + tabsMinWidth + 48, height: barsHeight(sections: 3) + 340)
+    static let editorMinWidth: CGFloat = 360
+    static let editorIdealWidth: CGFloat = 380
+    static let editorMaxWidth: CGFloat = 420
+    /// The bars span the window, so the window is as wide as the list and the editor below them.
+    static let windowMinSize = NSSize(width: listMinWidth + editorMinWidth + 48, height: barsHeight(sections: 3) + 340)
     /// The bars' pane fits its sections: each is a heading and a bar, plus the hint,
     /// the form's insets and the toolbar the content runs under.
     static func barsHeight(sections: Int) -> CGFloat {
@@ -102,4 +104,5 @@ enum LayoutDashboardMetrics {
     static let rowHeight: CGFloat = 28
     /// Wide pictures such as the clock scale down into it, so names line up.
     static let pictureColumnWidth: CGFloat = 44
+    static let checkboxColumnWidth: CGFloat = 18
 }

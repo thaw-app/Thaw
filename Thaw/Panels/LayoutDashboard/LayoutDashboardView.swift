@@ -33,7 +33,7 @@ struct LayoutDashboardView: View {
                 )
                 .padding(ThawSpacing.inset)
             }
-            // The bars across the window, sized to their sections; the list and the tabs take the rest.
+            // The bars across the window, sized to their sections; the list and the item editor take the rest.
             VStack(spacing: 0) {
                 ThawForm(readingWidth: .full) {
                     LayoutBarsSection(itemManager: appState.itemManager, selection: model.selection, isInLayoutWindow: true)
@@ -43,15 +43,12 @@ struct LayoutDashboardView: View {
                 HSplitView {
                     LayoutItemListPane(selection: model.selection, query: $model.filterText)
                         .frame(minWidth: LayoutDashboardMetrics.listMinWidth, idealWidth: LayoutDashboardMetrics.listIdealWidth)
-                    ThawForm(readingWidth: .full) {
-                        LayoutDetailTabs(
-                            itemManager: appState.itemManager,
-                            canArrangeLayout: !appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults,
-                            isHidingUnavailable: false,
-                            includesOptions: false
+                    LayoutDashboardSidePane(selection: model.selection)
+                        .frame(
+                            minWidth: LayoutDashboardMetrics.editorMinWidth,
+                            idealWidth: LayoutDashboardMetrics.editorIdealWidth,
+                            maxWidth: LayoutDashboardMetrics.editorMaxWidth
                         )
-                    }
-                    .frame(minWidth: LayoutDashboardMetrics.tabsMinWidth)
                 }
             }
             // The bars always show the live bar, so away from the target they only show it.
