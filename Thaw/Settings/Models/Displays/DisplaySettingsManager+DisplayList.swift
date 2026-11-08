@@ -8,9 +8,8 @@
 import Foundation
 
 extension DisplaySettingsManager {
-    /// Connected displays, then every saved one that isn't connected, each
-    /// group alphabetical. A saved display without a remembered name is listed
-    /// by its UUID, so its settings can still be reached or forgotten.
+    /// Connected displays, then saved ones that aren't, each alphabetical. One without
+    /// a remembered name is listed by its UUID, so it can still be reached or forgotten.
     var displays: [DisplayInfo] {
         let connected = connectedDisplays()
         let connectedIDs = Set(connected.map(\.id))

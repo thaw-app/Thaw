@@ -43,8 +43,8 @@ the items under New and Fixed.
 - **Layout tells you when macOS hides Focus** and turns on Thaw's own Focus icon in one click. Reported by @JosefGvirt in [#1477](https://github.com/thaw-app/Thaw/issues/1477).
 - **The Thaw Bar drops in from the menu bar.** It still closes at once, and only fades with Reduce Motion.
 - **Release notes can stay closed after an update,** in Privacy.
-- **The Thaw Bar can open only Always Hidden,** per display, as in Thaw 2. Hidden items still show in the menu bar.
-- **Items the notch pushes out can stay inline,** with a new Thaw Bar option. Your Thaw 2 choice for both carries over.
+- **The Thaw Bar can open only Always Hidden,** per display, as in Thaw 2. Hidden items still show in the menu bar, and your Thaw 2 choice carries over.
+- **Items the notch pushes out can stay inline,** with a new Thaw Bar option. Your Thaw 2 choice carries over.
 - **Displays lists the ones that aren't connected,** including any without a name, and Forget Display… removes one's settings.
 - **More Thaw Bar settings work through thaw:// links:** item size, item spacing and Always Hidden only, for any display.
 

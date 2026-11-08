@@ -114,7 +114,7 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "general.useThawBarOnNotchOverflow",
-            title: "Open items the notch pushes out",
+            title: "Open items the notch pushes out in the Thaw Bar",
             descriptionText: String(localized: "When items don't fit beside the notch, the \(Constants.displayName) Bar shows the ones macOS pushed out."),
             pane: .thawBar,
             section: "Options for all displays",
