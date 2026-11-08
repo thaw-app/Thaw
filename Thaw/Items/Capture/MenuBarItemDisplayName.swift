@@ -51,9 +51,23 @@ enum MenuBarItemDisplayName {
     /// costs inside a re-evaluating body.
     static func displayName(for item: MenuBarItem) -> String {
         // A user rename changes the name without moving the key, so the
-        // custom name is read back on each call instead of cached. It is only
-        // a dictionary lookup.
-        if let custom = item.customName, !custom.trimmingCharacters(in: .whitespaces).isEmpty {
+        // custom name is read back on each call instead of cached.
+        displayName(for: item, customName: item.customName)
+    }
+
+    /// The same, with the custom names read once by a caller naming many items:
+    /// each read copies the whole dictionary out of user defaults.
+    static func displayName(for item: MenuBarItem, customNames: [String: String]) -> String {
+        displayName(for: item, customName: customNames[item.uniqueIdentifier])
+    }
+
+    /// The user's names for items, by MenuBarItem.uniqueIdentifier.
+    static func customNames() -> [String: String] {
+        Defaults.dictionary(forKey: .menuBarItemCustomNames) as? [String: String] ?? [:]
+    }
+
+    private static func displayName(for item: MenuBarItem, customName: String?) -> String {
+        if let custom = customName, !custom.trimmingCharacters(in: .whitespaces).isEmpty {
             return custom
         }
 
@@ -89,8 +103,7 @@ enum MenuBarItemDisplayName {
             return cached
         }
         let pid = item.sourcePID ?? item.ownerPID
-        guard let resolved = NSRunningApplication(processIdentifier: pid)?.localizedName,
-              !resolved.isEmpty
+        guard let resolved = NSRunningApplication(processIdentifier: pid)?.localizedName, !resolved.isEmpty
         else {
             return nil
         }

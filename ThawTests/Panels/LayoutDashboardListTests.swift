@@ -34,18 +34,48 @@ struct LayoutDashboardListTests {
 
     // MARK: Rows and filter
 
-    @Test("Sections keep their order and bar order, drop when empty, and filter by name")
-    func sectionsAndFilter() {
+    @Test("Sections keep their order and bar order, and drop when empty")
+    func sectionsInOrder() {
         let visible = Self.items(["Alpha", "Beta"])
         let hidden = Self.items(["Gamma"])
         let all = LayoutItemList.sections(from: [.visible: visible, .hidden: hidden, .alwaysHidden: []], order: [.visible, .hidden, .alwaysHidden], query: "")
         #expect(all.map(\.name) == [.visible, .hidden])
         #expect(all[0].rows.map(\.name) == ["Alpha", "Beta"])
+        #expect(all[1].rows.map(\.section) == [.hidden], "each row knows its section, for the badge and the moves")
+    }
 
-        let filtered = LayoutItemList.sections(from: [.visible: visible, .hidden: hidden], order: [.visible, .hidden], query: " gam ")
-        #expect(filtered.map(\.name) == [.hidden])
-        #expect(filtered[0].rows.map(\.name) == ["Gamma"])
-        #expect(LayoutItemList.sections(from: [.visible: visible], order: [.visible], query: "zzz").isEmpty)
+    @Test("A query ranks matches as search does, in one run without headings")
+    func fuzzyFilter() {
+        let visible = Self.items(["Battery", "Gamma Clock"])
+        let hidden = Self.items(["Gammaray", "Backup"])
+        let items: [MenuBarSectionName: [MenuBarItem]] = [.visible: visible, .hidden: hidden]
+        let ranked = LayoutItemList.sections(from: items, order: [.visible, .hidden], query: " gam ")
+        #expect(ranked.count == 1)
+        #expect(ranked[0].name == nil, "matches across sections aren't split by heading")
+        #expect(ranked[0].rows.map(\.name).prefix(2).sorted() == ["Gamma Clock", "Gammaray"], "prefix matches rank first")
+        #expect(ranked[0].rows.first { $0.name == "Gammaray" }?.section == .hidden)
+
+        let typo = LayoutItemList.sections(from: items, order: [.visible, .hidden], query: "batery")
+        #expect(typo.first?.rows.first?.name == "Battery", "a typo still finds the item, as in search")
+        #expect(LayoutItemList.sections(from: items, order: [.visible, .hidden], query: "zzzzqq").isEmpty)
+    }
+
+    @Test("The scope keeps one section, with or without a query, and offers only sections that are on")
+    func scope() {
+        let visible = Self.items(["Alpha"])
+        let hidden = Self.items(["Alpine"])
+        let items: [MenuBarSectionName: [MenuBarItem]] = [.visible: visible, .hidden: hidden]
+        let order: [MenuBarSectionName] = [.visible, .hidden]
+        #expect(LayoutItemList.sections(from: items, order: order, query: "", scope: .hidden).map(\.name) == [.hidden])
+        #expect(LayoutItemList.sections(from: items, order: order, query: "al", scope: .visible).flatMap(\.rows).map(\.name) == ["Alpha"])
+        #expect(LayoutItemList.sections(from: items, order: order, query: "", scope: .alwaysHidden).isEmpty)
+        #expect(LayoutItemListScope.offered(enabled: [.visible, .hidden]) == [.all, .visible, .hidden])
+    }
+
+    @Test("The count says items, or matches while filtering")
+    func countText() {
+        #expect(LayoutItemListText.count(1, isFiltered: false) == "1 item")
+        #expect(LayoutItemListText.count(3, isFiltered: true) == "3 matches")
     }
 
     @Test("The arrows step through the rows and hold at the ends")
@@ -90,6 +120,33 @@ struct LayoutDashboardListTests {
         selection.update(Self.units(hidden), in: .hidden)
         selection.selectAll()
         #expect(selection.count == 3)
+    }
+
+    @Test("⌘A in a filtered list selects only the rows it shows, so a move can't take the hidden ones")
+    func selectAllFiltered() {
+        let visible = Self.items(["Alpha", "Beta"])
+        let hidden = Self.items(["Gamma", "Delta"])
+        let selection = LayoutSelectionModel(announce: { _ in })
+        selection.update(Self.units(visible), in: .visible)
+        selection.update(Self.units(hidden), in: .hidden)
+        let rows = LayoutItemList.sections(from: [.visible: visible, .hidden: hidden], order: [.visible, .hidden], query: "gamma")
+            .flatMap(\.rows)
+        #expect(rows.map(\.name) == ["Gamma"])
+        selection.selectAll(among: Set(rows.map(\.id)))
+        #expect(selection.orderedItemIDs == [hidden[0].uniqueIdentifier])
+        #expect(selection.command(to: .visible, placement: .end)?.itemIDs == [hidden[0].uniqueIdentifier])
+    }
+
+    @Test("⌘A over a filtered group member brings the whole group, as a click on it does")
+    func selectAllFilteredGroup() {
+        let items = Self.items(["Alpha", "Beta", "Gamma"])
+        let selection = LayoutSelectionModel(announce: { _ in })
+        selection.update([
+            LayoutSelection.Unit(memberIDs: [items[0].uniqueIdentifier, items[1].uniqueIdentifier], isSelectable: true),
+            LayoutSelection.Unit(memberIDs: [items[2].uniqueIdentifier], isSelectable: true),
+        ], in: .visible)
+        selection.selectAll(among: [items[1].uniqueIdentifier])
+        #expect(selection.orderedItemIDs == [items[0], items[1]].map(\.uniqueIdentifier))
     }
 
     // MARK: Actions and undo

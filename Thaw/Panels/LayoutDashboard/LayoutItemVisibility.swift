@@ -42,8 +42,13 @@ enum LayoutItemVisibility {
     }
 
     /// Moves the selection to section, beside its divider so the rest of the bar keeps its order.
-    static func moveSelection(to section: MenuBarSectionName, selection: LayoutSelectionModel, appState: AppState) {
+    static func moveSelection(
+        to section: MenuBarSectionName,
+        selection: LayoutSelectionModel,
+        appState: AppState,
+        keepsSelection: Bool = false
+    ) {
         LayoutSelectionActions(selection: selection, appState: appState)
-            .move(to: section, placement: section == .visible ? .start : .end)
+            .move(to: section, placement: section == .visible ? .start : .end, keepsSelection: keepsSelection)
     }
 }

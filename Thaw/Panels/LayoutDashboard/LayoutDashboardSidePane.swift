@@ -12,8 +12,9 @@ import ThawUI
 struct LayoutDashboardSidePane: View {
     @Environment(AppState.self) private var appState
     let selection: LayoutSelectionModel
-
-    @State private var pane = Pane.item
+    @Binding var pane: Pane
+    /// False while the window is away from the bar it edits: the panes still show, but nothing changes.
+    let isEditable: Bool
 
     enum Pane: CaseIterable, ThawTab {
         case item, groups, spacers, appleItems
@@ -54,13 +55,15 @@ struct LayoutDashboardSidePane: View {
                     LayoutDetailTabs(
                         itemManager: appState.itemManager,
                         canArrangeLayout: !appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults,
-                        isHidingUnavailable: false,
+                        isHidingUnavailable: appState.menuBarManager.sectionController.isHidingUnavailable,
                         includesOptions: false,
                         fixedTab: tab
                     )
+                    // On the rows, not the form, so the pane still scrolls.
+                    .disabled(!isEditable)
                 }
             } else {
-                LayoutItemEditor(selection: selection)
+                LayoutItemEditor(selection: selection, isEditable: isEditable)
             }
         }
         // Picking an item means editing it.

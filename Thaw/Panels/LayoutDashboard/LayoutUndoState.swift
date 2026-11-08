@@ -45,10 +45,18 @@ final class LayoutUndoState {
         // Unchanged values aren't written, so they don't redraw the toolbar.
         let (undo, redo) = (undoManager.canUndo, undoManager.canRedo)
         let (undoName, redoName) = (undoManager.undoMenuItemTitle, undoManager.redoMenuItemTitle)
-        if canUndo != undo { canUndo = undo }
-        if canRedo != redo { canRedo = redo }
-        if undoTitle != undoName { undoTitle = undoName }
-        if redoTitle != redoName { redoTitle = redoName }
+        if canUndo != undo {
+            canUndo = undo
+        }
+        if canRedo != redo {
+            canRedo = redo
+        }
+        if undoTitle != undoName {
+            undoTitle = undoName
+        }
+        if redoTitle != redoName {
+            redoTitle = redoName
+        }
     }
 
     func undo() {

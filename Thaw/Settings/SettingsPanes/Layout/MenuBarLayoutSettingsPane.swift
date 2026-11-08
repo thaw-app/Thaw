@@ -61,9 +61,7 @@ struct MenuBarLayoutSettingsPane: View {
     }
 
     private func syncHidingAvailability() {
-        let controller = menuBarManager.sectionController
-        // An absent engine does not prove hiding is unsupported; warn only for a running backend.
-        isHidingAvailable = controller.isOperational ? controller.isHidingAvailable : true
+        isHidingAvailable = !menuBarManager.sectionController.isHidingUnavailable
     }
 
     var body: some View {
