@@ -31,11 +31,14 @@ final class LayoutDashboardWindow: NSObject, NSWindowDelegate {
             characters: event.charactersIgnoringModifiers ?? "",
             flags: flags,
             filterText: model.filterText,
-            isEditingText: LayoutDashboardKeys.isEditingText(window.firstResponder)
+            isEditingText: LayoutDashboardKeys.isEditingText(window.firstResponder),
+            isEditingFilter: LayoutDashboardKeys.isEditingFilter(window.firstResponder, filter: model.filterAnchor)
         )
         switch action {
         case .clearFilter:
             model.filterText = ""
+        case .endEditing:
+            window.makeFirstResponder(nil)
         case .close:
             window.performClose(nil)
         case let .undo(redo):
@@ -124,18 +127,20 @@ final class LayoutDashboardWindow: NSObject, NSWindowDelegate {
 enum LayoutDashboardKeys {
     enum Action: Equatable {
         case clearFilter
+        case endEditing
         case close
         case undo(redo: Bool)
     }
 
-    /// ⌘W closes and ⌘Z or ⇧⌘Z undo or redo. Escape empties the filter, then closes; while a field
-    /// is being typed in, Escape is the field's, which empties the filter or cancels a rename.
+    /// ⌘W closes and ⌘Z or ⇧⌘Z undo or redo. Escape empties the filter, then closes. In the filter
+    /// field it empties the field, then leaves it; in any other field, Escape is the field's.
     static func action(
         keyCode: KeyCode,
         characters: String,
         flags: NSEvent.ModifierFlags,
         filterText: String,
-        isEditingText: Bool
+        isEditingText: Bool,
+        isEditingFilter: Bool = false
     ) -> Action? {
         switch (flags, characters.lowercased()) {
         case (.command, "w"): return .close
@@ -143,8 +148,25 @@ enum LayoutDashboardKeys {
         case ([.command, .shift], "z"): return .undo(redo: true)
         default: break
         }
-        guard keyCode == .escape, flags.isEmpty, !isEditingText else { return nil }
+        guard keyCode == .escape, flags.isEmpty else { return nil }
+        if isEditingFilter {
+            return filterText.isEmpty ? .endEditing : .clearFilter
+        }
+        guard !isEditingText else { return nil }
         return filterText.isEmpty ? .close : .clearFilter
+    }
+
+    /// Whether the field being typed in is the list's filter: its text field sits inside the
+    /// filter's frame. Escape in the filter field left it untouched, so the window empties it.
+    static func isEditingFilter(_ responder: NSResponder?, filter: NSView?) -> Bool {
+        guard isEditingText(responder), let editor = responder as? NSTextView, let field = editor.delegate as? NSView, let filter, field.window === filter.window, field.window != nil
+        else { return false }
+        return isInside(field.convert(field.bounds, to: nil), filter.convert(filter.bounds, to: nil))
+    }
+
+    /// Whether a field's frame sits inside the filter's, both in window coordinates.
+    static func isInside(_ field: NSRect, _ filter: NSRect) -> Bool {
+        !filter.isEmpty && filter.insetBy(dx: -1, dy: -1).contains(NSPoint(x: field.midX, y: field.midY))
     }
 
     /// Whether a text field is being typed in. Only a field editor counts, so a text view that

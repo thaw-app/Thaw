@@ -31,6 +31,9 @@ final class LayoutDashboardModel {
     /// The toolbar's filter for the item list.
     var filterText = ""
 
+    /// A view behind the filter field, so the window can tell the filter from other fields.
+    @ObservationIgnored weak var filterAnchor: NSView?
+
     /// Which sections the item list shows.
     var scope = LayoutItemListScope.all
 
