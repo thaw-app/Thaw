@@ -25,6 +25,33 @@ nonisolated extension SearchIndex {
             property: .tools("enableDiagnosticLogging")
         ),
         SearchEntry(
+            id: "tools.diagnosticLogMaxSizeMB",
+            title: "Maximum log file size",
+            descriptionText: String(localized: "A new log file starts once the current one reaches this size."),
+            pane: .tools,
+            section: "Diagnostics",
+            keywords: ["log", "size", "megabytes", "rotate", "rotation", "diagnostics"],
+            property: .tools("diagnosticLogMaxSizeMB")
+        ),
+        SearchEntry(
+            id: "tools.diagnosticLogRetentionDays",
+            title: "Keep logs for",
+            descriptionText: String(localized: "Older log files are deleted after this many days."),
+            pane: .tools,
+            section: "Diagnostics",
+            keywords: ["log", "retention", "days", "keep", "delete", "diagnostics"],
+            property: .tools("diagnosticLogRetentionDays")
+        ),
+        SearchEntry(
+            id: "tools.diagnosticLogRotationInterval",
+            title: "Rotate logs by time",
+            descriptionText: String(localized: "Start a new log file every hour or day, on top of the size limit."),
+            pane: .tools,
+            section: "Diagnostics",
+            keywords: ["log", "rotate", "rotation", "hourly", "daily", "diagnostics"],
+            property: .tools("diagnosticLogRotationInterval")
+        ),
+        SearchEntry(
             id: "tools.exportLogs",
             title: "Export logs",
             descriptionText: String(localized: "Zip the logs and any capture samples into one file to attach to a bug report."),
