@@ -25,6 +25,7 @@ extension MigrationManager {
         removeMenuBarHistory(from: Defaults.store)
         removeAXBridgeLogs()
         migrateSearchPresentation(in: Defaults.store)
+        migrateLastSettingsPane(in: Defaults.store)
         let results = [
             migratePerDisplayThawBar(),
         ]
@@ -72,6 +73,22 @@ extension MigrationManager {
         for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("MenuBarSearchPanelFrame_") {
             defaults.removeObject(forKey: key)
         }
+    }
+}
+
+// MARK: - Migrate Retired Settings Pages
+
+extension MigrationManager {
+    /// Spaces, Automation, Experiments and Advanced are no longer pages: a
+    /// saved last page that names one is stored as the page it opens.
+    func migrateLastSettingsPane(in defaults: UserDefaults) {
+        let key = Defaults.Key.lastSettingsPane.rawValue
+        guard
+            let stored = defaults.string(forKey: key), let pane = SettingsNavigationIdentifier(storedValue: stored), pane.rawValue != stored
+        else {
+            return
+        }
+        defaults.set(pane.rawValue, forKey: key)
     }
 }
 
