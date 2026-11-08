@@ -127,10 +127,30 @@ enum LayoutItemList {
                 ownerName: MenuBarItemDisplayName.ownerName(for: row.item) ?? "",
                 identityKey: row.id
             )
-        }
+        }.filter { isPlausible($0, for: needle) }
         let ids = PaletteCandidate.ranked(matching: needle, in: candidates, using: fuse).map(\.identityKey)
         lastRanking = (key, ids)
         return ids
+    }
+
+    /// Typo tolerance starts at this many characters; a shorter query is too little to guess from.
+    static let typoToleranceLength = 4
+
+    /// Whether a candidate can match needle at all. Below typoToleranceLength every character must
+    /// appear in order in its name or app name, so "fl" finds Flux and not Clock.
+    static func isPlausible(_ candidate: PaletteCandidate, for needle: String) -> Bool {
+        guard needle.count < typoToleranceLength else { return true }
+        return [candidate.displayName, candidate.ownerName].contains { contains(needle, inOrderIn: $0) }
+    }
+
+    static func contains(_ needle: String, inOrderIn text: String) -> Bool {
+        let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive]
+        var rest = text[...]
+        for character in needle where !character.isWhitespace {
+            guard let found = rest.range(of: String(character), options: options) else { return false }
+            rest = rest[found.upperBound...]
+        }
+        return true
     }
 
     private static func row(_ item: MenuBarItem, in section: MenuBarSectionName, customNames: [String: String]) -> LayoutItemListRow {

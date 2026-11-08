@@ -19,9 +19,10 @@ final class LayoutDashboardWindow: NSObject, NSWindowDelegate {
 
     private var window: NSWindow?
     private(set) var model: LayoutDashboardModel?
+    private weak var appState: AppState?
     private let onClose: () -> Void
 
-    /// Escape and ⌘W, which a window without a File menu doesn't get on its own.
+    /// Escape, ⌘W and ⌘Z, which a window in an app without File and Edit menus doesn't get on its own.
     private lazy var keyMonitor = EventMonitor.local(for: [.keyDown]) { [weak self] event in
         guard let self, let window, event.window === window, let model else { return event }
         let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
@@ -30,17 +31,37 @@ final class LayoutDashboardWindow: NSObject, NSWindowDelegate {
             characters: event.charactersIgnoringModifiers ?? "",
             flags: flags,
             filterText: model.filterText,
-            isEditingText: window.firstResponder is NSText
+            isEditingText: LayoutDashboardKeys.isEditingText(window.firstResponder)
         )
         switch action {
         case .clearFilter:
             model.filterText = ""
         case .close:
             window.performClose(nil)
+        case let .undo(redo):
+            undo(redo: redo, in: window, isEditable: model.pin.isEditable)
         case nil:
             return event
         }
         return nil
+    }
+
+    /// Typing in a field undoes first; after that, and anywhere else, the layout's history.
+    private func undo(redo: Bool, in window: NSWindow, isEditable: Bool) {
+        let typing = LayoutDashboardKeys.isEditingText(window.firstResponder) ? window.undoManager : nil
+        if let typing, redo ? typing.canRedo : typing.canUndo {
+            Self.step(typing, redo: redo)
+        } else if isEditable, let history = appState?.layoutUndo {
+            Self.step(history, redo: redo)
+        }
+    }
+
+    private static func step(_ manager: UndoManager, redo: Bool) {
+        if redo {
+            manager.redo()
+        } else {
+            manager.undo()
+        }
     }
 
     var isShown: Bool {
@@ -81,6 +102,7 @@ final class LayoutDashboardWindow: NSObject, NSWindowDelegate {
         window.setFrameAutosaveName(Self.frameName)
         self.window = window
         self.model = model
+        self.appState = appState
         keyMonitor.start()
         window.makeKeyAndOrderFront(nil)
         appState.activate(withPolicy: appState.userWindowActivationPolicy)
@@ -98,15 +120,16 @@ final class LayoutDashboardWindow: NSObject, NSWindowDelegate {
     }
 }
 
-/// What Escape and ⌘W do in the Layout window.
+/// What Escape, ⌘W and ⌘Z do in the Layout window.
 enum LayoutDashboardKeys {
     enum Action: Equatable {
         case clearFilter
         case close
+        case undo(redo: Bool)
     }
 
-    /// ⌘W closes. Escape empties the filter, then closes; while a field is being typed in,
-    /// Escape is the field's, which empties the filter or cancels a rename.
+    /// ⌘W closes and ⌘Z or ⇧⌘Z undo or redo. Escape empties the filter, then closes; while a field
+    /// is being typed in, Escape is the field's, which empties the filter or cancels a rename.
     static func action(
         keyCode: KeyCode,
         characters: String,
@@ -114,10 +137,19 @@ enum LayoutDashboardKeys {
         filterText: String,
         isEditingText: Bool
     ) -> Action? {
-        if flags == .command, characters.lowercased() == "w" {
-            return .close
+        switch (flags, characters.lowercased()) {
+        case (.command, "w"): return .close
+        case (.command, "z"): return .undo(redo: false)
+        case ([.command, .shift], "z"): return .undo(redo: true)
+        default: break
         }
         guard keyCode == .escape, flags.isEmpty, !isEditingText else { return nil }
         return filterText.isEmpty ? .close : .clearFilter
+    }
+
+    /// Whether a text field is being typed in. Only a field editor counts, so a text view that
+    /// SwiftUI uses for a focusable list's keys can't keep Escape from the window.
+    static func isEditingText(_ responder: NSResponder?) -> Bool {
+        (responder as? NSTextView)?.isFieldEditor == true
     }
 }

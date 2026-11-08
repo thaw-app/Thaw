@@ -114,6 +114,7 @@ private struct LayoutSingleItemEditor: View {
 
     /// Committed on Return and when the editor goes away, as in the bars' inspector.
     @State private var draftName: String
+    @FocusState private var isNameFocused: Bool
     /// MenuBarItemAlertReveals isn't observable, so keep a copy and write through.
     @State private var revealsOnIconChange: Bool
 
@@ -131,11 +132,19 @@ private struct LayoutSingleItemEditor: View {
             in: section,
             experimentalSystemItemHiding: appState.settings.layout.enableExperimentalSystemItemHiding
         )
+        let storedName = LayoutItemNameDraft.stored(for: item)
         ThawSection("Name and icon") {
             LabeledContent("Name") {
                 TextField("Name", text: $draftName, prompt: Text(item.autoDetectedName))
                     .labelsHidden()
-                    .onSubmit(commitName)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: LayoutItemNameDraft.fieldWidth)
+                    .focused($isNameFocused)
+                    .onSubmit {
+                        commitName()
+                        // Out of the field, so ⌘Z reaches the layout history and not the typing.
+                        isNameFocused = false
+                    }
             }
             LabeledContent("Icon") {
                 Button("Choose…") { ItemIconPicker.present(for: item, appState: appState) }
@@ -162,11 +171,15 @@ private struct LayoutSingleItemEditor: View {
         }
         LayoutItemAppSection(details: LayoutItemAppDetails(item: item))
             .onDisappear(perform: commitName)
+            // A rename undone or made elsewhere replaces the draft, unless someone is typing a new one.
+            .onChange(of: storedName) { old, new in
+                draftName = LayoutItemNameDraft.following(draft: draftName, oldStored: old, newStored: new, isEditing: isNameFocused)
+            }
     }
 
     private func commitName() {
-        let trimmed = draftName.trimmingCharacters(in: .whitespaces)
-        LayoutEditUndo.rename(item, to: trimmed.isEmpty ? nil : trimmed, undoManager: appState.layoutUndo)
+        guard let name = LayoutItemNameDraft.commit(draft: draftName, stored: LayoutItemNameDraft.stored(for: item)) else { return }
+        LayoutEditUndo.rename(item, to: name.isEmpty ? nil : name, undoManager: appState.layoutUndo)
     }
 }
 
@@ -202,6 +215,19 @@ private struct LayoutItemAppSection: View {
         ThawSection("App") {
             if details.isPartOfMacOS {
                 LabeledContent("App", value: String(localized: "Part of macOS"))
+            } else if details.isPartOfThaw {
+                LabeledContent {
+                    Text(details.isRunning ? "Running" : "Not running")
+                        .foregroundStyle(.secondary)
+                } label: {
+                    Label {
+                        Text("Part of \(Constants.displayName)")
+                    } icon: {
+                        Image(nsImage: NSApp.applicationIconImage)
+                            .resizable()
+                            .frame(width: 16, height: 16)
+                    }
+                }
             } else {
                 LabeledContent {
                     Text(details.isRunning ? "Running" : "Not running")
@@ -214,6 +240,8 @@ private struct LayoutItemAppSection: View {
                             Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
                                 .resizable()
                                 .frame(width: 16, height: 16)
+                        } else {
+                            Image(systemName: "app.dashed")
                         }
                     }
                 }
