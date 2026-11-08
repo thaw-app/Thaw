@@ -49,7 +49,7 @@ struct LayoutSectionPicker: View {
 
     var body: some View {
         let destinations = MenuBarSearchItemActions.moveDestinations(appState: appState).compactMap(\.self)
-        Picker("Section", selection: Binding(get: { section }, set: { target in
+        ThawPicker("Section", selection: Binding(get: { section }, set: { target in
             guard let target, target != section else { return }
             LayoutItemVisibility.moveSelection(to: target, selection: selection, appState: appState)
         })) {
