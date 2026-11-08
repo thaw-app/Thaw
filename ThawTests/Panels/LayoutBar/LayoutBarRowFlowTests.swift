@@ -22,7 +22,9 @@ struct LayoutBarRowFlowTests {
         let flow = Self.flow(rowWidth: rowWidth)
         #expect(flow.rowCount == 1)
         #expect(flow.row.allSatisfy { $0 == 0 })
-        #expect(flow.wrappedX == flow.sweepX)
+        // A wide enough row holds them all, pushed to its trailing edge.
+        let shift = rowWidth.map { $0 - (flow.sweepX[9] + 24) } ?? 0
+        #expect(flow.wrappedX == flow.sweepX.map { $0 + shift })
         #expect(flow.sweepX[3] == CGFloat(24 * 3 + 15), "the grip's room comes before the group's first item")
         #expect(flow.height == 24)
     }
@@ -38,8 +40,8 @@ struct LayoutBarRowFlowTests {
         let flow = Self.flow(rowWidth: rowWidth)
         #expect(flow.row == rows)
         #expect(flow.rowCount == (rows.last ?? 0) + 1)
-        for index in flow.row.indices where index == 0 || flow.row[index] != flow.row[index - 1] {
-            #expect(flow.wrappedX[index] == flow.leads[index], "a row starts at its first item's grip room")
+        for index in flow.row.indices where index == flow.row.count - 1 || flow.row[index] != flow.row[index + 1] {
+            #expect(flow.wrappedX[index] + 24 == max(rowWidth, flow.leads[index] + 24), "a row ends at the trailing edge, as the menu bar does")
         }
         #expect(flow.height == CGFloat(flow.rowCount) * 24 + CGFloat(flow.rowCount - 1) * LayoutBarRowFlow.rowSpacing)
     }

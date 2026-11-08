@@ -14,7 +14,7 @@ import CoreGraphics
 nonisolated struct LayoutBarRowFlow: Equatable {
     static let rowSpacing: CGFloat = 4
 
-    /// Each view's leading edge on its row.
+    /// Each view's leading edge on its row. Wrapped rows are pushed to end at the row width.
     let wrappedX: [CGFloat]
     /// Each view's leading edge in the single row.
     let sweepX: [CGFloat]
@@ -52,6 +52,17 @@ nonisolated struct LayoutBarRowFlow: Equatable {
             sweep += viewWidth
             lineX += viewWidth
             widest = max(widest, lineX)
+        }
+        // Rows end at the trailing edge, as the menu bar's items do.
+        if let rowWidth {
+            for line in 0 ..< (row.last.map { $0 + 1 } ?? 0) {
+                let indices = row.indices.filter { row[$0] == line }
+                guard let last = indices.last else { continue }
+                let shift = max(0, rowWidth - (wrappedX[last] + widths[last]))
+                for index in indices {
+                    wrappedX[index] += shift
+                }
+            }
         }
         self.wrappedX = wrappedX
         self.sweepX = sweepX
