@@ -14,13 +14,16 @@ struct LayoutBarsSection: View {
     let itemManager: MenuBarItemManager
     /// The Layout window's selection, shared with its item list.
     var selection: LayoutSelectionModel?
-    /// In the Layout window: a one-line hint, without the controls its toolbar already has.
+    /// In the Layout window: a one-line hint, without the controls its toolbar already has, and bars that wrap.
     var isInLayoutWindow = false
+    /// Told the bars' height as it changes, so the Layout window can fit its pane to them.
+    var onBarsHeightChange: ((CGFloat) -> Void)?
 
     var body: some View {
         // A header avoids row clipping 20pt below the card's top edge; no rows means no card obscuring the first bar.
         Section {} header: {
-            FoldedMenuBar(itemManager: itemManager, arrangement: .spaced, sharedSelection: selection)
+            FoldedMenuBar(itemManager: itemManager, arrangement: .spaced, sharedSelection: selection, wrapsRows: isInLayoutWindow)
+                .onGeometryChange(for: CGFloat.self, of: \.size.height) { onBarsHeightChange?($0) }
                 .textCase(nil)
                 .font(nil)
                 .foregroundStyle(.primary)

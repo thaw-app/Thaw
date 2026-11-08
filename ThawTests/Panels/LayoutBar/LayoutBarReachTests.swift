@@ -68,6 +68,8 @@ struct LayoutBarReachTests {
         let bar = try LongBar(count: 165)
         let document = try #require(bar.scrollView.documentView)
         #expect(document.frame.width > bar.scrollView.contentView.bounds.width)
+        #expect(bar.container.rowWidth == nil, "Settings' bars keep one row")
+        #expect(bar.scrollView.hasHorizontalScroller)
         #expect(try bar.isShown(164))
         #expect(try !bar.isShown(0))
     }
@@ -111,7 +113,6 @@ struct LayoutBarReachTests {
         var bar: LongBar?
         let elapsed = try clock.measure { bar = try LongBar(count: 165) }
         #expect(bar?.container.arrangedViews.count == 165)
-        #expect(elapsed < .seconds(2))
-        Attachment.record("built 165 items in \(elapsed)", named: "timing")
+        #expect(elapsed < .seconds(2), "165 items took \(elapsed)")
     }
 }

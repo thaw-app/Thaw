@@ -15,6 +15,10 @@ import ThawUI
 struct LayoutDashboardView: View {
     let appState: AppState
     let model: LayoutDashboardModel
+    /// The bars' height as they last laid out; their rows wrap, so it follows the window's width.
+    @State private var barsContentHeight: CGFloat?
+    /// The window's content height, which caps the bars.
+    @State private var availableHeight: CGFloat?
 
     private var enabledSectionCount: Int {
         MenuBarSectionName.allCases.count { appState.menuBarManager.section(withName: $0)?.isEnabled == true }
@@ -33,12 +37,25 @@ struct LayoutDashboardView: View {
                 )
                 .padding(ThawSpacing.inset)
             }
-            // The bars across the window, sized to their sections; the list and the item editor take the rest.
+            // The bars across the window, as tall as their rows up to a cap; the list and the item editor take the rest.
             VStack(spacing: 0) {
                 ThawForm(readingWidth: .full) {
-                    LayoutBarsSection(itemManager: appState.itemManager, selection: model.selection, isInLayoutWindow: true)
+                    LayoutBarsSection(
+                        itemManager: appState.itemManager,
+                        selection: model.selection,
+                        isInLayoutWindow: true,
+                        onBarsHeightChange: { height in
+                            if barsContentHeight != height {
+                                barsContentHeight = height
+                            }
+                        }
+                    )
                 }
-                .frame(height: LayoutDashboardMetrics.barsHeight(sections: enabledSectionCount))
+                .frame(height: LayoutDashboardMetrics.barsHeight(
+                    fitting: barsContentHeight,
+                    sections: enabledSectionCount,
+                    available: availableHeight
+                ))
                 // The bars always show the live bar, so away from the target they only show it.
                 .disabled(!model.pin.isEditable)
                 .opacity(model.pin.isEditable ? 1 : 0.5)
@@ -66,6 +83,11 @@ struct LayoutDashboardView: View {
                 .padding(.bottom, ThawSpacing.base)
         }
         .frame(minWidth: LayoutDashboardMetrics.windowMinSize.width, minHeight: LayoutDashboardMetrics.windowMinSize.height)
+        .onGeometryChange(for: CGFloat.self, of: \.size.height) { height in
+            if availableHeight != height {
+                availableHeight = height
+            }
+        }
         .navigationTitle("Layout")
         .navigationSubtitle(LayoutDashboardText.title(profileName: model.profileName))
         .toolbar { LayoutDashboardToolbar(model: model) }

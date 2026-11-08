@@ -98,7 +98,7 @@ extension LayoutBarContainer {
     /// Moves the selection to where a drop at windowLocation lands, the same slot the drop marker shows.
     func dropSelection(at windowLocation: NSPoint) {
         guard let selection else { return }
-        let destination = groupDropDestination(atX: convert(windowLocation, from: nil).x)
+        let destination = groupDropDestination(atX: sweepX(at: windowLocation))
         let order = LayoutBarPaddingView.layoutItemsForPersistence(from: arrangedViews).map(\.uniqueIdentifier)
         let placement = LayoutSelection.placement(
             insertingAt: destination.itemIndex,
