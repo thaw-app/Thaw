@@ -16,8 +16,11 @@ import Observation
 final class LayoutDashboardModel {
     private(set) var pin: LayoutTargetPin
 
-    /// The profile in use when the window opened, shown beside the target.
-    private(set) var profileName: String?
+    /// The profile in use, shown beside the target. Read each time, so a Space that
+    /// applies another profile renames the window while it is open.
+    var profileName: String? {
+        readProfileName()
+    }
 
     /// The layout history the toolbar's Undo and Redo act on.
     let undo: LayoutUndoState
@@ -28,17 +31,24 @@ final class LayoutDashboardModel {
     /// The toolbar's filter for the item list.
     var filterText = ""
 
+    /// Which sections the item list shows.
+    var scope = LayoutItemListScope.all
+
+    /// The right pane's tab.
+    var sidePane = LayoutDashboardSidePane.Pane.item
+
     @ObservationIgnored private let readTarget: @MainActor () -> LayoutEditTarget
+    @ObservationIgnored private let readProfileName: @MainActor () -> String?
     @ObservationIgnored private var cancellable: AnyCancellable?
 
     init(
-        profileName: String? = nil,
+        profileName: @escaping @MainActor () -> String? = { nil },
         undoManager: UndoManager = UndoManager(),
         readTarget: @escaping @MainActor () -> LayoutEditTarget,
         changes: some Publisher<Void, Never> = Empty<Void, Never>()
     ) {
         self.readTarget = readTarget
-        self.profileName = profileName
+        readProfileName = profileName
         undo = LayoutUndoState(undoManager: undoManager)
         pin = LayoutTargetPin(readTarget())
         cancellable = changes
@@ -58,16 +68,19 @@ final class LayoutDashboardModel {
 extension LayoutDashboardModel {
     /// A model on the live menu bar, following Space and display changes.
     static func live(appState: AppState, displayInvalidations: some Publisher<Void, Never>) -> LayoutDashboardModel {
-        let profiles = appState.profileManager
-        let profileName = appState.profilesFeature.isOn
-            ? profiles.activeProfileID.flatMap { id in profiles.profiles.first { $0.id == id }?.name }
-            : nil
-        return LayoutDashboardModel(
-            profileName: profileName,
+        LayoutDashboardModel(
+            profileName: { activeProfileName(appState: appState) },
             undoManager: appState.layoutUndo,
             readTarget: { liveTarget(spaces: appState.spaceDirectory.spaces) },
             changes: DisplayEnvironment.spaceOrDisplayChanges(merging: displayInvalidations)
         )
+    }
+
+    /// The profile in use, or nil when profiles are off.
+    static func activeProfileName(appState: AppState) -> String? {
+        let profiles = appState.profileManager
+        guard appState.profilesFeature.isOn, let id = profiles.activeProfileID else { return nil }
+        return profiles.profiles.first { $0.id == id }?.name
     }
 
     /// The active menu bar's display and the Space showing on it.

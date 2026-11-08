@@ -39,21 +39,28 @@ struct LayoutDashboardView: View {
                     LayoutBarsSection(itemManager: appState.itemManager, selection: model.selection, isInLayoutWindow: true)
                 }
                 .frame(height: LayoutDashboardMetrics.barsHeight(sections: enabledSectionCount))
+                // The bars always show the live bar, so away from the target they only show it.
+                .disabled(!model.pin.isEditable)
+                .opacity(model.pin.isEditable ? 1 : 0.5)
                 Divider()
+                // The list and the editor stay readable away from the target; they turn off only what would change it.
                 HSplitView {
-                    LayoutItemListPane(selection: model.selection, query: $model.filterText)
-                        .frame(
-                            minWidth: LayoutDashboardMetrics.listMinWidth,
-                            idealWidth: LayoutDashboardMetrics.listIdealWidth,
-                            maxWidth: LayoutDashboardMetrics.listMaxWidth
-                        )
-                    LayoutDashboardSidePane(selection: model.selection)
+                    LayoutItemListPane(
+                        selection: model.selection,
+                        query: $model.filterText,
+                        scope: $model.scope,
+                        isEditable: model.pin.isEditable,
+                        showEditor: { model.sidePane = .item }
+                    )
+                    .frame(
+                        minWidth: LayoutDashboardMetrics.listMinWidth,
+                        idealWidth: LayoutDashboardMetrics.listIdealWidth,
+                        maxWidth: LayoutDashboardMetrics.listMaxWidth
+                    )
+                    LayoutDashboardSidePane(selection: model.selection, pane: $model.sidePane, isEditable: model.pin.isEditable)
                         .frame(minWidth: LayoutDashboardMetrics.editorMinWidth, maxWidth: .infinity)
                 }
             }
-            // The bars always show the live bar, so away from the target they only show it.
-            .disabled(!model.pin.isEditable)
-            .opacity(model.pin.isEditable ? 1 : 0.5)
             LayoutRefusalNotice()
                 .padding(.horizontal, ThawSpacing.inset)
                 .padding(.bottom, ThawSpacing.base)

@@ -14,6 +14,8 @@ import ThawUI
 struct LayoutItemEditor: View {
     @Environment(AppState.self) private var appState
     let selection: LayoutSelectionModel
+    /// False while the window is away from the bar it edits: the editor shows the item but changes nothing.
+    var isEditable = true
 
     var body: some View {
         switch LayoutItemEditorContent.make(selectedIDs: selection.orderedItemIDs, itemCache: appState.itemManager.itemCache) {
@@ -27,13 +29,15 @@ struct LayoutItemEditor: View {
         case let .single(item, section):
             ThawForm(readingWidth: .full) {
                 LayoutSingleItemEditor(item: item, section: section, selection: selection)
+                    // On the rows, not the form, so the editor still scrolls.
+                    .disabled(!isEditable)
             }
             // A fresh editor per item, so a draft name never carries over.
             .id(item.uniqueIdentifier)
         case let .several(count, section):
             ThawForm(readingWidth: .full) {
                 ThawSection("\(count) items selected") {
-                    LayoutSectionPicker(section: section, selection: selection, isLocked: false)
+                    LayoutSectionPicker(section: section, selection: selection, isLocked: !isEditable)
                 }
             }
         }

@@ -80,6 +80,15 @@ nonisolated struct LayoutSelection: Equatable, Sendable {
         }
     }
 
+    /// Selects the selectable units in layout that hold any of itemIDs, keeping the anchor.
+    /// A group comes whole, as a click on one member brings the rest.
+    mutating func selectAll(among itemIDs: Set<String>, in layout: [MenuBarSectionName: [Unit]]) {
+        self.itemIDs = layout.compactMapValues { units in
+            let ids = Set(units.filter { $0.isSelectable && $0.memberIDs.contains(where: itemIDs.contains) }.flatMap(\.memberIDs))
+            return ids.isEmpty ? nil : ids
+        }
+    }
+
     /// Applies a click on itemID in section, whose units are listed left to right.
     mutating func click(_ itemID: String, in section: MenuBarSectionName, units: [Unit], kind: Click) {
         guard let index = units.firstIndex(where: { $0.memberIDs.contains(itemID) }), units[index].isSelectable else {
@@ -101,8 +110,7 @@ nonisolated struct LayoutSelection: Equatable, Sendable {
             }
             anchor = Anchor(section: section, itemID: itemID)
         case .extend:
-            guard let anchor, anchor.section == section,
-                  let start = units.firstIndex(where: { $0.memberIDs.contains(anchor.itemID) })
+            guard let anchor, anchor.section == section, let start = units.firstIndex(where: { $0.memberIDs.contains(anchor.itemID) })
             else {
                 click(itemID, in: section, units: units, kind: .replace)
                 return

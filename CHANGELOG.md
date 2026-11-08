@@ -69,6 +69,9 @@ the items under New and Fixed.
 - **Pop Out Editor opens Layout in a window that stays on its menu bar.** Switch Space or display and the bars go read-only, naming where you are, until you switch back or edit that bar instead. It has Capture Hidden Items and Undo in its toolbar.
 - **The Layout window lists every item under the bars,** with a filter and multi-select. Selecting in the list selects in the bars, and a right click or Return opens the item's menu. Uncheck an item to hide it, or check it to show it; items macOS keeps in place can't be unchecked.
 - **The Layout window edits the selected item beside the list:** its name, icon, section, group, shortcut and whether it shows when its icon changes, plus its app. Groups, Spacers and Apple's items are a click away above it.
+- **The Layout window's list filters like search,** forgiving typos and ranking the closest names first, shows how many items match, and can show one section at a time. ⌘A selects only the items the filter shows.
+- **The Layout window's list works from the keyboard like the bars:** ⌥-arrows move the selected items, ⌘1 to ⌘3 send them to a section, ⌘Z undoes, and Home, End, Page Up and Page Down jump through the list. Drag rows onto another row or a section's name to move them. Escape clears the filter, then closes the window, and so does ⌘W.
+- **Away from the bar it edits, the Layout window still lets you read and select items;** only the changes are turned off. Always Hidden items carry a badge, and the window's title follows a profile change.
 - **The experimental reorder editor is gone,** with its hidden setting.
 - **Hold Option on Capture Hidden Items to retake every picture.** The button reads Retake All Pictures while you do.
 - **Extras is now Modules.**
