@@ -165,7 +165,7 @@ struct ThawBarContentView: View {
             section: section,
             displayID: screen.displayID,
             sizing: itemSizing,
-            tooltipDelay: appState.settings.advanced.tooltipDelay,
+            tooltipDelay: appState.settings.visibility.tooltipDelay,
             displayImage: image,
             isKeyboardFocused: keyboardFocus.index == index,
             activationRequest: keyboardFocus.activationRequest,

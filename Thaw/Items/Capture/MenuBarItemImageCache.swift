@@ -169,11 +169,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// Watches AppNavigationState's @Observable properties.
     private var navigationStateObservationTask: Task<Void, Never>?
 
-    /// Task observing AdvancedSettings.iconRefreshInterval, which is
+    /// Task observing LayoutSettings.iconRefreshInterval, which is
     /// @Observable rather than a Combine ObservableObject.
     private var iconRefreshIntervalObservationTask: Task<Void, Never>?
 
-    /// Task observing AdvancedSettings.alwaysUseAppIconForMenuBarItems.
+    /// Task observing LayoutSettings.alwaysUseAppIconForMenuBarItems.
     private var alwaysUseAppIconObservationTask: Task<Void, Never>?
 
     private var memoryPressureSource: DispatchSourceMemoryPressure?
@@ -380,8 +380,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             // Restart the live loop on interval changes. The initial emission
             // is a no-op through the liveRefreshTask guard.
             iconRefreshIntervalObservationTask?.cancel()
-            iconRefreshIntervalObservationTask = Task { @MainActor [weak self, advancedSettings = appState.settings.advanced] in
-                let changes = Observations { advancedSettings.iconRefreshInterval }
+            iconRefreshIntervalObservationTask = Task { @MainActor [weak self, layoutSettings = appState.settings.layout] in
+                let changes = Observations { layoutSettings.iconRefreshInterval }
                 for await _ in changes {
                     guard let self else { return }
                     guard self.liveRefreshTask != nil else { continue }
@@ -394,9 +394,9 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             // Entries rot unread while app icons are on, so rebuild the cache
             // when the preference turns off. The initial value is skipped.
             alwaysUseAppIconObservationTask?.cancel()
-            alwaysUseAppIconObservationTask = Task { @MainActor [weak self, advancedSettings = appState.settings.advanced] in
+            alwaysUseAppIconObservationTask = Task { @MainActor [weak self, layoutSettings = appState.settings.layout] in
                 var previous: Bool?
-                let changes = Observations { advancedSettings.alwaysUseAppIconForMenuBarItems }
+                let changes = Observations { layoutSettings.alwaysUseAppIconForMenuBarItems }
                 for await alwaysUseAppIcon in changes {
                     guard let self else { return }
                     defer { previous = alwaysUseAppIcon }

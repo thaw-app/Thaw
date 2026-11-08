@@ -14,7 +14,7 @@ import SwiftUI
 /// Model for the app's General settings.
 @MainActor
 @Observable
-final class GeneralSettings {
+final class GeneralSettings: SettingsURIHandling {
     @ObservationIgnored
     private let diagLog = DiagLog(category: "GeneralSettings")
     /// A Boolean value that indicates whether the Thaw icon
@@ -105,144 +105,27 @@ final class GeneralSettings {
         }
     }
 
-    /// A Boolean value that indicates whether the Thaw Bar is pinned in
-    /// place instead of being draggable by its background.
-    var lockThawBarPosition = Defaults.DefaultValue.lockThawBarPosition {
+    /// Hide application menus when needed to fit menu bar items.
+    var hideApplicationMenus = Defaults.DefaultValue.hideApplicationMenus {
         didSet {
-            guard oldValue != lockThawBarPosition else { return }
-            Defaults.set(lockThawBarPosition, forKey: .lockThawBarPosition)
+            guard oldValue != hideApplicationMenus else { return }
+            Defaults.set(hideApplicationMenus, forKey: .hideApplicationMenus)
         }
     }
 
-    /// Whether every display's corners are drawn rounded, like a MacBook's
-    /// top corners, with screenCornerRadius.
-    var roundScreenCorners = Defaults.DefaultValue.roundScreenCorners {
+    var enableSecondaryContextMenu = Defaults.DefaultValue.enableSecondaryContextMenu {
         didSet {
-            guard oldValue != roundScreenCorners else { return }
-            Defaults.set(roundScreenCorners, forKey: .roundScreenCorners)
+            guard oldValue != enableSecondaryContextMenu else { return }
+            Defaults.set(enableSecondaryContextMenu, forKey: .enableSecondaryContextMenu)
         }
     }
 
-    var screenCornerRadius = Defaults.DefaultValue.screenCornerRadius {
+    /// Cover Finder titles while the desktop is frontmost, leaving the Apple menu and Finder state unchanged.
+    /// See ApplicationMenuCover for why this differs from hideApplicationMenus.
+    var enableDesktopMenuHiding = Defaults.DefaultValue.enableDesktopMenuHiding {
         didSet {
-            guard oldValue != screenCornerRadius else { return }
-            Defaults.set(screenCornerRadius, forKey: .screenCornerRadius)
-        }
-    }
-
-    /// Whether clicking a hidden item, in the Thaw Bar, search or elsewhere,
-    /// shows it in the menu bar and opens its menu there. Off, the menu opens
-    /// without the icon appearing, and only apps that ignore that are shown.
-    var openHiddenItemsInMenuBar = Defaults.DefaultValue.openHiddenItemsInMenuBar {
-        didSet {
-            guard oldValue != openHiddenItemsInMenuBar else { return }
-            Defaults.set(openHiddenItemsInMenuBar, forKey: .openHiddenItemsInMenuBar)
-        }
-    }
-
-    // MARK: - Deprecated (Per-Display Migration)
-
-    // These properties are kept for one release cycle for downgrade safety.
-    // New code should use AppSettings.displaySettings instead.
-
-    /// A Boolean value that indicates whether to show hidden items
-    /// in a separate bar below the menu bar.
-    var useThawBar = Defaults.DefaultValue.useThawBar {
-        didSet {
-            guard oldValue != useThawBar else { return }
-            Defaults.set(useThawBar, forKey: .useThawBar)
-        }
-    }
-
-    /// A Boolean value that indicates whether to use the Thaw Bar
-    /// only on displays with a notch.
-    var useThawBarOnlyOnNotchedDisplay = Defaults.DefaultValue.useThawBarOnlyOnNotchedDisplay {
-        didSet {
-            guard oldValue != useThawBarOnlyOnNotchedDisplay else { return }
-            Defaults.set(useThawBarOnlyOnNotchedDisplay, forKey: .useThawBarOnlyOnNotchedDisplay)
-        }
-    }
-
-    /// The location where the Thaw Bar appears.
-    var thawBarLocation = Defaults.DefaultValue.thawBarLocation {
-        didSet {
-            guard oldValue != thawBarLocation else { return }
-            Defaults.set(thawBarLocation.rawValue, forKey: .thawBarLocation)
-        }
-    }
-
-    /// A Boolean value that indicates whether the Thaw Bar should
-    /// appear at the mouse pointer's location when shown by a hotkey.
-    var thawBarLocationOnHotkey = Defaults.DefaultValue.thawBarLocationOnHotkey {
-        didSet {
-            guard oldValue != thawBarLocationOnHotkey else { return }
-            Defaults.set(thawBarLocationOnHotkey, forKey: .thawBarLocationOnHotkey)
-        }
-    }
-
-    /// A Boolean value that indicates whether the hidden section
-    /// should be shown when the mouse pointer clicks in an empty
-    /// area of the menu bar.
-    var showOnClick = Defaults.DefaultValue.showOnClick {
-        didSet {
-            guard oldValue != showOnClick else { return }
-            Defaults.set(showOnClick, forKey: .showOnClick)
-        }
-    }
-
-    /// A Boolean value that indicates whether the hidden section
-    /// should be shown when the mouse pointer hovers over an
-    /// empty area of the menu bar.
-    var showOnHover = Defaults.DefaultValue.showOnHover {
-        didSet {
-            guard oldValue != showOnHover else { return }
-            Defaults.set(showOnHover, forKey: .showOnHover)
-        }
-    }
-
-    /// A Boolean value that indicates whether the hidden section
-    /// should be shown or hidden when the user scrolls in the
-    /// menu bar.
-    var showOnScroll = Defaults.DefaultValue.showOnScroll {
-        didSet {
-            guard oldValue != showOnScroll else { return }
-            Defaults.set(showOnScroll, forKey: .showOnScroll)
-        }
-    }
-
-    // The offset to apply to the menu bar item spacing and padding.
-
-    /// A Boolean value that indicates whether the hidden section
-    /// should automatically rehide.
-    var autoRehide = Defaults.DefaultValue.autoRehide {
-        didSet {
-            guard oldValue != autoRehide else { return }
-            Defaults.set(autoRehide, forKey: .autoRehide)
-        }
-    }
-
-    /// A strategy that determines how the auto-rehide feature works.
-    var rehideStrategy = Defaults.DefaultValue.rehideStrategy {
-        didSet {
-            guard oldValue != rehideStrategy else { return }
-            Defaults.set(rehideStrategy.rawValue, forKey: .rehideStrategy)
-        }
-    }
-
-    /// A time interval for the auto-rehide feature when its rule
-    /// is RehideStrategy.timed.
-    var rehideInterval = Defaults.DefaultValue.rehideInterval {
-        didSet {
-            guard oldValue != rehideInterval else { return }
-            Defaults.set(rehideInterval, forKey: .rehideInterval)
-        }
-    }
-
-    /// Time interval temporarily shown menu bar items remain visible.
-    var tempShowInterval = Defaults.DefaultValue.tempShowInterval {
-        didSet {
-            guard oldValue != tempShowInterval else { return }
-            Defaults.set(tempShowInterval, forKey: .tempShowInterval)
+            guard oldValue != enableDesktopMenuHiding else { return }
+            Defaults.set(enableDesktopMenuHiding, forKey: .enableDesktopMenuHiding)
         }
     }
 
@@ -254,9 +137,9 @@ final class GeneralSettings {
     @ObservationIgnored
     private let decoder = JSONDecoder()
 
-    /// Storage for internal observers.
+    /// The thaw:// settings subscription.
     @ObservationIgnored
-    private var cancellables = Set<AnyCancellable>()
+    private var settingsURIChanges: AnyCancellable?
 
     /// The shared app state.
     @ObservationIgnored
@@ -266,7 +149,7 @@ final class GeneralSettings {
     func performSetup(with appState: AppState) {
         self.appState = appState
         loadInitialState()
-        configureObservers()
+        settingsURIChanges = subscribeToSettingsURIChanges()
     }
 
     /// Loads the model's initial state.
@@ -277,30 +160,9 @@ final class GeneralSettings {
         Defaults.ifPresent(key: .showSettingDescriptions, assign: &showSettingDescriptions)
         settingsAppearance = SettingsAppearance.stored()
         Defaults.ifPresent(key: .simpleModeShowsPreview, assign: &simpleModeShowsPreview)
-        Defaults.ifPresent(key: .lockThawBarPosition, assign: &lockThawBarPosition)
-        Defaults.ifPresent(key: .openHiddenItemsInMenuBar, assign: &openHiddenItemsInMenuBar)
-        Defaults.ifPresent(key: .roundScreenCorners, assign: &roundScreenCorners)
-        Defaults.ifPresent(key: .screenCornerRadius, assign: &screenCornerRadius)
-        Defaults.ifPresent(key: .useThawBar, assign: &useThawBar)
-        Defaults.ifPresent(key: .useThawBarOnlyOnNotchedDisplay, assign: &useThawBarOnlyOnNotchedDisplay)
-        Defaults.ifPresent(key: .thawBarLocationOnHotkey, assign: &thawBarLocationOnHotkey)
-        Defaults.ifPresent(key: .showOnClick, assign: &showOnClick)
-        Defaults.ifPresent(key: .showOnHover, assign: &showOnHover)
-        Defaults.ifPresent(key: .showOnScroll, assign: &showOnScroll)
-        Defaults.ifPresent(key: .autoRehide, assign: &autoRehide)
-        Defaults.ifPresent(key: .rehideInterval, assign: &rehideInterval)
-        Defaults.ifPresent(key: .tempShowInterval, assign: &tempShowInterval)
-
-        Defaults.ifPresent(key: .thawBarLocation) { rawValue in
-            if let location = ThawBarLocation(rawValue: rawValue) {
-                thawBarLocation = location
-            }
-        }
-        Defaults.ifPresent(key: .rehideStrategy) { rawValue in
-            if let strategy = RehideStrategy(rawValue: rawValue) {
-                rehideStrategy = strategy
-            }
-        }
+        Defaults.ifPresent(key: .hideApplicationMenus, assign: &hideApplicationMenus)
+        Defaults.ifPresent(key: .enableSecondaryContextMenu, assign: &enableSecondaryContextMenu)
+        Defaults.ifPresent(key: .enableDesktopMenuHiding, assign: &enableDesktopMenuHiding)
 
         if let data = Defaults.data(forKey: .thawIcon) {
             do {
@@ -314,86 +176,25 @@ final class GeneralSettings {
         }
     }
 
-    /// Configures the internal observers for the model.
-    ///
-    /// Properties persist through didSet; only the Settings URI subscription
-    /// is Combine-based.
-    private func configureObservers() {
-        var c = Set<AnyCancellable>()
-
-        NotificationCenter.default
-            .publisher(for: .settingsDidChangeViaURI)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] notification in
-                self?.handleExternalSettingsChange(notification)
-            }
-            .store(in: &c)
-
-        cancellables = c
-    }
+    /// The thaw:// keys of this page's Bool settings.
+    private static let uriBoolKeys: [String: ReferenceWritableKeyPath<GeneralSettings, Bool>] = [
+        "showThawIcon": \.showThawIcon,
+        "customThawIconIsTemplate": \.customThawIconIsTemplate,
+        "simpleMode": \.simpleMode,
+        "showSettingDescriptions": \.showSettingDescriptions,
+        "hideApplicationMenus": \.hideApplicationMenus,
+        "enableSecondaryContextMenu": \.enableSecondaryContextMenu,
+        "enableDesktopMenuHiding": \.enableDesktopMenuHiding,
+    ]
 
     /// Handles settings changed externally via Settings URI scheme.
-    private func handleExternalSettingsChange(_ notification: Notification) {
-        guard let key = notification.userInfo?["key"] as? String else {
+    func handleExternalSettingsChange(_ notification: Notification) {
+        if applySettingsURIChange(notification, bools: Self.uriBoolKeys) {
             return
         }
-
-        if let boolValue = notification.userInfo?["value"] as? Bool {
-            diagLog.debug("GeneralSettings: Received external change for \(key) = \(boolValue)")
-
-            switch key {
-            case "showThawIcon" where showThawIcon != boolValue:
-                showThawIcon = boolValue
-            case "customThawIconIsTemplate" where customThawIconIsTemplate != boolValue:
-                customThawIconIsTemplate = boolValue
-            case "simpleMode" where simpleMode != boolValue:
-                simpleMode = boolValue
-            case "showSettingDescriptions" where showSettingDescriptions != boolValue:
-                showSettingDescriptions = boolValue
-            case "lockThawBarPosition" where lockThawBarPosition != boolValue:
-                lockThawBarPosition = boolValue
-            case "openHiddenItemsInMenuBar" where openHiddenItemsInMenuBar != boolValue:
-                openHiddenItemsInMenuBar = boolValue
-            case "useThawBarOnlyOnNotchedDisplay" where useThawBarOnlyOnNotchedDisplay != boolValue:
-                useThawBarOnlyOnNotchedDisplay = boolValue
-            case "thawBarLocationOnHotkey" where thawBarLocationOnHotkey != boolValue:
-                thawBarLocationOnHotkey = boolValue
-            case "showOnClick" where showOnClick != boolValue:
-                showOnClick = boolValue
-            case "showOnHover" where showOnHover != boolValue:
-                showOnHover = boolValue
-            case "showOnScroll" where showOnScroll != boolValue:
-                showOnScroll = boolValue
-            case "autoRehide" where autoRehide != boolValue:
-                autoRehide = boolValue
-            default:
-                // Key not handled by GeneralSettings or value unchanged
-                break
-            }
-        }
-
-        if let doubleValue = notification.userInfo?["doubleValue"] as? Double {
-            diagLog.debug("GeneralSettings: Received external change for \(key) = \(doubleValue)")
-
-            if key == "rehideInterval", rehideInterval != doubleValue {
-                rehideInterval = doubleValue
-            } else if key == "tempShowInterval", tempShowInterval != doubleValue {
-                tempShowInterval = doubleValue
-            }
-        }
-
         // Enums arrive as raw integers.
-        if let rawEnumValue = notification.userInfo?["rawEnumValue"] as? Int {
-            diagLog.debug("GeneralSettings: Received external change for \(key) = \(rawEnumValue)")
-
-            if key == "rehideStrategy",
-               let strategy = RehideStrategy(rawValue: rawEnumValue),
-               rehideStrategy != strategy
-            {
-                rehideStrategy = strategy
-            } else if key == "settingsAppearance", let appearance = SettingsAppearance(rawValue: rawEnumValue) {
-                settingsAppearance = appearance
-            }
+        if notification.userInfo?["key"] as? String == "settingsAppearance", let rawEnumValue = notification.userInfo?["rawEnumValue"] as? Int, let appearance = SettingsAppearance(rawValue: rawEnumValue) {
+            settingsAppearance = appearance
         }
     }
 }

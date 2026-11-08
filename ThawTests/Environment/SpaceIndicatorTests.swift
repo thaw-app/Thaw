@@ -241,7 +241,7 @@ struct SpaceIndicatorWiringTests {
             read: { snapshot(current: [active, 4], active: active) },
             publish: { published.append($0) }
         )
-        let settings = AdvancedSettings()
+        let settings = SpacesSettings()
         let changes = SpaceChanges(activeSpaceID: { active })
         indicator.start(settings: settings, changes: changes, directory: SpaceDirectory(read: { spaces }))
 

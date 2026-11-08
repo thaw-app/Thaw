@@ -475,7 +475,7 @@ final class MenuBarItemManager {
     /// Whether the user has taken menu bar arrangement into their own hands (MenuBarArrangementMode.manual).
     /// Every automatic path reads this; the explicit Layout edit path reads arrangementForbidsMoves instead.
     var arrangementIsManual: Bool {
-        appState?.settings.advanced.menuBarArrangementMode == .manual
+        appState?.settings.layout.menuBarArrangementMode == .manual
     }
 
     /// Whether Manual refuses a move asked for by the current task: all but an explicit Layout edit.

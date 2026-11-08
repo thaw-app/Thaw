@@ -16,7 +16,7 @@ import ThawUI
 struct PrivacySettingsPane: View {
     @Environment(AppState.self) private var appState
     @Bindable var updatesManager: UpdatesManager
-    @Bindable var advancedSettings: AdvancedSettings
+    @Bindable var privacySettings: PrivacySettings
 
     var body: some View {
         ThawForm {
@@ -35,7 +35,7 @@ struct PrivacySettingsPane: View {
                 }
             }
 
-            OtherAppsSection(settings: appState.settings.automation)
+            OtherAppsSection(settings: appState.settings.privacy)
 
             CaptureInspectorSection()
 
@@ -84,14 +84,14 @@ struct PrivacySettingsPane: View {
                 Text("Checking asks \(updateHost) whether a newer version exists. Downloading also fetches it in the background; without it, the download starts only after you accept an update. The release notes shown with an update come from the same server.")
             }
 
-            Toggle(isOn: $advancedSettings.fetchReleaseNotes) {
+            Toggle(isOn: $privacySettings.fetchReleaseNotes) {
                 Text("What’s New notes")
             }
             .annotation {
                 Text("Fetches the latest release notes from \(changelogHost) when you open What’s New and keeps a copy for offline use. When this is off, What’s New shows the last copy it fetched, if there is one.")
             }
 
-            Toggle("Show release notes after an update", isOn: $advancedSettings.showReleaseNotesAfterUpdate)
+            Toggle("Show release notes after an update", isOn: $privacySettings.showReleaseNotesAfterUpdate)
                 .annotation {
                     Text("Opens What’s New the first time \(Constants.displayName) starts after an update. You can still open it from \(Constants.displayName)’s menu or About.")
                 }

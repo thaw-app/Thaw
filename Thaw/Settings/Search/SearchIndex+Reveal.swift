@@ -20,7 +20,7 @@ nonisolated extension SearchIndex {
             pane: .visibility,
             section: "Reveal hidden items",
             keywords: ["click", "show", "hidden"],
-            property: .general("showOnClick")
+            property: .visibility("showOnClick")
         ),
         SearchEntry(
             id: "advanced.showAlwaysHiddenOnIconDoubleClick",
@@ -29,7 +29,7 @@ nonisolated extension SearchIndex {
             pane: .visibility,
             section: "Reveal hidden items",
             keywords: ["double-click", "double click", "icon", "always hidden", "reveal"],
-            property: .advanced("showAlwaysHiddenOnIconDoubleClick")
+            property: .visibility("showAlwaysHiddenOnIconDoubleClick")
         ),
         SearchEntry(
             id: "advanced.enableSwapBar",
@@ -38,7 +38,7 @@ nonisolated extension SearchIndex {
             pane: .visibility,
             section: "Swap shown and hidden",
             keywords: ["swap", "switch", "exchange", "groups", "shown", "hidden", "bar", "strip", "floating", "controls", "profile", "zen", "toggle", "top", "menu bar", "right-click", "transport"],
-            property: .advanced("enableSwapBar")
+            property: .visibility("enableSwapBar")
         ),
         SearchEntry(
             id: "general.showOnHover",
@@ -47,7 +47,7 @@ nonisolated extension SearchIndex {
             pane: .visibility,
             section: "Reveal hidden items",
             keywords: ["hover", "show", "hidden", "mouse"],
-            property: .general("showOnHover")
+            property: .visibility("showOnHover")
         ),
         SearchEntry(
             id: "general.showOnScroll",
@@ -56,7 +56,7 @@ nonisolated extension SearchIndex {
             pane: .visibility,
             section: "Reveal hidden items",
             keywords: ["scroll", "swipe", "show", "hidden", "gesture"],
-            property: .general("showOnScroll")
+            property: .visibility("showOnScroll")
         ),
         SearchEntry(
             id: "general.autoRehide",
@@ -68,7 +68,7 @@ nonisolated extension SearchIndex {
                 "rehide", "auto", "automatic", "automatically rehide", "hide", "never", "click elsewhere",
                 "switch apps", "focus", "timed", "delay", "seconds", "minute", "strategy", "interval",
             ],
-            property: .general("autoRehide")
+            property: .visibility("autoRehide")
         ),
         SearchEntry(
             id: "general.tempShowInterval",
@@ -77,7 +77,7 @@ nonisolated extension SearchIndex {
             pane: .visibility,
             section: "After revealing",
             keywords: ["temp", "temporary", "temporarily shown", "show", "delay", "seconds", "hide again"],
-            property: .general("tempShowInterval")
+            property: .visibility("tempShowInterval")
         ),
     ]
 }

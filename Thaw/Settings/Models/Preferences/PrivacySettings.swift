@@ -1,5 +1,5 @@
 //
-//  AutomationSettings.swift
+//  PrivacySettings.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
@@ -11,10 +11,11 @@ import Foundation
 import Observation
 import SwiftUI
 
-/// Settings model for managing Settings URI automation and whitelist.
+/// Model for the Privacy page's settings: the apps allowed to change
+/// settings through thaw:// links, and what Thaw fetches over the network.
 @MainActor
 @Observable
-final class AutomationSettings {
+final class PrivacySettings: SettingsURIHandling {
     // MARK: - Observable Properties
 
     var isSettingsURIEnabled: Bool {
@@ -24,6 +25,21 @@ final class AutomationSettings {
     }
 
     var whitelistedApps: [WhitelistedApp] = []
+
+    var fetchReleaseNotes = Defaults.DefaultValue.fetchReleaseNotes {
+        didSet {
+            guard oldValue != fetchReleaseNotes else { return }
+            Defaults.set(fetchReleaseNotes, forKey: .fetchReleaseNotes)
+        }
+    }
+
+    /// Whether What's New opens by itself after an update. The menu and About links work either way.
+    var showReleaseNotesAfterUpdate = Defaults.DefaultValue.showReleaseNotesAfterUpdate {
+        didSet {
+            guard oldValue != showReleaseNotesAfterUpdate else { return }
+            Defaults.set(showReleaseNotesAfterUpdate, forKey: .showReleaseNotesAfterUpdate)
+        }
+    }
 
     // MARK: - Types
 
@@ -51,6 +67,9 @@ final class AutomationSettings {
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
+    @ObservationIgnored
+    private var settingsURIChanges: AnyCancellable?
+
     // MARK: - Initialization
 
     init() {
@@ -64,6 +83,28 @@ final class AutomationSettings {
                 self?.refreshWhitelist()
             }
             .store(in: &cancellables)
+    }
+
+    func performSetup() {
+        loadInitialState()
+        settingsURIChanges = subscribeToSettingsURIChanges()
+    }
+
+    /// Reads the stored network settings.
+    func loadInitialState() {
+        Defaults.ifPresent(key: .fetchReleaseNotes, assign: &fetchReleaseNotes)
+        Defaults.ifPresent(key: .showReleaseNotesAfterUpdate, assign: &showReleaseNotesAfterUpdate)
+    }
+
+    /// The thaw:// keys of this page's Bool settings.
+    private static let uriBoolKeys: [String: ReferenceWritableKeyPath<PrivacySettings, Bool>] = [
+        "fetchReleaseNotes": \.fetchReleaseNotes,
+        "showReleaseNotesAfterUpdate": \.showReleaseNotesAfterUpdate,
+    ]
+
+    /// Applies a thaw:// settings change for one of this page's keys.
+    func handleExternalSettingsChange(_ notification: Notification) {
+        applySettingsURIChange(notification, bools: Self.uriBoolKeys)
     }
 
     // MARK: - Whitelist Management
@@ -95,8 +136,7 @@ final class AutomationSettings {
         bundleID: String,
         identify: (URL) -> SettingsURISender? = SettingsURISender.identify(appAt:)
     ) -> Bool {
-        guard let identity = identify(url), identity.bundleIdentifier == bundleID,
-              identity.teamIdentifier != nil || identity.codeHash != nil
+        guard let identity = identify(url), identity.bundleIdentifier == bundleID, identity.teamIdentifier != nil || identity.codeHash != nil
         else {
             return false
         }
@@ -127,7 +167,7 @@ final class AutomationSettings {
         case noBundleID
     }
 
-    nonisolated static func choice(forBundleID bundleID: String?, allowed: [String]) -> AllowedAppChoice {
+    static nonisolated func choice(forBundleID bundleID: String?, allowed: [String]) -> AllowedAppChoice {
         let trimmed = bundleID?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !trimmed.isEmpty else { return .noBundleID }
         return allowed.contains(trimmed) ? .alreadyAllowed(trimmed) : .add(trimmed)

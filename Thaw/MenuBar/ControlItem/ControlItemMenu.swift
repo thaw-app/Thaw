@@ -152,7 +152,7 @@ final class ControlItemMenuController: NSObject {
             action: #selector(toggleSwapBar),
             keyEquivalent: ""
         )
-        item.state = appState.settings.advanced.enableSwapBar ? .on : .off
+        item.state = appState.settings.visibility.enableSwapBar ? .on : .off
         item.target = self
         return item
     }
@@ -300,8 +300,8 @@ final class ControlItemMenuController: NSObject {
     }
 
     @objc private func toggleSwapBar() {
-        guard let advanced = appState?.settings.advanced else { return }
-        advanced.enableSwapBar.toggle()
+        guard let visibility = appState?.settings.visibility else { return }
+        visibility.enableSwapBar.toggle()
     }
 
     @objc private func applyProfileFromMenu(_ menuItem: NSMenuItem) {

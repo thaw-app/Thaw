@@ -46,9 +46,9 @@ struct ProfileManagerApplyTests {
         let actions = HotkeyAction.settingsActions
         try #require(actions.count >= 2)
 
-        appState.settings.general.showOnHover = !Defaults.DefaultValue.showOnHover
+        appState.settings.visibility.showOnHover = !Defaults.DefaultValue.showOnHover
         let id = try manager.saveProfile(name: "Work", from: appState)
-        appState.settings.general.showOnHover = Defaults.DefaultValue.showOnHover
+        appState.settings.visibility.showOnHover = Defaults.DefaultValue.showOnHover
         appState.settings.hotkeys.hotkey(withAction: actions[1])?.keyCombination = Self.combination
 
         var profile = try manager.loadProfile(id: id)
@@ -75,7 +75,7 @@ struct ProfileManagerApplyTests {
             }
         }
 
-        #expect(appState.settings.general.showOnHover == !Defaults.DefaultValue.showOnHover)
+        #expect(appState.settings.visibility.showOnHover == !Defaults.DefaultValue.showOnHover)
         #expect(appState.settings.hotkeys.hotkey(withAction: actions[0])?.keyCombination == Self.combination)
         #expect(
             appState.settings.hotkeys.hotkey(withAction: actions[1])?.keyCombination == Self.combination,

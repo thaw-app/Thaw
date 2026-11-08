@@ -302,7 +302,7 @@ enum LayoutBarKeyboard {
         let item = view.item
         // Gate like drop and VoiceOver before registering undo to avoid phantom entries.
         // The shared move path still reports group refusals.
-        let experimentalSystemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
+        let experimentalSystemItemHiding = appState.settings.layout.enableExperimentalSystemItemHiding
         guard MenuBarBackendProvider.current.canAssign(
             item,
             to: target,

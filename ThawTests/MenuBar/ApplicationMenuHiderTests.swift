@@ -61,7 +61,7 @@ struct ApplicationMenuHiderTests {
     @Test("With both sections closed and nothing hidden, reconciling leaves the menus alone", arguments: [false, true])
     func closedSectionsLeaveMenus(hidingEnabled: Bool) {
         let appState = AppState()
-        appState.settings.advanced.hideApplicationMenus = hidingEnabled
+        appState.settings.general.hideApplicationMenus = hidingEnabled
         let hider = ApplicationMenuHider()
         hider.performSetup(with: appState)
         hider.reconcileApplicationMenuVisibility()
@@ -133,7 +133,7 @@ struct ApplicationMenuHiderTests {
     @Test("Toggling hides by hand, and closed sections then leave the menus hidden until toggled back")
     func toggleTakesManualOwnership() async throws {
         let appState = AppState()
-        appState.settings.advanced.hideApplicationMenus = true
+        appState.settings.general.hideApplicationMenus = true
         let calls = Calls()
         let hider = ApplicationMenuHider()
         hider.performSetup(with: appState, environment: environment(calls: calls, sleeps: RecordedSleeps()))
@@ -149,7 +149,7 @@ struct ApplicationMenuHiderTests {
     @Test("Closed sections restore automatic hiding")
     func closedSectionsRestoreAutomaticHiding() async throws {
         let appState = AppState()
-        appState.settings.advanced.hideApplicationMenus = true
+        appState.settings.general.hideApplicationMenus = true
         let calls = Calls()
         let hider = ApplicationMenuHider()
         hider.performSetup(with: appState, environment: environment(calls: calls, sleeps: RecordedSleeps()))

@@ -120,7 +120,7 @@ final class SpaceIndicator {
         self.publish = publish
     }
 
-    func start(settings: AdvancedSettings, changes: SpaceChanges, directory: SpaceDirectory) {
+    func start(settings: SpacesSettings, changes: SpaceChanges, directory: SpaceDirectory) {
         tasks.append(Task { [weak self, weak settings] in
             for await enabled in Observations({ settings?.showSpaceIndicator ?? false }) {
                 await self?.setEnabled(enabled)

@@ -36,7 +36,7 @@ nonisolated extension SearchIndex {
             sectionKey: "Options for all displays",
             sectionText: "Options for all displays",
             keywords: ["lock", "drag", "move", "pin", "bar", "position"],
-            property: .general("lockThawBarPosition")
+            property: .thawBar("lockThawBarPosition")
         ),
         SearchEntry(
             id: "general.showSettingDescriptions",
@@ -92,7 +92,7 @@ nonisolated extension SearchIndex {
             descriptionText: String(localized: "Choose whether a shortcut opens the \(Constants.displayName) Bar where Location says or centered on the pointer."),
             pane: .thawBar,
             keywords: ["ice bar", "thaw bar", "mouse", "pointer", "hotkey", "shortcut", "keyboard", "location", "show at mouse pointer"],
-            property: .general("thawBarLocationOnHotkey")
+            property: .thawBar("thawBarLocationOnHotkey")
         ),
         SearchEntry(
             id: "general.openHiddenItemsInMenuBar",
@@ -101,7 +101,7 @@ nonisolated extension SearchIndex {
             pane: .thawBar,
             section: "Options for all displays",
             keywords: ["ice bar", "thaw bar", "click", "open", "menu", "reveal", "show", "hidden", "open hidden items in the menu bar"],
-            property: .general("openHiddenItemsInMenuBar")
+            property: .thawBar("openHiddenItemsInMenuBar")
         ),
     ]
 }

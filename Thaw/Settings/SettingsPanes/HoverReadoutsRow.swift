@@ -14,7 +14,7 @@ import ThawUI
 /// name needs Screen Recording, so a note asks for it while it is missing.
 struct HoverReadoutsRow: View {
     @Environment(AppState.self) private var appState
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: VisibilitySettings
 
     var body: some View {
         ToggleButtonRow("On hover, show") {

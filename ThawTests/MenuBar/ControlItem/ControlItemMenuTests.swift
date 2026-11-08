@@ -48,14 +48,14 @@ struct ControlItemMenuTests {
     @Test("The swap bar item mirrors the setting and toggles it")
     func swapBarToggle() throws {
         let appState = AppState()
-        appState.settings.advanced.enableSwapBar = false
+        appState.settings.visibility.enableSwapBar = false
         let controller = ControlItemMenuController(appState: appState)
         let menu = controller.makeMenu()
         let swap = try item(menu, titled: String(localized: "Show Swap Bar"))
         #expect(swap.state == .off)
         let index = menu.index(of: swap)
         menu.performActionForItem(at: index)
-        #expect(appState.settings.advanced.enableSwapBar)
+        #expect(appState.settings.visibility.enableSwapBar)
         let rebuilt = controller.makeMenu()
         #expect(try item(rebuilt, titled: String(localized: "Show Swap Bar")).state == .on)
     }
@@ -77,7 +77,7 @@ struct ControlItemMenuTests {
     @Test("The Hidden toggle names the section's state", arguments: [false, true])
     func sectionToggle(alwaysHiddenEnabled: Bool) throws {
         let appState = AppState()
-        appState.settings.advanced.enableAlwaysHiddenSection = alwaysHiddenEnabled
+        appState.settings.layout.enableAlwaysHiddenSection = alwaysHiddenEnabled
         let menu = ControlItemMenuController(appState: appState).makeMenu()
         let titles = Set(menu.items.map(\.title))
         let hidden = try #require(appState.menuBarManager.section(withName: .hidden))

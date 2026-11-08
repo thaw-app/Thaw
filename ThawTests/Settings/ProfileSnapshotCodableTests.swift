@@ -204,3 +204,4 @@ struct ProfileSnapshotCodableTests {
         return object.keys.sorted()
     }
 }
+

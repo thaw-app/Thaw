@@ -15,7 +15,7 @@ import Testing
 struct SystemItemHidingCompatibilityTests {
     @Test("Fresh settings use Standard, which hides Apple's items")
     func freshSettingsHideAppleItems() {
-        let settings = AdvancedSettings()
+        let settings = LayoutSettings()
         #expect(!settings.enableNativeAppHiding)
         #expect(settings.enableExperimentalSystemItemHiding)
     }
@@ -23,7 +23,7 @@ struct SystemItemHidingCompatibilityTests {
     @Test("The switch reads the opposite of native hiding as native hiding changes")
     func switchFollowsNativeHiding() throws {
         try withPrivateSettingsChangeCenter {
-            let settings = AdvancedSettings()
+            let settings = LayoutSettings()
             try #require(settings.enableExperimentalSystemItemHiding)
 
             settings.enableNativeAppHiding = true
@@ -40,7 +40,7 @@ struct SystemItemHidingCompatibilityTests {
     func switchIsNotStored() throws {
         try withPrivateSettingsChangeCenter {
             Defaults.set(false, forKey: .enableExperimentalSystemItemHiding)
-            let settings = AdvancedSettings()
+            let settings = LayoutSettings()
 
             settings.enableNativeAppHiding = true
             settings.enableNativeAppHiding = false
@@ -53,15 +53,15 @@ struct SystemItemHidingCompatibilityTests {
     @Test("A profile saved with the switch loads, and applying it keeps what the method needs", arguments: [false, true], [false, true])
     func profileFollowsTheMethod(nativeHiding: Bool, storedSystemItemHiding: Bool) throws {
         try withPrivateSettingsChangeCenter {
-            let settings = AdvancedSettings()
-            settings.enableNativeAppHiding = nativeHiding
+            let settings = AppSettings()
+            settings.layout.enableNativeAppHiding = nativeHiding
             let json = Data(#"{"enableExperimentalSystemItemHiding": \#(storedSystemItemHiding)}"#.utf8)
             let profile = try JSONDecoder().decode(AdvancedSettingsSnapshot.self, from: json)
 
             profile.apply(to: settings)
 
-            #expect(settings.enableNativeAppHiding == nativeHiding)
-            #expect(settings.enableExperimentalSystemItemHiding == !nativeHiding)
+            #expect(settings.layout.enableNativeAppHiding == nativeHiding)
+            #expect(settings.layout.enableExperimentalSystemItemHiding == !nativeHiding)
         }
     }
 
@@ -71,7 +71,7 @@ struct SystemItemHidingCompatibilityTests {
         try withPrivateSettingsChangeCenter {
             Defaults.set(nativeHiding, forKey: .enableNativeAppHiding)
             Defaults.set(systemItemHiding, forKey: .enableExperimentalSystemItemHiding)
-            let settings = AdvancedSettings()
+            let settings = LayoutSettings()
 
             settings.loadInitialState()
 
@@ -85,7 +85,7 @@ struct SystemItemHidingCompatibilityTests {
         try withPrivateSettingsChangeCenter {
             Defaults.set(nativeHiding, forKey: .enableNativeAppHiding)
             Defaults.removeObject(forKey: .enableExperimentalSystemItemHiding)
-            let settings = AdvancedSettings()
+            let settings = LayoutSettings()
 
             settings.loadInitialState()
 
@@ -96,7 +96,7 @@ struct SystemItemHidingCompatibilityTests {
     @Test("A queued URI change for the switch changes nothing", arguments: [false, true])
     func queuedURIChangeRespectsCurrentMode(nativeHiding: Bool) throws {
         try withPrivateSettingsChangeCenter {
-            let settings = AdvancedSettings()
+            let settings = LayoutSettings()
             settings.enableNativeAppHiding = nativeHiding
 
             settings.handleExternalSettingsChange(Notification(

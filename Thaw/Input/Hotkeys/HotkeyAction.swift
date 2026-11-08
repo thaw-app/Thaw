@@ -21,7 +21,7 @@ nonisolated enum HotkeyAction: String, Codable, CaseIterable {
     // MARK: Menu Bar Items
 
     /// Summons the search panel, in the layout
-    /// AdvancedSettings.menuBarSearchPresentation asks for.
+    /// VisibilitySettings.menuBarSearchPresentation asks for.
     case searchMenuBarItems = "SearchMenuBarItems"
 
     /// Puts a letter under every item on the menu bar; typing one opens that
@@ -142,12 +142,12 @@ nonisolated enum HotkeyAction: String, Codable, CaseIterable {
     /// which Never keeps stored.
     @MainActor
     private func toggleRehiding(appState: AppState) {
-        let general = appState.settings.general
-        general.autoRehide.toggle()
+        let visibility = appState.settings.visibility
+        visibility.autoRehide.toggle()
         let choice = SimpleRehideChoice(
-            autoRehide: general.autoRehide,
-            strategy: general.rehideStrategy,
-            interval: general.rehideInterval
+            autoRehide: visibility.autoRehide,
+            strategy: visibility.rehideStrategy,
+            interval: visibility.rehideInterval
         )
         // The toggle has no visible effect until the next reveal, so
         // confirm the new state with a notification.

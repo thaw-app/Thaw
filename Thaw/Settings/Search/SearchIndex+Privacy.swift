@@ -57,7 +57,7 @@ nonisolated extension SearchIndex {
             pane: .privacy,
             section: "Network access",
             keywords: ["network", "release notes", "whats new", "what's new", "fetch", "changelog", "privacy", "offline"],
-            property: .advanced("fetchReleaseNotes")
+            property: .privacy("fetchReleaseNotes")
         ),
         SearchEntry(
             id: "privacy.showReleaseNotesAfterUpdate",
@@ -66,7 +66,7 @@ nonisolated extension SearchIndex {
             pane: .privacy,
             section: "Network access",
             keywords: ["release notes", "whats new", "what's new", "update", "changelog", "window", "after update"],
-            property: .advanced("showReleaseNotesAfterUpdate")
+            property: .privacy("showReleaseNotesAfterUpdate")
         ),
     ]
 }

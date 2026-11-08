@@ -20,8 +20,8 @@ final class ScreenCorners {
 
     func performSetup(with appState: AppState, displaySettlements: some Publisher<EnvironmentChange, Never>) {
         self.appState = appState
-        observationTask = Task { @MainActor [weak self, general = appState.settings.general] in
-            for await _ in Observations({ (general.roundScreenCorners, general.screenCornerRadius) }) {
+        observationTask = Task { @MainActor [weak self, appearance = appState.settings.appearance] in
+            for await _ in Observations({ (appearance.roundScreenCorners, appearance.screenCornerRadius) }) {
                 self?.reconcile()
             }
         }
@@ -34,8 +34,8 @@ final class ScreenCorners {
 
     private func reconcile() {
         removePanels()
-        guard let general = appState?.settings.general, general.roundScreenCorners else { return }
-        let radius = CGFloat(general.screenCornerRadius)
+        guard let appearance = appState?.settings.appearance, appearance.roundScreenCorners else { return }
+        let radius = CGFloat(appearance.screenCornerRadius)
         for screen in NSScreen.screens {
             for corner in Corner.allCases {
                 panels.append(makePanel(corner, radius: radius, on: screen))

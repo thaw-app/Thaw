@@ -13,7 +13,7 @@ import ThawUI
 
 struct ToolsSettingsPane: View {
     @Environment(AppState.self) private var appState
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: ToolsSettings
 
     @State private var currentLogFileName: String?
     @State private var pendingAction: MaintenanceToolAction?

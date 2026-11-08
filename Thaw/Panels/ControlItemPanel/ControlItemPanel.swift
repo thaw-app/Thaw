@@ -35,7 +35,7 @@ final class ControlItemPanelController: NSObject, NSPopoverDelegate {
     /// Whether the experiment is on. Read live, so the secondary click changes
     /// what it raises without a relaunch.
     var isEnabled: Bool {
-        appState?.settings.advanced.enableControlItemPanel ?? false
+        appState?.settings.widgets.enableControlItemPanel ?? false
     }
 
     var isShown: Bool {

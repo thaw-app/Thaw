@@ -22,7 +22,7 @@ nonisolated extension SearchIndex {
             pane: .tools,
             section: "Diagnostics",
             keywords: ["diagnostic", "logging", "debug", "logs", "troubleshoot", "tools"],
-            property: .advanced("enableDiagnosticLogging")
+            property: .tools("enableDiagnosticLogging")
         ),
         SearchEntry(
             id: "tools.resetAllSettings",

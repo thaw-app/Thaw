@@ -1,5 +1,5 @@
 //
-//  AdvancedSettingsSetupTests.swift
+//  SettingsPageModelTests.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
@@ -11,8 +11,8 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Advanced settings setup and observation", .serialized, .scratchDefaults)
-struct AdvancedSettingsSetupTests {
+@Suite("Settings page models", .serialized, .scratchDefaults)
+struct SettingsPageModelTests {
     /// Yields to the main actor until condition holds or a generous bound passes.
     private func waitUntil(_ condition: () -> Bool) async {
         let deadline = ContinuousClock.now.advanced(by: .seconds(10))
@@ -21,28 +21,38 @@ struct AdvancedSettingsSetupTests {
         }
     }
 
-    @Test("Setup loads the stored values and then follows Settings URI changes")
-    func setupLoadsAndFollowsURIChanges() async {
-        Defaults.set(7.0, forKey: .tooltipDelay)
-        let appState = AppState()
-        let settings = AdvancedSettings()
-
-        settings.performSetup(with: appState)
-        #expect(settings.tooltipDelay == 7)
-        #expect(settings.appState === appState)
-
+    private func postURIChange(_ key: String, _ value: Any, as field: String = "value") {
         NotificationCenter.default.post(
             name: .settingsDidChangeViaURI,
             object: nil,
-            userInfo: ["key": "tooltipDelay", "doubleValue": 4.5]
+            userInfo: ["key": key, field: value]
         )
+    }
+
+    @Test("Setup loads the stored values and then follows Settings URI changes")
+    func setupLoadsAndFollowsURIChanges() async {
+        Defaults.set(7.0, forKey: .tooltipDelay)
+        let settings = VisibilitySettings()
+
+        settings.performSetup()
+        #expect(settings.tooltipDelay == 7)
+
+        postURIChange("tooltipDelay", 4.5, as: "doubleValue")
         await waitUntil { settings.tooltipDelay == 4.5 }
         #expect(settings.tooltipDelay == 4.5)
     }
 
+    @Test("Layout keeps the app state it was set up with")
+    func layoutKeepsAppState() {
+        let appState = AppState()
+        let settings = LayoutSettings()
+        settings.performSetup(with: appState)
+        #expect(settings.appState === appState)
+    }
+
     @Test("Observing a flag delivers its current value, then each change")
     func observeDeliversChanges() async {
-        let settings = AdvancedSettings()
+        let settings = VisibilitySettings()
         settings.tooltipDelay = 1
         var seen: [Double] = []
 

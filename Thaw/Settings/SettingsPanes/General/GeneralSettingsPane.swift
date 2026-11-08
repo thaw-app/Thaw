@@ -11,7 +11,6 @@ import ThawUI
 
 struct GeneralSettingsPane: View {
     @Bindable var settings: GeneralSettings
-    @Bindable var advancedSettings: AdvancedSettings
     @State private var languageOverrideChanged = false
     @State private var relaunchErrorMessage: String?
 
@@ -28,8 +27,8 @@ struct GeneralSettingsPane: View {
                 thawIconOptions
             }
             ThawSection("Menu bar behavior") {
-                AppMenuHidingRow(settings: advancedSettings)
-                Toggle("Right-click the menu bar for the \(Constants.displayName) menu", isOn: $advancedSettings.enableSecondaryContextMenu)
+                AppMenuHidingRow(settings: settings)
+                Toggle("Right-click the menu bar for the \(Constants.displayName) menu", isOn: $settings.enableSecondaryContextMenu)
                     .annotation(
                         "Right-click an empty area of the menu bar to open a minimal version of \(Constants.displayName)'s menu. If macOS opens its own menu instead, hold Option as you right-click.",
                         more: "Turn this off if another app also uses right-clicks on the menu bar."
@@ -153,8 +152,7 @@ struct GeneralSettingsPane: View {
 #if DEBUG
     #Preview {
         GeneralSettingsPane(
-            settings: GeneralSettings(),
-            advancedSettings: AdvancedSettings()
+            settings: GeneralSettings()
         )
         .frame(width: 600, height: 500)
     }

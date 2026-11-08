@@ -18,7 +18,7 @@ nonisolated extension SearchIndex {
             pane: .menuBarAppearance,
             section: "Screen corners",
             keywords: ["corners", "rounded", "radius", "screen", "display"],
-            property: .general("roundScreenCorners")
+            property: .appearance("roundScreenCorners")
         ),
         SearchEntry(
             id: "appearance.isDynamic",

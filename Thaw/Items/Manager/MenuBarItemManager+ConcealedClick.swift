@@ -73,7 +73,7 @@ extension MenuBarItemManager {
         // the first one the owner reacts to, and start there next time.
         let identity = openMethodIdentity(for: item)
         let learned = LearnedOpenMethods.standard.method(for: identity)
-        let showInMenuBar = appState?.settings.general.openHiddenItemsInMenuBar ?? false
+        let showInMenuBar = appState?.settings.thawBar.openHiddenItemsInMenuBar ?? false
         for method in ConcealedItemOpenMethod.openMethodOrder(for: mouseButton, learned: learned, showInMenuBar: showInMenuBar) {
             let opened = switch method {
             case .pressInPlace, .showMenuInPlace:

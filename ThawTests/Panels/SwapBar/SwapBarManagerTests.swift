@@ -54,11 +54,11 @@ struct SwapBarManagerTests {
         let tmp = try ProfileTestDirectory.make(seeding: [])
         defer { try? FileManager.default.removeItem(at: tmp) }
         let appState = Self.makeAppState(profiles: tmp)
-        appState.settings.advanced.enableSwapBar = false
+        appState.settings.visibility.enableSwapBar = false
         let manager = makeManager()
         manager.performSetup(with: appState, displaySettlements: displaySettlements)
 
-        appState.settings.advanced.enableSwapBar = true
+        appState.settings.visibility.enableSwapBar = true
         await waitUntil { !recorder.presented.isEmpty }
 
         let panel = try #require(recorder.presented.first as? SwapBarPanel)
@@ -74,14 +74,14 @@ struct SwapBarManagerTests {
         let tmp = try ProfileTestDirectory.make(seeding: [])
         defer { try? FileManager.default.removeItem(at: tmp) }
         let appState = Self.makeAppState(profiles: tmp)
-        appState.settings.advanced.enableSwapBar = true
+        appState.settings.visibility.enableSwapBar = true
         let manager = makeManager()
         manager.performSetup(with: appState, displaySettlements: displaySettlements)
         await waitUntil { recorder.presented.count == 1 }
 
-        appState.settings.advanced.enableSwapBar = false
+        appState.settings.visibility.enableSwapBar = false
         await Task.yield()
-        appState.settings.advanced.enableSwapBar = true
+        appState.settings.visibility.enableSwapBar = true
         await waitUntil { recorder.presented.count == 2 }
 
         #expect(recorder.presented.count == 2)
@@ -94,7 +94,7 @@ struct SwapBarManagerTests {
         let tmp = try ProfileTestDirectory.make(seeding: [])
         defer { try? FileManager.default.removeItem(at: tmp) }
         let appState = Self.makeAppState(profiles: tmp)
-        appState.settings.advanced.enableSwapBar = true
+        appState.settings.visibility.enableSwapBar = true
         let manager = makeManager()
         manager.performSetup(with: appState, displaySettlements: displaySettlements)
         await waitUntil { !recorder.presented.isEmpty }
@@ -115,7 +115,7 @@ struct SwapBarManagerTests {
         let tmp = try ProfileTestDirectory.make(seeding: [])
         defer { try? FileManager.default.removeItem(at: tmp) }
         let appState = Self.makeAppState(profiles: tmp)
-        appState.settings.advanced.enableSwapBar = true
+        appState.settings.visibility.enableSwapBar = true
         let manager = makeManager()
         manager.performSetup(with: appState, displaySettlements: displaySettlements)
         await waitUntil { !recorder.pointerHandlers.isEmpty }

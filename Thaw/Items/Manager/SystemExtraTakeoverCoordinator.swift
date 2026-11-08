@@ -35,7 +35,7 @@ extension RuntimeSectionController: StandInSectionControlling {
 final class SystemExtraTakeoverCoordinator {
     let engine: SystemExtraTakeoverEngine
 
-    @ObservationIgnored private weak var settings: AdvancedSettings?
+    @ObservationIgnored private weak var settings: LayoutSettings?
     @ObservationIgnored private weak var controller: (any StandInSectionControlling)?
     @ObservationIgnored private var observationTasks: [Task<Void, Never>] = []
     @ObservationIgnored private var layoutSubscription: AnyCancellable?
@@ -82,7 +82,7 @@ final class SystemExtraTakeoverCoordinator {
 
     func start(
         controller: any StandInSectionControlling,
-        settings: AdvancedSettings,
+        settings: LayoutSettings,
         markKnown: @escaping (String) -> Void
     ) {
         self.controller = controller

@@ -41,7 +41,7 @@ enum LayoutDropCommit {
             )
             return true
         }
-        let systemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
+        let systemItemHiding = appState.settings.layout.enableExperimentalSystemItemHiding
         if drop.source == drop.target {
             let reorderable = systemItemHiding && LayoutBarPaddingView.allowsAnchoredSystemItemReordering(appState: appState)
             guard drop.target == .visible,

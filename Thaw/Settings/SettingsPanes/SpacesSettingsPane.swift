@@ -53,7 +53,7 @@ struct SpacesControlsContent: View {
 
     @ViewBuilder
     private var controls: some View {
-        SpaceIndicatorSection(settings: appState.settings.advanced)
+        SpaceIndicatorSection(settings: appState.settings.spaces)
         if presentation.isSupported {
             MenuBarHidingSection(
                 spaceID: activeSpaceID,
@@ -72,7 +72,7 @@ struct SpacesControlsContent: View {
 
 /// Turns on the menu bar item that names the active Space. It works without the per-Space controls.
 private struct SpaceIndicatorSection: View {
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: SpacesSettings
 
     var body: some View {
         ThawSection {

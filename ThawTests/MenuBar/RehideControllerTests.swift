@@ -271,11 +271,11 @@ struct LiveRehideEnvironmentTests {
     @Test("It reads the settings and answers every question without a set-up menu bar")
     func readsLiveState() async throws {
         let appState = AppState()
-        appState.settings.general.rehideStrategy = .focusedApp
-        appState.settings.general.rehideInterval = 7
+        appState.settings.visibility.rehideStrategy = .focusedApp
+        appState.settings.visibility.rehideInterval = 7
         let environment = RehideController.Environment.live(appState: appState)
         let expected = RehideController.Settings(
-            autoRehide: appState.settings.general.autoRehide,
+            autoRehide: appState.settings.visibility.autoRehide,
             strategy: .focusedApp,
             interval: 7
         )

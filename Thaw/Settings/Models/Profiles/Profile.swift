@@ -83,45 +83,45 @@ nonisolated struct GeneralSettingsSnapshot: Codable {
     )
 
     @MainActor
-    static func capture(from settings: GeneralSettings) -> GeneralSettingsSnapshot {
+    static func capture(from settings: AppSettings) -> GeneralSettingsSnapshot {
         GeneralSettingsSnapshot(
-            showThawIcon: settings.showThawIcon,
-            thawIcon: settings.thawIcon,
-            lastCustomThawIcon: settings.lastCustomThawIcon,
-            customThawIconIsTemplate: settings.customThawIconIsTemplate,
-            useThawBar: settings.useThawBar,
-            useThawBarOnlyOnNotchedDisplay: settings.useThawBarOnlyOnNotchedDisplay,
-            thawBarLocation: settings.thawBarLocation,
-            thawBarLocationOnHotkey: settings.thawBarLocationOnHotkey,
-            showOnClick: settings.showOnClick,
-            showOnHover: settings.showOnHover,
-            showOnScroll: settings.showOnScroll,
-            autoRehide: settings.autoRehide,
-            rehideStrategyRawValue: settings.rehideStrategy.rawValue,
-            rehideInterval: settings.rehideInterval,
-            tempShowInterval: settings.tempShowInterval
+            showThawIcon: settings.general.showThawIcon,
+            thawIcon: settings.general.thawIcon,
+            lastCustomThawIcon: settings.general.lastCustomThawIcon,
+            customThawIconIsTemplate: settings.general.customThawIconIsTemplate,
+            useThawBar: settings.thawBar.useThawBar,
+            useThawBarOnlyOnNotchedDisplay: settings.thawBar.useThawBarOnlyOnNotchedDisplay,
+            thawBarLocation: settings.thawBar.thawBarLocation,
+            thawBarLocationOnHotkey: settings.thawBar.thawBarLocationOnHotkey,
+            showOnClick: settings.visibility.showOnClick,
+            showOnHover: settings.visibility.showOnHover,
+            showOnScroll: settings.visibility.showOnScroll,
+            autoRehide: settings.visibility.autoRehide,
+            rehideStrategyRawValue: settings.visibility.rehideStrategy.rawValue,
+            rehideInterval: settings.visibility.rehideInterval,
+            tempShowInterval: settings.visibility.tempShowInterval
         )
     }
 
     @MainActor
-    func apply(to settings: GeneralSettings) {
-        settings.showThawIcon = showThawIcon
-        settings.lastCustomThawIcon = lastCustomThawIcon
-        settings.customThawIconIsTemplate = customThawIconIsTemplate
-        settings.thawIcon = thawIcon
-        settings.useThawBar = useThawBar
-        settings.useThawBarOnlyOnNotchedDisplay = useThawBarOnlyOnNotchedDisplay
-        settings.thawBarLocation = thawBarLocation
-        settings.thawBarLocationOnHotkey = thawBarLocationOnHotkey
-        settings.showOnClick = showOnClick
-        settings.showOnHover = showOnHover
-        settings.showOnScroll = showOnScroll
-        settings.autoRehide = autoRehide
+    func apply(to settings: AppSettings) {
+        settings.general.showThawIcon = showThawIcon
+        settings.general.lastCustomThawIcon = lastCustomThawIcon
+        settings.general.customThawIconIsTemplate = customThawIconIsTemplate
+        settings.general.thawIcon = thawIcon
+        settings.thawBar.useThawBar = useThawBar
+        settings.thawBar.useThawBarOnlyOnNotchedDisplay = useThawBarOnlyOnNotchedDisplay
+        settings.thawBar.thawBarLocation = thawBarLocation
+        settings.thawBar.thawBarLocationOnHotkey = thawBarLocationOnHotkey
+        settings.visibility.showOnClick = showOnClick
+        settings.visibility.showOnHover = showOnHover
+        settings.visibility.showOnScroll = showOnScroll
+        settings.visibility.autoRehide = autoRehide
         if let strategy = RehideStrategy(rawValue: rehideStrategyRawValue) {
-            settings.rehideStrategy = strategy
+            settings.visibility.rehideStrategy = strategy
         }
-        settings.rehideInterval = rehideInterval
-        settings.tempShowInterval = tempShowInterval
+        settings.visibility.rehideInterval = rehideInterval
+        settings.visibility.tempShowInterval = tempShowInterval
     }
 
     enum CodingKeys: String, CodingKey {
@@ -215,39 +215,39 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
     )
 
     @MainActor
-    static func capture(from settings: AdvancedSettings) -> AdvancedSettingsSnapshot {
+    static func capture(from settings: AppSettings) -> AdvancedSettingsSnapshot {
         AdvancedSettingsSnapshot(
-            enableAlwaysHiddenSection: settings.enableAlwaysHiddenSection,
-            showAllSectionsOnUserDrag: settings.showAllSectionsOnUserDrag,
-            sectionDividerStyle: settings.sectionDividerStyle.rawValue,
-            hideApplicationMenus: settings.hideApplicationMenus,
-            enableSecondaryContextMenu: settings.enableSecondaryContextMenu,
-            showOnHoverDelay: settings.showOnHoverDelay,
-            tooltipDelay: settings.tooltipDelay,
-            showMenuBarTooltips: settings.showMenuBarTooltips,
-            iconRefreshInterval: settings.iconRefreshInterval,
-            autoZenWhileSharingScreen: settings.autoZenWhileSharingScreen,
-            enableDiagnosticLogging: settings.enableDiagnosticLogging,
-            enableMenuBarItemOverflow: settings.enableMenuBarItemOverflow
+            enableAlwaysHiddenSection: settings.layout.enableAlwaysHiddenSection,
+            showAllSectionsOnUserDrag: settings.layout.showAllSectionsOnUserDrag,
+            sectionDividerStyle: settings.layout.sectionDividerStyle.rawValue,
+            hideApplicationMenus: settings.general.hideApplicationMenus,
+            enableSecondaryContextMenu: settings.general.enableSecondaryContextMenu,
+            showOnHoverDelay: settings.visibility.showOnHoverDelay,
+            tooltipDelay: settings.visibility.tooltipDelay,
+            showMenuBarTooltips: settings.visibility.showMenuBarTooltips,
+            iconRefreshInterval: settings.layout.iconRefreshInterval,
+            autoZenWhileSharingScreen: settings.visibility.autoZenWhileSharingScreen,
+            enableDiagnosticLogging: settings.tools.enableDiagnosticLogging,
+            enableMenuBarItemOverflow: settings.layout.enableMenuBarItemOverflow
         )
     }
 
     @MainActor
-    func apply(to settings: AdvancedSettings) {
-        settings.enableAlwaysHiddenSection = enableAlwaysHiddenSection
-        settings.showAllSectionsOnUserDrag = showAllSectionsOnUserDrag
+    func apply(to settings: AppSettings) {
+        settings.layout.enableAlwaysHiddenSection = enableAlwaysHiddenSection
+        settings.layout.showAllSectionsOnUserDrag = showAllSectionsOnUserDrag
         if let style = SectionDividerStyle(rawValue: sectionDividerStyle) {
-            settings.sectionDividerStyle = style
+            settings.layout.sectionDividerStyle = style
         }
-        settings.hideApplicationMenus = hideApplicationMenus
-        settings.enableSecondaryContextMenu = enableSecondaryContextMenu
-        settings.showOnHoverDelay = showOnHoverDelay
-        settings.tooltipDelay = tooltipDelay
-        settings.showMenuBarTooltips = showMenuBarTooltips
-        settings.iconRefreshInterval = iconRefreshInterval
-        settings.autoZenWhileSharingScreen = autoZenWhileSharingScreen
-        settings.enableDiagnosticLogging = enableDiagnosticLogging
-        settings.enableMenuBarItemOverflow = enableMenuBarItemOverflow
+        settings.general.hideApplicationMenus = hideApplicationMenus
+        settings.general.enableSecondaryContextMenu = enableSecondaryContextMenu
+        settings.visibility.showOnHoverDelay = showOnHoverDelay
+        settings.visibility.tooltipDelay = tooltipDelay
+        settings.visibility.showMenuBarTooltips = showMenuBarTooltips
+        settings.layout.iconRefreshInterval = iconRefreshInterval
+        settings.visibility.autoZenWhileSharingScreen = autoZenWhileSharingScreen
+        settings.tools.enableDiagnosticLogging = enableDiagnosticLogging
+        settings.layout.enableMenuBarItemOverflow = enableMenuBarItemOverflow
     }
 }
 

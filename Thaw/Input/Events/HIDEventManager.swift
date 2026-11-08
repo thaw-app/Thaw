@@ -62,7 +62,7 @@ final class HIDEventManager {
     var cancellables = Set<AnyCancellable>()
 
     /// Task observing GeneralSettings.showOnHover,
-    /// AdvancedSettings.showMenuBarTooltips and
+    /// VisibilitySettings.showMenuBarTooltips and
     /// DisplaySettingsManager.configurations, which are all @Observable.
     var hoverSettingsObservationTask: Task<Void, Never>?
 

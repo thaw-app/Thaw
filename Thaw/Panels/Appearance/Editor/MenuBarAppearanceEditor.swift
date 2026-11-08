@@ -187,7 +187,7 @@ struct MenuBarAppearanceEditor: View {
             }
         } footer: {
             VStack(alignment: .leading, spacing: ThawSpacing.tight) {
-                if case .settings = location, appState.settings.advanced.enableSecondaryContextMenu {
+                if case .settings = location, appState.settings.general.enableSecondaryContextMenu {
                     Text("Right-click an empty part of the menu bar to edit the look without opening Settings.")
                 }
             }
@@ -219,15 +219,15 @@ struct MenuBarAppearanceEditor: View {
 
     /// Corners are global across displays, unlike the per-appearance and per-Space menu bar look.
     private var screenCornersSection: some View {
-        @Bindable var general = appState.settings.general
+        @Bindable var corners = appState.settings.appearance
         return ThawSection {
             Text("Screen corners")
         } content: {
-            Toggle("Round screen corners", isOn: $general.roundScreenCorners)
-            if general.roundScreenCorners {
+            Toggle("Round screen corners", isOn: $corners.roundScreenCorners)
+            if corners.roundScreenCorners {
                 LabeledContent("Radius") {
-                    ThawSlider(value: $general.screenCornerRadius, in: 4 ... 24, step: 1) {
-                        Text("\(Int(general.screenCornerRadius)) pt")
+                    ThawSlider(value: $corners.screenCornerRadius, in: 4 ... 24, step: 1) {
+                        Text("\(Int(corners.screenCornerRadius)) pt")
                     }
                 }
             }
