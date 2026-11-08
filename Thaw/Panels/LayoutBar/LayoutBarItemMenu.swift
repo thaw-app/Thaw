@@ -114,7 +114,7 @@ enum LayoutBarItemMenu {
             ClosureMenuItem(title: String(localized: "Set Shortcut…")) {
                 SettingsSearchNavigation.selectSidebarPane(.hotkeys, navigationState: appState.navigationState)
                 appState.prepareSettingsPresentation()
-                appState.activate(withPolicy: .regular)
+                appState.activate(withPolicy: appState.userWindowActivationPolicy)
                 appState.openWindow(.settings)
             }
         )

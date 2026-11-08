@@ -67,7 +67,7 @@ extension MenuBarSearchPanel {
         let keyCode = KeyCode(rawValue: Int(event.keyCode))
         if keyCode == .comma {
             close()
-            appState?.activate(withPolicy: .regular)
+            appState?.activate(withPolicy: appState?.userWindowActivationPolicy)
             appState?.openWindow(.settings)
             return nil
         }

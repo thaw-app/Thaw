@@ -45,6 +45,8 @@ struct GeneralSettingsPane: View {
         LaunchAtLoginRow()
         Toggle("Simple Mode", isOn: $settings.simpleMode)
             .annotation("Shows only the essential settings, with a preview of your sections. Everything else keeps working as you set it.")
+        Toggle("Show Dock icon while Settings is open", isOn: $settings.showDockIconWithSettings)
+            .annotation("Off, \(Constants.displayName) stays out of the Dock and its recent apps.")
     }
 
     // MARK: Theme

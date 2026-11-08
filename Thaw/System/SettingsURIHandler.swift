@@ -58,27 +58,7 @@ enum SettingsURIHandler {
     }
 
     /// Unset keys read registered Defaults values; SettingsURIKeyTableTests ensures every global table key is registered.
-    static let keyTable: [String: SettingURIEntry] = [
-        // MARK: - General
-
-        "showThawIcon": SettingURIEntry(defaultsKey: .showThawIcon, kind: .boolean, isWritable: true),
-        "customThawIconIsTemplate": SettingURIEntry(defaultsKey: .customThawIconIsTemplate, kind: .boolean, isWritable: true),
-        "simpleMode": SettingURIEntry(defaultsKey: .simpleMode, kind: .boolean, isWritable: true),
-        "showSettingDescriptions": SettingURIEntry(defaultsKey: .showSettingDescriptions, kind: .boolean, isWritable: true),
-        "blackSettingsBackground": SettingURIEntry(defaultsKey: .blackSettingsBackground, kind: .boolean, isWritable: true),
-        "lockThawBarPosition": SettingURIEntry(defaultsKey: .lockThawBarPosition, kind: .boolean, isWritable: true),
-        "openHiddenItemsInMenuBar": SettingURIEntry(defaultsKey: .openHiddenItemsInMenuBar, kind: .boolean, isWritable: true),
-        "useThawBarOnlyOnNotchedDisplay": SettingURIEntry(defaultsKey: .useThawBarOnlyOnNotchedDisplay, kind: .boolean, isWritable: true),
-        "thawBarLocationOnHotkey": SettingURIEntry(defaultsKey: .thawBarLocationOnHotkey, kind: .boolean, isWritable: true),
-        "showOnClick": SettingURIEntry(defaultsKey: .showOnClick, kind: .boolean, isWritable: true),
-        "showOnHover": SettingURIEntry(defaultsKey: .showOnHover, kind: .boolean, isWritable: true),
-        "showOnScroll": SettingURIEntry(defaultsKey: .showOnScroll, kind: .boolean, isWritable: true),
-        "autoRehide": SettingURIEntry(defaultsKey: .autoRehide, kind: .boolean, isWritable: true),
-        "rehideInterval": SettingURIEntry(defaultsKey: .rehideInterval, kind: .double(min: 1, max: 300), isWritable: true),
-        "tempShowInterval": SettingURIEntry(defaultsKey: .tempShowInterval, kind: .double(min: 0, max: 30), isWritable: true),
-        "rehideStrategy": SettingURIEntry(defaultsKey: .rehideStrategy, kind: .enumeration, isWritable: true),
-        "settingsAppearance": SettingURIEntry(defaultsKey: .settingsAppearance, kind: .enumeration, isWritable: true),
-
+    static let keyTable: [String: SettingURIEntry] = generalKeyTable.merging([
         // MARK: - Advanced
 
         "enableAlwaysHiddenSection": SettingURIEntry(defaultsKey: .enableAlwaysHiddenSection, kind: .boolean, isWritable: true),
@@ -109,7 +89,7 @@ enum SettingsURIHandler {
         "enableDesktopMenuHiding": SettingURIEntry(defaultsKey: .enableDesktopMenuHiding, kind: .boolean, isWritable: true),
 
         // MARK: - Search
-    ]
+    ]) { general, _ in general }
 
     /// Derived from keyTable so the allow-lists can never disagree with it.
     static var supportedBooleanKeys: [String] {

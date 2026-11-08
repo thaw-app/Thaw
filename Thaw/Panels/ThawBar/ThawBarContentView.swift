@@ -283,7 +283,7 @@ struct ThawBarContentView: View {
     private func openPermissionsSettings() {
         menuBarManager.section(withName: section)?.hide()
         appState.navigationState.settingsNavigationIdentifier = .privacy
-        appState.activate(withPolicy: .regular)
+        appState.activate(withPolicy: appState.userWindowActivationPolicy)
         appState.openWindow(.settings)
     }
 

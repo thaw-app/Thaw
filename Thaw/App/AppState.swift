@@ -306,7 +306,7 @@ final class AppState {
                 // The delegate is still inside its launch callback here;
                 // changing the activation policy out from under it races.
                 try? await Task.sleep(for: .milliseconds(100))
-                activate(withPolicy: .regular)
+                activate(withPolicy: userWindowActivationPolicy)
                 dismissWindow(.settings)
                 openWindow(.permissions)
             }
@@ -342,7 +342,7 @@ final class AppState {
         guard hasPermissions else { return }
 
         Task {
-            activate(withPolicy: .regular)
+            activate(withPolicy: userWindowActivationPolicy)
             openWindow(.settings)
         }
     }
@@ -383,7 +383,7 @@ final class AppState {
         Task {
             let allowFetch = settings.privacy.fetchReleaseNotes
             guard await ChangelogDocument.load(allowFetch: allowFetch, info: .thaw).document?.newestRelease != nil else { return }
-            activate(withPolicy: .regular)
+            activate(withPolicy: userWindowActivationPolicy)
             openWindow(.whatsNew)
         }
     }
@@ -574,7 +574,7 @@ final class AppState {
 
             if self.openWindows.contains(id) {
                 self.diagLog.debug("Window \(id) already open (openWindows=\(self.openWindows)), activating existing window")
-                self.activate(withPolicy: .regular)
+                self.activate(withPolicy: userWindowActivationPolicy)
                 return
             }
             self.diagLog.debug("openWindow(\(id)) proceeding, openWindows=\(self.openWindows)")
@@ -589,7 +589,7 @@ final class AppState {
             openWindowAction(id: id)
 
             try? await Task.sleep(for: .milliseconds(100))
-            self.activate(withPolicy: .regular)
+            self.activate(withPolicy: userWindowActivationPolicy)
         }
     }
 

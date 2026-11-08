@@ -191,7 +191,7 @@ enum MenuBarSearchItemActions {
     /// Opens the pane the item's placement is edited in.
     static func openSettings(appState: AppState) {
         SettingsSearchNavigation.selectSidebarPane(.menuBarLayout, navigationState: appState.navigationState)
-        appState.activate(withPolicy: .regular)
+        appState.activate(withPolicy: appState.userWindowActivationPolicy)
         appState.openWindow(.settings)
     }
 
