@@ -32,7 +32,6 @@ final class AppearanceSettings: SettingsPageModel {
         loadInitialState()
     }
 
-    /// Reads the stored values.
     func loadInitialState() {
         Defaults.ifPresent(key: .roundScreenCorners, assign: &roundScreenCorners)
         Defaults.ifPresent(key: .screenCornerRadius, assign: &screenCornerRadius)

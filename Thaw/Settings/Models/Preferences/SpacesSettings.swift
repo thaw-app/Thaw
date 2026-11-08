@@ -29,17 +29,14 @@ final class SpacesSettings: SettingsURIHandling {
         settingsURIChanges = subscribeToSettingsURIChanges()
     }
 
-    /// Reads the stored values.
     func loadInitialState() {
         Defaults.ifPresent(key: .showSpaceIndicator, assign: &showSpaceIndicator)
     }
 
-    /// The thaw:// keys of this page's Bool settings.
     private static let uriBoolKeys: [String: ReferenceWritableKeyPath<SpacesSettings, Bool>] = [
         "showSpaceIndicator": \.showSpaceIndicator,
     ]
 
-    /// Applies a thaw:// settings change for one of this page's keys.
     func handleExternalSettingsChange(_ notification: Notification) {
         applySettingsURIChange(notification, bools: Self.uriBoolKeys)
     }
