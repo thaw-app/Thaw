@@ -64,4 +64,31 @@ struct SettingsPageModelTests {
 
         #expect(seen == [1, 2])
     }
+
+    @Test("A Settings URI change for a moved key reaches the model that now holds it")
+    func movedKeysFollowURIChanges() async {
+        let settings = AppSettings()
+        settings.performSetup(with: AppState())
+        let flips: [(key: String, read: () -> Bool)] = [
+            ("enableAlwaysHiddenSection", { settings.layout.enableAlwaysHiddenSection }),
+            ("showOnClick", { settings.visibility.showOnClick }),
+            ("enableSwapBar", { settings.visibility.enableSwapBar }),
+            ("lockThawBarPosition", { settings.thawBar.lockThawBarPosition }),
+            ("hideApplicationMenus", { settings.general.hideApplicationMenus }),
+            ("fetchReleaseNotes", { settings.privacy.fetchReleaseNotes }),
+            ("showSpaceIndicator", { settings.spaces.showSpaceIndicator }),
+            ("enableDiagnosticLogging", { settings.tools.enableDiagnosticLogging }),
+            ("enableControlItemPanel", { settings.widgets.enableControlItemPanel }),
+        ]
+        for flip in flips {
+            let wanted = !flip.read()
+            postURIChange(flip.key, wanted)
+            await waitUntil { flip.read() == wanted }
+            #expect(flip.read() == wanted, "\(flip.key) did not follow its Settings URI change")
+        }
+
+        postURIChange("rehideStrategy", RehideStrategy.timed.rawValue, as: "rawEnumValue")
+        await waitUntil { settings.visibility.rehideStrategy == .timed }
+        #expect(settings.visibility.rehideStrategy == .timed)
+    }
 }
