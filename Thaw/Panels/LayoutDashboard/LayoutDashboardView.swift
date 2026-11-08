@@ -68,7 +68,8 @@ struct LayoutDashboardView: View {
                         scope: $model.scope,
                         isEditable: model.pin.isEditable,
                         showEditor: { model.sidePane = .item },
-                        close: { NSApp.keyWindow?.performClose(nil) }
+                        close: { NSApp.keyWindow?.performClose(nil) },
+                        filterAnchor: { model.filterAnchor = $0 }
                     )
                     .frame(
                         minWidth: LayoutDashboardMetrics.listMinWidth,

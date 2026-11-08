@@ -23,8 +23,12 @@ struct LayoutItemListPane: View {
     let showEditor: () -> Void
     /// Escape with an empty filter.
     var close: () -> Void = {}
+    /// Gets the view behind the filter field, so the window can tell when the filter is being typed in.
+    var filterAnchor: (NSView) -> Void = { _ in }
 
     @State private var anchors = LayoutItemListAnchors()
+    /// Bumped when an item changes section, which the item cache doesn't always reflect.
+    @State private var membershipRevision = 0
     @State private var pageSize = 10
     @FocusState private var isFocused: Bool
 
@@ -32,6 +36,7 @@ struct LayoutItemListPane: View {
         // Reading the item cache and the names' revision keeps the list current as the bar changes or an item is renamed.
         _ = appState.itemManager.itemCache
         _ = MenuBarItemCustomNamesRevision.shared.value
+        _ = membershipRevision
         let enabled = LayoutItemList.enabledSections(appState: appState)
         let shownScope = scope.section.map(enabled.contains) ?? true ? scope : .all
         let sections = LayoutItemList.sections(appState: appState, query: query, scope: shownScope)
@@ -39,6 +44,7 @@ struct LayoutItemListPane: View {
         return VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: ThawSpacing.base) {
                 SettingsFilterField(prompt: "Filter items", clearLabel: "Clear filter", text: $query)
+                    .background(LayoutFilterAnchor(register: filterAnchor))
                 HStack(spacing: ThawSpacing.base) {
                     ThawPillPicker(
                         "Show",
@@ -56,6 +62,10 @@ struct LayoutItemListPane: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Menu bar items")
+        // The bars rebuild on the same signal; the next turn reads the committed assignment.
+        .onReceive(appState.menuBarManager.sectionLayoutChanges.receive(on: RunLoop.main)) { _ in
+            membershipRevision &+= 1
+        }
         .onChange(of: query) {
             guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
             AccessibilityAnnouncements.post(LayoutItemListText.count(rows.count, isFiltered: true))
@@ -77,7 +87,11 @@ struct LayoutItemListPane: View {
                                 anchors: anchors,
                                 isEditable: isEditable,
                                 showsSectionBadge: section.name == nil || row.section == .alwaysHidden,
-                                onTap: { isFocused = true }
+                                onTap: {
+                                    // A click on a row leaves the filter, so Escape and the arrows reach the list.
+                                    NSApp.keyWindow?.makeFirstResponder(nil)
+                                    isFocused = true
+                                }
                             )
                             .id(row.id)
                         }
@@ -352,4 +366,17 @@ enum LayoutItemListText {
     private static func inflected(_ text: AttributedString) -> String {
         String(text.characters)
     }
+}
+
+/// An empty view behind the filter field that reports itself, for LayoutDashboardKeys.isEditingFilter.
+struct LayoutFilterAnchor: NSViewRepresentable {
+    let register: (NSView) -> Void
+
+    func makeNSView(context _: Context) -> NSView {
+        let view = NSView()
+        register(view)
+        return view
+    }
+
+    func updateNSView(_: NSView, context _: Context) {}
 }

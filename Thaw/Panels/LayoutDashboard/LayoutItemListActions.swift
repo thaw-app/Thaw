@@ -79,9 +79,21 @@ enum LayoutItemListDrop {
         _ = provider.loadDataRepresentation(forTypeIdentifier: type.identifier) { data, _ in
             let text = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
             let ids = text.split(separator: "\n").map(String.init)
-            Task { @MainActor in perform(ids) }
+            Task { @MainActor in
+                await afterMouseUp()
+                perform(ids)
+            }
         }
         return true
+    }
+
+    /// Returns once no mouse button is down. The drop arrives before the drag's mouse-up is
+    /// handled, and a menu bar move started then reaches the store but the bar doesn't follow.
+    static func afterMouseUp(pressedButtons: () -> Int = { NSEvent.pressedMouseButtons }) async {
+        while pressedButtons() != 0 {
+            try? await Task.sleep(for: .milliseconds(30))
+        }
+        await Task.yield()
     }
 
     static func drop(_ ids: [String], before row: LayoutItemListRow, selection: LayoutSelectionModel, appState: AppState) {
