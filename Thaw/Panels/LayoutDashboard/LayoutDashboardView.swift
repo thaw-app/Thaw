@@ -45,7 +45,7 @@ struct LayoutDashboardView: View {
     }
 }
 
-/// Target, filter, capture and undo, in the order the plan lays them out.
+/// The window toolbar: target, filter, capture and undo.
 private struct LayoutDashboardToolbar: View {
     let model: LayoutDashboardModel
 
