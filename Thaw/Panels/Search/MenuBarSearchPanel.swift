@@ -37,6 +37,9 @@ final class MenuBarSearchPanel: NSPanel {
     /// The display the panel opened on, where an opened item is clicked.
     private var displayID: CGDirectDisplayID?
 
+    /// Refreshes the item pictures after the panel shows; cancelled on close.
+    private var pictureRefresh: Task<Void, Never>?
+
     /// The actions button the actions menu hangs from. Weak because the
     /// hosting view owns it.
     weak var itemActionsAnchor: NSView?
@@ -270,6 +273,23 @@ final class MenuBarSearchPanel: NSPanel {
 
         outsideClickMonitor.start()
         shortcutMonitor.start()
+
+        // Off the opening path, so the panel shows at once and rows fill in.
+        pictureRefresh?.cancel()
+        pictureRefresh = Task { [weak appState] in
+            guard let appState else { return }
+            await appState.itemManager.cacheItemsIfNeeded()
+            guard !Task.isCancelled else { return }
+            await appState.imageCache.recaptureIfWarranted()
+        }
+    }
+
+    /// Reads the highlighted row to VoiceOver after a key moved it.
+    func announceSelection() {
+        guard NSWorkspace.shared.isVoiceOverEnabled, let result = model.selectedResult else {
+            return
+        }
+        AccessibilityAnnouncements.post(MenuBarSearchAnnouncement.row(result))
     }
 
     /// Resizes the window for the panel collapsing to its field or opening,
@@ -294,6 +314,8 @@ final class MenuBarSearchPanel: NSPanel {
     }
 
     override func close() {
+        pictureRefresh?.cancel()
+        pictureRefresh = nil
         if !keepsQuery {
             model.searchText = ""
         }

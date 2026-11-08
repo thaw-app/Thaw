@@ -106,6 +106,9 @@ private struct MenuBarSearchContentView: View {
         .onChange(of: model.searchText) {
             refresh()
             model.selectFirstRow()
+            if NSWorkspace.shared.isVoiceOverEnabled, !model.searchText.isEmpty {
+                AccessibilityAnnouncements.post(MenuBarSearchAnnouncement.results(model.results))
+            }
         }
         .onChange(of: itemManager.itemCache, initial: true) {
             // The inventory is derived from this cache, so it dies with it.

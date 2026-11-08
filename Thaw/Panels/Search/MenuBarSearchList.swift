@@ -34,6 +34,8 @@ struct MenuBarSearchList: View {
 /// a field in the name's place.
 private struct MenuBarSearchRow: View {
     @Environment(MenuBarSearchModel.self) private var model
+    /// Grows with Larger Text, as the row's text does.
+    @ScaledMetric(relativeTo: .body) private var rowHeight = PanelRow.height
 
     let result: MenuBarSearchResult
     let selected: Bool
@@ -63,7 +65,7 @@ private struct MenuBarSearchRow: View {
             }
         }
         .padding(.horizontal, PanelRow.inset)
-        .frame(minHeight: PanelRow.height)
+        .frame(minHeight: rowHeight)
         .modifier(SearchRowBackground(selected: selected))
         .accessibilityElement(children: isRenaming ? .contain : .combine)
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
@@ -76,6 +78,8 @@ private struct MenuBarSearchRow: View {
 /// one-colour picture takes the row's ink, so a white glyph stays readable.
 private struct MenuBarSearchItemImage: View {
     @Environment(AppState.self) private var appState
+    /// Grows with Larger Text. Menu bar pictures don't: scaling them up blurs them.
+    @ScaledMetric(relativeTo: .body) private var iconBox = PanelRow.iconBox
 
     /// A menu bar glyph's height, so pictures sit in the row as on the bar.
     private static let glyphHeight: CGFloat = 18
@@ -108,10 +112,10 @@ private struct MenuBarSearchItemImage: View {
                 )
                 .foregroundStyle(.primary)
             } else {
-                MenuBarItemSourceIcon(item: item, length: PanelRow.iconBox)
+                MenuBarItemSourceIcon(item: item, length: iconBox)
             }
         }
-        .frame(minWidth: PanelRow.iconBox, minHeight: PanelRow.iconBox)
+        .frame(minWidth: iconBox, minHeight: iconBox)
     }
 }
 
