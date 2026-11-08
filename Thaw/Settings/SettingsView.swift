@@ -259,11 +259,11 @@ struct SettingsView: View {
             ProfileSettingsPane(profileManager: appState.profileManager)
         case .hotkeys:
             HotkeysSettingsPane(settings: appState.settings.hotkeys)
-        case .automation, .triggers:
+        case .triggers:
             TriggersSettingsPane()
-        case .displays, .spaces:
+        case .displays:
             DisplaySettingsPane(displaySettings: appState.settings.displaySettings)
-        case .general, .theLab:
+        case .general:
             GeneralSettingsPane(
                 settings: appState.settings.general,
                 advancedSettings: appState.settings.advanced
@@ -281,9 +281,6 @@ struct SettingsView: View {
             ThawAboutPane(updatesManager: appState.updatesManager)
         case .scripts:
             ScriptsSettingsPane()
-        case .advanced:
-            // Advanced was dissolved, so a saved pane that names it opens Layout.
-            MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
         }
     }
 }

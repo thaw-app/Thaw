@@ -111,12 +111,6 @@ final class AppNavigationState {
 
     var settingsNavigationIdentifier: SettingsNavigationIdentifier = .general {
         didSet {
-            // Observation routes this assignment back through didSet, which then saves it.
-            let destination = settingsNavigationIdentifier.destination
-            guard destination == settingsNavigationIdentifier else {
-                settingsNavigationIdentifier = destination
-                return
-            }
             // A search sets its section after the page, so only a section left from another page is dropped.
             if settingsNavigationIdentifier != oldValue {
                 requestedSettingsSection = nil
@@ -132,10 +126,7 @@ final class AppNavigationState {
         updateCaptureUIState()
         // Restore the full window's last pane for returning from Simple Mode; init assignment does not persist via didSet.
         // Ignore panes no longer in the sidebar so selection and detail stay connected.
-        if let rawValue = Defaults.string(forKey: .lastSettingsPane),
-           let pane = SettingsNavigationIdentifier(rawValue: rawValue)?.destination,
-           SettingsSidebarPanes.all.contains(pane)
-        {
+        if let rawValue = Defaults.string(forKey: .lastSettingsPane), let pane = SettingsNavigationIdentifier(storedValue: rawValue), SettingsSidebarPanes.all.contains(pane) {
             settingsNavigationIdentifier = pane
         }
         // Panes hidden by the old customizable sidebar show again.

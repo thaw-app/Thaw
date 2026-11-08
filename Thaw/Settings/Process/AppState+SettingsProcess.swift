@@ -27,7 +27,7 @@ extension AppState {
             },
             openInApp: { [weak self] pane in self?.openSettingsInApp(pane: pane) },
             pageChanged: { [weak self] pane in
-                if let identifier = SettingsNavigationIdentifier(rawValue: pane) {
+                if let identifier = SettingsNavigationIdentifier(storedValue: pane) {
                     self?.navigationState.settingsNavigationIdentifier = identifier
                 }
             },
@@ -44,7 +44,7 @@ extension AppState {
 
     /// A pane the settings process handed back because it needs the running app.
     private func openSettingsInApp(pane: String) {
-        if let identifier = SettingsNavigationIdentifier(rawValue: pane) {
+        if let identifier = SettingsNavigationIdentifier(storedValue: pane) {
             navigationState.settingsNavigationIdentifier = identifier
         }
         openWindow(.settings, allowSettingsProcess: false)
