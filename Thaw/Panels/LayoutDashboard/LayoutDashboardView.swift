@@ -97,7 +97,7 @@ struct LayoutDashboardView: View {
     }
 }
 
-/// The window toolbar: what it edits, then capture and undo.
+/// The window toolbar: what it edits and a WIP badge, then capture and undo.
 private struct LayoutDashboardToolbar: ToolbarContent {
     let model: LayoutDashboardModel
 
@@ -112,6 +112,10 @@ private struct LayoutDashboardToolbar: ToolbarContent {
             }
             .help("The display and Space this window edits.")
         }
+        ToolbarItem(placement: .navigation) {
+            ThawBadge.workInProgress
+        }
+        .sharedBackgroundVisibility(.hidden)
         ToolbarItem(placement: .primaryAction) {
             HiddenItemCaptureButton()
         }
