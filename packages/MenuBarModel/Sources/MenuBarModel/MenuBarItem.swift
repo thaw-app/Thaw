@@ -424,13 +424,13 @@ extension MenuBarItem: Hashable {
 extension MenuBarItem {
     /// Splits a camel-cased name into words, as in "TimeMachine" to "Time Machine". A single lowercase letter before a capital stays joined ("WiFi").
     static func titleCased(_ s: some StringProtocol) -> String {
-        String(s).replacing(/([a-z]{2})([A-Z])/) { $0.output.1 + " " + $0.output.2 }
+        String(s).replacing(TagRegex.camelBoundary) { $0.output.1 + " " + $0.output.2 }
     }
 
     /// A SystemUIServer item's name. On macOS 27 Time Machine's live title can be
     /// a bare "Item-0", so its identity in the tag names it when the title doesn't.
     static func systemUIServerDisplayName(title: String, tagTitle: String) -> String {
-        if let match = title.firstMatch(of: /TimeMachine/) ?? tagTitle.firstMatch(of: /TimeMachine/) {
+        if let match = title.firstMatch(of: TagRegex.timeMachine) ?? tagTitle.firstMatch(of: TagRegex.timeMachine) {
             return titleCased(match.output)
         }
         return titleCased(title)
