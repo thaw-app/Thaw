@@ -26,6 +26,12 @@ extension MenuBarItemImageCache {
             && BarSettling.isWithin(revealedSettleWindow, of: lastRevealChange, now: now)
     }
 
+    /// Whether a capture pass is skipped because the bar is mid-reflow. After
+    /// maximumReflowSkips skips in a row the next pass runs regardless.
+    static nonisolated func skipsPassForReflow(reflowing: Bool, consecutiveSkips: Int) -> Bool {
+        reflowing && consecutiveSkips < maximumReflowSkips
+    }
+
     /// Waits, within the reveal settle budget, for items' icons to stop moving. Their frames are read fresh,
     /// since the cache can still hold where they were parked; with none on the bar there is nothing to wait for.
     func settleRevealedSection(

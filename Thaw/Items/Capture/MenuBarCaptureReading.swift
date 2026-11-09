@@ -114,7 +114,12 @@ nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
                 ambiguous.insert(candidate.item.uniqueIdentifier)
                 MenuBarItemImageCache.diagLog.debug(Self.ownershipTrace(of: candidate, match: match, in: snapshot))
             case .unavailable:
-                if let frame = await drawnFrame(for: candidate, owner: owner, snapshot: snapshot, drawn: &drawn) {
+                let siblings = candidates
+                    .filter { ($0.item.sourcePID ?? $0.item.ownerPID) == owner && $0.item.uniqueIdentifier != candidate.item.uniqueIdentifier }
+                    .map(\.bounds)
+                if Self.drawnBarDistinguishes(candidate.bounds, from: siblings),
+                   let frame = await drawnFrame(for: candidate, owner: owner, snapshot: snapshot, drawn: &drawn)
+                {
                     bounds[candidate.item.uniqueIdentifier] = frame
                     continue
                 }
@@ -141,6 +146,12 @@ nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
             "CaptureOwnershipTrace: \(candidate.item.uniqueIdentifier) placed at \(frame) from MenuBarAgent's drawn bar"
         )
         return frame
+    }
+
+    /// Whether the drawn bar can tell an item at bounds from the same app's other items. It matches on
+    /// horizontal place alone, so same-width items could stand in for each other; no picture beats a wrong one.
+    static func drawnBarDistinguishes(_ bounds: CGRect, from siblings: [CGRect]) -> Bool {
+        !siblings.contains { abs($0.width - bounds.width) <= 1 }
     }
 
     /// Says why the catalog could not vouch for a candidate's frame.

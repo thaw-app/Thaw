@@ -162,7 +162,7 @@ extension MenuBarItemImageCache {
         let generation = diskLoadGeneration
         diskLoadTask = Task.detached(priority: .background) { [weak self] in
             guard let self else { return }
-            guard let file = self.diskStore.readSaveFile() else { return }
+            guard let file = await self.diskStore.readSaveFileAfterQueuedWork() else { return }
 
             let (classifications, occupiedIdentifiers) = await MainActor.run {
                 (

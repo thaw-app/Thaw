@@ -38,6 +38,14 @@ struct DrawnBarFrameTests {
         #expect(AXGeometryCatalog.drawnFrame(ownerPID: 919, bounds: bounds, in: drawn) == nil)
     }
 
+    @Test("An item with a same-width sibling from its app is not placed from the drawn bar")
+    func sameWidthSiblings() {
+        let bounds = CGRect(x: 1600, y: 3, width: 38, height: 24)
+        #expect(LiveMenuBarCaptureReader.drawnBarDistinguishes(bounds, from: []))
+        #expect(LiveMenuBarCaptureReader.drawnBarDistinguishes(bounds, from: [CGRect(x: 1500, y: 3, width: 60, height: 24)]))
+        #expect(!LiveMenuBarCaptureReader.drawnBarDistinguishes(bounds, from: [CGRect(x: 1500, y: 3, width: 38.5, height: 24)]))
+    }
+
     @Test("No entry of the owner at the item's place leaves it unplaced")
     func noMatch() {
         let bounds = CGRect(x: 1600, y: 3, width: 38, height: 24)
