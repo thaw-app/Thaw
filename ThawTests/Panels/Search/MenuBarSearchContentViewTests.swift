@@ -91,6 +91,26 @@ struct MenuBarSearchContentViewTests {
         #expect(withoutAlwaysHidden.first?.section == String(localized: "Recent"))
     }
 
+    @Test("An item caught mid-move in two sections is listed once, so the arrows don't stall on it")
+    func duplicateRowIsListedOnce() {
+        let alpha = World.item("Alpha")
+        let beta = World.item("Beta")
+        var cache = MenuBarItemCache(displayID: nil)
+        // The cache can hold the same item in its old and new section until the move settles.
+        cache[.visible] = [alpha]
+        cache[.hidden] = [alpha, beta]
+        let candidates = [alpha, beta].map {
+            PaletteCandidate(item: $0, displayName: $0.title ?? "", ownerName: "", identityKey: $0.uniqueIdentifier)
+        }
+
+        let results = MenuBarSearchModel.grouped([], in: cache, sections: MenuBarSection.Name.allCases, candidates: candidates)
+
+        #expect(results.map(\.id) == [alpha, beta].map(Self.itemID))
+        #expect(results.first?.section == MenuBarSection.Name.visible.localizedName, "the first listing keeps its place")
+        #expect(Set(results.map(\.id)).count == results.count)
+        #expect(PaletteCandidate.inventory(from: cache).count == 2, "and the palette offers it once too")
+    }
+
     @Test("A query lists the ranked matches, highlighting the best")
     func queryRanks() async {
         let alpha = World.item("Alpha")

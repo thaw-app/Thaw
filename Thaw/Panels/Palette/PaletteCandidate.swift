@@ -56,7 +56,9 @@ extension PaletteCandidate {
     }
 
     static func inventory(from cache: MenuBarItemCache) -> [PaletteCandidate] {
-        let items = cache.managedItems.filter(\.isUserActionable)
+        // One candidate per item: an item caught mid-move can sit in two cached
+        // sections, and a second candidate would list and scroll the same row twice.
+        let items = cache.managedItems.filter(\.isUserActionable).uniqued(on: \.uniqueIdentifier)
         // Menu bar order breaks equal-rank ties left to right.
         let ordered = items.sorted { $0.bounds.minX < $1.bounds.minX }
         return ordered.map { item in

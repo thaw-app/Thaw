@@ -9,9 +9,22 @@ import AppKit
 import ThawUI
 
 extension MenuBarSearchPanel {
+    /// Whether a result row shows. Compact collapsed to its field shows none, so keys that act on the
+    /// highlighted row pass through.
+    var showsAResultRow: Bool {
+        !(presentation.isCollapsed(query: model.searchText) && model.renameSession == nil)
+    }
+
+    /// Whether an input method, such as Japanese or Chinese, is composing in the field. Its composition
+    /// owns Return, the arrows and Escape, so every key passes through until it ends.
+    var isComposingText: Bool {
+        (firstResponder as? NSTextView)?.hasMarkedText() ?? false
+    }
+
     /// The one place the panel's keys are read, as in Floe: a second handler
     /// wrote a stale highlight back on held-arrow repeats. Nil when handled.
     func handleKeyDown(_ event: NSEvent) -> NSEvent? {
+        guard !isComposingText else { return event }
         if handleListMove(event) || handleSectionJump(event) || handleReturn(event) {
             return nil
         }
@@ -23,7 +36,7 @@ extension MenuBarSearchPanel {
     private func handleReturn(_ event: NSEvent) -> Bool {
         let key = KeyCode(rawValue: Int(event.keyCode))
         guard
-            event.window === self, model.renameSession == nil, key == .returnKey || key == .keypadEnter, Modifiers(nsEventFlags: event.modifierFlags).isEmpty, let item = model.selectedResult?.item
+            event.window === self, model.renameSession == nil, showsAResultRow, key == .returnKey || key == .keypadEnter, Modifiers(nsEventFlags: event.modifierFlags).isEmpty, let item = model.selectedResult?.item
         else {
             return false
         }
@@ -32,7 +45,8 @@ extension MenuBarSearchPanel {
     }
 
     /// Tab moves the highlight to the next section, Shift-Tab to the previous
-    /// one. Taken either way, so Tab never moves the keyboard out of the field.
+    /// one. Taken either way, so Tab never moves the keyboard out of the field,
+    /// but with no row showing there is no highlight to move.
     private func handleSectionJump(_ event: NSEvent) -> Bool {
         let modifiers = Modifiers(nsEventFlags: event.modifierFlags)
         guard
@@ -40,16 +54,19 @@ extension MenuBarSearchPanel {
         else {
             return false
         }
-        model.moveSelection(toSectionFromCurrentBy: modifiers == .shift ? -1 : 1)
-        announceSelection()
+        if showsAResultRow {
+            model.moveSelection(toSectionFromCurrentBy: modifiers == .shift ? -1 : 1)
+            announceSelection()
+        }
         return true
     }
 
     /// Arrows, Page Up, Page Down, Home and End, repeats included. Only the
-    /// panel's own events, so the global monitor can't move it twice.
+    /// panel's own events, so the global monitor can't move it twice. With no
+    /// row showing they pass through and move the field's text cursor instead.
     private func handleListMove(_ event: NSEvent) -> Bool {
         guard
-            event.window === self, model.renameSession == nil, Modifiers(nsEventFlags: event.modifierFlags).isEmpty, let delta = LauncherListStep.delta(for: KeyCode(rawValue: Int(event.keyCode)))
+            event.window === self, model.renameSession == nil, showsAResultRow, Modifiers(nsEventFlags: event.modifierFlags).isEmpty, let delta = LauncherListStep.delta(for: KeyCode(rawValue: Int(event.keyCode)))
         else {
             return false
         }
@@ -70,6 +87,10 @@ extension MenuBarSearchPanel {
             appState?.activate(withPolicy: appState?.userWindowActivationPolicy)
             appState?.openWindow(.settings)
             return nil
+        }
+        // With the panel collapsed to its field, no row shows to act on.
+        guard showsAResultRow else {
+            return event
         }
         if keyCode == .e {
             beginRenamingSelection()
