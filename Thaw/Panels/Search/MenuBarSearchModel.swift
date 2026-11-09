@@ -97,6 +97,10 @@ final class MenuBarSearchModel {
     @ObservationIgnored
     let recents: MenuBarSearchRecents
 
+    /// The query the shown results answer, so a keystroke that reorders them isn't taken for a move.
+    @ObservationIgnored
+    private var resultsQuery = ""
+
     init(recents: MenuBarSearchRecents = MenuBarSearchRecents()) {
         self.recents = recents
     }
@@ -118,7 +122,9 @@ final class MenuBarSearchModel {
             }
         }
         // A moved item slides to its new section; typing still swaps the list at once.
-        if Self.isRearrangement(from: results.map(\.placement), to: fresh.map(\.placement)) {
+        let sameQuery = query == resultsQuery
+        resultsQuery = query
+        if Self.isRearrangement(from: results.map(\.placement), to: fresh.map(\.placement), sameQuery: sameQuery) {
             withThawAnimation(ThawMotion.settle) { results = fresh }
         } else {
             results = fresh
@@ -126,13 +132,18 @@ final class MenuBarSearchModel {
         revalidateSelection()
     }
 
-    /// Whether the same rows came back in another order or under other headings, as after a move.
-    static func isRearrangement(from old: [MenuBarSearchResult.Placement], to new: [MenuBarSearchResult.Placement]) -> Bool {
-        old != new && old.count == new.count && Set(old.map(\.id)) == Set(new.map(\.id))
+    /// Whether the same query brought back the same rows reordered or regrouped, as after a move.
+    static func isRearrangement(
+        from old: [MenuBarSearchResult.Placement],
+        to new: [MenuBarSearchResult.Placement],
+        sameQuery: Bool = true
+    ) -> Bool {
+        sameQuery && old != new && old.count == new.count && Set(old.map(\.id)) == Set(new.map(\.id))
     }
 
     /// Each item is listed once: a second row with the same ID stalls the arrows.
-    /// Spacers and control items drop out.
+    /// Spacers and control items drop out. An item caught mid-move can still sit
+    /// in two sections of the cache, so one already listed is skipped.
     static func grouped(
         _ recentItems: [MenuBarItem],
         in inventory: MenuBarItemCache,
@@ -140,15 +151,16 @@ final class MenuBarSearchModel {
         candidates: [PaletteCandidate]
     ) -> [MenuBarSearchResult] {
         let byIdentity = Dictionary(candidates.map { ($0.identityKey, $0) }, uniquingKeysWith: { first, _ in first })
-        let recent = recentItems.compactMap { byIdentity[$0.uniqueIdentifier] }
-        let recentKeys = Set(recent.map(\.identityKey))
+        var listed = Set<String>()
         let recentTitle = String(localized: "Recent")
+        let recent = recentItems.compactMap { byIdentity[$0.uniqueIdentifier] }
+            .filter { listed.insert($0.identityKey).inserted }
         var results = recent.map { MenuBarSearchResult(item: $0.item, ownerName: $0.subtitle, section: recentTitle) }
         for name in sections {
             // The cache lists a section right to left.
             let items = inventory.managedItems(for: name).reversed()
                 .compactMap { byIdentity[$0.uniqueIdentifier] }
-                .filter { !recentKeys.contains($0.identityKey) }
+                .filter { listed.insert($0.identityKey).inserted }
             results += items.map { MenuBarSearchResult(item: $0.item, ownerName: $0.subtitle, section: name.localizedName) }
         }
         return results

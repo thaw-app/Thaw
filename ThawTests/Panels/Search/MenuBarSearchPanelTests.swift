@@ -10,6 +10,7 @@ import Combine
 import MenuBarModel
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// The search panel's rename, lookup and escape handling, on a panel that is never shown.
 @MainActor
@@ -147,6 +148,79 @@ struct MenuBarSearchPanelTests {
         panel.moveSelection(toDestinationAt: 7)
         panel.presentItemActions()
         #expect(world.appState.layoutFeedback.refusal == nil)
+    }
+
+    @Test("Collapsed to the field alone, Return and the item shortcuts pass through")
+    func collapsedFacesDontActOnTheHiddenSelection() throws {
+        let world = World()
+        let alpha = World.item("Alpha")
+        world.seat([alpha])
+        let panel = panel(world)
+        panel.presentation = .compact
+        panel.model.results = [MenuBarSearchResult(item: alpha, ownerName: nil, section: nil)]
+        panel.model.selectFirstRow()
+
+        func key(_ code: KeyCode, _ flags: NSEvent.ModifierFlags = []) throws -> NSEvent {
+            try #require(NSEvent.keyEvent(
+                with: .keyDown,
+                location: .zero,
+                modifierFlags: flags,
+                timestamp: 0,
+                windowNumber: panel.windowNumber,
+                context: nil,
+                characters: "",
+                charactersIgnoringModifiers: "",
+                isARepeat: false,
+                keyCode: UInt16(code.rawValue)
+            ))
+        }
+
+        // Collapsed to just the field, no row shows, so keys that act on the
+        // hidden first result pass through instead.
+        #expect(!panel.showsAResultRow)
+        #expect(try panel.handleKeyDown(key(.returnKey)) != nil)
+        #expect(try panel.handleKeyDown(key(.e, .command)) != nil)
+        #expect(try panel.handleKeyDown(key(.two, .command)) != nil)
+        #expect(panel.model.renameSession == nil)
+
+        // Typed, the list shows and the same keys act on the highlighted row.
+        panel.model.searchText = "al"
+        #expect(panel.showsAResultRow)
+        #expect(try panel.handleKeyDown(key(.e, .command)) == nil)
+        #expect(panel.model.renameSession != nil)
+    }
+
+    @Test("Collapsed to the field alone, the arrows and Tab leave the hidden selection where it is")
+    func collapsedFacesDontMoveTheHiddenSelection() throws {
+        let world = World()
+        let alpha = World.item("Alpha"), beta = World.item("Alpha Beta")
+        world.seat([alpha, beta])
+        let panel = panel(world)
+        panel.presentation = .compact
+        panel.model.results = [alpha, beta].map { MenuBarSearchResult(item: $0, ownerName: nil, section: nil) }
+        panel.model.selectFirstRow()
+        let first = panel.model.selection
+
+        func key(_ code: KeyCode) throws -> NSEvent {
+            try #require(NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: panel.windowNumber,
+                context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: UInt16(code.rawValue)
+            ))
+        }
+
+        // No row shows, so the arrows pass through to move the field's text cursor.
+        #expect(!panel.showsAResultRow)
+        #expect(try panel.handleKeyDown(key(.downArrow)) != nil)
+        #expect(panel.model.selection == first)
+        // Tab is still taken, so the keyboard stays in the field, but moves nothing.
+        #expect(try panel.handleKeyDown(key(.tab)) == nil)
+        #expect(panel.model.selection == first)
+
+        // Typed, the list shows and Down moves the highlight.
+        panel.model.searchText = "al"
+        #expect(panel.showsAResultRow)
+        #expect(try panel.handleKeyDown(key(.downArrow)) == nil)
+        #expect(panel.model.selection != first)
     }
 
     @Test("A section shortcut on an item macOS keeps in place explains the refusal")
