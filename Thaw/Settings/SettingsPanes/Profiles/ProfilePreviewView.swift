@@ -75,6 +75,9 @@ struct ProfilePreviewView: View {
     /// not walk the item cache during a view update.
     var diff: ProfileLayoutDiff?
 
+    /// Pictures of the items in the bar now, keyed by canonical identifier.
+    var liveImages: [String: MenuBarItemDisplayImage] = [:]
+
     /// Inline on the Profiles page, under the selected profile's name, the
     /// preview leaves out the name and takes the page's width.
     var isInline = false
@@ -140,7 +143,7 @@ struct ProfilePreviewView: View {
 
                 ForEach(diff.moves.prefix(maxListedChanges)) { move in
                     HStack(spacing: ThawSpacing.tight) {
-                        ItemIcon(bundleID: move.item.bundleID)
+                        ItemIcon(identifier: move.item.id, liveImages: liveImages)
                         Text(move.item.title)
                             .font(ThawType.caption)
                         Text(sectionTitle(for: move.from))
@@ -198,7 +201,7 @@ struct ProfilePreviewView: View {
             } else {
                 HStack(spacing: ThawSpacing.tight) {
                     ForEach(section.items.prefix(maxIconsPerSection)) { item in
-                        ItemIcon(bundleID: item.bundleID)
+                        ItemIcon(identifier: item.id, liveImages: liveImages)
                             .help(item.title)
                     }
                     if section.items.count > maxIconsPerSection {
@@ -258,30 +261,79 @@ struct ProfilePreviewView: View {
 
 // MARK: - ItemIcon
 
-/// A small app icon resolved from a bundle ID, with a generic fallback for
-/// apps that are no longer installed.
+/// A saved item's live picture, else its symbol or app icon, else a placeholder.
 private struct ItemIcon: View {
-    let bundleID: String
+    /// The saved uniqueIdentifier (namespace:title).
+    let identifier: String
+    let liveImages: [String: MenuBarItemDisplayImage]
+
+    /// Keeps a wide capture, such as a stats readout, from crowding the row.
+    private static let maxWidth: CGFloat = 40
 
     var body: some View {
-        Group {
-            if let icon = resolvedIcon {
-                Image(nsImage: icon)
-                    .resizable()
-            } else {
-                Image(systemName: "app.dashed")
-                    .resizable()
-                    .foregroundStyle(ThawInk.supporting)
-                    .padding(ThawSpacing.hairline)
+        if let liveImage = liveImages[MenuBarItemTag.canonicalPersistentIdentifier(identifier)] {
+            MenuBarItemGlyph(
+                image: liveImage,
+                fittingHeight: 18,
+                reinksCaptures: true,
+                drawnSize: Self.size(for: liveImage)
+            )
+        } else {
+            Group {
+                if let icon = ProfilePreviewModel.savedItemIcon(for: identifier) {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundStyle(icon.isTemplate ? ThawInk.supporting : .primary)
+                } else {
+                    Image(systemName: "app.dashed")
+                        .resizable()
+                        .foregroundStyle(ThawInk.supporting)
+                        .padding(ThawSpacing.hairline)
+                }
             }
+            .frame(width: 18, height: 18)
         }
-        .frame(width: 18, height: 18)
     }
 
-    private var resolvedIcon: NSImage? {
-        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else {
-            return nil
+    private static func size(for image: MenuBarItemDisplayImage) -> CGSize {
+        let fitted = image.targetSize(fittingHeight: 18)
+        guard fitted.width > maxWidth, fitted.width > 0 else { return fitted }
+        let scale = maxWidth / fitted.width
+        return CGSize(width: maxWidth, height: fitted.height * scale)
+    }
+}
+
+@MainActor
+extension ProfilePreviewModel {
+    /// Each bar item's picture as Layout picks it, keyed by canonical identifier.
+    static func liveImages(in appState: AppState) -> [String: MenuBarItemDisplayImage] {
+        var images = [String: MenuBarItemDisplayImage]()
+        for section in MenuBarSection.Name.allCases {
+            for item in appState.itemManager.managedItems(for: section) {
+                let key = MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
+                images[key] = OverflowFallbackIcon.resolvedImage(
+                    for: item,
+                    section: section,
+                    appState: appState,
+                    capturedImage: appState.imageCache.image(for: item.tag)
+                )
+            }
         }
-        return NSWorkspace.shared.icon(forFile: url.path)
+        return images
+    }
+
+    /// For an item not in the bar: its module symbol, Control Center's icon or its app's icon.
+    /// Nil when nothing on this Mac matches.
+    static func savedItemIcon(for identifier: String) -> NSImage? {
+        let (namespace, title) = split(identifier)
+        switch MenuBarItemTag.Namespace.string(namespace) {
+        case .menuBarAgent:
+            return SystemModuleGlyph.image(forItemTitle: title)
+        case .controlCenter, .systemUIServer, .textInputMenuAgent:
+            return ControlCenterIcon.image
+        default:
+            return OverflowFallbackIcon.cachedAppIcon(forBundleIdentifier: namespace)
+        }
     }
 }
