@@ -22,7 +22,9 @@ Anything else goes before the first section, or in its own section after
 these four. The website shows each section's name beside its list, and counts
 the items under New and Fixed.
 
-## [Unreleased]
+## [3.0.0-alpha.14] - 2026-11-08
+
+**macOS 27 only · Build 125**
 
 Layout gets a pop-out window and undo for every edit, search becomes Floe's launcher, and Settings fills its gaps.
 
