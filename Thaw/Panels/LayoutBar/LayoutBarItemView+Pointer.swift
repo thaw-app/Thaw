@@ -30,7 +30,7 @@ nonisolated struct LayoutTilePointer: Equatable {
 
     /// Whether the pointer has moved far enough to drag. From then on the gesture is no longer a click.
     mutating func drag(to location: CGPoint) -> Bool {
-        if let start = pressLocation, hypot(location.x - start.x, location.y - start.y) < Self.dragThreshold {
+        if let start = pressLocation, location.distance(to: start) < Self.dragThreshold {
             return false
         }
         isPressed = false

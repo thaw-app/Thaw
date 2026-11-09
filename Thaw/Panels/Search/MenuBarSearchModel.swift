@@ -118,8 +118,8 @@ final class MenuBarSearchModel {
             }
         }
         // A moved item slides to its new section; typing still swaps the list at once.
-        if Self.isRearrangement(from: results.map(\.placement), to: fresh.map(\.placement)), !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            withAnimation(ThawMotion.settle) { results = fresh }
+        if Self.isRearrangement(from: results.map(\.placement), to: fresh.map(\.placement)) {
+            withThawAnimation(ThawMotion.settle) { results = fresh }
         } else {
             results = fresh
         }

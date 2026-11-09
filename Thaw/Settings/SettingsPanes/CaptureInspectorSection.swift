@@ -197,11 +197,11 @@ struct CaptureInspectorSection: View {
                 Text(concealedItemCount == 1
                     ? "1 hidden item is not captured"
                     : "\(concealedItemCount) hidden items are not captured")
-                    .font(.caption)
+                    .font(ThawType.caption)
                     .foregroundStyle(.secondary)
             }
             Text(concealedItemsExplanation)
-                .font(.caption)
+                .font(ThawType.caption)
                 .foregroundStyle(ThawInk.supporting)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -229,7 +229,7 @@ struct CaptureInspectorSection: View {
                 regions: showsCropRegions ? cropRegions(in: capture) : []
             )
             Text("\(capture.image.width) × \(capture.image.height) px at \(capture.scale, format: .number)×")
-                .font(.caption)
+                .font(ThawType.caption)
                 .foregroundStyle(ThawInk.supporting)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -41,7 +41,7 @@ struct AlertRevealItemList: View {
         if rows.isEmpty {
             Text("Hide an item first. Anything in Hidden or Always Hidden can be set to reappear when its icon changes.")
                 .foregroundStyle(.secondary)
-                .font(.callout)
+                .font(ThawType.detail)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             ForEach(rows) { row in

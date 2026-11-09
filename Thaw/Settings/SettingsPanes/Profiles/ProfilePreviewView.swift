@@ -108,7 +108,7 @@ struct ProfilePreviewView: View {
             Divider()
 
             Text(settingsSummary)
-                .font(.caption)
+                .font(ThawType.caption)
                 .foregroundStyle(ThawInk.supporting)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -125,7 +125,7 @@ struct ProfilePreviewView: View {
 
             if diff.isEmpty {
                 Text("Nothing. This profile matches the current setup.")
-                    .font(.caption)
+                    .font(ThawType.caption)
                     .foregroundStyle(ThawInk.supporting)
             } else {
                 if let offset = diff.relaunchingSpacingOffset {
@@ -133,7 +133,7 @@ struct ProfilePreviewView: View {
                         "Sets item spacing to \(offset), which quits and reopens every menu bar app",
                         systemImage: "exclamationmark.triangle"
                     )
-                    .font(.caption)
+                    .font(ThawType.caption)
                     .foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
                 }
@@ -142,42 +142,42 @@ struct ProfilePreviewView: View {
                     HStack(spacing: ThawSpacing.tight) {
                         ItemIcon(bundleID: move.item.bundleID)
                         Text(move.item.title)
-                            .font(.caption)
+                            .font(ThawType.caption)
                         Text(sectionTitle(for: move.from))
-                            .font(.caption)
+                            .font(ThawType.caption)
                             .foregroundStyle(ThawInk.supporting)
                         Image(systemName: "arrow.right")
                             .font(.caption2)
                             .foregroundStyle(ThawInk.supporting)
                         Text(sectionTitle(for: move.to))
-                            .font(.caption)
+                            .font(ThawType.caption)
                             .foregroundStyle(ThawInk.supporting)
                     }
                 }
                 if diff.moves.count > maxListedChanges {
                     Text("and \(diff.moves.count - maxListedChanges) more moves")
-                        .font(.caption)
+                        .font(ThawType.caption)
                         .foregroundStyle(ThawInk.supporting)
                 }
                 reorderedSections(diff)
 
                 if !diff.unavailable.isEmpty {
                     Text("\(diff.unavailable.count) saved items are not on the bar right now and will be left alone")
-                        .font(.caption)
+                        .font(ThawType.caption)
                         .foregroundStyle(ThawInk.supporting)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 if !diff.unmentioned.isEmpty {
                     Text("\(diff.unmentioned.count) items are not in this profile and keep their current section")
-                        .font(.caption)
+                        .font(ThawType.caption)
                         .foregroundStyle(ThawInk.supporting)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 if !diff.settingChanges.isEmpty {
                     Text("Settings: \(diff.settingChanges.map(\.label).formatted(.list(type: .and)))")
-                        .font(.caption)
+                        .font(ThawType.caption)
                         .foregroundStyle(ThawInk.supporting)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -193,7 +193,7 @@ struct ProfilePreviewView: View {
 
             if section.items.isEmpty {
                 Text("No items")
-                    .font(.caption)
+                    .font(ThawType.caption)
                     .foregroundStyle(ThawInk.supporting)
             } else {
                 HStack(spacing: ThawSpacing.tight) {
@@ -217,7 +217,7 @@ struct ProfilePreviewView: View {
     private func reorderedSections(_ diff: ProfileLayoutDiff) -> some View {
         ForEach(diff.reorderedSections, id: \.self) { key in
             Text("Reorders items in \(Text(sectionTitle(for: key)))")
-                .font(.caption)
+                .font(ThawType.caption)
                 .foregroundStyle(ThawInk.supporting)
         }
     }

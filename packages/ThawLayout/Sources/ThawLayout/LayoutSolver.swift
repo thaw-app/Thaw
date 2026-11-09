@@ -726,8 +726,8 @@ public nonisolated enum LayoutSolver {
             // on every change, and the live item is already in currentInSection, so drop the variant.
             // The namespace is the prefix up to the first ':' (a bundle id or reserved keyword never contains one).
             if !allCurrentNamespaces.isEmpty {
-                let namespace = savedUID.prefix { $0 != ":" }
-                if !namespace.isEmpty, allCurrentNamespaces.contains(String(namespace)) {
+                let namespace = MenuBarItemTag.persistentIdentifierParts(savedUID)?.namespace ?? savedUID
+                if !namespace.isEmpty, allCurrentNamespaces.contains(namespace) {
                     return true
                 }
             }

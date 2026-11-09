@@ -203,7 +203,7 @@ final class MenuBarLeadingEdgeWatcher {
         guard let point = AXPrimitives.position(of: element, messagingTimeout: timeout),
               point.x != MenuBarItemGeometry.transientSentinelX,
               point.x > screen.minX, screen.contains(point),
-              point.y - screen.minY <= MenuBarItemGeometry.maxOnBarMidY
+              point.y - screen.minY <= MenuBarItem.maxBarBandMidY
         else {
             return nil
         }

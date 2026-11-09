@@ -128,7 +128,6 @@ struct LayoutListScrollTracking: ViewModifier {
     let motion: LayoutListMotion
     let proxy: ScrollViewProxy
     @State private var position = ScrollPosition()
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
@@ -147,7 +146,7 @@ struct LayoutListScrollTracking: ViewModifier {
             }
             .onChange(of: motion.scrollTarget) { _, target in
                 guard let target else { return }
-                withAnimation(reduceMotion ? nil : ThawMotion.settle) { proxy.scrollTo(target) }
+                withThawAnimation(ThawMotion.settle) { proxy.scrollTo(target) }
             }
     }
 }

@@ -187,11 +187,11 @@ extension MenuBarItemImageCache {
                     expiredCount += 1
                     continue
                 }
-                let parts = tagString.split(separator: ":", maxSplits: 1)
-                guard parts.count == 2 else { continue }
+                let parts = MenuBarItemTag.persistentIdentifierParts(tagString)
+                guard let (namespace, title) = parts, !namespace.isEmpty, !title.isEmpty else { continue }
                 let tag = MenuBarItemTag(
-                    namespace: .string(String(parts[0])),
-                    title: String(parts[1]),
+                    namespace: .string(namespace),
+                    title: title,
                     windowID: nil
                 )
                 parsed.append((tag, entry))

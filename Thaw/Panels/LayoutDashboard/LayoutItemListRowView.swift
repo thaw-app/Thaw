@@ -30,7 +30,6 @@ struct LayoutItemListRowView: View {
     let onSweep: (CGFloat, CGFloat) -> Void
     let onSweepEnd: () -> Void
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isDropTarget = false
 
     var body: some View {
@@ -84,7 +83,7 @@ struct LayoutItemListRowView: View {
                 LayoutDragHaptics.enter(row.section)
             }
         }
-        .animation(reduceMotion ? nil : ThawMotion.interactive, value: showsGap)
+        .thawAnimation(ThawMotion.interactive, value: showsGap)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .accessibilityValue(Text(row.section.localizedName))
@@ -178,7 +177,6 @@ struct LayoutItemListRowView: View {
 /// on it moves them to that section, and it lights while a drag is over it.
 struct LayoutItemListHeading: View {
     @Environment(AppState.self) private var appState
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let name: MenuBarSectionName
     let isFirst: Bool
     let isEditable: Bool
@@ -215,6 +213,6 @@ struct LayoutItemListHeading: View {
                     LayoutDragHaptics.enter(name)
                 }
             }
-            .animation(reduceMotion ? nil : ThawMotion.quick, value: isTargeted)
+            .thawAnimation(ThawMotion.quick, value: isTargeted)
     }
 }

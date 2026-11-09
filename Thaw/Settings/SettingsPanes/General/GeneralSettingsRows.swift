@@ -80,7 +80,7 @@ struct ShowThawIconRow: View {
             }
         } else {
             Text("Hiding the icon also shrinks the section dividers to nothing. If items start landing in the wrong section, show the icon again.")
-                .font(.footnote)
+                .font(ThawType.footnote)
                 .foregroundStyle(.secondary)
         }
         if !settings.showThawIcon, placementBlock == .deniedBySystem {

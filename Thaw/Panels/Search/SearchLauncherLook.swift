@@ -56,7 +56,7 @@ private nonisolated extension SharedAppearance.Fill {
 
     func launcherPaint(keeping base: LauncherTint) -> Paint {
         var tint = base
-        tint.opacity = opacity.unitClamped
+        tint.opacity = opacity.clamped(to: 0 ... 1)
         switch kind {
         case "none", "glass":
             return .nothing
@@ -84,7 +84,7 @@ private nonisolated extension SharedAppearance.Fill {
             style: style,
             isColored: glassIsColored ?? false,
             color: color.map(StoredColor.init) ?? base.color,
-            opacity: opacity.unitClamped
+            opacity: opacity.clamped(to: 0 ... 1)
         )
     }
 }
@@ -92,16 +92,10 @@ private nonisolated extension SharedAppearance.Fill {
 private nonisolated extension StoredColor {
     init(_ color: SharedAppearance.Color) {
         self.init()
-        red = color.red.unitClamped
-        green = color.green.unitClamped
-        blue = color.blue.unitClamped
-        opacity = color.alpha.unitClamped
-    }
-}
-
-private nonisolated extension Double {
-    var unitClamped: Double {
-        min(max(self, 0), 1)
+        red = color.red.clamped(to: 0 ... 1)
+        green = color.green.clamped(to: 0 ... 1)
+        blue = color.blue.clamped(to: 0 ... 1)
+        opacity = color.alpha.clamped(to: 0 ... 1)
     }
 }
 
