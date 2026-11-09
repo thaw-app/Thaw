@@ -7,23 +7,26 @@
 
 import SwiftUI
 
-/// Bounces the symbols in its content once when they first appear, so a grant lands as an event rather
-/// than a quiet swap. Reduce Motion keeps them still.
+/// Bounces the symbols in its content once when the permission is granted while they are on screen.
+/// One already granted when the content appeared stays still, as does everything under Reduce Motion.
 struct GrantedBounce: ViewModifier {
+    /// Whether the permission was granted since its card appeared.
+    let justGranted: Bool
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var trigger = false
 
     func body(content: Content) -> some View {
         content
             .symbolEffect(.bounce, options: .nonRepeating, value: trigger)
-            .onAppear {
-                if Self.bounces(reduceMotion: reduceMotion) {
+            .onChange(of: justGranted) { _, granted in
+                if Self.bounces(justGranted: granted, reduceMotion: reduceMotion) {
                     trigger.toggle()
                 }
             }
     }
 
-    static func bounces(reduceMotion: Bool) -> Bool {
-        !reduceMotion
+    static func bounces(justGranted: Bool, reduceMotion: Bool) -> Bool {
+        justGranted && !reduceMotion
     }
 }

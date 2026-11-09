@@ -30,6 +30,15 @@ struct SpaceChangeCoalescerTests {
         #expect(coalescer.admit(.activeSpace, activeSpaceID: 7, at: start + .milliseconds(100)) == .activeSpace(7))
     }
 
+    @Test("A switch on a display that isn't the active one is delivered, though the active Space stays")
+    func switchOnAnotherDisplay() {
+        var coalescer = SpaceChangeCoalescer()
+        #expect(coalescer.admit(.activeSpace, activeSpaceID: 7, shown: [7, 20], at: start) == .activeSpace(7))
+        #expect(coalescer.admit(.activeSpace, activeSpaceID: 7, shown: [7, 20], at: start + .milliseconds(5)) == nil)
+        #expect(coalescer.admit(.activeSpace, activeSpaceID: 7, shown: [7, 21], at: start + .milliseconds(200)) == .activeSpace(7))
+        #expect(coalescer.admit(.activeSpace, activeSpaceID: 7, shown: [7, 21], at: start + .milliseconds(210)) == nil)
+    }
+
     @Test("The same Space after the window counts again")
     func afterWindow() {
         var coalescer = SpaceChangeCoalescer()
@@ -111,6 +120,55 @@ struct SpaceChangesTests {
         center.post(name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
         var iterator = feed.makeAsyncIterator()
         #expect(await iterator.next() == .activeSpace)
+    }
+
+    @Test("Without window server events, each switch also asks for the Space list again")
+    func liveFeedFallbackRereadsTheList() async {
+        let center = NotificationCenter()
+        let feed = SpaceChanges.liveFeed(center: center, screenCenter: NotificationCenter(), register: { _ in false })
+        center.post(name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
+        var iterator = feed.makeAsyncIterator()
+        #expect(await iterator.next() == .activeSpace)
+        #expect(await iterator.next() == .spaceList)
+    }
+
+    @Test("With window server events, a switch alone does not ask for the Space list")
+    func liveFeedRegisteredSwitch() async {
+        let center = NotificationCenter()
+        let screenCenter = NotificationCenter()
+        let feed = SpaceChanges.liveFeed(center: center, screenCenter: screenCenter, register: { _ in true })
+        center.post(name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
+        center.post(name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
+        var iterator = feed.makeAsyncIterator()
+        #expect(await iterator.next() == .activeSpace)
+        #expect(await iterator.next() == .activeSpace)
+    }
+
+    @Test("A display arriving or leaving asks for the Space list again")
+    func liveFeedDisplayChange() async {
+        let screenCenter = NotificationCenter()
+        let feed = SpaceChanges.liveFeed(center: NotificationCenter(), screenCenter: screenCenter, register: { _ in true })
+        screenCenter.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        var iterator = feed.makeAsyncIterator()
+        #expect(await iterator.next() == .spaceList)
+    }
+
+    @Test("A switch on another display reaches subscribers within the duplicate window")
+    func deliversAnotherDisplaysSwitch() async {
+        let clock = TestClock()
+        var shown: Set<CGSSpaceID> = [3, 20]
+        let source = SpaceChanges(activeSpaceID: { 3 }, shownSpaceIDs: { shown }, now: { clock.now })
+        var iterator = source.changes().makeAsyncIterator()
+
+        source.admit(.activeSpace)
+        source.admit(.activeSpace)
+        shown = [3, 21]
+        source.admit(.activeSpace)
+        source.admit(.spaceList)
+
+        #expect(await iterator.next() == .activeSpace(3))
+        #expect(await iterator.next() == .activeSpace(3))
+        #expect(await iterator.next() == .spaceList)
     }
 }
 

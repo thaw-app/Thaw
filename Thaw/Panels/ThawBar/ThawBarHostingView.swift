@@ -13,9 +13,20 @@ final class ThawBarHostingView: NSHostingView<ThawBarContentView> {
         NSEdgeInsets()
     }
 
+    /// The size the panel was last fitted to. See ThawBarContentFit.
+    private var contentFit = ThawBarContentFit()
+
     override func layout() {
         super.layout()
-        (window as? ThawBarPanel)?.resizeToContent()
+        let ideal = intrinsicContentSize
+        guard let panel = window as? ThawBarPanel, contentFit.needsResize(ideal: ideal, frameSize: panel.frame.size) else {
+            return
+        }
+        panel.resizeToContent()
+        // Without a screen the panel did not resize, so the next pass tries again.
+        if panel.screen != nil {
+            contentFit.noteResize(ideal: ideal, frameSize: panel.frame.size)
+        }
     }
 
     /// What one showing of the Thaw Bar is built from.

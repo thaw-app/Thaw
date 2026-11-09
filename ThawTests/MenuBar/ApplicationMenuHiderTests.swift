@@ -47,6 +47,14 @@ struct ApplicationMenuHiderTests {
         #expect(alwaysHidden == .hideIfSectionNeedsRoom(.alwaysHidden))
     }
 
+    @Test("The Thaw Bar check names the section the reveal would make room for")
+    func thawBarSectionFollowsTheReconciliation() {
+        #expect(ApplicationMenuHider.thawBarSection(for: .hideIfSectionNeedsRoom(.alwaysHidden)) == .alwaysHidden)
+        #expect(ApplicationMenuHider.thawBarSection(for: .hideIfSectionNeedsRoom(.hidden)) == .hidden)
+        #expect(ApplicationMenuHider.thawBarSection(for: .showMenus) == .hidden)
+        #expect(ApplicationMenuHider.thawBarSection(for: .leaveMenus) == .hidden)
+    }
+
     @Test("Without setup, hiding, showing and toggling change nothing")
     func withoutSetup() {
         let hider = ApplicationMenuHider()

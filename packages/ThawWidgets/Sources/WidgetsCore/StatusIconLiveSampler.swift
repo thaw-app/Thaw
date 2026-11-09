@@ -59,6 +59,7 @@ final class StatusIconLiveSampler: ObservableObject {
         let battery = BatteryLevelSource.reading()
         samples.battery = battery.level
         samples.isCharging = battery.isCharging
+        samples.hasBattery = battery.hasBattery
         samples.isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
         samples.wifi = wifiStrength()
         samples.cpu = cpuUsage()

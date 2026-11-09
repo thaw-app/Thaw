@@ -150,6 +150,8 @@ final class SpaceIndicator {
             try await launcher.launch(.space, replacing: "", in: section)
         } catch {
             isEnabled = false
+            // The launcher counts the item as wanted and placed from before the open that failed.
+            launcher.stop(.space)
             log.error("Space indicator failed to start: \(error.localizedDescription)")
         }
     }

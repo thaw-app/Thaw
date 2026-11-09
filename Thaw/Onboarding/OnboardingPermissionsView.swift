@@ -263,6 +263,10 @@ private struct PermissionCard: View {
     /// Off in onboarding, where the page's primary action grants instead.
     var showsRequestButton = true
 
+    /// True once the permission is granted while this card is on screen. The control can be
+    /// inserted by the grant itself, so the card, which was there before, is what notices it.
+    @State private var grantedWhileShown = false
+
     var body: some View {
         OnboardingPermissionCard(surface: .glass, isGranted: permission.hasPermission) {
             PermissionLabel(
@@ -290,8 +294,11 @@ private struct PermissionCard: View {
         } control: {
             if showsRequestButton || permission.hasPermission {
                 PermissionStatusControl(permission: permission, layout: .filled)
-                    .modifier(GrantedBounce())
+                    .modifier(GrantedBounce(justGranted: grantedWhileShown))
             }
+        }
+        .onChange(of: permission.hasPermission) { _, granted in
+            grantedWhileShown = granted
         }
     }
 }
