@@ -81,7 +81,6 @@ struct SettingsWindow: Scene {
         )
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
-        .commands { AppUIZoomCommands(strings: .thaw) }
         .environment(appState)
         .environment(appState.permissions)
     }

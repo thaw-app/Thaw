@@ -69,7 +69,6 @@ private struct ThawWindowContent<Content: View>: View {
         ZStack {
             if appState.isWindowOpen(id) {
                 content()
-                    .modifier(AppUIZoomModifier())
                     // Glass buttons are capsules, as in macOS's own glass windows.
                     .buttonBorderShape(.capsule)
             }
