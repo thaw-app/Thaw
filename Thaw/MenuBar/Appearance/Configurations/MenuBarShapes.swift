@@ -101,7 +101,7 @@ nonisolated extension MenuBarFullShapeInfo: Codable {
         // Looks saved before the slider existed had fully round ends.
         // A damaged record is read inside 0 to 1, and as round when it isn't a number.
         let decoded = try stored.decodeIfPresent(Double.self, forKey: .roundness) ?? 1
-        roundness = decoded.isFinite ? min(max(decoded, 0), 1) : 1
+        roundness = decoded.isFinite ? decoded.clamped(to: 0 ... 1) : 1
     }
 }
 

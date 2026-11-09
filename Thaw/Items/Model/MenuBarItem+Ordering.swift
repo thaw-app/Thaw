@@ -9,25 +9,6 @@ import CoreGraphics
 import MenuBarModel
 
 nonisolated extension MenuBarItem {
-    static func sortByLeadingEdge(_ items: [MenuBarItem]) -> [MenuBarItem] {
-        items.sorted { $0.bounds.minX < $1.bounds.minX }
-    }
-
-    static func sortByVisualCenter(_ items: [MenuBarItem]) -> [MenuBarItem] {
-        items.sorted { $0.bounds.midX < $1.bounds.midX }
-    }
-
-    /// Visual-center order with a stable identifier tie-break for cache signatures
-    /// where two items can share the same midX during transient reflows.
-    static func sortByVisualCenterThenIdentifier(_ items: [MenuBarItem]) -> [MenuBarItem] {
-        items.sorted { lhs, rhs in
-            if lhs.bounds.midX == rhs.bounds.midX {
-                return lhs.uniqueIdentifier < rhs.uniqueIdentifier
-            }
-            return lhs.bounds.midX < rhs.bounds.midX
-        }
-    }
-
     /// Reorders the items macOS folds behind its overflow arrow into saved order.
     ///
     /// Folded items report frames stacked on the arrow, so their positions say

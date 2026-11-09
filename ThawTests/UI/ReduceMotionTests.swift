@@ -8,6 +8,7 @@
 import SwiftUI
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// Reduce Motion removed fades too, though a short cross-fade is what it should keep.
 @MainActor
@@ -15,8 +16,8 @@ import Testing
 struct ReduceMotionTests {
     @Test("Under Reduce Motion a fade keeps a quick ease-out; otherwise it keeps the animation it was given")
     func fadeKeepsAQuickFade() {
-        #expect(AnyTransition.fadeAnimation(reduceMotion: true, animation: .spring) == ReduceMotionFade.animation)
-        #expect(AnyTransition.fadeAnimation(reduceMotion: true, animation: nil) == ReduceMotionFade.animation)
+        #expect(AnyTransition.fadeAnimation(reduceMotion: true, animation: .spring) == ThawMotion.reducedFade)
+        #expect(AnyTransition.fadeAnimation(reduceMotion: true, animation: nil) == ThawMotion.reducedFade)
         #expect(AnyTransition.fadeAnimation(reduceMotion: false, animation: .spring) == .spring)
         #expect(AnyTransition.fadeAnimation(reduceMotion: false, animation: nil) == nil)
     }

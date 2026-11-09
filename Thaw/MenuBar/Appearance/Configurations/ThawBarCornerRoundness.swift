@@ -21,7 +21,7 @@ nonisolated enum ThawBarCornerRoundness {
     static func decode(from decoder: any Decoder) throws -> Double {
         let stored = try decoder.container(keyedBy: Keys.self)
         if let roundness = try? stored.decodeIfPresent(Double.self, forKey: .cornerRoundness) {
-            return roundness.isFinite ? min(max(roundness, 0), 1) : 0
+            return roundness.isFinite ? roundness.clamped(to: 0 ... 1) : 0
         }
         return (try? stored.decodeIfPresent(Bool.self, forKey: .hasRoundedShape)) == true ? 1 : 0
     }

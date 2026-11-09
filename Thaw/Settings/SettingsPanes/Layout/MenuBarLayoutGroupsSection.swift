@@ -80,7 +80,7 @@ struct MenuBarLayoutGroupsSection: View {
         let style = folders.style(for: group.id)
         return HStack(spacing: ThawSpacing.base) {
             Text("Folder icon")
-                .font(.callout)
+                .font(ThawType.detail)
                 .foregroundStyle(.secondary)
             Picker("Folder icon", selection: Binding(
                 get: { style.symbol },
@@ -215,7 +215,7 @@ struct MenuBarLayoutGroupsSection: View {
             ForEach(group.memberIdentifiers, id: \.self) { identifier in
                 HStack(spacing: ThawSpacing.base) {
                     Text(memberName(identifier))
-                        .font(.callout)
+                        .font(ThawType.detail)
                         .foregroundStyle(liveItem(identifier) == nil ? .secondary : .primary)
                     if liveItem(identifier) == nil {
                         // A quit app keeps its membership, so say why it looks inactive.

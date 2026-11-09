@@ -79,7 +79,7 @@ final class MenuBarItemIconChoices {
     /// at no more than 3x: a picked file can be any size, and the PNG is kept in the defaults.
     private static func pngData(for image: NSImage) -> Data? {
         let pixelHeight = image.representations.map(\.pixelsHigh).max() ?? 0
-        let scale = min(max(CGFloat(pixelHeight) / max(image.size.height, 1), 1), 3)
+        let scale = (CGFloat(pixelHeight) / max(image.size.height, 1)).clamped(to: 1 ... 3)
         guard let rep = NSBitmapImageRep(
             bitmapDataPlanes: nil,
             pixelsWide: max(Int((image.size.width * scale).rounded()), 1),
