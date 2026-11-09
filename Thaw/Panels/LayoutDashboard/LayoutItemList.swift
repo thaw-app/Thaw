@@ -198,4 +198,6 @@ enum LayoutDashboardMetrics {
     /// A real menu bar's glyph height, larger than search's rows.
     static let pictureHeight: CGFloat = 22
     static let checkboxColumnWidth: CGFloat = 24
+    /// The space a row drop opens above the row it lands before.
+    static let dropGap: CGFloat = 16
 }
