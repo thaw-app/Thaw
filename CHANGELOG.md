@@ -94,6 +94,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 
 #### Spaces and profiles
 
+- **The profile preview shows what your items look like,** using the same pictures as Layout for items in the menu bar now. Wi-Fi, Clock and other system items get their symbol instead of a blank square, and only apps that aren't installed anymore show the dashed outline.
 - **Renaming or duplicating an old profile no longer starts turning Always Hidden off** on the next apply or Space switch.
 - **Undo is cleared when a profile applies,** so ⌘Z can't write one profile's old order into another's layout.
 - **Spaces settings stay after Thaw quits,** and a Space's own look survives a logout.
