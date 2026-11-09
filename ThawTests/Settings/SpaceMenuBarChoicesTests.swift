@@ -228,6 +228,20 @@ struct SpaceMenuBarKeeperTests {
         #expect(current == SpaceMenuBarChoices())
     }
 
+    @Test("Resetting drops a choice still waiting for its Space to be listed")
+    func resetAllDropsPendingChoices() async {
+        var current: SpaceMenuBarChoices?
+        let keeper = SpaceMenuBarKeeper(load: { current }, save: { current = $0 }, presentation: { RecordingPresentation() })
+        keeper.record(spaceID: 9, in: []) { $0.isHidden = true }
+        #expect(keeper.hasPendingChanges)
+
+        await keeper.resetAll(spaces: [])
+        #expect(!keeper.hasPendingChanges)
+
+        keeper.resolvePending(in: [space(9, "NEW")])
+        #expect(current?.spaces.isEmpty ?? true)
+    }
+
     @Test("Starting re-applies everything, then new Spaces and agent restarts")
     func reappliesOnStart() async {
         let presentation = RecordingPresentation()

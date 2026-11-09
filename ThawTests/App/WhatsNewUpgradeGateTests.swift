@@ -32,4 +32,17 @@ struct WhatsNewUpgradeGateTests {
         #expect(Defaults.string(forKey: .lastWhatsNewVersion) == "3.0")
         #expect(!WhatsNewUpgradeGate.recordVersion("3.0", opensAfterUpdate: true))
     }
+
+    @Test("The stored release notes switches read the saved values, not the unloaded Privacy model")
+    func storedSwitchesFollowTheStore() {
+        Defaults.removeObject(forKey: .showReleaseNotesAfterUpdate)
+        Defaults.removeObject(forKey: .fetchReleaseNotes)
+        #expect(AppState.storedShowReleaseNotesAfterUpdate)
+        #expect(AppState.storedFetchReleaseNotes)
+
+        Defaults.set(false, forKey: .showReleaseNotesAfterUpdate)
+        Defaults.set(false, forKey: .fetchReleaseNotes)
+        #expect(!AppState.storedShowReleaseNotesAfterUpdate)
+        #expect(!AppState.storedFetchReleaseNotes)
+    }
 }

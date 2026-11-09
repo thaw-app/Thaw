@@ -31,7 +31,8 @@ nonisolated extension SearchIndex {
             pane: .tools,
             section: "Diagnostics",
             keywords: ["log", "size", "megabytes", "rotate", "rotation", "diagnostics"],
-            property: .tools("diagnosticLogMaxSizeMB")
+            property: .tools("diagnosticLogMaxSizeMB"),
+            needsDiagnosticLogging: true
         ),
         SearchEntry(
             id: "tools.diagnosticLogRetentionDays",
@@ -40,7 +41,8 @@ nonisolated extension SearchIndex {
             pane: .tools,
             section: "Diagnostics",
             keywords: ["log", "retention", "days", "keep", "delete", "diagnostics"],
-            property: .tools("diagnosticLogRetentionDays")
+            property: .tools("diagnosticLogRetentionDays"),
+            needsDiagnosticLogging: true
         ),
         SearchEntry(
             id: "tools.diagnosticLogRotationInterval",
@@ -49,7 +51,8 @@ nonisolated extension SearchIndex {
             pane: .tools,
             section: "Diagnostics",
             keywords: ["log", "rotate", "rotation", "hourly", "daily", "diagnostics"],
-            property: .tools("diagnosticLogRotationInterval")
+            property: .tools("diagnosticLogRotationInterval"),
+            needsDiagnosticLogging: true
         ),
         SearchEntry(
             id: "tools.exportLogs",

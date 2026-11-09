@@ -93,4 +93,29 @@ struct SettingsSearchAnchorTests {
         #expect(SearchIndex.entry(withID: row.id)?.titleText == row.titleText)
         #expect(SearchIndex.entry(withID: "nowhere") == nil)
     }
+
+    @Test("A second jump to the same row cancels the first jump's pending clear")
+    func newerJumpKeepsItsHighlight() async throws {
+        let navigation = AppNavigationState()
+        let disarm = SettingsSearchDisarm()
+        navigation.highlightedSettingsRow = "row"
+        disarm.schedule("row", on: navigation, after: .milliseconds(20))
+        // The second jump arms the same row again before the first clear is due.
+        navigation.highlightedSettingsRow = "row"
+        disarm.schedule("row", on: navigation, after: .seconds(30))
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(navigation.highlightedSettingsRow == "row", "the first jump's clear was cancelled")
+    }
+
+    @Test("A jump's highlight clears once the flash is over")
+    func highlightClears() async throws {
+        let navigation = AppNavigationState()
+        let disarm = SettingsSearchDisarm()
+        navigation.highlightedSettingsRow = "row"
+        disarm.schedule("row", on: navigation, after: .milliseconds(10))
+        for _ in 0 ..< 200 where navigation.highlightedSettingsRow != nil {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(navigation.highlightedSettingsRow == nil)
+    }
 }

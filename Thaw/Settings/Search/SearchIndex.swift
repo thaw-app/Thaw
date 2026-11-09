@@ -32,7 +32,7 @@ nonisolated enum SettingsProperty: Hashable {
 /// Fuzzy matching uses the English source text, not the localized string.
 ///
 /// Unchecked Sendable because LocalizedStringKey is not Sendable; every
-/// field is an immutable let.
+/// field is an immutable let, except the flag a row is filtered by.
 nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
     let id: String
     let titleKey: LocalizedStringKey
@@ -43,6 +43,9 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
     let sectionText: String?
     let keywords: [String]
     let property: SettingsProperty?
+    /// The row only exists while diagnostic logging is on, so search hides the
+    /// entry with the row rather than jumping to nothing.
+    var needsDiagnosticLogging = false
 
     var disclosure: AppNavigationState.SettingsDisclosure? {
         switch id {
@@ -78,7 +81,8 @@ nonisolated extension SearchEntry {
         pane: SettingsNavigationIdentifier,
         section: String.LocalizationValue? = nil,
         keywords: [String],
-        property: SettingsProperty?
+        property: SettingsProperty?,
+        needsDiagnosticLogging: Bool = false
     ) {
         let titleResource = LocalizedStringResource(title)
         self.init(
@@ -90,7 +94,8 @@ nonisolated extension SearchEntry {
             sectionKey: section.map { LocalizedStringKey(LocalizedStringResource($0).key) },
             sectionText: section.map { LocalizedStringResource($0).key },
             keywords: keywords,
-            property: property
+            property: property,
+            needsDiagnosticLogging: needsDiagnosticLogging
         )
     }
 }
@@ -138,6 +143,7 @@ nonisolated enum SearchIndex {
             title: "Hide the menu bar",
             descriptionText: String(localized: "Hides the system menu bar while this Space is showing, or in every Space."),
             pane: .displays,
+            section: "This Space",
             keywords: ["hide", "space", "menu bar", "per-space", "desktop", "global", "every space", "everywhere"],
             property: nil
         ),
