@@ -30,6 +30,9 @@ struct LayoutItemListPane: View {
     /// Bumped when an item changes section, which the item cache doesn't always reflect.
     @State private var membershipRevision = 0
     @State private var pageSize = 10
+    /// Each row's vertical span in the list, for the checkbox sweep.
+    @State private var rowSpans: [String: ClosedRange<CGFloat>] = [:]
+    @State private var sweep: LayoutCheckboxSweep?
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -81,22 +84,11 @@ struct LayoutItemListPane: View {
                             heading(name, isFirst: section.id == sections.first?.id)
                         }
                         ForEach(section.rows) { row in
-                            LayoutItemListRowView(
-                                row: row,
-                                selection: selection,
-                                anchors: anchors,
-                                isEditable: isEditable,
-                                showsSectionBadge: section.name == nil || row.section == .alwaysHidden,
-                                onTap: {
-                                    // A click on a row leaves the filter, so Escape and the arrows reach the list.
-                                    NSApp.keyWindow?.makeFirstResponder(nil)
-                                    isFocused = true
-                                }
-                            )
-                            .id(row.id)
+                            rowView(row, in: section, rows: rows)
                         }
                     }
                 }
+                .coordinateSpace(.named(LayoutCheckboxSweep.coordinateSpace))
                 .padding(ThawSpacing.base)
             }
             .onGeometryChange(for: Int.self) { geometry in
@@ -125,6 +117,29 @@ struct LayoutItemListPane: View {
         }
     }
 
+    private func rowView(_ row: LayoutItemListRow, in section: LayoutItemListSection, rows: [LayoutItemListRow]) -> some View {
+        LayoutItemListRowView(
+            row: row,
+            selection: selection,
+            anchors: anchors,
+            isEditable: isEditable,
+            showsSectionBadge: section.name == nil || row.section == .alwaysHidden,
+            sweepPreview: sweep.flatMap { $0.covered.contains(row.id) ? $0.target : nil },
+            onTap: {
+                // A click on a row leaves the filter, so Escape and the arrows reach the list.
+                NSApp.keyWindow?.makeFirstResponder(nil)
+                isFocused = true
+            },
+            onSweep: { startY, y in sweepChanged(from: row.id, startY: startY, to: y, rows: rows) },
+            onSweepEnd: { sweepEnded(rows: rows) }
+        )
+        .id(row.id)
+        .onGeometryChange(for: ClosedRange<CGFloat>.self) { proxy in
+            let frame = proxy.frame(in: .named(LayoutCheckboxSweep.coordinateSpace))
+            return frame.minY ... frame.maxY
+        } action: { rowSpans[row.id] = $0 }
+    }
+
     /// Spaced as ThawUI's list heading, in the bars' sentence case. Dropping rows on it moves them to that section.
     private func heading(_ name: MenuBarSectionName, isFirst: Bool) -> some View {
         Text(name.localizedName)
@@ -142,6 +157,38 @@ struct LayoutItemListPane: View {
                     LayoutItemListDrop.dropOnSection(ids, section: name, selection: selection, appState: appState)
                 }
             }
+    }
+
+    private func sweepRows(_ rows: [LayoutItemListRow]) -> [LayoutCheckboxSweep.Row] {
+        let experimental = appState.settings.layout.enableExperimentalSystemItemHiding
+        return rows.compactMap { row in
+            guard let span = rowSpans[row.id] else { return nil }
+            let lock = LayoutItemVisibility.lockReason(for: row.item, in: row.section, experimentalSystemItemHiding: experimental)
+            return LayoutCheckboxSweep.Row(
+                id: row.id,
+                span: span,
+                isShown: LayoutItemVisibility.isShown(row.section),
+                isLocked: !isEditable || lock != nil
+            )
+        }
+    }
+
+    private func sweepChanged(from rowID: String, startY: CGFloat, to y: CGFloat, rows: [LayoutItemListRow]) {
+        let sweepRows = sweepRows(rows)
+        if sweep == nil {
+            sweep = LayoutCheckboxSweep(startingAt: rowID, rows: sweepRows)
+        }
+        sweep?.extend(from: startY, to: y, rows: sweepRows)
+    }
+
+    /// Selects the rows the sweep changes and moves them in one batch, so one undo puts them back.
+    private func sweepEnded(rows: [LayoutItemListRow]) {
+        defer { sweep = nil }
+        guard let sweep else { return }
+        let changes = sweep.changes(in: sweepRows(rows))
+        guard !changes.isEmpty else { return }
+        selection.select(changes)
+        LayoutItemVisibility.moveSelection(to: sweep.target ? .visible : .hidden, selection: selection, appState: appState)
     }
 
     private func perform(_ command: LayoutItemListCommand, extends: Bool, rows: [LayoutItemListRow], proxy: ScrollViewProxy) -> Bool {
@@ -216,121 +263,8 @@ struct LayoutItemListPane: View {
     }
 }
 
-/// One row: checkbox, picture, name, owner and, where the heading doesn't say it, the section.
-/// Its own view, so a selection change redraws the rows and not the whole list.
-private struct LayoutItemListRowView: View {
-    @Environment(AppState.self) private var appState
-    let row: LayoutItemListRow
-    let selection: LayoutSelectionModel
-    let anchors: LayoutItemListAnchors
-    let isEditable: Bool
-    let showsSectionBadge: Bool
-    let onTap: () -> Void
-
-    @State private var isDropTarget = false
-
-    var body: some View {
-        let isSelected = selection.contains(row.id)
-        HStack(spacing: PanelRow.iconSpacing) {
-            visibilityCheckbox
-            MenuBarItemRowImage(
-                item: row.item,
-                columnWidth: LayoutDashboardMetrics.pictureColumnWidth,
-                glyphHeight: LayoutDashboardMetrics.pictureHeight
-            )
-            // ThawType has no step between body and display; Title 3 still follows Larger Text.
-            Text(row.name)
-                .font(.title3)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-            if let owner = row.ownerName {
-                Text(verbatim: owner)
-                    .font(ThawType.body)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            if showsSectionBadge, row.section != .visible {
-                ThawBadge(LayoutItemListText.sectionBadge(row.section))
-            }
-        }
-        .padding(.horizontal, PanelRow.inset)
-        .frame(minHeight: LayoutDashboardMetrics.rowHeight)
-        .modifier(SearchRowBackground(selected: isSelected))
-        .overlay(alignment: .top) {
-            // Where a drop lands: just above this row.
-            if isDropTarget, isEditable {
-                Capsule().fill(Color.accentColor).frame(height: 2)
-            }
-        }
-        .background {
-            LayoutItemListMenuHost(rowID: row.id, anchors: anchors) { isEditable ? menu() : nil }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onTap()
-            let flags = NSEvent.modifierFlags
-            let kind = LayoutSelection.Click(command: flags.contains(.command), shift: flags.contains(.shift))
-            selection.click(row.id, in: row.section, kind: kind)
-        }
-        .onDrag {
-            LayoutItemListDrop.provider(for: row.id, in: row.section, selection: selection)
-        } preview: {
-            LayoutItemListDragPreview(name: row.name, count: selection.contains(row.id) ? selection.count : 1)
-        }
-        .onDrop(of: [LayoutItemListDrop.type], isTargeted: $isDropTarget) { providers in
-            guard isEditable else { return false }
-            return LayoutItemListDrop.load(providers) { ids in
-                LayoutItemListDrop.drop(ids, before: row, selection: selection, appState: appState)
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-        .accessibilityValue(Text(row.section.localizedName))
-    }
-
-    /// Checked is Visible; unchecking hides into Hidden, so an Always Hidden item checked and
-    /// unchecked again ends in Hidden. With several rows selected, one checkbox moves them all.
-    private var visibilityCheckbox: some View {
-        let lock = LayoutItemVisibility.lockReason(
-            for: row.item,
-            in: row.section,
-            experimentalSystemItemHiding: appState.settings.layout.enableExperimentalSystemItemHiding
-        )
-        let isShown = LayoutItemVisibility.isShown(row.section)
-        return Toggle(isOn: Binding(get: { isShown }, set: { shown in
-            LayoutItemVisibility.setShown(shown, rowID: row.id, in: row.section, selection: selection, appState: appState)
-        })) {
-            // The style draws any label beside the box; the name is already in the row.
-            EmptyView()
-        }
-        .toggleStyle(.thawCheckbox)
-        .controlSize(.large)
-        .accessibilityLabel(Text("Show \(row.name) in the menu bar"))
-        .fixedSize()
-        .disabled(lock != nil || !isEditable)
-        // On a wrapper, so a disabled checkbox still explains itself.
-        .frame(width: LayoutDashboardMetrics.checkboxColumnWidth)
-        .contentShape(Rectangle())
-        .help(lock ?? (isShown ? String(localized: "Shown in the menu bar") : row.section.localizedName))
-    }
-
-    /// The bars' menus: the selection's moves for one of several selected rows, otherwise the item's own.
-    private func menu() -> NSMenu? {
-        if selection.count > 1, selection.contains(row.id) {
-            return LayoutSelectionActions(selection: selection, appState: appState).menu()
-        }
-        let running = NSWorkspace.shared.runningApplications.filter { !$0.isTerminated }
-        return LayoutBarItemMenu.menu(
-            subject: .item(row.item),
-            section: row.section,
-            orderedItems: LayoutDisplayedItems.items(in: row.section, appState: appState, runningApplications: running),
-            appState: appState
-        )
-    }
-}
-
 /// What follows the pointer while rows are dragged.
-private struct LayoutItemListDragPreview: View {
+struct LayoutItemListDragPreview: View {
     let name: String
     let count: Int
 
