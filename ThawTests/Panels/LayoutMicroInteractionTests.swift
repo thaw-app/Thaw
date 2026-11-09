@@ -49,13 +49,56 @@ struct LayoutMicroInteractionTests {
         #expect(LayoutListAutoscroll.offset(0, by: 18, contentHeight: 300, viewportHeight: 400) == 0)
     }
 
-    @Test("Only moves flash the list's rows")
-    func movesSelection() {
-        #expect(LayoutItemListCommand.sectionNumber(2).movesSelection)
-        #expect(LayoutItemListCommand.nudge(left: true).movesSelection)
-        #expect(LayoutItemListCommand.adjacentSection(up: false).movesSelection)
-        #expect(!LayoutItemListCommand.undo.movesSelection)
-        #expect(!LayoutItemListCommand.step(1).movesSelection)
+    @Test("Moved rows light once the bar reports them, or after a moment when it reported first")
+    func movedRowsFlash() async throws {
+        let motion = LayoutListMotion()
+        motion.revealPending()
+        #expect(motion.flashing.isEmpty, "a layout change with no landed move lights nothing")
+
+        motion.noteMoved(["a", "b"])
+        motion.revealPending()
+        #expect(motion.flashing == ["a", "b"])
+        #expect(motion.scrollTarget?.id == "a")
+
+        let quiet = LayoutListMotion()
+        quiet.noteMoved(["c"])
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(quiet.flashing == ["c"], "a move whose report came first still lights")
+        quiet.revealPending()
+        #expect(quiet.flashing == ["c"], "and a later layout change doesn't light it again")
+    }
+
+    @Test("Moving the same row again scrolls to it again")
+    func repeatedMoveScrolls() {
+        let motion = LayoutListMotion()
+        motion.noteMoved(["a"])
+        motion.revealPending()
+        let first = motion.scrollTarget
+        motion.noteMoved(["a"])
+        motion.revealPending()
+        #expect(motion.scrollTarget?.id == "a")
+        #expect(motion.scrollTarget != first)
+    }
+
+    @Test("A checkbox click is the sweep's while it covers other rows and just after it moved them")
+    func sweepClick() throws {
+        let motion = LayoutListMotion()
+        #expect(!motion.isSweepClick())
+
+        let rows = [
+            LayoutCheckboxSweep.Row(id: "a", span: 0 ... 10, isShown: true, isLocked: false),
+            LayoutCheckboxSweep.Row(id: "b", span: 10 ... 20, isShown: true, isLocked: false),
+        ]
+        var sweep = try #require(LayoutCheckboxSweep(startingAt: "a", rows: rows))
+        motion.sweep = sweep
+        #expect(!motion.isSweepClick(), "a drag still on its first row leaves the click to the checkbox")
+        sweep.extend(from: 5, to: 15, rows: rows)
+        motion.sweep = sweep
+        #expect(motion.isSweepClick())
+
+        motion.sweep = nil
+        motion.noteBatchSweepEnded()
+        #expect(motion.isSweepClick())
     }
 }
 
@@ -74,5 +117,6 @@ struct SearchRearrangementTests {
         #expect(!MenuBarSearchModel.isRearrangement(from: before, to: before))
         #expect(!MenuBarSearchModel.isRearrangement(from: before, to: Array(before.prefix(2))))
         #expect(!MenuBarSearchModel.isRearrangement(from: before, to: [placement("a", nil), placement("b", nil), placement("d", nil)]))
+        #expect(!MenuBarSearchModel.isRearrangement(from: before, to: moved, sameQuery: false), "a keystroke that reranks isn't a move")
     }
 }

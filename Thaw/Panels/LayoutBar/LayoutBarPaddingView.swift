@@ -407,7 +407,7 @@ final class LayoutBarPaddingView: NSView {
         }
 
         if let index = arrangedViews.firstIndex(of: draggingSource) {
-            let previousOrder = LayoutReorderUndo.orderBeforeDrag(of: item, in: orderedItems, from: draggingSource.oldContainerInfo?.index)
+            let previousOrder = LayoutReorderUndo.orderBeforeDrag(draggingSource.dragStartSectionOrder, matching: orderedItems)
             if sectionIsPhysicallyLive(container.section, controller: controller) {
                 if container.section == .visible,
                    let appState = container.appState
@@ -882,6 +882,7 @@ final class LayoutBarPaddingView: NSView {
         }
         let controller = appState.menuBarManager.sectionController
         let orderedItems = orderedLayoutItems()
+        let dragStartOrder = handle.dragStartSectionOrder
         let identifiers = orderedItems.map(\.uniqueIdentifier)
 
         // Members in their current left-to-right order, the sequence the
@@ -931,6 +932,7 @@ final class LayoutBarPaddingView: NSView {
                 rightAnchor: afterBlockIndex < reordered.count ? reordered[afterBlockIndex] : nil,
                 leftAnchor: firstIndex > 0 ? reordered[firstIndex - 1] : nil,
                 sectionOrderToCommit: reordered,
+                dragStartOrder: dragStartOrder,
                 sourceContainer: handle.sourceContainer
             )
             // The async task calls finishDrag, which restores view updates.
@@ -939,6 +941,7 @@ final class LayoutBarPaddingView: NSView {
 
         controller.setSectionOrder(from: reordered, for: container.section)
         appState.itemManager.scheduleSectionOrderApply(for: container.section)
+        LayoutReorderUndo.registerGroupReorder(reordered, dragStart: dragStartOrder, section: container.section, appState: appState)
         Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
         restoreAfterGroupDrop(handle)
         return true
@@ -959,6 +962,7 @@ final class LayoutBarPaddingView: NSView {
         rightAnchor: MenuBarItem?,
         leftAnchor: MenuBarItem?,
         sectionOrderToCommit: [MenuBarItem],
+        dragStartOrder: [MenuBarItem]?,
         sourceContainer: LayoutBarContainer?
     ) {
         guard let appState = container.appState, !members.isEmpty else {
@@ -1001,9 +1005,7 @@ final class LayoutBarPaddingView: NSView {
             let liveOrder: @MainActor () -> [MenuBarItem] = {
                 appState.itemManager.managedItems(for: section)
             }
-            @MainActor func liveItem(_ tag: MenuBarItemTag) -> MenuBarItem? {
-                liveOrder().first { $0.tag == tag }
-            }
+            @MainActor func liveItem(_ tag: MenuBarItemTag) -> MenuBarItem? { liveOrder().first { $0.tag == tag } }
             let block = GroupBlockPlacement(members: memberOrder, anchor: anchorTag, insertsLeftOfAnchor: insertToLeftOfAnchor)
             let isPlaced: @MainActor () -> Bool = {
                 let live = liveOrder().map(\.tag)
@@ -1065,7 +1067,8 @@ final class LayoutBarPaddingView: NSView {
                 )
             }
 
-            appState.menuBarManager.sectionController.setSectionOrder(
+            let sectionController = appState.menuBarManager.sectionController
+            sectionController.setSectionOrder(
                 from: sectionOrderToCommit,
                 for: section
             )
@@ -1073,6 +1076,7 @@ final class LayoutBarPaddingView: NSView {
                 // An explicitly requested group order still needs convergence.
                 appState.itemManager.scheduleSectionOrderApply(for: section)
             }
+            LayoutReorderUndo.registerGroupReorder(sectionOrderToCommit, dragStart: dragStartOrder, section: section, appState: appState)
             await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
             self.isStabilizing = false
             self.setDimmed(false)
@@ -1117,6 +1121,8 @@ final class LayoutBarPaddingView: NSView {
                             refusal: refusal
                         )
                     )
+                } else {
+                    LayoutSectionMoveUndo.registerGroupUndo(of: members, from: handle.sourceSection, to: targetSection, appState: appState)
                 }
             }
 
@@ -1142,13 +1148,7 @@ final class LayoutBarPaddingView: NSView {
     }
 
     private func orderedLayoutItemsForSectionOrder() -> [MenuBarItem] {
-        let orderedItems = orderedLayoutItems()
-        guard container.section != .visible,
-              !Self.allowsAnchoredSystemItemReordering(appState: container.appState)
-        else {
-            return orderedItems
-        }
-        return Self.anchoredSystemItemsTrail(in: orderedItems)
+        LayoutReorderUndo.sectionOrder(for: container)
     }
 
     /// Fallback move target for the visible Thaw control when the planner

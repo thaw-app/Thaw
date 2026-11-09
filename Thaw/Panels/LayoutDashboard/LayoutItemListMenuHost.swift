@@ -37,9 +37,15 @@ struct LayoutItemListMenuHost: NSViewRepresentable {
             makeMenu?()
         }
 
-        /// Clicks pass to the SwiftUI row; only the right click's menu comes from here.
+        /// Clicks pass to the SwiftUI row; only the click that asks for the menu comes here.
         override func hitTest(_ point: NSPoint) -> NSView? {
-            NSApp.currentEvent?.type == .rightMouseDown ? super.hitTest(point) : nil
+            guard let event = NSApp.currentEvent, Self.opensMenu(type: event.type, modifiers: event.modifierFlags) else { return nil }
+            return super.hitTest(point)
+        }
+
+        /// Whether a click asks for the row's menu: a right click, or a Control-click, which AppKit treats the same.
+        static nonisolated func opensMenu(type: NSEvent.EventType, modifiers: NSEvent.ModifierFlags) -> Bool {
+            type == .rightMouseDown || (type == .leftMouseDown && modifiers.contains(.control))
         }
 
         func popUpMenu() {

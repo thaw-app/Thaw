@@ -29,6 +29,36 @@ struct LayoutUndoCoverageTests {
         undoManager.endUndoGrouping()
     }
 
+    /// An earlier edit at the bottom of the history, so a test can see exactly what sits on top of it.
+    private func recordEarlierEdit(_ undoManager: UndoManager, in world: World) {
+        record(undoManager) {
+            undoManager.registerUndo(withTarget: world.appState) { _ in }
+            undoManager.setActionName(Self.earlierEdit)
+        }
+    }
+
+    private static let earlierEdit = "Earlier Edit"
+
+    /// Whether edit registers an undo step. An empty group would itself read as a step, so this
+    /// groups by event instead: a registration opens a group, which nothing else here does.
+    private func registersUndo(_ undoManager: UndoManager, _ edit: () -> Void) -> Bool {
+        undoManager.groupsByEvent = true
+        defer { undoManager.groupsByEvent = false }
+        edit()
+        return undoManager.groupingLevel > 0
+    }
+
+    /// The control item, seated in Visible. Hidden and Always Hidden refuse it, so a move between
+    /// them stops at the gate here instead of reaching the menu bar.
+    private func refusingItem(_ world: World) throws -> MenuBarItem {
+        let control = World.item(.visibleControlItem)
+        world.seat([control])
+        for section in [MenuBarSection.Name.hidden, .alwaysHidden] {
+            try #require(!MenuBarBackendProvider.current.canAssign(control, to: section, experimentalSystemItemHiding: false))
+        }
+        return control
+    }
+
     @Test("Grouping two items undoes and redoes")
     func groupingUndo() {
         let world = World()
@@ -150,14 +180,13 @@ struct LayoutUndoCoverageTests {
         spacers.removeSpacer(id: id)
     }
 
-    @Test("The order before a same-section drag puts the item back in the slot it left")
+    @Test("The order before a same-section drag is the captured drag-start order")
     func orderBeforeDrag() {
         let items = ["A", "B", "C"].map { World.item($0) }
         let dragged = [items[1], items[2], items[0]]
-        let previous = LayoutReorderUndo.orderBeforeDrag(of: items[0], in: dragged, from: 0)
-        #expect(previous?.map(\.tag) == items.map(\.tag))
-        #expect(LayoutReorderUndo.orderBeforeDrag(of: items[0], in: items, from: 0) == nil, "no change, no undo")
-        #expect(LayoutReorderUndo.orderBeforeDrag(of: items[0], in: dragged, from: nil) == nil)
+        #expect(LayoutReorderUndo.orderBeforeDrag(items, matching: dragged)?.map(\.tag) == items.map(\.tag))
+        #expect(LayoutReorderUndo.orderBeforeDrag(items, matching: items) == nil, "no change, no undo")
+        #expect(LayoutReorderUndo.orderBeforeDrag(nil, matching: dragged) == nil)
     }
 
     @Test("A reorder undo restores the previous order and redo puts it back")
@@ -201,5 +230,120 @@ struct LayoutUndoCoverageTests {
         #expect(undoManager.canRedo)
         undoManager.redo()
         #expect(undoManager.canUndo)
+    }
+
+    @Test("The registration probe sees a step being registered")
+    func probeSeesARegistration() {
+        let world = World()
+        let undoManager = history(world)
+        #expect(registersUndo(undoManager) { undoManager.registerUndo(withTarget: world.appState) { _ in } })
+        undoManager.endUndoGrouping()
+    }
+
+    @Test("Undoing a menu move puts its redo on top and adds no undo step when the undone move lands")
+    func menuMoveUndoAddsNoStep() throws {
+        let world = World()
+        let control = try refusingItem(world)
+        let undoManager = history(world)
+        recordEarlierEdit(undoManager, in: world)
+
+        // The menu's move landed, Always Hidden to Hidden, and asked for undo.
+        record(undoManager) {
+            MenuBarSearchItemActions.recordMoveUndo(
+                of: control, groupMembers: nil, from: .alwaysHidden, to: .hidden,
+                committed: true, recordsUndo: true, appState: world.appState
+            )
+        }
+        #expect(undoManager.undoActionName == String(localized: "Move \(control.displayName)"))
+
+        undoManager.undo()
+        #expect(undoManager.canRedo)
+        #expect(undoManager.undoActionName == Self.earlierEdit)
+
+        // The undo runs the shared move without asking for undo; its landing adds nothing.
+        #expect(!registersUndo(undoManager) {
+            MenuBarSearchItemActions.recordMoveUndo(
+                of: control, groupMembers: nil, from: .hidden, to: .alwaysHidden,
+                committed: true, recordsUndo: false, appState: world.appState
+            )
+        })
+        #expect(undoManager.canRedo, "a new step would have cleared the redo")
+        #expect(undoManager.undoActionName == Self.earlierEdit)
+    }
+
+    @Test("A move that didn't land records no undo step, even when asked")
+    func unlandedMoveRecordsNothing() throws {
+        let world = World()
+        let control = try refusingItem(world)
+        let undoManager = history(world)
+        recordEarlierEdit(undoManager, in: world)
+        for committed in [false, nil] as [Bool?] {
+            #expect(!registersUndo(undoManager) {
+                MenuBarSearchItemActions.recordMoveUndo(
+                    of: control, groupMembers: nil, from: .alwaysHidden, to: .hidden,
+                    committed: committed, recordsUndo: true, appState: world.appState
+                )
+            })
+        }
+        #expect(undoManager.undoActionName == Self.earlierEdit)
+    }
+
+    @Test("A keyboard section move is one undo step")
+    func keyboardSectionMoveIsOneStep() throws {
+        let world = World()
+        let control = try refusingItem(world)
+        let undoManager = history(world)
+        recordEarlierEdit(undoManager, in: world)
+
+        record(undoManager) {
+            LayoutBarKeyboard.performSectionMove(
+                tag: control.tag, from: .alwaysHidden, to: .hidden,
+                appState: world.appState, undoManager: undoManager, actionName: "Keyboard Move"
+            )
+        }
+        // The shared move it runs lands without asking for undo.
+        #expect(!registersUndo(undoManager) {
+            MenuBarSearchItemActions.recordMoveUndo(
+                of: control, groupMembers: nil, from: .alwaysHidden, to: .hidden,
+                committed: true, recordsUndo: false, appState: world.appState
+            )
+        })
+        #expect(undoManager.undoActionName == "Keyboard Move")
+        undoManager.undo()
+        #expect(undoManager.undoActionName == Self.earlierEdit, "one undo reaches the earlier edit")
+        #expect(undoManager.redoActionName == "Keyboard Move")
+    }
+
+    @Test("Moving all of an app's items undoes and redoes as one step")
+    func moveAllUndoRedo() throws {
+        let world = World()
+        let control = try refusingItem(world)
+        let undoManager = history(world)
+        recordEarlierEdit(undoManager, in: world)
+
+        record(undoManager) {
+            LayoutSectionMoveUndo.registerMoves(
+                back: [.alwaysHidden: [control.tag]], forward: [.hidden: [control.tag]], appState: world.appState
+            )
+        }
+        #expect(undoManager.undoActionName == LayoutBatchMoveUndo.actionName(count: 1))
+        undoManager.undo()
+        #expect(undoManager.undoActionName == Self.earlierEdit)
+        #expect(undoManager.redoActionName == LayoutBatchMoveUndo.actionName(count: 1))
+        undoManager.redo()
+        #expect(undoManager.undoActionName == LayoutBatchMoveUndo.actionName(count: 1))
+        #expect(!undoManager.canRedo)
+    }
+
+    @Test("Moving items that were already in the section leaves no undo step")
+    func moveAllWithinSectionRecordsNothing() {
+        let world = World()
+        let alpha = World.item("Alpha")
+        let undoManager = history(world)
+        recordEarlierEdit(undoManager, in: world)
+        #expect(!registersUndo(undoManager) {
+            LayoutSectionMoveUndo.registerMoves(back: [.hidden: [alpha.tag]], forward: [.hidden: [alpha.tag]], appState: world.appState)
+        })
+        #expect(undoManager.undoActionName == Self.earlierEdit)
     }
 }

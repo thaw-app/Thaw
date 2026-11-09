@@ -26,6 +26,10 @@ final class LayoutBarGroupHandleView: NSView {
     /// The container the group currently lives in, frozen for the drag.
     weak var sourceContainer: LayoutBarContainer?
 
+    /// The section's item order when the drag began, as the drop will build it.
+    /// A reorder or cross-section undo restores this.
+    var dragStartSectionOrder: [MenuBarItem]?
+
     /// The section the group is being dragged out of.
     let sourceSection: MenuBarSection.Name
 
@@ -186,6 +190,7 @@ extension LayoutBarGroupHandleView: NSDraggingSource {
         // Freeze the source container so a cache refresh can't dissolve the
         // group mid-drag before the drop commits.
         sourceContainer?.acceptsViewUpdates = false
+        dragStartSectionOrder = sourceContainer.map { LayoutReorderUndo.sectionOrder(for: $0) }
         session.animatesToStartingPositionsOnCancelOrFail = true
         LayoutDragHaptics.begin(in: sourceSection)
     }
@@ -193,6 +198,7 @@ extension LayoutBarGroupHandleView: NSDraggingSource {
     func draggingSession(_: NSDraggingSession, endedAt _: NSPoint, operation: NSDragOperation) {
         // A successful drop re-enables the source container in the drop handler;
         // a cancelled or rejected drag restores it here.
+        dragStartSectionOrder = nil
         if operation == [] {
             sourceContainer?.acceptsViewUpdates = true
         }

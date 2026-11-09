@@ -21,11 +21,13 @@ struct LayoutItemListRowView: View {
     let showsSectionBadge: Bool
     /// The sweep and the flash, read here so they redraw this row and not the list.
     let motion: LayoutListMotion
+    /// The rows the list shows, read only when Shift extends a click across them.
+    let shownRowIDs: () -> Set<String>
     let onTap: () -> Void
     /// A drag of this row started, so the list can scroll at its edges.
     let onDragStart: () -> Void
-    /// The rows a checkbox or a drop on this row is moving.
-    let onMoved: ([String]) -> Void
+    /// The rows a checkbox or a drop on this row moved, once the move lands.
+    let onMoved: @MainActor ([String]) -> Void
     /// The sweep's start and current height in the list's coordinates.
     let onSweep: (CGFloat, CGFloat) -> Void
     let onSweepEnd: () -> Void
@@ -56,7 +58,7 @@ struct LayoutItemListRowView: View {
             onTap()
             let flags = NSEvent.modifierFlags
             let kind = LayoutSelection.Click(command: flags.contains(.command), shift: flags.contains(.shift))
-            selection.click(row.id, in: row.section, kind: kind)
+            LayoutItemList.click(row, kind: kind, shownRowIDs: shownRowIDs, selection: selection)
         }
         // A drop opens a gap above this row, with the insertion line in it. The gap is part of the
         // row's drop area, so the pointer stays on this row as the row slides down.
@@ -73,9 +75,8 @@ struct LayoutItemListRowView: View {
         .onDrop(of: [LayoutItemListDrop.type], isTargeted: $isDropTarget) { providers in
             guard isEditable else { return false }
             return LayoutItemListDrop.load(providers) { ids in
-                LayoutItemListDrop.drop(ids, before: row, selection: selection, appState: appState)
-                onMoved(selection.orderedItemIDs)
-                ThawHaptics.land()
+                // Taps when a move starts, as the bars do; the flash waits until it lands.
+                _ = ThawHaptics.landing(LayoutItemListDrop.drop(ids, before: row, selection: selection, appState: appState, onMoved: onMoved))
             }
         }
         .onChange(of: showsGap) {
@@ -135,8 +136,9 @@ struct LayoutItemListRowView: View {
         let sweepPreview = motion.sweep.flatMap { $0.covered.contains(row.id) ? $0.target : nil }
         let shownNow = lock == nil ? sweepPreview ?? isShown : isShown
         return Toggle(isOn: Binding(get: { shownNow }, set: { shown in
-            LayoutItemVisibility.setShown(shown, rowID: row.id, in: row.section, selection: selection, appState: appState)
-            onMoved(selection.orderedItemIDs)
+            // A sweep over other rows ends on this checkbox's click; the sweep moves them all.
+            guard !motion.isSweepClick() else { return }
+            LayoutItemVisibility.setShown(shown, rowID: row.id, in: row.section, selection: selection, appState: appState, onMoved: onMoved)
         })) {
             // The style draws any label beside the box; the name is already in the row.
             EmptyView()
@@ -203,9 +205,13 @@ struct LayoutItemListHeading: View {
             .onDrop(of: [LayoutItemListDrop.type], isTargeted: $isDropTarget) { providers in
                 guard isEditable else { return false }
                 return LayoutItemListDrop.load(providers) { ids in
-                    LayoutItemListDrop.dropOnSection(ids, section: name, selection: selection, appState: appState)
-                    motion.noteMoved(selection.orderedItemIDs)
-                    ThawHaptics.land()
+                    _ = ThawHaptics.landing(LayoutItemListDrop.dropOnSection(
+                        ids,
+                        section: name,
+                        selection: selection,
+                        appState: appState,
+                        onMoved: { motion.noteMoved($0) }
+                    ))
                 }
             }
             .onChange(of: isDropTarget) {
