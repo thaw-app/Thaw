@@ -73,6 +73,53 @@ struct MenuBarScanStateTests {
         #expect(pass.owners == [5, 1, 3, 4, 2])
     }
 
+    @Test("A walk that ran out of time before the background-only owners is still complete")
+    func excusedBackgroundOwnersDoNotBlockCompleteness() {
+        var state = MenuBarScanState<String>()
+        let pass = state.begin(owners: [1, 2], priorityOwners: [], deferredOwners: [2])
+        state.didAttempt(owner: 1, generation: pass.generation)
+        state.record(["item"], owner: 1, generation: pass.generation)
+        #expect(!state.isComplete(generation: pass.generation))
+        #expect(!state.hasFreshKnownInventory(generation: pass.generation))
+        // Owner 2 can't own an item, so leaving it unread proves nothing was missed.
+        #expect(state.isComplete(pass, excusing: [2]))
+        #expect(state.hasFreshKnownInventory(generation: pass.generation, excusing: [2]))
+    }
+
+    @Test("A background-only owner is excused only while Thaw holds no items for it")
+    func deferredOwnerWithItemsIsNotExcused() {
+        var state = MenuBarScanState<String>()
+        // Owner 2 once showed an item; owner 3 answered empty; owner 4 was never read.
+        let first = state.begin(owners: [1, 2, 3, 4], priorityOwners: [])
+        for owner: Int32 in [1, 2, 3] {
+            state.didAttempt(owner: owner, generation: first.generation)
+        }
+        state.record(["one"], owner: 1, generation: first.generation)
+        state.record(["two"], owner: 2, generation: first.generation)
+        state.record([], owner: 3, generation: first.generation)
+
+        // A later walk reads owner 1 and runs out of time before the deferred owners.
+        let pass = state.begin(owners: [1, 2, 3, 4], priorityOwners: [], deferredOwners: [2, 3, 4])
+        state.didAttempt(owner: 1, generation: pass.generation)
+        state.record(["one"], owner: 1, generation: pass.generation)
+
+        let excused = state.excusableDeferredOwners(of: pass)
+        #expect(excused == [3, 4])
+        // Owner 2's item wasn't read again, so its geometry is stale and the inventory isn't fresh.
+        #expect(!state.hasFreshKnownInventory(generation: pass.generation, excusing: excused))
+        #expect(!state.isComplete(pass, excusing: excused))
+
+        // Once owner 2 answers empty it is excused like the others.
+        let next = state.begin(owners: [1, 2, 3, 4], priorityOwners: [], deferredOwners: [2, 3, 4])
+        state.didAttempt(owner: 1, generation: next.generation)
+        state.record(["one"], owner: 1, generation: next.generation)
+        state.didAttempt(owner: 2, generation: next.generation)
+        state.record([], owner: 2, generation: next.generation)
+        let nextExcused = state.excusableDeferredOwners(of: next)
+        #expect(nextExcused == [2, 3, 4])
+        #expect(state.hasFreshKnownInventory(generation: next.generation, excusing: nextExcused))
+    }
+
     @Test("An unvisited owner survives, but a successful empty answer removes its items")
     func absenceRequiresAnObservation() {
         var state = MenuBarScanState<String>()

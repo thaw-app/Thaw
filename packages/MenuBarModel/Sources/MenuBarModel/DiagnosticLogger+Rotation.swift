@@ -91,7 +91,13 @@ extension DiagnosticLogger {
         let openedAt = segmentOpenedAtLock.withLock { $0 } ?? Date()
         guard Self.shouldRotate(policy: policy, fileSize: size, openFor: Date().timeIntervalSince(openedAt)) else { return }
         closeLogFile()
+        // Logging can be turned off from another thread while this runs. That closes the file this
+        // read above, so a new one opened here would stay open with nothing left to close it.
+        guard isEnabled else { return }
         openLogFile()
+        if !isEnabled {
+            closeLogFile()
+        }
     }
 }
 

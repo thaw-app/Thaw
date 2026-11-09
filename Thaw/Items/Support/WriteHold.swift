@@ -95,4 +95,10 @@ nonisolated enum StructuralNormalizationHolds {
             MenuBarItemManager.diagLog.debug("\(note)")
         }
     }
+
+    /// Whether a deferred pass needs a fresh full read before its retry: the bar moved to a display the
+    /// cache hasn't followed, or the last read was incomplete. Nothing else asks for a read in either case.
+    static func needsFreshRead(_ situation: WriteHold.Situation) -> Bool {
+        situation.barOnUncachedDisplay || situation.barReadIncomplete
+    }
 }

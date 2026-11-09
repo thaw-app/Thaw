@@ -549,7 +549,7 @@ extension MenuBarItemManager {
             guard manualMembershipTask == nil else { return }
             if let held = WriteHold.first(StructuralNormalizationHolds.checks, in: situation) {
                 StructuralNormalizationHolds.logDeferral(on: held)
-                readBarIfItMoved(situation)
+                refreshBarForRetry(situation)
                 rearm()
                 return
             }
