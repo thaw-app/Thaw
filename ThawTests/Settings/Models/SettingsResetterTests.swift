@@ -38,6 +38,7 @@ struct SettingsResetterTests {
     func resetAllowedApps() {
         Defaults.set(["com.example.app"], forKey: .settingsURIWhitelist)
         Defaults.set(["com.example.app": "TEAM"], forKey: .settingsURISigningIdentities)
+        Defaults.set(["com.example.app": "HASH"], forKey: .settingsURICodeHashes)
         Defaults.set(true, forKey: .settingsURIEnabled)
         let settings = AppSettings()
         settings.privacy.isSettingsURIEnabled = true
@@ -48,6 +49,7 @@ struct SettingsResetterTests {
         #expect(!Defaults.bool(forKey: .settingsURIEnabled))
         #expect(Defaults.stringArray(forKey: .settingsURIWhitelist) == nil)
         #expect(Defaults.store.object(forKey: Defaults.Key.settingsURISigningIdentities.rawValue) == nil)
+        #expect(Defaults.store.object(forKey: Defaults.Key.settingsURICodeHashes.rawValue) == nil)
         #expect(settings.privacy.whitelistedApps.isEmpty)
     }
 
@@ -93,6 +95,7 @@ struct SettingsResetterTests {
         settings.visibility.autoRehide = !Defaults.DefaultValue.autoRehide
         settings.visibility.rehideStrategy = Defaults.DefaultValue.rehideStrategy == .timed ? .smart : .timed
         settings.visibility.rehideInterval = Defaults.DefaultValue.rehideInterval + 7
+        settings.visibility.recordingWatchPlacement = .leading
 
         settings.resetVisibility()
         settings.resetThawBar()
@@ -104,6 +107,18 @@ struct SettingsResetterTests {
         #expect(settings.visibility.autoRehide == Defaults.DefaultValue.autoRehide)
         #expect(settings.visibility.rehideStrategy == Defaults.DefaultValue.rehideStrategy)
         #expect(settings.visibility.rehideInterval == Defaults.DefaultValue.rehideInterval)
+        #expect(settings.visibility.recordingWatchPlacement == Defaults.DefaultValue.recordingWatchPlacement)
+        #expect(!Defaults.bool(forKey: .rememberSearchQuery))
+    }
+
+    @Test("Resetting Widgets puts the control item panel switch back")
+    func resetWidgets() {
+        let settings = AppSettings()
+        settings.widgets.enableControlItemPanel = !Defaults.DefaultValue.enableControlItemPanel
+
+        settings.resetWidgets()
+
+        #expect(settings.widgets.enableControlItemPanel == Defaults.DefaultValue.enableControlItemPanel)
     }
 
     @Test("Resetting everything reaches every page, Hotkeys and Display together")
@@ -111,9 +126,12 @@ struct SettingsResetterTests {
         let zoom = try #require(suites.make())
         zoom.set(80, forKey: AppUIZoom.defaultsKey)
         Defaults.set(["toggleHidden": Data([1])], forKey: .hotkeys)
+        Defaults.set(true, forKey: .rememberSearchQuery)
         let settings = AppSettings()
         settings.visibility.showOnHover = !Defaults.DefaultValue.showOnHover
         settings.visibility.tooltipDelay = 9
+        settings.visibility.recordingWatchPlacement = .trailing
+        settings.widgets.enableControlItemPanel = !Defaults.DefaultValue.enableControlItemPanel
         settings.privacy.showReleaseNotesAfterUpdate = !Defaults.DefaultValue.showReleaseNotesAfterUpdate
         settings.displaySettings.confirmSpacingRelaunch = !Defaults.DefaultValue.confirmSpacingRelaunch
 
@@ -122,8 +140,11 @@ struct SettingsResetterTests {
         #expect(zoom.object(forKey: AppUIZoom.defaultsKey) == nil)
         #expect(settings.visibility.showOnHover == Defaults.DefaultValue.showOnHover)
         #expect(settings.visibility.tooltipDelay == Defaults.DefaultValue.tooltipDelay)
+        #expect(settings.visibility.recordingWatchPlacement == Defaults.DefaultValue.recordingWatchPlacement)
+        #expect(settings.widgets.enableControlItemPanel == Defaults.DefaultValue.enableControlItemPanel)
         #expect(settings.privacy.showReleaseNotesAfterUpdate == Defaults.DefaultValue.showReleaseNotesAfterUpdate)
         #expect(settings.displaySettings.confirmSpacingRelaunch == Defaults.DefaultValue.confirmSpacingRelaunch)
+        #expect(!Defaults.bool(forKey: .rememberSearchQuery))
         #expect((Defaults.dictionary(forKey: .hotkeys) ?? [:]).isEmpty)
     }
 }

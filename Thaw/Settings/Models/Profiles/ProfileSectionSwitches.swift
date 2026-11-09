@@ -17,3 +17,18 @@ nonisolated extension AdvancedSettingsSnapshot {
         return merged
     }
 }
+
+/// How a profile file tells whether it stores the Always Hidden switch.
+nonisolated extension Profile {
+    private enum LegacyAdvancedKey: String, CodingKey {
+        case enableAlwaysHiddenSection
+    }
+
+    /// Newer files say so under their own key. In files from before the key, the saved advancedSettings
+    /// holding the switch tells, which a rewrite such as a rename would otherwise make true.
+    static func readsStoredAlwaysHiddenSwitch(from container: KeyedDecodingContainer<CodingKeys>) throws -> Bool {
+        try container.decodeIfPresent(Bool.self, forKey: .storesAlwaysHiddenSection)
+            ?? (try? container.nestedContainer(keyedBy: LegacyAdvancedKey.self, forKey: .advancedSettings))?
+            .contains(.enableAlwaysHiddenSection) ?? false
+    }
+}

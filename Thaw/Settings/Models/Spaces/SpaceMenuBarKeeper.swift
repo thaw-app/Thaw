@@ -79,6 +79,8 @@ final class SpaceMenuBarKeeper {
     func resetAll(spaces: [Bridging.ManagedSpace]) async {
         reload()
         let requests = SpaceMenuBarReapply.resetRequests(for: choices, spaces: spaces)
+        // A choice still waiting for its Space to be listed would otherwise come back after the reset.
+        pending.removeAll()
         removeAll()
         await send(requests)
     }

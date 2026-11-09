@@ -19,6 +19,7 @@ extension AppSettings {
         resetSpaces()
         resetPrivacy()
         resetTools()
+        resetWidgets()
         resetHotkeys()
         resetDisplay()
         resetAppearance()
@@ -27,6 +28,9 @@ extension AppSettings {
         FirstRunHintStore.shared.reset()
         appState?.imageCache.clearAll()
         appState?.imageCache.diskStore.removeCacheFiles()
+        // A reset rewinds the layout context, so recorded edits could write a
+        // pre-reset order back over it.
+        appState?.layoutUndo.removeAllActions()
         // Not a setting, but a learned verdict about the user's other apps.
         // A reset is the one moment they explicitly ask for a clean slate,
         // and it is the only way to clear a record from the UI.
@@ -98,8 +102,14 @@ extension AppSettings {
         visibility.enableRecordingWatch = Defaults.DefaultValue.enableRecordingWatch
         visibility.zenModeWhileRecording = Defaults.DefaultValue.zenModeWhileRecording
         visibility.recordingWatchScreen = Defaults.DefaultValue.recordingWatchScreen
+        visibility.recordingWatchPlacement = Defaults.DefaultValue.recordingWatchPlacement
         visibility.menuBarSearchPresentation = Defaults.DefaultValue.menuBarSearchPresentation
         Defaults.set(Defaults.DefaultValue.showSearchShortcutBar, forKey: .showSearchShortcutBar)
+        Defaults.set(Defaults.DefaultValue.rememberSearchQuery, forKey: .rememberSearchQuery)
+    }
+
+    func resetWidgets() {
+        widgets.enableControlItemPanel = Defaults.DefaultValue.enableControlItemPanel
     }
 
     func resetThawBar() {
@@ -139,6 +149,7 @@ extension AppSettings {
     static let allowedAppKeys = [
         Defaults.Key.settingsURIWhitelist.rawValue,
         Defaults.Key.settingsURISigningIdentities.rawValue,
+        Defaults.Key.settingsURICodeHashes.rawValue,
     ]
 
     /// What makes Thaw show its welcome and What's New again. Update consent
