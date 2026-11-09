@@ -48,6 +48,7 @@ struct LayoutBarsSection: View {
                     HiddenItemCaptureButton()
                         .settingsSearchAnchor("layout.captureHiddenItems")
                     if showsPopOutButton {
+                        ThawBadge.workInProgress
                         popOutButton
                     }
                 }
