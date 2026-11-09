@@ -62,7 +62,10 @@ struct LayoutMicroInteractionTests {
 
         let quiet = LayoutListMotion()
         quiet.noteMoved(["c"])
-        try await Task.sleep(for: .milliseconds(400))
+        // Polled, since a fixed wait can outlast the flash on a busy machine.
+        for _ in 0 ..< 500 where quiet.flashing != ["c"] {
+            try await Task.sleep(for: .milliseconds(10))
+        }
         #expect(quiet.flashing == ["c"], "a move whose report came first still lights")
         quiet.revealPending()
         #expect(quiet.flashing == ["c"], "and a later layout change doesn't light it again")
