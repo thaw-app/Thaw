@@ -139,7 +139,7 @@ extension MenuBarItemImageCache {
         // flag that never clears cannot starve capture.
         let reflowSkip = await MainActor.run { () -> Int in
             let reflowing = appState.barSettling.hold(for: .agentNudge) != nil
-            guard reflowing, consecutiveReflowSkips < Self.maximumReflowSkips else {
+            guard Self.skipsPassForReflow(reflowing: reflowing, consecutiveSkips: consecutiveReflowSkips) else {
                 consecutiveReflowSkips = 0
                 return 0
             }
@@ -248,7 +248,12 @@ extension MenuBarItemImageCache {
             knownItems: appState.itemManager.managedItems,
             recentItems: appState.itemManager.onScreenItemSnapshot.items
         )
-        if Self.settlesRevealedPixels(
+        // A pass the reflow is about to skip takes no picture, so it has nothing to wait for.
+        let reflowSkipsPass = Self.skipsPassForReflow(
+            reflowing: appState.barSettling.hold(for: .agentNudge) != nil,
+            consecutiveSkips: consecutiveReflowSkips
+        )
+        if !reflowSkipsPass, Self.settlesRevealedPixels(
             for: section,
             revealedSection: revealedSection,
             lastRevealChange: appState.barSettling.lastRevealChange,

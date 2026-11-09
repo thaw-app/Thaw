@@ -71,15 +71,15 @@ struct RevealCapturePrewarmTests {
         )
     }
 
-    /// Solid ink, pixelWidth wide at scale 2.
-    private static func glyph(pixelWidth: Int) throws -> MenuBarItemGlyphCapture {
+    /// Solid ink, pixelWidth wide at scale 2, with inset clear pixels on each side.
+    private static func glyph(pixelWidth: Int, inset: Int = 0) throws -> MenuBarItemGlyphCapture {
         let context = try #require(CGContext(
             data: nil, width: pixelWidth, height: 48, bitsPerComponent: 8, bytesPerRow: pixelWidth * 4,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ))
         context.setFillColor(CGColor(gray: 0, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: pixelWidth, height: 48))
+        context.fill(CGRect(x: inset, y: 0, width: pixelWidth - inset * 2, height: 48))
         return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 2)
     }
 
@@ -218,7 +218,7 @@ struct RevealCapturePrewarmTests {
         let world = World()
         let good = Self.item("Good"), weak = Self.item("Weak"), module = Self.item("com.apple.menuextra.wifi", namespace: .menuBarAgent)
         world.sections[.hidden] = [good, weak, module]
-        world.images[good.tag] = try Self.glyph(pixelWidth: 40)
+        world.images[good.tag] = try Self.glyph(pixelWidth: 40, inset: 6)
         world.newPictures = [weak.tag]
 
         let result = await world.prewarm().captureHiddenItems(retakingAll: retakingAll)
@@ -229,6 +229,23 @@ struct RevealCapturePrewarmTests {
         } else {
             #expect(result == HiddenItemCaptureResult(captured: 1, total: 1, missing: [], kept: 1))
         }
+    }
+
+    @Test("Capture Hidden Items retakes a picture clipped at its left edge; an automatic prewarm leaves it")
+    func clippedPictureIsRetakenOnRequest() async throws {
+        let world = World()
+        let good = Self.item("Good"), clipped = Self.item("Clipped")
+        world.sections[.hidden] = [good, clipped]
+        world.images[good.tag] = try Self.glyph(pixelWidth: 40, inset: 6)
+        world.images[clipped.tag] = try Self.glyph(pixelWidth: 40)
+        world.newPictures = [clipped.tag]
+
+        await world.run([.hidden])
+        #expect(world.captured.isEmpty, "An icon that draws to its edge must not be revealed on every open")
+
+        let result = await world.prewarm().captureHiddenItems(retakingAll: false)
+        #expect(world.captured.map(\.items) == [[clipped.tag]])
+        #expect(result == HiddenItemCaptureResult(captured: 1, total: 1, missing: [], kept: 1))
     }
 
     @Test("Capture Hidden Items reports nothing when no capture can run")
