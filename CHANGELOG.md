@@ -32,7 +32,8 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 
 - **Pop Out Editor (work in progress).** Opens Layout in a window with every item in a list, a filter, an editor for the selected item and full keyboard control.
 - **Every Layout edit can be undone,** with ⌘Z anywhere on the Layout page.
-- **Drag down the Layout window's checkboxes to show or hide several items at once.** A dragged row opens a gap where it will land.
+- **Drag down the Layout window's checkboxes to show or hide several items at once.** A dragged row opens a gap where it will land, a section's name lights up when a drop there would move it, and the list scrolls when a drag reaches its edge. Moved rows flash where they landed.
+- **Trackpad taps for Layout and sliders.** A drag taps as it crosses into another section and when it lands, and the spacing and item size sliders tap at their defaults.
 - **The current Space in the menu bar,** in Displays › Spaces.
 - **Layout warns when items don't fit or macOS hides Focus,** with a one-click fix for each. Reported by @JosefGvirt in [#1477](https://github.com/thaw-app/Thaw/issues/1477).
 - **The widget icon shows real readings** and Bluetooth audio, in a larger size. Suggested by @joaofrgomes in [#1378](https://github.com/thaw-app/Thaw/issues/1378).
@@ -46,7 +47,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 
 ### Changed
 
-- **Search is Floe's launcher,** grouped by section, with Extended and Compact layouts in Visibility. Detailed and Large become Extended.
+- **Search is Floe's launcher,** grouped by section, with Extended and Compact layouts in Visibility. Detailed and Large become Extended. A moved item slides into its new section, and counts roll as they change.
 - **Settings search goes to the row** and finds each module's switch.
 - **Extras is now Modules.**
 - **One name for each section: Visible, Hidden and Always Hidden.**

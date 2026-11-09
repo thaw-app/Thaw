@@ -127,7 +127,7 @@ final class LayoutBarPaddingView: NSView {
         // depends on that state to capture the badge's new neighbors; without
         // this guard the dropped item bounces to the wrong side of the badge.
         container.acceptsViewUpdates = false
-        return container.handleDrag(sender, phase: .entered)
+        return container.handleDragEntered(sender)
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
@@ -234,7 +234,7 @@ final class LayoutBarPaddingView: NSView {
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         // A drop is the user arranging in Layout, the one move Manual allows.
-        ExplicitLayoutEdit.perform { performLayoutDrop(sender) }
+        ThawHaptics.landing(ExplicitLayoutEdit.perform { performLayoutDrop(sender) })
     }
 
     private func performLayoutDrop(_ sender: NSDraggingInfo) -> Bool {

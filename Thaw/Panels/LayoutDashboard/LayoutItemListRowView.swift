@@ -21,7 +21,13 @@ struct LayoutItemListRowView: View {
     let showsSectionBadge: Bool
     /// The state a checkbox sweep is showing for this row, or nil when no sweep covers it.
     let sweepPreview: Bool?
+    /// Lit for a moment after the row moved, so it can be found where it landed.
+    let isFlashing: Bool
     let onTap: () -> Void
+    /// A drag of this row started, so the list can scroll at its edges.
+    let onDragStart: () -> Void
+    /// The rows a checkbox or a drop on this row is moving.
+    let onMoved: ([String]) -> Void
     /// The sweep's start and current height in the list's coordinates.
     let onSweep: (CGFloat, CGFloat) -> Void
     let onSweepEnd: () -> Void
@@ -39,6 +45,11 @@ struct LayoutItemListRowView: View {
         .padding(.horizontal, PanelRow.inset)
         .frame(minHeight: LayoutDashboardMetrics.rowHeight)
         .modifier(SearchRowBackground(selected: isSelected))
+        .background {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.accentColor.opacity(isFlashing ? 0.22 : 0))
+                .animation(.easeOut(duration: isFlashing ? 0.12 : 0.5), value: isFlashing)
+        }
         .background {
             LayoutItemListMenuHost(rowID: row.id, anchors: anchors) { isEditable ? menu() : nil }
         }
@@ -65,6 +76,13 @@ struct LayoutItemListRowView: View {
             guard isEditable else { return false }
             return LayoutItemListDrop.load(providers) { ids in
                 LayoutItemListDrop.drop(ids, before: row, selection: selection, appState: appState)
+                onMoved(selection.orderedItemIDs)
+                ThawHaptics.land()
+            }
+        }
+        .onChange(of: showsGap) {
+            if showsGap {
+                LayoutDragHaptics.enter(row.section)
             }
         }
         .animation(reduceMotion ? nil : ThawMotion.interactive, value: showsGap)
@@ -99,7 +117,9 @@ struct LayoutItemListRowView: View {
         .frame(maxWidth: .infinity, minHeight: LayoutDashboardMetrics.rowHeight, alignment: .leading)
         .contentShape(Rectangle())
         .onDrag {
-            LayoutItemListDrop.provider(for: row.id, in: row.section, selection: selection)
+            LayoutDragHaptics.begin(in: row.section)
+            onDragStart()
+            return LayoutItemListDrop.provider(for: row.id, in: row.section, selection: selection)
         } preview: {
             LayoutItemListDragPreview(name: row.name, count: selection.contains(row.id) ? selection.count : 1)
         }
@@ -117,6 +137,7 @@ struct LayoutItemListRowView: View {
         let shownNow = lock == nil ? sweepPreview ?? isShown : isShown
         return Toggle(isOn: Binding(get: { shownNow }, set: { shown in
             LayoutItemVisibility.setShown(shown, rowID: row.id, in: row.section, selection: selection, appState: appState)
+            onMoved(selection.orderedItemIDs)
         })) {
             // The style draws any label beside the box; the name is already in the row.
             EmptyView()
@@ -150,5 +171,53 @@ struct LayoutItemListRowView: View {
             orderedItems: LayoutDisplayedItems.items(in: row.section, appState: appState, runningApplications: running),
             appState: appState
         )
+    }
+}
+
+/// A section's heading, spaced as ThawUI's list heading in the bars' sentence case. Dropping rows
+/// on it moves them to that section, and it lights while a drag is over it.
+struct LayoutItemListHeading: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let name: MenuBarSectionName
+    let isFirst: Bool
+    let isEditable: Bool
+    let selection: LayoutSelectionModel
+    let motion: LayoutListMotion
+    @Binding var targeted: MenuBarSectionName?
+
+    var body: some View {
+        let isTargeted = isEditable && targeted == name
+        Text(name.localizedName)
+            .font(ThawType.sublabel.weight(.semibold))
+            .foregroundStyle(isTargeted ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, ThawSpacing.tight)
+            .padding(.leading, ThawSpacing.row)
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.accentColor.opacity(isTargeted ? 0.14 : 0))
+            }
+            .padding(.top, isFirst ? 0 : ThawSpacing.gutter - ThawSpacing.tight)
+            .accessibilityAddTraits(.isHeader)
+            .onDrop(of: [LayoutItemListDrop.type], isTargeted: Binding(get: { targeted == name }, set: setTargeted)) { providers in
+                guard isEditable else { return false }
+                return LayoutItemListDrop.load(providers) { ids in
+                    LayoutItemListDrop.dropOnSection(ids, section: name, selection: selection, appState: appState)
+                    motion.noteMoved(selection.orderedItemIDs)
+                    ThawHaptics.land()
+                }
+            }
+            .animation(reduceMotion ? nil : ThawMotion.quick, value: isTargeted)
+    }
+
+    private func setTargeted(_ isTargeted: Bool) {
+        if isTargeted {
+            targeted = name
+            LayoutDragHaptics.enter(name)
+        } else if targeted == name {
+            targeted = nil
+        }
     }
 }

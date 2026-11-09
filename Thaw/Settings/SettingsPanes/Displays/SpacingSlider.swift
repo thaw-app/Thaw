@@ -21,5 +21,6 @@ struct SpacingSlider<Label: View>: View {
             fillsFromCenter: true,
             valueLabel: label
         )
+        .snapHaptic(Double(value), at: 0)
     }
 }

@@ -187,6 +187,7 @@ extension LayoutBarGroupHandleView: NSDraggingSource {
         // group mid-drag before the drop commits.
         sourceContainer?.acceptsViewUpdates = false
         session.animatesToStartingPositionsOnCancelOrFail = true
+        LayoutDragHaptics.begin(in: sourceSection)
     }
 
     func draggingSession(_: NSDraggingSession, endedAt _: NSPoint, operation: NSDragOperation) {

@@ -9,6 +9,7 @@ import AppKit
 import Ifrit
 import MenuBarModel
 import Observation
+import SwiftUI
 import ThawUI
 
 /// One row of the search list: an item, the app that owns it when that says
@@ -21,6 +22,16 @@ struct MenuBarSearchResult: Identifiable {
 
     var id: MenuBarSearchModel.ItemID {
         MenuBarSearchModel.ItemID(item)
+    }
+
+    /// Where a row sits, for telling a move from a new query.
+    struct Placement: Equatable {
+        let id: MenuBarSearchModel.ItemID
+        let section: String?
+    }
+
+    var placement: Placement {
+        Placement(id: id, section: section)
     }
 }
 
@@ -99,14 +110,25 @@ final class MenuBarSearchModel {
             candidates = PaletteCandidate.inventory(from: inventory)
         }
         let query = searchText.trimmingCharacters(in: .whitespaces)
-        if query.isEmpty {
-            results = Self.grouped(recents.resolve(in: inventory), in: inventory, sections: sections, candidates: candidates)
+        let fresh = if query.isEmpty {
+            Self.grouped(recents.resolve(in: inventory), in: inventory, sections: sections, candidates: candidates)
         } else {
-            results = PaletteCandidate.ranked(matching: query, in: candidates, using: fuse).map {
+            PaletteCandidate.ranked(matching: query, in: candidates, using: fuse).map {
                 MenuBarSearchResult(item: $0.item, ownerName: $0.subtitle, section: nil)
             }
         }
+        // A moved item slides to its new section; typing still swaps the list at once.
+        if Self.isRearrangement(from: results.map(\.placement), to: fresh.map(\.placement)), !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            withAnimation(ThawMotion.settle) { results = fresh }
+        } else {
+            results = fresh
+        }
         revalidateSelection()
+    }
+
+    /// Whether the same rows came back in another order or under other headings, as after a move.
+    static func isRearrangement(from old: [MenuBarSearchResult.Placement], to new: [MenuBarSearchResult.Placement]) -> Bool {
+        old != new && old.count == new.count && Set(old.map(\.id)) == Set(new.map(\.id))
     }
 
     /// Each item is listed once: a second row with the same ID stalls the arrows.
