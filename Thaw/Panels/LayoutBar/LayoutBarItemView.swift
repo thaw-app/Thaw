@@ -268,7 +268,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 name: String(localized: "Move to \(name.localizedName)")
             ) { [weak appState] in
                 guard let appState else { return false }
-                MenuBarSearchItemActions.move(item, to: name, appState: appState)
+                MenuBarSearchItemActions.move(item, to: name, appState: appState, recordsUndo: true)
                 return true
             }
         })

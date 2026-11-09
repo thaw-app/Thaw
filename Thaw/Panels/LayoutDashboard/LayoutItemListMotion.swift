@@ -46,10 +46,16 @@ final class LayoutListMotion {
         var contentHeight: CGFloat = 0
     }
 
+    /// The token makes a second move of the same row scroll again.
+    struct ScrollRequest: Equatable {
+        let id: String
+        let token: Int
+    }
+
     /// Rows lit for a moment after they moved.
     private(set) var flashing: Set<String> = []
     /// The first moved row, which the list scrolls to.
-    private(set) var scrollTarget: String?
+    private(set) var scrollTarget: ScrollRequest?
     /// A drag down the checkboxes under way. Only the rows read it, so a sweep redraws them and not the list.
     var sweep: LayoutCheckboxSweep?
 
@@ -62,28 +68,54 @@ final class LayoutListMotion {
     /// The scroll view's top in the window's content, top-down.
     @ObservationIgnored var viewportTop: CGFloat = 0
     @ObservationIgnored private var pending: [String] = []
+    @ObservationIgnored private var pendingFallback: Task<Void, Never>?
     @ObservationIgnored private var flashToken = 0
+    /// When a sweep last moved a batch, so the checkbox it ended on doesn't move them again.
+    @ObservationIgnored private var batchSweepEnd: ContinuousClock.Instant?
     @ObservationIgnored private var autoscroll: Task<Void, Never>?
 
-    /// Remembers what a move from the list is moving, to flash once the bar reports it.
+    /// Flashes a landed move's rows when the bar reports it, or after 250 ms if the report came first.
     func noteMoved(_ ids: [String]) {
+        guard !ids.isEmpty else { return }
         pending = ids
+        pendingFallback?.cancel()
+        pendingFallback = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            self?.revealPending()
+        }
     }
 
     /// Called when the sections change: lights the rows the last move carried.
     func revealPending() {
         guard !pending.isEmpty else { return }
-        flashing = Set(pending)
-        scrollTarget = pending.first
-        pending = []
+        pendingFallback?.cancel()
+        pendingFallback = nil
         flashToken &+= 1
         let token = flashToken
+        flashing = Set(pending)
+        scrollTarget = pending.first.map { ScrollRequest(id: $0, token: token) }
+        pending = []
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(700))
             guard let self, flashToken == token else { return }
             flashing = []
             scrollTarget = nil
         }
+    }
+
+    func noteBatchSweepEnded() {
+        batchSweepEnd = .now
+    }
+
+    /// Whether a checkbox click belongs to a sweep over other rows, under way or just ended.
+    /// The click and the drag's end arrive in either order.
+    func isSweepClick() -> Bool {
+        if let sweep, sweep.covered.contains(where: { $0 != sweep.startID }) {
+            return true
+        }
+        guard let end = batchSweepEnd else { return false }
+        return ContinuousClock.now - end < .milliseconds(500)
     }
 
     /// Scrolls while the mouse button is down and the pointer rests near an edge.
@@ -146,7 +178,7 @@ struct LayoutListScrollTracking: ViewModifier {
             }
             .onChange(of: motion.scrollTarget) { _, target in
                 guard let target else { return }
-                withThawAnimation(ThawMotion.settle) { proxy.scrollTo(target) }
+                withThawAnimation(ThawMotion.settle) { proxy.scrollTo(target.id) }
             }
     }
 }

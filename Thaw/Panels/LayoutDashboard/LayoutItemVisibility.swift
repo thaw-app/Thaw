@@ -33,12 +33,13 @@ enum LayoutItemVisibility {
         rowID: String,
         in section: MenuBarSectionName,
         selection: LayoutSelectionModel,
-        appState: AppState
+        appState: AppState,
+        onMoved: @escaping @MainActor ([String]) -> Void = { _ in }
     ) {
         if !(selection.count > 1 && selection.contains(rowID)) {
             selection.click(rowID, in: section, kind: .replace)
         }
-        moveSelection(to: shown ? .visible : .hidden, selection: selection, appState: appState)
+        moveSelection(to: shown ? .visible : .hidden, selection: selection, appState: appState, onMoved: onMoved)
     }
 
     /// Moves the selection to section, beside its divider so the rest of the bar keeps its order.
@@ -46,9 +47,10 @@ enum LayoutItemVisibility {
         to section: MenuBarSectionName,
         selection: LayoutSelectionModel,
         appState: AppState,
-        keepsSelection: Bool = false
+        keepsSelection: Bool = false,
+        onMoved: @escaping @MainActor ([String]) -> Void = { _ in }
     ) {
         LayoutSelectionActions(selection: selection, appState: appState)
-            .move(to: section, placement: section == .visible ? .start : .end, keepsSelection: keepsSelection)
+            .move(to: section, placement: section == .visible ? .start : .end, keepsSelection: keepsSelection, onMoved: onMoved)
     }
 }

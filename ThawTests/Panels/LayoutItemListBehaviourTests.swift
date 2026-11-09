@@ -54,6 +54,35 @@ struct LayoutItemListBehaviourTests {
         #expect(command(.leftArrow, "", [.option, .command]) == nil)
     }
 
+    @Test("The keys step from the row they last landed on, with or without Shift")
+    func stepStartFollowsTheHead() {
+        // A fresh selection steps from the anchor.
+        #expect(LayoutItemList.stepStart(head: nil, anchor: "B", changeCount: 1) == "B")
+        // The row the keys last landed on starts the next extend past the first row,
+        // and a plain arrow after Shift+arrow carries on from there, as in Finder.
+        #expect(LayoutItemList.stepStart(head: ("C", 1), anchor: "B", changeCount: 1) == "C")
+        // A selection change elsewhere, such as a click in the bars, puts the keys back on the anchor.
+        #expect(LayoutItemList.stepStart(head: ("C", 1), anchor: "B", changeCount: 2) == "B")
+    }
+
+    @Test("A Shift-click in a filtered list selects only the rows it shows")
+    func shiftClickStaysInTheShownRows() {
+        let items = ["Alpha", "Beta", "Gamma"].map { World.item($0) }
+        let ids = items.map(\.uniqueIdentifier)
+        let selection = LayoutSelectionModel(announce: { _ in })
+        selection.update(Self.units(ids), in: .visible)
+        func row(_ index: Int) -> LayoutItemListRow {
+            LayoutItemListRow(id: ids[index], item: items[index], name: items[index].displayName, ownerName: nil, section: .visible)
+        }
+        let alpha = row(0), gamma = row(2)
+        // The filter hides Beta.
+        let shown: Set = [ids[0], ids[2]]
+
+        LayoutItemList.click(alpha, kind: .replace, shownRowIDs: { shown }, selection: selection)
+        LayoutItemList.click(gamma, kind: .extend, shownRowIDs: { shown }, selection: selection)
+        #expect(Set(selection.orderedItemIDs) == shown)
+    }
+
     @Test("Escape empties the filter, then closes; ⌘W closes; a field being typed in keeps Escape")
     func windowKeys() {
         func action(_ code: KeyCode, _ characters: String = "", _ flags: NSEvent.ModifierFlags = [], filter: String = "", editing: Bool = false) -> LayoutDashboardKeys.Action? {
@@ -142,6 +171,39 @@ struct LayoutItemListBehaviourTests {
         selection.update(Self.units(["A", "B"]), in: .visible)
         selection.reselect(["C"], in: .hidden)
         selection.click("A", in: .visible, kind: .replace)
+        selection.update(Self.units(["C"]), in: .hidden)
+        #expect(selection.orderedItemIDs == ["A"])
+    }
+
+    @Test("A right click and a Control-click ask for a row's menu; other clicks pass to the row")
+    func menuClicks() {
+        typealias MenuView = LayoutItemListMenuHost.MenuView
+        #expect(MenuView.opensMenu(type: .rightMouseDown, modifiers: []))
+        #expect(MenuView.opensMenu(type: .leftMouseDown, modifiers: [.control]))
+        #expect(!MenuView.opensMenu(type: .leftMouseDown, modifiers: []))
+        #expect(!MenuView.opensMenu(type: .leftMouseDown, modifiers: [.command]))
+        #expect(!MenuView.opensMenu(type: .leftMouseUp, modifiers: [.control]))
+    }
+
+    @Test("Clearing or selecting drops a pending reselection too")
+    func clearAndSelectCancelReselection() {
+        let selection = LayoutSelectionModel(announce: { _ in })
+        selection.update(Self.units(["A", "B"]), in: .visible)
+
+        selection.reselect(["C"], in: .hidden)
+        selection.clear()
+        selection.update(Self.units(["C"]), in: .hidden)
+        #expect(selection.orderedItemIDs.isEmpty, "Escape stays in force")
+
+        selection.update(Self.units([]), in: .hidden)
+        selection.reselect(["C"], in: .hidden)
+        selection.select(["B"])
+        selection.update(Self.units(["C"]), in: .hidden)
+        #expect(selection.orderedItemIDs == ["B"])
+
+        selection.update(Self.units([]), in: .hidden)
+        selection.reselect(["C"], in: .hidden)
+        selection.selectAll(among: ["A"])
         selection.update(Self.units(["C"]), in: .hidden)
         #expect(selection.orderedItemIDs == ["A"])
     }

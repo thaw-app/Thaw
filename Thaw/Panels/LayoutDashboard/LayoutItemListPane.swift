@@ -27,6 +27,9 @@ struct LayoutItemListPane: View {
     var filterAnchor: (NSView) -> Void = { _ in }
 
     @State private var anchors = LayoutItemListAnchors()
+    /// The row the list's keys last landed on, and the selection's change count then.
+    /// Lets Shift+arrow keep growing the range; see LayoutItemList.stepStart.
+    @State private var keyboardHead: (id: String, atChangeCount: Int)?
     /// Bumped when an item changes section, which the item cache doesn't always reflect.
     @State private var membershipRevision = 0
     @State private var pageSize = 10
@@ -132,6 +135,7 @@ struct LayoutItemListPane: View {
             isEditable: isEditable,
             showsSectionBadge: section.name == nil || row.section == .alwaysHidden,
             motion: motion,
+            shownRowIDs: { Set(rows.map(\.id)) },
             onTap: {
                 // A click on a row leaves the filter, so Escape and the arrows reach the list.
                 NSApp.keyWindow?.makeFirstResponder(nil)
@@ -147,6 +151,8 @@ struct LayoutItemListPane: View {
             let frame = proxy.frame(in: .named(LayoutCheckboxSweep.coordinateSpace))
             return frame.minY ... frame.maxY
         } action: { motion.rowSpans[row.id] = $0 }
+        // Off-screen rows aren't laid out, so their last span goes stale.
+        .onDisappear { motion.rowSpans[row.id] = nil }
     }
 
     private func sweepRows(_ rows: [LayoutItemListRow]) -> [LayoutCheckboxSweep.Row] {
@@ -190,19 +196,24 @@ struct LayoutItemListPane: View {
         guard let sweep = motion.sweep else { return }
         let changes = sweep.changes(in: sweepRows(rows))
         guard !changes.isEmpty else { return }
-        motion.noteMoved(changes)
+        motion.noteBatchSweepEnded()
         selection.select(changes)
-        LayoutItemVisibility.moveSelection(to: sweep.target ? .visible : .hidden, selection: selection, appState: appState)
+        LayoutItemVisibility.moveSelection(
+            to: sweep.target ? .visible : .hidden,
+            selection: selection,
+            appState: appState,
+            onMoved: { motion.noteMoved($0) }
+        )
     }
 
     private func perform(_ command: LayoutItemListCommand, extends: Bool, rows: [LayoutItemListRow], proxy: ScrollViewProxy) -> Bool {
         switch command {
         case let .step(delta):
-            go(LayoutItemList.step(from: selection.anchorItemID, by: delta, in: rows), extends: extends, proxy: proxy)
+            go(LayoutItemList.step(from: stepStart(), by: delta, in: rows), extends: extends, rows: rows, proxy: proxy)
         case let .page(direction):
-            go(LayoutItemList.step(from: selection.anchorItemID, by: direction * pageSize, in: rows), extends: extends, proxy: proxy)
+            go(LayoutItemList.step(from: stepStart(), by: direction * pageSize, in: rows), extends: extends, rows: rows, proxy: proxy)
         case let .edge(first):
-            go(first ? rows.first : rows.last, extends: extends, proxy: proxy)
+            go(first ? rows.first : rows.last, extends: extends, rows: rows, proxy: proxy)
         case .selectAll:
             selectAll(rows)
         case .showEditor:
@@ -247,10 +258,7 @@ struct LayoutItemListPane: View {
     /// can't reach anything behind the list.
     private func change(_ command: LayoutItemListCommand) -> Bool {
         guard isEditable else { return true }
-        let actions = LayoutItemListActions(selection: selection, appState: appState)
-        if command.movesSelection {
-            motion.noteMoved(selection.orderedItemIDs)
-        }
+        let actions = LayoutItemListActions(selection: selection, appState: appState, onMoved: { motion.noteMoved($0) })
         switch command {
         case .undo: appState.layoutUndo.undo()
         case .redo: appState.layoutUndo.redo()
@@ -262,9 +270,15 @@ struct LayoutItemListPane: View {
         return true
     }
 
-    private func go(_ row: LayoutItemListRow?, extends: Bool, proxy: ScrollViewProxy) -> Bool {
+    /// Where the next keyboard step starts; see LayoutItemList.stepStart.
+    private func stepStart() -> String? {
+        LayoutItemList.stepStart(head: keyboardHead, anchor: selection.anchorItemID, changeCount: selection.changeCount)
+    }
+
+    private func go(_ row: LayoutItemListRow?, extends: Bool, rows: [LayoutItemListRow], proxy: ScrollViewProxy) -> Bool {
         guard let row else { return false }
-        selection.click(row.id, in: row.section, kind: extends ? .extend : .replace)
+        selection.click(row.id, in: row.section, kind: extends ? .extend : .replace, among: Set(rows.map(\.id)))
+        keyboardHead = (row.id, selection.changeCount)
         proxy.scrollTo(row.id)
         return true
     }

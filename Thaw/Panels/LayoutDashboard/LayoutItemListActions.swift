@@ -15,6 +15,8 @@ import UniformTypeIdentifiers
 struct LayoutItemListActions {
     let selection: LayoutSelectionModel
     let appState: AppState
+    /// Gets the moved items once a move lands.
+    var onMoved: @MainActor ([String]) -> Void = { _ in }
 
     /// The section the whole selection is in, when it is in one.
     var selectedSection: MenuBarSectionName? {
@@ -27,7 +29,7 @@ struct LayoutItemListActions {
         else {
             return
         }
-        LayoutSelectionActions(selection: selection, appState: appState).move(to: section, placement: placement, keepsSelection: true)
+        LayoutSelectionActions(selection: selection, appState: appState).move(to: section, placement: placement, keepsSelection: true, onMoved: onMoved)
     }
 
     func moveToAdjacentSection(up: Bool) {
@@ -36,7 +38,7 @@ struct LayoutItemListActions {
         else {
             return
         }
-        LayoutItemVisibility.moveSelection(to: target, selection: selection, appState: appState, keepsSelection: true)
+        LayoutItemVisibility.moveSelection(to: target, selection: selection, appState: appState, keepsSelection: true, onMoved: onMoved)
     }
 
     func moveToSection(number: Int) {
@@ -45,7 +47,7 @@ struct LayoutItemListActions {
         else {
             return
         }
-        LayoutItemVisibility.moveSelection(to: target, selection: selection, appState: appState, keepsSelection: true)
+        LayoutItemVisibility.moveSelection(to: target, selection: selection, appState: appState, keepsSelection: true, onMoved: onMoved)
     }
 }
 
@@ -96,16 +98,35 @@ enum LayoutItemListDrop {
         await Task.yield()
     }
 
-    static func drop(_ ids: [String], before row: LayoutItemListRow, selection: LayoutSelectionModel, appState: AppState) {
-        guard let moving = select(ids, in: selection) else { return }
+    /// Whether a move started; false when the row is one of the dropped items or none of them resolves.
+    @discardableResult
+    static func drop(
+        _ ids: [String],
+        before row: LayoutItemListRow,
+        selection: LayoutSelectionModel,
+        appState: AppState,
+        onMoved: @escaping @MainActor ([String]) -> Void = { _ in }
+    ) -> Bool {
+        guard let moving = select(ids, in: selection) else { return false }
         let order = LayoutBatchMoveExecutor.snapshot(appState: appState).sections[row.section]?.map(\.id) ?? []
-        guard let placement = LayoutItemListPlacement.drop(Set(moving), before: row.id, in: order) else { return }
-        LayoutSelectionActions(selection: selection, appState: appState).move(to: row.section, placement: placement, keepsSelection: true)
+        guard let placement = LayoutItemListPlacement.drop(Set(moving), before: row.id, in: order) else { return false }
+        LayoutSelectionActions(selection: selection, appState: appState)
+            .move(to: row.section, placement: placement, keepsSelection: true, onMoved: onMoved)
+        return true
     }
 
-    static func dropOnSection(_ ids: [String], section: MenuBarSectionName, selection: LayoutSelectionModel, appState: AppState) {
-        guard select(ids, in: selection) != nil else { return }
-        LayoutItemVisibility.moveSelection(to: section, selection: selection, appState: appState, keepsSelection: true)
+    /// Whether a move started; false when none of the dropped items resolves.
+    @discardableResult
+    static func dropOnSection(
+        _ ids: [String],
+        section: MenuBarSectionName,
+        selection: LayoutSelectionModel,
+        appState: AppState,
+        onMoved: @escaping @MainActor ([String]) -> Void = { _ in }
+    ) -> Bool {
+        guard select(ids, in: selection) != nil else { return false }
+        LayoutItemVisibility.moveSelection(to: section, selection: selection, appState: appState, keepsSelection: true, onMoved: onMoved)
+        return true
     }
 
     /// Makes the dropped items the selection and returns them in bar order. No identifiers means the

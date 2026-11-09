@@ -41,6 +41,8 @@ struct LayoutItemEditor: View {
                 }
                 if let grouping = LayoutSelectionGrouping.make(selection: selection, appState: appState) {
                     LayoutSelectionGroupingSection(grouping: grouping)
+                        // A read-only window lists the selection but groups nothing.
+                        .disabled(!isEditable)
                 }
             }
         }

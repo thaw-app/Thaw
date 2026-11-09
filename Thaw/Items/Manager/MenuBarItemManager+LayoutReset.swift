@@ -685,9 +685,8 @@ extension MenuBarItemManager {
             return true
         }
 
-        // Taken before any state is armed, so a profile superseded while it
-        // queued leaves nothing behind. Held for the whole apply: repairs must
-        // not write between its assignment and its order.
+        // Taken before any state is armed, so a superseded profile leaves nothing
+        // behind, and held so repairs write neither mid-assignment nor mid-order.
         repairs.request(.profileLayoutApply, cause: .profileApplied)
         guard let hold = await repairs.enter(.profileLayoutApply, priority: .user) else {
             return true
@@ -705,9 +704,8 @@ extension MenuBarItemManager {
             itemSectionMap: itemSectionMap,
             itemOrder: itemOrder
         )
-        // Every way out clears the gate. The early returns below used to leave
-        // it set, which kept saved-layout apply, normalization and the order
-        // mirror switched off until another profile applied.
+        // Every way out clears the gate. The early returns used to leave it set,
+        // keeping saved-layout apply, normalization and the order mirror off.
         defer { clearProfileState(source: source) }
 
         // Both apply sources must prevent the cache from saving intermediate positions.
@@ -722,6 +720,8 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.error("applyProfileLayout: missing appState")
             return false
         }
+        // Edits recorded before the switch could write the old layout back.
+        appState.layoutUndo.removeAllActions()
         guard !itemOrder.isEmpty else {
             MenuBarItemManager.diagLog.debug("applyProfileLayout: no item order, skipping")
             return true

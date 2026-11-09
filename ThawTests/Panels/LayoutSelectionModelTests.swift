@@ -26,8 +26,12 @@ struct LayoutSelectionModelTests {
         return model
     }
 
-    private static func entry(_ id: String, assignable: Set<MenuBarSectionName> = Set(MenuBarSectionName.allCases)) -> Entry {
-        Entry(id: id, isControlItem: false, groupID: nil, assignableSections: assignable, reordersInVisible: true)
+    private static func entry(
+        _ id: String,
+        group: String? = nil,
+        assignable: Set<MenuBarSectionName> = Set(MenuBarSectionName.allCases)
+    ) -> Entry {
+        Entry(id: id, isControlItem: false, groupID: group, assignableSections: assignable, reordersInVisible: true)
     }
 
     @Test("Clicks change the selection and VoiceOver hears the count")
@@ -78,6 +82,52 @@ struct LayoutSelectionModelTests {
         #expect(command.section == .alwaysHidden)
         #expect(command.placement == .start)
         #expect(model.orderedItemIDs == ["h2", "c"])
+    }
+
+    @Test("Undo restores a group as one move the planner takes")
+    func restoringMovesKeepGroupsWhole() {
+        let model = model()
+        model.click("g1", in: .visible, kind: .replace)
+        model.click("b", in: .visible, kind: .toggle)
+
+        let moves = model.restoringMoves()
+
+        #expect(moves == [
+            LayoutBatchMove(itemIDs: ["b"], section: .visible, placement: .after("a")),
+            LayoutBatchMove(itemIDs: ["g1", "g2"], section: .visible, placement: .after("b")),
+        ])
+
+        // The move planner refuses a lone member of a group, so each restoring move
+        // has to plan cleanly or the undo would restore only part of the batch.
+        let snapshot = LayoutBatchMoveSnapshot(sections: [
+            .visible: [
+                Self.entry("a"),
+                Self.entry("b"),
+                Self.entry("g1", group: "g"),
+                Self.entry("g2", group: "g"),
+                Self.entry("c"),
+            ],
+        ])
+        for move in moves {
+            #expect((try? move.plan(in: snapshot).get()) != nil, "\(move) was refused")
+        }
+    }
+
+    @Test("Extending among shown rows skips rows the filter hides, but still starts at the anchor")
+    func extendAmongVisibleRows() {
+        let model = model()
+        model.click("a", in: .visible, kind: .replace)
+
+        // b is not shown; shift-clicking c may not select it.
+        model.click("c", in: .visible, kind: .extend, among: ["a", "c"])
+        #expect(model.contains("a") && model.contains("c"))
+        #expect(!model.contains("b"))
+
+        // Without shown rows the extend reaches everything between, as the bars do.
+        model.clear()
+        model.click("a", in: .visible, kind: .replace)
+        model.click("c", in: .visible, kind: .extend, among: nil)
+        #expect(model.contains("b"))
     }
 
     @Test("The menu offers only the sections the whole selection can go to")
