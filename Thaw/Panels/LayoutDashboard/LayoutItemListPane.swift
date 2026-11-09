@@ -30,13 +30,8 @@ struct LayoutItemListPane: View {
     /// Bumped when an item changes section, which the item cache doesn't always reflect.
     @State private var membershipRevision = 0
     @State private var pageSize = 10
-    /// Each row's vertical span in the list, for the checkbox sweep.
-    @State private var rowSpans: [String: ClosedRange<CGFloat>] = [:]
-    @State private var sweep: LayoutCheckboxSweep?
     @State private var motion = LayoutListMotion()
     @State private var scrollPosition = ScrollPosition()
-    /// The heading a row drag is over, lit to show the drop moves to that section.
-    @State private var targetedHeading: MenuBarSectionName?
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -92,8 +87,7 @@ struct LayoutItemListPane: View {
                                 isFirst: section.id == sections.first?.id,
                                 isEditable: isEditable,
                                 selection: selection,
-                                motion: motion,
-                                targeted: $targetedHeading
+                                motion: motion
                             )
                         }
                         ForEach(section.rows) { row in
@@ -138,8 +132,7 @@ struct LayoutItemListPane: View {
             anchors: anchors,
             isEditable: isEditable,
             showsSectionBadge: section.name == nil || row.section == .alwaysHidden,
-            sweepPreview: sweep.flatMap { $0.covered.contains(row.id) ? $0.target : nil },
-            isFlashing: motion.flashing.contains(row.id),
+            motion: motion,
             onTap: {
                 // A click on a row leaves the filter, so Escape and the arrows reach the list.
                 NSApp.keyWindow?.makeFirstResponder(nil)
@@ -154,13 +147,13 @@ struct LayoutItemListPane: View {
         .onGeometryChange(for: ClosedRange<CGFloat>.self) { proxy in
             let frame = proxy.frame(in: .named(LayoutCheckboxSweep.coordinateSpace))
             return frame.minY ... frame.maxY
-        } action: { rowSpans[row.id] = $0 }
+        } action: { motion.rowSpans[row.id] = $0 }
     }
 
     private func sweepRows(_ rows: [LayoutItemListRow]) -> [LayoutCheckboxSweep.Row] {
         let experimental = appState.settings.layout.enableExperimentalSystemItemHiding
         return rows.compactMap { row in
-            guard let span = rowSpans[row.id] else { return nil }
+            guard let span = motion.rowSpans[row.id] else { return nil }
             let lock = LayoutItemVisibility.lockReason(for: row.item, in: row.section, experimentalSystemItemHiding: experimental)
             return LayoutCheckboxSweep.Row(
                 id: row.id,
@@ -173,25 +166,29 @@ struct LayoutItemListPane: View {
 
     private func sweepChanged(from rowID: String, startY: CGFloat, to y: CGFloat, rows: [LayoutItemListRow]) {
         let sweepRows = sweepRows(rows)
-        if sweep == nil {
-            sweep = LayoutCheckboxSweep(startingAt: rowID, rows: sweepRows)
-            guard sweep != nil else { return }
+        if motion.sweep == nil {
+            motion.sweep = LayoutCheckboxSweep(startingAt: rowID, rows: sweepRows)
+            guard motion.sweep != nil else { return }
             motion.startAutoscroll(scrollTo: { scrollPosition.scrollTo(y: $0) }, pointer: { contentY in
                 // The rows' spans start inside the list's padding.
                 sweepChanged(from: rowID, startY: startY, to: contentY - ThawSpacing.base, rows: rows)
             })
         }
-        let before = sweep?.covered.count ?? 0
-        sweep?.extend(from: startY, to: y, rows: sweepRows)
-        if (sweep?.covered.count ?? 0) > before {
+        guard var sweep = motion.sweep else { return }
+        let before = sweep.covered.count
+        sweep.extend(from: startY, to: y, rows: sweepRows)
+        // Only a change redraws the rows, not every mouse move.
+        guard sweep != motion.sweep else { return }
+        motion.sweep = sweep
+        if sweep.covered.count > before {
             ThawHaptics.snap()
         }
     }
 
     /// Selects the rows the sweep changes and moves them in one batch, so one undo puts them back.
     private func sweepEnded(rows: [LayoutItemListRow]) {
-        defer { sweep = nil }
-        guard let sweep else { return }
+        defer { motion.sweep = nil }
+        guard let sweep = motion.sweep else { return }
         let changes = sweep.changes(in: sweepRows(rows))
         guard !changes.isEmpty else { return }
         motion.noteMoved(changes)
