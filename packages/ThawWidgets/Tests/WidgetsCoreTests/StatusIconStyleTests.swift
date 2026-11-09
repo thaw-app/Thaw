@@ -46,6 +46,14 @@ struct StatusIconStyleTests {
         #expect(tint(0.19) == .red)
         #expect(tint(0.2) == nil)
         #expect(tint(0.9) == nil)
+
+        // A Mac without a battery reads 0 for want of a source; that is not an
+        // empty battery, and colouring it forced a fixed bitmap over a template.
+        var desktop = StatusIconSamples()
+        desktop.battery = 0
+        desktop.hasBattery = false
+        #expect(StatusIconTint.battery(desktop) == nil)
+        #expect(!StatusIconStyle().hasColor(composition: StatusIconComposition(), samples: desktop))
     }
 
     @Test("A reading is tinted only when status colours are on, and volume turns blue on Bluetooth")
@@ -93,7 +101,7 @@ struct StatusIconStyleTests {
         samples.audioOutput = StatusIconAudioOutput(name: "AirPods", isBluetooth: true)
         let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(samples)) as? [String: Any]
         #expect(Set(json?.keys ?? [:].keys) == [
-            "network", "battery", "wifi", "volume", "cpu", "isCharging", "isLowPowerMode", "audioOutput",
+            "network", "battery", "wifi", "volume", "cpu", "isCharging", "isLowPowerMode", "audioOutput", "hasBattery",
         ])
         #expect(WidgetKeys.size == "StatusIconPrototype.size")
         #expect(WidgetKeys.thickness == "StatusIconPrototype.thickness")
@@ -108,6 +116,7 @@ struct StatusIconStyleTests {
         let samples = try JSONDecoder().decode(StatusIconSamples.self, from: old)
         #expect(samples.battery == 0.4 && samples.volume == 0.3)
         #expect(!samples.isCharging && !samples.isLowPowerMode && samples.audioOutput == nil)
+        #expect(samples.hasBattery, "readings saved before the flag came from a real battery")
 
         var full = StatusIconSamples()
         full.isCharging = true

@@ -25,19 +25,26 @@ nonisolated struct SpaceChangeCoalescer {
     /// Signals this close to the last delivered one count as the same change.
     static let duplicateWindow: Duration = .seconds(1)
 
-    private var lastActive: (spaceID: CGSSpaceID, at: ContinuousClock.Instant)?
+    private var lastActive: (spaceID: CGSSpaceID, shown: Set<CGSSpaceID>, at: ContinuousClock.Instant)?
 
     /// The change to deliver for signal, or nil when it repeats one already delivered.
     /// - Parameters:
     ///   - activeSpaceID: The active Space as read when the signal arrived.
+    ///   - shown: The Space each display showed when the signal arrived. A switch on a display
+    ///     that isn't the active one leaves the active Space alone and changes only this.
     ///   - now: When the signal arrived.
-    mutating func admit(_ signal: SpaceSignal, activeSpaceID: CGSSpaceID, at now: ContinuousClock.Instant) -> SpaceChange? {
+    mutating func admit(
+        _ signal: SpaceSignal,
+        activeSpaceID: CGSSpaceID,
+        shown: Set<CGSSpaceID> = [],
+        at now: ContinuousClock.Instant
+    ) -> SpaceChange? {
         switch signal {
         case .activeSpace:
-            if let lastActive, lastActive.spaceID == activeSpaceID, lastActive.at.duration(to: now) < Self.duplicateWindow {
+            if let lastActive, lastActive.spaceID == activeSpaceID, lastActive.shown == shown, lastActive.at.duration(to: now) < Self.duplicateWindow {
                 return nil
             }
-            lastActive = (activeSpaceID, now)
+            lastActive = (activeSpaceID, shown, now)
             return .activeSpace(activeSpaceID)
         case .spaceList:
             // Nothing tells two list events apart, so subscribers debounce them instead.

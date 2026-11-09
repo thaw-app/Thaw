@@ -111,10 +111,13 @@ struct StatusIconSamples: Codable, Equatable {
     var isCharging = false
     var isLowPowerMode = false
     var audioOutput: StatusIconAudioOutput?
+    /// False on a Mac with no battery, where the charge reads 0 for want of a source.
+    /// Without it that 0 would look like an empty battery and force a fixed bitmap.
+    var hasBattery = true
 
     /// The saved key names; a test pins them, since renaming one would drop saved readings.
     enum CodingKeys: String, CodingKey {
-        case network, battery, wifi, volume, cpu, isCharging, isLowPowerMode, audioOutput
+        case network, battery, wifi, volume, cpu, isCharging, isLowPowerMode, audioOutput, hasBattery
     }
 
     subscript(source: StatusIconComposition.Source) -> Double {
@@ -156,5 +159,6 @@ extension StatusIconSamples {
         isCharging = try container.decodeIfPresent(Bool.self, forKey: .isCharging) ?? false
         isLowPowerMode = try container.decodeIfPresent(Bool.self, forKey: .isLowPowerMode) ?? false
         audioOutput = try container.decodeIfPresent(StatusIconAudioOutput.self, forKey: .audioOutput)
+        hasBattery = try container.decodeIfPresent(Bool.self, forKey: .hasBattery) ?? hasBattery
     }
 }

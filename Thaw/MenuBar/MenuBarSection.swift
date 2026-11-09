@@ -260,6 +260,11 @@ final class MenuBarSection {
             diagLog.info("show(\(name.logString)): the items do not fit inline; using the Thaw Bar")
         }
         if !forcingInline, useThawBar || overflowsInline, let screen = revealScreen {
+            // A section left revealed inline would stay expanded behind the panel.
+            let revealedInline = menuBarManager.sectionController.revealedSection
+            if revealedInline != nil {
+                menuBarManager.sectionController.hideRevealedSections()
+            }
             for section in menuBarManager.sections {
                 section.desiredState = section.name == .visible ? .showSection : .hideSection
                 section.updateControlItemState(for: nil)
@@ -295,9 +300,7 @@ final class MenuBarSection {
     private func refreshRevealedItemImages() {
         guard let appState else { return }
         let revealedName = name == .alwaysHidden ? Name.alwaysHidden : Name.hidden
-        let sections: [Name] = revealedName == .alwaysHidden
-            ? Name.allCases
-            : [.visible, .hidden]
+        let sections: [Name] = revealedName == .alwaysHidden ? Name.allCases : [.visible, .hidden]
 
         Task { @MainActor [weak appState] in
             // Wait for revealed AX elements before capture.
@@ -317,9 +320,7 @@ final class MenuBarSection {
                 skipSavedLayoutApply: true
             )
 
-            guard appState.menuBarManager.sectionController.revealedSection == revealedName else {
-                return
-            }
+            guard appState.menuBarManager.sectionController.revealedSection == revealedName else { return }
             await appState.imageCache.recaptureNow(sections: sections)
         }
     }

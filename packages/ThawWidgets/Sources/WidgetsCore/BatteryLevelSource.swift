@@ -20,9 +20,10 @@ enum BatteryLevelSource {
     }
 
     /// The charge and whether it's charging, from one read of the power source.
-    static func reading() -> (level: Double, isCharging: Bool) {
-        guard let description = description() else { return (0, false) }
-        return (level(from: description), isCharging(from: description))
+    /// hasBattery is false on a Mac that has none, where the level means nothing.
+    static func reading() -> (level: Double, isCharging: Bool, hasBattery: Bool) {
+        guard let description = description() else { return (0, false, false) }
+        return (level(from: description), isCharging(from: description), true)
     }
 
     /// The first power source's description, or nil on a Mac without one.

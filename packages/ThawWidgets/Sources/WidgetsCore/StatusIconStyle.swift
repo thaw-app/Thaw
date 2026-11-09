@@ -77,7 +77,10 @@ enum StatusIconTint: Equatable {
     case green, yellow, red, blue
 
     /// Charging wins over Low Power Mode, and both win over a low charge.
+    /// A Mac without a battery has nothing to colour: its charge reads 0 for
+    /// want of a source, which is not an empty battery.
     static func battery(_ samples: StatusIconSamples) -> StatusIconTint? {
+        guard samples.hasBattery else { return nil }
         if samples.isCharging {
             return .green
         }
