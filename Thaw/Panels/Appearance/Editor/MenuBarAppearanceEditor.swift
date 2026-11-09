@@ -222,8 +222,8 @@ struct MenuBarAppearanceEditor: View {
             if corners.roundScreenCorners {
                 LabeledContent("Radius") {
                     ThawSlider(value: $corners.screenCornerRadius, in: 4 ... 24, step: 1) {
-                        Text("\(Int(corners.screenCornerRadius)) pt")
-                    }
+                        Text("\(Int(corners.screenCornerRadius)) pt").monospacedDigit()
+                    }.frame(maxWidth: 360)
                 }
             }
         } footer: {
@@ -714,7 +714,7 @@ struct ThawBarAppearanceEditor: View {
                 .annotation("Off, the \(Constants.displayName) Bar uses the menu bar's look from the Appearance pane.")
 
             if configuration.thawBarAppearance.overridesMenuBar {
-                ThawBarCornersSlider(roundness: $configuration.thawBarAppearance.cornerRoundness)
+                CornersSlider(roundness: $configuration.thawBarAppearance.cornerRoundness)
             }
         }
         if configuration.thawBarAppearance.overridesMenuBar {

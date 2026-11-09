@@ -56,6 +56,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Reset Thaw clears everything but your layout and profiles,** and Reset permissions forgets the files you picked.
 - **Thaw reads a busy menu bar faster,** and profiles and looks follow a Space switch sooner.
 - **The Thaw Bar drops in from the menu bar.**
+- **Corners sliders show their value,** Square, a percentage or Round, and match the other sliders.
 - **Switch to Reduced mode from Troubleshooting.**
 - **The experimental reorder editor is gone.**
 

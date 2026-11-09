@@ -48,23 +48,7 @@ struct MenuBarShapePicker: View {
     }
 
     private var cornersRow: some View {
-        LabeledContent("Corners") {
-            HStack(spacing: ThawSpacing.base) {
-                Text("Square")
-                    .font(ThawType.caption)
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-                ThawSlider(value: roundness, in: 0 ... 1) {
-                    EmptyView()
-                }
-                .accessibilityLabel("Corners")
-                Text("Round")
-                    .font(ThawType.caption)
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-            }
-            .frame(maxWidth: 360)
-        }
+        CornersSlider(roundness: roundness)
     }
 
     // MARK: Margins
