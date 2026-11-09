@@ -31,7 +31,6 @@ struct LayoutItemListPane: View {
     @State private var membershipRevision = 0
     @State private var pageSize = 10
     @State private var motion = LayoutListMotion()
-    @State private var scrollPosition = ScrollPosition()
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -98,7 +97,7 @@ struct LayoutItemListPane: View {
                 .coordinateSpace(.named(LayoutCheckboxSweep.coordinateSpace))
                 .padding(ThawSpacing.base)
             }
-            .modifier(LayoutListScrollTracking(motion: motion, position: $scrollPosition, proxy: proxy))
+            .modifier(LayoutListScrollTracking(motion: motion, proxy: proxy))
             .onGeometryChange(for: Int.self) { geometry in
                 max(1, Int(geometry.size.height / LayoutDashboardMetrics.rowHeight) - 1)
             } action: { pageSize = $0 }
@@ -138,7 +137,7 @@ struct LayoutItemListPane: View {
                 NSApp.keyWindow?.makeFirstResponder(nil)
                 isFocused = true
             },
-            onDragStart: { motion.startAutoscroll(scrollTo: { scrollPosition.scrollTo(y: $0) }) },
+            onDragStart: { motion.startAutoscroll() },
             onMoved: { motion.noteMoved($0) },
             onSweep: { startY, y in sweepChanged(from: row.id, startY: startY, to: y, rows: rows) },
             onSweepEnd: { sweepEnded(rows: rows) }
@@ -169,7 +168,7 @@ struct LayoutItemListPane: View {
         if motion.sweep == nil {
             motion.sweep = LayoutCheckboxSweep(startingAt: rowID, rows: sweepRows)
             guard motion.sweep != nil else { return }
-            motion.startAutoscroll(scrollTo: { scrollPosition.scrollTo(y: $0) }, pointer: { contentY in
+            motion.startAutoscroll(pointer: { contentY in
                 // The rows' spans start inside the list's padding.
                 sweepChanged(from: rowID, startY: startY, to: contentY - ThawSpacing.base, rows: rows)
             })

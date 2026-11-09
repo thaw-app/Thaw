@@ -57,6 +57,8 @@ final class LayoutListMotion {
     @ObservationIgnored var rowSpans: [String: ClosedRange<CGFloat>] = [:]
 
     @ObservationIgnored var scroll = Scroll()
+    /// Moves the list to an offset. The scroll tracking sets it, so the pane holds no scroll state.
+    @ObservationIgnored var scrollTo: (CGFloat) -> Void = { _ in }
     /// The scroll view's top in the window's content, top-down.
     @ObservationIgnored var viewportTop: CGFloat = 0
     @ObservationIgnored private var pending: [String] = []
@@ -85,8 +87,8 @@ final class LayoutListMotion {
     }
 
     /// Scrolls while the mouse button is down and the pointer rests near an edge.
-    /// scrollTo moves the list; pointer gets the pointer's height in the content after each step.
-    func startAutoscroll(scrollTo: @escaping (CGFloat) -> Void, pointer: @escaping (CGFloat) -> Void = { _ in }) {
+    /// pointer gets the pointer's height in the content after each step.
+    func startAutoscroll(pointer: @escaping (CGFloat) -> Void = { _ in }) {
         autoscroll?.cancel()
         autoscroll = Task { @MainActor [weak self] in
             while !Task.isCancelled, NSEvent.pressedMouseButtons & 1 != 0, let self {
@@ -121,10 +123,11 @@ final class LayoutListMotion {
 }
 
 /// Feeds the list's scroll position and frame to its motion, and scrolls to rows that just moved.
+/// It owns the scroll position: SwiftUI writes it on every scroll frame, and in the pane that rebuilt the list.
 struct LayoutListScrollTracking: ViewModifier {
     let motion: LayoutListMotion
-    @Binding var position: ScrollPosition
     let proxy: ScrollViewProxy
+    @State private var position = ScrollPosition()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
@@ -138,6 +141,10 @@ struct LayoutListScrollTracking: ViewModifier {
                 )
             } action: { _, scroll in motion.scroll = scroll }
             .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { motion.viewportTop = $0 }
+            .onAppear {
+                let position = $position
+                motion.scrollTo = { position.wrappedValue.scrollTo(y: $0) }
+            }
             .onChange(of: motion.scrollTarget) { _, target in
                 guard let target else { return }
                 withAnimation(reduceMotion ? nil : ThawMotion.settle) { proxy.scrollTo(target) }
