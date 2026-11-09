@@ -17,7 +17,6 @@ Thaw 3.0 runs on macOS 27, and Thaw 2.x runs on macOS 26 and, from 2.2, on macOS
     - [Full screen](#full-screen)
     - [Very many apps running](#very-many-apps-running)
     - [Siri and voice](#siri-and-voice)
-    - [Clicks in Settings](#clicks-in-settings)
     - [Shortcuts and Focus](#shortcuts-and-focus)
     - [Live Activities](#live-activities)
     - [Apps that need their own update](#apps-that-need-their-own-update)
@@ -99,10 +98,6 @@ With about 240 apps, Thaw can't read the whole menu bar in time, so icons can go
 #### Siri and voice
 
 Siri doesn't run Thaw's actions when you ask by voice. The same actions work from Shortcuts and Spotlight.
-
-#### Clicks in Settings
-
-If switches in Settings stop responding, the window may be zoomed. Press ⌘0 to return to actual size. [#1244](https://github.com/thaw-app/Thaw/issues/1244), [#1265](https://github.com/thaw-app/Thaw/issues/1265)
 
 #### Shortcuts and Focus
 

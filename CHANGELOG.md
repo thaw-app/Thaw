@@ -59,6 +59,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Corners sliders show their value,** Square, a percentage or Round, and match the other sliders.
 - **Switch to Reduced mode from Troubleshooting.**
 - **The experimental reorder editor is gone.**
+- **Zoom is off for now.** Thaw's windows stay at actual size, and ⌘+, ⌘− and the Zoom menu are gone until a zoomed Settings window stops ignoring clicks. Reported in [#1244](https://github.com/thaw-app/Thaw/issues/1244) and [#1265](https://github.com/thaw-app/Thaw/issues/1265).
 
 ### Fixed
 

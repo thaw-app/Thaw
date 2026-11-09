@@ -13,7 +13,6 @@ import ThawUI
 
 struct SettingsView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @AppStorage(AppUIZoom.defaultsKey) private var zoomPercent = 100
 
     let appState: AppState
     let navigationState: AppNavigationState
@@ -45,8 +44,8 @@ struct SettingsView: View {
         // the full layout's would otherwise hold Simple Mode open at a sidebar's
         // width forever.
         .frame(
-            minWidth: SettingsWindowMetrics.minimum(simpleMode: generalSettings.simpleMode).width / zoomScale,
-            minHeight: SettingsWindowMetrics.minimum(simpleMode: generalSettings.simpleMode).height / zoomScale
+            minWidth: SettingsWindowMetrics.minimum(simpleMode: generalSettings.simpleMode).width,
+            minHeight: SettingsWindowMetrics.minimum(simpleMode: generalSettings.simpleMode).height
         )
         .environment(\.settingsDescriptionsVisible, generalSettings.showSettingDescriptions)
         .settingsTheme(generalSettings.settingsAppearance, drawsBackground: true)
@@ -59,9 +58,7 @@ struct SettingsView: View {
             settingsWindow = window
             if let window {
                 appState.settingsProcessHost.appWindowOpened(window)
-                SettingsWindowDiagnostics.logWhenLaidOut(
-                    window, zoomPercent: zoomPercent, isSimpleMode: generalSettings.simpleMode
-                )
+                SettingsWindowDiagnostics.logWhenLaidOut(window, isSimpleMode: generalSettings.simpleMode)
             }
         }
         .onChange(of: generalSettings.simpleMode) { _, isSimpleMode in
@@ -72,10 +69,6 @@ struct SettingsView: View {
             navigationState.isSimpleModeSettings = isSimpleMode
         }
         .disablesAnimations(when: reduceMotion)
-    }
-
-    private var zoomScale: CGFloat {
-        CGFloat(AppUIZoom.normalized(zoomPercent)) / 100
     }
 
     private var simpleModeScreen: some View {
@@ -295,12 +288,6 @@ private struct SettingsOverflowMenu: View {
             }
             Button(menuBarManager.isZenModeActive ? "Leave Zen Mode" : "Zen Mode") {
                 menuBarManager.toggleZenMode()
-            }
-            Divider()
-            Menu {
-                AppUIZoomControls(strings: .thaw, showsShortcuts: false)
-            } label: {
-                Text("Zoom")
             }
             Divider()
             Toggle("Simple Mode", isOn: $generalSettings.simpleMode)
