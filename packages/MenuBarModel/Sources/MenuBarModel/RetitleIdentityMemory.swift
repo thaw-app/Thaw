@@ -21,7 +21,7 @@ public struct RetitleIdentityMemory: Sendable {
         }
     }
 
-    private var lastSlots: [pid_t: [Slot]] = [:]
+    private var lastSlots: [pid_t: (app: String?, slots: [Slot])] = [:]
     private var owners: [pid_t] = []
     private let capacity: Int
 
@@ -30,22 +30,24 @@ public struct RetitleIdentityMemory: Sendable {
     }
 
     /// The identities to use for slots, in order.
-    public mutating func resolve(owner: pid_t, slots: [Slot]) -> [String] {
+    /// - Parameter app: What names the app behind owner, such as its bundle identifier. macOS gives a
+    ///   process identifier out again after its process ends, so memory kept under another app is not used.
+    public mutating func resolve(owner: pid_t, app: String? = nil, slots: [Slot]) -> [String] {
         var resolved = slots
-        if let previous = lastSlots[owner], previous.count == slots.count {
+        if let (previousApp, previous) = lastSlots[owner], previousApp == app, previous.count == slots.count {
             for index in slots.indices where !slots[index].isStable && previous[index].isStable {
                 let kept = previous[index].identity
                 guard !resolved.contains(where: { $0.identity == kept }) else { continue }
                 resolved[index] = previous[index]
             }
         }
-        remember(resolved, for: owner)
+        remember(resolved, for: owner, app: app)
         return resolved.map(\.identity)
     }
 
     /// The owner read last goes to the back, so the ones dropped at capacity are those not read for longest.
-    private mutating func remember(_ slots: [Slot], for owner: pid_t) {
-        if lastSlots.updateValue(slots, forKey: owner) != nil {
+    private mutating func remember(_ slots: [Slot], for owner: pid_t, app: String?) {
+        if lastSlots.updateValue((app, slots), forKey: owner) != nil {
             owners.removeAll { $0 == owner }
         }
         owners.append(owner)

@@ -402,10 +402,10 @@ nonisolated enum MenuBarItemAXProvider {
         let items = assemble(state.observations)
         let freshItems = assemble(state.freshObservations(generation: pass.generation))
         diagLog.debug("menuBarItems: inventory=\(items.count), fresh=\(freshItems.count), truncated=\(truncated)")
-        let excused = Set(slowOwners.keys).subtracting(requiredOwners)
+        let excused = Set(slowOwners.keys).subtracting(requiredOwners).union(state.excusableDeferredOwners(of: pass))
         let passCovered = !Task.isCancelled && state.isComplete(pass, excusing: excused)
         let hasFreshMoveInventory = passCovered && state.hasFreshKnownInventory(generation: pass.generation, excusing: excused)
-        if hasFreshMoveInventory, !excused.isEmpty {
+        if hasFreshMoveInventory, excused.contains(where: { slowOwners[$0] != nil }) {
             diagLog.info(
                 "menuBarItems: move geometry excuses slow owner(s) \(excused.compactMap { slowOwners[$0] }.sorted())"
             )
@@ -414,7 +414,7 @@ nonisolated enum MenuBarItemAXProvider {
             items: items,
             freshItems: freshItems,
             completed: state.isComplete(generation: pass.generation),
-            hasFreshKnownInventory: state.hasFreshKnownInventory(generation: pass.generation),
+            hasFreshKnownInventory: state.hasFreshKnownInventory(generation: pass.generation, excusing: state.excusableDeferredOwners(of: pass)),
             hasFreshMoveInventory: hasFreshMoveInventory,
             hasFreshOwnerInventory: passCovered && state.hasFreshItemOwners(generation: pass.generation, excusing: excused)
         ), state)

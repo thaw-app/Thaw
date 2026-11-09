@@ -25,6 +25,14 @@ public struct MenuBarScanState<Observation: Sendable>: Sendable {
     public struct Pass: Sendable {
         public let generation: UInt64
         public let owners: [Int32]
+        /// Owners the walk asks last, such as background-only apps. See excusableDeferredOwners(of:).
+        public let deferredOwners: Set<Int32>
+
+        public init(generation: UInt64, owners: [Int32], deferredOwners: Set<Int32> = []) {
+            self.generation = generation
+            self.owners = owners
+            self.deferredOwners = deferredOwners
+        }
     }
 
     private var generation: UInt64 = 0
@@ -80,7 +88,8 @@ public struct MenuBarScanState<Observation: Sendable>: Sendable {
                         || attempted[owner] != observed[owner]
                         || observedAt[owner].map { now - $0 >= .seconds(5) } != false
                 }
-            }
+            },
+            deferredOwners: deferredOwners
         )
     }
 
@@ -123,6 +132,12 @@ public struct MenuBarScanState<Observation: Sendable>: Sendable {
             guard let items = retained[owner] else { return false }
             return items.isEmpty || observed[owner] == generation
         }
+    }
+
+    /// The pass's deferred owners a walk may excuse: those Thaw holds no items for. One that has
+    /// shown items must answer like any other, or its last geometry would pass for fresh.
+    public func excusableDeferredOwners(of pass: Pass) -> Set<Int32> {
+        pass.deferredOwners.filter { retained[$0]?.isEmpty != false }
     }
 
     /// Whether every owner with items was read in this pass. An owner never read, such as an app
