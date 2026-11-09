@@ -19,10 +19,8 @@ struct LayoutItemListRowView: View {
     let anchors: LayoutItemListAnchors
     let isEditable: Bool
     let showsSectionBadge: Bool
-    /// The state a checkbox sweep is showing for this row, or nil when no sweep covers it.
-    let sweepPreview: Bool?
-    /// Lit for a moment after the row moved, so it can be found where it landed.
-    let isFlashing: Bool
+    /// The sweep and the flash, read here so they redraw this row and not the list.
+    let motion: LayoutListMotion
     let onTap: () -> Void
     /// A drag of this row started, so the list can scroll at its edges.
     let onDragStart: () -> Void
@@ -38,6 +36,7 @@ struct LayoutItemListRowView: View {
     var body: some View {
         let isSelected = selection.contains(row.id)
         let showsGap = isDropTarget && isEditable
+        let isFlashing = motion.flashing.contains(row.id)
         HStack(spacing: PanelRow.iconSpacing) {
             visibilityCheckbox
             content
@@ -134,6 +133,7 @@ struct LayoutItemListRowView: View {
             experimentalSystemItemHiding: appState.settings.layout.enableExperimentalSystemItemHiding
         )
         let isShown = LayoutItemVisibility.isShown(row.section)
+        let sweepPreview = motion.sweep.flatMap { $0.covered.contains(row.id) ? $0.target : nil }
         let shownNow = lock == nil ? sweepPreview ?? isShown : isShown
         return Toggle(isOn: Binding(get: { shownNow }, set: { shown in
             LayoutItemVisibility.setShown(shown, rowID: row.id, in: row.section, selection: selection, appState: appState)
@@ -184,10 +184,11 @@ struct LayoutItemListHeading: View {
     let isEditable: Bool
     let selection: LayoutSelectionModel
     let motion: LayoutListMotion
-    @Binding var targeted: MenuBarSectionName?
+    /// Its own state, so lighting up redraws the heading and not the list.
+    @State private var isDropTarget = false
 
     var body: some View {
-        let isTargeted = isEditable && targeted == name
+        let isTargeted = isEditable && isDropTarget
         Text(name.localizedName)
             .font(ThawType.sublabel.weight(.semibold))
             .foregroundStyle(isTargeted ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
@@ -201,7 +202,7 @@ struct LayoutItemListHeading: View {
             }
             .padding(.top, isFirst ? 0 : ThawSpacing.gutter - ThawSpacing.tight)
             .accessibilityAddTraits(.isHeader)
-            .onDrop(of: [LayoutItemListDrop.type], isTargeted: Binding(get: { targeted == name }, set: setTargeted)) { providers in
+            .onDrop(of: [LayoutItemListDrop.type], isTargeted: $isDropTarget) { providers in
                 guard isEditable else { return false }
                 return LayoutItemListDrop.load(providers) { ids in
                     LayoutItemListDrop.dropOnSection(ids, section: name, selection: selection, appState: appState)
@@ -209,15 +210,11 @@ struct LayoutItemListHeading: View {
                     ThawHaptics.land()
                 }
             }
+            .onChange(of: isDropTarget) {
+                if isDropTarget {
+                    LayoutDragHaptics.enter(name)
+                }
+            }
             .animation(reduceMotion ? nil : ThawMotion.quick, value: isTargeted)
-    }
-
-    private func setTargeted(_ isTargeted: Bool) {
-        if isTargeted {
-            targeted = name
-            LayoutDragHaptics.enter(name)
-        } else if targeted == name {
-            targeted = nil
-        }
     }
 }

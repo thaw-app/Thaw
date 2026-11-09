@@ -50,6 +50,11 @@ final class LayoutListMotion {
     private(set) var flashing: Set<String> = []
     /// The first moved row, which the list scrolls to.
     private(set) var scrollTarget: String?
+    /// A drag down the checkboxes under way. Only the rows read it, so a sweep redraws them and not the list.
+    var sweep: LayoutCheckboxSweep?
+
+    /// Each row's vertical span in the list. Unobserved: a gap opening must not rebuild the list.
+    @ObservationIgnored var rowSpans: [String: ClosedRange<CGFloat>] = [:]
 
     @ObservationIgnored var scroll = Scroll()
     /// The scroll view's top in the window's content, top-down.
