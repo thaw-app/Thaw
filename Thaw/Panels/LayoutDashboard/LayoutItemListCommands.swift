@@ -29,6 +29,14 @@ enum LayoutItemListCommand: Equatable {
     /// Escape: empties the filter, then closes the window.
     case escape
 
+    /// Whether the command moves the selected items, so the list flashes them where they land.
+    var movesSelection: Bool {
+        switch self {
+        case .nudge, .adjacentSection, .sectionNumber: true
+        default: false
+        }
+    }
+
     /// The command for a key, or nil to let it through. Shift extends a step.
     static func command(for key: KeyEquivalent, characters: String, modifiers: EventModifiers) -> (command: Self, extends: Bool)? {
         let mods = modifiers.intersection([.command, .option, .control, .shift])

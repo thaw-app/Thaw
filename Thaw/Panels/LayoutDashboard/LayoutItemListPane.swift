@@ -33,6 +33,10 @@ struct LayoutItemListPane: View {
     /// Each row's vertical span in the list, for the checkbox sweep.
     @State private var rowSpans: [String: ClosedRange<CGFloat>] = [:]
     @State private var sweep: LayoutCheckboxSweep?
+    @State private var motion = LayoutListMotion()
+    @State private var scrollPosition = ScrollPosition()
+    /// The heading a row drag is over, lit to show the drop moves to that section.
+    @State private var targetedHeading: MenuBarSectionName?
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -57,6 +61,7 @@ struct LayoutItemListPane: View {
                     .labelsHidden()
                     Spacer(minLength: 0)
                     SettingsSearchResultCount(Text(LayoutItemListText.count(rows.count, isFiltered: !query.trimmingCharacters(in: .whitespaces).isEmpty)))
+                        .rollingNumber(rows.count)
                 }
             }
             .padding(ThawSpacing.base)
@@ -68,6 +73,7 @@ struct LayoutItemListPane: View {
         // The bars rebuild on the same signal; the next turn reads the committed assignment.
         .onReceive(appState.menuBarManager.sectionLayoutChanges.receive(on: RunLoop.main)) { _ in
             membershipRevision &+= 1
+            motion.revealPending()
         }
         .onChange(of: query) {
             guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
@@ -81,7 +87,14 @@ struct LayoutItemListPane: View {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(sections) { section in
                         if let name = section.name {
-                            heading(name, isFirst: section.id == sections.first?.id)
+                            LayoutItemListHeading(
+                                name: name,
+                                isFirst: section.id == sections.first?.id,
+                                isEditable: isEditable,
+                                selection: selection,
+                                motion: motion,
+                                targeted: $targetedHeading
+                            )
                         }
                         ForEach(section.rows) { row in
                             rowView(row, in: section, rows: rows)
@@ -91,6 +104,7 @@ struct LayoutItemListPane: View {
                 .coordinateSpace(.named(LayoutCheckboxSweep.coordinateSpace))
                 .padding(ThawSpacing.base)
             }
+            .modifier(LayoutListScrollTracking(motion: motion, position: $scrollPosition, proxy: proxy))
             .onGeometryChange(for: Int.self) { geometry in
                 max(1, Int(geometry.size.height / LayoutDashboardMetrics.rowHeight) - 1)
             } action: { pageSize = $0 }
@@ -125,11 +139,14 @@ struct LayoutItemListPane: View {
             isEditable: isEditable,
             showsSectionBadge: section.name == nil || row.section == .alwaysHidden,
             sweepPreview: sweep.flatMap { $0.covered.contains(row.id) ? $0.target : nil },
+            isFlashing: motion.flashing.contains(row.id),
             onTap: {
                 // A click on a row leaves the filter, so Escape and the arrows reach the list.
                 NSApp.keyWindow?.makeFirstResponder(nil)
                 isFocused = true
             },
+            onDragStart: { motion.startAutoscroll(scrollTo: { scrollPosition.scrollTo(y: $0) }) },
+            onMoved: { motion.noteMoved($0) },
             onSweep: { startY, y in sweepChanged(from: row.id, startY: startY, to: y, rows: rows) },
             onSweepEnd: { sweepEnded(rows: rows) }
         )
@@ -138,25 +155,6 @@ struct LayoutItemListPane: View {
             let frame = proxy.frame(in: .named(LayoutCheckboxSweep.coordinateSpace))
             return frame.minY ... frame.maxY
         } action: { rowSpans[row.id] = $0 }
-    }
-
-    /// Spaced as ThawUI's list heading, in the bars' sentence case. Dropping rows on it moves them to that section.
-    private func heading(_ name: MenuBarSectionName, isFirst: Bool) -> some View {
-        Text(name.localizedName)
-            .font(ThawType.sublabel.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, isFirst ? ThawSpacing.tight : ThawSpacing.gutter)
-            .padding(.bottom, ThawSpacing.tight)
-            .padding(.leading, ThawSpacing.row)
-            .accessibilityAddTraits(.isHeader)
-            .onDrop(of: [LayoutItemListDrop.type], isTargeted: nil) { providers in
-                guard isEditable else { return false }
-                return LayoutItemListDrop.load(providers) { ids in
-                    LayoutItemListDrop.dropOnSection(ids, section: name, selection: selection, appState: appState)
-                }
-            }
     }
 
     private func sweepRows(_ rows: [LayoutItemListRow]) -> [LayoutCheckboxSweep.Row] {
@@ -177,8 +175,17 @@ struct LayoutItemListPane: View {
         let sweepRows = sweepRows(rows)
         if sweep == nil {
             sweep = LayoutCheckboxSweep(startingAt: rowID, rows: sweepRows)
+            guard sweep != nil else { return }
+            motion.startAutoscroll(scrollTo: { scrollPosition.scrollTo(y: $0) }, pointer: { contentY in
+                // The rows' spans start inside the list's padding.
+                sweepChanged(from: rowID, startY: startY, to: contentY - ThawSpacing.base, rows: rows)
+            })
         }
+        let before = sweep?.covered.count ?? 0
         sweep?.extend(from: startY, to: y, rows: sweepRows)
+        if (sweep?.covered.count ?? 0) > before {
+            ThawHaptics.snap()
+        }
     }
 
     /// Selects the rows the sweep changes and moves them in one batch, so one undo puts them back.
@@ -187,6 +194,7 @@ struct LayoutItemListPane: View {
         guard let sweep else { return }
         let changes = sweep.changes(in: sweepRows(rows))
         guard !changes.isEmpty else { return }
+        motion.noteMoved(changes)
         selection.select(changes)
         LayoutItemVisibility.moveSelection(to: sweep.target ? .visible : .hidden, selection: selection, appState: appState)
     }
@@ -244,6 +252,9 @@ struct LayoutItemListPane: View {
     private func change(_ command: LayoutItemListCommand) -> Bool {
         guard isEditable else { return true }
         let actions = LayoutItemListActions(selection: selection, appState: appState)
+        if command.movesSelection {
+            motion.noteMoved(selection.orderedItemIDs)
+        }
         switch command {
         case .undo: appState.layoutUndo.undo()
         case .redo: appState.layoutUndo.redo()

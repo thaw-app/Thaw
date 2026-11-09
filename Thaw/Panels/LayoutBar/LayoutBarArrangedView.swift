@@ -74,6 +74,7 @@ extension LayoutBarArrangedView: NSDraggingSource {
         let container = superview as? LayoutBarContainer
         container?.acceptsViewUpdates = false
         frozenSourceContainer = container
+        LayoutDragHaptics.begin(in: container?.section)
 
         // A cancelled drag slides back to where it started, as a group's does.
         session.animatesToStartingPositionsOnCancelOrFail = true
