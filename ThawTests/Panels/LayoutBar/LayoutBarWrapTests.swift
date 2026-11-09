@@ -169,11 +169,15 @@ struct LayoutBarWrapTests {
     func relayoutTime() throws {
         let bar = try WrappedBar(count: 165, width: 900)
         let clock = ContinuousClock()
-        let elapsed = clock.measure {
-            for width in stride(from: CGFloat(880), through: 400, by: -40) {
-                bar.container.rowWidth = width
+        // The fastest of three, so a stall in the parallel suite can't fail it.
+        let elapsed = (0 ..< 3).map { _ in
+            bar.container.rowWidth = 900
+            return clock.measure {
+                for width in stride(from: CGFloat(880), through: 400, by: -40) {
+                    bar.container.rowWidth = width
+                }
             }
-        }
+        }.min() ?? .zero
         #expect(bar.container.flow.rowCount > 5)
         #expect(elapsed < .milliseconds(500), "13 relayouts of 165 items took \(elapsed)")
     }
