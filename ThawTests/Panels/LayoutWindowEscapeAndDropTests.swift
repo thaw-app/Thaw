@@ -22,6 +22,13 @@ struct LayoutWindowEscapeAndDropTests {
         )
     }
 
+    @Test("The window never goes full screen, where it had no close button")
+    @MainActor
+    func noFullScreen() {
+        #expect(LayoutDashboardWindow.collectionBehavior.contains(.fullScreenNone))
+        #expect(!LayoutDashboardWindow.collectionBehavior.contains(.fullScreenPrimary))
+    }
+
     @Test("Escape in the filter field empties it, then leaves the field")
     func escapeInFilter() {
         #expect(escape(filter: "fl", editingText: true, editingFilter: true) == .clearFilter)
