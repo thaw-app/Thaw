@@ -11,9 +11,10 @@ import CoreGraphics
 /// flips to, and the release moves them all in one batch, so one undo puts them back.
 nonisolated struct LayoutCheckboxSweep: Equatable {
     /// A row as the sweep sees it, with its vertical span in the list's coordinates.
+    /// A row scrolled out of view isn't laid out and has no span.
     struct Row: Equatable {
         let id: String
-        let span: ClosedRange<CGFloat>
+        let span: ClosedRange<CGFloat>?
         let isShown: Bool
         let isLocked: Bool
     }
@@ -34,12 +35,22 @@ nonisolated struct LayoutCheckboxSweep: Equatable {
         covered = [startID]
     }
 
-    /// Covers every row between where the drag started and where it is now, both ends included.
-    mutating func extend(from startY: CGFloat, to currentY: CGFloat, rows: [Row]) {
-        let low = min(startY, currentY)
-        let high = max(startY, currentY)
-        let passed = rows.filter { $0.span.overlaps(low ... high) }.map(\.id)
-        covered = passed.contains(startID) ? passed : [startID] + passed
+    /// Covers every row from the first one to the one under the pointer, both ends included.
+    /// Counted in list order: a sweep that scrolls the list leaves its first rows without a span.
+    mutating func extend(to currentY: CGFloat, rows: [Row]) {
+        guard let start = rows.firstIndex(where: { $0.id == startID }), let end = Self.index(nearest: currentY, in: rows) else { return }
+        covered = rows[min(start, end) ... max(start, end)].map(\.id)
+    }
+
+    /// The laid-out row under y, or the closest one when y is past the rows.
+    private static func index(nearest y: CGFloat, in rows: [Row]) -> Int? {
+        func distance(_ span: ClosedRange<CGFloat>) -> CGFloat {
+            max(span.lowerBound - y, y - span.upperBound, 0)
+        }
+        return rows.indices
+            .compactMap { index in rows[index].span.map { (index, distance($0)) } }
+            .min { $0.1 < $1.1 }?
+            .0
     }
 
     /// The state a covered row shows while the drag is under way, or nil when the sweep doesn't reach it.

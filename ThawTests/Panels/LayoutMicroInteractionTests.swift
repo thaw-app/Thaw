@@ -114,7 +114,7 @@ struct LayoutMicroInteractionTests {
         var sweep = try #require(LayoutCheckboxSweep(startingAt: "a", rows: rows))
         motion.sweep = sweep
         #expect(!motion.isSweepClick(), "a drag still on its first row leaves the click to the checkbox")
-        sweep.extend(from: 5, to: 15, rows: rows)
+        sweep.extend(to: 15, rows: rows)
         motion.sweep = sweep
         #expect(motion.isSweepClick())
 

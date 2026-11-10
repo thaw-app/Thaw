@@ -146,7 +146,7 @@ struct LayoutItemListPane: View {
             },
             onDragStart: { motion.startAutoscroll() },
             onMoved: { motion.noteMoved($0) },
-            onSweep: { startY, y in sweepChanged(from: row.id, startY: startY, to: y, rows: rows) },
+            onSweep: { _, y in sweepChanged(from: row.id, to: y, rows: rows) },
             onSweepEnd: { sweepEnded(rows: rows) }
         )
         .id(row.id)
@@ -160,31 +160,30 @@ struct LayoutItemListPane: View {
 
     private func sweepRows(_ rows: [LayoutItemListRow]) -> [LayoutCheckboxSweep.Row] {
         let experimental = appState.settings.layout.enableExperimentalSystemItemHiding
-        return rows.compactMap { row in
-            guard let span = motion.rowSpans[row.id] else { return nil }
+        return rows.map { row in
             let lock = LayoutItemVisibility.lockReason(for: row.item, in: row.section, experimentalSystemItemHiding: experimental)
             return LayoutCheckboxSweep.Row(
                 id: row.id,
-                span: span,
+                span: motion.rowSpans[row.id],
                 isShown: LayoutItemVisibility.isShown(row.section),
                 isLocked: !isEditable || lock != nil
             )
         }
     }
 
-    private func sweepChanged(from rowID: String, startY: CGFloat, to y: CGFloat, rows: [LayoutItemListRow]) {
+    private func sweepChanged(from rowID: String, to y: CGFloat, rows: [LayoutItemListRow]) {
         let sweepRows = sweepRows(rows)
         if motion.sweep == nil {
             motion.sweep = LayoutCheckboxSweep(startingAt: rowID, rows: sweepRows)
             guard motion.sweep != nil else { return }
             motion.startAutoscroll(pointer: { contentY in
                 // The rows' spans start inside the list's padding.
-                sweepChanged(from: rowID, startY: startY, to: contentY - ThawSpacing.base, rows: rows)
+                sweepChanged(from: rowID, to: contentY - ThawSpacing.base, rows: rows)
             })
         }
         guard var sweep = motion.sweep else { return }
         let before = sweep.covered.count
-        sweep.extend(from: startY, to: y, rows: sweepRows)
+        sweep.extend(to: y, rows: sweepRows)
         // Only a change redraws the rows, not every mouse move.
         guard sweep != motion.sweep else { return }
         motion.sweep = sweep
