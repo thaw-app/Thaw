@@ -69,8 +69,8 @@ struct LayoutItemListPane: View {
         .accessibilityLabel("Menu bar items")
         // The bars rebuild on the same signal. Subscribed once: onReceive takes a new publisher on every
         // update, and this one sends its current value on subscribing, so each update caused the next.
-        .task {
-            for await _ in appState.menuBarManager.sectionLayoutChanges.values {
+        .onAppear {
+            motion.followSectionChanges(appState.menuBarManager.sectionLayoutChanges) {
                 membershipRevision &+= 1
                 motion.revealPending()
             }
