@@ -740,7 +740,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         }
 
         let side = min(bounds.width, bounds.height)
-        return CGRect(
+        return (drawsBareModuleGlyph(for: item) ? bareGlyphRect(for: imageSize, in: bounds) : nil) ?? CGRect(
             x: bounds.midX - (side / 2),
             y: bounds.midY - (side / 2),
             width: side,
@@ -913,7 +913,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     private func drawPlaceholder() {
         let bare = Self.drawsBareModuleGlyph(for: item)
-        guard let image = resolvedPlaceholderImage(), let iconRect = bare ? Self.bareGlyphRect(in: bounds) : Self.drawPlaceholderBox(in: bounds) else {
+        guard let image = resolvedPlaceholderImage(), let iconRect = bare ? Self.bareGlyphRect(for: image.size, in: bounds) : Self.drawPlaceholderBox(in: bounds) else {
             return
         }
         draw(
