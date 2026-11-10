@@ -32,6 +32,15 @@ final class StatusItemPublisher: NSObject {
     /// What the image on the button was drawn from.
     private var rendered: StatusIconDrawnContent?
     private var menuTitles: [String] = []
+    private var hasContent = false
+    /// Thaw's choice to hide the icon, which outlives every reading published after it.
+    var isHiddenByThaw = false {
+        didSet {
+            if oldValue != isHiddenByThaw {
+                applyVisibility()
+            }
+        }
+    }
 
     /// Creates (or reuses) a status item and sets its image to the rendered
     /// composition. The item appears immediately.
@@ -40,6 +49,7 @@ final class StatusItemPublisher: NSObject {
             hide()
             return
         }
+        hasContent = true
         if statusItem == nil {
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
             item.autosaveName = Self.autosaveName
@@ -67,8 +77,17 @@ final class StatusItemPublisher: NSObject {
             statusItem?.menu = makeMenu(for: state)
             menuTitles = titles
         }
-        if statusItem?.isVisible != true {
-            statusItem?.isVisible = true
+        applyVisibility()
+    }
+
+    static func shows(hasContent: Bool, hiddenByThaw: Bool) -> Bool {
+        hasContent && !hiddenByThaw
+    }
+
+    private func applyVisibility() {
+        let visible = Self.shows(hasContent: hasContent, hiddenByThaw: isHiddenByThaw)
+        if statusItem?.isVisible != visible {
+            statusItem?.isVisible = visible
         }
     }
 
@@ -139,7 +158,8 @@ final class StatusItemPublisher: NSObject {
 
     /// Hides the preview item without destroying it (so a re-publish is instant).
     func hide() {
-        statusItem?.isVisible = false
+        hasContent = false
+        applyVisibility()
     }
 
     /// A template that follows the menu bar, or in the bar's own ink once a reading is coloured, since a template drops colour.

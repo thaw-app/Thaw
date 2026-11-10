@@ -97,15 +97,17 @@ enum SystemExtraStandIn: String, CaseIterable {
 
 // MARK: - Visibility
 
-/// Hides Thaw's extra bundles itself: Control Center's app list may have no record of them.
-/// Must match ExtraVisibilityChannel in ThawExtraHelper.
+/// Hides Thaw's extra and module bundles itself: Control Center's app list may have no record of
+/// them, and native hiding never switches off a bundle under Thaw's own identifier.
+/// Must match ExtraVisibilityChannel in ThawExtraHelper and WidgetVisibility in the Widgets module.
 @MainActor
 enum ExtraVisibilityChannel {
     private static let log = DiagLog(category: "SystemExtraStandIn")
     private static var lastHidden: Set<String>?
 
     static func ownsBundle(_ bundleID: String) -> Bool {
-        bundleID.hasPrefix("\(ThawMenuBarIdentity.bundleIdentifier).extra.")
+        let own = ThawMenuBarIdentity.bundleIdentifier
+        return bundleID.hasPrefix("\(own).extra.") || bundleID.hasPrefix("\(own).module.")
     }
 
     /// Bundles native hiding must not switch off in the system's Menu Bar list: the extras, which are
