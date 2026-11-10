@@ -7,6 +7,7 @@
 
 import CoreGraphics
 import MenuBarModel
+import Combine
 import Testing
 @testable import Thaw
 
@@ -69,6 +70,24 @@ struct LayoutMicroInteractionTests {
         #expect(quiet.flashing == ["c"], "a move whose report came first still lights")
         quiet.revealPending()
         #expect(quiet.flashing == ["c"], "and a later layout change doesn't light it again")
+    }
+
+    @Test("The list follows section changes through one subscription, however often it is asked")
+    func sectionChangesAreFollowedOnce() async throws {
+        let changes = CurrentValueSubject<Void, Never>(())
+        let motion = LayoutListMotion()
+        var runs = 0
+        motion.followSectionChanges(changes.eraseToAnyPublisher()) { runs += 1 }
+        motion.followSectionChanges(changes.eraseToAnyPublisher()) { runs += 100 }
+        for _ in 0 ..< 200 where runs < 1 {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(runs == 1, "the value sent on subscribing arrives once")
+        changes.send(())
+        for _ in 0 ..< 200 where runs < 2 {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(runs == 2)
     }
 
     @Test("Moving the same row again scrolls to it again")
