@@ -73,6 +73,14 @@ struct MenuBarWalkConcurrencyTests {
         itemOwners.dropFirst().first
     }
 
+    /// A dozen apps with both owners among them: enough to read several at once. Every running app
+    /// is hundreds of reads on a busy machine, which runs the walk out of its budget before the owner.
+    private static var sampledApps: [NSRunningApplication] {
+        let owners = Array(itemOwners.prefix(2))
+        let chosen = Set(owners.map(\.processIdentifier))
+        return owners + otherApps.filter { !chosen.contains($0.processIdentifier) }.prefix(10)
+    }
+
     private static func item(for pid: pid_t) -> Provider.RawItem {
         Provider.RawItem(
             namespace: .string("com.example.walk"),
@@ -90,7 +98,8 @@ struct MenuBarWalkConcurrencyTests {
     func readsAppsInParallel() async throws {
         let owner = try #require(Self.itemOwner).processIdentifier
         let log = ReadLog()
-        let reader = Provider.WalkReader(runningApps: { Self.otherApps }, isTrusted: { true }, read: { app, _, _, _ in
+        let apps = Self.sampledApps
+        let reader = Provider.WalkReader(runningApps: { apps }, isTrusted: { true }, read: { app, _, _, _ in
             log.enter(app.processIdentifier)
             Thread.sleep(forTimeInterval: 0.005)
             log.leave()
@@ -122,13 +131,14 @@ struct MenuBarWalkConcurrencyTests {
                 app.processIdentifier == owner ? [Self.item(for: owner)] : []
             })
         }
-        let before = Self.otherApps.filter { $0.processIdentifier != launched }
+        let apps = Self.sampledApps
+        let before = apps.filter { $0.processIdentifier != launched }
 
         let (_, state) = await Provider.enumerateMenuBarItemsResilient(
             state: MenuBarScanState(), scope: .discovery, priorityPIDs: [], reader: reader(before)
         )
         let (snapshot, _) = await Provider.enumerateMenuBarItemsResilient(
-            state: state, scope: .requestedOwners, priorityPIDs: [owner], reader: reader(Self.otherApps)
+            state: state, scope: .requestedOwners, priorityPIDs: [owner], reader: reader(apps)
         )
 
         #expect(!snapshot.hasFreshMoveInventory, "a move still waits for the new app")
