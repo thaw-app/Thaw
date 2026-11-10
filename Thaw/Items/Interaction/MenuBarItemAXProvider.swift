@@ -146,7 +146,7 @@ nonisolated enum MenuBarItemAXProvider {
 
     /// Owners that missed their per-app deadline. Cooldowns expire, so an app
     /// slow once in a launch storm is not banished; see SlowResponderLedger.
-    private static let slowResponders = OSAllocatedUnfairLock(
+    static let slowResponders = OSAllocatedUnfairLock(
         initialState: SlowResponderLedger()
     )
 
@@ -171,7 +171,7 @@ nonisolated enum MenuBarItemAXProvider {
         }
     }
 
-    private static let perAppWalkBudget = Duration.milliseconds(400)
+    static let perAppWalkBudget = Duration.milliseconds(400)
 
     /// Late answers from apps that missed their deadline, merged by the next
     /// walk so a slow app's icon is one pass late instead of absent.
@@ -255,7 +255,7 @@ nonisolated enum MenuBarItemAXProvider {
         // process-heavy machine is not cut off mid-pass; the 1.5 s floor
         // bounds small tables and the per-app deadline caps any one slow app.
         let globalBudget = max(
-            Duration.milliseconds(1500),
+            reader.minimumBudget,
             Duration.milliseconds(15) * pass.owners.count
         )
         let walkStart = ContinuousClock.now
@@ -346,7 +346,7 @@ nonisolated enum MenuBarItemAXProvider {
                 }
                 // Abandons, not awaits, a hung AX call. A timeout and a cancellation both
                 // yield nil here; Task.isCancelled tells them apart when it is collected.
-                let result = try? await withAbandoningTimeout(Self.perAppWalkBudget) {
+                let result = try? await withAbandoningTimeout(reader.perAppBudget) {
                     await collected.value
                 }
                 return ProbeOutcome(ownerPID: ownerPID, appBundleID: appBundleID, result: result, collected: collected)
