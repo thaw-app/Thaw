@@ -142,4 +142,47 @@ struct ThawBarBackgroundSampleTests {
         #expect(inkOverWhite(asTint: asTint, style: .regular, tinted: true, colored: true) == .black)
         #expect(inkOverWhite(asTint: asTint, style: .dynamic, colored: true) == .white, "The wash and the fade add up")
     }
+
+    @Test("Downsampled 64x4 strip maps panel position to proportional image coordinates")
+    func downsampledStripSampleRect() throws {
+        let context = try #require(CGContext(
+            data: nil,
+            width: 64,
+            height: 4,
+            bitsPerComponent: 8,
+            bytesPerRow: 64 * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        // Paint left half blue, right half red.
+        context.setFillColor(CGColor(srgbRed: 0, green: 0, blue: 1, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: 32, height: 4))
+        context.setFillColor(CGColor(srgbRed: 1, green: 0, blue: 0, alpha: 1))
+        context.fill(CGRect(x: 32, y: 0, width: 32, height: 4))
+        let strip = try #require(context.makeImage())
+
+        let screenFrame = CGRect(x: 0, y: 0, width: 1728, height: 1117)
+        let imageSize = CGSize(width: strip.width, height: strip.height)
+
+        let leftRect = ThawBarColorManager.sampleRect(
+            forPanelFrame: CGRect(x: 0, y: 1000, width: 300, height: 40),
+            screenFrame: screenFrame,
+            imageSize: imageSize
+        )
+        let rightRect = ThawBarColorManager.sampleRect(
+            forPanelFrame: CGRect(x: 1428, y: 1000, width: 300, height: 40),
+            screenFrame: screenFrame,
+            imageSize: imageSize
+        )
+
+        #expect(!leftRect.isEmpty && !rightRect.isEmpty)
+        #expect(leftRect.maxX <= 64 && rightRect.maxX <= 64)
+        #expect(leftRect.midX < rightRect.midX)
+
+        let leftAverage = try #require(strip.cropping(to: leftRect)?.averageColor())
+        let rightAverage = try #require(strip.cropping(to: rightRect)?.averageColor())
+        let leftColor = try #require(NSColor(cgColor: leftAverage)?.usingColorSpace(.sRGB))
+        let rightColor = try #require(NSColor(cgColor: rightAverage)?.usingColorSpace(.sRGB))
+        #expect(leftColor.blueComponent > 0.7 && rightColor.redComponent > 0.7)
+    }
 }

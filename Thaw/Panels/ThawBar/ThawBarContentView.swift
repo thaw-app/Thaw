@@ -246,8 +246,8 @@ struct ThawBarContentView: View {
             keyboardFocus.update(itemCount: key.count, arrangement: arrangement)
         }
         .onChange(of: thawBarAppearance, initial: true) { _, appearance in
-            menuBarManager.thawBarPanel.hasShadow = appearance.hasShadow || appearance.backgroundHasShadow
-            menuBarManager.thawBarPanel.invalidateShadow()
+            menuBarManager.thawBarPanelIfCreated?.hasShadow = appearance.hasShadow || appearance.backgroundHasShadow
+            menuBarManager.thawBarPanelIfCreated?.invalidateShadow()
         }
         .onAppear {
             Self.diagLog.notice("""

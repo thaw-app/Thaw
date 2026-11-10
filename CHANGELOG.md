@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Changed
+
+- **Lower idle and background memory usage.** Thaw releases Settings, reading windows, Search, the Thaw Bar, and cached menu bar item images from memory shortly after they close, and skips background item capture when no panel or settings pane that displays them is open.
+
 ## [3.0.0-alpha.13] - 2026-11-05
 
 **macOS 27 only · Build 124**

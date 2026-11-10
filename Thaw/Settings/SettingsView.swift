@@ -11,6 +11,10 @@ import ThawUI
 
 // MARK: - SettingsView
 
+private final class WeakWindowBox {
+    weak var window: NSWindow?
+}
+
 struct SettingsView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(AppUIZoom.defaultsKey) private var zoomPercent = 100
@@ -18,7 +22,7 @@ struct SettingsView: View {
     let appState: AppState
     let navigationState: AppNavigationState
     let generalSettings: GeneralSettings
-    @State private var settingsWindow: NSWindow?
+    @State private var settingsWindowBox = WeakWindowBox()
 
     /// Shared settings search state, driving the detail header's search field
     /// the single search entry point. The sidebar is navigation only, so
@@ -51,18 +55,19 @@ struct SettingsView: View {
         .environment(\.settingsDescriptionsVisible, generalSettings.showSettingDescriptions)
         .settingsTheme(generalSettings.settingsAppearance, drawsBackground: true)
         .environment(searchModel)
-        // Both layouts title the toolbar themselves: the full one with the
-        // pane, Simple Mode with the app and the mode. Cleared here so the
-        // window never falls back to the scene's title.
-        .navigationTitle("")
         .onWindowChange { window in
-            settingsWindow = window
+            settingsWindowBox.window = window
             if let window {
                 appState.settingsProcessHost.appWindowOpened(window)
                 SettingsWindowDiagnostics.logWhenLaidOut(
                     window, zoomPercent: zoomPercent, isSimpleMode: generalSettings.simpleMode
                 )
             }
+        }
+        .onDisappear {
+            settingsWindowBox.window = nil
+            searchModel.searchText = ""
+            searchModel.clearIndex()
         }
         .onChange(of: generalSettings.simpleMode) { _, isSimpleMode in
             resizeSettingsWindow(forSimpleMode: isSimpleMode)
@@ -80,38 +85,35 @@ struct SettingsView: View {
 
     private var simpleModeScreen: some View {
         // No sidebar and no navigation: one scrolling page is the whole point
-        // of Simple Mode. The title bar names the mode, so the page has no
-        // heading of its own and opens straight on the folded bar; arranging
-        // comes first, app plumbing last.
-        SimpleModeSettingsPane(
-            itemManager: appState.itemManager,
-            updatesManager: appState.updatesManager,
-            settings: generalSettings
-        )
-        .environment(\.settingsPaneTitle, nil)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .navigationTitle("\(Constants.displayName): Simple Mode")
-        // The same overflow menu as the full window, so the mode switch sits
-        // in the same place whichever way the window is showing.
-        .toolbar {
-            // A labelled way out, so leaving Simple Mode doesn't depend on finding the overflow menu.
-            ToolbarItem(placement: .primaryAction) {
-                Button("All Settings") {
-                    generalSettings.simpleMode = false
-                }
-                .help("Leave Simple Mode and show every settings page")
+        // of Simple Mode. The header bar names the mode, so the page has no
+        // heading of its own and opens straight on the folded bar.
+        SettingsSingleHeaderShell(
+            title: Text("\(Constants.displayName): Simple Mode")
+        ) {
+            Button("All Settings") {
+                generalSettings.simpleMode = false
             }
-            ToolbarItem(placement: .primaryAction) {
-                SettingsOverflowMenu(appState: appState, generalSettings: generalSettings)
-            }
+            .buttonStyle(.settingsGlass)
+            .help("Leave Simple Mode and show every settings page")
+
+            SettingsOverflowMenu(appState: appState, generalSettings: generalSettings)
+        } content: {
+            SimpleModeSettingsPane(
+                itemManager: appState.itemManager,
+                updatesManager: appState.updatesManager,
+                settings: generalSettings
+            )
+            .environment(\.settingsPaneTitle, nil)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
     }
 
     private var fullSettingsScreen: some View {
         @Bindable var searchModel = searchModel
-        // The system toolbar is the pane header. It stays put while the form scrolls and blurs under it, and carries
-        // the search field and the overflow menu on its trailing edge.
-        return ThawSettingsShell(title: Text(toolbarTitle), subtitle: toolbarSubtitle, sidebarMaxWidth: 250) {
+        return SettingsSplitShell(
+            title: Text(toolbarTitle),
+            subtitle: isSearching ? nil : Text(navigationState.settingsNavigationIdentifier.subtitle)
+        ) {
             sidebar
         } detail: {
             detailContent
@@ -119,10 +121,6 @@ struct SettingsView: View {
                     paneHistory.record(leaving: previous)
                 }
                 .background {
-                    // History's shortcuts live in the content, not on the
-                    // toolbar buttons: a toolbar item that carries a
-                    // keyboardShortcut is vended with focused values every
-                    // layout pass, and AppKit refuses the 406th constraints pass.
                     Button("Back") {
                         paneHistory.goBack(from: navigationState.settingsNavigationIdentifier, navigationState: navigationState)
                     }
@@ -136,29 +134,20 @@ struct SettingsView: View {
                     .disabled(paneHistory.forward.isEmpty)
                     .hidden()
                 }
-        } toolbar: {
-            // History on the leading edge, the overflow menu beside search.
-            ToolbarItemGroup(placement: .navigation) {
-                SettingsHistoryButtons(history: paneHistory, navigationState: navigationState)
-            }
-            ToolbarItem(placement: .primaryAction) {
-                SettingsOverflowMenu(appState: appState, generalSettings: generalSettings)
-            }
+        } leadingHeader: {
+            SettingsHistoryButtons(history: paneHistory, navigationState: navigationState)
+        } trailingHeader: {
+            SettingsHeaderSearchField(
+                text: $searchModel.searchText,
+                prompt: "Search",
+                findLabel: "Find"
+            )
+            SettingsOverflowMenu(appState: appState, generalSettings: generalSettings)
         }
-        .settingsSearchField(
-            text: $searchModel.searchText,
-            placement: .toolbar,
-            prompt: "Search",
-            findLabel: "Find"
-        )
     }
 
     private var toolbarTitle: LocalizedStringResource {
         isSearching ? "Search" : navigationState.settingsNavigationIdentifier.localized
-    }
-
-    private var toolbarSubtitle: Text {
-        isSearching ? Text(verbatim: "") : Text(navigationState.settingsNavigationIdentifier.subtitle)
     }
 
     @ViewBuilder
@@ -199,7 +188,7 @@ struct SettingsView: View {
     /// taste within a mode is left alone. Anchored at the top-left because
     /// AppKit sizes from the bottom.
     private func resizeSettingsWindow(forSimpleMode isSimpleMode: Bool) {
-        guard let window = settingsWindow else {
+        guard let window = settingsWindowBox.window else {
             return
         }
         let preferred = SettingsWindowMetrics.preferred(simpleMode: isSimpleMode)
@@ -287,167 +276,5 @@ struct SettingsView: View {
             // Advanced was dissolved, so a saved pane that names it opens Layout.
             MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
         }
-    }
-}
-
-// MARK: - SettingsDetailHeader
-
-/// The toolbar's overflow menu: window-level switches that have no pane of their own.
-/// Anything with a row in a pane stays out, so each setting has one home.
-private struct SettingsOverflowMenu: View {
-    let appState: AppState
-    let generalSettings: GeneralSettings
-
-    var body: some View {
-        @Bindable var generalSettings = generalSettings
-        let menuBarManager = appState.menuBarManager
-        Menu {
-            Button(menuBarManager.isSwapped ? "Swap Back" : "Swap Shown and Hidden Items") {
-                menuBarManager.toggleSwap()
-            }
-            Button(menuBarManager.isZenModeActive ? "Leave Zen Mode" : "Zen Mode") {
-                menuBarManager.toggleZenMode()
-            }
-            Divider()
-            Menu {
-                AppUIZoomControls(strings: .thaw, showsShortcuts: false)
-            } label: {
-                Text("Zoom")
-            }
-            Divider()
-            Toggle("Simple Mode", isOn: $generalSettings.simpleMode)
-        } label: {
-            Label("More", systemImage: "ellipsis.circle")
-        }
-        .menuIndicator(.hidden)
-    }
-}
-
-// MARK: - SettingsSearchResults
-
-/// Search results in the detail column, on the same reading width as the
-/// panes they stand in for.
-private struct SettingsSearchResults: View {
-    @Environment(SearchModel.self) private var searchModel
-    let navigationState: AppNavigationState
-
-    private var resultCount: Int {
-        searchModel.displayedGroups.reduce(0) { $0 + $1.entries.count }
-    }
-
-    var body: some View {
-        @Bindable var searchModel = searchModel
-        if searchModel.displayedGroups.isEmpty {
-            SearchEmptyView(query: searchModel.searchText)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            VStack(alignment: .leading, spacing: 0) {
-                // A count makes a long list read as bounded, and tells the
-                // reader whether narrowing the query is worth it.
-                SettingsSearchResultCount(Text("^[\(resultCount) result](inflect: true)"))
-                    .padding(.horizontal, SettingsDetailLayout.titleHorizontalInset + 6)
-                    .padding(.bottom, ThawSpacing.compact)
-
-                SearchResultsList(groups: searchModel.displayedGroups) { entry in
-                    SettingsSearchNavigation.selectSearchResult(
-                        entry,
-                        navigationState: navigationState,
-                        query: &searchModel.searchText
-                    )
-                }
-                .frame(maxWidth: SettingsDetailLayout.columnMaxWidth)
-                .padding(.horizontal, SettingsDetailLayout.titleHorizontalInset - 10)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
-    }
-}
-
-// MARK: - SettingsSidebar
-
-/// The sidebar column: the list of pages, at Floe's width.
-///
-/// The pane header names the pane; the sidebar only lists where to go.
-private struct SettingsSidebar: View {
-    @Environment(SearchModel.self) private var searchModel
-    let appState: AppState
-    let navigationState: AppNavigationState
-    let generalSettings: GeneralSettings
-
-    var body: some View {
-        SettingsSidebarPaneList(
-            navigationState: navigationState,
-            turnedOff: SettingsSidebarPanes.panesTurnedOff(
-                isEnabled: appState.moduleHost.isEnabled,
-                profilesOn: appState.profilesFeature.isOn
-            )
-        )
-        .onChange(of: generalSettings.simpleMode) { _, _ in
-            searchModel.updateDisplayedItems()
-        }
-    }
-}
-
-// MARK: - Toolbar pieces
-
-/// Back and forward through the panes visited in this window, like a
-/// browser, so a detour to check one setting is one click back.
-@MainActor
-@Observable
-final class SettingsPaneHistory {
-    private(set) var back: [SettingsNavigationIdentifier] = []
-    private(set) var forward: [SettingsNavigationIdentifier] = []
-    /// Set while a history move is changing the pane, so the change is not
-    /// recorded as a new visit.
-    private var isTravelling = false
-
-    func record(leaving pane: SettingsNavigationIdentifier) {
-        guard !isTravelling else { return }
-        back.append(pane)
-        if back.count > 50 {
-            back.removeFirst()
-        }
-        forward.removeAll()
-    }
-
-    func goBack(from current: SettingsNavigationIdentifier, navigationState: AppNavigationState) {
-        guard let target = back.popLast() else { return }
-        forward.append(current)
-        travel(to: target, navigationState: navigationState)
-    }
-
-    func goForward(from current: SettingsNavigationIdentifier, navigationState: AppNavigationState) {
-        guard let target = forward.popLast() else { return }
-        back.append(current)
-        travel(to: target, navigationState: navigationState)
-    }
-
-    private func travel(to pane: SettingsNavigationIdentifier, navigationState: AppNavigationState) {
-        isTravelling = true
-        SettingsSearchNavigation.selectSidebarPane(pane, navigationState: navigationState)
-        isTravelling = false
-    }
-}
-
-private struct SettingsHistoryButtons: View {
-    let history: SettingsPaneHistory
-    let navigationState: AppNavigationState
-
-    var body: some View {
-        Button {
-            history.goBack(from: navigationState.settingsNavigationIdentifier, navigationState: navigationState)
-        } label: {
-            Label("Back", systemImage: "chevron.backward")
-        }
-        .disabled(history.back.isEmpty)
-        .help("Back")
-
-        Button {
-            history.goForward(from: navigationState.settingsNavigationIdentifier, navigationState: navigationState)
-        } label: {
-            Label("Forward", systemImage: "chevron.forward")
-        }
-        .disabled(history.forward.isEmpty)
-        .help("Forward")
     }
 }

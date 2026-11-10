@@ -11,54 +11,84 @@ import MenuBarModel
 import Testing
 @testable import Thaw
 
-/// Pins MenuBarItemImageCache.idleTrimSurvivors(cachedTags:concealedTags:),
-/// the selection the idle trim uses to keep glyphs that only a reveal on the
-/// live menu bar can refill. Visible-section images may go; images for items
-/// in a concealed section stay, matched without regard to the window ID
-/// because disk-loaded captures carry none.
-@Suite("Idle trim survivors")
+/// Verifies that idle trim flushes captures to disk, purges all in-memory
+/// CGImages (including concealed items), and re-hydrates lazily from disk.
+@MainActor
+@Suite("Idle trim full purge and disk hydration", .serialized, .scratchDefaults, .timeLimit(.minutes(1)))
 struct MenuBarItemImageCacheIdleTrimTests {
+    private let directory = FileManager.default.temporaryDirectory
+        .appending(path: ScratchDefaults.name("MenuBarItemImageCacheIdleTrimTests"), directoryHint: .isDirectory)
+
     private static func tag(_ bundleID: String, _ title: String, windowID: CGWindowID? = nil) -> MenuBarItemTag {
         MenuBarItemTag(namespace: .string(bundleID), title: title, windowID: windowID)
     }
 
-    @Test("nothing survives when no section is concealed")
-    func nothingConcealedDropsEverything() {
-        let cached = [Self.tag("com.a", "A", windowID: 1), Self.tag("com.b", "B", windowID: 2)]
-        #expect(MenuBarItemImageCache.idleTrimSurvivors(cachedTags: cached, concealedTags: []).isEmpty)
+    private static func capture() throws -> MenuBarItemGlyphCapture {
+        let context = try #require(CGContext(
+            data: nil,
+            width: 24,
+            height: 20,
+            bitsPerComponent: 8,
+            bytesPerRow: 24 * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        context.setFillColor(CGColor(red: 0.2, green: 0.6, blue: 0.9, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: 24, height: 20))
+        return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 2)
     }
 
-    @Test("only concealed items' images are kept")
-    func keepsConcealedDropsVisible() {
-        let visible = Self.tag("com.visible", "V", windowID: 1)
-        let hidden = Self.tag("com.hidden", "H", windowID: 2)
-        let alwaysHidden = Self.tag("com.always", "AH", windowID: 3)
-        let survivors = MenuBarItemImageCache.idleTrimSurvivors(
-            cachedTags: [visible, hidden, alwaysHidden],
-            concealedTags: [hidden, alwaysHidden]
-        )
-        #expect(survivors == [hidden, alwaysHidden])
+    @Test("trimForIdle flushes to disk and purges all in-memory captures when no consumer is visible")
+    func trimFlushesAndPurgesEverything() async throws {
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = MenuBarItemImageCacheDiskStore(cachesDirectory: directory)
+        let cache = MenuBarItemImageCache(diskStore: store)
+        let appState = AppState()
+        cache.appState = appState
+        cache.hasLoadedFromDisk = true
+
+        let visibleTag = Self.tag("com.example.visible", "V", windowID: 1)
+        let hiddenTag = Self.tag("com.example.hidden", "H", windowID: 2)
+        try cache.setCapture(Self.capture(), for: visibleTag)
+        try cache.setCapture(Self.capture(), for: hiddenTag)
+        cache.updateAccessOrder(for: visibleTag)
+        cache.updateAccessOrder(for: hiddenTag)
+
+        #expect(cache.cacheSize == 2)
+        #expect(cache.lruEntryCount == 2)
+
+        await cache.trimForIdle()
+
+        #expect(cache.cacheSize == 0)
+        #expect(cache.lruEntryCount == 0)
+        #expect(!cache.hasLoadedFromDisk)
+
+        // Disk store holds the flushed captures for lazy hydration on reveal.
+        let file = try #require(store.readSaveFile())
+        #expect(file.entries[visibleTag.tagIdentifier] != nil)
+        #expect(file.entries[hiddenTag.tagIdentifier] != nil)
+
+        // Opening a consumer hydrates entries back into RAM lazily.
+        await cache.ensureDiskLoaded()
+        #expect(cache.hasLoadedFromDisk)
+        #expect(cache.cacheSize == 2)
     }
 
-    @Test("a disk-loaded key without a window ID matches its live concealed item")
-    func matchesIgnoringWindowID() {
-        let diskKey = Self.tag("com.hidden", "H")
-        let liveItem = Self.tag("com.hidden", "H", windowID: 42)
-        let survivors = MenuBarItemImageCache.idleTrimSurvivors(
-            cachedTags: [diskKey],
-            concealedTags: [liveItem]
-        )
-        #expect(survivors == [diskKey])
-    }
+    @Test("trimForIdle skips purge while an image consumer is visible")
+    func trimAbortsWhenConsumerActive() async throws {
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = MenuBarItemImageCacheDiskStore(cachesDirectory: directory)
+        let cache = MenuBarItemImageCache(diskStore: store)
+        let appState = AppState()
+        appState.navigationState.isThawBarPresented = true
+        cache.appState = appState
 
-    @Test("a concealed item with no cached image contributes nothing")
-    func concealedWithoutImageIsIgnored() {
-        let cachedVisible = Self.tag("com.visible", "V", windowID: 1)
-        let concealedUncached = Self.tag("com.hidden", "H", windowID: 2)
-        let survivors = MenuBarItemImageCache.idleTrimSurvivors(
-            cachedTags: [cachedVisible],
-            concealedTags: [concealedUncached]
-        )
-        #expect(survivors.isEmpty)
+        let tag = Self.tag("com.example.active", "A", windowID: 10)
+        try cache.setCapture(Self.capture(), for: tag)
+
+        await cache.trimForIdle()
+
+        #expect(cache.cacheSize == 1)
+        #expect(cache.image(for: tag) != nil)
     }
 }

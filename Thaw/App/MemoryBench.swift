@@ -41,46 +41,61 @@ enum MemoryBench {
     }
 
     private static func benchSettings(_ appState: AppState) {
-        let settings = window(size: SettingsWindowMetrics.fullDefault)
-        settings.contentView = NSHostingView(rootView: SettingsView(
-            appState: appState,
-            navigationState: appState.navigationState,
-            generalSettings: appState.settings.general
-        )
-        .environment(appState)
-        .environment(appState.permissions))
-        for pane in SettingsNavigationIdentifier.allCases {
-            appState.navigationState.settingsNavigationIdentifier = pane
-            render(settings)
-            if ProcessInfo.processInfo.environment["THAW_BENCH_PANES"] != nil {
-                report("PANE \(pane.rawValue)")
+        autoreleasepool {
+            let settings = window(size: SettingsWindowMetrics.fullDefault)
+            let hosting = NSHostingView(rootView: SettingsView(
+                appState: appState,
+                navigationState: appState.navigationState,
+                generalSettings: appState.settings.general
+            )
+            .environment(appState)
+            .environment(appState.permissions))
+            settings.contentView = hosting
+            for pane in SettingsNavigationIdentifier.allCases {
+                autoreleasepool {
+                    appState.navigationState.settingsNavigationIdentifier = pane
+                    render(settings)
+                    if ProcessInfo.processInfo.environment["THAW_BENCH_PANES"] != nil {
+                        report("PANE \(pane.rawValue)")
+                    }
+                }
             }
+            report("SETTINGS")
+            AppState.tearDownWindowHierarchy(settings)
+            settings.close()
         }
-        report("SETTINGS")
-        settings.contentView = nil
-        settings.close()
         settle(0.5)
         report("SETTINGS CLOSED")
     }
 
     private static func benchSearch(_ appState: AppState) {
-        let search = window(size: CGSize(width: 640, height: 480))
-        let model = MenuBarSearchModel()
-        search.contentView = NSHostingView(rootView: MenuBarSearchRootView(
-            appState: appState,
-            model: model,
-            displayID: CGMainDisplayID(),
-            panel: MenuBarSearchPanel(),
-            presentation: .inspector
-        ))
-        render(search)
-        for query in ["wi", "wifi", "battery", ""] {
-            model.searchText = query
+        autoreleasepool {
+            let search = window(size: CGSize(width: 640, height: 480))
+            let model = MenuBarSearchModel()
+            let panel = MenuBarSearchPanel()
+            let hosting = NSHostingView(rootView: MenuBarSearchRootView(
+                appState: appState,
+                model: model,
+                displayID: CGMainDisplayID(),
+                panel: panel,
+                presentation: .inspector
+            ))
+            search.contentView = hosting
             render(search)
+            for query in ["wi", "wifi", "battery", ""] {
+                autoreleasepool {
+                    model.searchText = query
+                    render(search)
+                }
+            }
+            report("SEARCH")
+            model.displayedItems = []
+            model.launcherCandidates = []
+            model.selection = nil
+            model.detach()
+            AppState.tearDownWindowHierarchy(search)
+            search.close()
         }
-        report("SEARCH")
-        search.contentView = nil
-        search.close()
         settle(0.5)
         _ = malloc_zone_pressure_relief(nil, 0)
     }

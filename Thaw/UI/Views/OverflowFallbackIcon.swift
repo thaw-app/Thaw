@@ -151,6 +151,13 @@ enum OverflowFallbackIcon {
         appIconsByPID.removeValue(forKey: pid)
     }
 
+    /// Drops cached app icons during idle cleanup; icons refill lazily when a bar or inspector renders.
+    @MainActor
+    static func clearCache() {
+        appIconsByPID.removeAll()
+        appIconsByBundleIdentifier.removeAll()
+    }
+
     @MainActor
     private static var appIconsByBundleIdentifier: [String: NSImage?] = [:]
 
@@ -218,8 +225,7 @@ enum OverflowFallbackIcon {
 
     /// Fully transparent crops pass the width test but would draw empty cells.
     static func isUsableCapture(_ capture: MenuBarItemGlyphCapture?, for item: MenuBarItem? = nil) -> Bool {
-        guard let capture,
-              isUsableCapture(width: capture.pointSize.width, itemWidth: item?.bounds.width)
+        guard let capture, isUsableCapture(width: capture.pointSize.width, itemWidth: item?.bounds.width)
         else { return false }
         return !capture.isEffectivelyBlank
     }

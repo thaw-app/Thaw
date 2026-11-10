@@ -46,18 +46,47 @@ final class FeatureTips {
         )
     }
 
+    /// Records whether this launch upgraded from before multi-select without initializing TipKit eagerly.
+    static func prepareAtLaunch() {
+        guard isEnabled(environment: ProcessInfo.processInfo.environment) else { return }
+        let previousVersion = Defaults.string(forKey: .lastWhatsNewVersion)
+        if LayoutMultiSelectTip.isUpgrade(previousVersion: previousVersion) {
+            Defaults.set(true, forKey: .pendingMultiSelectTip)
+        }
+    }
+
+    /// Lazily initializes TipKit when Layout opens only if an upgrade tip may still need to display.
+    static func configureIfNeededForLayout() {
+        let environment = ProcessInfo.processInfo.environment
+        guard !shared.isConfigured, isEnabled(environment: environment) else { return }
+        let hasPendingUpgrade = Defaults.bool(forKey: .pendingMultiSelectTip)
+        let datastoreExists = FileManager.default.fileExists(
+            atPath: datastoreURL(applicationSupport: URL.applicationSupportDirectory, bundleIdentifier: Constants.bundleIdentifier).path
+        )
+        let hasRetired = Defaults.bool(forKey: .hasRetiredMultiSelectTip)
+        guard hasPendingUpgrade || (datastoreExists && !hasRetired) else { return }
+        shared.configure(
+            environment: environment,
+            applicationSupport: URL.applicationSupportDirectory,
+            bundleIdentifier: Constants.bundleIdentifier,
+            previousVersion: Defaults.string(forKey: .lastWhatsNewVersion),
+            forceMultiSelectUpgrade: hasPendingUpgrade
+        )
+    }
+
     /// Configures TipKit the first time it is called and ignores later calls. It must run before the What's New
     /// check records the current version, which the entry point guarantees.
     func configure(
         environment: [String: String],
         applicationSupport: URL,
         bundleIdentifier: String,
-        previousVersion: String?
+        previousVersion: String?,
+        forceMultiSelectUpgrade: Bool = false
     ) {
         guard !isConfigured, Self.isEnabled(environment: environment) else { return }
         let setup = Setup(
             datastoreURL: Self.datastoreURL(applicationSupport: applicationSupport, bundleIdentifier: bundleIdentifier),
-            isMultiSelectUpgrade: LayoutMultiSelectTip.isUpgrade(previousVersion: previousVersion)
+            isMultiSelectUpgrade: forceMultiSelectUpgrade || LayoutMultiSelectTip.isUpgrade(previousVersion: previousVersion)
         )
         do {
             try apply(setup)
@@ -69,18 +98,22 @@ final class FeatureTips {
 
     /// Retires the multi-select tip. Does nothing until TipKit is configured, so tests never reach its datastore.
     func noteMultiSelect() {
+        if Self.isEnabled(environment: ProcessInfo.processInfo.environment) {
+            Defaults.set(false, forKey: .pendingMultiSelectTip)
+            Defaults.set(true, forKey: .hasRetiredMultiSelectTip)
+        }
         guard isConfigured else { return }
         retireMultiSelectTip()
     }
 
     /// Tips stay off in unit tests, whose host is the app, and in SwiftUI previews.
-    nonisolated static func isEnabled(environment: [String: String]) -> Bool {
+    static nonisolated func isEnabled(environment: [String: String]) -> Bool {
         guard !TestHosting.isActive(environment: environment) else { return false }
         return environment["XCODE_RUNNING_FOR_PREVIEWS"] != "1"
     }
 
     /// The datastore lives in the app's own Application Support folder, so the debug build keeps its own tips.
-    nonisolated static func datastoreURL(applicationSupport: URL, bundleIdentifier: String) -> URL {
+    static nonisolated func datastoreURL(applicationSupport: URL, bundleIdentifier: String) -> URL {
         applicationSupport
             .appending(path: bundleIdentifier, directoryHint: .isDirectory)
             .appending(path: "Tips", directoryHint: .isDirectory)

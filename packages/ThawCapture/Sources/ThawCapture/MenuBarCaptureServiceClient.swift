@@ -51,6 +51,10 @@ public actor MenuBarCaptureServiceClient {
     /// Diagnostics only; a drop means the helper restarted.
     private var lastGeneration = 0
 
+    /// Safety-net timer that invalidates an idle XPC session after `idleTimeout`.
+    private let idleTimeout: Duration
+    private var idleTimeoutTask: Task<Void, Never>?
+
     /// Longest one XPC round trip may take before this client treats the
     /// session as wedged and tears it down for a retry. Longer than the
     /// helper's capture watchdog (8 s) on purpose: the normal un-wedge path is
@@ -63,10 +67,11 @@ public actor MenuBarCaptureServiceClient {
     private var framesReceived = 0
     private var bytesReceived = 0
 
-    public init(serviceName: String? = nil) {
+    public init(serviceName: String? = nil, idleTimeout: Duration = .seconds(10)) {
         self.serviceName = serviceName ?? CaptureService.serviceName(
             forAppBundleIdentifier: Bundle.main.bundleIdentifier
         )
+        self.idleTimeout = idleTimeout
     }
 
     // MARK: Consumer Lifecycle
@@ -127,13 +132,17 @@ public actor MenuBarCaptureServiceClient {
         with windowIDs: [CGWindowID],
         screenBounds: CGRect? = nil,
         option: CGWindowImageOption = [],
+        targetPixelWidth: Int? = nil,
+        targetPixelHeight: Int? = nil,
         visibilityGeneration: UInt64? = nil
     ) async -> CGImage? {
         let request = CaptureServiceRequest.windows(
             ids: windowIDs,
             screenBounds: screenBounds,
             imageOptionRawValue: option.rawValue,
-            scale: 0
+            scale: 0,
+            targetPixelWidth: targetPixelWidth,
+            targetPixelHeight: targetPixelHeight
         )
         return await performCapture(request, visibilityGeneration: visibilityGeneration)?.makeImage()
     }
@@ -165,10 +174,13 @@ public actor MenuBarCaptureServiceClient {
     /// the session for the next caller.
     private func performCapture(_ request: CaptureServiceRequest, visibilityGeneration: UInt64?) async -> CaptureServiceFrame? {
         guard let ticket = visibilityGeneration ?? ScreenCapture.captureUITicket(), ScreenCapture.isCaptureUITicketCurrent(ticket) else { return nil }
+        idleTimeoutTask?.cancel()
+        idleTimeoutTask = nil
         inFlightCaptureCount += 1
         defer {
             inFlightCaptureCount -= 1
             closeSessionIfIdle()
+            scheduleIdleTimeoutIfNeeded()
         }
 
         for attempt in 0 ..< 2 {
@@ -319,6 +331,8 @@ public actor MenuBarCaptureServiceClient {
     }
 
     private func invalidateSession(reason: String) {
+        idleTimeoutTask?.cancel()
+        idleTimeoutTask = nil
         guard session != nil else {
             return
         }
@@ -333,5 +347,31 @@ public actor MenuBarCaptureServiceClient {
             return
         }
         invalidateSession(reason: "last consumer stopped")
+    }
+
+    private func scheduleIdleTimeoutIfNeeded() {
+        idleTimeoutTask?.cancel()
+        idleTimeoutTask = nil
+        guard session != nil, inFlightCaptureCount == 0, idleTimeout > .zero else {
+            return
+        }
+        let timeout = idleTimeout
+        idleTimeoutTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: timeout)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            await self?.expireIdleSession()
+        }
+    }
+
+    private func expireIdleSession() {
+        idleTimeoutTask = nil
+        guard session != nil, inFlightCaptureCount == 0 else {
+            return
+        }
+        invalidateSession(reason: "idle timeout")
     }
 }

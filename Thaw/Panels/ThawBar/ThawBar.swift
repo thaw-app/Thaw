@@ -7,6 +7,7 @@
 
 import AppKit
 import Combine
+import Darwin
 import MenuBarModel
 
 final class ThawBarPanel: NSPanel {
@@ -47,8 +48,17 @@ final class ThawBarPanel: NSPanel {
 
     private var cancellables = Set<AnyCancellable>()
 
+    /// Idle delay after closing before tearing down the hosted SwiftUI view hierarchy and color manager.
+    static let idleTeardownDelay: Duration = .seconds(10)
+
     /// Background cache task started when the panel is shown.
     private var cacheTask: Task<Void, Never>?
+
+    /// Delayed teardown task armed when the panel closes so rapid reopens keep warm views without leaking idle RAM.
+    private var idleTeardownTask: Task<Void, Never>?
+
+    private var displaySettlementsPublisher: AnyPublisher<EnvironmentChange, Never> = Empty().eraseToAnyPublisher()
+    private var colorManagerNeedsSetup = false
 
     /// Stop repeated failed WindowServer measurements until the control item gets a new ID.
     private var staleAnchorWindowID: CGWindowID?
@@ -90,6 +100,7 @@ final class ThawBarPanel: NSPanel {
 
     deinit {
         lockPositionObservationTask?.cancel()
+        idleTeardownTask?.cancel()
     }
 
     private static func livePointerInEmptyMenuBarSpace(_ appState: AppState, _ screen: NSScreen) -> Bool {
@@ -103,7 +114,7 @@ final class ThawBarPanel: NSPanel {
         self.pointerLocation = pointerLocation
         self.pointerInEmptyMenuBarSpace = pointerInEmptyMenuBarSpace
         super.init(
-            contentRect: .zero,
+            contentRect: NSRect(origin: .zero, size: CGSize(width: 1, height: 1)),
             styleMask: [.nonactivatingPanel, .fullSizeContentView, .borderless],
             backing: .buffered,
             defer: false
@@ -125,6 +136,8 @@ final class ThawBarPanel: NSPanel {
 
     func performSetup(with appState: AppState, displayInvalidations: some Publisher<Void, Never>, displaySettlements: some Publisher<EnvironmentChange, Never>) {
         self.appState = appState
+        displaySettlementsPublisher = displaySettlements.eraseToAnyPublisher()
+        colorManagerNeedsSetup = false
 
         // Observations delivers the current lock value before subsequent changes.
         lockPositionObservationTask?.cancel()
@@ -140,9 +153,7 @@ final class ThawBarPanel: NSPanel {
         DisplayEnvironment.spaceOrDisplayChanges(merging: displayInvalidations)
             .sink { [weak self] in
                 guard
-                    let self,
-                    let ts = lastShowTimestamp,
-                    ts.duration(to: .now) >= .seconds(1)
+                    let self, let ts = lastShowTimestamp, ts.duration(to: .now) >= .seconds(1)
                 else {
                     return
                 }
@@ -323,6 +334,15 @@ final class ThawBarPanel: NSPanel {
         setFrameOrigin(floatingOrigin(for: location, on: screen, appState: appState))
     }
 
+    private func preparePresentationSubsystems(with appState: AppState) {
+        idleTeardownTask?.cancel()
+        idleTeardownTask = nil
+        appState.imageCache.loadFromDiskIfNeeded()
+        guard colorManagerNeedsSetup else { return }
+        colorManager.performSetup(with: self, appState: appState, displaySettlements: displaySettlementsPublisher)
+        colorManagerNeedsSetup = false
+    }
+
     func show(
         section: MenuBarSection.Name,
         on screen: NSScreen,
@@ -332,6 +352,7 @@ final class ThawBarPanel: NSPanel {
         openedFrom iconFrame: CGRect? = nil
     ) {
         guard let appState else { return }
+        preparePresentationSubsystems(with: appState)
         self.presentation = presentation
         folderMemberIdentifiers = presentation == .folder ? folderMembers : nil
         openingIconFrame = iconFrame
@@ -413,6 +434,7 @@ final class ThawBarPanel: NSPanel {
         cacheTask?.cancel()
         cacheTask = Task { [weak appState, weak self] in
             guard let appState else { return }
+            await appState.imageCache.ensureDiskLoaded()
             guard !Task.isCancelled else { return }
             // Wait for control windows after screen activation; stale bounds can classify everything Visible and empty Hidden.
             try? await Task.sleep(for: .milliseconds(500))
@@ -490,17 +512,14 @@ final class ThawBarPanel: NSPanel {
         // With the icon off there is no icon to click, only its 2-pt stand-in.
         // Without a live window the cached frame still decides.
         let iconWindow = appState?.menuBarManager.section(withName: .visible)?.controlItem.window
-        if let appState,
-           appState.settings.general.showThawIcon,
-           Self.isControlItemClick(
-               appKitLocation: NSEvent.mouseLocation,
-               liveControlItemFrame: iconWindow?.frame,
-               liveScreenMaxY: iconWindow?.screen?.frame.maxY,
-               quartzLocation: MouseHelpers.locationCoreGraphics,
-               cachedControlItemFrame: controlItemAnchorBounds(appState: appState),
-               cachedScreenMinY: iconWindow?.screen.map { CGDisplayBounds($0.displayID).minY }
-           )
-        {
+        if let appState, appState.settings.general.showThawIcon, Self.isControlItemClick(
+            appKitLocation: NSEvent.mouseLocation,
+            liveControlItemFrame: iconWindow?.frame,
+            liveScreenMaxY: iconWindow?.screen?.frame.maxY,
+            quartzLocation: MouseHelpers.locationCoreGraphics,
+            cachedControlItemFrame: controlItemAnchorBounds(appState: appState),
+            cachedScreenMinY: iconWindow?.screen.map { CGDisplayBounds($0.displayID).minY }
+        ) {
             return
         }
         if presentation == .folder, appState?.groupFolders.iconContainsPointer() == true {
@@ -510,10 +529,7 @@ final class ThawBarPanel: NSPanel {
     }
 
     func hide() {
-        if presentation == .section,
-           let name = currentSection,
-           let section = appState?.menuBarManager.section(withName: name)
-        {
+        if presentation == .section, let name = currentSection, let section = appState?.menuBarManager.section(withName: name) {
             section.hide()
         }
         close()
@@ -537,11 +553,40 @@ final class ThawBarPanel: NSPanel {
         appState?.navigationState.isThawBarPresented = false
         orderOut(nil)
         super.close()
+        contentView?.layer?.contents = nil
         if ownedSection {
             resetSectionStateAfterClose(closingSection)
         }
+        scheduleIdleTeardown()
         appState?.restoreAccessoryPolicyIfUnused()
         MemoryReclaimer.scheduleRelief(reason: "Thaw Bar closed")
+    }
+
+    private func scheduleIdleTeardown() {
+        idleTeardownTask?.cancel()
+        idleTeardownTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(for: Self.idleTeardownDelay)
+            } catch {
+                return
+            }
+            self?.tearDownForIdle()
+        }
+    }
+
+    /// Drops the SwiftUI hosting graph, Metal/IOSurface backing layers, and color subscriptions after idle timeout.
+    func tearDownForIdle() {
+        idleTeardownTask?.cancel()
+        idleTeardownTask = nil
+        guard !isVisible else { return }
+        makeFirstResponder(nil)
+        contentViewController = nil
+        contentView?.layer?.contents = nil
+        contentView = nil
+        folderMemberIdentifiers = nil
+        colorManager.tearDownIdle()
+        colorManagerNeedsSetup = true
+        _ = malloc_zone_pressure_relief(nil, 0)
     }
 
     private func resetSectionStateAfterClose(_ closingSection: MenuBarSection.Name?) {
@@ -559,8 +604,7 @@ final class ThawBarPanel: NSPanel {
     func resizeToContent(on targetScreen: NSScreen? = nil) {
         guard let contentView, let screen = targetScreen ?? screen else { return }
         let ideal = contentView.intrinsicContentSize
-        guard ideal.width.isFinite, ideal.height.isFinite, ideal.width > 0, ideal.height > 0 else { return }
-        guard ideal != frame.size || targetScreen != nil else { return }
+        guard ideal.width.isFinite, ideal.height.isFinite, ideal.width > 0, ideal.height > 0, ideal != frame.size || targetScreen != nil else { return }
         if ideal != frame.size {
             setFrame(NSRect(origin: frame.origin, size: ideal), display: true, animate: false)
         }

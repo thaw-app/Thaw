@@ -40,8 +40,7 @@ nonisolated enum MenuBarColorSampler {
         from windows: [WindowInfo]
     ) async -> Sample? {
         guard
-            let menuBarWindow = WindowInfo.menuBarWindow(from: windows, for: displayID),
-            let wallpaperWindow = WindowInfo.wallpaperWindow(from: windows, for: displayID)
+            let menuBarWindow = WindowInfo.menuBarWindow(from: windows, for: displayID), let wallpaperWindow = WindowInfo.wallpaperWindow(from: windows, for: displayID)
         else {
             return nil
         }
@@ -51,7 +50,9 @@ nonisolated enum MenuBarColorSampler {
         guard let image = await ScreenCapture.captureWindows(
             with: windowIDs,
             screenBounds: stripBounds,
-            option: .nominalResolution
+            option: .nominalResolution,
+            targetPixelWidth: 64,
+            targetPixelHeight: 4
         ) else {
             return nil
         }

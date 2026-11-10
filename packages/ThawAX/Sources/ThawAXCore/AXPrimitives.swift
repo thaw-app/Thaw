@@ -24,15 +24,17 @@ public enum AXPrimitives {
     /// Whether the process has an open menu on screen, which distinguishes an
     /// owner busy tracking the menu it just opened from one that is hung.
     public static func isTrackingOpenMenu(pid: pid_t) -> Bool {
-        guard let windows = CGWindowListCopyWindowInfo(
-            .optionOnScreenOnly,
-            kCGNullWindowID
-        ) as? [[String: Any]] else {
-            return false
-        }
-        return windows.contains { window in
-            window[kCGWindowLayer as String] as? Int == popupMenuWindowLayer &&
-                window[kCGWindowOwnerPID as String] as? pid_t == pid
+        autoreleasepool {
+            guard let windows = CGWindowListCopyWindowInfo(
+                .optionOnScreenOnly,
+                kCGNullWindowID
+            ) as? [[String: Any]] else {
+                return false
+            }
+            return windows.contains { window in
+                window[kCGWindowLayer as String] as? Int == popupMenuWindowLayer &&
+                    window[kCGWindowOwnerPID as String] as? pid_t == pid
+            }
         }
     }
 
@@ -119,25 +121,19 @@ public enum AXPrimitives {
     /// The element's frame, preferring AXFrame and falling back to
     /// AXPosition plus AXSize for elements that do not vend it.
     public static func frame(of element: AXUIElement) -> CGRect? {
-        if let value = copyAttribute(element, "AXFrame"),
-           CFGetTypeID(value) == AXValueGetTypeID()
-        {
+        if let value = copyAttribute(element, "AXFrame"), CFGetTypeID(value) == AXValueGetTypeID() {
             var rect = CGRect.zero
             if AXValueGetValue(unsafeDowncast(value, to: AXValue.self), .cgRect, &rect) {
                 return rect
             }
         }
-        guard let positionValue = copyAttribute(element, kAXPositionAttribute),
-              let sizeValue = copyAttribute(element, kAXSizeAttribute),
-              CFGetTypeID(positionValue) == AXValueGetTypeID(),
-              CFGetTypeID(sizeValue) == AXValueGetTypeID()
+        guard let positionValue = copyAttribute(element, kAXPositionAttribute), let sizeValue = copyAttribute(element, kAXSizeAttribute), CFGetTypeID(positionValue) == AXValueGetTypeID(), CFGetTypeID(sizeValue) == AXValueGetTypeID()
         else {
             return nil
         }
         var origin = CGPoint.zero
         var size = CGSize.zero
-        guard AXValueGetValue(unsafeDowncast(positionValue, to: AXValue.self), .cgPoint, &origin),
-              AXValueGetValue(unsafeDowncast(sizeValue, to: AXValue.self), .cgSize, &size)
+        guard AXValueGetValue(unsafeDowncast(positionValue, to: AXValue.self), .cgPoint, &origin), AXValueGetValue(unsafeDowncast(sizeValue, to: AXValue.self), .cgSize, &size)
         else {
             return nil
         }
@@ -165,8 +161,7 @@ public enum AXPrimitives {
     }
 
     public static func elementAttribute(_ element: AXUIElement, _ attribute: String) -> AXUIElement? {
-        guard let value = copyAttribute(element, attribute),
-              CFGetTypeID(value) == AXUIElementGetTypeID()
+        guard let value = copyAttribute(element, attribute), CFGetTypeID(value) == AXUIElementGetTypeID()
         else {
             return nil
         }
@@ -198,12 +193,14 @@ public enum AXPrimitives {
         pid: pid_t,
         messagingTimeout: Float = defaultMessagingTimeout
     ) -> [CGRect]? {
-        let appElement = AXUIElementCreateApplication(pid)
-        AXUIElementSetMessagingTimeout(appElement, messagingTimeout)
-        guard let menuBar = elementAttribute(appElement, kAXMenuBarAttribute as String) else {
-            return nil
+        autoreleasepool {
+            let appElement = AXUIElementCreateApplication(pid)
+            AXUIElementSetMessagingTimeout(appElement, messagingTimeout)
+            guard let menuBar = elementAttribute(appElement, kAXMenuBarAttribute as String) else {
+                return nil
+            }
+            return children(of: menuBar).compactMap { frame(of: $0) }
         }
-        return children(of: menuBar).compactMap { frame(of: $0) }
     }
 
     /// Whether pid is this process. AppKit answers AX reads of a process's own
@@ -270,23 +267,25 @@ public enum AXPrimitives {
         action: String = kAXPressAction,
         messagingTimeout: Float = defaultMessagingTimeout
     ) -> Bool {
-        guard let bar = extrasMenuBar(pid: pid, messagingTimeout: messagingTimeout) else {
-            return false
-        }
-        let items = children(of: bar)
-        // One item is unambiguous; multiple items require a target match to avoid opening the wrong menu.
-        if items.count == 1 {
-            return press(items[0], action: action, messagingTimeout: messagingTimeout)
-        }
-        let nearest = items
-            .compactMap { item in
-                frame(of: item).map { (item, hypot($0.midX - target.x, $0.midY - target.y)) }
+        autoreleasepool {
+            guard let bar = extrasMenuBar(pid: pid, messagingTimeout: messagingTimeout) else {
+                return false
             }
-            .min { $0.1 < $1.1 }
-        guard let nearest, nearest.1 <= tolerance else {
-            return false
+            let items = children(of: bar)
+            // One item is unambiguous; multiple items require a target match to avoid opening the wrong menu.
+            if items.count == 1 {
+                return press(items[0], action: action, messagingTimeout: messagingTimeout)
+            }
+            let nearest = items
+                .compactMap { item in
+                    frame(of: item).map { (item, hypot($0.midX - target.x, $0.midY - target.y)) }
+                }
+                .min { $0.1 < $1.1 }
+            guard let nearest, nearest.1 <= tolerance else {
+                return false
+            }
+            return press(nearest.0, action: action, messagingTimeout: messagingTimeout)
         }
-        return press(nearest.0, action: action, messagingTimeout: messagingTimeout)
     }
 
     /// Presses a status item MenuBarAgent hosts on behalf of sourcePID.
@@ -294,15 +293,17 @@ public enum AXPrimitives {
         sourcePID: pid_t,
         messagingTimeout: Float = defaultMessagingTimeout
     ) -> Bool {
-        guard let bar = menuBarAgentExtrasBar(messagingTimeout: messagingTimeout) else {
+        autoreleasepool {
+            guard let bar = menuBarAgentExtrasBar(messagingTimeout: messagingTimeout) else {
+                return false
+            }
+            for child in children(of: bar) where pid(of: child) == sourcePID {
+                for element in children(of: child) + [child] where press(element, messagingTimeout: messagingTimeout) {
+                    return true
+                }
+            }
             return false
         }
-        for child in children(of: bar) where pid(of: child) == sourcePID {
-            for element in children(of: child) + [child] where press(element, messagingTimeout: messagingTimeout) {
-                return true
-            }
-        }
-        return false
     }
 
     // MARK: - Hit testing
@@ -312,17 +313,19 @@ public enum AXPrimitives {
         at point: CGPoint,
         messagingTimeout: Float = defaultMessagingTimeout
     ) -> AXUIElement? {
-        let systemWide = AXUIElementCreateSystemWide()
-        AXUIElementSetMessagingTimeout(systemWide, messagingTimeout)
-        var element: AXUIElement?
-        guard AXUIElementCopyElementAtPosition(
-            systemWide,
-            Float(point.x),
-            Float(point.y),
-            &element
-        ) == .success else {
-            return nil
+        autoreleasepool {
+            let systemWide = AXUIElementCreateSystemWide()
+            AXUIElementSetMessagingTimeout(systemWide, messagingTimeout)
+            var element: AXUIElement?
+            guard AXUIElementCopyElementAtPosition(
+                systemWide,
+                Float(point.x),
+                Float(point.y),
+                &element
+            ) == .success else {
+                return nil
+            }
+            return element
         }
-        return element
     }
 }

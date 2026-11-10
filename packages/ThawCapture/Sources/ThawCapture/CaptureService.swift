@@ -23,8 +23,7 @@ public enum CaptureService {
     /// Appending the suffix after the service component causes XPC's "No such process" failure.
     public static func serviceName(forAppBundleIdentifier appBundleIdentifier: String?) -> String {
         guard
-            let appBundleIdentifier,
-            appBundleIdentifier.hasPrefix(baseAppBundleIdentifier)
+            let appBundleIdentifier, appBundleIdentifier.hasPrefix(baseAppBundleIdentifier)
         else {
             return baseServiceBundleIdentifier
         }
@@ -39,8 +38,15 @@ public enum CaptureService {
 /// Window requests mirror ScreenCapture.captureWindows; the helper re-enumerates menu-bar and wallpaper windows and rejects other IDs.
 public enum CaptureServiceRequest: Codable, Sendable {
     /// Captures windows front to back; screenBounds overrides their union and imageOptionRawValue holds CGWindowImageOption.
-    /// scale is advisory (0 means native); capture uses the SCK filter's scale, or 1x for nominalResolution.
-    case windows(ids: [CGWindowID], screenBounds: CGRect?, imageOptionRawValue: UInt32, scale: Double)
+    /// scale is advisory (0 means native); capture uses the SCK filter's scale, or 1x for nominalResolution unless target pixel dimensions are specified.
+    case windows(
+        ids: [CGWindowID],
+        screenBounds: CGRect?,
+        imageOptionRawValue: UInt32,
+        scale: Double,
+        targetPixelWidth: Int? = nil,
+        targetPixelHeight: Int? = nil
+    )
 
     /// SkyLight backdrop composite. The helper admits ordinary windows only
     /// within a display's menu-bar strip; larger reads are desktop-only.
@@ -144,9 +150,7 @@ public extension CaptureServiceFrame {
     /// Redraw into BGRA for the wire format because crop and normalization paths may change SCK's bitmap layout.
     init?(image: CGImage, windowFrame: CGRect, scale: Double) {
         guard
-            image.width > 0, image.height > 0,
-            let colorSpace = image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB),
-            let context = CGContext(
+            image.width > 0, image.height > 0, let colorSpace = image.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB), let context = CGContext(
                 data: nil,
                 width: image.width,
                 height: image.height,
@@ -177,9 +181,7 @@ public extension CaptureServiceFrame {
     func makeImage() -> CGImage? {
         let byteCount = Self.wireByteCount(pixelWidth: pixelWidth, pixelHeight: pixelHeight, bytesPerRow: bytesPerRow)
         guard
-            let byteCount, pixelData.count >= byteCount,
-            let colorSpace = CGColorSpace(name: CGColorSpace.sRGB),
-            let provider = CGDataProvider(data: pixelData as CFData)
+            let byteCount, pixelData.count >= byteCount, let colorSpace = CGColorSpace(name: CGColorSpace.sRGB), let provider = CGDataProvider(data: pixelData as CFData)
         else {
             return nil
         }

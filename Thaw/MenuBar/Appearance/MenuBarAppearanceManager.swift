@@ -203,9 +203,7 @@ final class MenuBarAppearanceManager {
 
     private func rebuildOverlayPanelsIfScreensMoved() {
         // Unchanged geometry needs no rebuild, avoiding overlay blinks and composite-appearance leaks.
-        if !overlayPanels.isEmpty,
-           Self.currentScreenLayout() == lastConfiguredScreenLayout
-        {
+        if !overlayPanels.isEmpty, Self.currentScreenLayout() == lastConfiguredScreenLayout {
             return
         }
         closeOverlayPanels()
@@ -264,6 +262,7 @@ final class MenuBarAppearanceManager {
             configureOverlayPanels(with: configuration)
         } else if !needsOverlayPanels(for: configuration) {
             closeOverlayPanels()
+            MemoryReclaimer.scheduleRelief(reason: "appearance overlays disabled")
         }
     }
 
@@ -278,10 +277,9 @@ final class MenuBarAppearanceManager {
             if overlayPanels.isEmpty, needsPanels {
                 configureOverlayPanels(with: configuration, force: true)
             }
-        } else {
-            if !needsOverlayPanels(for: configuration) {
-                closeOverlayPanels()
-            }
+        } else if !needsOverlayPanels(for: configuration) {
+            closeOverlayPanels()
+            MemoryReclaimer.scheduleRelief(reason: "appearance preview ended without overlays")
         }
     }
 
@@ -305,8 +303,7 @@ final class MenuBarAppearanceManager {
         closeOverlayPanels()
 
         guard
-            let appState,
-            force || needsOverlayPanels(for: configuration)
+            let appState, force || needsOverlayPanels(for: configuration)
         else {
             lastConfiguredScreenLayout = [:]
             return

@@ -14,6 +14,11 @@ import os.lock
 import PlatformRuntimeKit
 import ThawCapture
 
+private nonisolated struct ConsumerObservationState: Equatable, Sendable {
+    let scope: MenuBarItemImageCache.LiveCaptureScope
+    let hasActiveConsumer: Bool
+}
+
 /// One item's published capture, observable on its own.
 ///
 /// Observing capturesByTag would wake every tile on any item's capture (a
@@ -52,11 +57,13 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     init(
         windowServer: any WindowServerReading = LiveWindowServerReader(),
         screenIsLocked: @escaping @Sendable () -> Bool = { ScreenLock.isLocked },
-        captureIsAllowed: @escaping @Sendable () -> Bool = { ScreenCapture.acceptsCaptures }
+        captureIsAllowed: @escaping @Sendable () -> Bool = { ScreenCapture.acceptsCaptures },
+        diskStore: MenuBarItemImageCacheDiskStore = MenuBarItemImageCacheDiskStore()
     ) {
         self.windowServer = windowServer
         self.screenIsLocked = screenIsLocked
         self.captureIsAllowed = captureIsAllowed
+        self.diskStore = diskStore
     }
 
     /// Consecutive capture passes skipped because the bar was mid-reflow.
@@ -152,7 +159,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// The disk half: the cache file, its format, and the save queue. The
     /// cache owns the policy, this owns the file.
-    let diskStore = MenuBarItemImageCacheDiskStore()
+    let diskStore: MenuBarItemImageCacheDiskStore
 
     /// Weak so the cache never keeps the app alive; every method that needs it
     /// bails out quietly when it has gone.
@@ -228,9 +235,9 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     @ObservationIgnored
     private var isObservingCapturesForGlyphSlots = false
 
-    /// How long the app must go without a visible capture consumer before
-    /// the cache is dropped.
-    static let idleTrimDelay: Duration = .seconds(30)
+    /// How long the app must go without a visible image consumer before
+    /// the cache is flushed to disk and purged from RAM.
+    static let idleTrimDelay: Duration = .seconds(10)
 
     /// Whether the per-item hotkey list is expanded. While collapsed it shows
     /// no item icons, so the live capture loop can stay off.
@@ -342,38 +349,44 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             AnyCancellable { itemCacheTask.cancel() }
                 .store(in: &installed)
             ImageRecaptureTriggers.changes(itemCacheChanges: itemCacheChangeSubject)
-            .debounce(
-                for: .milliseconds(Constants.MenuBarTuning.imageCaptureObserverDebounceMilliseconds),
-                scheduler: DispatchQueue.main
-            )
-            .sink { [weak self] _ in
-                guard let self else {
-                    return
+                .debounce(
+                    for: .milliseconds(Constants.MenuBarTuning.imageCaptureObserverDebounceMilliseconds),
+                    scheduler: DispatchQueue.main
+                )
+                .sink { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    // Capture only if something will read the result; a closed
+                    // layout pane refills its own cache when it opens.
+                    let nav = self.makeNavigationStateSnapshot()
+                    let hasVisible = self.hasVisibleCaptureConsumer(nav: nav)
+                    let hasBackgroundDemand = self.hasBackgroundCaptureDemand()
+                    guard hasVisible || hasBackgroundDemand else {
+                        return
+                    }
+                    self.currentUpdateTask?.cancel()
+                    self.currentUpdateTask = Task { [weak self, hasBackgroundDemand] in
+                        await self?.refreshVisibleConsumersOrPrewarmLayoutCache(
+                            allowBackgroundCapture: hasBackgroundDemand
+                        )
+                    }
                 }
-                // Capture only if something will read the result; a closed
-                // layout pane refills its own cache when it opens.
-                let nav = self.makeNavigationStateSnapshot()
-                let hasVisible = self.hasVisibleCaptureConsumer(nav: nav)
-                let hasBackgroundDemand = self.hasBackgroundCaptureDemand()
-                guard hasVisible || hasBackgroundDemand else {
-                    return
-                }
-                self.currentUpdateTask?.cancel()
-                self.currentUpdateTask = Task { [weak self, hasBackgroundDemand] in
-                    await self?.refreshVisibleConsumersOrPrewarmLayoutCache(
-                        allowBackgroundCapture: hasBackgroundDemand
-                    )
-                }
-            }
-            .store(in: &installed)
+                .store(in: &installed)
 
-            // No debounce needed: startLiveRefreshIfNeeded() is idempotent.
+            // Observe both capture scope and unfocused consumer visibility so closing an unfocused
+            // consumer still arms the idle trim.
             navigationStateObservationTask?.cancel()
             navigationStateObservationTask = Task { @MainActor [weak self] in
-                let changes = Observations { [weak self] in
-                    self?.makeNavigationStateSnapshot().liveCaptureScope
+                let changes = Observations { [weak self] () -> ConsumerObservationState? in
+                    guard let self else { return nil }
+                    let nav = makeNavigationStateSnapshot()
+                    return ConsumerObservationState(
+                        scope: nav.liveCaptureScope,
+                        hasActiveConsumer: hasActiveImageConsumer(nav: nav)
+                    )
                 }
-                for await _ in changes {
+                for await _ in changes.removeDuplicates() {
                     guard let self else { return }
                     self.startLiveRefreshIfNeeded()
                 }
@@ -425,18 +438,40 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 isSettingsPresented: false,
                 settingsNavigationIdentifier: nil,
                 isItemHotkeyListExpanded: false,
-                isSimpleModeSettings: false
+                isSimpleModeSettings: false,
+                isLayoutEditorPresented: false
             )
         }
+        let manager = appState.menuBarManager
+        let nav = appState.navigationState
         return NavigationStateSnapshot(
-            isThawBarPresented: appState.navigationState.isThawBarPresented,
-            isSearchPresented: appState.navigationState.isSearchPresented,
-            isAppFrontmost: appState.navigationState.isAppFrontmost,
-            isSettingsPresented: appState.navigationState.isSettingsPresented,
-            settingsNavigationIdentifier: appState.navigationState.settingsNavigationIdentifier,
+            isThawBarPresented: nav.isThawBarPresented || (manager.thawBarPanelIfCreated?.isVisible == true),
+            isSearchPresented: nav.isSearchPresented || (manager.searchPanelIfCreated?.isVisible == true),
+            isAppFrontmost: nav.isAppFrontmost,
+            isSettingsPresented: nav.isSettingsPresented,
+            settingsNavigationIdentifier: nav.settingsNavigationIdentifier,
             isItemHotkeyListExpanded: isItemHotkeyListExpanded,
-            isSimpleModeSettings: appState.navigationState.isSimpleModeSettings
+            isSimpleModeSettings: nav.isSimpleModeSettings,
+            isLayoutEditorPresented: nav.isLayoutEditorPresented || (manager.layoutEditorPanelIfCreated?.isShown == true)
         )
+    }
+
+    /// Evaluates to true ONLY when at least one UI surface that renders item bitmaps is actively visible.
+    @MainActor
+    var hasActiveImageConsumer: Bool {
+        hasActiveImageConsumer(nav: makeNavigationStateSnapshot())
+    }
+
+    func hasActiveImageConsumer(nav: NavigationStateSnapshot) -> Bool {
+        nav.isThawBarPresented
+            || nav.isSearchPresented
+            || nav.isLayoutEditorPresented
+            || (nav.isSettingsPresented && (
+                nav.isSimpleModeSettings
+                    || nav.settingsNavigationIdentifier == .menuBarLayout
+                    || nav.settingsNavigationIdentifier == .thawBar
+                    || (nav.settingsNavigationIdentifier == .hotkeys && nav.isItemHotkeyListExpanded)
+            ))
     }
 
     /// Refreshes the cache for whatever currently needs it, on screen or not.
@@ -465,7 +500,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 nav: nav
             )
             await MainActor.run {
-                guard !hasVisibleCaptureConsumer() else { return }
+                guard !hasActiveImageConsumer else { return }
                 scheduleIdleTrim()
             }
         }
@@ -498,11 +533,15 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 self.makeNavigationStateSnapshot()
             }
             let needsRefresh = self.hasVisibleCaptureConsumer(nav: nav)
+            let hasConsumer = self.hasActiveImageConsumer(nav: nav)
 
-            if needsRefresh {
+            if hasConsumer {
                 self.idleTrimTask?.cancel()
                 self.idleTrimTask = nil
                 await MainActor.run { self.loadFromDiskIfNeeded() }
+            }
+
+            if needsRefresh {
                 guard self.liveRefreshTask == nil else { return }
                 MenuBarItemImageCache.diagLog.debug(
                     "Starting live refresh (scope=\(nav.liveCaptureScope), simpleMode=\(nav.isSimpleModeSettings), thawBar=\(nav.isThawBarPresented), search=\(nav.isSearchPresented), settings=\(nav.isSettingsPresented))"
@@ -517,7 +556,9 @@ final class MenuBarItemImageCache: @unchecked Sendable {
                 }
                 self.liveRefreshTask?.cancel()
                 self.liveRefreshTask = nil
-                self.scheduleIdleTrim()
+                if !hasConsumer {
+                    self.scheduleIdleTrim()
+                }
             }
         }
     }
@@ -572,7 +613,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             }
 
             let sections = nav.liveCaptureScope.sections(
-                thawBarSection: appState.menuBarManager.thawBarPanel.currentSection
+                thawBarSection: appState.menuBarManager.thawBarPanelIfCreated?.currentSection
             )
             guard !sections.isEmpty else {
                 // Keep looping rather than break: ThawBar close() nils
@@ -688,6 +729,11 @@ extension MenuBarItemImageCache {
     ///
     /// Resolves like image(for:), and bumps the access order so watched items
     /// stay out of the LRU's way.
+    @MainActor
+    func pruneDeadGlyphSlots() {
+        glyphSlotsByTag = glyphSlotsByTag.filter { $0.value.slot != nil }
+    }
+
     @MainActor
     private func publishGlyphSlots() {
         guard !glyphSlotsByTag.isEmpty else { return }

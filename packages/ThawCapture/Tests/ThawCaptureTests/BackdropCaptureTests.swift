@@ -78,6 +78,30 @@ struct BackdropCaptureTests {
         #expect(options == CGWindowImageOption.nominalResolution.rawValue)
     }
 
+    @Test func windowsRequestPreservesTargetPixelDimensions() throws {
+        let request = CaptureServiceRequest.windows(
+            ids: [10, 20],
+            screenBounds: strip,
+            imageOptionRawValue: CGWindowImageOption.nominalResolution.rawValue,
+            scale: 1,
+            targetPixelWidth: 64,
+            targetPixelHeight: 4
+        )
+        let decoded = try JSONDecoder().decode(
+            CaptureServiceRequest.self, from: JSONEncoder().encode(request)
+        )
+        guard case let .windows(ids, bounds, options, scale, targetWidth, targetHeight) = decoded else {
+            Issue.record("Windows request did not survive the wire round trip")
+            return
+        }
+        #expect(ids == [10, 20])
+        #expect(bounds == strip)
+        #expect(options == CGWindowImageOption.nominalResolution.rawValue)
+        #expect(scale == 1)
+        #expect(targetWidth == 64)
+        #expect(targetHeight == 4)
+    }
+
     private func allows(_ bounds: CGRect, level: CGWindowLevel) -> Bool {
         ScreenCapture.isAllowedBackdropWindow(
             captureBounds: bounds,

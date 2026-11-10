@@ -72,11 +72,7 @@ final class ThawBarColorManager {
             .throttle(for: 0.1, scheduler: DispatchQueue.main, latest: true)
             .sink { [weak self, weak thawBarPanel] frame in
                 guard
-                    let self,
-                    let thawBarPanel,
-                    let screen = thawBarPanel.screen,
-                    thawBarPanel.isVisible,
-                    self.appState?.appearanceManager.configuration.thawBarAppearance.overridesMenuBar == true
+                    let self, let thawBarPanel, let screen = thawBarPanel.screen, thawBarPanel.isVisible, self.appState?.appearanceManager.configuration.thawBarAppearance.overridesMenuBar == true
                 else {
                     return
                 }
@@ -134,9 +130,7 @@ final class ThawBarColorManager {
     /// Hidden panels do not keep either sampling path active.
     private func refreshWhilePresented(animated: Bool) {
         guard
-            let thawBarPanel,
-            thawBarPanel.isVisible,
-            let screen = thawBarPanel.screen
+            let thawBarPanel, thawBarPanel.isVisible, let screen = thawBarPanel.screen
         else {
             return
         }
@@ -183,6 +177,15 @@ final class ThawBarColorManager {
         clearWindowImage()
     }
 
+    /// Drops observers, timers, and cached strip buffers when the panel tears down while idle.
+    func tearDownIdle() {
+        stopPeriodicRefresh()
+        cancellables.removeAll()
+        clearWindowImage()
+        colorInfo = nil
+        colorDisplayID = nil
+    }
+
     /// Clears windowImage and invalidates any in-flight capture. Use whenever
     /// callers want a synchronous nil state that an outstanding async capture
     /// must not be allowed to overwrite.
@@ -207,32 +210,43 @@ final class ThawBarColorManager {
         windowImage = (displayID, image)
     }
 
+    /// Maps a panel frame in screen coordinates onto a proportionally scaled region of the captured strip.
+    static nonisolated func sampleRect(forPanelFrame frame: CGRect, screenFrame: CGRect, imageSize: CGSize) -> CGRect {
+        let imageBounds = CGRect(origin: .zero, size: imageSize)
+        guard imageBounds.width > 0, imageBounds.height > 0 else {
+            return .zero
+        }
+        let travel = screenFrame.insetBy(dx: frame.width / 2, dy: 0)
+        let fraction: CGFloat = travel.width > 0 ? ((frame.midX - travel.minX) / travel.width).clamped(to: 0 ... 1) : 0.5
+        let scaleX = screenFrame.width > 0 ? imageBounds.width / screenFrame.width : 1
+        let sampleHalfWidth = max(2, 150 * scaleX)
+        let intersected = CGRect(
+            x: imageBounds.width * fraction - sampleHalfWidth,
+            y: 0,
+            width: sampleHalfWidth * 2,
+            height: imageBounds.height
+        ).intersection(imageBounds)
+        return intersected.isNull ? imageBounds : intersected
+    }
+
     /// Publishes the average color of the strip behind the panel.
     ///
-    /// The capture is a 1 px tall, screen-wide strip. The panel's center is
-    /// mapped to a fraction of its traversable range (it cannot reach the
-    /// outer half-panel-width at either screen edge), and a fixed window of
+    /// The capture may be downscaled by WindowServer for low memory overhead. The panel's center is
+    /// mapped to a fraction of its traversable range, and a proportional horizontal window of
     /// pixels around the matching strip position is averaged.
     private func updateColorInfo(with frame: CGRect, screen: NSScreen) {
         guard let capture = windowImage, capture.displayID == screen.displayID else {
             return
         }
         let image = capture.image
-
-        let sampleHalfWidth: CGFloat = 150
-        let imageBounds = CGRect(x: 0, y: 0, width: image.width, height: image.height)
-        let travel = screen.frame.insetBy(dx: frame.width / 2, dy: 0)
-        let fraction = ((frame.midX - travel.minX) / travel.width).clamped(to: 0 ... 1)
-        let sampleRect = CGRect(
-            x: imageBounds.width * fraction - sampleHalfWidth,
-            y: 0,
-            width: sampleHalfWidth * 2,
-            height: 1
-        ).intersection(imageBounds)
+        let sampleRect = Self.sampleRect(
+            forPanelFrame: frame,
+            screenFrame: screen.frame,
+            imageSize: CGSize(width: image.width, height: image.height)
+        )
 
         guard
-            let sample = image.cropping(to: sampleRect),
-            let averageColor = sample.averageColor()
+            !sampleRect.isEmpty, let sample = image.cropping(to: sampleRect), let averageColor = sample.averageColor()
         else {
             return
         }

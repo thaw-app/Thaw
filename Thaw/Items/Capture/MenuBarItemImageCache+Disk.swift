@@ -147,6 +147,13 @@ extension MenuBarItemImageCache {
         return selections
     }
 
+    /// Ensures any started or pending disk cache hydration finishes before callers inspect the live cache.
+    @MainActor
+    func ensureDiskLoaded() async {
+        loadFromDiskIfNeeded()
+        await diskLoadTask?.value
+    }
+
     /// Loads cached images from disk.
     ///
     /// The load is tracked rather than fired and forgotten. It decodes on a
@@ -160,9 +167,11 @@ extension MenuBarItemImageCache {
     private func loadFromDisk() {
         diskLoadTask?.cancel()
         let generation = diskLoadGeneration
-        diskLoadTask = Task.detached(priority: .background) { [weak self] in
-            guard let self else { return }
-            guard let file = self.diskStore.readSaveFile() else { return }
+        let backingScaleFactor = NSScreen.main?.backingScaleFactor
+            ?? NSScreen.screens.map(\.backingScaleFactor).max()
+            ?? 1
+        diskLoadTask = Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self, let file = self.diskStore.readSaveFile() else { return }
 
             let (classifications, occupiedIdentifiers) = await MainActor.run {
                 (
@@ -212,8 +221,14 @@ extension MenuBarItemImageCache {
 
             for (tag, entry) in candidates {
                 guard !Task.isCancelled else { return }
-                if let capture = self.diskStore.decodeEntry(entry, legacyJSON: file.isLegacyJSON) {
-                    loadedImages[tag] = capture
+                autoreleasepool {
+                    if let capture = self.diskStore.decodeEntry(
+                        entry,
+                        legacyJSON: file.isLegacyJSON,
+                        backingScaleFactor: backingScaleFactor
+                    ) {
+                        loadedImages[tag] = capture
+                    }
                 }
             }
 

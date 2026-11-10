@@ -194,4 +194,29 @@ struct MenuBarItemImageCacheDiskStoreTests {
         #expect(store.legacyCacheFileURL == nil)
         #expect(store.readSaveFile() == nil)
     }
+
+    @Test("Large disk entries decode into thumbnails bounded by maxItemDimension and backingScaleFactor")
+    func boundedThumbnailDecode() throws {
+        let context = try #require(CGContext(
+            data: nil,
+            width: 400,
+            height: 80,
+            bitsPerComponent: 8,
+            bytesPerRow: 400 * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        context.setFillColor(CGColor(red: 0.4, green: 0.8, blue: 0.3, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: 400, height: 80))
+        let largeImage = try #require(context.makeImage())
+        let pngData = try #require(Self.png(largeImage))
+        let entry: [String: Any] = ["png": pngData, "scale": 2.0]
+
+        let decoded = try #require(
+            store.decodeEntry(entry, legacyJSON: false, maxItemDimension: 50, backingScaleFactor: 2)
+        )
+        #expect(decoded.scale == 2)
+        #expect(decoded.cgImage.width <= 100)
+        #expect(decoded.cgImage.height == 20)
+    }
 }

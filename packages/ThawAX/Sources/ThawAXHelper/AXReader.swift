@@ -87,69 +87,76 @@ enum AXReader {
         var completed = true
 
         for app in runningApplications() {
-            if app.isTerminated {
-                continue
-            }
             if let deadline, Date() >= deadline {
                 completed = false
                 break
             }
+            let didExhaustDeadline: Bool = autoreleasepool {
+                if app.isTerminated {
+                    return false
+                }
 
-            let appElement = AXUIElementCreateApplication(app.processIdentifier)
-            AXUIElementSetMessagingTimeout(appElement, messagingTimeout)
+                let appElement = AXUIElementCreateApplication(app.processIdentifier)
+                AXUIElementSetMessagingTimeout(appElement, messagingTimeout)
 
-            guard let bar = AXPrimitives.elementAttribute(appElement, kAXExtrasMenuBarAttribute as String) else {
-                continue
+                guard let bar = AXPrimitives.elementAttribute(appElement, kAXExtrasMenuBarAttribute as String) else {
+                    return false
+                }
+                let overflow = AXPrimitives.elementAttribute(bar, "AXOverflowButton")
+                // Builds without AXOverflowButton still mark the chevron by its role.
+                let isMenuBarAgent = app.bundleIdentifier == "com.apple.MenuBarAgent"
+                let children = AXPrimitives.children(of: bar)
+
+                for child in children {
+                    if let deadline, Date() >= deadline {
+                        completed = false
+                        return true
+                    }
+                    autoreleasepool {
+                        guard let reported = AXPrimitives.frame(of: child), !reported.isNull, !reported.isEmpty, let frame = AXPrimitives.itemFrame(reported, maximumHeight: maximumItemHeight) else { return }
+                        if let displayBounds, !AXPrimitives.frame(frame, isWithin: displayBounds) {
+                            return
+                        }
+
+                        let identifier = AXPrimitives.stringAttribute(child, kAXIdentifierAttribute)
+                        let accessibilityDescription = AXPrimitives.stringAttribute(child, kAXDescriptionAttribute)
+                        // Some apps publish the stable identifier and description on the
+                        // status-bar button rather than its container, so read one level
+                        // deeper for the values the in-process walk falls back to. Only
+                        // scan when the item's own value would not win, mirroring the
+                        // in-process walk's lazy fallback.
+                        let childElements = needsChildScan(identifier: identifier, description: accessibilityDescription)
+                            ? AXPrimitives.children(of: child)
+                            : []
+
+                        observations.append(
+                            AXItemObservation(
+                                bundleID: app.bundleIdentifier,
+                                processName: app.localizedName,
+                                ownerPID: AXPrimitives.pid(of: child) ?? app.processIdentifier,
+                                identifier: identifier,
+                                accessibilityDescription: accessibilityDescription,
+                                title: AXPrimitives.stringAttribute(child, kAXTitleAttribute),
+                                help: AXPrimitives.stringAttribute(child, kAXHelpAttribute),
+                                frame: frame,
+                                isOverflowControl: overflow.map { CFEqual($0, child) } ?? false
+                                    || isMenuBarAgent && AXPrimitives.isMenuBarAgentOverflowRole(
+                                        AXPrimitives.stringAttribute(child, kAXRoleAttribute)
+                                    ),
+                                childIdentifier: childElements
+                                    .compactMap { stableIdentifier(AXPrimitives.stringAttribute($0, kAXIdentifierAttribute)) }
+                                    .first,
+                                childDescription: childElements
+                                    .compactMap { AXPrimitives.stringAttribute($0, kAXDescriptionAttribute) }
+                                    .first
+                            )
+                        )
+                    }
+                }
+                return false
             }
-            let overflow = AXPrimitives.elementAttribute(bar, "AXOverflowButton")
-            // Builds without AXOverflowButton still mark the chevron by its role.
-            let isMenuBarAgent = app.bundleIdentifier == "com.apple.MenuBarAgent"
-            let children = AXPrimitives.children(of: bar)
-
-            for child in children {
-                if let deadline, Date() >= deadline {
-                    completed = false
-                    break
-                }
-                guard let reported = AXPrimitives.frame(of: child), !reported.isNull, !reported.isEmpty else { continue }
-                guard let frame = AXPrimitives.itemFrame(reported, maximumHeight: maximumItemHeight) else { continue }
-                if let displayBounds, !AXPrimitives.frame(frame, isWithin: displayBounds) {
-                    continue
-                }
-
-                let identifier = AXPrimitives.stringAttribute(child, kAXIdentifierAttribute)
-                let accessibilityDescription = AXPrimitives.stringAttribute(child, kAXDescriptionAttribute)
-                // Some apps publish the stable identifier and description on the
-                // status-bar button rather than its container, so read one level
-                // deeper for the values the in-process walk falls back to. Only
-                // scan when the item's own value would not win, mirroring the
-                // in-process walk's lazy fallback.
-                let childElements = needsChildScan(identifier: identifier, description: accessibilityDescription)
-                    ? AXPrimitives.children(of: child)
-                    : []
-
-                observations.append(
-                    AXItemObservation(
-                        bundleID: app.bundleIdentifier,
-                        processName: app.localizedName,
-                        ownerPID: AXPrimitives.pid(of: child) ?? app.processIdentifier,
-                        identifier: identifier,
-                        accessibilityDescription: accessibilityDescription,
-                        title: AXPrimitives.stringAttribute(child, kAXTitleAttribute),
-                        help: AXPrimitives.stringAttribute(child, kAXHelpAttribute),
-                        frame: frame,
-                        isOverflowControl: overflow.map { CFEqual($0, child) } ?? false
-                            || isMenuBarAgent && AXPrimitives.isMenuBarAgentOverflowRole(
-                                AXPrimitives.stringAttribute(child, kAXRoleAttribute)
-                            ),
-                        childIdentifier: childElements
-                            .compactMap { stableIdentifier(AXPrimitives.stringAttribute($0, kAXIdentifierAttribute)) }
-                            .first,
-                        childDescription: childElements
-                            .compactMap { AXPrimitives.stringAttribute($0, kAXDescriptionAttribute) }
-                            .first
-                    )
-                )
+            if didExhaustDeadline {
+                break
             }
         }
 
@@ -177,8 +184,7 @@ enum AXReader {
     // MARK: - Pointer reads and presses
 
     private static func hitTest(at point: CGPoint) -> AXHitTestResult? {
-        guard let element = AXPrimitives.hitTestElement(at: point, messagingTimeout: messagingTimeout),
-              let pid = AXPrimitives.pid(of: element)
+        guard let element = AXPrimitives.hitTestElement(at: point, messagingTimeout: messagingTimeout), let pid = AXPrimitives.pid(of: element)
         else {
             return nil
         }

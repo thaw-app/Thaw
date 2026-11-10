@@ -60,6 +60,7 @@ struct ThawBarSettingsPane: View {
             }
         }
         .onAppear {
+            appState.imageCache.loadFromDiskIfNeeded()
             // Open on the first connected display, so the page shows something the user can act on.
             if selectedDisplayUUID == nil {
                 selectedDisplayUUID = displaySettings.displays.first(where: { $0.isConnected })?.id
@@ -118,9 +119,7 @@ struct ThawBarSettingsPane: View {
 
     @ViewBuilder
     private var displayAnnotation: some View {
-        if let display = displaySettings.displays.first(where: { $0.id == editedDisplayUUID }),
-           !display.isConnected
-        {
+        if let display = displaySettings.displays.first(where: { $0.id == editedDisplayUUID }), !display.isConnected {
             Text("\(display.name) is disconnected. You can still edit its saved configuration; it applies when this display reconnects.")
         }
     }

@@ -174,12 +174,7 @@ public extension Bridging {
     static func getActiveMenuBarDisplayID() -> CGDirectDisplayID? {
         // The UUID string comes back at +1, so it is taken retained before
         // anything else can bail out.
-        guard let identifier = cgsCopyActiveMenuBarDisplayIdentifier(processConnection) else {
-            return CGMainDisplayID()
-        }
-        guard
-            let uuid = CFUUIDCreateFromString(nil, identifier.takeRetainedValue()),
-            let displayID = activeDisplayID(matching: uuid)
+        guard let identifier = cgsCopyActiveMenuBarDisplayIdentifier(processConnection), let uuid = CFUUIDCreateFromString(nil, identifier.takeRetainedValue()), let displayID = activeDisplayID(matching: uuid)
         else {
             return CGMainDisplayID()
         }
@@ -254,23 +249,25 @@ public extension Bridging {
     /// - Returns: The matching space identifiers, or an empty array if the
     ///   window server declined to answer.
     static func getSpaceList(for windowID: CGWindowID, visibleSpacesOnly: Bool = false) -> [CGSSpaceID] {
-        let scope: CGSSpaceMask = visibleSpacesOnly ? .allVisibleSpacesMask : .allSpacesMask
-        // Another Copy call: the array arrives at +1 and is consumed retained
-        // on both the success and the wrong-type path, so a description the
-        // bridge cannot read is still released rather than leaked.
-        guard let copied = cgsCopySpacesForWindows(processConnection, scope.rawValue, [windowID] as CFArray) else {
-            diagLog.error("cgsCopySpacesForWindows returned nil")
-            return []
+        autoreleasepool {
+            let scope: CGSSpaceMask = visibleSpacesOnly ? .allVisibleSpacesMask : .allSpacesMask
+            // Another Copy call: the array arrives at +1 and is consumed retained
+            // on both the success and the wrong-type path, so a description the
+            // bridge cannot read is still released rather than leaked.
+            guard let copied = cgsCopySpacesForWindows(processConnection, scope.rawValue, [windowID] as CFArray) else {
+                diagLog.error("cgsCopySpacesForWindows returned nil")
+                return []
+            }
+            guard let elements = arrayValue(of: copied.takeRetainedValue()) else {
+                diagLog.error("cgsCopySpacesForWindows returned a value that is not an array")
+                return []
+            }
+            guard let spaceIDs = elements as? [CGSSpaceID] else {
+                diagLog.error("cgsCopySpacesForWindows returned array of unexpected type")
+                return []
+            }
+            return spaceIDs
         }
-        guard let elements = arrayValue(of: copied.takeRetainedValue()) else {
-            diagLog.error("cgsCopySpacesForWindows returned a value that is not an array")
-            return []
-        }
-        guard let spaceIDs = elements as? [CGSSpaceID] else {
-            diagLog.error("cgsCopySpacesForWindows returned array of unexpected type")
-            return []
-        }
-        return spaceIDs
     }
 
     /// Whether a space is a full-screen space rather than a desktop.
@@ -312,41 +309,43 @@ public extension Bridging {
     /// key derived from its display; there is only ever one such space per
     /// display, which keeps the fallback unambiguous.
     static func getManagedSpaces() -> [ManagedSpace] {
-        guard let raw = cgsCopyManagedDisplaySpaces(processConnection) else {
-            diagLog.error("cgsCopyManagedDisplaySpaces returned nil")
-            return []
-        }
-        guard let elements = arrayValue(of: raw.takeRetainedValue()) else {
-            diagLog.error("cgsCopyManagedDisplaySpaces returned a value that is not an array")
-            return []
-        }
-        let displays = elements.compactMap { element -> [String: Any]? in
-            dictionaryValue(of: element as CFTypeRef)
-        }
-        if displays.count != elements.count {
-            diagLog.error("cgsCopyManagedDisplaySpaces returned an array of unexpected type")
-        }
+        autoreleasepool {
+            guard let raw = cgsCopyManagedDisplaySpaces(processConnection) else {
+                diagLog.error("cgsCopyManagedDisplaySpaces returned nil")
+                return []
+            }
+            guard let elements = arrayValue(of: raw.takeRetainedValue()) else {
+                diagLog.error("cgsCopyManagedDisplaySpaces returned a value that is not an array")
+                return []
+            }
+            let displays = elements.compactMap { element -> [String: Any]? in
+                dictionaryValue(of: element as CFTypeRef)
+            }
+            if displays.count != elements.count {
+                diagLog.error("cgsCopyManagedDisplaySpaces returned an array of unexpected type")
+            }
 
-        var result: [ManagedSpace] = []
-        for display in displays {
-            let displayIdentifier = display["Display Identifier"] as? String ?? "unknown"
-            guard let spaces = display["Spaces"] as? [[String: Any]] else {
-                // Entries without a Spaces array are collapsed records
-                // for displays that are not currently attached.
-                continue
+            var result: [ManagedSpace] = []
+            for display in displays {
+                let displayIdentifier = display["Display Identifier"] as? String ?? "unknown"
+                guard let spaces = display["Spaces"] as? [[String: Any]] else {
+                    // Entries without a Spaces array are collapsed records
+                    // for displays that are not currently attached.
+                    continue
+                }
+                for (index, space) in spaces.enumerated() {
+                    guard let spaceID = space["id64"] as? CGSSpaceID else { continue }
+                    let uuid = space["uuid"] as? String ?? ""
+                    result.append(ManagedSpace(
+                        spaceID: spaceID,
+                        persistentKey: uuid.isEmpty ? "display:\(displayIdentifier)#default" : uuid,
+                        displayIdentifier: displayIdentifier,
+                        ordinal: index + 1
+                    ))
+                }
             }
-            for (index, space) in spaces.enumerated() {
-                guard let spaceID = space["id64"] as? CGSSpaceID else { continue }
-                let uuid = space["uuid"] as? String ?? ""
-                result.append(ManagedSpace(
-                    spaceID: spaceID,
-                    persistentKey: uuid.isEmpty ? "display:\(displayIdentifier)#default" : uuid,
-                    displayIdentifier: displayIdentifier,
-                    ordinal: index + 1
-                ))
-            }
+            return result
         }
-        return result
     }
 }
 
@@ -380,11 +379,7 @@ public extension Bridging {
     /// defer work and "settled" on error means acting immediately.
     static func menuBarRevealState(forSpace spaceID: CGSSpaceID? = nil) -> MenuBarRevealState {
         guard
-            SLSMenuBar.isAvailable,
-            let getReveal = SLSMenuBar.getSpaceMenuBarReveal,
-            let getBounds = SLSMenuBar.getRevealedMenuBarBounds,
-            let getAutohide = SLSMenuBar.getMenuBarAutohideEnabled,
-            let isVisible = SLSMenuBar.isMenuBarVisibleOnSpace
+            SLSMenuBar.isAvailable, let getReveal = SLSMenuBar.getSpaceMenuBarReveal, let getBounds = SLSMenuBar.getRevealedMenuBarBounds, let getAutohide = SLSMenuBar.getMenuBarAutohideEnabled, let isVisible = SLSMenuBar.isMenuBarVisibleOnSpace
         else {
             return MenuBarRevealState(
                 revealFraction: 0,
@@ -588,10 +583,7 @@ public extension Bridging {
     ///
     /// - Parameter windowID: The window to test.
     static func isWindowOnScreen(_ windowID: CGWindowID) -> Bool {
-        guard onScreenWindowIDs().contains(windowID) else {
-            return false
-        }
-        guard let frame = getWindowBounds(for: windowID) else {
+        guard onScreenWindowIDs().contains(windowID), let frame = getWindowBounds(for: windowID) else {
             return false
         }
         return activeDisplayIDs().contains { displayID in
@@ -768,7 +760,9 @@ public extension Bridging {
         // round trip per window.
         let spaceInFront = getActiveSpaceID()
         return windowIDs.filter { windowID in
-            isWindowOnSpace(windowID, spaceInFront)
+            autoreleasepool {
+                isWindowOnSpace(windowID, spaceInFront)
+            }
         }
     }
 
@@ -808,21 +802,23 @@ public extension Bridging {
 
         let rawList = processMenuBarWindowIDs()
         let filtered = rawList.filter { windowID in
-            if let onScreenIDs, !onScreenIDs.contains(windowID) {
-                return false
+            autoreleasepool {
+                if let onScreenIDs, !onScreenIDs.contains(windowID) {
+                    return false
+                }
+                if let requiredSpaceID, !isWindowOnSpace(windowID, requiredSpaceID) {
+                    return false
+                }
+                // The bar itself sits at the main menu level and the items in it do
+                // not. Checked last because it is the only filter that costs a
+                // round trip per window, so the cheap set and space tests get to
+                // reject first. A window whose level cannot be read is kept: an
+                // unreadable level is not evidence of being the bar.
+                if excludesTheBarItself, getWindowLevel(for: windowID) == kCGMainMenuWindowLevel {
+                    return false
+                }
+                return true
             }
-            if let requiredSpaceID, !isWindowOnSpace(windowID, requiredSpaceID) {
-                return false
-            }
-            // The bar itself sits at the main menu level and the items in it do
-            // not. Checked last because it is the only filter that costs a
-            // round trip per window, so the cheap set and space tests get to
-            // reject first. A window whose level cannot be read is kept: an
-            // unreadable level is not evidence of being the bar.
-            if excludesTheBarItself, getWindowLevel(for: windowID) == kCGMainMenuWindowLevel {
-                return false
-            }
-            return true
         }
         diagLog.debug("getMenuBarWindowList: \(rawList.count) raw -> \(filtered.count) after filtering (options: onScreen=\(option.contains(.onScreen)), activeSpace=\(option.contains(.activeSpace)), itemsOnly=\(option.contains(.itemsOnly)))")
         return filtered
@@ -844,12 +840,7 @@ public extension Bridging {
             return true
         }
         guard
-            bounds.origin.x.isFinite,
-            bounds.origin.y.isFinite,
-            bounds.size.width.isFinite,
-            bounds.size.height.isFinite,
-            scale.isFinite,
-            scale > 0
+            bounds.origin.x.isFinite, bounds.origin.y.isFinite, bounds.size.width.isFinite, bounds.size.height.isFinite, scale.isFinite, scale > 0
         else { return false }
         // width/height return absolute extents, so a negatively sized rect
         // would pass a > 0 test against them; the raw size components keep
@@ -967,11 +958,15 @@ public extension Bridging {
     ///     encloses the selected windows.
     ///   - options: Capture options. boundsIgnoreFraming maps to
     ///     ignoreShadowsDisplay; nominalResolution forces 1x scale.
+    ///   - targetPixelWidth: Optional explicit output width in pixels for WindowServer downscaling.
+    ///   - targetPixelHeight: Optional explicit output height in pixels for WindowServer downscaling.
     /// - Returns: The captured image, or nil if capture failed.
     static func captureWindowsImageSCK(
         windowIDs: [CGWindowID],
         screenBounds: CGRect? = nil,
         options: CGWindowImageOption = [],
+        targetPixelWidth: Int? = nil,
+        targetPixelHeight: Int? = nil,
         shouldCapture: @Sendable () -> Bool = { true }
     ) async -> CGImage? {
         guard shouldCapture() else { return nil }
@@ -1056,8 +1051,13 @@ public extension Bridging {
             width: effectiveBounds.width,
             height: effectiveBounds.height
         )
-        configuration.width = Int((effectiveBounds.width * scale).rounded())
-        configuration.height = Int((effectiveBounds.height * scale).rounded())
+        configureStreamDimensions(
+            of: configuration,
+            effectiveBounds: effectiveBounds,
+            scale: scale,
+            targetPixelWidth: targetPixelWidth,
+            targetPixelHeight: targetPixelHeight
+        )
 
         // A degenerate union means the window server has not laid the bar out,
         // so fail and let callers fall back. An explicit screenBounds is exempt:
@@ -1083,6 +1083,25 @@ public extension Bridging {
         } catch {
             diagLog.error("captureWindowsImageSCK: SCScreenshotManager.captureImage failed: \(error)")
             return nil
+        }
+    }
+
+    private static func configureStreamDimensions(
+        of configuration: SCStreamConfiguration,
+        effectiveBounds: CGRect,
+        scale: CGFloat,
+        targetPixelWidth: Int?,
+        targetPixelHeight: Int?
+    ) {
+        if let targetPixelWidth, let targetPixelHeight, targetPixelWidth > 0, targetPixelHeight > 0 {
+            // Downscale directly inside WindowServer to avoid allocating multi-megabyte full-display bitmaps for color analysis.
+            configuration.scalesToFit = true
+            configuration.preservesAspectRatio = false
+            configuration.width = targetPixelWidth
+            configuration.height = targetPixelHeight
+        } else {
+            configuration.width = Int((effectiveBounds.width * scale).rounded())
+            configuration.height = Int((effectiveBounds.height * scale).rounded())
         }
     }
 }

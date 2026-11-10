@@ -161,8 +161,8 @@ private struct MenuBarSearchContentView: View {
     /// The flag is dropped first: it can read true after the field lost the keyboard.
     private func focusQueryField() {
         queryFieldIsFocused = false
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(50))
+        model.scheduleFocus { [weak panel] in
+            guard panel?.isVisible == true else { return }
             queryFieldIsFocused = true
         }
     }

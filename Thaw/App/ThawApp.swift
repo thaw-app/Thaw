@@ -7,6 +7,7 @@
 
 import SwiftUI
 import ThawCapture
+import ThawUI
 
 @main
 @MainActor
@@ -17,8 +18,9 @@ enum ThawEntryPoint {
         } else if MemoryBench.isRequested {
             MemoryBench.run()
         } else {
-            // Both the app and the Settings process configure TipKit here, before any scene or default changes.
-            FeatureTips.configureAtLaunch()
+            // Both the app and the Settings process record upgrade state before any scene or default changes,
+            // while deferring TipKit datastore initialization until Layout actually opens.
+            FeatureTips.prepareAtLaunch()
             if SettingsProcessApp.isRequested {
                 SettingsProcessApp.main()
             } else {
@@ -38,10 +40,11 @@ struct ThawApp: App {
     @NSApplicationDelegateAdaptor var appDelegate: AppDelegate
 
     var body: some Scene {
-        WindowActionBridge(registerWindowActions: appDelegate.appState.registerWindowActions)
-        SettingsWindow(appState: appDelegate.appState)
-        PermissionsWindow(appState: appDelegate.appState)
-        WhatsNewWindow(appState: appDelegate.appState)
-        AcknowledgementsWindow(appState: appDelegate.appState)
+        MenuBarExtra("", isInserted: .constant(false)) {
+            EmptyView()
+        }
+        .commands {
+            AppUIZoomCommands(strings: .thaw)
+        }
     }
 }

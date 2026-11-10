@@ -11,7 +11,6 @@ import Combine
 import MenuBarModel
 import Observation
 import PlatformRuntimeKit
-import SwiftUI
 import ThawCapture
 import ThawUI
 
@@ -161,37 +160,48 @@ final class AppState {
 
     // MARK: - Window bookkeeping
 
-    /// Track open windows to prevent duplicates
-    private var openWindows = Set<ThawWindowIdentifier>()
+    /// Track open windows to prevent duplicates.
+    var openWindows = Set<ThawWindowIdentifier>()
 
     /// Whether any Thaw window is open.
     var hasOpenWindow: Bool {
         !openWindows.isEmpty
     }
 
-    /// Live windows keyed by scene identifier.
-    /// - Note: onWindowChange supplies these because unreliable NSApp.windows KVO would leave openWindows stuck after closing.
-    private var trackedWindows = [ThawWindowIdentifier: NSWindow]()
+    /// Live windows keyed by identifier, released after close teardown completes.
+    var trackedWindows = [ThawWindowIdentifier: NSWindow]()
 
-    /// Per-window visibility observers, keyed by identifier.
-    private var windowVisibilityCancellables = [ThawWindowIdentifier: AnyCancellable]()
+    /// AppKit window delegates keyed by identifier.
+    @ObservationIgnored var windowDelegates = [ThawWindowIdentifier: ThawWindowDelegate]()
 
-    /// Fresh EnvironmentValues have inert window actions; scenes register live actions without eagerly creating windows.
-    private var openWindowAction: OpenWindowAction?
-    private var dismissWindowAction: DismissWindowAction?
-    private var pendingOpenWindows = Set<ThawWindowIdentifier>()
+    /// Delayed teardown tasks armed when a window closes so rapid reopens skip full view teardown.
+    @ObservationIgnored var windowTeardownTasks = [ThawWindowIdentifier: Task<Void, Never>]()
+
+    /// Overridable factory for unit tests verifying lazy creation, grace reuse, and teardown.
+    @ObservationIgnored var windowFactory: @MainActor (ThawWindowIdentifier, AppState, NSWindowDelegate) -> NSWindow =
+        AppState.defaultMakeManagedWindow
+
+    static let windowTeardownDelay: Duration = .seconds(2)
 
     // MARK: - Private state
 
     /// Holds the subscriptions made by installObservers(). Emptied before
     /// they are remade, so the observers can never end up doubled.
-    private var cancellables = Set<AnyCancellable>()
+    var cancellables = Set<AnyCancellable>()
 
     /// Watches navigationState's observable focus and Settings visibility.
-    private var navigationStateObservationTask: Task<Void, Never>?
+    var navigationStateObservationTask: Task<Void, Never>?
 
     /// Prevent repeated restart attempts.
-    private var isRestarting = false
+    var isRestarting = false
+
+    func updateActiveSpace(_ spaceID: Int) {
+        activeSpace = SpaceInfo(spaceID: spaceID)
+    }
+
+    func updateIsDraggingMenuBarItem(_ isDragging: Bool) {
+        isDraggingMenuBarItem = isDragging
+    }
 
     // MARK: - Bootstrap
 
@@ -371,395 +381,5 @@ final class AppState {
     /// Allows explicit starting of the updater from UI flows.
     func startUpdaterIfNeeded() {
         updatesManager.startUpdaterIfNeeded()
-    }
-
-    /// exit(0) bypasses termination teardown; run it here to prevent macOS 27 ghost icons with dead menus after relaunch.
-    func restartSelf() {
-        guard !isRestarting else { return }
-        isRestarting = true
-
-        // Save image cache to disk before restarting so new instance can load it
-        imageCache.saveToDisk()
-
-        let config = NSWorkspace.OpenConfiguration()
-        config.activates = false
-        config.addsToRecentItems = false
-        config.createsNewApplicationInstance = true
-        config.promptsUserIfNeeded = false
-        config.arguments = SingleInstanceRule.relaunchArguments(replacing: ProcessInfo.processInfo.processIdentifier)
-
-        Task { @MainActor in
-            do {
-                _ = try await NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: config)
-                // Restore blocked items before exit so none remain off-screen; this is a no-op on macOS 27.
-                _ = await itemManager.restoreBlockedItemsToVisible()
-                menuBarManager.tearDownControlItemsForTermination()
-                diagLog.info("Restart: tore down control items, waiting for MenuBarAgent to reclaim")
-                try? await Task.sleep(for: .milliseconds(150))
-                try? await Task.sleep(for: .milliseconds(500))
-                exit(0)
-            } catch {
-                // Report asynchronous relaunch failures here so every triggering control gets visible feedback.
-                diagLog.error("Failed to relaunch app: \(error.localizedDescription)")
-                isRestarting = false
-                let alert = NSAlert()
-                alert.messageText = String(localized: "Couldn’t relaunch \(Constants.displayName)")
-                alert.informativeText = String(
-                    localized: "\(Constants.displayName) could not open a second copy of itself, so it stayed open and nothing changed. Quit and open it again to finish."
-                )
-                alert.runModal()
-            }
-        }
-    }
-
-    // MARK: - Observers
-
-    /// Subscribe after bootstrap because immediate current-value emissions must not reach a half-built subsystem graph.
-    private func installObservers() {
-        cancellables.removeAll()
-
-        observeActiveSpace()
-        observeAppFocus()
-        observeItemDrags()
-        observeImageCacheTriggers()
-        // Observation tracks owned-model reads through appState directly; no objectWillChange forwarding is needed.
-        startDisplayChangeCoordinator()
-    }
-
-    /// Frontmost-app changes cover space notifications missed on secondary displays.
-    /// Sample clicks immediately and again later because fullscreen notifications can precede window-server updates.
-    private func observeActiveSpace() {
-        let spaceSwitched = NSWorkspace.shared.notificationCenter
-            .publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
-            .replace(with: ())
-            .eraseToAnyPublisher()
-
-        let appSwitched = NSWorkspace.shared
-            .publisher(for: \.frontmostApplication)
-            .replace(with: ())
-            .eraseToAnyPublisher()
-
-        let clicked = EventMonitor.publish(events: .leftMouseDown, scope: .universal)
-            .throttle(for: .seconds(0.15), scheduler: DispatchQueue.main, latest: true)
-            .flatMap { _ in
-                Just(()).append(Just(()).delay(for: 0.1, scheduler: DispatchQueue.main))
-            }
-            .eraseToAnyPublisher()
-
-        Publishers.MergeMany(spaceSwitched, appSwitched, clicked)
-            .map { _ in Bridging.getActiveSpaceID() }
-            .removeDuplicates()
-            .sink { [weak self] spaceID in
-                self?.activeSpace = SpaceInfo(spaceID: spaceID)
-            }
-            .store(in: &cancellables)
-    }
-
-    /// Mirrors "is Thaw the frontmost app" into navigationState, which the
-    /// settings window and the Thaw bar both key their behaviour off.
-    private func observeAppFocus() {
-        NSWorkspace.shared.publisher(for: \.frontmostApplication)
-            .receive(on: DispatchQueue.main)
-            .map { $0 == .current }
-            .removeDuplicates()
-            .sink { [weak self] isFrontmost in
-                self?.navigationState.isAppFrontmost = isFrontmost
-            }
-            .store(in: &cancellables)
-    }
-
-    /// Mirrors HIDEventManager drags for views, manually deduplicating Observation values.
-    private func observeItemDrags() {
-        let task = Task { @MainActor [weak self, hidEventManager] in
-            let changes = Observations { hidEventManager.isDraggingMenuBarItem }
-            var previous: Bool?
-            for await isDragging in changes {
-                guard let self else { return }
-                guard isDragging != previous else { continue }
-                let dragEnded = previous == true && !isDragging
-                previous = isDragging
-                isDraggingMenuBarItem = isDragging
-                if isDragging {
-                    itemManager.dragMembership.dragStarted(pressing: hidEventManager.pressedItemTag)
-                } else if dragEnded {
-                    itemManager.noteUserMenuBarDragEnded()
-                }
-            }
-        }
-        cancellables.insert(AnyCancellable { task.cancel() })
-    }
-
-    /// Refresh on frontmost Settings and once after bootstrap to populate the first draw.
-    /// Observation flags change only on navigation, so no throttle is needed.
-    private func observeImageCacheTriggers() {
-        navigationStateObservationTask = Task { [weak self] in
-            guard let self else { return }
-            let changes = Observations { [navigationState] in
-                (navigationState.isAppFrontmost, navigationState.isSettingsPresented)
-            }
-            for await (isAppFrontmost, isSettingsPresented) in changes {
-                guard isAppFrontmost, isSettingsPresented else { continue }
-                await self.refreshAllItemImages()
-            }
-        }
-        Task { [weak self] in
-            try? await Task.sleep(for: .seconds(1))
-            await self?.refreshAllItemImages()
-        }
-    }
-
-    /// Use the visible-consumer guard: SCK's first capture retains roughly 10-20 MB, so wait until a consumer opens.
-    private func refreshAllItemImages() async {
-        await imageCache.recaptureIfWarranted()
-        if imageCache.cacheSize > 15 {
-            imageCache.logCacheStatus("Periodic update")
-        }
-    }
-
-    // MARK: - Windows
-
-    /// Emits the scene's window or nil when closed, starting with the current value and never finishing.
-    /// Bridges trackedWindows Observation into a publisher.
-    func windowPublisher(for id: ThawWindowIdentifier) -> some Publisher<NSWindow?, Never> {
-        let subject = CurrentValueSubject<NSWindow?, Never>(trackedWindows[id])
-        let task = Task { @MainActor [weak self] in
-            guard let self else { return }
-            let changes = Observations { self.trackedWindows[id] }
-            for await window in changes {
-                subject.send(window)
-            }
-        }
-        return subject.handleEvents(receiveCancel: { task.cancel() })
-    }
-
-    func prepareSettingsPresentation() {
-        guard let id = navigationState.beginSettingsPresentation() else { return }
-        imageCache.prepareForPresentation()
-        // A failed or deferred scene request must not leave capture enabled.
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(3))
-            self?.navigationState.finishSettingsPresentation(id)
-        }
-    }
-
-    func openWindow(_ id: ThawWindowIdentifier, allowSettingsProcess: Bool = true) {
-        if allowSettingsProcess, showsInSettingsProcess(id, isOpenHere: openWindows.contains(id)) {
-            return
-        }
-        if id == .settings {
-            prepareSettingsPresentation()
-        }
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-
-            if self.openWindows.contains(id) {
-                self.diagLog.debug("Window \(id) already open (openWindows=\(self.openWindows)), activating existing window")
-                self.activate(withPolicy: .regular)
-                return
-            }
-            self.diagLog.debug("openWindow(\(id)) proceeding, openWindows=\(self.openWindows)")
-
-            self.openWindows.insert(id)
-            self.diagLog.debug("Opening window with id: \(id)")
-            guard let openWindowAction = self.openWindowAction else {
-                self.pendingOpenWindows.insert(id)
-                self.diagLog.debug("Deferring window request until SwiftUI scene setup: \(id)")
-                return
-            }
-            openWindowAction(id: id)
-
-            try? await Task.sleep(for: .milliseconds(100))
-            self.activate(withPolicy: .regular)
-        }
-    }
-
-    func dismissWindow(_ id: ThawWindowIdentifier) {
-        if id == .settings {
-            navigationState.cancelSettingsPresentation()
-            navigationState.isSettingsPresented = false
-        }
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            self.openWindows.remove(id)
-            self.pendingOpenWindows.remove(id)
-            self.diagLog.debug("Dismissing window with id: \(id)")
-            self.dismissWindowAction?(id: id)
-        }
-    }
-
-    /// onWindowChange supplies the live window, or nil after close and view teardown; mirror visibility into openWindows.
-    func windowVisibilityChanged(id: ThawWindowIdentifier, window: NSWindow?) {
-        guard let window else {
-            trackedWindows[id] = nil
-            windowVisibilityCancellables[id] = nil
-            openWindows.remove(id)
-            if id == .settings {
-                navigationState.cancelSettingsPresentation()
-                navigationState.isSettingsPresented = false
-            }
-            // The window's whole SwiftUI graph is now unreachable; make the
-            // footprint reflect that rather than wait on malloc.
-            MemoryReclaimer.scheduleRelief(reason: "\(id) closed")
-            return
-        }
-
-        trackedWindows[id] = window
-        openWindows.insert(id)
-        windowVisibilityCancellables[id] = window.publisher(for: \.isVisible)
-            .removeDuplicates()
-            .sink { [weak self] isVisible in
-                self?.handleWindowVisibilityChanged(id: id, isVisible: isVisible)
-            }
-    }
-
-    /// Gates scene content because SwiftUI retains closed NSWindows and would otherwise retain every built view.
-    /// Set before ordering the window front so content returns before display.
-    func isWindowOpen(_ id: ThawWindowIdentifier) -> Bool {
-        openWindows.contains(id)
-    }
-
-    /// Applies the side effects of a tracked window's visibility changing.
-    private func handleWindowVisibilityChanged(id: ThawWindowIdentifier, isVisible: Bool) {
-        if isVisible {
-            openWindows.insert(id)
-        } else {
-            openWindows.remove(id)
-            // Removing the id tears down scene content, allowing its memory pages to be reclaimed.
-            MemoryReclaimer.scheduleRelief(reason: "\(id) closed")
-        }
-
-        guard id == .settings else { return }
-        navigationState.isSettingsPresented = isVisible
-
-        if isVisible {
-            // Show consent only for completed tours without an update answer.
-            // Unseen tours answer in the permissions window, even alongside restored Settings; wait for consent.
-            if Constants.supportsSparkleUpdates,
-               Defaults.bool(forKey: .hasSeenOnboarding),
-               !Defaults.bool(forKey: .hasSeenUpdateConsent)
-            {
-                isUpdateConsentPresented = true
-            } else if Defaults.bool(forKey: .hasSeenUpdateConsent) {
-                startUpdaterIfNeeded()
-            }
-
-            // Select About after construction to avoid losing sidebar rendering; defer What's New while the consent sheet is open.
-            if navigationState.isWhatsNewRequested, !isUpdateConsentPresented {
-                navigationState.settingsNavigationIdentifier = .about
-            }
-        } else {
-            deactivate(withPolicy: .accessory)
-        }
-    }
-
-    /// Stores window actions from a live SwiftUI scene and fulfills any open
-    /// request that arrived during application launch before scene setup.
-    func registerWindowActions(openWindow: OpenWindowAction, dismissWindow: DismissWindowAction) {
-        openWindowAction = openWindow
-        dismissWindowAction = dismissWindow
-
-        let pending = pendingOpenWindows
-        pendingOpenWindows.removeAll()
-        for id in pending {
-            diagLog.debug("Fulfilling pending window request for id: \(id)")
-            openWindow(id: id)
-        }
-    }
-
-    // MARK: - Activation and permissions
-
-    /// Centralizes policy changes for focus-drop attribution; DiagLog avoids stack-capture cost when diagnostics are off.
-    private func applyActivationPolicy(
-        _ policy: NSApplication.ActivationPolicy,
-        callerFile: String = #fileID,
-        callerLine: Int = #line
-    ) {
-        diagLog.debug(
-            "focus-trace setActivationPolicy \(policy.rawValue) from \(callerFile):\(callerLine) stack=\(Thread.callStackSymbols.prefix(8).joined(separator: " | "))"
-        )
-        NSApp.setActivationPolicy(policy)
-    }
-
-    func restoreAccessoryPolicyIfUnused(
-        callerFile: String = #fileID,
-        callerLine: Int = #line
-    ) {
-        diagLog.debug(
-            "focus-trace restoreAccessoryPolicyIfUnused from \(callerFile):\(callerLine) stack=\(Thread.callStackSymbols.prefix(8).joined(separator: " | "))"
-        )
-        guard NSApp.activationPolicy() == .regular,
-              openWindows.isEmpty,
-              pendingOpenWindows.isEmpty,
-              !navigationState.isSettingsPresented,
-              !navigationState.isThawBarPresented,
-              !navigationState.isSearchPresented,
-              !menuBarManager.layoutEditorPanel.isShown,
-              !menuBarManager.isHidingApplicationMenus,
-              NSApp.modalWindow == nil,
-              !NSApp.windows.contains(where: {
-                  ($0.isVisible || $0.isMiniaturized) && ($0.canBecomeKey || $0.canBecomeMain)
-              })
-        else { return }
-
-        diagLog.debug("No windows or panels need activation, switching to accessory policy")
-        applyActivationPolicy(.accessory)
-    }
-
-    /// Reassert activation through NSRunningApplication after policy changes because NSApp.activate alone is unreliable.
-    /// Prefer handoff from the frontmost app to avoid a Dock bounce.
-    func activate(
-        withPolicy policy: NSApplication.ActivationPolicy? = nil,
-        callerFile: String = #fileID,
-        callerLine: Int = #line
-    ) {
-        diagLog.debug(
-            "focus-trace activate policy=\(String(describing: policy)) from \(callerFile):\(callerLine) stack=\(Thread.callStackSymbols.prefix(8).joined(separator: " | "))"
-        )
-
-        if let policy {
-            applyActivationPolicy(policy)
-        }
-
-        NSApp.activate(ignoringOtherApps: true)
-
-        Task {
-            try? await Task.sleep(for: .milliseconds(50))
-            let frontmost = NSWorkspace.shared.frontmostApplication
-            diagLog.debug(
-                "focus-trace activate re-assert after 50ms frontmost=\(frontmost?.bundleIdentifier ?? "nil") stack=\(Thread.callStackSymbols.prefix(8).joined(separator: " | "))"
-            )
-            if let frontmost {
-                NSRunningApplication.current.activate(from: frontmost)
-            } else {
-                NSRunningApplication.current.activate()
-            }
-        }
-    }
-
-    /// Gives up focus, optionally dropping back to an accessory process on the
-    /// way out so the app leaves the Dock and the app switcher.
-    func deactivate(
-        withPolicy policy: NSApplication.ActivationPolicy? = nil,
-        callerFile: String = #fileID,
-        callerLine: Int = #line
-    ) {
-        diagLog.debug(
-            "focus-trace deactivate policy=\(String(describing: policy)) from \(callerFile):\(callerLine) stack=\(Thread.callStackSymbols.prefix(8).joined(separator: " | "))"
-        )
-
-        if let policy {
-            applyActivationPolicy(policy)
-        }
-        NSApp.deactivate()
-    }
-
-    /// Whether the app currently holds the grant named by key.
-    func isPermissionGranted(_ key: AppPermissions.PermissionKey) -> Bool {
-        switch key {
-        case .accessibility: permissions.accessibility.hasPermission
-        case .screenRecording: permissions.screenRecording.hasPermission
-        case .fullDiskAccess: permissions.fullDiskAccess.hasPermission
-        case .controlCenterAppList: permissions.controlCenterAppList.hasPermission
-        }
     }
 }

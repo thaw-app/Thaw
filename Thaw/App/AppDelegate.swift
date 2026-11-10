@@ -164,7 +164,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationSupportsSecureRestorableState(_: NSApplication) -> Bool {
         // This only declares secure coding for restorable state; window
-        // restoration itself is switched off per scene in ThawWindow.
+        // restoration itself is switched off in ThawWindowConfiguration.
         return true
     }
 
@@ -242,9 +242,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         withReplyEvent _: NSAppleEventDescriptor
     ) {
         guard
-            let urlString = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))?.stringValue,
-            let url = URL(string: urlString),
-            url.scheme?.lowercased() == "thaw"
+            let urlString = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))?.stringValue, let url = URL(string: urlString), url.scheme?.lowercased() == "thaw"
         else { return }
 
         handleURL(url, sender: SettingsURISender.identify(from: event))
@@ -425,9 +423,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     #if DEBUG
         /// Extracts manual bundleId from URL query parameter (DEBUG builds only).
         private func extractManualBundleId(from url: URL) -> String? {
-            guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-                  let bundleId = components.queryItems?.first(where: { $0.name == "bundleId" })?.value,
-                  !bundleId.isEmpty
+            guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false), let bundleId = components.queryItems?.first(where: { $0.name == "bundleId" })?.value, !bundleId.isEmpty
             else {
                 return nil
             }

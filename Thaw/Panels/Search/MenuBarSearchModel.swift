@@ -74,6 +74,9 @@ final class MenuBarSearchModel {
     @ObservationIgnored
     private let captureSlot = TaskSlot()
 
+    @ObservationIgnored
+    var focusTask: Task<Void, Never>?
+
     /// Fuzzy matcher that ranks items against the query. One instance for all
     /// three modes, so they agree on what counts as a match at all.
     let fuse = Fuse(threshold: 0.5)
@@ -125,8 +128,20 @@ final class MenuBarSearchModel {
     /// again. Called when the search panel's mode stops previewing rows over
     /// the menu bar color.
     func detach() {
+        focusTask?.cancel()
+        focusTask = nil
         cancellables.removeAll()
         clearAverageColorInfo()
+    }
+
+    /// Runs a delayed UI focus step unless cancelled before the delay elapses.
+    func scheduleFocus(after delay: Duration = .milliseconds(50), _ action: @escaping @MainActor () -> Void) {
+        focusTask?.cancel()
+        focusTask = Task { @MainActor in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            autoreleasepool { action() }
+        }
     }
 
     /// Clears averageColorInfo and cancels any in-flight capture so a late
@@ -153,10 +168,7 @@ final class MenuBarSearchModel {
                 for: displayID,
                 from: onScreenWindows
             )?.image
-            guard let color = image?.averageColor(option: .ignoreAlpha) else {
-                return
-            }
-            guard let self, self.captureSlot.isCurrent(ticket) else { return }
+            guard let color = image?.averageColor(option: .ignoreAlpha), let self, self.captureSlot.isCurrent(ticket) else { return }
             let info = MenuBarAverageColorInfo(color: color, source: .menuBarWindow)
             if self.averageColorInfo != info {
                 self.averageColorInfo = info
