@@ -48,7 +48,6 @@ struct LayoutBarsSection: View {
                     HiddenItemCaptureButton()
                         .settingsSearchAnchor("layout.captureHiddenItems")
                     if showsPopOutButton {
-                        ThawBadge.workInProgress
                         popOutButton
                     }
                 }
@@ -68,9 +67,14 @@ struct LayoutBarsSection: View {
     }
 
     private var popOutButton: some View {
-        Button("Pop Out Editor", systemImage: "rectangle.portrait.and.arrow.right") {
+        Button {
             guard let screen = MenuBarLayoutEditorPanel.defaultScreen else { return }
             appState.menuBarManager.layoutEditorPanel.showWindow(on: screen)
+        } label: {
+            HStack(spacing: ThawSpacing.compact) {
+                Label("Pop Out Editor", systemImage: "rectangle.portrait.and.arrow.right")
+                ThawBadge.workInProgress
+            }
         }
         .buttonStyle(.settingsGlass)
         .help("Opens Layout in a window that stays on this menu bar while you work.")
