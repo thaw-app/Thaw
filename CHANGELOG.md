@@ -128,6 +128,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 
 #### Other
 
+- **With the Native hiding method, Thaw no longer watches every click and drag for a press on the clock.** That bridge, and the one for the Notification Center shortcut, are only needed with Standard, so they are now only installed with it.
 - **Turning "Show release notes after an update" off now keeps the window closed** after Thaw updates.
 - **A Mac without a battery draws its widget icon in the menu bar's own ink** instead of as a fixed grey picture.
 - **Reset Thaw also puts back the widgets switch, the recording alert position and Remember last search,** and forgets what it checked about your allowed apps.

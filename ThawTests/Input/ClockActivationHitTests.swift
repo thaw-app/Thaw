@@ -11,6 +11,13 @@ import Testing
 @testable import Thaw
 
 struct ClockActivationHitTests {
+    @Test("The bridge taps are only possible with a real engine and Native hiding off")
+    func bridgeNeedsTheStandardMethod() {
+        #expect(ClockBridgeAvailability.isPossible(engineIsOperational: true, nativeHidingActive: false))
+        #expect(!ClockBridgeAvailability.isPossible(engineIsOperational: true, nativeHidingActive: true))
+        #expect(!ClockBridgeAvailability.isPossible(engineIsOperational: false, nativeHidingActive: false))
+    }
+
     private let bands = [
         CGRect(x: 0, y: 0, width: 1470, height: 40),
         CGRect(x: -1920, y: -200, width: 1920, height: 24),
