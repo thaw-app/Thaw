@@ -232,6 +232,44 @@ struct LayoutUndoCoverageTests {
         #expect(undoManager.canUndo)
     }
 
+    @Test("An undo step whose anchor has gone puts the item at the end of its old section")
+    func undoStepFallsBackWhenAnchorIsGone() async {
+        let plan = LayoutBatchMovePlan(itemIDs: ["b"], source: .hidden, target: .visible, previousTargetOrder: ["c"], targetOrder: ["c", "b"])
+        var asked = [LayoutBatchMove]()
+        let step = LayoutBatchMove(itemIDs: ["b"], section: .visible, placement: .after("a"))
+
+        let outcome = await LayoutBatchMoveUndo.run(step) { move in
+            asked.append(move)
+            return move.afterID == "a" ? .refused(.unknownAnchor("a")) : .moved(plan)
+        }
+
+        #expect(outcome == .moved(plan))
+        #expect(asked == [step, LayoutBatchMove(itemIDs: ["b"], section: .visible, placement: .end)])
+    }
+
+    @Test("An undo step that goes through, or is refused for another reason, is not retried")
+    func undoStepIsNotRetriedOtherwise() async {
+        let plan = LayoutBatchMovePlan(itemIDs: ["b"], source: .hidden, target: .visible, previousTargetOrder: [], targetOrder: ["b"])
+        let step = LayoutBatchMove(itemIDs: ["b"], section: .visible, placement: .start)
+        for answer in [LayoutBatchMoveOutcome.moved(plan), .refused(.moveRefused)] {
+            var calls = 0
+            let outcome = await LayoutBatchMoveUndo.run(step) { _ in
+                calls += 1
+                return answer
+            }
+            #expect(outcome == answer)
+            #expect(calls == 1)
+        }
+    }
+
+    @Test("A refused undo step is reported; steps that moved or changed nothing are not")
+    func refusedUndoIsReported() {
+        let plan = LayoutBatchMovePlan(itemIDs: ["a"], source: .visible, target: .hidden, previousTargetOrder: [], targetOrder: ["a"])
+        #expect(LayoutBatchMoveUndo.refusal(for: [.moved(plan), .unchanged(plan)]) == nil)
+        #expect(LayoutBatchMoveUndo.refusal(for: []) == nil)
+        #expect(LayoutBatchMoveUndo.refusal(for: [.moved(plan), .refused(.moveRefused)]) != nil)
+    }
+
     @Test("The registration probe sees a step being registered")
     func probeSeesARegistration() {
         let world = World()
