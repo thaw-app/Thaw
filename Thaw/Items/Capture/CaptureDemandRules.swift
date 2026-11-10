@@ -66,10 +66,34 @@ extension MenuBarItemImageCache {
         /// Simple Mode has no sidebar, so the identifier above never names its
         /// pane and cannot answer for it.
         let isSimpleModeSettings: Bool
+        let isLayoutEditorPresented: Bool
+
+        init(
+            isThawBarPresented: Bool,
+            isSearchPresented: Bool,
+            isAppFrontmost: Bool,
+            isSettingsPresented: Bool,
+            settingsNavigationIdentifier: SettingsNavigationIdentifier?,
+            isItemHotkeyListExpanded: Bool,
+            isSimpleModeSettings: Bool,
+            isLayoutEditorPresented: Bool = false
+        ) {
+            self.isThawBarPresented = isThawBarPresented
+            self.isSearchPresented = isSearchPresented
+            self.isAppFrontmost = isAppFrontmost
+            self.isSettingsPresented = isSettingsPresented
+            self.settingsNavigationIdentifier = settingsNavigationIdentifier
+            self.isItemHotkeyListExpanded = isItemHotkeyListExpanded
+            self.isSimpleModeSettings = isSimpleModeSettings
+            self.isLayoutEditorPresented = isLayoutEditorPresented
+        }
 
         var liveCaptureScope: LiveCaptureScope {
             if isSearchPresented {
                 return .visible
+            }
+            if isLayoutEditorPresented {
+                return .allSections
             }
             if isAppFrontmost, isSettingsPresented {
                 if isSimpleModeSettings {

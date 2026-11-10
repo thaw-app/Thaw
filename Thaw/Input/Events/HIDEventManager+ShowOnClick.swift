@@ -100,10 +100,7 @@ extension HIDEventManager {
 
         // A second click inside the double-click window is the always-hidden
         // gesture, timed here because clickCount cannot see a quiet first click.
-        if let pending = pendingMenuBarClick,
-           pending.displayID == screen.displayID,
-           ContinuousClock.now - pending.timestamp < .seconds(NSEvent.doubleClickInterval)
-        {
+        if let pending = pendingMenuBarClick, pending.displayID == screen.displayID, ContinuousClock.now - pending.timestamp < .seconds(NSEvent.doubleClickInterval) {
             cancelPendingMenuBarClick()
             // Not re-armed: the first click's guard is still inside its window,
             // and re-arming resets guardMouseUpState, stranding the mouse-up.
@@ -122,26 +119,21 @@ extension HIDEventManager {
         if modifierFlags.contains(.option) {
             cancelPendingMenuBarClick()
             disarmShowOnClickGuard()
-            if let alwaysHiddenSection = appState.menuBarManager.section(withName: .alwaysHidden),
-               alwaysHiddenSection.isEnabled
-            {
+            if let alwaysHiddenSection = appState.menuBarManager.section(withName: .alwaysHidden), alwaysHiddenSection.isEnabled {
                 revealSection(.alwaysHidden)
             }
             return
         }
 
         guard
-            let hiddenSection = appState.menuBarManager.section(withName: .hidden),
-            hiddenSection.isEnabled
+            let hiddenSection = appState.menuBarManager.section(withName: .hidden), hiddenSection.isEnabled
         else {
             return
         }
 
         // With always-hidden showing in the Thaw Bar, a plain click closes it
         // rather than switching the bar to the hidden section.
-        if appState.menuBarManager.thawBarPanel.currentSection == .alwaysHidden,
-           let alwaysHiddenSection = appState.menuBarManager.section(withName: .alwaysHidden)
-        {
+        if appState.menuBarManager.thawBarPanelIfCreated?.currentSection == .alwaysHidden, let alwaysHiddenSection = appState.menuBarManager.section(withName: .alwaysHidden) {
             cancelPendingMenuBarClick()
             disarmShowOnClickGuard()
             Self.diagLog.debug("click: closing always-hidden in the Thaw Bar")
@@ -324,8 +316,7 @@ extension HIDEventManager {
                 return
             }
             await MainActor.run {
-                guard self?.showOnClickGuardDeferredDisarmToken == token else { return }
-                guard self?.guardMouseUpState == .swallowingThenDisarm else { return }
+                guard self?.showOnClickGuardDeferredDisarmToken == token, self?.guardMouseUpState == .swallowingThenDisarm else { return }
                 self?.showOnClickGuardDeferredDisarmToken = nil
                 self?.showOnClickGuardDeferredDisarmTask = nil
                 self?.guardMouseUpState = .idle
@@ -372,13 +363,7 @@ extension HIDEventManager {
 
     func isPointInsideShowOnClickGuardRegion(_ point: CGPoint) -> Bool {
         expireShowOnClickGuardIfNeeded()
-        guard let region = showOnClickGuardRegion,
-              let displayID = showOnClickGuardDisplayID
-        else {
-            return false
-        }
-
-        guard NSScreen.screenWithMouse?.displayID == displayID else {
+        guard let region = showOnClickGuardRegion, let displayID = showOnClickGuardDisplayID, NSScreen.screenWithMouse?.displayID == displayID else {
             return false
         }
 
@@ -402,8 +387,7 @@ extension HIDEventManager {
         screen: NSScreen
     ) {
         guard
-            configuration.autoRehide,
-            case .smart = configuration.rehideStrategy
+            configuration.autoRehide, case .smart = configuration.rehideStrategy
         else {
             return
         }
@@ -412,20 +396,18 @@ extension HIDEventManager {
         // or the Thaw Bar is how the user drives the sections, not a signal to
         // put them away.
         if
-            let controlItem = appState.menuBarManager.controlItem(withName: .visible),
-            event.window === controlItem.window
+            let controlItem = appState.menuBarManager.controlItem(withName: .visible), event.window === controlItem.window
         {
             return
         }
-        if event.window === appState.menuBarManager.thawBarPanel {
+        if let thawBarPanel = appState.menuBarManager.thawBarPanelIfCreated, event.window === thawBarPanel {
             return
         }
 
         // There is nothing to rehide unless something is showing, and clicks
         // that landed on the menu bar itself belong to the show-on-click path.
         guard
-            appState.menuBarManager.hasVisibleSection,
-            !isMouseInsideMenuBar(appState: appState, screen: screen)
+            appState.menuBarManager.hasVisibleSection, !isMouseInsideMenuBar(appState: appState, screen: screen)
         else {
             return
         }

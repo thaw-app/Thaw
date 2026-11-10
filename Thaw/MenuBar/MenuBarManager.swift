@@ -144,14 +144,69 @@ final class MenuBarManager {
     private var isManuallyHidingApplicationMenus = false
     private var nativeMenuBarStateChangedAt: ContinuousClock.Instant?
 
-    let thawBarPanel = ThawBarPanel()
+    @ObservationIgnored
+    private weak var displayEnvironment: DisplayEnvironment?
 
-    let searchPanel = MenuBarSearchPanel()
+    private(set) var thawBarPanelIfCreated: ThawBarPanel?
+
+    var thawBarPanel: ThawBarPanel {
+        if let thawBarPanelIfCreated {
+            return thawBarPanelIfCreated
+        }
+        let panel = ThawBarPanel()
+        thawBarPanelIfCreated = panel
+        if let appState, let displayEnvironment {
+            panel.performSetup(
+                with: appState,
+                displayInvalidations: displayEnvironment.invalidations,
+                displaySettlements: displayEnvironment.settlements
+            )
+        }
+        return panel
+    }
+
+    private(set) var searchPanelIfCreated: MenuBarSearchPanel?
+
+    var searchPanel: MenuBarSearchPanel {
+        if let searchPanelIfCreated {
+            return searchPanelIfCreated
+        }
+        let panel = MenuBarSearchPanel()
+        searchPanelIfCreated = panel
+        if let appState, let displayEnvironment {
+            panel.performSetup(with: appState, displayInvalidations: displayEnvironment.invalidations)
+        }
+        return panel
+    }
 
     /// Standalone appearance editor for changes without opening Settings.
-    let appearanceEditorPanel = MenuBarAppearanceEditorPanel()
+    private(set) var appearanceEditorPanelIfCreated: MenuBarAppearanceEditorPanel?
 
-    let layoutEditorPanel = MenuBarLayoutEditorPanel()
+    var appearanceEditorPanel: MenuBarAppearanceEditorPanel {
+        if let appearanceEditorPanelIfCreated {
+            return appearanceEditorPanelIfCreated
+        }
+        let panel = MenuBarAppearanceEditorPanel()
+        appearanceEditorPanelIfCreated = panel
+        if let appState {
+            panel.performSetup(with: appState)
+        }
+        return panel
+    }
+
+    private(set) var layoutEditorPanelIfCreated: MenuBarLayoutEditorPanel?
+
+    var layoutEditorPanel: MenuBarLayoutEditorPanel {
+        if let layoutEditorPanelIfCreated {
+            return layoutEditorPanelIfCreated
+        }
+        let panel = MenuBarLayoutEditorPanel()
+        layoutEditorPanelIfCreated = panel
+        if let appState, let displayEnvironment {
+            panel.performSetup(with: appState, displayInvalidations: displayEnvironment.invalidations)
+        }
+        return panel
+    }
 
     /// Non-optional platform controller behind an interface so app callers need no platform type.
     private(set) var sectionController: any MenuBarSectionControlling = InertSectionController()
@@ -282,13 +337,14 @@ final class MenuBarManager {
     func performSetup(with appState: AppState, activeDisplayWatcher: ActiveMenuBarDisplayWatcher, displays: DisplayEnvironment) {
         self.appState = appState
         self.activeDisplayWatcher = activeDisplayWatcher
+        self.displayEnvironment = displays
         configuration = appState.settings
         menuOpenMonitor = appState.itemManager.menuOpenMonitor
         installObservers()
-        thawBarPanel.performSetup(with: appState, displayInvalidations: displays.invalidations, displaySettlements: displays.settlements)
-        searchPanel.performSetup(with: appState, displayInvalidations: displays.invalidations)
-        appearanceEditorPanel.performSetup(with: appState)
-        layoutEditorPanel.performSetup(with: appState, displayInvalidations: displays.invalidations)
+        thawBarPanelIfCreated?.performSetup(with: appState, displayInvalidations: displays.invalidations, displaySettlements: displays.settlements)
+        searchPanelIfCreated?.performSetup(with: appState, displayInvalidations: displays.invalidations)
+        appearanceEditorPanelIfCreated?.performSetup(with: appState)
+        layoutEditorPanelIfCreated?.performSetup(with: appState, displayInvalidations: displays.invalidations)
         for section in sections {
             section.performSetup(with: appState, displays: displays)
         }
@@ -307,8 +363,7 @@ final class MenuBarManager {
         revealReflow.observe(revealedSectionChanges)
         nativeAppHidingExperiment.start(controller: controller, settings: appState.settings.advanced)
         systemExtraTakeover.start(controller: controller, settings: appState.settings.advanced) { [weak appState] identifier in
-            guard let itemManager = appState?.itemManager,
-                  itemManager.knownItemIdentifiers.insert(identifier).inserted
+            guard let itemManager = appState?.itemManager, itemManager.knownItemIdentifiers.insert(identifier).inserted
             else {
                 return
             }
@@ -399,10 +454,7 @@ final class MenuBarManager {
             return
         }
         guard
-            let hiddenSection = section(withName: .hidden),
-            let screen = appState.hidEventManager.bestScreen(appState: appState),
-            !appState.hidEventManager.isMouseInsideMenuBar(appState: appState, screen: screen),
-            !appState.hidEventManager.isMouseInsideThawBar(appState: appState)
+            let hiddenSection = section(withName: .hidden), let screen = appState.hidEventManager.bestScreen(appState: appState), !appState.hidEventManager.isMouseInsideMenuBar(appState: appState, screen: screen), !appState.hidEventManager.isMouseInsideThawBar(appState: appState)
         else {
             return
         }
@@ -430,8 +482,7 @@ final class MenuBarManager {
         }
 
         if
-            configuration.rehideStrategy == .smart,
-            await menuOpenMonitor?.isAnyMenuOpen() == true
+            configuration.rehideStrategy == .smart, await menuOpenMonitor?.isAnyMenuOpen() == true
         {
             return
         }
@@ -594,8 +645,7 @@ final class MenuBarManager {
         captureGeneration += 1
         averageColors = cache
         if
-            let displayID = NSScreen.screenWithActiveMenuBar?.displayID,
-            let cached = cache[displayID]
+            let displayID = NSScreen.screenWithActiveMenuBar?.displayID, let cached = cache[displayID]
         {
             averageColorInfo = cached
         }
@@ -718,11 +768,7 @@ final class MenuBarManager {
 
         let activeDisplayID = (NSScreen.screenWithActiveMenuBar ?? NSScreen.main)?.displayID ?? CGMainDisplayID()
         guard
-            configuration.hideApplicationMenus,
-            !shouldUseThawBar(for: activeDisplayID),
-            !isMenuBarHiddenBySystem,
-            !appState.activeSpace.isFullscreen,
-            !appState.navigationState.isSettingsPresented
+            configuration.hideApplicationMenus, !shouldUseThawBar(for: activeDisplayID), !isMenuBarHiddenBySystem, !appState.activeSpace.isFullscreen, !appState.navigationState.isSettingsPresented
         else {
             return
         }
@@ -749,9 +795,7 @@ final class MenuBarManager {
             // Let WindowServer settle the expanded section before checking its presentation mode.
             try? await Task.sleep(for: .milliseconds(50))
             guard
-                !Task.isCancelled,
-                NSScreen.screenWithActiveMenuBar?.displayID == displayID,
-                let shownSection
+                !Task.isCancelled, NSScreen.screenWithActiveMenuBar?.displayID == displayID, let shownSection
             else {
                 return
             }
@@ -906,9 +950,8 @@ final class MenuBarManager {
         needsPalette: Bool
     ) async -> (CGDirectDisplayID, MenuBarAverageColorInfo, PaletteCapture?)? {
         guard let sample = await ScreenCapture.withOneshotCaptureTicket({
-                  await MenuBarColorSampler.captureStrip(for: displayID, from: windows)
-              }),
-              let color = sample.image.averageColor(option: .ignoreAlpha)
+            await MenuBarColorSampler.captureStrip(for: displayID, from: windows)
+        }), let color = sample.image.averageColor(option: .ignoreAlpha)
         else {
             return nil
         }
@@ -943,12 +986,15 @@ final class MenuBarManager {
         guard let reason else { return nil }
         diagLog.debug("Refreshing wallpaper palette for display \(displayID): \(reason)")
 
-        // The one-pixel strip suffices for averaging, but a palette needs the wallpaper's full height.
+        // The one-pixel strip suffices for averaging; downscale the full-wallpaper
+        // capture in WindowServer since dominantColors() only samples a 48x48 grid.
         let palette = await ScreenCapture.withOneshotCaptureTicket {
             await ScreenCapture.captureWindows(
                 with: sample.windowIDs,
                 screenBounds: sample.wallpaperBounds,
-                option: .nominalResolution
+                option: .nominalResolution,
+                targetPixelWidth: 64,
+                targetPixelHeight: 64
             )
         }?.dominantColors()
         // Retain the previous palette on misses or empty swatches to avoid losing tint or falling back to average color.
@@ -1124,10 +1170,7 @@ final class MenuBarManager {
 
     @objc private func applyProfileFromMenu(_ menuItem: NSMenuItem) {
         guard
-            let profileID = menuItem.representedObject as? UUID,
-            let appState,
-            appState.profileManager.layoutTask == nil,
-            profileID != appState.profileManager.activeProfileID
+            let profileID = menuItem.representedObject as? UUID, let appState, appState.profileManager.layoutTask == nil, profileID != appState.profileManager.activeProfileID
         else { return }
         Task { [weak self] in
             do {
@@ -1243,8 +1286,7 @@ final class MenuBarManager {
             isZenModeEngagedAutomatically = true
         } else {
             automaticZenReasons.remove(reason)
-            guard isZenModeActive, isZenModeEngagedAutomatically,
-                  automaticZenReasons.isEmpty else { return }
+            guard isZenModeActive, isZenModeEngagedAutomatically, automaticZenReasons.isEmpty else { return }
             deactivateZenMode()
             isZenModeEngagedAutomatically = false
         }
@@ -1431,7 +1473,7 @@ final class MenuBarManager {
     }
 
     func dismissLayoutEditorPanel() {
-        layoutEditorPanel.close()
+        layoutEditorPanelIfCreated?.close()
     }
 
     @objc private func showAppearanceEditorPanel() {
@@ -1444,7 +1486,7 @@ final class MenuBarManager {
     }
 
     func dismissAppearanceEditorPanel() {
-        appearanceEditorPanel.close()
+        appearanceEditorPanelIfCreated?.close()
     }
 
     // MARK: - Sections

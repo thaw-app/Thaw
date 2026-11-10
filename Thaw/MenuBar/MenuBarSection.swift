@@ -156,10 +156,7 @@ final class MenuBarSection {
         // An open Thaw Bar counts as revealed even while the assertion conceals its items.
         // A second click must close it, not rerun prewarm and flash hidden items.
         let presentedName = name == .alwaysHidden ? Name.alwaysHidden : Name.hidden
-        if let panel = menuBarManager?.thawBarPanel,
-           panel.presentation == .section,
-           panel.currentSection == presentedName
-        {
+        if let panel = menuBarManager?.thawBarPanelIfCreated, panel.presentation == .section, panel.currentSection == presentedName {
             return false
         }
         return appState?.menuBarManager.sectionController.isSectionHidden(name) ?? true
@@ -282,7 +279,7 @@ final class MenuBarSection {
             return
         }
 
-        menuBarManager.thawBarPanel.close()
+        menuBarManager.thawBarPanelIfCreated?.close()
         menuBarManager.sectionController.show(name)
         switch name {
         case .visible, .hidden:
@@ -313,9 +310,7 @@ final class MenuBarSection {
             // Skip boundary repair: preferred-position writes invalidate Thaw's hit target.
             try? await Task.sleep(for: .milliseconds(500))
             guard
-                let appState,
-                !Task.isCancelled,
-                appState.menuBarManager.sectionController.revealedSection == revealedName
+                let appState, !Task.isCancelled, appState.menuBarManager.sectionController.revealedSection == revealedName
             else {
                 return
             }
@@ -344,7 +339,7 @@ final class MenuBarSection {
             } else {
                 menuBarManager.sectionController.hideRevealedSections()
             }
-            menuBarManager.thawBarPanel.close()
+            menuBarManager.thawBarPanelIfCreated?.close()
         }
         resetClosedPresentationState(using: menuBarManager)
         stopRehideChecks()
@@ -381,8 +376,7 @@ final class MenuBarSection {
         rehideMonitor?.stop()
 
         guard
-            let appState,
-            configuration.autoRehide
+            let appState, configuration.autoRehide
         else {
             return
         }
@@ -435,9 +429,7 @@ final class MenuBarSection {
     @MainActor
     private func restartTimedRehideTimer() async {
         guard
-            appState != nil,
-            configuration.autoRehide,
-            case .timed = configuration.rehideStrategy
+            appState != nil, configuration.autoRehide, case .timed = configuration.rehideStrategy
         else {
             return
         }
@@ -456,9 +448,7 @@ final class MenuBarSection {
     ) -> Task<Void, Never> {
         Task { @MainActor [weak self, weak appState] in
             guard
-                let self,
-                let appState,
-                await self.waitForContinuousRehideEligibility(
+                let self, let appState, await self.waitForContinuousRehideEligibility(
                     appState: appState,
                     interval: interval
                 )

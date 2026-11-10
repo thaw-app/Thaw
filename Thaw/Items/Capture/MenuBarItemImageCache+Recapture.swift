@@ -289,12 +289,7 @@ extension MenuBarItemImageCache {
         // Governable system extras can retain the last settled visible glyph.
         var retainedPriorCount = 0
         for tag in invalidatedTags {
-            if !unconditionallyInvalidatedTags.contains(tag),
-               newImages[tag] == nil,
-               let existing = capturesByTag[tag],
-               !existing.isEffectivelyBlank,
-               existing.pointSize.width >= Self.minimumTrustedGlyphWidth
-            {
+            if !unconditionallyInvalidatedTags.contains(tag), newImages[tag] == nil, let existing = capturesByTag[tag], !existing.isEffectivelyBlank, existing.pointSize.width >= Self.minimumTrustedGlyphWidth {
                 retainedPriorCount += 1
                 continue
             }
@@ -628,9 +623,11 @@ extension MenuBarItemImageCache {
         var cover: @MainActor () -> Void = {
             // No cover unless the caller supplies one, as in tests.
         }
+
         var uncover: @MainActor () -> Void = {
             // Nothing to take down when no cover was raised.
         }
+
         /// Asked right before each batch's reveal, since the hiding method can
         /// change while a pass is suspended between batches.
         var mayReveal: @MainActor () -> Bool = { true }
@@ -659,9 +656,7 @@ extension MenuBarItemImageCache {
         scale: CGFloat,
         missPolicy: RevealMissPolicy
     ) async {
-        guard !items.isEmpty, !Task.isCancelled,
-              !skipCaptureWhileScreenLocked("grouped reveal capture"),
-              let appState else { return }
+        guard !items.isEmpty, !Task.isCancelled, !skipCaptureWhileScreenLocked("grouped reveal capture"), let appState else { return }
 
         // Before the first await: the display the caller resolved these items
         // and displayID against. Every batch answers to this one.
@@ -725,8 +720,7 @@ extension MenuBarItemImageCache {
         for batch in batches {
             // A reveal during a move reflows the bar under the drag.
             await moveActivity?.waitUntilIdle()
-            guard !Task.isCancelled, !skipCaptureWhileScreenLocked("revealing capture batch"),
-                  sources.mayReveal() else { return }
+            guard !Task.isCancelled, !skipCaptureWhileScreenLocked("revealing capture batch"), sources.mayReveal() else { return }
 
             sources.cover()
             for item in batch {
@@ -827,10 +821,7 @@ extension MenuBarItemImageCache {
         let stoppedEarly = Task.isCancelled
         if missPolicy == .dropUntrustedEntries, !stoppedEarly {
             for tag in captureResult.invalidatedTags {
-                if !captureResult.unconditionallyInvalidatedTags.contains(tag),
-                   let existing = capturesByTag[tag],
-                   Self.isTrustedGlyph(existing)
-                {
+                if !captureResult.unconditionallyInvalidatedTags.contains(tag), let existing = capturesByTag[tag], Self.isTrustedGlyph(existing) {
                     continue
                 }
                 removeCapture(for: tag)
@@ -846,10 +837,7 @@ extension MenuBarItemImageCache {
                 // A miss never wipes a settled glyph. Under the dropping
                 // policy a blank or chevron-width entry goes, so a failed
                 // reveal cannot leave a stale thumbnail behind.
-                if missPolicy == .dropUntrustedEntries, !stoppedEarly,
-                   let existing = capturesByTag[tag],
-                   !Self.isTrustedGlyph(existing)
-                {
+                if missPolicy == .dropUntrustedEntries, !stoppedEarly, let existing = capturesByTag[tag], !Self.isTrustedGlyph(existing) {
                     removeCapture(for: tag)
                     accessTimestamps.removeValue(forKey: tag)
                 }
@@ -888,8 +876,7 @@ extension MenuBarItemImageCache {
         await beginConcealedPrewarm(tally: tally)
         defer { endConcealedPrewarm() }
         // The hiding method can change while a pass waits its turn.
-        guard !Task.isCancelled, !skipCaptureWhileScreenLocked("queued prewarm"),
-              ConcealedPrewarmGate.mayReveal(for: appState) else { return }
+        guard !Task.isCancelled, !skipCaptureWhileScreenLocked("queued prewarm"), ConcealedPrewarmGate.mayReveal(for: appState) else { return }
 
         let sections = requestedSections.reduce(into: [MenuBarSection.Name]()) { result, section in
             guard section != .visible, !result.contains(section) else { return }
@@ -909,6 +896,12 @@ extension MenuBarItemImageCache {
                         "\(sections.map(\.rawValue))"
                 )
             }
+        }
+
+        // Hydrate cached glyphs from disk before checking which concealed items need live capture.
+        if onlyMissingImages {
+            await ensureDiskLoaded()
+            guard !Task.isCancelled else { return }
         }
 
         // Always-hidden items go through the same grouped reveal as hidden
@@ -1119,7 +1112,7 @@ extension MenuBarItemImageCache {
         }
 
         let thawBarSection: MenuBarSection.Name? = navSnapshot.isThawBarPresented
-            ? appState.menuBarManager.thawBarPanel.currentSection
+            ? appState.menuBarManager.thawBarPanelIfCreated?.currentSection
             : nil
 
         await recaptureIfWarranted(
@@ -1147,7 +1140,7 @@ extension MenuBarItemImageCache {
         let navSnapshot = makeNavigationStateSnapshot()
 
         let thawBarSection: MenuBarSection.Name? = navSnapshot.isThawBarPresented
-            ? appState.menuBarManager.thawBarPanel.currentSection
+            ? appState.menuBarManager.thawBarPanelIfCreated?.currentSection
             : nil
         let sectionsNeedingDisplay = navSnapshot.liveCaptureScope.sections(thawBarSection: thawBarSection)
 

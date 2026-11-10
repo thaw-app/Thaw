@@ -181,23 +181,29 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
         _ snapshot: [MenuBarItemTag: MenuBarItemGlyphCapture],
         concealedIdentifiers: Set<String> = []
     ) {
-        guard !snapshot.isEmpty else { return }
-        guard let url = cacheFileURL else { return }
+        guard !snapshot.isEmpty, let url = cacheFileURL else { return }
         // The file locations are resolved before parking, so the drain block
         // never has to reach for the search API from the queue.
         let legacyURL = legacyCacheFileURL
 
-        let needsDrain = diskSaveState.withLock { state -> Bool in
+        diskSaveState.withLock { state in
             state.pending = snapshot
             state.pendingConcealed = concealedIdentifiers
-            guard !state.isDrainScheduled else { return false }
+            guard !state.isDrainScheduled else { return }
             state.isDrainScheduled = true
-            return true
+            // Submit on queue under the lock so a subsequent flush() sees strict FIFO ordering.
+            queue.async {
+                self.drainPendingSave(to: url, legacyURL: legacyURL)
+            }
         }
-        guard needsDrain else { return }
+    }
 
-        queue.async {
-            self.drainPendingSave(to: url, legacyURL: legacyURL)
+    /// Waits until any already-enqueued disk save has finished writing.
+    nonisolated func flush() async {
+        await withCheckedContinuation { continuation in
+            queue.async {
+                continuation.resume()
+            }
         }
     }
 
@@ -314,18 +320,15 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
     /// false when the file is gone or was written by another version or build, which
     /// leaves the caller to write it out in full.
     private nonisolated func restampCacheFile(at url: URL, to date: Date) -> Bool {
-        guard let fileData = try? Data(contentsOf: url),
-              var root = try? PropertyListSerialization.propertyList(
-                  from: fileData,
-                  format: nil
-              ) as? [String: Any],
-              ImageCacheFileValidity.isCurrent(
-                  fileVersion: root["version"] as? Int,
-                  fileBuild: root["build"] as? String,
-                  cacheVersion: Self.cacheVersion,
-                  appBuild: ImageCacheFileValidity.appBuild
-              ),
-              root["images"] != nil
+        guard let fileData = try? Data(contentsOf: url), var root = try? PropertyListSerialization.propertyList(
+            from: fileData,
+            format: nil
+        ) as? [String: Any], ImageCacheFileValidity.isCurrent(
+            fileVersion: root["version"] as? Int,
+            fileBuild: root["build"] as? String,
+            cacheVersion: Self.cacheVersion,
+            appBuild: ImageCacheFileValidity.appBuild
+        ), root["images"] != nil
         else {
             return false
         }
@@ -384,8 +387,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
                     format: nil
                 ) as? [String: Any] ?? [:]
             }
-            guard let timestamp = root["timestamp"] as? TimeInterval,
-                  let imagesDict = root["images"] as? [String: [String: Any]] else { return nil }
+            guard let timestamp = root["timestamp"] as? TimeInterval, let imagesDict = root["images"] as? [String: [String: Any]] else { return nil }
 
             if !ImageCacheFileValidity.isCurrent(
                 fileVersion: root["version"] as? Int,
@@ -415,9 +417,16 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
         }
     }
 
-    /// Decodes one file entry into a capture, or nil when its pixels cannot
-    /// be read.
-    nonisolated func decodeEntry(_ entry: [String: Any], legacyJSON: Bool) -> MenuBarItemGlyphCapture? {
+    /// Maximum point dimension for hydrated item thumbnails; keeps decoded disk glyphs bounded.
+    static nonisolated let defaultMaxItemDimension: CGFloat = 160
+
+    /// Decodes one file entry into a bounded, immediately decoded thumbnail, or nil when unreadable.
+    nonisolated func decodeEntry(
+        _ entry: [String: Any],
+        legacyJSON: Bool,
+        maxItemDimension: CGFloat = defaultMaxItemDimension,
+        backingScaleFactor: CGFloat? = nil
+    ) -> MenuBarItemGlyphCapture? {
         // The plist stores PNG bytes natively; the legacy JSON stored them
         // base64-encoded. JSONSerialization hands back Double for the stored
         // scale, never CGFloat, so cast through it either way.
@@ -426,10 +435,18 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
         } else {
             entry["png"] as? Data
         }
-        guard let scale = entry["scale"] as? Double,
-              let data = pngData,
-              let source = CGImageSourceCreateWithData(data as CFData, nil),
-              let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil)
+        guard let scale = entry["scale"] as? Double, let data = pngData, let source = CGImageSourceCreateWithData(data as CFData, nil)
+        else { return nil }
+        let effectiveScale = max(1, backingScaleFactor ?? CGFloat(scale))
+        let maxPixelSize = max(1, Int(ceil(maxItemDimension * effectiveScale)))
+        let thumbnailOptions: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+        ]
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions as CFDictionary)
+            ?? CGImageSourceCreateImageAtIndex(source, 0, nil)
         else { return nil }
         return MenuBarItemGlyphCapture(cgImage: cgImage, scale: CGFloat(scale))
     }

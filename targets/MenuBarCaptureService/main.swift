@@ -42,10 +42,9 @@ private enum MenuBarCaptureServiceMain {
     /// closes and another opens, so exiting at once left the new request
     /// waiting out the full reply timeout on a dying process.
     ///
-    /// Long enough to outlast the app's once-a-minute refresh as well. At three
-    /// seconds the helper was started 23 times in half an hour, and each cold
-    /// start kept a capture waiting for five to seven seconds.
-    static let idleExitGrace: TimeInterval = 90
+    /// Thirty seconds bridges surface swaps without keeping helper pages
+    /// allocated while the bar UI stays idle.
+    static let idleExitGrace: TimeInterval = 30
 
     /// How long a single capture may run before the helper treats
     /// ScreenCaptureKit as wedged and dies so XPC relaunches a healthy one.
@@ -273,7 +272,7 @@ private enum MenuBarCaptureServiceMain {
 
     static func makeReply(for request: CaptureServiceRequest) async -> CaptureServiceReply {
         switch request {
-        case let .windows(ids, screenBounds, imageOptionRawValue, _):
+        case let .windows(ids, screenBounds, imageOptionRawValue, _, targetPixelWidth, targetPixelHeight):
             // The scale field is advisory in v1; the SCK path derives the
             // capture scale from the filter (or 1x for .nominalResolution).
             //
@@ -285,8 +284,7 @@ private enum MenuBarCaptureServiceMain {
             var seenIDs = Set<CGWindowID>()
             seenIDs.reserveCapacity(ids.count)
             let accepted = ids.filter { id in
-                guard id != 0, !seenIDs.contains(id), allowed.contains(id),
-                      seenIDs.count < Self.maxWindowCount
+                guard id != 0, !seenIDs.contains(id), allowed.contains(id), seenIDs.count < Self.maxWindowCount
                 else { return false }
                 seenIDs.insert(id)
                 return true
@@ -308,7 +306,9 @@ private enum MenuBarCaptureServiceMain {
             guard let image = await ScreenCapture.captureWindows(
                 with: accepted,
                 screenBounds: screenBounds,
-                option: CGWindowImageOption(rawValue: imageOptionRawValue)
+                option: CGWindowImageOption(rawValue: imageOptionRawValue),
+                targetPixelWidth: targetPixelWidth,
+                targetPixelHeight: targetPixelHeight
             ) else {
                 return captureFailureReply()
             }
@@ -392,8 +392,7 @@ private enum MenuBarCaptureServiceMain {
     /// which is how the app's defaults domain is found.
     static func enableDiagnosticLoggingIfRequested() {
         guard
-            let helperIdentifier = Bundle.main.bundleIdentifier,
-            let serviceComponent = helperIdentifier.range(
+            let helperIdentifier = Bundle.main.bundleIdentifier, let serviceComponent = helperIdentifier.range(
                 of: ".MenuBarCaptureService",
                 options: .backwards
             )
@@ -405,10 +404,7 @@ private enum MenuBarCaptureServiceMain {
 
         // XPC relaunches this helper every few seconds, so it appends to the app's
         // session log instead of minting its own, but never reopens a stale one.
-        if let sessionLog = DiagnosticLogger.shared.latestLogFile,
-           let modified = try? sessionLog.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
-           Date().timeIntervalSince(modified) < Self.sessionLogAttachWindow
-        {
+        if let sessionLog = DiagnosticLogger.shared.latestLogFile, let modified = try? sessionLog.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate, Date().timeIntervalSince(modified) < Self.sessionLogAttachWindow {
             DiagnosticLogger.shared.attachToFile(at: sessionLog)
         } else {
             DiagnosticLogger.shared.isEnabled = true

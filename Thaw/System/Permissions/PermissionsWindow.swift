@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import SwiftUI
 import ThawUI
 
@@ -66,11 +67,14 @@ private struct PermissionsFlowView: View {
 }
 
 /// The window that hosts onboarding and the access recovery screen.
-struct PermissionsWindow: Scene {
-    let appState: AppState
-
-    var body: some Scene {
-        ThawWindow(id: .permissions, appState: appState) {
+@MainActor
+enum PermissionsWindow {
+    static func makeWindow(appState: AppState, delegate: NSWindowDelegate?) -> NSWindow {
+        let initialSize = CGSize(
+            width: ThawOnboardingWindowMetrics.width,
+            height: ThawOnboardingWindowMetrics.height
+        )
+        let rootView = ThawWindowConfiguration.configuredContent(
             PermissionsFlowView()
                 .onWindowChange { window in
                     guard let window else {
@@ -90,11 +94,30 @@ struct PermissionsWindow: Scene {
                         }
                     }
                 }
-        }
-        // contentMinSize allows resizing beyond the ideal when Larger Text exceeds a step's budget.
-        .windowResizability(.contentMinSize)
-        .windowStyle(.hiddenTitleBar)
+        )
         .environment(appState)
         .environment(appState.permissions)
+
+        let window = NSWindow(
+            contentRect: NSRect(origin: .zero, size: initialSize),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        ThawWindowConfiguration.configureCommon(window, id: .permissions)
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.isMovableByWindowBackground = true
+        window.standardWindowButton(.closeButton)?.isHidden =
+            appState.permissions.permissionsState == .missing
+        window.standardWindowButton(.zoomButton)?.isHidden = true
+
+        let controller = NSHostingController(rootView: rootView)
+        controller.sizingOptions = [.minSize]
+        window.contentViewController = controller
+        window.setContentSize(initialSize)
+        window.center()
+        window.delegate = delegate
+        return window
     }
 }

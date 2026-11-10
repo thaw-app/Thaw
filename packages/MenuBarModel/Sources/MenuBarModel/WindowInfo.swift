@@ -84,15 +84,7 @@ public struct WindowInfo: Sendable {
     ///
     /// - Parameter element: One element of a window description array.
     private init?(element: Any) {
-        guard let description: [CFString: Any] = Bridging.dictionaryValue(of: element as CFTypeRef) else {
-            return nil
-        }
-        guard
-            let windowID = description[kCGWindowNumber] as? CGWindowID,
-            let ownerPID = description[kCGWindowOwnerPID] as? pid_t,
-            let boundsDescription = description[kCGWindowBounds] as? NSDictionary,
-            let bounds = CGRect(dictionaryRepresentation: boundsDescription),
-            let layer = description[kCGWindowLayer] as? Int
+        guard let description: [CFString: Any] = Bridging.dictionaryValue(of: element as CFTypeRef), let windowID = description[kCGWindowNumber] as? CGWindowID, let ownerPID = description[kCGWindowOwnerPID] as? pid_t, let boundsDescription = description[kCGWindowBounds] as? NSDictionary, let bounds = CGRect(dictionaryRepresentation: boundsDescription), let layer = description[kCGWindowLayer] as? Int
         else {
             return nil
         }
@@ -160,31 +152,37 @@ public extension WindowInfo {
     /// - Returns: Descriptions the window server still recognises, in its
     ///   order. Closed windows and unreadable descriptions are dropped.
     static func createWindows(from windowIDs: [CGWindowID]) -> [WindowInfo] {
-        guard let array = Bridging.createCGWindowArray(with: windowIDs) else {
-            diagLog.warning("createWindows: createCGWindowArray returned nil for \(windowIDs.count) window IDs")
-            return []
-        }
-        guard let raw = CGWindowListCreateDescriptionFromArray(array) else {
-            // The window server answers nil for a whole process (the capture
-            // service, for one), so the first refusal is the diagnostic.
-            let firstRefusal = !nilDescriptionLogged.exchange(true, ordering: .relaxed)
-            if firstRefusal {
-                diagLog.warning("createWindows: CGWindowListCreateDescriptionFromArray returned nil for \(windowIDs.count) window IDs; further refusals log at debug")
-            } else {
-                diagLog.debug("createWindows: CGWindowListCreateDescriptionFromArray returned nil for \(windowIDs.count) window IDs")
+        autoreleasepool {
+            guard let array = Bridging.createCGWindowArray(with: windowIDs) else {
+                diagLog.warning("createWindows: createCGWindowArray returned nil for \(windowIDs.count) window IDs")
+                return []
             }
-            return []
+            guard let raw = CGWindowListCreateDescriptionFromArray(array) else {
+                // The window server answers nil for a whole process (the capture
+                // service, for one), so the first refusal is the diagnostic.
+                let firstRefusal = !nilDescriptionLogged.exchange(true, ordering: .relaxed)
+                if firstRefusal {
+                    diagLog.warning("createWindows: CGWindowListCreateDescriptionFromArray returned nil for \(windowIDs.count) window IDs; further refusals log at debug")
+                } else {
+                    diagLog.debug("createWindows: CGWindowListCreateDescriptionFromArray returned nil for \(windowIDs.count) window IDs")
+                }
+                return []
+            }
+            guard let list = Bridging.arrayValue(of: raw) else {
+                let typeName = CFCopyTypeIDDescription(CFGetTypeID(raw)) as String? ?? "unknown"
+                diagLog.warning("createWindows: CGWindowListCreateDescriptionFromArray returned a \(typeName), not an array, for \(windowIDs.count) window IDs")
+                return []
+            }
+            let windows = list.compactMap { element in
+                autoreleasepool {
+                    WindowInfo(element: element)
+                }
+            }
+            if windows.count != windowIDs.count {
+                diagLog.debug("createWindows: \(windowIDs.count) IDs -> \(list.count) descriptions -> \(windows.count) WindowInfo objects (some may have failed init)")
+            }
+            return windows
         }
-        guard let list = Bridging.arrayValue(of: raw) else {
-            let typeName = CFCopyTypeIDDescription(CFGetTypeID(raw)) as String? ?? "unknown"
-            diagLog.warning("createWindows: CGWindowListCreateDescriptionFromArray returned a \(typeName), not an array, for \(windowIDs.count) window IDs")
-            return []
-        }
-        let windows = list.compactMap { WindowInfo(element: $0) }
-        if windows.count != windowIDs.count {
-            diagLog.debug("createWindows: \(windowIDs.count) IDs -> \(list.count) descriptions -> \(windows.count) WindowInfo objects (some may have failed init)")
-        }
-        return windows
     }
 
     /// Describes every window, narrowed by option.
@@ -255,20 +253,19 @@ public extension WindowInfo {
     /// Frames of this process's windows that a systemwide AX hit test lands on.
     /// Overlays at the main menu level and above, and zero-alpha windows, pass it through.
     static func ownHitTestableWindowFrames() -> [CGRect] {
-        let ownPID = ProcessInfo.processInfo.processIdentifier
-        guard let windows = CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID) as? [[CFString: Any]] else {
-            return []
-        }
-        return windows.compactMap { window in
-            guard
-                window[kCGWindowOwnerPID] as? pid_t == ownPID,
-                let layer = window[kCGWindowLayer] as? Int, layer < Int(kCGMainMenuWindowLevel),
-                (window[kCGWindowAlpha] as? Double ?? 1) > 0,
-                let boundsDescription = window[kCGWindowBounds] as? NSDictionary
-            else {
-                return nil
+        autoreleasepool {
+            let ownPID = ProcessInfo.processInfo.processIdentifier
+            guard let windows = CGWindowListCopyWindowInfo(.optionOnScreenOnly, kCGNullWindowID) as? [[CFString: Any]] else {
+                return []
             }
-            return CGRect(dictionaryRepresentation: boundsDescription)
+            return windows.compactMap { window in
+                guard
+                    window[kCGWindowOwnerPID] as? pid_t == ownPID, let layer = window[kCGWindowLayer] as? Int, layer < Int(kCGMainMenuWindowLevel), (window[kCGWindowAlpha] as? Double ?? 1) > 0, let boundsDescription = window[kCGWindowBounds] as? NSDictionary
+                else {
+                    return nil
+                }
+                return CGRect(dictionaryRepresentation: boundsDescription)
+            }
         }
     }
 

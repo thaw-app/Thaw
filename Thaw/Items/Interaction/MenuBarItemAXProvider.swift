@@ -122,15 +122,17 @@ nonisolated enum MenuBarItemAXProvider {
                 return (restoredIdentities(assemble(raw)), false)
             }
             let appBundleID = runningApp.bundleIdentifier ?? runningApp.localizedName ?? "(pid \(runningApp.processIdentifier))"
-            let collected = collectApp(
-                runningApp: runningApp,
-                appBundleID: appBundleID,
-                display: display,
-                displayBounds: nil,
-                ourBundleID: ourBundleID,
-                formerHosts: formerHosts,
-                isOutOfTime: { isOutOfTime }
-            )
+            let collected = autoreleasepool {
+                collectApp(
+                    runningApp: runningApp,
+                    appBundleID: appBundleID,
+                    display: display,
+                    displayBounds: nil,
+                    ourBundleID: ourBundleID,
+                    formerHosts: formerHosts,
+                    isOutOfTime: { isOutOfTime }
+                )
+            }
             raw += collected.raw
             guard collected.completed else {
                 diagLog.warning("menuBarItems: walk exceeded its budget inside \(appBundleID); returning incomplete")
@@ -342,14 +344,16 @@ nonisolated enum MenuBarItemAXProvider {
                 continue
             }
             let collected = Task.detached(priority: .userInitiated) {
-                Self.collectApp(
-                    runningApp: runningApp,
-                    appBundleID: appBundleID,
-                    display: nil,
-                    displayBounds: nil,
-                    ourBundleID: ourBundleID,
-                    formerHosts: formerHosts
-                ).raw
+                autoreleasepool {
+                    Self.collectApp(
+                        runningApp: runningApp,
+                        appBundleID: appBundleID,
+                        display: nil,
+                        displayBounds: nil,
+                        ourBundleID: ourBundleID,
+                        formerHosts: formerHosts
+                    ).raw
+                }
             }
             // Abandons, not awaits, a hung AX call. A timeout and a cancellation both
             // yield nil here; Task.isCancelled tells them apart below.
@@ -518,28 +522,30 @@ nonisolated enum MenuBarItemAXProvider {
 
         for (childIndex, child) in children.enumerated() {
             guard !isOutOfTime() else { return (raw, false) }
-            let attributes = AXHelpers.menuBarChildAttributes(for: child, includingRole: namespace == .menuBarAgent)
-            traceCaptureFrames(of: child, attributes: attributes, childIndex: childIndex, runningApp: runningApp, appBundleID: appBundleID)
-            guard let frame = Self.itemFrame(attributes.frame, maximumHeight: itemHeightCeiling) else {
-                continue
-            }
-            // Dormant: the live caller passes no bounds. Don't use it to narrow
-            // the inventory; a frame's display is not an item attribute.
-            let isOffDisplay = displayBounds.map { !Self.frame(frame, isWithin: $0) } ?? false
-            if isOffDisplay || isNativeOverflowControl(child, frame: frame, role: attributes.role, namespace: namespace, signature: overflowControl) {
-                continue
-            }
+            autoreleasepool {
+                let attributes = AXHelpers.menuBarChildAttributes(for: child, includingRole: namespace == .menuBarAgent)
+                traceCaptureFrames(of: child, attributes: attributes, childIndex: childIndex, runningApp: runningApp, appBundleID: appBundleID)
+                guard let frame = Self.itemFrame(attributes.frame, maximumHeight: itemHeightCeiling) else {
+                    return
+                }
+                // Dormant: the live caller passes no bounds. Don't use it to narrow
+                // the inventory; a frame's display is not an item attribute.
+                let isOffDisplay = displayBounds.map { !Self.frame(frame, isWithin: $0) } ?? false
+                if isOffDisplay || isNativeOverflowControl(child, frame: frame, role: attributes.role, namespace: namespace, signature: overflowControl) {
+                    return
+                }
 
-            let ownerPID = AXHelpers.pid(for: child) ?? runningApp.processIdentifier
-            let derived = Self.rawItem(
-                for: attributes, namespace: namespace, frame: frame, ownerPID: ownerPID, fallbackIndex: &fallbackIndex
-            )
-            guard let item = derived.item else {
-                diagLog.debug("menuBarItems: skipping native overflow control (title) title='\(derived.identityTitle)' frame=\(frame)")
-                continue
+                let ownerPID = AXHelpers.pid(for: child) ?? runningApp.processIdentifier
+                let derived = Self.rawItem(
+                    for: attributes, namespace: namespace, frame: frame, ownerPID: ownerPID, fallbackIndex: &fallbackIndex
+                )
+                guard let item = derived.item else {
+                    diagLog.debug("menuBarItems: skipping native overflow control (title) title='\(derived.identityTitle)' frame=\(frame)")
+                    return
+                }
+                probedChildren?.append("\(derived.identityTitle) frame=\(NSStringFromRect(frame)) ownerPID=\(ownerPID)")
+                raw.append(item)
             }
-            probedChildren?.append("\(derived.identityTitle) frame=\(NSStringFromRect(frame)) ownerPID=\(ownerPID)")
-            raw.append(item)
         }
         return (raw, true)
     }
@@ -694,9 +700,7 @@ nonisolated enum MenuBarItemAXProvider {
     static func menuBarItemsForMoveConcurrent(priorityPIDs: Set<pid_t>) async -> [MenuBarItem]? {
         // Item owners first: re-probing every app whose empty answer has expired can spend the whole budget.
         for scope in [MenuBarScanScope.itemOwners, .knownOwners] {
-            if let snapshot = await inventoryGate.snapshot(freshOnly: true, scope: scope, priorityOwners: priorityPIDs),
-               snapshot.hasFreshMoveInventory
-            {
+            if let snapshot = await inventoryGate.snapshot(freshOnly: true, scope: scope, priorityOwners: priorityPIDs), snapshot.hasFreshMoveInventory {
                 return restoredIdentities(snapshot).freshItems
             }
         }
@@ -801,7 +805,9 @@ nonisolated enum MenuBarItemAXProvider {
             // Detached tasks inherit no priority, so the first caller's is
             // passed explicitly; later waiters escalate by awaiting.
             let walk = Task.detached(priority: Task.currentPriority) {
-                MenuBarItemAXProvider.nativeOverflowObservation(on: display)
+                autoreleasepool {
+                    MenuBarItemAXProvider.nativeOverflowObservation(on: display)
+                }
             }
             inFlight[display] = walk
             let observation = await walk.value
@@ -886,9 +892,7 @@ nonisolated enum MenuBarItemAXProvider {
             case .absent:
                 break
             }
-        } else if let lastAbsentAt = memo.lastAbsentAt,
-                  ContinuousClock.now - lastAbsentAt < cooldown
-        {
+        } else if let lastAbsentAt = memo.lastAbsentAt, ContinuousClock.now - lastAbsentAt < cooldown {
             return .absent
         }
 
@@ -988,9 +992,7 @@ nonisolated enum MenuBarItemAXProvider {
     /// Everything else uses nativeOverflowObservationConcurrent(on:).
     static func nativeOverflowObservation(on display: CGDirectDisplayID) -> NativeOverflowObservation {
         let now = ContinuousClock.now
-        if let memo = overflowObservationMemo.withLock({ $0[display] }),
-           now - memo.readAt < overflowObservationLifetime
-        {
+        if let memo = overflowObservationMemo.withLock({ $0[display] }), now - memo.readAt < overflowObservationLifetime {
             return memo.observation
         }
         let observation = nativeOverflowObservationUncached(on: display)
@@ -1028,93 +1030,90 @@ nonisolated enum MenuBarItemAXProvider {
 
     /// The tree walk itself; see nativeOverflowObservation(on:) for the memo.
     private static func nativeOverflowObservationUncached(on display: CGDirectDisplayID) -> NativeOverflowObservation {
-        guard AXHelpers.isProcessTrusted(),
-              let bar = AXHelpers.menuBarAgentExtrasBar()
-        else {
-            return .unavailable
-        }
-
-        let displayBounds = CGDisplayBounds(display)
-        guard let children = AXHelpers.childrenIfAvailable(for: bar) else {
-            return .unavailable
-        }
-        let descendants = children.flatMap { child -> [AXElement] in
-            let childDescendants = AXHelpers.childrenIfAvailable(for: child) ?? []
-            return [child] + childDescendants
-        }
-        var attributeReadFailed = false
-        let attributedControls = ([bar] + children).compactMap { element -> AXElement? in
-            guard let supportsOverflowButton = AXHelpers.supportsOverflowButton(element) else {
-                attributeReadFailed = true
-                return nil
-            }
-            guard supportsOverflowButton else { return nil }
-            guard let button = AXHelpers.overflowButton(for: element) else {
-                attributeReadFailed = true
-                return nil
-            }
-            return button
-        }
-        let labeledControls = descendants.filter { element in
-            let identifier = AXHelpers.identifier(for: element)?.nonEmpty
-            let accessibilityDescription = AXHelpers.description(for: element)?.nonEmpty
-            let displayTitle = AXHelpers.title(for: element)?.nonEmpty
-                ?? accessibilityDescription
-                ?? identifier
-                ?? ""
-            let stableTitle = identityTitle(
-                namespace: .menuBarAgent,
-                identifier: identifier,
-                accessibilityDescription: accessibilityDescription,
-                displayTitle: displayTitle
-            )
-            return isNativeOverflowChevronPlaceholder(
-                namespace: .menuBarAgent,
-                identityTitle: stableTitle,
-                displayTitle: displayTitle
-            )
-        }
-
-        var seenFrames = Set<CGRect>()
-        let frames: [CGRect] = (attributedControls + AXHelpers.overflowButtons(among: children) + labeledControls).compactMap { control -> CGRect? in
-            guard let frame = AXHelpers.frame(for: control),
-                  !frame.isNull,
-                  !frame.isEmpty,
-                  displayBounds.contains(frame.center),
-                  seenFrames.insert(frame).inserted
+        autoreleasepool {
+            guard AXHelpers.isProcessTrusted(), let bar = AXHelpers.menuBarAgentExtrasBar()
             else {
-                return nil
-            }
-            return frame
-        }
-        // The walk finds only AXOverflowButton; the notchless macOS 27
-        // indicator is a composited AXImage outside the extras bar. Fall back
-        // to the shared strip hit-test so the cover sees the same answer.
-        var mergedFrames = frames
-        var hitTestGaveUp = false
-        if frames.isEmpty {
-            switch chevronObservationByHitTest(on: display, displayBounds: displayBounds) {
-            case let .present(hitTestFrames):
-                for frame in hitTestFrames where seenFrames.insert(frame).inserted {
-                    mergedFrames.append(frame)
-                }
-            case .absent:
-                break
-            case .unavailable:
-                hitTestGaveUp = true
-            }
-        }
-
-        if mergedFrames.isEmpty {
-            // A partial sweep must not report .absent, or the reducer retires
-            // the overflow state on a busy bar.
-            guard !hitTestGaveUp else { return .unavailable }
-            if attributeReadFailed || !(attributedControls + labeledControls).isEmpty {
                 return .unavailable
             }
-            return .absent
+
+            let displayBounds = CGDisplayBounds(display)
+            guard let children = AXHelpers.childrenIfAvailable(for: bar) else {
+                return .unavailable
+            }
+            let descendants = children.flatMap { child -> [AXElement] in
+                let childDescendants = AXHelpers.childrenIfAvailable(for: child) ?? []
+                return [child] + childDescendants
+            }
+            var attributeReadFailed = false
+            let attributedControls = ([bar] + children).compactMap { element -> AXElement? in
+                guard let supportsOverflowButton = AXHelpers.supportsOverflowButton(element) else {
+                    attributeReadFailed = true
+                    return nil
+                }
+                guard supportsOverflowButton else { return nil }
+                guard let button = AXHelpers.overflowButton(for: element) else {
+                    attributeReadFailed = true
+                    return nil
+                }
+                return button
+            }
+            let labeledControls = descendants.filter { element in
+                let identifier = AXHelpers.identifier(for: element)?.nonEmpty
+                let accessibilityDescription = AXHelpers.description(for: element)?.nonEmpty
+                let displayTitle = AXHelpers.title(for: element)?.nonEmpty
+                    ?? accessibilityDescription
+                    ?? identifier
+                    ?? ""
+                let stableTitle = identityTitle(
+                    namespace: .menuBarAgent,
+                    identifier: identifier,
+                    accessibilityDescription: accessibilityDescription,
+                    displayTitle: displayTitle
+                )
+                return isNativeOverflowChevronPlaceholder(
+                    namespace: .menuBarAgent,
+                    identityTitle: stableTitle,
+                    displayTitle: displayTitle
+                )
+            }
+
+            var seenFrames = Set<CGRect>()
+            let frames: [CGRect] = (attributedControls + AXHelpers.overflowButtons(among: children) + labeledControls).compactMap { control -> CGRect? in
+                guard let frame = AXHelpers.frame(for: control), !frame.isNull, !frame.isEmpty, displayBounds.contains(frame.center), seenFrames.insert(frame).inserted
+                else {
+                    return nil
+                }
+                return frame
+            }
+            // The walk finds only AXOverflowButton; the notchless macOS 27
+            // indicator is a composited AXImage outside the extras bar. Fall back
+            // to the shared strip hit-test so the cover sees the same answer.
+            var mergedFrames = frames
+            var hitTestGaveUp = false
+            if frames.isEmpty {
+                switch chevronObservationByHitTest(on: display, displayBounds: displayBounds) {
+                case let .present(hitTestFrames):
+                    for frame in hitTestFrames where seenFrames.insert(frame).inserted {
+                        mergedFrames.append(frame)
+                    }
+                case .absent:
+                    break
+                case .unavailable:
+                    hitTestGaveUp = true
+                }
+            }
+
+            if mergedFrames.isEmpty {
+                // A partial sweep must not report .absent, or the reducer retires
+                // the overflow state on a busy bar.
+                guard !hitTestGaveUp else { return .unavailable }
+                if attributeReadFailed || !(attributedControls + labeledControls).isEmpty {
+                    return .unavailable
+                }
+                return .absent
+            }
+            return .present(mergedFrames)
         }
-        return .present(mergedFrames)
     }
 
     // MARK: - Assembly
@@ -1220,8 +1219,7 @@ nonisolated enum MenuBarItemAXProvider {
     /// AppKit's _NS:<number> placeholders change every launch and would orphan
     /// the persisted entry, so they return nil and callers fall back.
     static func stableAXIdentifier(_ identifier: String?) -> String? {
-        guard let identifier, !identifier.isEmpty else { return nil }
-        guard isStableAXIdentifier(identifier) else { return nil }
+        guard let identifier, !identifier.isEmpty, isStableAXIdentifier(identifier) else { return nil }
         return identifier
     }
 
@@ -1257,17 +1255,13 @@ nonisolated enum MenuBarItemAXProvider {
     ) -> String {
         // Control Center controls end in an instance UUID re-minted on every
         // placement; drop it so identity survives a remove and re-add.
-        if namespace == .menuBarAgent,
-           let identifier = identifier?.nonEmpty,
-           let stableIdentity = ChronoControlIdentity.stableIdentity(forAXIdentifier: identifier)
-        {
+        if namespace == .menuBarAgent, let identifier = identifier?.nonEmpty, let stableIdentity = ChronoControlIdentity.stableIdentity(forAXIdentifier: identifier) {
             return stableIdentity
         }
 
         // For apps with stable titles AXIdentifier is stable by convention;
         // return raw.
-        guard case let .string(bundleID) = namespace,
-              MenuBarItemTag.hasCanonicalizableTitles(bundleID)
+        guard case let .string(bundleID) = namespace, MenuBarItemTag.hasCanonicalizableTitles(bundleID)
         else {
             return identifier?.nonEmpty ?? displayTitle
         }

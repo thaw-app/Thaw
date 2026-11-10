@@ -16,7 +16,23 @@ import UniformTypeIdentifiers
 /// every app; an app that ships nothing still offers "Choose Image…".
 @MainActor
 enum ItemIconPicker {
+    private final class WindowDelegate: NSObject, NSWindowDelegate {
+        func windowWillClose(_ notification: Notification) {
+            guard let closingWindow = notification.object as? NSWindow else { return }
+            closingWindow.makeFirstResponder(nil)
+            closingWindow.contentViewController = nil
+            closingWindow.contentView?.layer?.contents = nil
+            closingWindow.contentView = nil
+            closingWindow.delegate = nil
+            if ItemIconPicker.window === closingWindow {
+                ItemIconPicker.window = nil
+            }
+            MemoryReclaimer.scheduleRelief(reason: "item icon picker closed")
+        }
+    }
+
     private static var window: NSWindow?
+    private static let windowDelegate = WindowDelegate()
 
     static func present(for item: MenuBarItem, appState: AppState) {
         let bundleURL = item.sourcePID.flatMap { NSRunningApplication(processIdentifier: $0)?.bundleURL }
@@ -46,6 +62,7 @@ enum ItemIconPicker {
         )
         window.isReleasedWhenClosed = false
         window.minSize = NSSize(width: 360, height: 280)
+        window.delegate = windowDelegate
         return window
     }
 }

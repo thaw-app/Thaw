@@ -7,6 +7,7 @@
 
 import AsyncAlgorithms
 import Combine
+import Darwin
 import MenuBarModel
 import Observation
 import SwiftUI
@@ -21,41 +22,46 @@ extension EnvironmentValues {
 /// SearchPresentation asks for. Dismissed on resign-key, an outside click,
 /// or a space or display change.
 final class MenuBarSearchPanel: NSPanel {
-    private static nonisolated let diagLog = DiagLog(category: "MenuBarSearchPanel")
+    static nonisolated let diagLog = DiagLog(category: "MenuBarSearchPanel")
 
     /// Must match the glass effect the hosted view draws.
     static let cornerRadius: CGFloat = ThawRadius.panel
+
+    /// Grace delay after close before tearing down the hosted SwiftUI view hierarchy and search model lists.
+    static let idleTeardownDelay: Duration = .seconds(2)
 
     /// Written only by adopt(_:), so a preference flipped while the panel is
     /// up cannot make close() save the wrong face's frame.
     private(set) var presentation: SearchPresentation = .inspector
 
-    private weak var appState: AppState?
+    weak var appState: AppState?
 
     private var cancellables = Set<AnyCancellable>()
 
     /// A click right after a move is that move's tail, not a dismissal.
     private var moveActivity: MoveOperationTracker?
 
-    private var cacheTask: Task<Void, Never>?
+    var cacheTask: Task<Void, Never>?
+
+    private var idleTeardownTask: Task<Void, Never>?
 
     /// Retargets the real menu bar spotlight to the highlighted row.
-    private var selectionObservationTask: Task<Void, Never>?
+    var selectionObservationTask: Task<Void, Never>?
 
     /// Lights the selected item after a short delay; replaced on each
     /// selection change.
-    private var spotlightTask: Task<Void, Never>?
+    var spotlightTask: Task<Void, Never>?
 
     /// Whether the agent confirmed the highlight, so teardown releases only
     /// a spotlight that landed.
-    private var isSpotlighted = false
+    var isSpotlighted = false
 
     /// Captured up front so endSpotlight() releases the right item after the
     /// selection has moved on.
-    private var spotlightedName: String?
+    var spotlightedName: String?
 
     let model = MenuBarSearchModel()
-    private var displayInvalidations: AnyPublisher<Void, Never> = Empty().eraseToAnyPublisher()
+    var displayInvalidations: AnyPublisher<Void, Never> = Empty().eraseToAnyPublisher()
 
     /// The actions button the actions menu hangs from. Weak because the
     /// hosting view owns it.
@@ -63,7 +69,7 @@ final class MenuBarSearchPanel: NSPanel {
 
     /// While the actions menu tracks, outside clicks and losing key must not
     /// dismiss the panel from under it.
-    private var isPresentingItemActions = false
+    var isPresentingItemActions = false
 
     /// Every face has the action bar, so its "Remember last search" applies to all.
     private var keepsQuery: Bool {
@@ -99,9 +105,7 @@ final class MenuBarSearchPanel: NSPanel {
         }
         // With no highlighted row these keys pass through.
         guard
-            model.renameSession == nil,
-            let appState,
-            selectedItem != nil
+            model.renameSession == nil, let appState, selectedItem != nil
         else {
             return event
         }
@@ -126,11 +130,14 @@ final class MenuBarSearchPanel: NSPanel {
     }
 
     /// Tracked so a showing in the same mode does not rebuild the subscriptions.
-    private var isSamplingMenuBarColor = false
+    var isSamplingMenuBarColor = false
+
+    /// Guards close() against re-entry when super.close() triggers didResignKeyNotification.
+    private var isClosing = false
 
     init() {
         super.init(
-            contentRect: .zero,
+            contentRect: NSRect(origin: .zero, size: SearchPresentation.inspector.contentSize),
             styleMask: [
                 .titled, .fullSizeContentView, .nonactivatingPanel,
                 .utilityWindow,
@@ -161,12 +168,13 @@ final class MenuBarSearchPanel: NSPanel {
     isolated deinit {
         NotificationCenter.default.removeObserver(self)
         selectionObservationTask?.cancel()
+        idleTeardownTask?.cancel()
         endSpotlight()
     }
 
     @objc private func panelResignedKey(_: Notification) {
         // The actions menu takes focus; menuDidClose(_:) re-tests key afterwards.
-        guard !isPresentingItemActions else {
+        guard !isPresentingItemActions, isVisible else {
             return
         }
         close()
@@ -192,178 +200,15 @@ final class MenuBarSearchPanel: NSPanel {
 
         // A display change closes at the posting, while the frame still belongs to its display.
         DisplayEnvironment.spaceOrDisplayChanges(merging: displayInvalidations)
-            .sink { [weak self] in self?.close() }
+            .sink { [weak self] in
+                guard let self, isVisible || self.appState?.navigationState.isSearchPresented == true else { return }
+                close()
+            }
             .store(in: &cancellables)
 
         // The mode is unknown until the first showing, so this runs in every
         // mode and retargetSpotlight() declines where it does not apply.
         observeSelectionForSpotlight()
-    }
-
-    /// By window when the row knew one, otherwise by tag.
-    private func cachedItem(withTag tag: MenuBarItemTag, windowID: CGWindowID?) -> MenuBarItem? {
-        guard let itemManager = appState?.itemManager else {
-            return nil
-        }
-        if let windowID {
-            return itemManager.managedItem(withWindowID: windowID)
-        }
-        return itemManager.managedItem(withTag: tag)
-    }
-
-    /// The item a search list row stands for, if it is still in the cache.
-    func cachedItem(for selection: MenuBarSearchModel.ItemID) -> MenuBarItem? {
-        guard case let .item(tag, windowID) = selection else {
-            return nil
-        }
-        return cachedItem(withTag: tag, windowID: windowID)
-    }
-
-    // MARK: Selection spotlight
-
-    /// The selection-driven counterpart of LayoutBarItemView's hover spotlight.
-    private func observeSelectionForSpotlight() {
-        selectionObservationTask?.cancel()
-        selectionObservationTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            let changes = Observations { self.model.selection }.removeDuplicates()
-            for await selection in changes {
-                retargetSpotlight()
-            }
-        }
-    }
-
-    private func retargetSpotlight() {
-        endSpotlight()
-        guard presentation.spotlightsSelection,
-              isVisible,
-              let selection = model.selection,
-              let item = cachedItem(for: selection),
-              // Control items and untitled items have no AX title to address.
-              !item.isControlItem,
-              let title = item.title, !title.isEmpty
-        else {
-            return
-        }
-        scheduleSpotlight(name: title)
-    }
-
-    /// Shorter delay than hover's, since a selection change is deliberate.
-    private func scheduleSpotlight(name: String) {
-        guard let spotlighting = MenuBarPresentationProvider.itemSpotlighting,
-              spotlighting.isSupported
-        else {
-            return
-        }
-        spotlightedName = name
-        spotlightTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .milliseconds(100))
-            guard !Task.isCancelled else { return }
-            let landed = await spotlighting.setItemSpotlighted(true, forItemNamed: name)
-            guard let self, !Task.isCancelled else {
-                // Superseded mid-call: pair the true with a false.
-                if landed {
-                    Task { await spotlighting.setItemSpotlighted(false, forItemNamed: name) }
-                }
-                return
-            }
-            self.isSpotlighted = landed
-        }
-    }
-
-    /// Pairs every true sent to the agent with a false.
-    private func endSpotlight() {
-        spotlightTask?.cancel()
-        spotlightTask = nil
-        defer { spotlightedName = nil }
-        guard isSpotlighted, let name = spotlightedName,
-              let spotlighting = MenuBarPresentationProvider.itemSpotlighting
-        else {
-            return
-        }
-        isSpotlighted = false
-        Task { await spotlighting.setItemSpotlighted(false, forItemNamed: name) }
-    }
-
-    // MARK: Item actions
-
-    /// The item the highlighted row stands for, if it is still in the cache.
-    var selectedItem: MenuBarItem? {
-        guard let selection = model.selection else {
-            return nil
-        }
-        return cachedItem(for: selection)
-    }
-
-    /// A menu, not buttons, because group destinations have unknown length;
-    /// it also matches the layout editor's right-click menu.
-    func presentItemActions() {
-        guard let appState, let anchor = itemActionsAnchor, let item = selectedItem else {
-            return
-        }
-
-        let menu = MenuBarSearchItemActions.menu(for: item, appState: appState) { [weak self] in
-            guard let self else { return }
-            close()
-            MenuBarSearchItemActions.openSettings(appState: appState)
-        }
-        menu.delegate = self
-        menu.popUp(positioning: nil, at: CGPoint(x: 0, y: anchor.bounds.maxY), in: anchor)
-    }
-
-    /// ⌘1 to ⌘3. A disabled section's number does nothing rather than
-    /// renumbering the others.
-    func moveSelection(toDestinationAt index: Int) {
-        guard let appState, let item = selectedItem else {
-            return
-        }
-        let destinations = MenuBarSearchItemActions.moveDestinations(appState: appState)
-        guard destinations.indices.contains(index), let section = destinations[index] else {
-            return
-        }
-        MenuBarSearchItemActions.move(item, to: section, appState: appState)
-    }
-
-    // MARK: Rename
-
-    func beginRenamingSelection() {
-        guard
-            case let .item(tag, windowID)? = model.selection,
-            let item = cachedItem(withTag: tag, windowID: windowID)
-        else {
-            return
-        }
-        model.renameSession = .init(tag: tag, windowID: windowID, draft: item.customName ?? "")
-    }
-
-    /// An all-whitespace draft removes the custom name.
-    func commitRename() {
-        guard let session = model.renameSession else {
-            return
-        }
-        model.renameSession = nil
-
-        guard let item = cachedItem(withTag: session.tag, windowID: session.windowID) else {
-            Self.diagLog.error("Cannot save custom name, no matching item")
-            return
-        }
-        Self.diagLog.debug("Saving custom name for tag: \(session.tag)")
-
-        var names = Defaults.dictionary(forKey: .menuBarItemCustomNames) as? [String: String] ?? [:]
-        let newName = session.draft.trimmingCharacters(in: .whitespaces)
-        if newName.isEmpty {
-            names.removeValue(forKey: item.uniqueIdentifier)
-        } else {
-            names[item.uniqueIdentifier] = newName
-        }
-        Defaults.set(names, forKey: .menuBarItemCustomNames)
-        // The launchers rank by names captured with their inventory; rebuild it.
-        model.launcherCandidates = []
-        // A Defaults write is not observed. Reassigning displayedItems is,
-        // since the @Observable setter has no equality check, so rows re-render.
-        // Routed through a local so it does not read as a typo'd x = x.
-        let itemsToRerender = model.displayedItems
-        model.displayedItems = itemsToRerender
     }
 
     // MARK: Presentation
@@ -373,6 +218,9 @@ final class MenuBarSearchPanel: NSPanel {
         guard let appState else {
             return
         }
+        idleTeardownTask?.cancel()
+        idleTeardownTask = nil
+        appState.imageCache.loadFromDiskIfNeeded()
         guard let screen = screen ?? NSScreen.screenWithMouse ?? NSScreen.main else {
             Self.diagLog.error("Missing screen for \(presentation.logLabel)")
             return
@@ -419,19 +267,7 @@ final class MenuBarSearchPanel: NSPanel {
         outsideClickMonitor.start()
         shortcutMonitor.start()
 
-        guard presentation.warmsCachesOnShow else {
-            return
-        }
-        // Cancelled in close() to avoid holding appState.
-        cacheTask?.cancel()
-        cacheTask = Task { [weak appState] in
-            guard let appState else { return }
-            guard !Task.isCancelled else { return }
-            await appState.itemManager.cacheItemsIfNeeded()
-            guard !Task.isCancelled else { return }
-            await appState.imageCache.recaptureIfWarranted()
-            appState.imageCache.logCacheStatus("Search panel opened")
-        }
+        warmCachesOnShow(appState: appState)
     }
 
     /// The one place the mode is adopted, from show(on:); true when it changed.
@@ -442,31 +278,59 @@ final class MenuBarSearchPanel: NSPanel {
         return changed
     }
 
-    func toggle() {
-        if isVisible {
-            close()
-        } else {
-            show()
-        }
-    }
-
     override func close() {
+        guard !isClosing else { return }
+        isClosing = true
+        defer { isClosing = false }
+        let hasHostedContent = isVisible || contentView is MenuBarSearchHostingView || contentViewController != nil || isSamplingMenuBarColor
         if presentation.persistsFrame, isVisible, let screen, contentView != nil {
             saveFrameForDisplay(screen)
         }
         cacheTask?.cancel()
         cacheTask = nil
+        model.focusTask?.cancel()
         endSpotlight()
         if !keepsQuery {
             model.searchText = ""
         }
         model.renameSession = nil
+        makeFirstResponder(nil)
+        orderOut(nil)
         super.close()
-        // Hosting view retained deliberately; show() repoints it.
         outsideClickMonitor.stop()
         shortcutMonitor.stop()
         appState?.navigationState.isSearchPresented = false
-        MemoryReclaimer.scheduleRelief(reason: "\(presentation.logLabel) closed")
+        if hasHostedContent {
+            scheduleIdleTeardown()
+            MemoryReclaimer.scheduleRelief(reason: "\(presentation.logLabel) closed")
+        }
+    }
+
+    private func scheduleIdleTeardown() {
+        idleTeardownTask?.cancel()
+        idleTeardownTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(for: Self.idleTeardownDelay)
+            } catch {
+                return
+            }
+            self?.tearDownForIdle()
+        }
+    }
+
+    /// Drops the SwiftUI hosting hierarchy and search model caches after the panel stays closed past grace.
+    func tearDownForIdle() {
+        idleTeardownTask?.cancel()
+        idleTeardownTask = nil
+        guard !isVisible else { return }
+        AppState.tearDownWindowHierarchy(self, clearDelegate: false)
+        model.displayedItems = []
+        model.launcherCandidates = []
+        model.selection = nil
+        model.detach()
+        isSamplingMenuBarColor = false
+        MemoryReclaimer.scheduleRelief(reason: "\(presentation.logLabel) idle teardown")
+        _ = malloc_zone_pressure_relief(nil, 0)
     }
 
     /// Escape backs out one layer at a time: rename, then query, then panel.
@@ -476,134 +340,6 @@ final class MenuBarSearchPanel: NSPanel {
         } else if model.searchText != "", !keepsQuery {
             model.searchText = ""
         } else {
-            close()
-        }
-    }
-
-    // MARK: Per-display frame persistence
-
-    /// Nil when the display has no resolvable UUID.
-    private func frameDefaultsKey(for screen: NSScreen) -> String? {
-        guard let uuidString = Bridging.getDisplayUUIDString(for: screen.displayID) else {
-            return nil
-        }
-        return "\(Defaults.Key.menuBarSearchPanelFrameWithConfig.rawValue)\(uuidString)"
-    }
-
-    private func saveFrameForDisplay(_ screen: NSScreen) {
-        guard isVisible, contentView != nil else {
-            return
-        }
-
-        let currentFrame = frame
-        let actualScreen = NSScreen.screens.first { $0.visibleFrame.intersects(currentFrame) } ?? screen
-
-        guard let keyString = frameDefaultsKey(for: actualScreen) else {
-            return
-        }
-
-        // Relative to the display's visible frame.
-        let visibleFrame = actualScreen.visibleFrame
-        let relativeFrame = CGRect(
-            x: currentFrame.minX - visibleFrame.minX,
-            y: currentFrame.minY - visibleFrame.minY,
-            width: currentFrame.width,
-            height: currentFrame.height
-        )
-
-        UserDefaults.standard.set(relativeFrame.dictionaryRepresentation as NSDictionary, forKey: keyString)
-    }
-
-    private func loadFrameForDisplay(_ screen: NSScreen) -> CGRect? {
-        guard
-            let keyString = frameDefaultsKey(for: screen),
-            let frameDict = UserDefaults.standard.dictionary(forKey: keyString)
-        else {
-            return nil
-        }
-        return CGRect(dictionaryRepresentation: frameDict as CFDictionary)
-    }
-
-    private func placementFrame(on screen: NSScreen, size: CGSize) -> CGRect {
-        switch presentation.placement {
-        case .remembered: rememberedFrame(on: screen, size: size)
-        case .centered: launcherFrame(on: screen, size: size)
-        case .nearPointer: assistedFrame(on: screen, size: size)
-        }
-    }
-
-    /// Anchored to the pointer; see AssistedPanelPlacement.
-    private func assistedFrame(on screen: NSScreen, size: CGSize) -> CGRect {
-        AssistedPanelPlacement.frame(
-            near: NSEvent.mouseLocation,
-            in: screen.visibleFrame,
-            size: size
-        )
-    }
-
-    /// The saved spot clamped to the visible area, or dead center.
-    private func rememberedFrame(on screen: NSScreen, size: CGSize) -> CGRect {
-        let visibleFrame = screen.visibleFrame
-
-        guard let savedFrame = loadFrameForDisplay(screen) else {
-            let centered = CGPoint(
-                x: visibleFrame.midX - size.width / 2,
-                y: visibleFrame.midY - size.height / 2
-            )
-            return CGRect(origin: centered, size: size)
-        }
-
-        // Saved origins are relative to the display's visible frame.
-        let origin = CGPoint(
-            x: min(max(savedFrame.minX + visibleFrame.minX, visibleFrame.minX), visibleFrame.maxX - size.width),
-            y: min(max(savedFrame.minY + visibleFrame.minY, visibleFrame.minY), visibleFrame.maxY - size.height)
-        )
-        return CGRect(origin: origin, size: size)
-    }
-
-    /// Slightly above center, like Spotlight.
-    private func launcherFrame(on screen: NSScreen, size: CGSize) -> CGRect {
-        let visible = screen.visibleFrame
-        let originX = visible.midX - size.width / 2
-        let originY = visible.midY - size.height / 2 + visible.height * 0.12
-        return CGRect(
-            x: originX.rounded(),
-            y: min(originY, visible.maxY - size.height).rounded(),
-            width: size.width,
-            height: size.height
-        )
-    }
-
-    // MARK: Menu bar color sampling
-
-    /// Sampling costs a screen capture per showing, so only modes that preview
-    /// items over the bar color do it. Switched per showing, since the mode can change.
-    private func updateMenuBarColorSampling() {
-        let wanted = presentation.samplesMenuBarColor
-        guard wanted != isSamplingMenuBarColor else {
-            return
-        }
-        isSamplingMenuBarColor = wanted
-        if wanted {
-            model.attach(to: self, displayInvalidations: displayInvalidations)
-        } else {
-            model.detach()
-        }
-    }
-}
-
-// MARK: - Actions menu tracking
-
-extension MenuBarSearchPanel: NSMenuDelegate {
-    func menuWillOpen(_: NSMenu) {
-        isPresentingItemActions = true
-    }
-
-    func menuDidClose(_: NSMenu) {
-        isPresentingItemActions = false
-        // Apply a dismissal suppressed while the menu was up. Tested now, not
-        // remembered, since Escape closes the menu without the panel losing key.
-        if !isKeyWindow {
             close()
         }
     }

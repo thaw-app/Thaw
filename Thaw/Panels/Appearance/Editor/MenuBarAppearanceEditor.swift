@@ -19,7 +19,7 @@ struct MenuBarAppearanceEditor: View {
 
     @Environment(AppState.self) var appState
     @Bindable var appearanceManager: MenuBarAppearanceManager
-    @Environment(\.dismissWindow) private var dismissWindow
+    @Environment(\.dismiss) private var dismiss
     @State private var isResetAlertPresented = false
     @State private var editingAppearance = SystemAppearance.current
     @State private var systemAppearance = SystemAppearance.current
@@ -300,7 +300,7 @@ struct MenuBarAppearanceEditor: View {
             if let onDone {
                 onDone()
             } else {
-                dismissWindow()
+                dismiss()
             }
         }
         .buttonStyle(.thawProminent)

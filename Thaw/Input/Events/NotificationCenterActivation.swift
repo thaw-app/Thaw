@@ -65,9 +65,9 @@ final class NotificationCenterActivation {
 
     /// Hidden default that turns the bridge off. Clock clicks and the shortcut then
     /// go to macOS untouched, which cannot open the panel while items are hidden.
-    nonisolated static let bridgeDisabledKey = Defaults.Key.disableNotificationCenterBridge.rawValue
+    static nonisolated let bridgeDisabledKey = Defaults.Key.disableNotificationCenterBridge.rawValue
 
-    nonisolated static func isBridgeEnabled(in defaults: UserDefaults = .standard) -> Bool {
+    static nonisolated func isBridgeEnabled(in defaults: UserDefaults = .standard) -> Bool {
         !defaults.bool(forKey: bridgeDisabledKey)
     }
 
@@ -90,23 +90,23 @@ final class NotificationCenterActivation {
     /// Notification Center is presenting when its panel window is on-screen.
     /// The flag flips within ~100 ms of open and close, inside one poll interval.
     private static nonisolated func systemPanelPresenting() -> Bool {
-        let owners = Set(
-            NSRunningApplication.runningApplications(withBundleIdentifier: panelOwnerBundleID)
-                .map(\.processIdentifier)
-        )
-        guard !owners.isEmpty else { return false }
-        let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
-        return list.contains { isPanelWindow($0, panelOwners: owners) }
+        autoreleasepool {
+            let owners = Set(
+                NSRunningApplication.runningApplications(withBundleIdentifier: panelOwnerBundleID)
+                    .map(\.processIdentifier)
+            )
+            guard !owners.isEmpty else { return false }
+            let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+            return list.contains { isPanelWindow($0, panelOwners: owners) }
+        }
     }
 
-    private nonisolated static let panelOwnerBundleID = "com.apple.notificationcenterui"
+    private static nonisolated let panelOwnerBundleID = "com.apple.notificationcenterui"
 
     /// Whether a window is the panel: owned by the panel's process, above normal level.
     /// The same process keeps desktop widgets on-screen at the desktop level.
     static nonisolated func isPanelWindow(_ window: [String: Any], panelOwners: Set<pid_t>) -> Bool {
-        guard let owner = window[kCGWindowOwnerPID as String] as? Int,
-              panelOwners.contains(pid_t(owner)),
-              let layer = window[kCGWindowLayer as String] as? Int
+        guard let owner = window[kCGWindowOwnerPID as String] as? Int, panelOwners.contains(pid_t(owner)), let layer = window[kCGWindowLayer as String] as? Int
         else { return false }
         return layer > Int(CGWindowLevelForKey(.normalWindow))
     }

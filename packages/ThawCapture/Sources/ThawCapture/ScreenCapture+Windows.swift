@@ -26,23 +26,34 @@ public extension ScreenCapture {
     ///   - screenBounds: The bounds to capture, specified in screen coordinates.
     ///     Pass nil to capture the minimum rectangle that encloses the windows.
     ///   - option: Options that specify which parts of the windows are captured.
+    ///   - targetPixelWidth: Optional explicit output width in pixels for WindowServer downscaling.
+    ///   - targetPixelHeight: Optional explicit output height in pixels for WindowServer downscaling.
     static func captureWindows(
         with windowIDs: [CGWindowID],
         screenBounds: CGRect? = nil,
-        option: CGWindowImageOption = []
+        option: CGWindowImageOption = [],
+        targetPixelWidth: Int? = nil,
+        targetPixelHeight: Int? = nil
     ) async -> CGImage? {
         guard let ticket = captureUITicket(), !Task.isCancelled else { return nil }
-        if routesThroughCaptureService,
-           let viaService = await MenuBarCaptureServiceClient.shared.captureWindows(
-               with: windowIDs,
-               screenBounds: screenBounds,
-               option: option,
-               visibilityGeneration: ticket
-           )
-        {
+        if routesThroughCaptureService, let viaService = await MenuBarCaptureServiceClient.shared.captureWindows(
+            with: windowIDs,
+            screenBounds: screenBounds,
+            option: option,
+            targetPixelWidth: targetPixelWidth,
+            targetPixelHeight: targetPixelHeight,
+            visibilityGeneration: ticket
+        ) {
             return viaService
         }
-        let image = await Bridging.captureWindowsImageSCK(windowIDs: windowIDs, screenBounds: screenBounds, options: option, shouldCapture: { isCaptureUITicketCurrent(ticket) })
+        let image = await Bridging.captureWindowsImageSCK(
+            windowIDs: windowIDs,
+            screenBounds: screenBounds,
+            options: option,
+            targetPixelWidth: targetPixelWidth,
+            targetPixelHeight: targetPixelHeight,
+            shouldCapture: { isCaptureUITicketCurrent(ticket) }
+        )
         return isCaptureUITicketCurrent(ticket) ? image : nil
     }
 }

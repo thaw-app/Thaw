@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
+import ThawUI
 
 /// `Thaw --settings <pane>`: Settings in a process the app started, with AppState built but never
 /// launched. It ends when its last window closes, What's New and Acknowledgements included.
@@ -17,10 +18,12 @@ struct SettingsProcessApp: App {
     }
 
     var body: some Scene {
-        WindowActionBridge(registerWindowActions: delegate.appState.registerWindowActions)
-        SettingsWindow(appState: delegate.appState)
-        WhatsNewWindow(appState: delegate.appState)
-        AcknowledgementsWindow(appState: delegate.appState)
+        MenuBarExtra("", isInserted: .constant(false)) {
+            EmptyView()
+        }
+        .commands {
+            AppUIZoomCommands(strings: .thaw)
+        }
     }
 }
 

@@ -73,6 +73,13 @@ final class LayoutEditorWindow: NSObject, NSWindowDelegate {
     }
 
     func windowWillClose(_: Notification) {
+        if let window {
+            window.makeFirstResponder(nil)
+            window.contentViewController = nil
+            window.contentView?.layer?.contents = nil
+            window.contentView = nil
+            window.delegate = nil
+        }
         window = nil
         onClose()
     }

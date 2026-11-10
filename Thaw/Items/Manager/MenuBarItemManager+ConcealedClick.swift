@@ -108,11 +108,13 @@ extension MenuBarItemManager {
     /// The owner's windows on screen at pop-up menu level. Not the status bar
     /// level, which also holds the owner's own icons.
     private func ownerMenuWindowIDs(_ item: MenuBarItem) -> Set<CGWindowID> {
-        let pids = item.reactionPIDs
-        let windows = WindowInfo.createWindows(from: Bridging.getWindowList(option: .onScreen)).filter { window in
-            pids.contains(window.ownerPID) && WindowLevelPredicates.isPopUpMenu(layer: window.layer)
+        autoreleasepool {
+            let pids = item.reactionPIDs
+            let windows = WindowInfo.createWindows(from: Bridging.getWindowList(option: .onScreen)).filter { window in
+                pids.contains(window.ownerPID) && WindowLevelPredicates.isPopUpMenu(layer: window.layer)
+            }
+            return Set(windows.map(\.windowID))
         }
-        return Set(windows.map(\.windowID))
     }
 
     /// Shows a concealed item where it sits, presses it once the bar draws it and returns whether

@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import Cocoa
+import Darwin.malloc
 import MenuBarModel
 
 extension MenuBarItemImageCache {
@@ -141,25 +142,13 @@ extension MenuBarItemImageCache {
         }
     }
 
-    /// Schedules the cache drop that follows a period with nothing on
-    /// screen to read it.
-    ///
-    /// Captured images are only ever displayed by the Thaw Bar, the search
-    /// panel and two settings panes. While none of those is up the cache is
-    /// pure resident memory, and on a Mac left alone that is most of the
-    /// time. Reopening a panel inside the delay finds the cache intact;
-    /// after it, the panel refills visible-section glyphs through the same
-    /// loading path it already shows on a cold launch. Concealed-section
-    /// glyphs are kept across the trim (see trimForIdle()).
+    /// Schedules the cache flush and full purge after a period with no visible image consumer.
     func scheduleIdleTrim() {
         idleTrimTask?.cancel()
         idleTrimTask = Task { [weak self] in
             try? await Task.sleep(for: MenuBarItemImageCache.idleTrimDelay)
             guard !Task.isCancelled, let self else { return }
-            await MainActor.run {
-                guard !self.hasVisibleCaptureConsumer(), !self.hasUnfocusedCaptureConsumer() else { return }
-                self.trimForIdle()
-            }
+            await self.trimForIdle()
         }
     }
 
@@ -172,87 +161,48 @@ extension MenuBarItemImageCache {
     }
 
     func hasUnfocusedCaptureConsumer(nav: NavigationStateSnapshot) -> Bool {
-        hasVisibleCaptureConsumer(nav: NavigationStateSnapshot(
-            isThawBarPresented: nav.isThawBarPresented,
-            isSearchPresented: nav.isSearchPresented,
-            isAppFrontmost: true,
-            isSettingsPresented: nav.isSettingsPresented,
-            settingsNavigationIdentifier: nav.settingsNavigationIdentifier,
-            isItemHotkeyListExpanded: nav.isItemHotkeyListExpanded,
-            isSimpleModeSettings: nav.isSimpleModeSettings
-        ))
+        hasActiveImageConsumer(nav: nav)
     }
 
-    /// Drops the cache, except for glyphs only a reveal can refill, and hands
-    /// the freed pages back to the system.
-    ///
-    /// Visible-section images are cheap to recapture: the live refresh loop
-    /// screenshots the bar it can already see. An image for an item in a
-    /// concealed section (Hidden / Always Hidden on macOS 27) is not: the only
-    /// way to get it is to reveal the item on the real menu bar, and a trim
-    /// that dropped those made every Thaw Bar open after 30 s idle replay the
-    /// whole reveal parade. Those entries stay; they are a few dozen small
-    /// crops at most.
-    ///
-    /// The one-time disk load is also re-armed so the next consumer open
-    /// fills any remaining gap from disk (subject to the per-item TTL) before
-    /// resorting to a reveal.
-    ///
-    /// Releasing the images returns their pages to the allocator, which
-    /// holds on to the address space by default; the pressure-relief call
-    /// is what actually shrinks the process's footprint rather than just
-    /// its live set.
-    private func trimForIdle() {
-        let survivors = Self.idleTrimSurvivors(
-            cachedTags: capturesByTag.keys,
-            concealedTags: concealedItemTags()
+    /// Flushes dirty captures to disk, purges every in-memory cached CGImage (including
+    /// concealed items), and returns freed pages to the system allocator.
+    @MainActor
+    func trimForIdle() async {
+        guard !hasActiveImageConsumer else { return }
+
+        let snapshot = Self.diskPersistableCaptures(
+            capturesByTag: capturesByTag,
+            accessTimestamps: accessTimestamps
         )
-        let droppedImages = capturesByTag.count - survivors.count
-        if survivors.isEmpty {
-            removeAllCaptures()
-            accessTimestamps.removeAll()
-        } else {
-            keepCaptures { tag, _ in survivors.contains(tag) }
-            accessTimestamps = accessTimestamps.filter { survivors.contains($0.key) }
+        let concealed = appState.map(concealedIdentifiers(in:)) ?? []
+        if !snapshot.isEmpty {
+            diskStore.enqueueSave(snapshot, concealedIdentifiers: concealed)
+            await diskStore.flush()
         }
+
+        guard !Task.isCancelled, !hasActiveImageConsumer else { return }
+        purgeAllCapturesForIdle()
+    }
+
+    @MainActor
+    func purgeAllCapturesForIdle() {
+        let droppedImages = capturesByTag.count
+        removeAllCaptures()
+        accessTimestamps.removeAll()
         let droppedFailures = failedCapturesLock.withLock { dict in
             let count = dict.count
             dict.removeAll()
             return count
         }
+        pruneDeadGlyphSlots()
+        OverflowFallbackIcon.clearCache()
+        MenuBarItemDisplayName.clear()
         hasLoadedFromDisk = false
         invalidateDiskLoad()
         malloc_zone_pressure_relief(nil, 0)
         MenuBarItemImageCache.diagLog.info(
-            "Idle trim: dropped \(droppedImages) cached images and \(droppedFailures) failure records; kept \(survivors.count) images for concealed items (refilling those needs a reveal on the live bar)"
+            "Idle trim: flushed to disk and purged all \(droppedImages) cached images and \(droppedFailures) failure records"
         )
-    }
-
-    /// Tags of every item currently in a concealed section, or nothing when no
-    /// section engine is running (pre-macOS 27, where hidden items are still
-    /// on the bar and cheap to recapture).
-    private func concealedItemTags() -> [MenuBarItemTag] {
-        guard let appState, appState.menuBarManager.sectionController.isOperational else {
-            return []
-        }
-        let itemCache = appState.itemManager.itemCache
-        return [MenuBarSection.Name.hidden, .alwaysHidden].flatMap { itemCache[$0].map(\.tag) }
-    }
-
-    /// The cached tags an idle trim keeps: those naming an item in
-    /// concealedTags.
-    ///
-    /// Matching ignores the window ID because the two sides are keyed
-    /// differently: the item cache carries live window IDs while disk-loaded
-    /// captures (and system items) carry none.
-    static nonisolated func idleTrimSurvivors(
-        cachedTags: some Sequence<MenuBarItemTag>,
-        concealedTags: [MenuBarItemTag]
-    ) -> Set<MenuBarItemTag> {
-        guard !concealedTags.isEmpty else { return [] }
-        return Set(cachedTags.filter { cached in
-            concealedTags.contains { $0.matchesIgnoringWindowID(cached) }
-        })
     }
 
     /// Returns the count least recently used tags, sorted by access time (oldest first).

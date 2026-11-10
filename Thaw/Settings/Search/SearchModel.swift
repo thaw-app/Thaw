@@ -66,11 +66,11 @@ final class SearchModel {
     var displayedGroups = [SearchGroup]()
 
     @ObservationIgnored
-    let fuse = Fuse(threshold: 0.5)
+    private var fuse: Fuse?
 
-    /// The static search corpus, tokenized once and reused across queries.
+    /// The static search corpus, materialized lazily on the first non-empty query.
     @ObservationIgnored
-    private let searchItems = SearchIndex.entries.map(SearchItem.init)
+    private var searchItems: [SearchItem]?
 
     /// Rebuilds displayedGroups from the current searchText.
     func updateDisplayedItems() {
@@ -78,14 +78,25 @@ final class SearchModel {
         guard !query.isEmpty else {
             // The view renders the normal pane list when the query is empty, so
             // the model only ever owns filtered results.
-            displayedGroups = []
+            clearIndex()
             return
         }
 
-        let fuseResults = fuse.searchSync(query, in: searchItems, by: \.properties)
+        let fuse = self.fuse ?? {
+            let instance = Fuse(threshold: 0.5)
+            self.fuse = instance
+            return instance
+        }()
+        let items = self.searchItems ?? {
+            let built = SearchIndex.entries.map(SearchItem.init)
+            self.searchItems = built
+            return built
+        }()
+
+        let fuseResults = fuse.searchSync(query, in: items, by: \.properties)
 
         let scored = fuseResults.map { result in
-            (item: searchItems[result.index], diffScore: result.diffScore)
+            (item: items[result.index], diffScore: result.diffScore)
         }
 
         // Rank globally by relevance, then group by pane preserving the rank
@@ -105,5 +116,12 @@ final class SearchModel {
         displayedGroups = paneOrder.map { pane in
             SearchGroup(pane: pane, entries: grouped[pane] ?? [])
         }
+    }
+
+    /// Drops the lazy Fuse matcher, tokenized corpus, and current result groups.
+    func clearIndex() {
+        displayedGroups = []
+        searchItems = nil
+        fuse = nil
     }
 }

@@ -111,7 +111,7 @@ struct SettingsPaneRenderTests {
     @Test("The allowed apps section draws")
     func allowedAppsSection() async throws {
         let appState = AppState()
-        let render = render(ThawForm { OtherAppsSection(settings: appState.settings.automation) }, appState: appState)
+        let render = render(Thaw.ThawForm { OtherAppsSection(settings: appState.settings.automation) }, appState: appState)
         _ = try await drawnPixels(render)
     }
 

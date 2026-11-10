@@ -129,7 +129,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     }
 
     func isThawBarShowing() -> Bool {
-        appState?.menuBarManager.thawBarPanel.currentSection != nil
+        appState?.menuBarManager.thawBarPanelIfCreated?.currentSection != nil
     }
 
     func isMenuBarHiddenBySystem() -> Bool {
@@ -140,8 +140,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
         // Ask the window server: AppKit is wrong with "Displays have separate
         // Spaces" off and lags after a topology change. The bridge falls back
         // to the main display, so an unbacked id means mid-change.
-        guard let displayID = Bridging.getActiveMenuBarDisplayID(),
-              connectedDisplayIDs().contains(displayID)
+        guard let displayID = Bridging.getActiveMenuBarDisplayID(), connectedDisplayIDs().contains(displayID)
         else {
             return nil
         }
@@ -282,9 +281,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
                 height: item.bounds.height * capture.scale
             ).integral
             let clippedCropRect = cropRect.intersection(imageBounds)
-            guard !clippedCropRect.isNull,
-                  !clippedCropRect.isEmpty,
-                  let cropped = capture.image.cropping(to: clippedCropRect)
+            guard !clippedCropRect.isNull, !clippedCropRect.isEmpty, let cropped = capture.image.cropping(to: clippedCropRect)
             else {
                 diagLog.warning("controlCrop[\(reason)] id=\(identifier.rawValue) crop unavailable")
                 continue
@@ -328,9 +325,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     private func controlAXElement(matching identifier: ControlItemIdentifier) -> AXElement? {
         guard let runningApp = NSWorkspace.shared.runningApplications.first(where: {
             ThawMenuBarIdentity.owns(bundleIdentifier: $0.bundleIdentifier)
-        }),
-            let app = AXHelpers.application(for: runningApp),
-            let extrasMenuBar = AXHelpers.extrasMenuBar(for: app)
+        }), let app = AXHelpers.application(for: runningApp), let extrasMenuBar = AXHelpers.extrasMenuBar(for: app)
         else {
             return nil
         }

@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import SwiftUI
 import ThawUI
 
@@ -40,50 +41,70 @@ enum SettingsWindowMetrics {
 
 // MARK: - SettingsWindow
 
-struct SettingsWindow: Scene {
-    @Bindable var appState: AppState
-
-    var body: some Scene {
-        ThawWindow(id: .settings, appState: appState) {
-            SettingsView(
-                appState: appState,
-                navigationState: appState.navigationState,
-                generalSettings: appState.settings.general
-            )
-            .sheet(isPresented: $appState.isUpdateConsentPresented) {
-                UpdateConsentSheet(strings: .thaw) { autoDownload in
-                    appState.isUpdateConsentPresented = false
-                    Defaults.set(true, forKey: .hasSeenUpdateConsent)
-                    appState.updatesManager.automaticallyChecksForUpdates = true
-                    appState.updatesManager.automaticallyDownloadsUpdates = autoDownload
-                    appState.startUpdaterIfNeeded()
-                } onDisable: {
-                    appState.isUpdateConsentPresented = false
-                    Defaults.set(true, forKey: .hasSeenUpdateConsent)
-                    appState.updatesManager.automaticallyChecksForUpdates = false
-                }
-            }
-            .sheet(isPresented: Bindable(restoreOffer).isPresented) {
-                RestoreHiddenAppsSheet(offer: restoreOffer)
-            }
-            .onChange(of: appState.navigationState.isSettingsPresented, initial: true) {
-                presentRestoreOfferIfDue()
-            }
-            .onChange(of: appState.isUpdateConsentPresented) {
-                presentRestoreOfferIfDue()
-            }
-        }
-        // Content sets only the minimum; .contentSize would also snap the window to it right after it opens.
-        .windowResizability(.contentMinSize)
-        .defaultSize(
-            width: SettingsWindowMetrics.fullDefault.width,
-            height: SettingsWindowMetrics.fullDefault.height
+@MainActor
+enum SettingsWindow {
+    static func makeWindow(appState: AppState, delegate: NSWindowDelegate?) -> NSWindow {
+        let initialSize = SettingsWindowMetrics.preferred(simpleMode: appState.settings.general.simpleMode)
+        let rootView = ThawWindowConfiguration.configuredContent(
+            SettingsWindowRootView(appState: appState)
         )
-        .windowStyle(.titleBar)
-        .windowToolbarStyle(.unified)
-        .commands { AppUIZoomCommands(strings: .thaw) }
         .environment(appState)
         .environment(appState.permissions)
+
+        let window = NSWindow(
+            contentRect: NSRect(origin: .zero, size: initialSize),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        ThawWindowConfiguration.configureCommon(window, id: .settings)
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+
+        let controller = NSHostingController(rootView: rootView)
+        // Enforce only the content minimum; intrinsic/preferred options would snap user-resized frames.
+        controller.sizingOptions = [.minSize]
+        window.contentViewController = controller
+        window.setContentSize(initialSize)
+        window.center()
+        window.delegate = delegate
+        return window
+    }
+}
+
+// MARK: - SettingsWindowRootView
+
+private struct SettingsWindowRootView: View {
+    @Bindable var appState: AppState
+
+    var body: some View {
+        SettingsView(
+            appState: appState,
+            navigationState: appState.navigationState,
+            generalSettings: appState.settings.general
+        )
+        .modifier(ConditionalSettingsSheet(isPresented: $appState.isUpdateConsentPresented) {
+            UpdateConsentSheet(strings: .thaw) { autoDownload in
+                appState.isUpdateConsentPresented = false
+                Defaults.set(true, forKey: .hasSeenUpdateConsent)
+                appState.updatesManager.automaticallyChecksForUpdates = true
+                appState.updatesManager.automaticallyDownloadsUpdates = autoDownload
+                appState.startUpdaterIfNeeded()
+            } onDisable: {
+                appState.isUpdateConsentPresented = false
+                Defaults.set(true, forKey: .hasSeenUpdateConsent)
+                appState.updatesManager.automaticallyChecksForUpdates = false
+            }
+        })
+        .modifier(ConditionalSettingsSheet(isPresented: Bindable(restoreOffer).isPresented) {
+            RestoreHiddenAppsSheet(offer: restoreOffer)
+        })
+        .onChange(of: appState.navigationState.isSettingsPresented, initial: true) {
+            presentRestoreOfferIfDue()
+        }
+        .onChange(of: appState.isUpdateConsentPresented) {
+            presentRestoreOfferIfDue()
+        }
     }
 
     private var restoreOffer: HiddenAppsRestoreOffer {
@@ -99,5 +120,29 @@ struct SettingsWindow: Scene {
             isAnotherSheetShowing: appState.isUpdateConsentPresented,
             isDraggingMenuBarItem: appState.isDraggingMenuBarItem
         )
+    }
+}
+
+private struct ConditionalSettingsSheet<SheetContent: View>: ViewModifier {
+    @Binding var isPresented: Bool
+    @State private var isSheetHostMounted = false
+    @ViewBuilder let sheetContent: () -> SheetContent
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: isPresented, initial: true) { _, newValue in
+                if newValue {
+                    isSheetHostMounted = true
+                }
+            }
+            .background {
+                if isSheetHostMounted {
+                    Color.clear.sheet(
+                        isPresented: $isPresented,
+                        onDismiss: { isSheetHostMounted = false },
+                        content: sheetContent
+                    )
+                }
+            }
     }
 }

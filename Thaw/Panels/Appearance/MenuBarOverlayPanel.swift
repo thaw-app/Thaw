@@ -25,19 +25,17 @@ private final class MenuBarLiquidGlassFadeView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
-        guard isEnabled,
-              let context = NSGraphicsContext.current?.cgContext,
-              let gradient = CGGradient(
-                  colorsSpace: CGColorSpace(name: CGColorSpace.displayP3),
-                  // Keep the upper third dense for legible titles on bright wallpaper; reveal glass through the lower half.
-                  colors: [
-                      NSColor.black.withAlphaComponent(0.96).cgColor,
-                      NSColor.black.withAlphaComponent(0.88).cgColor,
-                      NSColor.black.withAlphaComponent(0.42).cgColor,
-                      NSColor.clear.cgColor,
-                  ] as CFArray,
-                  locations: [0, 0.3, 0.62, 1]
-              )
+        guard isEnabled, let context = NSGraphicsContext.current?.cgContext, let gradient = CGGradient(
+            colorsSpace: CGColorSpace(name: CGColorSpace.displayP3),
+            // Keep the upper third dense for legible titles on bright wallpaper; reveal glass through the lower half.
+            colors: [
+                NSColor.black.withAlphaComponent(0.96).cgColor,
+                NSColor.black.withAlphaComponent(0.88).cgColor,
+                NSColor.black.withAlphaComponent(0.42).cgColor,
+                NSColor.clear.cgColor,
+            ] as CFArray,
+            locations: [0, 0.3, 0.62, 1]
+        )
         else { return }
 
         context.drawLinearGradient(
@@ -114,6 +112,18 @@ final class MenuBarLiquidGlassContainerView: NSView {
         borderLayer.lineWidth = border.width * 2
         borderLayer.lineDashPattern = border.style.dashPattern(width: border.width)?.map { NSNumber(value: Double($0)) }
         borderLayer.isHidden = border.color == nil
+    }
+
+    func clear() {
+        for glassView in glassViews {
+            glassView.removeFromSuperview()
+        }
+        glassViews.removeAll()
+        fadeView.isEnabled = false
+        maskLayer.path = nil
+        borderLayer.path = nil
+        borderLayer.strokeColor = nil
+        borderLayer.isHidden = true
     }
 
     override func hitTest(_: NSPoint) -> NSView? {
@@ -401,8 +411,7 @@ final class MenuBarOverlayPanel: NSPanel {
     /// Skip frame reads during teardown (pipelines can still fire) or system hiding, when geometry is not on screen.
     private func refreshApplicationMenuFrame() {
         guard
-            let menuBarManager = appState?.menuBarManager,
-            !menuBarManager.isMenuBarHiddenBySystem
+            let menuBarManager = appState?.menuBarManager, !menuBarManager.isMenuBarHiddenBySystem
         else {
             return
         }
@@ -500,6 +509,16 @@ final class MenuBarOverlayPanel: NSPanel {
         menuFrameSettleTask = nil
         cancellables.removeAll()
         cleanupReferences()
+        if let contentView {
+            for subview in contentView.subviews {
+                (subview as? MenuBarOverlayPanelContentView)?.tearDown()
+                (subview as? MenuBarLiquidGlassContainerView)?.clear()
+                subview.layer?.contents = nil
+                subview.removeFromSuperview()
+            }
+            (contentView as? MenuBarOverlayPanelContentView)?.tearDown()
+            contentView.layer?.contents = nil
+        }
         contentView = nil
         missionControlProbe.close()
         super.close()
@@ -599,7 +618,11 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
     private static let alphaFadeKey = "thawAlphaFade"
 
-    private lazy var tintGlassView: NSGlassEffectView = {
+    private var _tintGlassView: NSGlassEffectView?
+    private var tintGlassView: NSGlassEffectView {
+        if let existing = _tintGlassView {
+            return existing
+        }
         let view = NSGlassEffectView()
         view.style = .regular
         view.cornerRadius = 0
@@ -615,38 +638,64 @@ private final class MenuBarOverlayPanelContentView: NSView {
             content.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             content.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+        _tintGlassView = view
         return view
-    }()
+    }
 
-    private lazy var tintLiquidGlassView: MenuBarLiquidGlassContainerView = {
+    private var _tintLiquidGlassView: MenuBarLiquidGlassContainerView?
+    private var tintLiquidGlassView: MenuBarLiquidGlassContainerView {
+        if let existing = _tintLiquidGlassView {
+            return existing
+        }
         let view = MenuBarLiquidGlassContainerView()
         view.translatesAutoresizingMaskIntoConstraints = false
+        _tintLiquidGlassView = view
         return view
-    }()
+    }
 
-    private lazy var backgroundLiquidGlassView: MenuBarLiquidGlassContainerView = {
+    private var _backgroundLiquidGlassView: MenuBarLiquidGlassContainerView?
+    private var backgroundLiquidGlassView: MenuBarLiquidGlassContainerView {
+        if let existing = _backgroundLiquidGlassView {
+            return existing
+        }
         let view = MenuBarLiquidGlassContainerView()
         view.translatesAutoresizingMaskIntoConstraints = false
+        _backgroundLiquidGlassView = view
         return view
-    }()
+    }
 
-    private lazy var tintGlassMaskLayer: CAShapeLayer = {
+    private var _tintGlassMaskLayer: CAShapeLayer?
+    private var tintGlassMaskLayer: CAShapeLayer {
+        if let existing = _tintGlassMaskLayer {
+            return existing
+        }
         let layer = CAShapeLayer()
         layer.fillRule = .evenOdd
+        _tintGlassMaskLayer = layer
         return layer
-    }()
+    }
 
-    private lazy var tintGlassContentMaskLayer: CAShapeLayer = {
+    private var _tintGlassContentMaskLayer: CAShapeLayer?
+    private var tintGlassContentMaskLayer: CAShapeLayer {
+        if let existing = _tintGlassContentMaskLayer {
+            return existing
+        }
         let layer = CAShapeLayer()
         layer.fillRule = .evenOdd
+        _tintGlassContentMaskLayer = layer
         return layer
-    }()
+    }
 
-    private lazy var tintGlassBorderLayer: CAShapeLayer = {
+    private var _tintGlassBorderLayer: CAShapeLayer?
+    private var tintGlassBorderLayer: CAShapeLayer {
+        if let existing = _tintGlassBorderLayer {
+            return existing
+        }
         let layer = CAShapeLayer()
         layer.fillColor = nil
+        _tintGlassBorderLayer = layer
         return layer
-    }()
+    }
 
     private var shapeCGPath: CGPath?
 
@@ -699,9 +748,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
     /// The colors to draw with: the live preview while one is up, and the
     /// stored configuration for the current appearance otherwise.
     private var configuration: MenuBarAppearancePartialConfiguration {
-        if let appState = overlayPanel?.appState,
-           let preview = appState.appearanceManager.previewConfiguration
-        {
+        if let appState = overlayPanel?.appState, let preview = appState.appearanceManager.previewConfiguration {
             return preview
         }
         return fullConfiguration.current
@@ -796,7 +843,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 // Refresh macOS 27 physical AX geometry after cache changes.
                 let cacheTask = Task { @MainActor [weak self, itemManager = appState.itemManager] in
                     let changes = Observations { itemManager.itemCache }.removeDuplicates()
-                    for await cache in changes {
+                    for await _ in changes {
                         guard let self else { return }
                         // Freeze so a transient AX read during the
                         // cache-change reflow doesn't flash wrong bounds.
@@ -1024,8 +1071,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
         let computedLeadingPathBounds: CGRect = {
             guard
-                let applicationMenuFrame = overlayPanel?.applicationMenuFrame,
-                applicationMenuFrame.width > 0
+                let applicationMenuFrame = overlayPanel?.applicationMenuFrame, applicationMenuFrame.width > 0
             else {
                 return .zero
             }
@@ -1109,9 +1155,8 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 .withAlpha(configuration.tintOpacity)
                 .draw(in: rect, using: .displayP3)
         case .adaptive:
-            if let colorInfo = averageColorInfo,
-               let color = NSColor(cgColor: colorInfo.color)?
-               .withAlphaComponent(configuration.tintOpacity)
+            if let colorInfo = averageColorInfo, let color = NSColor(cgColor: colorInfo.color)?
+                .withAlphaComponent(configuration.tintOpacity)
             {
                 color.setFill()
                 rect.fill()
@@ -1119,9 +1164,8 @@ private final class MenuBarOverlayPanelContentView: NSView {
         case .adaptiveGradient:
             if let gradient = adaptiveGradient(opacity: configuration.tintOpacity) {
                 gradient.draw(in: rect, angle: 0)
-            } else if let colorInfo = averageColorInfo,
-                      let color = NSColor(cgColor: colorInfo.color)?
-                      .withAlphaComponent(configuration.tintOpacity)
+            } else if let colorInfo = averageColorInfo, let color = NSColor(cgColor: colorInfo.color)?
+                .withAlphaComponent(configuration.tintOpacity)
             {
                 // Use the average until the palette arrives to avoid an untinted flash.
                 color.setFill()
@@ -1133,18 +1177,13 @@ private final class MenuBarOverlayPanelContentView: NSView {
     /// Use the two dominant swatches, or nil before capture; repeated swatches produce a flat tint for single-colour wallpaper.
     private func adaptiveGradient(opacity: CGFloat) -> NSGradient? {
         guard
-            let palette = wallpaperPalette,
-            let primary = palette.primary,
-            let secondary = palette.secondary
+            let palette = wallpaperPalette, let primary = palette.primary, let secondary = palette.secondary
         else {
             return nil
         }
         let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpaceCreateDeviceRGB()
         guard
-            let start = primary.cgColor(in: colorSpace),
-            let end = secondary.cgColor(in: colorSpace),
-            let startColor = NSColor(cgColor: start)?.withAlphaComponent(opacity),
-            let endColor = NSColor(cgColor: end)?.withAlphaComponent(opacity)
+            let start = primary.cgColor(in: colorSpace), let end = secondary.cgColor(in: colorSpace), let startColor = NSColor(cgColor: start)?.withAlphaComponent(opacity), let endColor = NSColor(cgColor: end)?.withAlphaComponent(opacity)
         else {
             return nil
         }
@@ -1200,12 +1239,38 @@ private final class MenuBarOverlayPanelContentView: NSView {
             updateBackgroundGlassSurface(glassView)
         } else if isBackgroundGlassActive {
             isBackgroundGlassActive = false
-            guard let container = panel.contentView,
-                  let realContent = container.subviews.firstNonNil({ $0 as? MenuBarOverlayPanelContentView })
+            guard let container = panel.contentView, let realContent = container.subviews.firstNonNil({ $0 as? MenuBarOverlayPanelContentView })
             else { return }
+            _backgroundLiquidGlassView?.clear()
+            _backgroundLiquidGlassView?.removeFromSuperview()
+            _backgroundLiquidGlassView = nil
             realContent.removeFromSuperview()
             panel.contentView = realContent
         }
+    }
+
+    func tearDown() {
+        geometryRefresh.cancel()
+        iconShadeTask?.cancel()
+        iconShadeTask = nil
+        cancellables.removeAll()
+        _tintLiquidGlassView?.clear()
+        _tintLiquidGlassView?.removeFromSuperview()
+        _tintLiquidGlassView = nil
+        _backgroundLiquidGlassView?.clear()
+        _backgroundLiquidGlassView?.removeFromSuperview()
+        _backgroundLiquidGlassView = nil
+        _tintGlassView?.removeFromSuperview()
+        _tintGlassView = nil
+        _tintGlassMaskLayer?.path = nil
+        _tintGlassMaskLayer = nil
+        _tintGlassContentMaskLayer?.path = nil
+        _tintGlassContentMaskLayer = nil
+        _tintGlassBorderLayer?.path = nil
+        _tintGlassBorderLayer?.removeFromSuperlayer()
+        _tintGlassBorderLayer = nil
+        shapeCGPath = nil
+        layer?.contents = nil
     }
 
     private func updateBackgroundGlassSurface(_ glassView: NSGlassEffectView) {
@@ -1225,7 +1290,8 @@ private final class MenuBarOverlayPanelContentView: NSView {
             )
             backgroundLiquidGlassView.isHidden = false
         } else {
-            backgroundLiquidGlassView.isHidden = true
+            _backgroundLiquidGlassView?.clear()
+            _backgroundLiquidGlassView?.isHidden = true
             configureGlassView(
                 glassView,
                 style: style,
@@ -1262,8 +1328,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
     /// again when the bar changed. IconShadeReadSchedule decides when.
     private func readIconShadeIfFollowed() {
         let followed = configuration.tintGlassStyle.followsIconShade || configuration.backgroundGlassStyle.followsIconShade
-        guard followed, let panel = overlayPanel,
-              iconShadeSchedule.shouldStart(bar: averageColorInfo, hasShade: iconShade != nil)
+        guard followed, let panel = overlayPanel, iconShadeSchedule.shouldStart(bar: averageColorInfo, hasShade: iconShade != nil)
         else {
             return
         }
@@ -1284,9 +1349,10 @@ private final class MenuBarOverlayPanelContentView: NSView {
     /// Adds or removes the tint glass effect subview, masked to the shape path.
     private func updateTintGlass() {
         guard configuration.tintKind == .glass, let shapeCGPath else {
-            tintGlassView.isHidden = true
-            tintLiquidGlassView.isHidden = true
-            tintGlassBorderLayer.isHidden = true
+            _tintGlassView?.isHidden = true
+            _tintLiquidGlassView?.clear()
+            _tintLiquidGlassView?.isHidden = true
+            _tintGlassBorderLayer?.isHidden = true
             return
         }
 
@@ -1309,13 +1375,14 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 usesDarkFade: style.usesDarkFade,
                 border: .init(color: configuration.hasBorder ? configuration.borderColor : nil, width: configuration.borderWidth, style: configuration.borderStyle)
             )
-            tintGlassView.isHidden = true
-            tintGlassBorderLayer.isHidden = true
+            _tintGlassView?.isHidden = true
+            _tintGlassBorderLayer?.isHidden = true
             tintLiquidGlassView.isHidden = false
             return
         }
 
-        tintLiquidGlassView.isHidden = true
+        _tintLiquidGlassView?.clear()
+        _tintLiquidGlassView?.isHidden = true
         if tintGlassView.superview == nil {
             addSubview(tintGlassView, positioned: .above, relativeTo: nil)
             NSLayoutConstraint.activate([
@@ -1346,7 +1413,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 .dashPattern(width: configuration.borderWidth)?.map { NSNumber(value: Double($0)) }
             tintGlassBorderLayer.isHidden = false
         } else {
-            tintGlassBorderLayer.isHidden = true
+            _tintGlassBorderLayer?.isHidden = true
         }
 
         tintGlassView.isHidden = false
@@ -1371,9 +1438,8 @@ private final class MenuBarOverlayPanelContentView: NSView {
         case .glass:
             break
         case .adaptive:
-            if let colorInfo = averageColorInfo,
-               let color = NSColor(cgColor: colorInfo.color)?
-               .withAlphaComponent(configuration.backgroundOpacity)
+            if let colorInfo = averageColorInfo, let color = NSColor(cgColor: colorInfo.color)?
+                .withAlphaComponent(configuration.backgroundOpacity)
             {
                 color.setFill()
                 rect.fill()
@@ -1383,8 +1449,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
     /// Draws the background shadow at the top edge of the given rectangle.
     private func drawBackgroundShadow(in rect: CGRect) {
-        guard configuration.backgroundHasShadow else { return }
-        guard let gradient = NSGradient(
+        guard configuration.backgroundHasShadow, let gradient = NSGradient(
             colors: [
                 NSColor(white: 0.0, alpha: 0.0),
                 NSColor(white: 0.0, alpha: 0.2),
@@ -1401,8 +1466,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
     /// Draws the background border at the top edge of the given rectangle.
     private func drawBackgroundBorder(in rect: CGRect) {
-        guard configuration.backgroundHasBorder else { return }
-        guard let color = NSColor(cgColor: configuration.backgroundBorderColor) else { return }
+        guard configuration.backgroundHasBorder, let color = NSColor(cgColor: configuration.backgroundBorderColor) else { return }
         let borderBounds = CGRect(
             x: rect.minX,
             y: rect.minY,
@@ -1415,8 +1479,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
     override func draw(_: NSRect) {
         guard
-            let overlayPanel,
-            let context = NSGraphicsContext.current
+            let overlayPanel, let context = NSGraphicsContext.current
         else {
             return
         }
@@ -1500,9 +1563,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 drawTint(in: drawableBounds)
             }
 
-            if hasBorder,
-               let borderColor = NSColor(cgColor: configuration.borderColor)
-            {
+            if hasBorder, let borderColor = NSColor(cgColor: configuration.borderColor) {
                 context.saveGraphicsState()
                 defer {
                     context.restoreGraphicsState()

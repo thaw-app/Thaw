@@ -115,7 +115,7 @@ struct SettingsSidebarPaneList: View {
 
     var body: some View {
         let current = navigationState.settingsNavigationIdentifier
-        ThawSidebar(
+        SettingsSidebarList(
             rows: rows,
             current: current,
             showsSelection: SettingsSidebarPanes.showsSelection(current: current, isSearching: isSearching),

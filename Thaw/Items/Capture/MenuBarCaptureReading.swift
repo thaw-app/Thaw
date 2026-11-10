@@ -164,35 +164,30 @@ extension MenuBarItemImageCache {
         for ownerPID: pid_t,
         displayBounds: CGRect
     ) -> (windowID: CGWindowID, frame: CGRect)? {
-        guard
-            displayBounds.width > 0,
-            let list = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]]
-        else { return nil }
-        var best: (windowID: CGWindowID, frame: CGRect, info: [String: Any])?
-        for info in list {
+        autoreleasepool {
             guard
-                let pid = info[kCGWindowOwnerPID as String] as? pid_t, pid == ownerPID,
-                let number = info[kCGWindowNumber as String] as? CGWindowID,
-                let boundsDict = info[kCGWindowBounds as String] as? NSDictionary,
-                let frame = CGRect(dictionaryRepresentation: boundsDict)
-            else { continue }
-            guard ScreenCapture.isMenuBarStripFrame(frame, in: displayBounds),
-                  (info[kCGWindowAlpha as String] as? Double ?? 1) > 0
-            else { continue }
-            if let current = best, frame.width <= current.frame.width {
-                continue
+                displayBounds.width > 0, let list = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]]
+            else { return nil }
+            var best: (windowID: CGWindowID, frame: CGRect, info: [String: Any])?
+            for info in list {
+                guard
+                    let pid = info[kCGWindowOwnerPID as String] as? pid_t, pid == ownerPID, let number = info[kCGWindowNumber as String] as? CGWindowID, let boundsDict = info[kCGWindowBounds as String] as? NSDictionary, let frame = CGRect(dictionaryRepresentation: boundsDict), ScreenCapture.isMenuBarStripFrame(frame, in: displayBounds), (info[kCGWindowAlpha as String] as? Double ?? 1) > 0
+                else { continue }
+                if let current = best, frame.width <= current.frame.width {
+                    continue
+                }
+                best = (windowID: number, frame: frame, info: info)
             }
-            best = (windowID: number, frame: frame, info: info)
+            guard let best else { return nil }
+            let layer = best.info[kCGWindowLayer as String] as? Int ?? -1
+            let onScreen = best.info[kCGWindowIsOnscreen as String] as? Bool ?? false
+            let owner = best.info[kCGWindowOwnerName as String] as? String ?? "?"
+            MenuBarItemImageCache.diagLog.debug(
+                "barWindow: pid \(ownerPID) (\(owner)) → wid=\(best.windowID) frame=\(best.frame) " +
+                    "layer=\(layer) onScreen=\(onScreen)"
+            )
+            return (windowID: best.windowID, frame: best.frame)
         }
-        guard let best else { return nil }
-        let layer = best.info[kCGWindowLayer as String] as? Int ?? -1
-        let onScreen = best.info[kCGWindowIsOnscreen as String] as? Bool ?? false
-        let owner = best.info[kCGWindowOwnerName as String] as? String ?? "?"
-        MenuBarItemImageCache.diagLog.debug(
-            "barWindow: pid \(ownerPID) (\(owner)) → wid=\(best.windowID) frame=\(best.frame) " +
-                "layer=\(layer) onScreen=\(onScreen)"
-        )
-        return (windowID: best.windowID, frame: best.frame)
     }
 
     static nonisolated func barWindowCapture(
@@ -200,9 +195,7 @@ extension MenuBarItemImageCache {
         displayBounds: CGRect
     ) async -> ScreenCapture.MenuBarHostingCapture? {
         guard
-            let barWindow = barWindow(for: ownerPID, displayBounds: displayBounds),
-            barWindow.frame.width > 0,
-            let capture = await ScreenCapture.captureOwnerBarWindow(
+            let barWindow = barWindow(for: ownerPID, displayBounds: displayBounds), barWindow.frame.width > 0, let capture = await ScreenCapture.captureOwnerBarWindow(
                 windowID: barWindow.windowID,
                 frame: barWindow.frame
             )
