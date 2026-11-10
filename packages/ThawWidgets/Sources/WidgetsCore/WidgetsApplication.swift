@@ -51,6 +51,7 @@ final class WidgetsAppDelegate: NSObject, NSApplicationDelegate {
             hostDefaults: hostBundleIdentifier.flatMap(UserDefaults.init(suiteName:))
         )
         StatusIconWidgetController.shared.start()
+        followThawVisibility()
         if ModuleWindowController.isRequestedAtLaunch {
             showWindow()
         }
@@ -63,5 +64,19 @@ final class WidgetsAppDelegate: NSObject, NSApplicationDelegate {
 
     private func showWindow() {
         window.show()
+    }
+
+    /// Hides or shows the icon as Thaw asks, now and on each change it announces.
+    private func followThawVisibility() {
+        guard let host = hostBundleIdentifier, let bundleID = Bundle.main.bundleIdentifier else { return }
+        let apply = {
+            StatusItemPublisher.shared.isHiddenByThaw = WidgetVisibility.isHidden(bundleID, in: WidgetVisibility.folder(host: host))
+        }
+        apply()
+        DistributedNotificationCenter.default().addObserver(
+            forName: WidgetVisibility.notification(host: host), object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated(apply)
+        }
     }
 }

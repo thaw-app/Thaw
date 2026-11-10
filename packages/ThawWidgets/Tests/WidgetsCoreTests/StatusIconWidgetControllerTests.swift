@@ -211,6 +211,28 @@ struct StatusItemRenderingTests {
         #expect(charged.drawn != state.drawn)
     }
 
+    @Test("The icon shows only with something to draw and while Thaw doesn't hide it")
+    func visibilityFollowsThaw() {
+        #expect(StatusItemPublisher.shows(hasContent: true, hiddenByThaw: false))
+        #expect(!StatusItemPublisher.shows(hasContent: true, hiddenByThaw: true))
+        #expect(!StatusItemPublisher.shows(hasContent: false, hiddenByThaw: false))
+    }
+
+    @Test("Thaw's list of hidden bundles names this module's bundle, or doesn't")
+    func hiddenListIsRead() throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "WidgetVisibilityTests-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let own = "com.example.thaw.module.widgets"
+        #expect(!WidgetVisibility.isHidden(own, in: folder), "no file hides nothing")
+
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try "com.example.thaw.extra.space\n\(own)".write(to: folder.appending(path: "hidden-extras.txt"), atomically: true, encoding: .utf8)
+        #expect(WidgetVisibility.isHidden(own, in: folder))
+        #expect(!WidgetVisibility.isHidden("com.example.thaw.module.widget", in: folder), "a whole line, not a prefix")
+        #expect(WidgetVisibility.notification(host: "com.example.thaw").rawValue == "com.example.thaw.extra.visibility")
+        #expect(WidgetVisibility.folder(host: "com.example.thaw").path.hasSuffix("com.example.thaw/StandIns"))
+    }
+
     @Test("A coloured icon is redrawn when the menu bar turns light or dark")
     func redrawsOnAppearanceChange() {
         let publisher = StatusItemPublisher()
