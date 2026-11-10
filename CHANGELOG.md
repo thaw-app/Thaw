@@ -65,6 +65,9 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 
 #### Layout and items
 
+- **Native hiding starts again when an app Thaw had hidden has no entry in System Settings › Menu Bar,** such as one you removed. That one leftover record used to stop it at every launch. Reported by @SebastienBn in [#1513](https://github.com/thaw-app/Thaw/issues/1513).
+- **Native hiding hides your apps again when macOS puts its list back right after Thaw changed it.** Thaw used to take that for your choice, leave every app on the menu bar and mark each one with a warning. Reported by @macdaddy1944 in [#1501](https://github.com/thaw-app/Thaw/issues/1501).
+- **An app you switched back on in System Settings says so in Layout,** instead of saying macOS won't let Thaw switch it off.
 - **Undo brings a moved group back whole again.** It used to restore only the batch's ungrouped items.
 - **Live item pictures update again when their left part changes,** like right-aligned text getting shorter on an item that keeps its width.
 - **Shift and the arrow keys extend the selection down the Layout window's list** instead of stopping after one row, a plain arrow key then carries on from where they stopped, and a filter stops a Shift-click selecting rows it hides.
