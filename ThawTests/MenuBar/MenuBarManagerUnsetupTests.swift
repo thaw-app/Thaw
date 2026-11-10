@@ -75,6 +75,7 @@ struct MenuBarManagerUnsetupTests {
         #expect(manager.setSection(.hidden, items: []) == nil)
         #expect(manager.nativeHiddenBundleIDs.isEmpty)
         #expect(manager.nativeUntrackedBundleIDs.isEmpty)
+        #expect(manager.nativeLeftAloneBundleIDs.isEmpty)
         var received = 0
         let first = manager.revealedSectionChanges.sink { _ in received += 1 }
         let second = manager.sectionLayoutChanges.sink { _ in received += 1 }

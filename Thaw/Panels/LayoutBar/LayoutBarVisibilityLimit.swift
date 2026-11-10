@@ -18,6 +18,9 @@ enum LayoutBarVisibilityLimit: Equatable {
     /// Native app hiding found no Control Center switch that governs the app,
     /// so its icon stays on the bar.
     case cannotHide
+    /// Native app hiding switched the app off and found it on again later, which it takes for the
+    /// person's choice in System Settings, so it leaves the icon on the bar until the next launch.
+    case leftAlone
 
     var explanation: String {
         switch self {
@@ -27,6 +30,8 @@ enum LayoutBarVisibilityLimit: Equatable {
             String(localized: "macOS takes pinned Control Center items like this one off the menu bar while other icons are hidden. It comes back when you show them.")
         case .cannotHide:
             String(localized: "macOS won't let \(Constants.displayName) switch this app off, so its icon stays on the bar.")
+        case .leftAlone:
+            String(localized: "This app was switched back on in System Settings after \(Constants.displayName) hid it, so its icon stays on the bar until \(Constants.displayName) restarts.")
         }
     }
 
@@ -43,6 +48,7 @@ enum LayoutBarVisibilityLimit: Equatable {
         nativeAppHidingActive: Bool,
         hidesOtherIcons: Bool,
         untrackedBundleIDs: Set<String>,
+        leftAloneBundleIDs: Set<String> = [],
         isPinnedControlCenterModule: Bool = false
     ) -> Self? {
         if section == .visible {
@@ -51,7 +57,11 @@ enum LayoutBarVisibilityLimit: Equatable {
             }
             return !nativeAppHidingActive && hidesOtherIcons && ownerHasRegisteredBundle == false ? .cannotShow : nil
         }
-        return nativeAppHidingActive && untrackedBundleIDs.contains(ownerBundleID) ? .cannotHide : nil
+        guard nativeAppHidingActive else { return nil }
+        if untrackedBundleIDs.contains(ownerBundleID) {
+            return .cannotHide
+        }
+        return leftAloneBundleIDs.contains(ownerBundleID) ? .leftAlone : nil
     }
 
     @MainActor
@@ -65,6 +75,7 @@ enum LayoutBarVisibilityLimit: Equatable {
             nativeAppHidingActive: menuBarManager.nativeAppHidingExperiment.isActive,
             hidesOtherIcons: menuBarManager.sectionController.sectionAssignment.values.contains { $0 != .visible },
             untrackedBundleIDs: menuBarManager.nativeUntrackedBundleIDs,
+            leftAloneBundleIDs: menuBarManager.nativeLeftAloneBundleIDs,
             isPinnedControlCenterModule: item.tag.namespace.isMenuBarHostingNamespace
                 && SystemMenuBarModuleCatalog.pinnedModuleName(inTitle: item.tag.title) != nil
         )
