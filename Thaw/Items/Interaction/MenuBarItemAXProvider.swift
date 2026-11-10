@@ -82,7 +82,7 @@ nonisolated enum MenuBarItemAXProvider {
             items: restoredIdentities(snapshot.items),
             freshItems: restoredIdentities(snapshot.freshItems),
             completed: snapshot.completed,
-            hasFreshKnownInventory: snapshot.hasFreshKnownInventory,
+            knownInventory: snapshot.knownInventory,
             hasFreshMoveInventory: snapshot.hasFreshMoveInventory,
             hasFreshOwnerInventory: snapshot.hasFreshOwnerInventory
         )
@@ -414,7 +414,7 @@ nonisolated enum MenuBarItemAXProvider {
             items: items,
             freshItems: freshItems,
             completed: state.isComplete(generation: pass.generation),
-            hasFreshKnownInventory: state.hasFreshKnownInventory(generation: pass.generation, excusing: state.excusableDeferredOwners(of: pass)),
+            knownInventory: state.coverage(of: pass, skipped: Set(slowOwners.keys).subtracting(requiredOwners)),
             hasFreshMoveInventory: hasFreshMoveInventory,
             hasFreshOwnerInventory: passCovered && state.hasFreshItemOwners(generation: pass.generation, excusing: excused)
         ), state)
@@ -673,7 +673,7 @@ nonisolated enum MenuBarItemAXProvider {
         let items: [MenuBarItem]
         let freshItems: [MenuBarItem]
         let completed: Bool
-        let hasFreshKnownInventory: Bool
+        let knownInventory: InventoryCoverage
         let hasFreshMoveInventory: Bool
         /// Every requested owner and owner with items answered; apps never read, left to discovery, don't count.
         let hasFreshOwnerInventory: Bool
@@ -682,7 +682,7 @@ nonisolated enum MenuBarItemAXProvider {
             items: [],
             freshItems: [],
             completed: false,
-            hasFreshKnownInventory: false,
+            knownInventory: .none,
             hasFreshMoveInventory: false,
             hasFreshOwnerInventory: false
         )
@@ -746,7 +746,7 @@ nonisolated enum MenuBarItemAXProvider {
             priorityOwners: plan.priorityOwners,
             preemptsDiscovery: plan.scope == .discovery
         ) else { return .unavailable }
-        if plan.scope == .discovery, snapshot.completed || snapshot.hasFreshKnownInventory {
+        if plan.scope == .discovery, snapshot.completed || snapshot.knownInventory.isFresh {
             fullWalks.noteFullWalk()
         }
         return restoredIdentities(snapshot)

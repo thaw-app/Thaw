@@ -190,7 +190,7 @@ extension MenuBarItemManager {
                     let snapshot = await MenuBarItemAXProvider.menuBarInventoryConcurrent(freshOnly: true)
                     // An owner can exit during the re-scan, so the process table is read again with it.
                     running = await RunningApplicationSnapshot.current()
-                    guard snapshot.hasFreshKnownInventory,
+                    guard snapshot.knownInventory.isFresh,
                           layoutPublication.canPublish(generation: publicationGeneration)
                     else {
                         scheduleCoalescedCacheRerun()
@@ -652,7 +652,7 @@ extension MenuBarItemManager {
             return
         }
         onScreenItemSnapshot.update(inventory.freshItems.filter(\.isOnScreen), fromCompleteWalk: inventory.completed)
-        thisRead = BarReadRecord.Read(hasFreshKnownInventory: inventory.hasFreshKnownInventory)
+        thisRead = BarReadRecord.Read(hasFreshKnownInventory: inventory.knownInventory.isFresh, hasSteadyKnownInventory: inventory.knownInventory.isSteady)
 
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: getMenuBarItems returned \(items.count) items")
 
@@ -800,7 +800,7 @@ extension MenuBarItemManager {
         // Partial inventory, or one merged with cached items, can populate the editor, but cannot
         // authorize boundary repairs or replace saved order with retained geometry.
         lastKnownControlItems = CacheDividers.live(controlItems)
-        if isPartialMerge || !inventory.hasFreshKnownInventory {
+        if isPartialMerge || !inventory.knownInventory.isFresh {
             await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID, publicationGeneration: publicationGeneration, observationOnly: true)
             return
         }

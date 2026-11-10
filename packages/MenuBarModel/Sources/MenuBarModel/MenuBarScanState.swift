@@ -140,6 +140,17 @@ public struct MenuBarScanState<Observation: Sendable>: Sendable {
         pass.deferredOwners.filter { retained[$0]?.isEmpty != false }
     }
 
+    /// How much of the known inventory a pass covered, given the owners it skipped as unresponsive.
+    /// A skipped owner with a retained answer still has its items listed, with old geometry; one never read is not excused.
+    public func coverage(of pass: Pass, skipped: Set<Int32> = []) -> InventoryCoverage {
+        let deferred = excusableDeferredOwners(of: pass)
+        let known = skipped.filter { retained[$0] != nil }
+        return InventoryCoverage(
+            isFresh: hasFreshKnownInventory(generation: pass.generation, excusing: deferred),
+            isSteady: hasFreshKnownInventory(generation: pass.generation, excusing: deferred.union(known))
+        )
+    }
+
     /// Whether every owner with items was read in this pass. An owner never read, such as an app
     /// launched since the last full walk, doesn't count: reads that leave new apps to discovery use this.
     public func hasFreshItemOwners(generation: UInt64, excusing excused: Set<Int32> = []) -> Bool {
@@ -159,4 +170,19 @@ public struct MenuBarScanState<Observation: Sendable>: Sendable {
     public func isComplete(generation: UInt64) -> Bool {
         owners.allSatisfy { observed[$0] == generation }
     }
+}
+
+/// What a pass can vouch for. See MenuBarScanState.coverage(of:skipped:).
+public struct InventoryCoverage: Equatable, Sendable {
+    /// Every owner known to have items answered this pass, so its geometry can back a write.
+    public let isFresh: Bool
+    /// The same, except for unresponsive owners whose items are already known. Fresh implies steady.
+    public let isSteady: Bool
+
+    public init(isFresh: Bool, isSteady: Bool) {
+        self.isFresh = isFresh
+        self.isSteady = isSteady
+    }
+
+    public static let none = InventoryCoverage(isFresh: false, isSteady: false)
 }

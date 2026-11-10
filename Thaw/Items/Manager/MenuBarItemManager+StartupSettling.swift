@@ -38,7 +38,7 @@ extension MenuBarItemManager {
                 return nil
             }),
             readGeneration: cacheCycleState.lastRead.generation,
-            readComplete: cacheCycleState.lastRead.isComplete
+            readComplete: cacheCycleState.lastRead.isSteady
         )
     }
 
