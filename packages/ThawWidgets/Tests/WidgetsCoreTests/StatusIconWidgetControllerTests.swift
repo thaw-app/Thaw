@@ -193,6 +193,24 @@ struct StatusItemRenderingTests {
         #expect(button.image == nil)
     }
 
+    @Test("A reading that changes its text and not its picture leaves the drawn content equal")
+    func textOnlyChangesDrawNothingNew() {
+        var samples = StatusIconSamples(network: .wifi)
+        samples.wifi = 0.80
+        let state = StatusIconPreviewState(composition: StatusIconComposition(), samples: samples, isLive: true)
+        var nudged = state
+        nudged.samples.wifi = 0.81
+        #expect(nudged.displayed != state.displayed, "the menu says 81%")
+        #expect(nudged.drawn == state.drawn, "the same bars and dots are lit")
+
+        var weaker = state
+        weaker.samples.wifi = 0.2
+        #expect(weaker.drawn != state.drawn)
+        var charged = state
+        charged.samples.battery = 0.5
+        #expect(charged.drawn != state.drawn)
+    }
+
     @Test("A coloured icon is redrawn when the menu bar turns light or dark")
     func redrawsOnAppearanceChange() {
         let publisher = StatusItemPublisher()

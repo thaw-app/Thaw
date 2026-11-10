@@ -111,6 +111,34 @@ struct StatusIconPreviewState: Equatable {
     }
 }
 
+extension StatusIconPreviewState {
+    /// What the image draws, to the precision it shows: whole percents around the outside, lit
+    /// segments below and signal bars in the centre. A reading can change its text and not its picture.
+    var drawn: StatusIconDrawnContent {
+        let showsWifi = composition.center.showsNetwork(for: samples) && samples.network == .wifi
+        return StatusIconDrawnContent(
+            composition: composition,
+            style: style,
+            centerSymbol: composition.center.symbolName(for: samples),
+            tints: composition.activeSources.map { style.tint(for: $0, samples: samples) },
+            outerPercent: composition.outer == .none ? nil : Int((samples[composition.outerSource] * 100).rounded()),
+            signalBars: showsWifi ? StatusIconSignal.bars(strength: samples[.wifi]) : nil,
+            litSegments: composition.bottom == .none ? nil : samples.litSegments(for: composition.bottomSource)
+        )
+    }
+}
+
+/// The inputs of the menu bar image.
+struct StatusIconDrawnContent: Equatable {
+    var composition: StatusIconComposition
+    var style: StatusIconStyle
+    var centerSymbol: String?
+    var tints: [StatusIconTint?]
+    var outerPercent: Int?
+    var signalBars: Int?
+    var litSegments: Int?
+}
+
 /// The parts of a preview state that reach the screen or VoiceOver.
 struct StatusIconDisplayedContent: Equatable {
     var composition: StatusIconComposition

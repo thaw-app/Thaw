@@ -29,6 +29,9 @@ final class StatusItemPublisher: NSObject {
     private var appearanceObservation: NSKeyValueObservation?
     /// Whether the icon was last drawn for a dark menu bar.
     private var renderedDark: Bool?
+    /// What the image on the button was drawn from.
+    private var rendered: StatusIconDrawnContent?
+    private var menuTitles: [String] = []
 
     /// Creates (or reuses) a status item and sets its image to the rendered
     /// composition. The item appears immediately.
@@ -49,10 +52,21 @@ final class StatusItemPublisher: NSObject {
         }
         lastState = state
         if let button = statusItem?.button {
-            Self.configure(button, for: state)
-            renderedDark = Self.isDark(button)
+            // A new image makes AppKit snapshot the item again, so it is set only when the picture changes.
+            // A reading often changes its text alone, as Wi-Fi strength does between bars.
+            let dark = Self.isDark(button)
+            if state.drawn != rendered || dark != renderedDark {
+                button.image = Self.image(for: state, darkMenuBar: dark)
+                rendered = state.drawn
+                renderedDark = dark
+            }
+            Self.describe(button, for: state)
         }
-        statusItem?.menu = makeMenu(for: state)
+        let titles = [state.title] + state.details
+        if titles != menuTitles || statusItem?.menu == nil {
+            statusItem?.menu = makeMenu(for: state)
+            menuTitles = titles
+        }
         if statusItem?.isVisible != true {
             statusItem?.isVisible = true
         }
@@ -84,9 +98,16 @@ final class StatusItemPublisher: NSObject {
     /// Thaw names its own items by it and the label changes with every reading.
     static func configure(_ button: NSButton, for state: StatusIconPreviewState) {
         button.image = image(for: state, darkMenuBar: isDark(button))
+        describe(button, for: state)
+    }
+
+    /// Describes the readings to VoiceOver and the tooltip, leaving the picture alone.
+    static func describe(_ button: NSButton, for state: StatusIconPreviewState) {
+        let description = state.accessibilityDescription
         button.setAccessibilityIdentifier(autosaveName)
-        button.setAccessibilityLabel(state.accessibilityDescription)
-        button.toolTip = state.accessibilityDescription
+        guard button.toolTip != description else { return }
+        button.setAccessibilityLabel(description)
+        button.toolTip = description
     }
 
     /// The menu a click opens: the same readings the image shows.
