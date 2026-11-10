@@ -90,6 +90,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Two same-width items of one app can no longer show each other's picture.**
 - **An item with a changing title is recognized after its app restarts,** even when the old copy was still quitting.
 - **Capture Hidden Items retakes a picture that is cut off at its left edge,** and a cut-off picture can no longer replace a complete one. It used to count a cut picture as good and leave it.
+- **Pictures of hidden items survive a restart.** Restarting Thaw could leave the saved pictures half written, so all of them were gone at the next start. Thaw could also save before it had read them back in, and it never reused the picture of an app's second item with the same name. Reported by katla on Discord.
 
 #### Thaw Bar
 

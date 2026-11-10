@@ -200,10 +200,10 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     @ObservationIgnored
     var diskLoadTask: Task<Void, Never>?
 
-    /// Bumped whenever the cache is emptied on purpose. A load merges only
-    /// under the generation it started with, so it cannot restore released images.
+    /// Where the lazy disk load stands: the generation a load must still be
+    /// in to merge, and whether a save is waiting for it.
     @ObservationIgnored
-    var diskLoadGeneration = 0
+    var diskLoad = DiskLoadState()
 
     /// A slot the cache publishes into, kept only for as long as the consumer
     /// that asked for it holds on.

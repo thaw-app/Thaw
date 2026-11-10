@@ -398,7 +398,7 @@ final class AppState {
         isRestarting = true
 
         // Save image cache to disk before restarting so new instance can load it
-        imageCache.saveToDisk()
+        imageCache.saveToDiskAndWait()
 
         let config = NSWorkspace.OpenConfiguration()
         config.activates = false
