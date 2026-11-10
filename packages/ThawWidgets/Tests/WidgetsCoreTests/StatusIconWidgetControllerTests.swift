@@ -42,6 +42,48 @@ struct StatusIconWidgetControllerTests {
         #expect(publisher.published.last?.samples.network == .ethernet, "The icon must match the sampler")
     }
 
+    @Test("A sample that changes nothing the icon shows is not published again")
+    func unusedReadingsAreNotRepublished() throws {
+        let controller = try makeController()
+        var samples = StatusIconSamples(network: .wifi)
+        controller.absorb(samples)
+        let published = publisher.published.count
+
+        samples.cpu = 0.9
+        controller.absorb(samples)
+        samples.battery += 0.001
+        controller.absorb(samples)
+        #expect(publisher.published.count == published, "the default icon shows battery and Wi-Fi, to the percent")
+
+        samples.battery = 0.4
+        controller.absorb(samples)
+        #expect(publisher.published.count == published + 1)
+        #expect(controller.liveSamples.cpu == 0.9, "the builder still gets every reading")
+    }
+
+    @Test("Manual mode stops the live sampler, and live mode starts it again")
+    func manualModeStopsSampling() throws {
+        let controller = try makeController()
+        controller.setLive(true)
+        #expect(!controller.isSampling, "nothing samples before the module starts")
+
+        controller.start()
+        #expect(controller.isSampling)
+        controller.setLive(false)
+        #expect(!controller.isSampling)
+        controller.setLive(true)
+        #expect(controller.isSampling)
+        controller.setLive(false)
+    }
+
+    @Test("A module started in manual mode does not sample")
+    func startInManualModeDoesNotSample() throws {
+        let controller = try makeController()
+        controller.setLive(false)
+        controller.start()
+        #expect(!controller.isSampling)
+    }
+
     @Test("Manual readings are saved and come back for the sliders")
     func manualSamplesPersist() throws {
         let controller = try makeController()
@@ -120,6 +162,35 @@ struct StatusItemRenderingTests {
         let colored = StatusItemPublisher.image(for: state, darkMenuBar: true)
         #expect(!colored.isTemplate)
         #expect(colored.size == CGSize(width: 22, height: 22))
+    }
+
+    @Test("An appearance set again without changing, as AppKit does to snapshot the item, redraws nothing")
+    func sameAppearanceRedrawsNothing() {
+        let publisher = StatusItemPublisher()
+        let button = NSButton(frame: CGRect(x: 0, y: 0, width: 22, height: 22))
+        var samples = StatusIconSamples()
+        samples.isCharging = true
+        publisher.lastState = StatusIconPreviewState(composition: StatusIconComposition(), samples: samples, isLive: true)
+        button.appearance = NSAppearance(named: .darkAqua)
+        publisher.appearanceChanged(of: button)
+        let drawn = button.image
+
+        publisher.appearanceChanged(of: button)
+        #expect(button.image === drawn)
+
+        button.appearance = NSAppearance(named: .aqua)
+        publisher.appearanceChanged(of: button)
+        #expect(button.image !== drawn)
+    }
+
+    @Test("A template icon is left alone when the menu bar turns light or dark")
+    func templateIsNotRedrawn() {
+        let publisher = StatusItemPublisher()
+        let button = NSButton(frame: CGRect(x: 0, y: 0, width: 22, height: 22))
+        publisher.lastState = StatusIconPreviewState(composition: StatusIconComposition(), samples: StatusIconSamples(), isLive: true)
+        button.appearance = NSAppearance(named: .darkAqua)
+        publisher.appearanceChanged(of: button)
+        #expect(button.image == nil)
     }
 
     @Test("A coloured icon is redrawn when the menu bar turns light or dark")

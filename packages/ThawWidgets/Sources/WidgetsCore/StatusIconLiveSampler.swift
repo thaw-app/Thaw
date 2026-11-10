@@ -33,17 +33,23 @@ final class StatusIconLiveSampler: ObservableObject {
                 guard !Task.isCancelled, let self else { return }
                 // availableInterfaces includes idle radios. Only interfaces
                 // actually used by the default path describe this connection.
-                samples.network = StatusIconNetwork(
+                var next = samples
+                next.network = StatusIconNetwork(
                     status: path.status,
                     usedInterfaces: [.wiredEthernet, .wifi, .cellular, .other].filter { path.usesInterfaceType($0) }
                 )
-                samples.wifi = wifiStrength()
+                next.wifi = wifiStrength()
+                samples = next
             }
         }
         poll()
         timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.poll() }
         }
+    }
+
+    var isRunning: Bool {
+        timer != nil
     }
 
     func stop() {
@@ -56,13 +62,16 @@ final class StatusIconLiveSampler: ObservableObject {
     }
 
     private func poll() {
+        // Assembled first and assigned once: each change to samples is a separate delivery.
+        var next = samples
         let battery = BatteryLevelSource.reading()
-        samples.battery = battery.level
-        samples.isCharging = battery.isCharging
-        samples.hasBattery = battery.hasBattery
-        samples.isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
-        samples.wifi = wifiStrength()
-        samples.cpu = cpuUsage()
+        next.battery = battery.level
+        next.isCharging = battery.isCharging
+        next.hasBattery = battery.hasBattery
+        next.isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+        next.wifi = wifiStrength()
+        next.cpu = cpuUsage()
+        samples = next
         // A sleeping Bluetooth device can make CoreAudio slow to answer, so it's read off the main actor.
         // A read still running is left to finish, so a slow device can't pile them up or starve the reading.
         guard audioTask == nil else { return }
