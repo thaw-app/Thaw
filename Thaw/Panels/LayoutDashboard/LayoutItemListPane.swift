@@ -67,10 +67,13 @@ struct LayoutItemListPane: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Menu bar items")
-        // The bars rebuild on the same signal; the next turn reads the committed assignment.
-        .onReceive(appState.menuBarManager.sectionLayoutChanges.receive(on: RunLoop.main)) { _ in
-            membershipRevision &+= 1
-            motion.revealPending()
+        // The bars rebuild on the same signal. Subscribed once: onReceive takes a new publisher on every
+        // update, and this one sends its current value on subscribing, so each update caused the next.
+        .task {
+            for await _ in appState.menuBarManager.sectionLayoutChanges.values {
+                membershipRevision &+= 1
+                motion.revealPending()
+            }
         }
         .onChange(of: query) {
             guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
