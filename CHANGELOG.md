@@ -50,6 +50,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Search is Floe's launcher,** grouped by section, with Extended and Compact layouts in Visibility. Detailed and Large become Extended. A moved item slides into its new section, and counts roll as they change.
 - **Settings search goes to the row** and finds each module's switch.
 - **Extras is now Modules.**
+- **Segmented choices and the tabs in Settings are the system's own control.** The selection is a glass lens you can press and drag across the choices.
 - **One name for each section: Visible, Hidden and Always Hidden.**
 - **The Thaw Bar has its own switch again,** and so does double-clicking Thaw's icon for Always Hidden. By @malash in [#1339](https://github.com/thaw-app/Thaw/pull/1339).
 - **Apply to All Displays asks first.**
