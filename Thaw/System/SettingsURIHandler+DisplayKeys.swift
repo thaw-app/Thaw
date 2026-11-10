@@ -25,14 +25,14 @@ extension SettingsURIHandler {
     static func handleDisplayLookSet(key: String, value: String, scope: PerDisplayScope) -> Bool {
         switch key {
         case "thawBarItemScale":
-            guard let scale = Double(value) else {
+            guard let scale = DisplaySettingsManager.finite(value) else {
                 diagLog.warning("Settings URI: Invalid thawBarItemScale value '\(value)'")
                 return false
             }
             let clamped = ThawBarItemSize.clampedScale(scale)
             postPerDisplaySettingsDidChangeNotification(key: key, stringValue: String(clamped), scope: scope)
         case "itemSpacingOffset":
-            guard let offset = Double(value) else {
+            guard let offset = DisplaySettingsManager.finite(value) else {
                 diagLog.warning("Settings URI: Invalid itemSpacingOffset value '\(value)'")
                 return false
             }
