@@ -96,4 +96,27 @@ struct StatusIconPreviewState: Equatable {
     var accessibilityDescription: String {
         ([title] + details).joined(separator: ". ")
     }
+
+    /// What the icon draws and says, to the precision either shows. A reading no indicator uses, or
+    /// a change of less than a percent, leaves it equal, so that sample need not redraw the icon.
+    var displayed: StatusIconDisplayedContent {
+        StatusIconDisplayedContent(
+            composition: composition,
+            style: style,
+            title: title,
+            details: details,
+            centerSymbol: composition.center.symbolName(for: samples),
+            tints: composition.activeSources.map { style.tint(for: $0, samples: samples) }
+        )
+    }
+}
+
+/// The parts of a preview state that reach the screen or VoiceOver.
+struct StatusIconDisplayedContent: Equatable {
+    var composition: StatusIconComposition
+    var style: StatusIconStyle
+    var title: String
+    var details: [String]
+    var centerSymbol: String?
+    var tints: [StatusIconTint?]
 }

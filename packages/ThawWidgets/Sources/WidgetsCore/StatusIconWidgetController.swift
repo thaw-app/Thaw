@@ -31,6 +31,13 @@ final class StatusIconWidgetController {
     private let publisher: any StatusIconPublishing
     private let sampler = StatusIconLiveSampler()
     private var samplerCancellable: AnyCancellable?
+    private var isStarted = false
+    private var lastPublished: StatusIconDisplayedContent?
+
+    /// Whether the live sampler is polling. Manual mode shows the sliders' values, so it stops.
+    var isSampling: Bool {
+        sampler.isRunning
+    }
 
     init(defaults: UserDefaults = .standard, publisher: any StatusIconPublishing = StatusItemPublisher.shared) {
         self.defaults = defaults
@@ -40,7 +47,10 @@ final class StatusIconWidgetController {
     /// Puts the icon in the menu bar and starts the sampler. Running is what
     /// "on" means for this module, so there is no matching stop.
     func start() {
-        sampler.start()
+        isStarted = true
+        if isLive {
+            sampler.start()
+        }
         if samplerCancellable == nil {
             samplerCancellable = sampler.$samples
                 .removeDuplicates()
@@ -62,7 +72,7 @@ final class StatusIconWidgetController {
         if !state.isLive, let data = try? JSONEncoder().encode(state.samples) {
             defaults.set(data, forKey: WidgetKeys.samples)
         }
-        publisher.publish(state)
+        publish(state)
     }
 
     /// The manual readings last used in the builder, restored for the sliders.
@@ -79,10 +89,24 @@ final class StatusIconWidgetController {
 
     func setLive(_ newValue: Bool) {
         defaults.set(newValue, forKey: WidgetKeys.live)
+        guard isStarted else { return }
+        if newValue {
+            sampler.start()
+        } else {
+            sampler.stop()
+        }
     }
 
     private func republish() {
-        publisher.publish(currentState())
+        publish(currentState())
+    }
+
+    /// Redraws the icon only when what it shows changed: most samples differ in a reading it doesn't use.
+    private func publish(_ state: StatusIconPreviewState) {
+        let content = state.displayed
+        guard content != lastPublished else { return }
+        lastPublished = content
+        publisher.publish(state)
     }
 
     /// Rebuilds the snapshot from defaults and the sampler.

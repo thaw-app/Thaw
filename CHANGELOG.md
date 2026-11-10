@@ -128,6 +128,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 
 #### Other
 
+- **The widget icon is redrawn only when what it shows changes.** It used to be drawn again every two seconds for readings it doesn't show, such as CPU, each time macOS took a picture of it, and while showing sample readings. This cuts the Widgets module's memory and processor use.
 - **With the Native hiding method, Thaw no longer watches every click and drag for a press on the clock.** That bridge, and the one for the Notification Center shortcut, are only needed with Standard, so they are now only installed with it.
 - **Turning "Show release notes after an update" off now keeps the window closed** after Thaw updates.
 - **A Mac without a battery draws its widget icon in the menu bar's own ink** instead of as a fixed grey picture.

@@ -27,6 +27,8 @@ final class StatusItemPublisher: NSObject {
     /// What the icon shows now.
     var lastState: StatusIconPreviewState?
     private var appearanceObservation: NSKeyValueObservation?
+    /// Whether the icon was last drawn for a dark menu bar.
+    private var renderedDark: Bool?
 
     /// Creates (or reuses) a status item and sets its image to the rendered
     /// composition. The item appears immediately.
@@ -48,6 +50,7 @@ final class StatusItemPublisher: NSObject {
         lastState = state
         if let button = statusItem?.button {
             Self.configure(button, for: state)
+            renderedDark = Self.isDark(button)
         }
         statusItem?.menu = makeMenu(for: state)
         if statusItem?.isVisible != true {
@@ -58,17 +61,29 @@ final class StatusItemPublisher: NSObject {
     /// A coloured icon is drawn in the menu bar's ink, so it's redrawn when the bar turns light or dark.
     func observeAppearance(of button: NSButton) -> NSKeyValueObservation {
         button.observe(\.effectiveAppearance) { [weak self] button, _ in
-            MainActor.assumeIsolated {
-                guard let state = self?.lastState else { return }
-                Self.configure(button, for: state)
-            }
+            MainActor.assumeIsolated { self?.appearanceChanged(of: button) }
         }
+    }
+
+    /// AppKit sets the appearance again each time it snapshots the item, and a template follows the
+    /// bar by itself, so only a coloured icon whose bar really turned light or dark is redrawn.
+    func appearanceChanged(of button: NSButton) {
+        guard let state = lastState else { return }
+        let dark = Self.isDark(button)
+        guard dark != renderedDark else { return }
+        renderedDark = dark
+        guard state.style.hasColor(composition: state.composition, samples: state.samples) else { return }
+        button.image = Self.image(for: state, darkMenuBar: dark)
+    }
+
+    static func isDark(_ button: NSButton) -> Bool {
+        button.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
     }
 
     /// Draws the readings and describes them to VoiceOver. The identifier stays fixed, because
     /// Thaw names its own items by it and the label changes with every reading.
     static func configure(_ button: NSButton, for state: StatusIconPreviewState) {
-        button.image = image(for: state, darkMenuBar: button.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
+        button.image = image(for: state, darkMenuBar: isDark(button))
         button.setAccessibilityIdentifier(autosaveName)
         button.setAccessibilityLabel(state.accessibilityDescription)
         button.toolTip = state.accessibilityDescription
