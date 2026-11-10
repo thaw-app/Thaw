@@ -48,6 +48,23 @@ private final class ReadLog: Sendable {
 struct MenuBarWalkConcurrencyTests {
     private typealias Provider = MenuBarItemAXProvider
 
+    /// The record of slow apps is shared by the whole process, so one test's missed deadline would
+    /// make the next skip that app.
+    init() {
+        Provider.slowResponders.withLock { $0 = SlowResponderLedger() }
+    }
+
+    /// Limits no read here can miss, for tests that are not about a slow app.
+    private static func patientReader(
+        apps: [NSRunningApplication],
+        read: @escaping @Sendable (NSRunningApplication) -> [Provider.RawItem]
+    ) -> Provider.WalkReader {
+        var reader = Provider.WalkReader(runningApps: { apps }, isTrusted: { true }, read: { app, _, _, _ in read(app) })
+        reader.perAppBudget = .seconds(30)
+        reader.minimumBudget = .seconds(60)
+        return reader
+    }
+
     private static var runningApps: [NSRunningApplication] {
         NSWorkspace.shared.runningApplications.filter { !$0.isTerminated }
     }
@@ -99,12 +116,12 @@ struct MenuBarWalkConcurrencyTests {
         let owner = try #require(Self.itemOwner).processIdentifier
         let log = ReadLog()
         let apps = Self.sampledApps
-        let reader = Provider.WalkReader(runningApps: { apps }, isTrusted: { true }, read: { app, _, _, _ in
+        let reader = Self.patientReader(apps: apps) { app in
             log.enter(app.processIdentifier)
-            Thread.sleep(forTimeInterval: 0.005)
+            Thread.sleep(forTimeInterval: 0.05)
             log.leave()
             return app.processIdentifier == owner ? [Self.item(for: owner)] : []
-        })
+        }
 
         let (snapshot, _) = await Provider.enumerateMenuBarItemsResilient(
             state: MenuBarScanState(),
@@ -127,9 +144,9 @@ struct MenuBarWalkConcurrencyTests {
         let owner = try #require(Self.itemOwner).processIdentifier
         let launched = try #require(Self.slowOwner).processIdentifier
         func reader(_ apps: [NSRunningApplication]) -> Provider.WalkReader {
-            Provider.WalkReader(runningApps: { apps }, isTrusted: { true }, read: { app, _, _, _ in
+            Self.patientReader(apps: apps) { app in
                 app.processIdentifier == owner ? [Self.item(for: owner)] : []
-            })
+            }
         }
         let apps = Self.sampledApps
         let before = apps.filter { $0.processIdentifier != launched }

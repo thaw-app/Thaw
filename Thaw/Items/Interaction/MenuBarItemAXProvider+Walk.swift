@@ -34,6 +34,10 @@ nonisolated extension MenuBarItemAXProvider {
         }
 
         var isTrusted: @Sendable () -> Bool = { AXHelpers.isProcessTrusted() }
+        /// How long one app may take, and the least the whole walk gets. Tests widen both, since
+        /// they are wall-clock limits and a busy machine misses them for reasons the test isn't about.
+        var perAppBudget = MenuBarItemAXProvider.perAppWalkBudget
+        var minimumBudget = Duration.milliseconds(1500)
         var read: @Sendable (
             _ app: NSRunningApplication, _ appBundleID: String, _ ourBundleID: String?, _ formerHosts: Set<String>
         ) -> [RawItem] = { app, appBundleID, ourBundleID, formerHosts in
