@@ -269,7 +269,7 @@ struct LayoutBarSelectionTests {
         #expect(bar.commands.count == 1)
         #expect(bar.commands.first?.itemIDs == items.map(\.uniqueIdentifier))
         #expect(bar.commands.first?.placement == .end)
-        #expect(bar.selection.count == 0)
+        #expect(bar.selection.count == 2, "the stand-in mover refuses, so the selection comes back")
     }
 
     @Test("Dropping a dragged selection on a bar moves it there in one batch")
