@@ -10,7 +10,7 @@ import Testing
 @testable import Thaw
 import ThawAXCore
 
-/// Pins where Thaw clicks and whether it crops a revealed item, from MenuBarAgent's own window.
+/// Pins where Thaw clicks and crops a revealed item, from MenuBarAgent's own window.
 @Suite("Drawn item frame")
 struct DrawnItemFrameTests {
     private static let agent: pid_t = 786
@@ -113,23 +113,37 @@ struct DrawnItemFrameTests {
         #expect(DrawnItemFrame.clickFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: nil) == Self.axFrame)
     }
 
-    // MARK: canCrop
+    // MARK: cropFrame
 
-    @Test("A crop is cut only where the item is drawn")
-    func cropAgreement() {
-        #expect(!DrawnItemFrame.canCrop(at: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar))
-
+    @Test("A frame on the drawn seat is cropped where it is")
+    func cropOnSeat() {
         let onSeat = [Self.entry(Self.driveDx, x: 929, width: 16)]
-        #expect(DrawnItemFrame.canCrop(at: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: onSeat))
+
+        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: onSeat) == Self.axFrame)
     }
 
-    @Test("Without a drawn entry, a crop is cut unless the frame is a phantom")
+    @Test("A frame off the drawn seat is moved onto it and keeps its size")
+    func cropMovesToSeat() {
+        // Drawn from 908 to 926, centred on 917; reported from 926 to 946, centred on 936.
+        let crop = DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar)
+
+        #expect(crop == CGRect(x: 907, y: 4.5, width: 20, height: 24))
+    }
+
+    @Test("A drawn entry of another size is not cropped")
+    func cropRefusesOtherSize() {
+        let bar = [Self.entry(Self.driveDx, x: 880, width: 40)]
+
+        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: bar) == nil)
+    }
+
+    @Test("Without a drawn entry, a frame is cropped where it is unless it is a phantom")
     func cropWithoutDrawn() {
         let bar = Self.bar.filter { $0.ownerPID != Self.driveDx }
-        #expect(!DrawnItemFrame.canCrop(at: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: bar))
+        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: bar) == nil)
 
         let clear = CGRect(x: 960, y: 4.5, width: 20, height: 24)
-        #expect(DrawnItemFrame.canCrop(at: clear, ownerPID: Self.driveDx, sourcePID: nil, in: bar))
+        #expect(DrawnItemFrame.cropFrame(for: clear, ownerPID: Self.driveDx, sourcePID: nil, in: bar) == clear)
     }
 
     // MARK: Displays

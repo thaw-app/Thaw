@@ -41,6 +41,7 @@ the items under New and Fixed.
 - **Pictures of hidden items fit again after a spacing change.** A picture taken before you narrowed the menu bar spacing kept its extra space, so some items in the Thaw Bar had bigger gaps, and taking new pictures didn't fix it. The Thaw Bar now retakes a picture that no longer fits its item when it opens.
 - **Pictures update when an icon gets much narrower.** When an icon got a lot narrower, such as one that stops showing text, Thaw kept the wider picture in the Thaw Bar, Search and Layout. Thaw now takes the new one once the old picture no longer matches the item's width.
 - **A cut-off picture no longer replaces a good one.** A new picture of a hidden item was weighed against the one Thaw already had only when that one was taken since Thaw started. One loaded from disk was replaced by any new picture, even one missing the left part of its icon because it was taken while the icon slid in.
+- **Pictures of hidden items catch up with a changed icon.** A picture was only retaken when it was missing, so an icon that changed while hidden, such as one showing an update, kept its old look until you retook every picture. A hidden item you open from the Thaw Bar now gets a new picture as soon as its menu closes, so macOS shows the screen recording indicator for a moment. With Use app icons instead of live previews on, items shown as their app's icon are left alone.
 
 ## [3.0.0-alpha.14] - 2026-11-14
 

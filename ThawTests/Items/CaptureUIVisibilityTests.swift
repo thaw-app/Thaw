@@ -90,6 +90,26 @@ struct CaptureUIVisibilityTests {
         #expect(!navigation.hasVisibleCaptureUI)
     }
 
+    @Test("A background capture keeps capture on until its last hold ends")
+    func backgroundCaptureHolds() {
+        let navigation = AppNavigationState()
+        #expect(!navigation.hasCaptureUI)
+
+        navigation.beginBackgroundCapture()
+        navigation.beginBackgroundCapture()
+        #expect(navigation.hasCaptureUI)
+        #expect(!navigation.hasVisibleCaptureUI, "a hold is no surface the live loop draws for")
+        navigation.endBackgroundCapture()
+        #expect(navigation.hasCaptureUI)
+        navigation.endBackgroundCapture()
+        #expect(!navigation.hasCaptureUI)
+
+        navigation.endBackgroundCapture()
+        navigation.beginBackgroundCapture()
+        #expect(navigation.hasCaptureUI, "an extra end can't cancel a later hold")
+        navigation.endBackgroundCapture()
+    }
+
     @Test("Capture remains available until the last surface closes")
     func overlappingSurfaces() {
         let navigation = AppNavigationState()

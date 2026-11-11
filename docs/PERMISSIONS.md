@@ -40,6 +40,8 @@ If you decline, Thaw offers Full Disk Access as a fallback. It never asks for th
 
 You can refuse this one. Hiding, revealing and moving items in the menu bar work without it.
 
+With it, when you open a hidden item from the Thaw Bar, Thaw takes a new picture of the item once its menu closes, so macOS shows its screen recording indicator for a moment.
+
 Without it:
 
 - The Thaw Bar, search and Layout draw each item as its app's icon instead of a live preview.

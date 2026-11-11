@@ -81,7 +81,11 @@ struct ThawBarItemView: View {
                 // Wait for the panel to close (KVO on isVisible) before
                 // checking item visibility.
                 await panel?.waitUntilClosed(timeout: .milliseconds(200))
-                await itemManager.clickConcealedItem(item: item, with: button, on: displayID)
+                let outcome = await itemManager.clickConcealedItem(item: item, with: button, on: displayID)
+                // The item is in the menu bar now, so its picture can catch up with its icon.
+                if case .completed = outcome {
+                    itemManager.appState?.imageCache.retakePictureAfterOpening(item)
+                }
                 let duration = clickStartTime.duration(to: .now)
                 ThawBarItemView.diagLog.debug("click(\(button == .left ? "left" : "right")): completed in \(Int(duration.milliseconds))ms (macOS 27 concealed-item path)")
             }

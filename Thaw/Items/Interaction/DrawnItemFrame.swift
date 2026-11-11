@@ -21,6 +21,10 @@ nonisolated enum DrawnItemFrame {
     /// and still describe the same seat.
     static let agreementTolerance: CGFloat = 4
 
+    /// How much narrower or wider, in points, an item's drawn entry may be than its
+    /// Accessibility frame and still be the same item. The frame adds about a point each side.
+    static let widthTolerance: CGFloat = 4
+
     /// The frame the item is drawn at: x and width from its drawn entry, y and height from
     /// axFrame. Nil unless the read is settled and exactly one entry belongs to the item's app:
     /// its source process for an item MenuBarAgent hosts, whose own entries are other items.
@@ -78,19 +82,22 @@ nonisolated enum DrawnItemFrame {
         return isPhantom(axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries, displays: displays) ? nil : axFrame
     }
 
-    /// Whether a crop at axFrame shows the item: its drawn frame, when there is one, is on the
-    /// same seat, and otherwise axFrame is no phantom. A crop can only be cut at the
-    /// Accessibility frame, which the capture checks against a fresh read.
-    static func canCrop(
-        at axFrame: CGRect,
+    /// Where to crop the item: axFrame when it is on the seat the item is drawn at, else axFrame
+    /// moved onto that seat, so the picture keeps the padding every other picture has. Nil when
+    /// the drawn entry is not the item's size, or there is none and axFrame is a phantom.
+    static func cropFrame(
+        for axFrame: CGRect,
         ownerPID: pid_t,
         sourcePID: pid_t?,
         in entries: [MenuBarAgentWindow.Entry]?
-    ) -> Bool {
-        if let drawn = drawnFrame(for: axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries) {
-            return abs(drawn.midX - axFrame.midX) <= agreementTolerance
+    ) -> CGRect? {
+        guard let drawn = drawnFrame(for: axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries) else {
+            return isPhantom(axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries) ? nil : axFrame
         }
-        return !isPhantom(axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries)
+        let offset = drawn.midX - axFrame.midX
+        guard abs(offset) > agreementTolerance else { return axFrame }
+        guard abs(drawn.width - axFrame.width) <= widthTolerance else { return nil }
+        return axFrame.offsetBy(dx: offset, dy: 0)
     }
 
     /// The entries on the display holding axFrame, or all when none holds it: MenuBarAgent's first
