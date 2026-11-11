@@ -26,9 +26,13 @@ extension MenuBarItemImageCache {
     /// Keeps a settled glyph over a blank or much narrower (chevron bleed) one, and takes the candidate when
     /// it's at least as wide, or narrower only because the spacing around the same icon shrank (see
     /// GlyphMarginChange). A live glyph can really lose its left ink, so only the reveal path rejects that.
+    ///
+    /// oldPictureIsStale says existing no longer matches its item's width, as when an icon stops showing
+    /// text. The width rule then has nothing left to protect, so any trusted glyph replaces it.
     static nonisolated func preferredCachedImage(
         existing: MenuBarItemGlyphCapture,
-        candidate: MenuBarItemGlyphCapture
+        candidate: MenuBarItemGlyphCapture,
+        oldPictureIsStale: Bool = false
     ) -> MenuBarItemGlyphCapture {
         if existing.isEffectivelyBlank {
             return candidate
@@ -37,7 +41,7 @@ extension MenuBarItemImageCache {
             return existing
         }
         if candidate.pointSize.width < existing.pointSize.width * 0.75,
-           !(isTrustedGlyph(candidate) && GlyphMarginChange.onlyMarginsShrank(from: existing, to: candidate))
+           !(isTrustedGlyph(candidate) && (oldPictureIsStale || GlyphMarginChange.onlyMarginsShrank(from: existing, to: candidate)))
         {
             return existing
         }

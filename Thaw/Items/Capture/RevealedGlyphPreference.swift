@@ -18,11 +18,18 @@ extension MenuBarItemImageCache {
     /// can also catch the glyph mid-slide, its left part not drawn yet or cut off at the crop's
     /// left edge, so such a candidate loses here too. Live items skip these rules: a graph or a
     /// level really can get shorter or lose its left ink.
+    ///
+    /// recordedItemWidth is the width Thaw had for the item before the reveal, and listedItemWidth the
+    /// width its item list has now, read again since. When the cached picture no longer matches either
+    /// (see oldPictureIsStale), a much narrower picture may replace it.
     static nonisolated func preferredRevealedImage(
         existing: MenuBarItemGlyphCapture,
-        candidate: MenuBarItemGlyphCapture
+        candidate: MenuBarItemGlyphCapture,
+        recordedItemWidth: CGFloat? = nil,
+        listedItemWidth: CGFloat? = nil
     ) -> MenuBarItemGlyphCapture {
-        let preferred = preferredCachedImage(existing: existing, candidate: candidate)
+        let isStale = oldPictureIsStale(existing, itemWidths: [recordedItemWidth, listedItemWidth])
+        let preferred = preferredCachedImage(existing: existing, candidate: candidate, oldPictureIsStale: isStale)
         guard preferred.cgImage === candidate.cgImage, !existing.isEffectivelyBlank else { return preferred }
         if isLeadingCut(candidate, of: existing) || isNewlyClipped(candidate, comparedTo: existing) {
             return existing

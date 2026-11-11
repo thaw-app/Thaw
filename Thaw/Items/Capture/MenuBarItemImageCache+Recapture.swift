@@ -406,8 +406,8 @@ extension MenuBarItemImageCache {
             }
         }
 
-        // Merge in the new images, preferring settled glyphs over blank
-        // or much-narrower (chevron-bleed) candidates.
+        // Merge in the new images, preferring settled glyphs over blank or
+        // much-narrower (chevron-bleed) candidates; see mergeNewImages.
         //
         // The merge runs on a local copy. capturesByTag is the one
         // property every glyph consumer observes, and the live refresh
@@ -416,9 +416,7 @@ extension MenuBarItemImageCache {
         // views on every tick, including the common one where the merge
         // kept every glyph it already had.
         var mergedImages = capturesByTag
-        mergedImages.merge(newImages) { existing, new in
-            Self.preferredCachedImage(existing: existing, candidate: new)
-        }
+        mergeNewImages(newImages, into: &mergedImages)
 
         // A pass that only re-proved what the cache already holds is
         // changeless: the merge preferred the existing glyphs, and every
@@ -692,6 +690,7 @@ extension MenuBarItemImageCache {
             }
         }
 
+        let itemWidths = listedItemWidths()
         for pair in revealed {
             // The capture result is keyed by the fresh AX item, while the
             // cache is keyed by the concealed snapshot the caller holds.
@@ -709,7 +708,7 @@ extension MenuBarItemImageCache {
                 continue
             }
             if let cachedImage = capturesByTag[tag] {
-                let preferred = Self.preferredRevealedImage(existing: cachedImage, candidate: image)
+                let preferred = Self.preferredRevealedImage(existing: cachedImage, candidate: image, revealing: pair.requested, listedWidths: itemWidths)
                 if MenuBarItemGlyphCapture.isVisuallyEqual(preferred, cachedImage) {
                     continue
                 }
