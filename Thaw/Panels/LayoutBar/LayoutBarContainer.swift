@@ -177,11 +177,11 @@ final class LayoutBarContainer: NSView {
 
             // These settings are @Observable, so they are observed separately
             // and rerun the same re-arrangement.
-            let advancedSettings = appState.settings.advanced
+            let layoutSettings = appState.settings.layout
             advancedSettingsObservationTask?.cancel()
             advancedSettingsObservationTask = Task { @MainActor [weak self] in
                 let changes = Observations {
-                    (advancedSettings.enableAlwaysHiddenSection, advancedSettings.enableExperimentalSystemItemHiding)
+                    (layoutSettings.enableAlwaysHiddenSection, layoutSettings.enableExperimentalSystemItemHiding)
                 }
                 for await _ in changes {
                     guard let self else { return }
@@ -826,7 +826,7 @@ final class LayoutBarContainer: NSView {
         guard case let .item(item) = sourceView.kind else {
             return true
         }
-        let experimentalSystemItemHiding = appState?.settings.advanced.enableExperimentalSystemItemHiding ?? false
+        let experimentalSystemItemHiding = appState?.settings.layout.enableExperimentalSystemItemHiding ?? false
         // A denylisted item may reorder but not hide; mirror the rejection in
         // performDragOperation with the no-drop cursor.
         if item.tag.isLayoutAnchoredSystemItem,

@@ -245,45 +245,36 @@ struct SettingsView: View {
         case .menuBarLayout:
             MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
         case .visibility:
-            MenuBarAccessPane(
-                settings: appState.settings.general,
-                advancedSettings: appState.settings.advanced
-            )
+            MenuBarAccessPane(settings: appState.settings.visibility)
         case .thawBar:
             ThawBarSettingsPane(displaySettings: appState.settings.displaySettings)
         case .menuBarAppearance:
             MenuBarAppearanceSettingsPane(appearanceManager: appState.appearanceManager)
         case .widgets:
-            WidgetsSettingsPane(settings: appState.settings.advanced)
+            WidgetsSettingsPane(settings: appState.settings.widgets)
         case .profiles:
             ProfileSettingsPane(profileManager: appState.profileManager)
         case .hotkeys:
             HotkeysSettingsPane(settings: appState.settings.hotkeys)
-        case .automation, .triggers:
+        case .triggers:
             TriggersSettingsPane()
-        case .displays, .spaces:
+        case .displays:
             DisplaySettingsPane(displaySettings: appState.settings.displaySettings)
-        case .general, .theLab:
-            GeneralSettingsPane(
-                settings: appState.settings.general,
-                advancedSettings: appState.settings.advanced
-            )
+        case .general:
+            GeneralSettingsPane(settings: appState.settings.general)
         case .privacy:
             PrivacySettingsPane(
                 updatesManager: appState.updatesManager,
-                advancedSettings: appState.settings.advanced
+                privacySettings: appState.settings.privacy
             )
         case .tools:
-            ToolsSettingsPane(settings: appState.settings.advanced)
+            ToolsSettingsPane(settings: appState.settings.tools)
         case .modules:
             ModulesSettingsPane(moduleHost: appState.moduleHost, profiles: appState.profilesFeature)
         case .about:
             ThawAboutPane(updatesManager: appState.updatesManager)
         case .scripts:
             ScriptsSettingsPane()
-        case .advanced:
-            // Advanced was dissolved, so a saved pane that names it opens Layout.
-            MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
         }
     }
 }

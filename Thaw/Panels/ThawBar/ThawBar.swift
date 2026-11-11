@@ -128,8 +128,8 @@ final class ThawBarPanel: NSPanel {
 
         // Observations delivers the current lock value before subsequent changes.
         lockPositionObservationTask?.cancel()
-        lockPositionObservationTask = Task { @MainActor [weak self, generalSettings = appState.settings.general] in
-            let changes = Observations { generalSettings.lockThawBarPosition }
+        lockPositionObservationTask = Task { @MainActor [weak self, thawBarSettings = appState.settings.thawBar] in
+            let changes = Observations { thawBarSettings.lockThawBarPosition }
             for await locked in changes {
                 guard let self else { return }
                 isMovableByWindowBackground = !locked
@@ -356,7 +356,7 @@ final class ThawBarPanel: NSPanel {
         visibleFrame=\(screen.visibleFrame.debugDescription)
         """)
 
-        hotkeyLocationOverride = triggeredByHotkey && appState.settings.general.thawBarLocationOnHotkey
+        hotkeyLocationOverride = triggeredByHotkey && appState.settings.thawBar.thawBarLocationOnHotkey
         // Probe once per open; the stale marker only suppresses repeated layout-pass lookups.
         staleAnchorWindowID = nil
 

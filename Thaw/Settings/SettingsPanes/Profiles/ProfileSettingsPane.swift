@@ -251,10 +251,10 @@ struct ProfileSettingsPane: View {
             profile: profile.menuBarLayout
         )
         diff.settingChanges = ProfileLayoutDiff.settingChanges(
-            current: GeneralSettingsSnapshot.capture(from: appState.settings.general),
+            current: GeneralSettingsSnapshot.capture(from: appState.settings),
             profile: profile.generalSettings
         ) + {
-            let current = AdvancedSettingsSnapshot.capture(from: appState.settings.advanced)
+            let current = AdvancedSettingsSnapshot.capture(from: appState.settings)
             return ProfileLayoutDiff.settingChanges(current: current, profile: profile.advancedSettings.merged(onto: current))
         }()
 

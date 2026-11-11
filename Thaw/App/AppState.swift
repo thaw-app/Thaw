@@ -250,7 +250,7 @@ final class AppState {
         spaceMenuBarKeeper.start(directory: spaceDirectory, agentRestarts: SpaceMenuBarKeeper.liveAgentRestarts())
         settings.performSetup(with: self)
         menuBarManager.performSetup(with: self, activeDisplayWatcher: activeDisplayWatcher, displays: displayEnvironment)
-        spaceIndicator.start(settings: settings.advanced, changes: spaceChanges, directory: spaceDirectory)
+        spaceIndicator.start(settings: settings.spaces, changes: spaceChanges, directory: spaceDirectory)
         barSettlingObservers.observe(revealedSections: menuBarManager.revealedSectionChanges)
         // A refused preferences watcher stays stopped; recreate it after either a table-file grant or Full Disk Access.
         permissions.onPermissionTransition = { [weak self] permission, granted in
@@ -385,11 +385,11 @@ final class AppState {
     /// First launches and upgrades without changelog content record the version silently, leaving onboarding to handle new users.
     /// Record synchronously before the async repository fetch to avoid repeated prompts after failures.
     func presentWhatsNewForUpgradeIfNeeded() {
-        let opensAfterUpdate = settings.advanced.showReleaseNotesAfterUpdate
+        let opensAfterUpdate = settings.privacy.showReleaseNotesAfterUpdate
         guard WhatsNewUpgradeGate.recordVersion(Constants.versionString, opensAfterUpdate: opensAfterUpdate) else { return }
 
         Task {
-            let allowFetch = settings.advanced.fetchReleaseNotes
+            let allowFetch = settings.privacy.fetchReleaseNotes
             guard await ChangelogDocument.load(allowFetch: allowFetch, info: .thaw).document?.newestRelease != nil else { return }
             activate(withPolicy: .regular)
             openWindow(.whatsNew)

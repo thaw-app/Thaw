@@ -23,10 +23,10 @@ struct RuntimeSectionContextAdapterTests {
     func forwardsSettings(enabled: Bool) {
         let appState = AppState()
         let adapter = makeAdapter(appState)
-        appState.settings.advanced.enableAlwaysHiddenSection = enabled
-        appState.settings.advanced.enableNativeAppHiding = !enabled
-        appState.settings.advanced.enableExperimentalOverflowPrevention = enabled
-        appState.settings.general.tempShowInterval = enabled ? 7 : 3
+        appState.settings.layout.enableAlwaysHiddenSection = enabled
+        appState.settings.layout.enableNativeAppHiding = !enabled
+        appState.settings.layout.enableExperimentalOverflowPrevention = enabled
+        appState.settings.visibility.tempShowInterval = enabled ? 7 : 3
         #expect(adapter.isAlwaysHiddenSectionEnabled == enabled)
         #expect(adapter.experimentalSystemItemHiding == enabled)
         #expect(adapter.enableExperimentalOverflowPrevention == enabled)
@@ -87,12 +87,12 @@ struct RuntimeSectionContextAdapterTests {
     @Test("A reveal into Always Hidden turns that section on once")
     func enablesAlwaysHidden() {
         let appState = AppState()
-        appState.settings.advanced.enableAlwaysHiddenSection = false
+        appState.settings.layout.enableAlwaysHiddenSection = false
         let adapter = makeAdapter(appState)
         adapter.enableAlwaysHiddenSectionRevealIfNeeded()
-        #expect(appState.settings.advanced.enableAlwaysHiddenSection)
+        #expect(appState.settings.layout.enableAlwaysHiddenSection)
         adapter.enableAlwaysHiddenSectionRevealIfNeeded()
-        #expect(appState.settings.advanced.enableAlwaysHiddenSection)
+        #expect(appState.settings.layout.enableAlwaysHiddenSection)
     }
 
     @Test("Engine callbacks are safe to run before setup")

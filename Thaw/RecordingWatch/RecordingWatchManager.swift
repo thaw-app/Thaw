@@ -30,7 +30,7 @@ final class RecordingWatchManager {
 
     /// The settings slice this manager observes, injected at setup so the
     /// flag reads do not reach through the whole app state.
-    private var advancedSettings: AdvancedSettings?
+    private var visibilitySettings: VisibilitySettings?
     private var cancellables = Set<AnyCancellable>()
 
     /// The most recent reading, or an empty one while the alerts are off.
@@ -43,16 +43,16 @@ final class RecordingWatchManager {
     /// Whether the alerts run. Read straight off the settings model so a
     /// thaw:// flip and a profile apply agree with it.
     var areAlertsOn: Bool {
-        RecordingWatchPolicy.alertsOn(saved: advancedSettings?.enableRecordingWatch ?? false)
+        RecordingWatchPolicy.alertsOn(saved: visibilitySettings?.enableRecordingWatch ?? false)
     }
 
     private var isZenModeOn: Bool {
-        advancedSettings?.zenModeWhileRecording ?? false
+        visibilitySettings?.zenModeWhileRecording ?? false
     }
 
     func performSetup(with appState: AppState) {
         self.appState = appState
-        advancedSettings = appState.settings.advanced
+        visibilitySettings = appState.settings.visibility
         cancellables = [observeSettingFlips()]
         refresh()
     }
@@ -166,7 +166,7 @@ final class RecordingWatchManager {
     private func announce(_ announcement: RecordingWatchAnnouncement) {
         // Resolved per announcement so a picker change applies immediately.
         let screen = announcementScreen()
-        let placement = advancedSettings?.recordingWatchPlacement ?? .center
+        let placement = visibilitySettings?.recordingWatchPlacement ?? .center
         switch announcement {
         case let .microphoneOn(app):
             diagLog.info("microphone input started: \(app)")
@@ -190,7 +190,7 @@ final class RecordingWatchManager {
     /// The screen the next announcement lands on. Live reads happen here; the
     /// decision is the pure RecordingWatchScreen.resolve.
     private func announcementScreen() -> NSScreen? {
-        let choice = advancedSettings?.recordingWatchScreen ?? .screenWithPointer
+        let choice = visibilitySettings?.recordingWatchScreen ?? .screenWithPointer
         let connectedDisplays: [(uuid: String, displayID: CGDirectDisplayID)] = NSScreen.screens.compactMap { screen in
             guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else {
                 return nil
@@ -210,13 +210,13 @@ final class RecordingWatchManager {
     /// Starts and stops the poller with the two flags. Observes the
     /// properties, not defaults, so pane, thaw:// and profile changes all land.
     private func observeSettingFlips() -> AnyCancellable {
-        guard let advanced = advancedSettings else { return AnyCancellable { /* Nothing was observed, so there is nothing to cancel. */ } }
-        let flagTask = advanced.observe(\.enableRecordingWatch) { [weak self] _ in
+        guard let visibility = visibilitySettings else { return AnyCancellable { /* Nothing was observed, so there is nothing to cancel. */ } }
+        let flagTask = visibility.observe(\.enableRecordingWatch) { [weak self] _ in
             self?.refresh()
         }
         // The poll loop never sees the flag's falling edge, so release any
         // held collapse here.
-        let zenTask = advanced.observe(\.zenModeWhileRecording) { [weak self] enabled in
+        let zenTask = visibility.observe(\.zenModeWhileRecording) { [weak self] enabled in
             if !enabled {
                 self?.appState?.menuBarManager.setAutomaticZenMode(false, reason: .recording)
             }

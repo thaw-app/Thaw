@@ -183,14 +183,14 @@ struct ControlItemPanelView: View {
     }
 
     private var swapBarToggle: some View {
-        @Bindable var advanced = appState.settings.advanced
+        @Bindable var visibility = appState.settings.visibility
         return PanelToggleRow(
             symbol: "arrow.left.arrow.right",
             title: "Swap Bar",
             help: "Show a floating bar at the bottom of the screen with buttons to swap the shown and hidden items, show sections, switch profiles and turn on Zen Mode",
-            isOn: advanced.enableSwapBar
+            isOn: visibility.enableSwapBar
         ) {
-            advanced.enableSwapBar.toggle()
+            visibility.enableSwapBar.toggle()
         }
     }
 

@@ -11,8 +11,7 @@ import ThawUI
 /// The Visibility pane: revealing and rehiding, Zen Mode, the Swap Bar, search and hover.
 struct MenuBarAccessPane: View {
     @Environment(AppState.self) private var appState
-    @Bindable var settings: GeneralSettings
-    @Bindable var advancedSettings: AdvancedSettings
+    @Bindable var settings: VisibilitySettings
     @AppStorage(Defaults.Key.showSearchShortcutBar.rawValue) private var showSearchShortcutBar = Defaults.DefaultValue.showSearchShortcutBar
     @AppStorage(Defaults.Key.rememberSearchQuery.rawValue) private var rememberSearchQuery = Defaults.DefaultValue.rememberSearchQuery
 
@@ -22,7 +21,7 @@ struct MenuBarAccessPane: View {
                 ShowHiddenItemsOnRow(settings: settings)
                 alwaysHiddenGestures
             }
-            .thawAnimation(ThawMotion.settle, value: advancedSettings.isAlwaysHiddenSectionEnabled)
+            .thawAnimation(ThawMotion.settle, value: appState.settings.layout.isAlwaysHiddenSectionEnabled)
 
             ThawSection("After revealing") {
                 RehideChoiceRow(settings: settings)
@@ -30,7 +29,7 @@ struct MenuBarAccessPane: View {
             }
 
             ThawSection("Zen Mode") {
-                ZenModeWhileRow(settings: advancedSettings)
+                ZenModeWhileRow(settings: settings)
             }
 
             ThawSection("Swap shown and hidden") {
@@ -46,7 +45,7 @@ struct MenuBarAccessPane: View {
             }
 
             ThawSection("On hover") {
-                HoverReadoutsRow(settings: advancedSettings)
+                HoverReadoutsRow(settings: settings)
             }
         }
         .sliderLabelAlignment()
@@ -56,7 +55,7 @@ struct MenuBarAccessPane: View {
 
     /// The Swap Bar makes swapping one click; the note names the other ways so the toggle doesn't read as the only one.
     private var swapBarToggle: some View {
-        Toggle("Show Swap Bar", isOn: $advancedSettings.enableSwapBar)
+        Toggle("Show Swap Bar", isOn: $settings.enableSwapBar)
             .annotation(
                 "A strip under the menu bar that trades your shown and hidden items in one click.",
                 more: """
@@ -85,8 +84,8 @@ struct MenuBarAccessPane: View {
 
     @ViewBuilder
     private var alwaysHiddenGestures: some View {
-        if advancedSettings.isAlwaysHiddenSectionEnabled {
-            Toggle("Double-click the \(Constants.displayName) icon to show Always Hidden", isOn: $advancedSettings.showAlwaysHiddenOnIconDoubleClick)
+        if appState.settings.layout.isAlwaysHiddenSectionEnabled {
+            Toggle("Double-click the \(Constants.displayName) icon to show Always Hidden", isOn: $settings.showAlwaysHiddenOnIconDoubleClick)
                 .annotation("Option-click and gestures in empty menu bar space are unchanged.")
         } else {
             LabeledContent("Always Hidden is off") {
@@ -105,13 +104,13 @@ struct MenuBarAccessPane: View {
     // MARK: - Search
 
     private var searchPresentationPicker: some View {
-        ThawPicker("Panel layout", selection: $advancedSettings.menuBarSearchPresentation) {
+        ThawPicker("Panel layout", selection: $settings.menuBarSearchPresentation) {
             ForEach(SearchPresentation.allCases) { presentation in
                 Text(presentation.localized).tag(presentation)
             }
         }
         .annotation {
-            Text(advancedSettings.menuBarSearchPresentation.summary)
+            Text(settings.menuBarSearchPresentation.summary)
         }
     }
 }

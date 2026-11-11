@@ -36,7 +36,7 @@ private struct WhatsNewPage: View {
         WhatsNewView(
             info: .thaw,
             strings: .thaw,
-            allowFetch: appState.settings.advanced.fetchReleaseNotes,
+            allowFetch: appState.settings.privacy.fetchReleaseNotes,
             pendingUpdateVersion: appState.pendingUpdateVersion
         )
     }

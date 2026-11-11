@@ -52,8 +52,8 @@ struct ProfileManagerStorageTests {
     func saveCapturesCurrentState() throws {
         try ProfileTestDirectory.withManager(seeding: []) { manager, tmp in
             let appState = AppState()
-            appState.settings.general.showOnHover = !Defaults.DefaultValue.showOnHover
-            appState.settings.advanced.tooltipDelay = 2.5
+            appState.settings.visibility.showOnHover = !Defaults.DefaultValue.showOnHover
+            appState.settings.visibility.tooltipDelay = 2.5
             appState.settings.displaySettings.confirmSpacingRelaunch = false
 
             let id = try manager.saveProfile(name: "Work", from: appState)
@@ -386,7 +386,7 @@ struct ProfileManagerStorageTests {
             profile.automation = automation
             try manager.replaceProfile(profile)
             let appState = AppState()
-            appState.settings.advanced.showOnHoverDelay = 1.75
+            appState.settings.visibility.showOnHoverDelay = 1.75
             appState.settings.displaySettings.unconfirmedSpacingProfileScope = .allProfiles
 
             try manager.updateProfile(id: id, scope: .configurationOnly, appState: appState)
@@ -412,7 +412,7 @@ struct ProfileManagerStorageTests {
             original.automation = automation
             try manager.replaceProfile(original)
             let appState = AppState()
-            appState.settings.general.autoRehide = !Defaults.DefaultValue.autoRehide
+            appState.settings.visibility.autoRehide = !Defaults.DefaultValue.autoRehide
 
             try manager.updateProfile(id: meta.id, scope: .all, appState: appState)
 

@@ -12,7 +12,13 @@ extension AppSettings {
     /// zoomDefaults holds the UI zoom, which @AppStorage keeps in the standard domain.
     func resetAllSettingsToDefaults(zoomDefaults: UserDefaults = .standard) {
         resetGeneral(zoomDefaults: zoomDefaults)
-        resetAdvanced()
+        resetLayout()
+        resetVisibility()
+        resetThawBar()
+        resetScreenCorners()
+        resetSpaces()
+        resetPrivacy()
+        resetTools()
         resetHotkeys()
         resetDisplay()
         resetAppearance()
@@ -41,63 +47,80 @@ extension AppSettings {
         general.simpleModeShowsPreview = Defaults.DefaultValue.simpleModeShowsPreview
         general.showSettingDescriptions = Defaults.DefaultValue.showSettingDescriptions
         general.settingsAppearance = .system
-        general.lockThawBarPosition = Defaults.DefaultValue.lockThawBarPosition
-        general.openHiddenItemsInMenuBar = Defaults.DefaultValue.openHiddenItemsInMenuBar
-        general.roundScreenCorners = Defaults.DefaultValue.roundScreenCorners
-        general.screenCornerRadius = Defaults.DefaultValue.screenCornerRadius
-        general.useThawBar = Defaults.DefaultValue.useThawBar
-        general.useThawBarOnlyOnNotchedDisplay = Defaults.DefaultValue.useThawBarOnlyOnNotchedDisplay
-        general.thawBarLocation = Defaults.DefaultValue.thawBarLocation
-        general.thawBarLocationOnHotkey = Defaults.DefaultValue.thawBarLocationOnHotkey
-        general.showOnClick = Defaults.DefaultValue.showOnClick
-        general.showOnHover = Defaults.DefaultValue.showOnHover
-        general.showOnScroll = Defaults.DefaultValue.showOnScroll
-        general.autoRehide = Defaults.DefaultValue.autoRehide
-        general.rehideStrategy = Defaults.DefaultValue.rehideStrategy
-        general.rehideInterval = Defaults.DefaultValue.rehideInterval
-        general.tempShowInterval = Defaults.DefaultValue.tempShowInterval
+        general.hideApplicationMenus = Defaults.DefaultValue.hideApplicationMenus
+        general.enableSecondaryContextMenu = Defaults.DefaultValue.enableSecondaryContextMenu
+        general.enableDesktopMenuHiding = Defaults.DefaultValue.enableDesktopMenuHiding
     }
 
-    func resetAdvanced() {
-        advanced.enableAlwaysHiddenSection = Defaults.DefaultValue.enableAlwaysHiddenSection
-        advanced.showAllSectionsOnUserDrag = Defaults.DefaultValue.showAllSectionsOnUserDrag
+    func resetLayout() {
+        layout.enableAlwaysHiddenSection = Defaults.DefaultValue.enableAlwaysHiddenSection
+        layout.showAllSectionsOnUserDrag = Defaults.DefaultValue.showAllSectionsOnUserDrag
         appState?.itemManager.updateNewItemsPlacement(section: .hidden, arrangedViews: [])
-        advanced.sectionDividerStyle = Defaults.DefaultValue.sectionDividerStyle
-        advanced.customSectionDividerImage = nil
-        advanced.customSectionDividerIsTemplate = Defaults.DefaultValue.customSectionDividerIsTemplate
-        advanced.menuBarArrangementMode = Defaults.DefaultValue.menuBarArrangementMode
-        advanced.hideApplicationMenus = Defaults.DefaultValue.hideApplicationMenus
-        advanced.enableSecondaryContextMenu = Defaults.DefaultValue.enableSecondaryContextMenu
-        advanced.showOnHoverDelay = Defaults.DefaultValue.showOnHoverDelay
-        advanced.tooltipDelay = Defaults.DefaultValue.tooltipDelay
-        advanced.showMenuBarTooltips = Defaults.DefaultValue.showMenuBarTooltips
-        advanced.iconRefreshInterval = Defaults.DefaultValue.iconRefreshInterval
-        advanced.autoZenWhileSharingScreen = Defaults.DefaultValue.autoZenWhileSharingScreen
-        advanced.menuBarOrderFulfillmentTimeout = Defaults.DefaultValue.menuBarOrderFulfillmentTimeout
-        advanced.enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
-        advanced.enableMenuBarItemOverflow = Defaults.DefaultValue.enableMenuBarItemOverflow
-        advanced.enableExperimentalOverflowPrevention = Defaults.DefaultValue.enableExperimentalOverflowPrevention
-        advanced.alwaysUseAppIconForMenuBarItems = Defaults.DefaultValue.alwaysUseAppIconForMenuBarItems
-        advanced.enableMenuBarItemDescenders = Defaults.DefaultValue.enableMenuBarItemDescenders
-        advanced.enableSwapBar = Defaults.DefaultValue.enableSwapBar
-        advanced.swapOnThawIconClick = Defaults.DefaultValue.swapOnThawIconClick
-        advanced.showAlwaysHiddenOnIconDoubleClick = Defaults.DefaultValue.showAlwaysHiddenOnIconDoubleClick
-        advanced.fetchReleaseNotes = Defaults.DefaultValue.fetchReleaseNotes
-        advanced.showReleaseNotesAfterUpdate = Defaults.DefaultValue.showReleaseNotesAfterUpdate
-        advanced.showSpaceIndicator = Defaults.DefaultValue.showSpaceIndicator
-        advanced.enableNativeAppHiding = Defaults.DefaultValue.enableNativeAppHiding
-        advanced.enableModuleStandIns = Defaults.DefaultValue.enableModuleStandIns
-        advanced.skippedModuleStandIns = Set(Defaults.DefaultValue.skippedModuleStandIns)
-        advanced.enableTimeMachineTakeover = Defaults.DefaultValue.enableTimeMachineTakeover
-        advanced.enableTimerTakeover = Defaults.DefaultValue.enableTimerTakeover
-        advanced.enableTextInputTakeover = Defaults.DefaultValue.enableTextInputTakeover
-        advanced.enableRecordingWatch = Defaults.DefaultValue.enableRecordingWatch
+        layout.sectionDividerStyle = Defaults.DefaultValue.sectionDividerStyle
+        layout.customSectionDividerImage = nil
+        layout.customSectionDividerIsTemplate = Defaults.DefaultValue.customSectionDividerIsTemplate
+        layout.menuBarArrangementMode = Defaults.DefaultValue.menuBarArrangementMode
+        layout.iconRefreshInterval = Defaults.DefaultValue.iconRefreshInterval
+        layout.menuBarOrderFulfillmentTimeout = Defaults.DefaultValue.menuBarOrderFulfillmentTimeout
+        layout.enableMenuBarItemOverflow = Defaults.DefaultValue.enableMenuBarItemOverflow
+        layout.enableExperimentalOverflowPrevention = Defaults.DefaultValue.enableExperimentalOverflowPrevention
+        layout.alwaysUseAppIconForMenuBarItems = Defaults.DefaultValue.alwaysUseAppIconForMenuBarItems
+        layout.enableNativeAppHiding = Defaults.DefaultValue.enableNativeAppHiding
+        layout.enableModuleStandIns = Defaults.DefaultValue.enableModuleStandIns
+        layout.skippedModuleStandIns = Set(Defaults.DefaultValue.skippedModuleStandIns)
+        layout.enableTimeMachineTakeover = Defaults.DefaultValue.enableTimeMachineTakeover
+        layout.enableTimerTakeover = Defaults.DefaultValue.enableTimerTakeover
+        layout.enableTextInputTakeover = Defaults.DefaultValue.enableTextInputTakeover
+    }
 
-        advanced.zenModeWhileRecording = Defaults.DefaultValue.zenModeWhileRecording
-        advanced.recordingWatchScreen = Defaults.DefaultValue.recordingWatchScreen
-        advanced.enableDesktopMenuHiding = Defaults.DefaultValue.enableDesktopMenuHiding
-        advanced.menuBarSearchPresentation = Defaults.DefaultValue.menuBarSearchPresentation
+    func resetVisibility() {
+        visibility.showOnClick = Defaults.DefaultValue.showOnClick
+        visibility.showOnHover = Defaults.DefaultValue.showOnHover
+        visibility.showOnScroll = Defaults.DefaultValue.showOnScroll
+        visibility.autoRehide = Defaults.DefaultValue.autoRehide
+        visibility.rehideStrategy = Defaults.DefaultValue.rehideStrategy
+        visibility.rehideInterval = Defaults.DefaultValue.rehideInterval
+        visibility.tempShowInterval = Defaults.DefaultValue.tempShowInterval
+        visibility.showOnHoverDelay = Defaults.DefaultValue.showOnHoverDelay
+        visibility.tooltipDelay = Defaults.DefaultValue.tooltipDelay
+        visibility.showMenuBarTooltips = Defaults.DefaultValue.showMenuBarTooltips
+        visibility.autoZenWhileSharingScreen = Defaults.DefaultValue.autoZenWhileSharingScreen
+        visibility.enableMenuBarItemDescenders = Defaults.DefaultValue.enableMenuBarItemDescenders
+        visibility.enableSwapBar = Defaults.DefaultValue.enableSwapBar
+        visibility.swapOnThawIconClick = Defaults.DefaultValue.swapOnThawIconClick
+        visibility.showAlwaysHiddenOnIconDoubleClick = Defaults.DefaultValue.showAlwaysHiddenOnIconDoubleClick
+        visibility.enableRecordingWatch = Defaults.DefaultValue.enableRecordingWatch
+        visibility.zenModeWhileRecording = Defaults.DefaultValue.zenModeWhileRecording
+        visibility.recordingWatchScreen = Defaults.DefaultValue.recordingWatchScreen
+        visibility.menuBarSearchPresentation = Defaults.DefaultValue.menuBarSearchPresentation
         Defaults.set(Defaults.DefaultValue.showSearchShortcutBar, forKey: .showSearchShortcutBar)
+    }
+
+    func resetThawBar() {
+        thawBar.lockThawBarPosition = Defaults.DefaultValue.lockThawBarPosition
+        thawBar.openHiddenItemsInMenuBar = Defaults.DefaultValue.openHiddenItemsInMenuBar
+        thawBar.useThawBar = Defaults.DefaultValue.useThawBar
+        thawBar.useThawBarOnlyOnNotchedDisplay = Defaults.DefaultValue.useThawBarOnlyOnNotchedDisplay
+        thawBar.thawBarLocation = Defaults.DefaultValue.thawBarLocation
+        thawBar.thawBarLocationOnHotkey = Defaults.DefaultValue.thawBarLocationOnHotkey
+    }
+
+    func resetScreenCorners() {
+        appearance.roundScreenCorners = Defaults.DefaultValue.roundScreenCorners
+        appearance.screenCornerRadius = Defaults.DefaultValue.screenCornerRadius
+    }
+
+    func resetSpaces() {
+        spaces.showSpaceIndicator = Defaults.DefaultValue.showSpaceIndicator
+    }
+
+    func resetPrivacy() {
+        privacy.fetchReleaseNotes = Defaults.DefaultValue.fetchReleaseNotes
+        privacy.showReleaseNotesAfterUpdate = Defaults.DefaultValue.showReleaseNotesAfterUpdate
+    }
+
+    func resetTools() {
+        tools.enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
     }
 
     func resetHotkeys() {

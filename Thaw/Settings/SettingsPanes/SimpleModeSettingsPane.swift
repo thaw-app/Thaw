@@ -32,7 +32,7 @@ struct SimpleModeSettingsPane: View {
             ThawSection {
                 LaunchAtLoginRow()
                 arrangementPicker
-                RehideChoiceRow(settings: settings)
+                RehideChoiceRow(settings: appState.settings.visibility)
                 alwaysHiddenToggle
                 previewToggle
                 hiddenSectionHotkeyRow
@@ -89,14 +89,14 @@ struct SimpleModeSettingsPane: View {
 
     /// The same choice as on Layout, so Simple Mode doesn't decide it for you.
     private var arrangementPicker: some View {
-        @Bindable var advanced = appState.settings.advanced
+        @Bindable var layout = appState.settings.layout
         return ThawPillPicker(
             "Item arrangement",
-            selection: $advanced.menuBarArrangementMode,
+            selection: $layout.menuBarArrangementMode,
             values: MenuBarArrangementMode.allCases,
             title: \.localized
         )
-        .annotation(advanced.menuBarArrangementMode.explanation)
+        .annotation(layout.menuBarArrangementMode.explanation)
     }
 
     private var previewToggle: some View {
@@ -105,8 +105,8 @@ struct SimpleModeSettingsPane: View {
     }
 
     private var alwaysHiddenToggle: some View {
-        @Bindable var advanced = appState.settings.advanced
-        return Toggle("Always Hidden", isOn: $advanced.enableAlwaysHiddenSection)
+        @Bindable var layout = appState.settings.layout
+        return Toggle("Always Hidden", isOn: $layout.enableAlwaysHiddenSection)
             .annotation("Adds a second divider. Icons left of it stay hidden until you double-click \(Constants.displayName)'s icon.")
     }
 

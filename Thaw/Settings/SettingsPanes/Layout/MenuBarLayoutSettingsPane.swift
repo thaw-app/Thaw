@@ -185,7 +185,7 @@ private struct LayoutDetailTabs: View {
     @State private var tab = LayoutDetailTab.options
 
     var body: some View {
-        let settings = appState.settings.advanced
+        let settings = appState.settings.layout
         // Groups and Apple's items need the bars, so without them only Options and Spacers are offered.
         let tabs = canArrangeLayout ? LayoutDetailTab.allCases : [.options, .spacers]
         SettingsPaneTabs(selection: $tab, tabs: tabs, tabForDisclosure: { LayoutDetailTab.tab(for: $0) })
@@ -214,7 +214,7 @@ private struct LayoutDetailTabs: View {
 }
 
 private struct LayoutOverflowSection: View {
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: LayoutSettings
 
     var body: some View {
         ThawSection("Overflow and previews") {
@@ -239,7 +239,7 @@ private struct LayoutOverflowSection: View {
 }
 
 private struct LayoutSectionOptions: View {
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: LayoutSettings
     let isHidingUnavailable: Bool
 
     var body: some View {

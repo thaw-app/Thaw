@@ -36,7 +36,7 @@ struct FocusStandInNoticeTests {
     @Test("Draws when Focus is missing, nothing otherwise, and its button turns the stand-in on")
     func drawsAndActs() async throws {
         let appState = AppState()
-        let settings = appState.settings.advanced
+        let settings = appState.settings.layout
         settings.controlCenterReplacements = ControlCenterReplacements(modules: false, timeMachine: false, textInput: false)
         let size = CGSize(width: 480, height: 80)
         let shown = OffscreenRender(FocusStandInNotice(settings: settings, focusShownInControlCenter: true).frame(width: size.width), size: size)

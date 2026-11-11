@@ -14,17 +14,17 @@ import Testing
 @MainActor
 @Suite("Menu bar engine configuration", .serialized, .scratchDefaults)
 struct EngineConfigurationTests {
-    @Test("Reveal and rehide settings come from General")
+    @Test("Reveal and rehide settings come from Visibility, the icon from General")
     func generalSettings() {
         let settings = AppSettings()
         let configuration: any MenuBarEngineConfiguration = settings
-        settings.general.showOnClick = false
-        settings.general.showOnHover = true
-        settings.general.showOnScroll = false
-        settings.general.autoRehide = false
-        settings.general.rehideStrategy = .timed
-        settings.general.rehideInterval = 42
-        settings.general.tempShowInterval = 7
+        settings.visibility.showOnClick = false
+        settings.visibility.showOnHover = true
+        settings.visibility.showOnScroll = false
+        settings.visibility.autoRehide = false
+        settings.visibility.rehideStrategy = .timed
+        settings.visibility.rehideInterval = 42
+        settings.visibility.tempShowInterval = 7
         settings.general.showThawIcon = false
         settings.general.simpleMode = true
         #expect(!configuration.showOnClick)
@@ -40,47 +40,49 @@ struct EngineConfigurationTests {
         #expect(configuration.customThawIconIsTemplate == settings.general.customThawIconIsTemplate)
     }
 
-    @Test("Item handling and presentation settings come from Advanced")
-    func advancedSettings() {
+    @Test("Item handling and presentation settings come from their pages' models")
+    func pageSettings() {
         let settings = AppSettings()
         let configuration: any MenuBarEngineConfiguration = settings
-        let advanced = settings.advanced
-        advanced.showOnHoverDelay = 0.75
-        advanced.tooltipDelay = 1.25
-        advanced.iconRefreshInterval = 3
-        advanced.menuBarOrderFulfillmentTimeout = 9
-        advanced.hideApplicationMenus = !advanced.hideApplicationMenus
-        advanced.showMenuBarTooltips = !advanced.showMenuBarTooltips
-        advanced.enableSecondaryContextMenu = !advanced.enableSecondaryContextMenu
-        advanced.enableMenuBarItemOverflow = !advanced.enableMenuBarItemOverflow
-        advanced.alwaysUseAppIconForMenuBarItems = !advanced.alwaysUseAppIconForMenuBarItems
-        advanced.showAllSectionsOnUserDrag = !advanced.showAllSectionsOnUserDrag
-        advanced.swapOnThawIconClick = !advanced.swapOnThawIconClick
+        let layout = settings.layout
+        let visibility = settings.visibility
+        let general = settings.general
+        visibility.showOnHoverDelay = 0.75
+        visibility.tooltipDelay = 1.25
+        layout.iconRefreshInterval = 3
+        layout.menuBarOrderFulfillmentTimeout = 9
+        general.hideApplicationMenus = !general.hideApplicationMenus
+        visibility.showMenuBarTooltips = !visibility.showMenuBarTooltips
+        general.enableSecondaryContextMenu = !general.enableSecondaryContextMenu
+        layout.enableMenuBarItemOverflow = !layout.enableMenuBarItemOverflow
+        layout.alwaysUseAppIconForMenuBarItems = !layout.alwaysUseAppIconForMenuBarItems
+        layout.showAllSectionsOnUserDrag = !layout.showAllSectionsOnUserDrag
+        visibility.swapOnThawIconClick = !visibility.swapOnThawIconClick
         #expect(configuration.showOnHoverDelay == 0.75)
         #expect(configuration.tooltipDelay == 1.25)
         #expect(configuration.iconRefreshInterval == 3)
         #expect(configuration.menuBarOrderFulfillmentTimeout == 9)
-        #expect(configuration.hideApplicationMenus == advanced.hideApplicationMenus)
-        #expect(configuration.showMenuBarTooltips == advanced.showMenuBarTooltips)
-        #expect(configuration.enableSecondaryContextMenu == advanced.enableSecondaryContextMenu)
-        #expect(configuration.enableMenuBarItemOverflow == advanced.enableMenuBarItemOverflow)
-        #expect(configuration.alwaysUseAppIconForMenuBarItems == advanced.alwaysUseAppIconForMenuBarItems)
-        #expect(configuration.showAllSectionsOnUserDrag == advanced.showAllSectionsOnUserDrag)
-        #expect(configuration.swapOnThawIconClick == advanced.swapOnThawIconClick)
-        #expect(configuration.isAlwaysHiddenSectionEnabled == advanced.isAlwaysHiddenSectionEnabled)
-        #expect(configuration.enableExperimentalSystemItemHiding == advanced.enableExperimentalSystemItemHiding)
-        #expect(configuration.enableExperimentalOverflowPrevention == advanced.enableExperimentalOverflowPrevention)
-        #expect(configuration.sectionDividerStyle == advanced.sectionDividerStyle)
+        #expect(configuration.hideApplicationMenus == general.hideApplicationMenus)
+        #expect(configuration.showMenuBarTooltips == visibility.showMenuBarTooltips)
+        #expect(configuration.enableSecondaryContextMenu == general.enableSecondaryContextMenu)
+        #expect(configuration.enableMenuBarItemOverflow == layout.enableMenuBarItemOverflow)
+        #expect(configuration.alwaysUseAppIconForMenuBarItems == layout.alwaysUseAppIconForMenuBarItems)
+        #expect(configuration.showAllSectionsOnUserDrag == layout.showAllSectionsOnUserDrag)
+        #expect(configuration.swapOnThawIconClick == visibility.swapOnThawIconClick)
+        #expect(configuration.isAlwaysHiddenSectionEnabled == layout.isAlwaysHiddenSectionEnabled)
+        #expect(configuration.enableExperimentalSystemItemHiding == layout.enableExperimentalSystemItemHiding)
+        #expect(configuration.enableExperimentalOverflowPrevention == layout.enableExperimentalOverflowPrevention)
+        #expect(configuration.sectionDividerStyle == layout.sectionDividerStyle)
     }
 
     @Test("A custom divider mark carries the chosen image and its template flag")
     func customDividerMark() {
         let settings = AppSettings()
-        settings.advanced.customSectionDividerImage = nil
+        settings.layout.customSectionDividerImage = nil
         #expect(settings.customSectionDividerMark == nil)
         let data = Data([1, 2, 3])
-        settings.advanced.customSectionDividerImage = data
-        settings.advanced.customSectionDividerIsTemplate = true
+        settings.layout.customSectionDividerImage = data
+        settings.layout.customSectionDividerIsTemplate = true
         #expect(settings.customSectionDividerMark == SectionDividerCustomMark(data: data, isTemplate: true))
     }
 }

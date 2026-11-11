@@ -18,7 +18,7 @@ nonisolated extension SearchIndex {
             pane: .visibility,
             section: "On hover",
             keywords: ["hover", "details", "readout", "descender", "notch", "tooltip", "weather"],
-            property: .advanced("enableMenuBarItemDescenders")
+            property: .visibility("enableMenuBarItemDescenders")
         ),
         SearchEntry(
             id: "lab.zenModeWhileRecording",
@@ -27,7 +27,7 @@ nonisolated extension SearchIndex {
             pane: .visibility,
             section: "Zen Mode",
             keywords: ["presenter", "presentation", "recording", "screen", "capture", "zen", "collapse", "hide", "camera", "microphone", "call", "meeting", "clean"],
-            property: .advanced("zenModeWhileRecording")
+            property: .visibility("zenModeWhileRecording")
         ),
         SearchEntry(
             id: "layout.replaceControlCenterItems",
@@ -40,7 +40,7 @@ nonisolated extension SearchIndex {
                 "time machine", "backup", "input menu", "text input", "keyboard", "input source", "language",
                 "menu extra", "system item", "replace", "replacement", "stand-in",
             ],
-            property: .advanced("enableModuleStandIns")
+            property: .layout("enableModuleStandIns")
         ),
         SearchEntry(
             id: "lab.enableDesktopMenuHiding",
@@ -49,7 +49,7 @@ nonisolated extension SearchIndex {
             pane: .general,
             section: "Menu bar behavior",
             keywords: ["finder", "desktop", "menus", "menu titles", "hide", "app menus", "cover", "clean"],
-            property: .advanced("enableDesktopMenuHiding")
+            property: .general("enableDesktopMenuHiding")
         ),
         SearchEntry(
             id: "lab.enableControlItemPanel",
@@ -58,7 +58,7 @@ nonisolated extension SearchIndex {
             pane: .widgets,
             section: "\(Constants.displayName)'s menu and icon",
             keywords: ["panel", "status menu", "menu", "right-click", "icon", "controls", "sections", "zen", "profile", "swap"],
-            property: .advanced("enableControlItemPanel")
+            property: .widgets("enableControlItemPanel")
         ),
         SearchEntry(
             id: "general.menuBarSearchPresentation",
@@ -70,7 +70,7 @@ nonisolated extension SearchIndex {
                 "search", "panel", "layout", "style", "launcher", "spotlight", "floe",
                 "compact", "extended", "list", "collapse",
             ],
-            property: .advanced("menuBarSearchPresentation")
+            property: .visibility("menuBarSearchPresentation")
         ),
         SearchEntry(
             id: "general.showSearchShortcutBar",
@@ -97,7 +97,7 @@ nonisolated extension SearchIndex {
             pane: .visibility,
             section: "On hover",
             keywords: ["tooltip", "hover", "menu bar"],
-            property: .advanced("showMenuBarTooltips")
+            property: .visibility("showMenuBarTooltips")
         ),
         SearchEntry(
             id: "advanced.autoZenWhileSharingScreen",
@@ -106,7 +106,7 @@ nonisolated extension SearchIndex {
             pane: .visibility,
             section: "Zen Mode",
             keywords: ["zen", "presenting", "present", "share", "sharing", "mirror", "screen", "projector", "meeting"],
-            property: .advanced("autoZenWhileSharingScreen")
+            property: .visibility("autoZenWhileSharingScreen")
         ),
         SearchEntry(
             id: "automation.menuBarItemAlertReveals",
@@ -124,7 +124,7 @@ nonisolated extension SearchIndex {
             pane: .menuBarLayout,
             section: "Overflow and previews",
             keywords: ["overflow", "notch", "fit", "visible", "hidden", "advanced layout controls"],
-            property: .advanced("enableMenuBarItemOverflow")
+            property: .layout("enableMenuBarItemOverflow")
         ),
         SearchEntry(
             id: "advanced.hideApplicationMenus",
@@ -133,7 +133,7 @@ nonisolated extension SearchIndex {
             pane: .general,
             section: "Menu bar behavior",
             keywords: ["app menus", "hide", "application", "menu bar"],
-            property: .advanced("hideApplicationMenus")
+            property: .general("hideApplicationMenus")
         ),
         SearchEntry(
             id: "advanced.enableSecondaryContextMenu",
@@ -144,7 +144,7 @@ nonisolated extension SearchIndex {
             sectionKey: "Menu bar behavior",
             sectionText: "Menu bar behavior",
             keywords: ["context menu", "right click", "right-click", "secondary", "secondary context menu"],
-            property: .advanced("enableSecondaryContextMenu")
+            property: .general("enableSecondaryContextMenu")
         ),
         SearchEntry(
             id: "advanced.enableNativeAppHiding",
@@ -156,7 +156,7 @@ nonisolated extension SearchIndex {
                 "live activities", "camera", "microphone", "indicator", "native", "standard", "everything", "hiding", "method",
                 "notification center", "clock", "control center", "siri",
             ],
-            property: .advanced("enableNativeAppHiding")
+            property: .layout("enableNativeAppHiding")
         ),
         SearchEntry(
             id: "general.appLanguage",

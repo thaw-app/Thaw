@@ -363,8 +363,8 @@ final class ProfileManager {
 
     /// Returns whether the apply may restart apps for its spacing.
     private func applySnapshot(_ profile: Profile, to appState: AppState, relaunchesApps: Bool, spacingRelaunchApproved: Bool) -> Bool {
-        profile.generalSettings.apply(to: appState.settings.general)
-        profile.advancedSettings.merged(onto: .capture(from: appState.settings.advanced)).apply(to: appState.settings.advanced)
+        profile.generalSettings.apply(to: appState.settings)
+        profile.advancedSettings.merged(onto: .capture(from: appState.settings)).apply(to: appState.settings)
 
         Defaults.set(profile.hotkeys, forKey: .hotkeys)
         for hotkey in appState.settings.hotkeys.hotkeys {
@@ -573,8 +573,8 @@ final class ProfileManager {
     /// layout when given. The one list of captured fields, so every kind of update saves the same ones.
     private func capturedContent(from appState: AppState, menuBarLayout: MenuBarLayoutSnapshot? = nil) -> ProfileContent {
         ProfileContent(
-            generalSettings: GeneralSettingsSnapshot.capture(from: appState.settings.general),
-            advancedSettings: AdvancedSettingsSnapshot.capture(from: appState.settings.advanced),
+            generalSettings: GeneralSettingsSnapshot.capture(from: appState.settings),
+            advancedSettings: AdvancedSettingsSnapshot.capture(from: appState.settings),
             hotkeys: Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:],
             displayConfigurations: appState.settings.displaySettings.configurations,
             globalDisplayConfiguration: appState.settings.displaySettings.globalConfiguration,

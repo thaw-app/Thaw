@@ -70,9 +70,10 @@ struct SettingsURIKeyTableTests {
     /// change handlers use to name a key.
     private static func externalChangeKeys(in relativePath: String, functionName: String) throws -> Set<String> {
         let lines = try sourceLines(relativePath)
-        let body = try body(of: functionName, in: lines).joined(separator: "\n")
+        // The handler's own comparisons, plus the key tables it hands to applySettingsURIChange.
+        let body = try body(of: functionName, in: lines).joined(separator: "\n") + "\n" + lines.joined(separator: "\n")
         var keys: Set<String> = []
-        for pattern in ["case \"([^\"]+)\"", "key == \"([^\"]+)\""] {
+        for pattern in ["case \"([^\"]+)\"", "key == \"([^\"]+)\"", "String == \"([^\"]+)\"", "\"([^\"]+)\": \\\\\\."] {
             let regex = try NSRegularExpression(pattern: pattern)
             let range = NSRange(body.startIndex ..< body.endIndex, in: body)
             for match in regex.matches(in: body, range: range) {
@@ -148,9 +149,9 @@ struct SettingsURIKeyTableTests {
     func everyExternalChangeCaseIsInTheTable() throws {
         let tableKeys = Set(SettingsURIHandler.keyTable.keys)
         let sources = [
-            ("Thaw/Settings/Models/Preferences/AdvancedSettings.swift", "handleExternalSettingsChange"),
-            ("Thaw/Settings/Models/Preferences/GeneralSettings.swift", "handleExternalSettingsChange"),
-        ]
+            "GeneralSettings", "LayoutSettings", "VisibilitySettings", "ThawBarSettings",
+            "SpacesSettings", "PrivacySettings", "ToolsSettings", "WidgetsSettings",
+        ].map { ("Thaw/Settings/Models/Preferences/\($0).swift", "handleExternalSettingsChange") }
 
         for (path, function) in sources {
             let keys = try Self.externalChangeKeys(in: path, functionName: function)

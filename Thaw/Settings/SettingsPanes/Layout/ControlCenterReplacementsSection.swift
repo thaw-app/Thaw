@@ -72,7 +72,7 @@ struct ControlCenterReplacements: Equatable {
     }
 }
 
-extension AdvancedSettings {
+extension LayoutSettings {
     var controlCenterReplacements: ControlCenterReplacements {
         get {
             ControlCenterReplacements(
@@ -95,7 +95,7 @@ extension AdvancedSettings {
 /// macOS hides together, plus Time Machine and the Input menu, which it will not hide.
 /// While it is on, a list under it picks which ones are replaced.
 struct ControlCenterReplacementsSection: View {
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: LayoutSettings
     @Environment(AppState.self) private var appState
 
     /// The extras that report whether their replacement is running.

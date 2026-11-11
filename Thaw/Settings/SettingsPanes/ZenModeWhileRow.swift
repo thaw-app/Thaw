@@ -12,7 +12,7 @@ import ThawUI
 /// is shared or mirrored, and while the camera or microphone is on. Each
 /// turns Zen Mode off again when it ends, and the two don't undo each other.
 struct ZenModeWhileRow: View {
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: VisibilitySettings
 
     var body: some View {
         ToggleButtonRow("Turn on Zen Mode while") {

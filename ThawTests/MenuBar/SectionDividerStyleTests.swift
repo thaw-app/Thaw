@@ -48,7 +48,7 @@ struct SectionDividerStyleTests {
     @Test("The custom image and its appearance switch are saved")
     func customImageIsSaved() throws {
         try ScratchDefaults.withStore(named: "SectionDividerStyleTests") { store in
-            let settings = AdvancedSettings()
+            let settings = LayoutSettings()
             #expect(settings.customSectionDividerIsTemplate, "it matches the menu bar by default")
             settings.customSectionDividerImage = Data([9, 8, 7])
             settings.customSectionDividerIsTemplate = false

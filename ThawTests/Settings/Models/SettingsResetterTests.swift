@@ -25,12 +25,7 @@ struct SettingsResetterTests {
         general.simpleMode = !Defaults.DefaultValue.simpleMode
         general.showSettingDescriptions = !Defaults.DefaultValue.showSettingDescriptions
         general.settingsAppearance = .black
-        general.lockThawBarPosition = !Defaults.DefaultValue.lockThawBarPosition
-        general.screenCornerRadius = Defaults.DefaultValue.screenCornerRadius + 3
-        general.showOnHover = !Defaults.DefaultValue.showOnHover
-        general.autoRehide = !Defaults.DefaultValue.autoRehide
-        general.rehideStrategy = Defaults.DefaultValue.rehideStrategy == .timed ? .smart : .timed
-        general.rehideInterval = Defaults.DefaultValue.rehideInterval + 7
+        general.hideApplicationMenus = !Defaults.DefaultValue.hideApplicationMenus
 
         settings.resetGeneral(zoomDefaults: zoom)
 
@@ -39,32 +34,49 @@ struct SettingsResetterTests {
         #expect(general.simpleMode == Defaults.DefaultValue.simpleMode)
         #expect(general.showSettingDescriptions == Defaults.DefaultValue.showSettingDescriptions)
         #expect(general.settingsAppearance == .system)
-        #expect(general.lockThawBarPosition == Defaults.DefaultValue.lockThawBarPosition)
-        #expect(general.screenCornerRadius == Defaults.DefaultValue.screenCornerRadius)
-        #expect(general.showOnHover == Defaults.DefaultValue.showOnHover)
-        #expect(general.autoRehide == Defaults.DefaultValue.autoRehide)
-        #expect(general.rehideStrategy == Defaults.DefaultValue.rehideStrategy)
-        #expect(general.rehideInterval == Defaults.DefaultValue.rehideInterval)
+        #expect(general.hideApplicationMenus == Defaults.DefaultValue.hideApplicationMenus)
         #expect(general.lastCustomThawIcon == nil)
     }
 
-    @Test("Resetting everything reaches General, Advanced, Hotkeys and Display together")
+    @Test("Resetting Visibility, Thaw Bar and screen corners puts back their defaults")
+    func resetVisibilityThawBarAndCorners() {
+        let settings = AppSettings()
+        settings.thawBar.lockThawBarPosition = !Defaults.DefaultValue.lockThawBarPosition
+        settings.appearance.screenCornerRadius = Defaults.DefaultValue.screenCornerRadius + 3
+        settings.visibility.showOnHover = !Defaults.DefaultValue.showOnHover
+        settings.visibility.autoRehide = !Defaults.DefaultValue.autoRehide
+        settings.visibility.rehideStrategy = Defaults.DefaultValue.rehideStrategy == .timed ? .smart : .timed
+        settings.visibility.rehideInterval = Defaults.DefaultValue.rehideInterval + 7
+
+        settings.resetVisibility()
+        settings.resetThawBar()
+        settings.resetScreenCorners()
+
+        #expect(settings.thawBar.lockThawBarPosition == Defaults.DefaultValue.lockThawBarPosition)
+        #expect(settings.appearance.screenCornerRadius == Defaults.DefaultValue.screenCornerRadius)
+        #expect(settings.visibility.showOnHover == Defaults.DefaultValue.showOnHover)
+        #expect(settings.visibility.autoRehide == Defaults.DefaultValue.autoRehide)
+        #expect(settings.visibility.rehideStrategy == Defaults.DefaultValue.rehideStrategy)
+        #expect(settings.visibility.rehideInterval == Defaults.DefaultValue.rehideInterval)
+    }
+
+    @Test("Resetting everything reaches every page, Hotkeys and Display together")
     func resetAll() throws {
         let zoom = try #require(suites.make())
         zoom.set(80, forKey: AppUIZoom.defaultsKey)
         Defaults.set(["toggleHidden": Data([1])], forKey: .hotkeys)
         let settings = AppSettings()
-        settings.general.showOnHover = !Defaults.DefaultValue.showOnHover
-        settings.advanced.tooltipDelay = 9
-        settings.advanced.showReleaseNotesAfterUpdate = !Defaults.DefaultValue.showReleaseNotesAfterUpdate
+        settings.visibility.showOnHover = !Defaults.DefaultValue.showOnHover
+        settings.visibility.tooltipDelay = 9
+        settings.privacy.showReleaseNotesAfterUpdate = !Defaults.DefaultValue.showReleaseNotesAfterUpdate
         settings.displaySettings.confirmSpacingRelaunch = !Defaults.DefaultValue.confirmSpacingRelaunch
 
         settings.resetAllSettingsToDefaults(zoomDefaults: zoom)
 
         #expect(zoom.object(forKey: AppUIZoom.defaultsKey) == nil)
-        #expect(settings.general.showOnHover == Defaults.DefaultValue.showOnHover)
-        #expect(settings.advanced.tooltipDelay == Defaults.DefaultValue.tooltipDelay)
-        #expect(settings.advanced.showReleaseNotesAfterUpdate == Defaults.DefaultValue.showReleaseNotesAfterUpdate)
+        #expect(settings.visibility.showOnHover == Defaults.DefaultValue.showOnHover)
+        #expect(settings.visibility.tooltipDelay == Defaults.DefaultValue.tooltipDelay)
+        #expect(settings.privacy.showReleaseNotesAfterUpdate == Defaults.DefaultValue.showReleaseNotesAfterUpdate)
         #expect(settings.displaySettings.confirmSpacingRelaunch == Defaults.DefaultValue.confirmSpacingRelaunch)
         #expect((Defaults.dictionary(forKey: .hotkeys) ?? [:]).isEmpty)
     }

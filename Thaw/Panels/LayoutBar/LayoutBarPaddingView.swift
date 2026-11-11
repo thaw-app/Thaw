@@ -186,7 +186,7 @@ final class LayoutBarPaddingView: NSView {
             members: members,
             expectedMemberCount: handle.memberIdentifiers.count,
             to: container.section,
-            experimentalSystemItemHiding: appState.settings.advanced.enableExperimentalSystemItemHiding,
+            experimentalSystemItemHiding: appState.settings.layout.enableExperimentalSystemItemHiding,
             isHidingAvailable: appState.menuBarManager.sectionController.isHidingAvailable
         )
         return canMove ? .move : []
@@ -322,7 +322,7 @@ final class LayoutBarPaddingView: NSView {
         let controller = container.appState?.menuBarManager.sectionController
         let sourceSection = sourceContainer?.section ?? container.section
         let orderedItems = orderedLayoutItemsForSectionOrder()
-        let experimentalSystemItemHiding = container.appState?.settings.advanced.enableExperimentalSystemItemHiding ?? false
+        let experimentalSystemItemHiding = container.appState?.settings.layout.enableExperimentalSystemItemHiding ?? false
         let physicalOrderExperimentalSystemItemHiding = experimentalSystemItemHiding &&
             Self.allowsAnchoredSystemItemReordering(appState: container.appState)
 

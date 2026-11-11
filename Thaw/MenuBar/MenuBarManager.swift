@@ -235,8 +235,8 @@ final class MenuBarManager {
         sectionController = controller
         runtimeSectionController = controller
         revealAttribution.observe(revealedSectionChanges)
-        nativeAppHidingExperiment.start(controller: controller, settings: appState.settings.advanced)
-        systemExtraTakeover.start(controller: controller, settings: appState.settings.advanced) { [weak appState] identifier in
+        nativeAppHidingExperiment.start(controller: controller, settings: appState.settings.layout)
+        systemExtraTakeover.start(controller: controller, settings: appState.settings.layout) { [weak appState] identifier in
             guard let itemManager = appState?.itemManager,
                   itemManager.knownItemIdentifiers.insert(identifier).inserted
             else {

@@ -47,9 +47,9 @@ struct ShowThawIconRow: View {
     /// Names only the gestures that currently do something: double-click needs
     /// its shortcut enabled, and the swap option changes what a click does.
     private var gestureSummary: LocalizedStringResource {
-        let advanced = appState.settings.advanced
+        let visibility = appState.settings.visibility
         let doubleClickOpensAlwaysHidden = appState.settings.usesIconDoubleClickForAlwaysHidden
-        switch (advanced.swapOnThawIconClick, doubleClickOpensAlwaysHidden) {
+        switch (visibility.swapOnThawIconClick, doubleClickOpensAlwaysHidden) {
         case (false, true):
             return "Click to show hidden items, double-click for Always Hidden, and right-click for settings."
         case (false, false):
@@ -115,7 +115,7 @@ struct ThawPlacementWarning: View {
 
 /// Which gestures on an empty stretch of the menu bar reveal hidden items.
 struct ShowHiddenItemsOnRow: View {
-    @Bindable var settings: GeneralSettings
+    @Bindable var settings: VisibilitySettings
 
     var body: some View {
         ToggleButtonRow("Show hidden items on") {
@@ -157,7 +157,7 @@ struct ToggleButtonRow<Toggles: View>: View {
 
 /// When revealed items hide themselves again, as one menu over the three stored settings.
 struct RehideChoiceRow: View {
-    @Bindable var settings: GeneralSettings
+    @Bindable var settings: VisibilitySettings
 
     private var choice: SimpleRehideChoice {
         SimpleRehideChoice(autoRehide: settings.autoRehide, strategy: settings.rehideStrategy, interval: settings.rehideInterval)
