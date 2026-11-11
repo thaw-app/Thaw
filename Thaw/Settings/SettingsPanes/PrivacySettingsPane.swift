@@ -90,6 +90,11 @@ struct PrivacySettingsPane: View {
             .annotation {
                 Text("Fetches the latest release notes from \(changelogHost) when you open What’s New and keeps a copy for offline use. When this is off, What’s New shows the last copy it fetched, if there is one.")
             }
+
+            Toggle("Show release notes after an update", isOn: $advancedSettings.showReleaseNotesAfterUpdate)
+                .annotation {
+                    Text("Opens What’s New the first time \(Constants.displayName) starts after an update. You can still open it from \(Constants.displayName)’s menu or About.")
+                }
         } else {
             Text("This build of \(Constants.displayName) makes no network calls.")
                 .foregroundStyle(ThawInk.supporting)

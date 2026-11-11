@@ -56,6 +56,7 @@ struct SettingsResetterTests {
         let settings = AppSettings()
         settings.general.showOnHover = !Defaults.DefaultValue.showOnHover
         settings.advanced.tooltipDelay = 9
+        settings.advanced.showReleaseNotesAfterUpdate = !Defaults.DefaultValue.showReleaseNotesAfterUpdate
         settings.displaySettings.confirmSpacingRelaunch = !Defaults.DefaultValue.confirmSpacingRelaunch
 
         settings.resetAllSettingsToDefaults(zoomDefaults: zoom)
@@ -63,6 +64,7 @@ struct SettingsResetterTests {
         #expect(zoom.object(forKey: AppUIZoom.defaultsKey) == nil)
         #expect(settings.general.showOnHover == Defaults.DefaultValue.showOnHover)
         #expect(settings.advanced.tooltipDelay == Defaults.DefaultValue.tooltipDelay)
+        #expect(settings.advanced.showReleaseNotesAfterUpdate == Defaults.DefaultValue.showReleaseNotesAfterUpdate)
         #expect(settings.displaySettings.confirmSpacingRelaunch == Defaults.DefaultValue.confirmSpacingRelaunch)
         #expect((Defaults.dictionary(forKey: .hotkeys) ?? [:]).isEmpty)
     }

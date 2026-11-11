@@ -36,7 +36,9 @@ extension MenuBarItemManager {
                     return bid
                 }
                 return nil
-            })
+            }),
+            readGeneration: cacheCycleState.lastRead.generation,
+            readComplete: cacheCycleState.lastRead.isComplete
         )
     }
 

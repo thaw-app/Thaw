@@ -51,6 +51,9 @@ final class AppState {
     /// The sections, their control items, and the show/hide state machine.
     let menuBarManager: MenuBarManager
 
+    /// The displays where macOS's own overflow arrow is showing, for Settings.
+    let nativeOverflowPresence = NativeOverflowPresence()
+
     /// Shared by the menu bar manager, which acts on a display move, and the
     /// event taps, which ask for a check.
     private let activeDisplayWatcher = ActiveMenuBarDisplayWatcher()
@@ -366,13 +369,8 @@ final class AppState {
     /// First launches and upgrades without changelog content record the version silently, leaving onboarding to handle new users.
     /// Record synchronously before the async repository fetch to avoid repeated prompts after failures.
     func presentWhatsNewForUpgradeIfNeeded() {
-        let current = Constants.versionString
-        guard let lastSeen = Defaults.string(forKey: .lastWhatsNewVersion) else {
-            Defaults.set(current, forKey: .lastWhatsNewVersion)
-            return
-        }
-        guard lastSeen != current else { return }
-        Defaults.set(current, forKey: .lastWhatsNewVersion)
+        let opensAfterUpdate = settings.advanced.showReleaseNotesAfterUpdate
+        guard WhatsNewUpgradeGate.recordVersion(Constants.versionString, opensAfterUpdate: opensAfterUpdate) else { return }
 
         Task {
             let allowFetch = settings.advanced.fetchReleaseNotes

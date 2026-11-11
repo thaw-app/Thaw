@@ -195,6 +195,84 @@ struct BarSettlingTests {
         #expect(streak == .init(lastSeenCount: 5, stablePolls: 0))
     }
 
+    /// Three polls that coalesce into one truncated read must not end the launch settle.
+    @Test("Three coalesced polls of one truncated read do not settle")
+    func coalescedTruncatedReadDoesNotSettle() {
+        var streak = BarSettling.Streak(lastSeenCount: 15, stablePolls: 0)
+        let truncated = BarSettling.Sample.ready(count: 15, read: 7, complete: false)
+        let verdicts = (0 ..< 3).map { _ in
+            BarSettling.verdict(for: truncated, expecting: nil, minimumElapsed: true, barQuiet: true, streak: &streak)
+        }
+
+        #expect(verdicts == [.waiting(.readIncomplete), .waiting(.sameRead), .waiting(.sameRead)])
+        #expect(streak.stablePolls == 0)
+    }
+
+    @Test("A truncated read resets the stability streak")
+    func truncatedReadResetsStreak() {
+        var streak = BarSettling.Streak(lastSeenCount: 17, stablePolls: 2, lastReadGeneration: 3)
+
+        let verdict = BarSettling.verdict(
+            for: .ready(count: 17, read: 4, complete: false), expecting: nil, minimumElapsed: true, barQuiet: true, streak: &streak
+        )
+
+        #expect(verdict == .waiting(.readIncomplete))
+        #expect(streak == .init(lastSeenCount: -1, stablePolls: 0, lastReadGeneration: 4))
+    }
+
+    @Test("A poll that coalesced into the previous read leaves the streak as it was")
+    func sameReadLeavesStreak() {
+        var streak = BarSettling.Streak(lastSeenCount: 17, stablePolls: 2, lastReadGeneration: 3)
+
+        let verdict = BarSettling.verdict(
+            for: .ready(count: 17, read: 3), expecting: nil, minimumElapsed: true, barQuiet: true, streak: &streak
+        )
+
+        #expect(verdict == .waiting(.sameRead))
+        #expect(streak == .init(lastSeenCount: 17, stablePolls: 2, lastReadGeneration: 3))
+    }
+
+    @Test("Fresh complete reads still settle after three steady polls")
+    func freshCompleteReadsSettle() {
+        var streak = BarSettling.Streak()
+        let verdicts = (UInt64(1) ... 4).map { read in
+            BarSettling.verdict(
+                for: .ready(count: 17, read: read), expecting: nil, minimumElapsed: true, barQuiet: true, streak: &streak
+            )
+        }
+
+        #expect(verdicts == [.waiting(.countChanged(from: -1, to: 17)), .waiting(.counting), .waiting(.counting), .settled])
+    }
+
+    @Test("A complete read after a truncated one starts the count over")
+    func completeReadAfterTruncatedStartsOver() {
+        var streak = BarSettling.Streak()
+        let reads: [BarSettling.Sample] = [
+            .ready(count: 15, read: 1, complete: false),
+            .ready(count: 19, read: 2),
+            .ready(count: 19, read: 3),
+            .ready(count: 19, read: 4),
+            .ready(count: 19, read: 5),
+        ]
+        let verdicts = reads.map {
+            BarSettling.verdict(for: $0, expecting: nil, minimumElapsed: true, barQuiet: true, streak: &streak)
+        }
+
+        #expect(verdicts == [
+            .waiting(.readIncomplete), .waiting(.countChanged(from: -1, to: 19)), .waiting(.counting), .waiting(.counting), .settled,
+        ])
+    }
+
+    @Test("A launch settle whose polls only see one truncated read ends at its deadline")
+    func truncatedLaunchSettleHitsDeadline() async {
+        let harness = Harness(samples: [.ready(count: 15, read: 1, complete: false)])
+
+        harness.settling.note(.thawLaunched)
+        await harness.settling.settled()
+
+        #expect(harness.endings.map(\.hitDeadline) == [true])
+    }
+
     @Test("A steady count waits for the minimum time, the host modules and resolved PIDs")
     func countModeBlockers() {
         func judge(_ sample: BarSettling.Sample, minimumElapsed: Bool = true) -> BarSettling.Verdict {
@@ -378,5 +456,9 @@ private final class Harness {
 private extension BarSettling.Sample {
     static func ready(count: Int, bundleIDs: Set<String> = []) -> Self {
         Self(managedCount: count, unresolvedPIDs: 0, hostReady: true, bundleIDs: bundleIDs)
+    }
+
+    static func ready(count: Int, read: UInt64, complete: Bool = true) -> Self {
+        Self(managedCount: count, unresolvedPIDs: 0, hostReady: true, readGeneration: read, readComplete: complete)
     }
 }

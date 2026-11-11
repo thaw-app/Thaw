@@ -24,8 +24,18 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### New
+
+- **Layout warns when items don't fit.** When macOS hides items it has no room for, Layout names them until there's room again.
+- **Release notes can stay closed after an update.** Turn off Show release notes after an update in Privacy. What's New still opens from Thaw's menu and About.
+
+### Changed
+
+- **The Thaw Bar has its own switch again.** Show hidden items is now two switches, Thaw Bar and Always show hidden items. Your settings carry over.
+
 ### Fixed
 
+- **Items no longer move at launch when Thaw can't read the whole bar in time.** With many apps running, Thaw now waits for a full read before it treats the bar as settled or re-lays it.
 - **Your saved layout is put back once the menu bar settles at launch,** also when Thaw re-applies your profile then and its spacing hasn't changed. Before, that re-apply could stop the final layout pass.
 
 ## [3.0.0-alpha.13] - 2026-11-05

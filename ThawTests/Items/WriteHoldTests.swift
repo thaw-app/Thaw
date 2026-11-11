@@ -50,6 +50,7 @@ struct WriteHoldTests {
         all.sectionRevealed = true
         all.revealTransitionActive = true
         all.barOnUncachedDisplay = true
+        all.barReadIncomplete = true
         #expect(all.heldChecks == Set(WriteHold.Check.allCases))
     }
 }
@@ -71,5 +72,77 @@ struct StructuralNormalizationHoldsTests {
         var situation = WriteHold.Situation()
         situation.barOnUncachedDisplay = true
         #expect(WriteHold.first(StructuralNormalizationHolds.checks, in: situation) == .barOnUncachedDisplay)
+    }
+
+    /// A structural pass on a read that missed items would re-lay the whole bar, so it waits.
+    @Test("The pass waits while the last bar read was incomplete, and says so")
+    func checksCoverIncompleteRead() {
+        var situation = WriteHold.Situation()
+        situation.barReadIncomplete = true
+
+        let held = WriteHold.first(StructuralNormalizationHolds.checks, in: situation)
+
+        #expect(held == .barReadIncomplete)
+        #expect(held.flatMap(StructuralNormalizationHolds.deferralNote(for:))
+            == "structural normalization: the last bar read was incomplete; deferring")
+        #expect(StructuralNormalizationHolds.deferralNote(for: .sectionRevealed) == nil)
+        StructuralNormalizationHolds.logDeferral(on: .barReadIncomplete)
+        StructuralNormalizationHolds.logDeferral(on: .sectionRevealed)
+    }
+
+    @Test("The item manager reports the bar read as incomplete before any read")
+    @MainActor func managerSituationReadsTheLastBarRead() {
+        let manager = MenuBarItemManager()
+        #expect(manager.structuralNormalizationSituation().barReadIncomplete)
+    }
+}
+
+/// The record of the cache's last bar read, which the settle and the structural pass both trust.
+@Suite("Bar read record")
+struct BarReadRecordTests {
+    @Test("Each read gets a new number and is complete only when every known owner answered it")
+    func readsAreNumberedAndJudged() {
+        var record = BarReadRecord()
+        #expect(record.generation == 0)
+        #expect(!record.isComplete)
+
+        record.note(.init(hasFreshKnownInventory: true))
+        #expect(record.generation == 1)
+        #expect(record.isComplete)
+
+        record.note(.init(hasFreshKnownInventory: false))
+        #expect(record.generation == 2)
+        #expect(!record.isComplete)
+
+        record.note(nil)
+        #expect(record.generation == 2, "a pass that never read the bar")
+    }
+
+    @Test("A quick read that refreshed every known owner counts, though it skipped apps without items")
+    func quickFreshReadIsComplete() {
+        var record = BarReadRecord()
+
+        record.note(.init(hasFreshKnownInventory: true))
+
+        #expect(record.isComplete)
+    }
+
+    @Test("A truncated read with stale owners does not count")
+    func truncatedStaleReadIsIncomplete() {
+        var record = BarReadRecord()
+
+        record.note(.init(hasFreshKnownInventory: false))
+
+        #expect(!record.isComplete)
+    }
+
+    @Test("A read merged with older items is incomplete")
+    func mergedReadIsIncomplete() {
+        var record = BarReadRecord()
+
+        record.note(.init(hasFreshKnownInventory: true, mergedWithOlderItems: true))
+
+        #expect(record.generation == 1)
+        #expect(!record.isComplete)
     }
 }

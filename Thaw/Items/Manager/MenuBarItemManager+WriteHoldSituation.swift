@@ -34,6 +34,7 @@ extension MenuBarItemManager {
         situation.revealTransitionActive = barHolds.contains(.revealTransition)
         let barDisplayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
         situation.barOnUncachedDisplay = itemDisplayID.map { $0 != barDisplayID } ?? false
+        situation.barReadIncomplete = !cacheCycleState.lastRead.isComplete
         return situation
     }
 

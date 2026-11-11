@@ -171,6 +171,7 @@ struct PreferenceModelsTests {
         settings.swapOnThawIconClick = !Defaults.DefaultValue.swapOnThawIconClick
         settings.enableControlItemPanel = !Defaults.DefaultValue.enableControlItemPanel
         settings.fetchReleaseNotes = !Defaults.DefaultValue.fetchReleaseNotes
+        settings.showReleaseNotesAfterUpdate = !Defaults.DefaultValue.showReleaseNotesAfterUpdate
         settings.enableModuleStandIns = !Defaults.DefaultValue.enableModuleStandIns
         settings.skippedModuleStandIns = ["b", "a"]
         settings.enableTimeMachineTakeover = !Defaults.DefaultValue.enableTimeMachineTakeover
@@ -211,6 +212,7 @@ struct PreferenceModelsTests {
         #expect(reloaded.swapOnThawIconClick == settings.swapOnThawIconClick)
         #expect(reloaded.enableControlItemPanel == settings.enableControlItemPanel)
         #expect(reloaded.fetchReleaseNotes == settings.fetchReleaseNotes)
+        #expect(reloaded.showReleaseNotesAfterUpdate == settings.showReleaseNotesAfterUpdate)
         #expect(reloaded.enableModuleStandIns == settings.enableModuleStandIns)
         #expect(reloaded.skippedModuleStandIns == ["a", "b"])
         #expect(reloaded.enableTimeMachineTakeover == settings.enableTimeMachineTakeover)
@@ -275,6 +277,7 @@ struct PreferenceModelsTests {
             "swapOnThawIconClick": \.swapOnThawIconClick,
             "enableControlItemPanel": \.enableControlItemPanel,
             "fetchReleaseNotes": \.fetchReleaseNotes,
+            "showReleaseNotesAfterUpdate": \.showReleaseNotesAfterUpdate,
             "enableRecordingWatch": \.enableRecordingWatch,
             "zenModeWhileRecording": \.zenModeWhileRecording,
             "enableDesktopMenuHiding": \.enableDesktopMenuHiding,
