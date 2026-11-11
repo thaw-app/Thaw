@@ -22,6 +22,16 @@ Anything else goes before the first section, or in its own section after
 these four. The website shows each section's name beside its list, and counts
 the items under New and Fixed.
 
+## [Unreleased]
+
+### Changed
+
+- **Thaw stays open after macOS opens it for its Focus filter.** When Thaw wasn't running and macOS opened it in the background to run Thaw's Focus filter, macOS used to quit it again about 30 seconds later. Thaw now keeps running.
+
+### Fixed
+
+- **A copy of Thaw you build yourself no longer quits a minute after you log in.** macOS doesn't accept App Intents from a copy signed without a team, and after a restart it asked such a copy to quit once Thaw's Focus filter had run. It looked like a crash.
+
 ## [3.0.0-alpha.14] - 2026-11-11
 
 **macOS 27 only · Build 125**
