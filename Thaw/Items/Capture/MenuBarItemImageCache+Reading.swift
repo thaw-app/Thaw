@@ -243,6 +243,19 @@ extension MenuBarItemImageCache {
         let forgivenTags = section != .visible && shouldUseFreshBounds
             ? Set(items.map(\.tag))
             : []
+        let geometryOwners = Self.captureGeometryOwners(
+            for: items,
+            knownItems: appState.itemManager.managedItems,
+            recentItems: appState.itemManager.onScreenItemSnapshot.items
+        )
+        if Self.settlesRevealedPixels(
+            for: section,
+            revealedSection: revealedSection,
+            lastRevealChange: appState.barSettling.lastRevealChange,
+            now: .now
+        ) {
+            await settleRevealedSection(items, appState: appState, reader: LiveMenuBarCaptureReader(geometryOwners: geometryOwners))
+        }
         // A stale item cache can let concealed items into this pass; the crop
         // loop rejects them against this set.
         let concealedIdentifiers = appState.menuBarManager.sectionController
@@ -256,11 +269,7 @@ extension MenuBarItemImageCache {
             freshBounds: shouldUseFreshBounds,
             concealedIdentifiers: concealedIdentifiers,
             forgivenTags: forgivenTags,
-            geometryOwners: Self.captureGeometryOwners(
-                for: items,
-                knownItems: appState.itemManager.managedItems,
-                recentItems: appState.itemManager.onScreenItemSnapshot.items
-            )
+            geometryOwners: geometryOwners
         )
         if !captureResult.unreadable.isEmpty {
             MenuBarItemImageCache.diagLog.debug(

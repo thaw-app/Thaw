@@ -197,7 +197,7 @@ struct ControlItemPanelView: View {
     // MARK: Commands
 
     private var searchRow: some View {
-        PanelCommandRow(symbol: "magnifyingglass", title: "Search items…") {
+        PanelCommandRow(symbol: "magnifyingglass", title: "Search Menu Bar Items…") {
             dismiss()
             appState.menuBarManager.searchPanel.show()
         }

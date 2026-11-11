@@ -15,7 +15,7 @@ import SwiftUI
 
 /// A view that displays an image in a menu bar layout view.
 final class LayoutBarItemView: LayoutBarArrangedView {
-    private enum Metrics {
+    enum Metrics {
         static let minWidth: CGFloat = 14
         static let maxWidth = OverflowFallbackIcon.maximumItemWidth
         /// A tile drawing an icon instead of the item is icon-sized, however
@@ -69,7 +69,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// when the container recycles this view for a refreshed item.
     private(set) var item: MenuBarItem
 
-    private lazy var tooltipController = CustomTooltipController(text: item.displayName, view: self)
+    lazy var tooltipController = CustomTooltipController(text: item.displayName, view: self)
     private var tooltipTrackingArea: NSTrackingArea?
 
     /// Delay hover spotlighting so sweeping across the editor does not strobe the agent with highlight calls.
@@ -86,8 +86,8 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// releaseInspectorHolds() releases the hold.
     private var isInspecting = false
 
-    /// A click is mouse-up without a drag, not a distance threshold, because dragging starts on the first pixel.
-    private var isClickCandidate = false
+    /// Hover, press and whether the gesture is still a click; a drag starts past a small threshold.
+    var pointer = LayoutTilePointer()
 
     /// Whether the current gesture has already posted a refusal, so a drag on
     /// an immovable item explains itself once rather than on every pixel.
@@ -132,7 +132,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     var isOwnerUnresponsive = false {
         didSet {
             guard isOwnerUnresponsive != oldValue else { return }
-            needsDisplay = true
+            refreshBadgeHelp()
         }
     }
 
@@ -140,9 +140,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     var visibilityLimit: LayoutBarVisibilityLimit? {
         didSet {
             guard visibilityLimit != oldValue else { return }
-            toolTip = visibilityLimit?.explanation
-            setAccessibilityHelp(visibilityLimit?.explanation)
-            needsDisplay = true
+            refreshBadgeHelp()
         }
     }
 
@@ -306,7 +304,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    private var tooltipDelay: TimeInterval {
+    var tooltipDelay: TimeInterval {
         appState?.settings.advanced.tooltipDelay ?? 0.5
     }
 
@@ -361,13 +359,13 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     override func mouseEntered(with event: NSEvent) {
         super.mouseEntered(with: event)
-        tooltipController.scheduleShow(delay: tooltipDelay)
+        pointerEntered()
         scheduleSpotlight()
     }
 
     override func mouseExited(with event: NSEvent) {
         super.mouseExited(with: event)
-        tooltipController.cancel()
+        pointerExited()
         // Keep the real item lit while its inspector is open, the pointer has
         // to leave this view to reach the popover's controls.
         guard !isInspecting else {
@@ -378,22 +376,21 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     /// Claim mouse-down without forwarding to the unused padding responder.
     /// AppKit still sends drag/up to the hit view, regardless of which responder handled down.
-    override func mouseDown(with _: NSEvent) {
+    override func mouseDown(with event: NSEvent) {
         tooltipController.cancel()
         // Focusing on click keeps the keyboard path continuous: having reached
         // a glyph with the pointer, the arrow keys act on that same glyph.
         _ = window?.makeFirstResponder(self)
-        isClickCandidate = true
+        pointerPressed(event)
         didRefuseDrag = false
     }
 
     /// Opens the inspector for a mouse-up that never turned into a drag.
     override func mouseUp(with event: NSEvent) {
         super.mouseUp(with: event)
-        guard isClickCandidate else {
+        guard pointerReleased() else {
             return
         }
-        isClickCandidate = false
         showInspector()
     }
 
@@ -663,6 +660,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         guard !isDraggingPlaceholder else {
             return
         }
+        drawPointerWash()
         if shouldPreferPlaceholderImage {
             drawOverflowFallback()
         } else if let capturedImage = cachedDrawImage {
@@ -675,22 +673,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         } else {
             drawPlaceholder()
         }
-        if isOwnerUnresponsive {
-            drawWarningBadge(atLeadingEdge: false)
-        }
-        if visibilityLimit != nil {
-            drawWarningBadge(atLeadingEdge: true)
-        }
-    }
-
-    /// Draws the warning badge into the view's bottom-right corner (bottom-left
-    /// for a visibility limit), scaled to Metrics.unresponsiveBadgeWidth.
-    private func drawWarningBadge(atLeadingEdge: Bool) {
-        let badge = NSImage.warning
-        let badgeWidth = Metrics.unresponsiveBadgeWidth
-        let badgeSize = CGSize(width: badgeWidth, height: badge.size.height * (badgeWidth / badge.size.width))
-        let originX = atLeadingEdge ? bounds.minX : bounds.maxX - badgeSize.width
-        badge.draw(in: CGRect(x: originX, y: bounds.minY, width: badgeSize.width, height: badgeSize.height))
+        drawBadges()
     }
 
     private var shouldPreferPlaceholderImage: Bool {
@@ -845,9 +828,8 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     override func mouseDragged(with event: NSEvent) {
         super.mouseDragged(with: event)
         tooltipController.cancel()
-        // Any movement disqualifies the gesture from being a click, including
-        // the movement that ends in one of the refusals below.
-        isClickCandidate = false
+        // A wobble stays a click; past the threshold the gesture is a drag, including one refused below.
+        guard pointerDragged(event) else { return }
 
         guard isEnabled else {
             refuseDrag(LayoutBarFeedbackCenter.itemNotMovable(itemName: item.displayName))

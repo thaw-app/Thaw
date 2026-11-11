@@ -16,16 +16,26 @@ import MenuBarModel
 enum BatteryLevelSource {
     /// Current battery charge as a fraction of maximum (0–1).
     static func level() -> Double {
-        guard let snapshot = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
-              let handles = Bridging.arrayValue(of: IOPSCopyPowerSourcesList(snapshot)?.takeRetainedValue()),
-              let handle = handles.first,
-              // The list vends opaque handles, not dictionaries; casting them
-              // directly fails the bridge and reports 0%.
-              let description: [String: Any] = Bridging.dictionaryValue(
-                  of: IOPSGetPowerSourceDescription(snapshot, handle as CFTypeRef)?.takeUnretainedValue()
-              )
-        else { return 0 }
-        return level(from: description)
+        reading().level
+    }
+
+    /// The charge and whether it's charging, from one read of the power source.
+    static func reading() -> (level: Double, isCharging: Bool) {
+        guard let description = description() else { return (0, false) }
+        return (level(from: description), isCharging(from: description))
+    }
+
+    /// The first power source's description, or nil on a Mac without one.
+    private static func description() -> [String: Any]? {
+        guard let snapshot = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(), let handles = Bridging.arrayValue(of: IOPSCopyPowerSourcesList(snapshot)?.takeRetainedValue()), let handle = handles.first
+        else { return nil }
+        // The list vends opaque handles, not dictionaries; casting them directly fails the bridge.
+        return Bridging.dictionaryValue(of: IOPSGetPowerSourceDescription(snapshot, handle as CFTypeRef)?.takeUnretainedValue())
+    }
+
+    /// Plugged in but held at a charge limit isn't charging.
+    static func isCharging(from description: [String: Any]) -> Bool {
+        description[kIOPSIsChargingKey] as? Bool ?? false
     }
 
     /// The charge fraction a power source description reports.

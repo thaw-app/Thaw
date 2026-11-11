@@ -52,6 +52,14 @@ struct LayoutBannerTests {
         #expect(LayoutBanner.namesNotDrawn(visibleItems: items, notDrawnTags: []).isEmpty)
     }
 
+    @Test("Move to Hidden takes each Visible item macOS is not drawing, in bar order")
+    func itemsNotDrawn() {
+        let items = [item("Alpha", windowID: 1), item("Beta", windowID: 2), item("Gamma", windowID: 3)]
+        let notDrawn = LayoutBanner.itemsNotDrawn(visibleItems: items, notDrawnTags: [items[2].tag, items[0].tag])
+        #expect(notDrawn.map(\.tag) == [items[0].tag, items[2].tag])
+        #expect(LayoutBanner.itemsNotDrawn(visibleItems: items, notDrawnTags: []).isEmpty)
+    }
+
     private func item(_ title: String, windowID: CGWindowID) -> MenuBarItem {
         MenuBarItem(
             tag: MenuBarItemTag(namespace: .string("com.example.\(title)"), title: title, instanceIndex: Int(windowID)),

@@ -316,10 +316,10 @@ struct SwapBarView: View {
         .accessibilityValue(Text(isOn ? "Swapped" : "Not swapped"))
     }
 
-    /// Closing disables the bar; the Settings switch is the only way back.
+    /// The ✕ turns the feature off, so a notice says where to turn it back on.
     private var closeButton: some View {
         Button {
-            appState.settings.advanced.enableSwapBar = false
+            SwapBarTurnOff.turnOff(appState.settings.advanced)
         } label: {
             Image(systemName: "xmark")
                 .font(ThawType.caption.weight(.semibold))
@@ -329,8 +329,8 @@ struct SwapBarView: View {
         }
         .buttonStyle(.plain)
         .thawHoverLift()
-        .help("Close the Swap Bar")
-        .accessibilityLabel("Close")
+        .help(Text(SwapBarTurnOff.title))
+        .accessibilityLabel(Text(SwapBarTurnOff.title))
     }
 
     private var profileMenu: some View {

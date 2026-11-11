@@ -320,7 +320,7 @@ private struct LayoutSpacersRows: View {
                             .monospacedDigit()
                     }
                     Button {
-                        spacerManager.removeSpacer(id: spacer.id)
+                        spacerManager.removeSpacer(id: spacer.id, undoManager: NSApp.keyWindow?.undoManager)
                     } label: {
                         Image(systemName: "trash")
                     }
@@ -362,7 +362,7 @@ struct LayoutBarsSection: View {
                 .containerRelativeFrame(.horizontal) { width, _ in width - 40 }.frame(minWidth: 0, maxWidth: .infinity)
         } footer: {
             HStack(alignment: .firstTextBaseline, spacing: ThawSpacing.base) {
-                Text("Drag items between sections. Hold ⌘ Command to drag in the menu bar.")
+                Text("Drag items between sections, or ⌥-arrows to move the selected one. ⌘- or ⇧-click selects several. Hold ⌘ Command to drag in the menu bar.")
                     .font(ThawType.footnote)
                     .foregroundStyle(ThawInk.supporting)
                     .fixedSize(horizontal: false, vertical: true)
@@ -374,7 +374,7 @@ struct LayoutBarsSection: View {
             }
         }
 
-        layoutRefusalNotice
+        LayoutRefusalNotice()
     }
 
     /// Not inside the pop-out itself.
@@ -392,31 +392,6 @@ struct LayoutBarsSection: View {
         }
         .buttonStyle(.settingsGlass)
         .help("Opens the reorder editor in its own window.")
-    }
-
-    /// A refused group move snaps back with no other explanation, so the
-    /// reason appears here rather than in a modal that would cover the bars.
-    @ViewBuilder
-    private var layoutRefusalNotice: some View {
-        if let refusal = appState.layoutFeedback.refusal {
-            VStack(alignment: .leading, spacing: ThawSpacing.inset) {
-                Text("macOS 27 does not let \(Constants.displayName) hide some system items.")
-                    .font(ThawType.footnote)
-                    .foregroundStyle(ThawInk.supporting)
-                    .fixedSize(horizontal: false, vertical: true)
-                SettingsWarningPill(
-                    title: LocalizedStringResource(String.LocalizationValue(refusal.title)),
-                    message: LocalizedStringResource(String.LocalizationValue(refusal.message)),
-                    systemImage: "exclamationmark.triangle.fill",
-                    tint: .orange,
-                    actionTitle: "Dismiss"
-                ) {
-                    appState.layoutFeedback.clear()
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .transition(.fade(reduceMotion: reduceMotion, animation: ThawMotion.settle))
-        }
     }
 }
 
@@ -593,7 +568,7 @@ struct CannotArrangeLayoutView: View {
         ThawEmptyState(
             systemImage: "menubar.rectangle",
             title: "\(Constants.displayName) cannot arrange menu bar items in automatically hidden menu bars.",
-            caption: "Turn off automatic menu bar hiding in System Settings > Control Center"
+            caption: "Turn off automatic menu bar hiding in System Settings \(Constants.menuArrow) Control Center"
         )
     }
 }

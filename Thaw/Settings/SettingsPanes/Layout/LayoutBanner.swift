@@ -38,11 +38,15 @@ nonisolated enum LayoutBanner: Equatable {
         banner == nil || banner == .noScreenRecording
     }
 
+    /// The Visible items macOS is not drawing, in bar order.
+    static func itemsNotDrawn(visibleItems: [MenuBarItem], notDrawnTags: Set<MenuBarItemTag>) -> [MenuBarItem] {
+        visibleItems.filter { notDrawnTags.contains($0.tag) }
+    }
+
     /// The names of the Visible items macOS is not drawing, in bar order, each name once.
     static func namesNotDrawn(visibleItems: [MenuBarItem], notDrawnTags: Set<MenuBarItemTag>) -> [String] {
         var seen = Set<String>()
-        return visibleItems
-            .filter { notDrawnTags.contains($0.tag) }
+        return itemsNotDrawn(visibleItems: visibleItems, notDrawnTags: notDrawnTags)
             .map(\.displayName)
             .filter { seen.insert($0).inserted }
     }

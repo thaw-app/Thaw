@@ -175,7 +175,7 @@ final class NativeVisibilityRecoveryModel {
         var errorDescription: String? {
             switch self {
             case .otherManagerRunning:
-                String(localized: "Quit other copies of Thaw and Bartender before continuing. Recovery records have been kept.")
+                String(localized: "Quit other copies of \(Constants.displayName) and Bartender before continuing. Recovery records have been kept.")
             case .accessNotGranted:
                 String(localized: "Read and write access was not granted. Try again or restore the app switches in System Settings → Menu Bar.")
             case .normalLaunch:

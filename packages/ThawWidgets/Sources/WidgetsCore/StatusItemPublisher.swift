@@ -24,6 +24,9 @@ final class StatusItemPublisher: NSObject {
 
     static let autosaveName = MenuBarItemTag.thawWidgetIdentifier
     private var statusItem: NSStatusItem?
+    /// What the icon shows now.
+    var lastState: StatusIconPreviewState?
+    private var appearanceObservation: NSKeyValueObservation?
 
     /// Creates (or reuses) a status item and sets its image to the rendered
     /// composition. The item appears immediately.
@@ -40,7 +43,9 @@ final class StatusItemPublisher: NSObject {
             item.button?.imagePosition = .imageOnly
             item.button?.imageScaling = .scaleProportionallyDown
             statusItem = item
+            appearanceObservation = item.button.map(observeAppearance(of:))
         }
+        lastState = state
         if let button = statusItem?.button {
             Self.configure(button, for: state)
         }
@@ -50,10 +55,20 @@ final class StatusItemPublisher: NSObject {
         }
     }
 
+    /// A coloured icon is drawn in the menu bar's ink, so it's redrawn when the bar turns light or dark.
+    func observeAppearance(of button: NSButton) -> NSKeyValueObservation {
+        button.observe(\.effectiveAppearance) { [weak self] button, _ in
+            MainActor.assumeIsolated {
+                guard let state = self?.lastState else { return }
+                Self.configure(button, for: state)
+            }
+        }
+    }
+
     /// Draws the readings and describes them to VoiceOver. The identifier stays fixed, because
     /// Thaw names its own items by it and the label changes with every reading.
     static func configure(_ button: NSButton, for state: StatusIconPreviewState) {
-        button.image = render(CompositeStatusIcon(composition: state.composition, samples: state.samples), size: 22)
+        button.image = image(for: state, darkMenuBar: button.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
         button.setAccessibilityIdentifier(autosaveName)
         button.setAccessibilityLabel(state.accessibilityDescription)
         button.toolTip = state.accessibilityDescription
@@ -68,7 +83,7 @@ final class StatusItemPublisher: NSObject {
             item.isEnabled = false
             menu.addItem(item)
         }
-        if state.composition.center == .wifi || state.composition.activeSources.contains(.wifi) {
+        if state.composition.center.showsNetwork(for: state.samples) || state.composition.activeSources.contains(.wifi) {
             menu.addItem(.separator())
             let settingsItem = NSMenuItem(
                 title: String(localized: "Open Network Settings…"),
@@ -91,16 +106,25 @@ final class StatusItemPublisher: NSObject {
         statusItem?.isVisible = false
     }
 
+    /// A template that follows the menu bar, or in the bar's own ink once a reading is coloured, since a template drops colour.
+    static func image(for state: StatusIconPreviewState, darkMenuBar: Bool) -> NSImage {
+        let icon = CompositeStatusIcon(composition: state.composition, samples: state.samples, style: state.style)
+        let isColored = state.style.hasColor(composition: state.composition, samples: state.samples)
+        return render(icon, size: 22, scheme: isColored && darkMenuBar ? .dark : .light, isTemplate: !isColored)
+    }
+
     /// Renders a SwiftUI view hierarchy into an NSImage at the given point size.
     static func render(
         _ view: some View,
-        size: CGFloat
+        size: CGFloat,
+        scheme: ColorScheme = .light,
+        isTemplate: Bool = true
     ) -> NSImage {
-        let renderer = ImageRenderer(content: view.frame(width: size, height: size).environment(\.colorScheme, .light))
+        let renderer = ImageRenderer(content: view.frame(width: size, height: size).environment(\.colorScheme, scheme))
         renderer.scale = 2.0
         renderer.isOpaque = false
         let image = renderer.nsImage ?? NSImage()
-        image.isTemplate = true
+        image.isTemplate = isTemplate
         return image
     }
 }

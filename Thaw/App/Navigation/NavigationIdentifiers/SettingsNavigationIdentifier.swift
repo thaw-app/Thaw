@@ -71,7 +71,7 @@ enum SettingsNavigationIdentifier: String, @MainActor NavigationIdentifier {
     var subtitle: LocalizedStringResource {
         switch self {
         case .general: "Startup, language and icon"
-        case .menuBarLayout: "Shown, hidden and always hidden"
+        case .menuBarLayout: "Visible, Hidden and Always Hidden"
         case .visibility: "How hidden items appear"
         case .thawBar: "Hidden items below the menu bar"
         case .displays: "Each display and Space"

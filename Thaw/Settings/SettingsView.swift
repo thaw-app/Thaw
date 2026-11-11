@@ -180,14 +180,12 @@ struct SettingsView: View {
     private var paneTransition: AnyTransition {
         // Insertion-only: cross-fading two full panes doubles the glass and
         // material layers WindowServer composites for the whole fade, which
-        // reads as pane-switch lag. Removing the old pane instantly keeps at
-        // most one pane's worth of glass on screen.
-        reduceMotion
-            ? .identity
-            : .asymmetric(
-                insertion: .opacity.animation(ThawMotion.pane),
-                removal: .identity
-            )
+        // reads as pane-switch lag. Removing the old pane instantly keeps one
+        // pane's glass on screen. Reduce Motion shortens the fade to 0.12 s.
+        .asymmetric(
+            insertion: .fade(reduceMotion: reduceMotion, animation: ThawMotion.pane),
+            removal: .identity
+        )
     }
 
     /// Brings the window to the size the incoming layout wants.

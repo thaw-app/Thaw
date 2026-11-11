@@ -14,6 +14,8 @@ struct BentoTile: View {
     let demo: BentoDemo
     let index: Int
     let appeared: Bool
+    /// Whether a click opens the card's pane; under Simple Mode it only finishes setup.
+    var opensPane = true
     let action: () -> Void
 
     @Environment(\.appearsActive) private var appearsActive
@@ -54,9 +56,9 @@ struct BentoTile: View {
         .thawAnimation(ThawMotion.quick, value: isHovered)
         .thawHoverLift()
         .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 8)
-        .thawAnimation(ThawMotion.settle.delay(Double(index) * 0.04), value: appeared)
-        .accessibilityLabel(Text("\(Text(demo.title)), opens \(Text(demo.pane.localized))"))
+        .offset(y: appeared ? 0 : 6)
+        .thawAnimation(ThawMotion.settle.delay(BentoTile.entranceDelay(index: index)), value: appeared)
+        .accessibilityLabel(opensPane ? Text("\(Text(demo.title)), opens \(Text(demo.pane.localized))") : Text(demo.title))
     }
 
     /// Captions shrink the demo stage, not the card; clip compact bars that intentionally extend past its edges.
@@ -89,5 +91,14 @@ struct BentoTile: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, ThawSpacing.inset)
         .padding(.bottom, ThawSpacing.row)
+    }
+}
+
+extension BentoTile {
+    /// Each tile starts a little sooner after the one before, so the grid settles as one motion instead of
+    /// ticking in at even steps. Tiles past the list start with the last one.
+    static func entranceDelay(index: Int) -> Double {
+        let delays = [0, 0.03, 0.055, 0.075, 0.09, 0.1, 0.11, 0.12]
+        return delays[min(max(index, 0), delays.count - 1)]
     }
 }

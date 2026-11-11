@@ -65,6 +65,9 @@ struct LayoutBarSmallViewsTests {
         #expect(refusals[0].message.contains(GroupMoveRefusal.hidingUnavailable.localizedReason))
         #expect(refusals[4].message != refusals[3].message, "an unresponsive app is explained differently")
         #expect(refusals[0] != refusals[1], "every refusal is its own value")
+        #expect(refusals.map(\.isAboutSystemItems) == [false, true, true, true, false, false, false])
+        #expect(refusals[1].message.contains("Standard"), "names the hiding method that moves Apple's items")
+        #expect(!refusals[1].message.contains("Everything"))
 
         let center = LayoutBarFeedbackCenter()
         center.post(refusals[2])

@@ -14,6 +14,7 @@ import ThawUI
 /// same-bundle clusters have no stored record until the user touches one.
 struct MenuBarLayoutGroupsSection: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.undoManager) private var undoManager
     @State private var editingNames = [UUID: String]()
     /// Indexed once per membership change, since every keystroke in the name
     /// fields re-runs body and a scan per row would be quadratic.
@@ -47,7 +48,7 @@ struct MenuBarLayoutGroupsSection: View {
                             }
                             Divider()
                             Button("Ungroup", role: .destructive) {
-                                appState.itemGroupManager.ungroup(.user(group.id))
+                                UngroupUndo.ungroup(.user(group.id), name: appState.groupFolders.folderName(for: group), manager: appState.itemGroupManager, folders: appState.groupFolders, undoManager: undoManager)
                             }
                         }
                     if group.id != groups.last?.id {
@@ -163,7 +164,7 @@ struct MenuBarLayoutGroupsSection: View {
                 ))
                 .help("Keeps the group's items in Hidden and puts a folder icon in the menu bar that opens them.")
                 Button("Ungroup", role: .destructive) {
-                    appState.itemGroupManager.ungroup(.user(group.id))
+                    UngroupUndo.ungroup(.user(group.id), name: appState.groupFolders.folderName(for: group), manager: appState.itemGroupManager, folders: appState.groupFolders, undoManager: undoManager)
                 }
                 .buttonStyle(.settingsGlass)
             }

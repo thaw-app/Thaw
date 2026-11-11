@@ -97,8 +97,8 @@ struct ThawPlacementWarning: View {
         case .unknown: "The \(Constants.displayName) icon isn't in the menu bar"
         }
         let message: LocalizedStringResource = switch block {
-        case .deniedBySystem: "\(Constants.displayName) can't hide or arrange anything until it is switched back on in System Settings > Menu Bar."
-        case .unknown: "macOS may be blocking it. Check that \(Constants.displayName) is switched on in System Settings > Menu Bar."
+        case .deniedBySystem: "\(Constants.displayName) can't hide or arrange anything until it is switched back on in System Settings \(Constants.menuArrow) Menu Bar."
+        case .unknown: "macOS may be blocking it. Check that \(Constants.displayName) is switched on in System Settings \(Constants.menuArrow) Menu Bar."
         }
         return SettingsWarningPill(
             title: title,

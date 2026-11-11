@@ -29,25 +29,6 @@ extension MenuBarItemImageCache {
 
     /// The height in points from the first to the last row with visible ink.
     static nonisolated func inkPointHeight(of capture: MenuBarItemGlyphCapture) -> CGFloat {
-        let image = capture.cgImage
-        let width = image.width, height = image.height
-        guard width > 0, height > 0, capture.scale > 0 else { return 0 }
-        let context = CGContext(
-            data: nil,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: width * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )
-        guard let context else { return 0 }
-        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-        guard let data = context.data?.assumingMemoryBound(to: UInt8.self) else { return 0 }
-        let inkRows = (0 ..< height).filter { row in
-            (0 ..< width).contains { column in data[(row * width + column) * 4 + 3] > 12 }
-        }
-        guard let first = inkRows.first, let last = inkRows.last else { return 0 }
-        return CGFloat(last - first + 1) / capture.scale
+        inkBounds(of: capture)?.height ?? 0
     }
 }

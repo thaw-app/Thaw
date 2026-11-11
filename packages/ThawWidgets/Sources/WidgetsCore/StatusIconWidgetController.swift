@@ -90,14 +90,25 @@ final class StatusIconWidgetController {
         let manual = storedSamples()
         var samples = isLive ? liveSamples : manual
         samples.volume = manual.volume
-        return StatusIconPreviewState(composition: storedComposition(), samples: samples, isLive: isLive)
+        return StatusIconPreviewState(composition: storedComposition(), samples: samples, isLive: isLive, style: storedStyle())
+    }
+
+    private func storedStyle() -> StatusIconStyle {
+        let fallback = StatusIconStyle()
+        return StatusIconStyle(
+            size: decode(WidgetKeys.size, fallback: fallback.size),
+            thickness: decode(WidgetKeys.thickness, fallback: fallback.thickness),
+            statusColors: defaults.object(forKey: WidgetKeys.statusColors) as? Bool ?? fallback.statusColors
+        )
+    }
+
+    /// A saved option, or fallback when it's missing or this version doesn't know it.
+    private func decode<T: RawRepresentable>(_ key: String, fallback: T) -> T where T.RawValue == String {
+        defaults.string(forKey: key).flatMap { T(rawValue: $0) } ?? fallback
     }
 
     private func storedComposition() -> StatusIconComposition {
         let defaultRecipe = StatusIconComposition()
-        func decode<T: RawRepresentable>(_ key: String, fallback: T) -> T where T.RawValue == String {
-            defaults.string(forKey: key).flatMap { T(rawValue: $0) } ?? fallback
-        }
         return StatusIconComposition(
             outer: decode(WidgetKeys.outer, fallback: defaultRecipe.outer),
             outerSource: decode(WidgetKeys.outerSource, fallback: defaultRecipe.outerSource),

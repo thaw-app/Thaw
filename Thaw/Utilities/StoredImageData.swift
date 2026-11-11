@@ -20,7 +20,7 @@ nonisolated enum StoredImageData {
         case unreadable
 
         var errorDescription: String? {
-            String(localized: "Thaw can’t read this file as an image.")
+            String(localized: "\(Constants.displayName) can’t read this file as an image.")
         }
     }
 

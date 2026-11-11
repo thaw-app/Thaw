@@ -57,7 +57,7 @@ final class FeatureTips {
         guard !isConfigured, Self.isEnabled(environment: environment) else { return }
         let setup = Setup(
             datastoreURL: Self.datastoreURL(applicationSupport: applicationSupport, bundleIdentifier: bundleIdentifier),
-            isMultiSelectUpgrade: LayoutMultiSelectTip.isUpgrade(previousVersion: previousVersion)
+            isMultiSelectUpgrade: LayoutMultiSelectTip.shouldShow(previousVersion: previousVersion)
         )
         do {
             try apply(setup)

@@ -42,10 +42,11 @@ struct LayoutBarItemViewTests {
             try #require(scrollView.arrangedViews.lazy.compactMap { $0 as? LayoutBarItemView }.first { $0.item.tag == item.tag })
         }
 
-        func mouse(_ type: NSEvent.EventType, on view: NSView) throws -> NSEvent {
+        /// offset moves the event along x, so a drag can pass the tile's 3 pt threshold.
+        func mouse(_ type: NSEvent.EventType, on view: NSView, offset: CGFloat = 0) throws -> NSEvent {
             try #require(NSEvent.mouseEvent(
                 with: type,
-                location: view.convert(NSPoint(x: view.bounds.midX, y: view.bounds.midY), to: nil),
+                location: view.convert(NSPoint(x: view.bounds.midX + offset, y: view.bounds.midY), to: nil),
                 modifierFlags: [],
                 timestamp: 0,
                 windowNumber: window.windowNumber,
@@ -206,9 +207,9 @@ struct LayoutBarItemViewTests {
 
         try view.mouseDown(with: bar.mouse(.leftMouseDown, on: view))
         #expect(bar.window.firstResponder === view, "a press focuses the tile")
-        try view.mouseDragged(with: bar.mouse(.leftMouseDragged, on: view))
+        try view.mouseDragged(with: bar.mouse(.leftMouseDragged, on: view, offset: 4))
         let first = try #require(bar.world.appState.layoutFeedback.refusal)
-        try view.mouseDragged(with: bar.mouse(.leftMouseDragged, on: view))
+        try view.mouseDragged(with: bar.mouse(.leftMouseDragged, on: view, offset: 5))
         #expect(bar.world.appState.layoutFeedback.refusal == first, "the refusal is posted once per press")
         try view.mouseUp(with: bar.mouse(.leftMouseUp, on: view))
         #expect(bar.world.appState.navigationState.isLayoutEditorPresented == false)
@@ -222,9 +223,53 @@ struct LayoutBarItemViewTests {
         try #require(view.isEnabled)
         view.isOwnerUnresponsive = true
         try view.mouseDown(with: bar.mouse(.leftMouseDown, on: view))
-        try view.mouseDragged(with: bar.mouse(.leftMouseDragged, on: view))
+        try view.mouseDragged(with: bar.mouse(.leftMouseDragged, on: view, offset: 4))
         let refusal = try #require(bar.world.appState.layoutFeedback.refusal)
         #expect(refusal.message == LayoutBarFeedbackCenter.ownerUnresponsive(itemName: alpha.displayName).message)
+    }
+
+    @Test("A wobble under three points stays a click and raises no refusal")
+    func wobbleStaysAClick() throws {
+        let alpha = World.item("Alpha")
+        let bar = try Bar([alpha])
+        let view = try bar.view(alpha)
+        view.isEnabled = false
+        try view.mouseDown(with: bar.mouse(.leftMouseDown, on: view))
+        try view.mouseDragged(with: bar.mouse(.leftMouseDragged, on: view, offset: 2))
+        #expect(bar.world.appState.layoutFeedback.refusal == nil)
+        #expect(view.pointer.isClickCandidate)
+    }
+
+    @Test("Hovering a tile draws the accent wash, and leaving clears it")
+    func hoverDrawsWash() throws {
+        let alpha = World.item("Alpha")
+        let bar = try Bar([alpha])
+        let view = try bar.view(alpha)
+        let plain = try pixels(of: view)
+        let entered = try #require(NSEvent.enterExitEvent(
+            with: .mouseEntered, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: bar.window.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil
+        ))
+        view.mouseEntered(with: entered)
+        #expect(try pixels(of: view) != plain)
+        let exited = try #require(NSEvent.enterExitEvent(
+            with: .mouseExited, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: bar.window.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil
+        ))
+        view.mouseExited(with: exited)
+        #expect(try pixels(of: view) == plain)
+    }
+
+    @Test("The unresponsive badge explains itself in the tooltip and to VoiceOver")
+    func unresponsiveBadgeHelp() throws {
+        let alpha = World.item("Alpha")
+        let bar = try Bar([alpha])
+        let view = try bar.view(alpha)
+        view.isOwnerUnresponsive = true
+        #expect(view.toolTip?.contains("isn’t responding") == true)
+        #expect(view.accessibilityHelp() == view.toolTip)
+        view.isOwnerUnresponsive = false
+        #expect(view.toolTip == nil)
     }
 
     @Test("A tile adopts a refreshed item, and names where macOS puts it because of its app")

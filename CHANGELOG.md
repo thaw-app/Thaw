@@ -26,35 +26,87 @@ the items under New and Fixed.
 
 ### New
 
-- **Layout warns when items don't fit.** When macOS hides items it has no room for, Layout names them until there's room again.
-- **Release notes can stay closed after an update.** Turn off Show release notes after an update in Privacy. What's New still opens from Thaw's menu and About.
-- **Profiles name Spaces the way Mission Control does.** Pick any Space for a profile, grouped by display, with full screen apps by name. A Space that's gone shows as missing, and the display with the menu bar is marked.
-- **The menu bar can show which Space you're in.** Turn on Show the current Space in the menu bar under Displays › Spaces. Its menu lists the Spaces on each display.
+#### Spaces
+
+- **The current Space in the menu bar.** Turn on Show the current Space in the menu bar in Displays › Spaces. Its menu lists each display's Spaces.
+- **Profiles name Spaces the way Mission Control does,** grouped by display, with full screen apps by name. The display with the menu bar is marked.
+
+#### Widgets
+
+- **The widget icon shows real readings.** Wi-Fi shows your actual bars, and the battery turns green while charging, yellow in Low Power Mode and red below 20%. Suggested by @joaofrgomes in [#1378](https://github.com/thaw-app/Thaw/issues/1378).
+- **Bluetooth audio in the center.** While sound plays through AirPods, headphones or a speaker, the widget shows it, with the volume in blue.
+- **A larger, better-proportioned widget icon.** The ring fills the icon and opens at the bottom, with the dots along it. Choose Standard or Large and the ring's thickness.
+
+#### Layout and Thaw Bar
+
+- **Layout warns when items don't fit,** names the ones macOS hid, and Move to Hidden makes room in one click.
+- **Layout tells you when macOS hides Focus** and turns on Thaw's own Focus icon in one click. Reported by @JosefGvirt in [#1477](https://github.com/thaw-app/Thaw/issues/1477).
+- **The Thaw Bar drops in from the menu bar.** It still closes at once, and only fades with Reduce Motion.
+- **Release notes can stay closed after an update,** in Privacy.
 
 ### Changed
 
-- **Extras is now called Modules.** The Settings page that turns Profiles, Scripts, Triggers and Widgets on and off, and the sidebar group they appear in, use the same name as the rest of Thaw.
-- **Double-clicking Thaw's icon for Always Hidden has its own switch.** Turn off Double-click the Thaw icon to show Always Hidden in Menu Bar Access, and every click shows or hides your items.
-- **The Thaw Bar has its own switch again.** Show hidden items is now two switches, Thaw Bar and Always show hidden items. Your settings carry over.
-- **Profiles and menu bar looks follow a Space switch sooner.** Thaw hears about the switch as it starts, and a new Space can have its own profile right away.
-- **Spaces settings stay after Thaw quits.** Thaw saves what you set on the Spaces page and applies it again when it starts, when you add a Space and when macOS restarts the menu bar.
+- **Hold Option on Capture Hidden Items to retake every picture.** The button reads Retake All Pictures while you do.
+- **Extras is now Modules.**
+- **One name for each section: Visible, Hidden and Always Hidden.**
+- **Apply to All Displays always asks first,** since it overwrites every display's own settings.
+- **The Thaw Bar has its own switch again.** Show hidden items is now two switches, Thaw Bar and Always show hidden items.
+- **Double-clicking Thaw's icon for Always Hidden has its own switch,** in Menu Bar Access. By @malash in [#1339](https://github.com/thaw-app/Thaw/pull/1339).
+- **Spaces settings stay after Thaw quits,** and come back when you add a Space or macOS restarts the menu bar.
+- **Profiles and menu bar looks follow a Space switch sooner.**
+- **Thaw reads a busy menu bar faster.** With many apps running it asks several at once, so it no longer stops partway.
 
 ### Fixed
 
-- **Arrow keys move the Thaw Bar highlight at once.** The item under the keyboard no longer springs up on every key press; the pointer still lifts it.
-- **The layout warning fades in and out.** When Thaw can't move an item, the notice in Layout, the pop-out editor and search no longer pops in and vanishes after a few seconds.
-- **The menu bar shape gets out of the way faster when you drag an item.** It fades out in 0.15 s instead of 0.25 s, and a drag that stops partway fades back sooner.
-- **With Reduce Motion on, the notch panel switches without a pause.** It no longer waits for an animation that Reduce Motion has already turned off.
-- **Layout shows Bluetooth and other switched-off system items as their own symbol.** Items Thaw hides by switching their Control Center module off used to sit in a grey box.
-- **Hidden items no longer collapse right after you point at them or show them again.** A timed rehide that was already finishing could still hide the section you had just reopened.
-- **Diagnostic logs no longer warn on every layout pass about apps that aren't running.** Saved items whose app is closed, and Thaw extras you have turned off, are left out of that warning.
-- **One click on Thaw's icon shows or hides your items again when double-click opens Always Hidden.** With a slow double-click speed in macOS, ordinary clicks a second apart counted as double-clicks and went to Always Hidden instead.
-- **Items from apps that hide from accessibility get their picture.** Thaw now finds icons like f.lux's on the menu bar macOS draws, so the Thaw Bar and Layout can show the real icon.
-- **The capsule border comes back after the Mac wakes.** A read of the bar taken while the screen slept could empty the shape around your items until Thaw restarted. Thaw now reads the bar again after waking or unlocking.
-- **Thaw reads a busy menu bar faster.** With many apps running, Thaw now asks several at once and leaves apps that can't show items for last, so it reads the whole bar in time instead of stopping partway. Capture Hidden Items no longer waits on a read of every app when one has launched since the last.
-- **Items with a countdown or changing count no longer keep moving to Hidden.** Thaw now notices an item that changes its text even when many apps are running, instead of treating each new text as a new item.
-- **Items no longer move at launch when Thaw can't read the whole bar in time.** With many apps running, Thaw now waits for a full read before it treats the bar as settled or re-lays it.
-- **Your saved layout is put back once the menu bar settles at launch,** also when Thaw re-applies your profile then and its spacing hasn't changed. Before, that re-apply could stop the final layout pass.
+#### Layout
+
+- **Moving an item to another section, ungrouping and removing a spacer can be undone.**
+- **Hidden items' pictures are no longer cut off.** Thaw waits for an icon to finish sliding in before it takes its picture.
+- **Layout says when a dragged item didn't land.**
+- **Layout items light up on hover and while pressed,** a small wobble no longer starts a drag, and a cancelled drag slides back.
+- **Items slide aside when you drag one away,** and the new-items badge grows in from its middle.
+- **Bluetooth and other switched-off system items show their own symbol,** not a grey box.
+- **An item whose app isn't responding shows an hourglass,** with a tooltip and a VoiceOver description.
+- **Refused moves point to the right setting.** Apple's items move with the Standard hiding method, and the note about system items shows only when it applies.
+
+#### Items
+
+- **Items with a countdown no longer keep moving to Hidden** or pile up copies, such as Raycast's calendar. Reported by @jasonericsiegel in [#1489](https://github.com/thaw-app/Thaw/issues/1489).
+- **Items no longer move at launch when Thaw can't read the whole bar in time.**
+- **Your saved layout is put back once the menu bar settles at launch.**
+- **Hidden items no longer collapse right after you point at them or show them again.**
+- **f.lux and other apps that hide from accessibility get their picture.**
+- **Capture Hidden Items no longer waits on a read of every app.**
+- **Capture Hidden Items counts the pictures of items Native hiding parks.** By @Belligerently in [#1488](https://github.com/thaw-app/Thaw/pull/1488).
+
+#### Thaw's icon and the Thaw Bar
+
+- **One click on Thaw's icon works again when double-click opens Always Hidden** and macOS's double-click speed is slow. Reported by @bortolatto-creator in [#1492](https://github.com/thaw-app/Thaw/issues/1492).
+- **A long click on a Thaw Bar item still opens it,** and items show when they're pressed.
+- **Arrow keys move the Thaw Bar highlight at once.**
+
+#### Look and motion
+
+- **The capsule border comes back after the Mac wakes.**
+- **The menu bar shape gets out of the way faster when you drag an item.**
+- **The layout warning fades in and out** instead of popping.
+- **With Reduce Motion on, the notch panel switches without a pause.**
+- **The Thaw Bar preview keeps up with its sliders,** and onboarding's tiles settle in as one motion.
+
+#### Other
+
+- **Undoing a new or duplicated profile keeps the profile you're on.** By @Belligerently in [#1487](https://github.com/thaw-app/Thaw/pull/1487).
+- **The Widgets and Scripts windows open at full size,** not as an empty title bar.
+- **The Swap Bar's ✕ is labelled Turn Off Swap Bar** and says where to turn it back on.
+- **Diagnostic logs no longer warn on every layout pass** about apps that aren't running.
+- **Setup names the permission it's waiting for,** and Menu Bar Layout Access no longer suggests Thaw works without it.
+- **Search offers Clear Search when nothing matches.**
+- **A move from search that fails stays up and is read aloud,** and shows in the same notice as Layout's.
+- **Layout and search show their shortcuts,** including ⌥-arrows to move and ⌘1–⌘3 from search, and new installs see the tip for selecting several items.
+- **Setup says what you give up without Accessibility** next to the button, not only in a tooltip.
+- **Onboarding's cards keep the Simple Mode you picked,** and the Zen Mode card opens Visibility, where Zen Mode lives.
+- **Reduce Motion keeps short fades.** Panels, notices and Settings pages still fade in quickly instead of appearing in one frame, with no movement.
+- **A granted permission's checkmark bounces once** in setup.
 
 ## [3.0.0-alpha.13] - 2026-11-05
 

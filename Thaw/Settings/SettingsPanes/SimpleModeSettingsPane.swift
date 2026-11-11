@@ -106,7 +106,7 @@ struct SimpleModeSettingsPane: View {
 
     private var alwaysHiddenToggle: some View {
         @Bindable var advanced = appState.settings.advanced
-        return Toggle("Always Hidden section", isOn: $advanced.enableAlwaysHiddenSection)
+        return Toggle("Always Hidden", isOn: $advanced.enableAlwaysHiddenSection)
             .annotation("Adds a second divider. Icons left of it stay hidden until you double-click \(Constants.displayName)'s icon.")
     }
 

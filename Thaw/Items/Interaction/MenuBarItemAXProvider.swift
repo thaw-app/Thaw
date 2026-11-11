@@ -538,7 +538,7 @@ nonisolated enum MenuBarItemAXProvider {
             probedChildren?.append("\(derived.identityTitle) frame=\(NSStringFromRect(frame)) ownerPID=\(ownerPID)")
             raw.append(item)
         }
-        return (raw, true)
+        return (RetitledItemIdentities.resolve(raw), true)
     }
 
     private static func noteMissingExtrasBar(

@@ -15,14 +15,18 @@ struct HiddenItemCaptureButton: View {
 
     @State private var isCapturing = false
     @State private var result: String?
+    @State private var isOptionDown = false
+    @State private var flagsMonitor: Any?
 
     var body: some View {
-        Button("Capture Hidden Items", systemImage: "camera.viewfinder") {
+        Button(Self.title(retakingAll: isOptionDown), systemImage: "camera.viewfinder") {
             capture()
         }
         .buttonStyle(.settingsGlass)
         .disabled(isCapturing)
         .help("Takes pictures of your Hidden and Always Hidden items that have none or a poor one. Hold Option to retake every picture. They may appear in the menu bar for a moment, and with the Native hiding method other icons can move.")
+        .onAppear(perform: watchOption)
+        .onDisappear(perform: stopWatchingOption)
         .popover(isPresented: isShowingResult) {
             Text(result ?? "")
                 .font(ThawType.detail)
@@ -54,11 +58,31 @@ struct HiddenItemCaptureButton: View {
         modifierFlags.contains(.option)
     }
 
+    /// The title says what a click does now, as a menu item's Option alternate does.
+    static func title(retakingAll: Bool) -> String {
+        retakingAll ? String(localized: "Retake All Pictures") : String(localized: "Capture Hidden Items")
+    }
+
+    private func watchOption() {
+        isOptionDown = Self.retakesAll(modifierFlags: NSEvent.modifierFlags)
+        flagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
+            isOptionDown = Self.retakesAll(modifierFlags: event.modifierFlags)
+            return event
+        }
+    }
+
+    private func stopWatchingOption() {
+        flagsMonitor.map(NSEvent.removeMonitor)
+        flagsMonitor = nil
+    }
+
     static func message(for result: HiddenItemCaptureResult?) -> String {
         guard let result else {
-            return String(localized: "Thaw needs Screen Recording permission to capture items.")
+            return String(localized: "\(Constants.displayName) needs Screen Recording permission to capture items.")
         }
-        let kept = result.kept > 0 ? " " + String(localized: "Left \(result.kept) good pictures as they were.") : ""
+        let kept = result.kept > 0
+            ? " " + String(localized: "Left \(result.kept) good pictures as they were. Option-click to retake them too.")
+            : ""
         guard !result.missing.isEmpty else {
             return String(localized: "Captured \(result.captured) of \(result.total) items.") + kept
         }

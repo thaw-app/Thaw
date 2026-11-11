@@ -127,6 +127,13 @@ final class GroupFolders {
         }
     }
 
+    /// Marks a group a folder again after an undone ungroup; its items are still in Hidden.
+    func restoreFolder(_ id: UUID) {
+        folderIDs.insert(id)
+        persist()
+        reconcile()
+    }
+
     private func persist() {
         Defaults.store.set(folderIDs.map(\.uuidString).sorted(), forKey: Self.foldersKey)
         var stored: [String: [String: String]] = [:]

@@ -68,7 +68,7 @@ struct ToolsSettingsPane: View {
             Text(action.confirmationMessage)
         }
         .confirmationDialog("Open visibility recovery?", isPresented: $confirmsVisibilityRecovery, titleVisibility: .visible) {
-            Button("Quit Thaw and Open Recovery") {
+            Button("Quit \(Constants.displayName) and Open Recovery") {
                 Task {
                     isBusy = true
                     defer { isBusy = false }
@@ -82,7 +82,7 @@ struct ToolsSettingsPane: View {
             }
             Button("Cancel", role: .cancel) { /* The dialog dismisses itself; cancelling needs no other work. */ }
         } message: {
-            Text("Thaw will quit normal mode so neither hiding mechanism can interfere. Your saved layout is kept. Native hiding will remain off after recovery.")
+            Text("\(Constants.displayName) will quit normal mode so neither hiding mechanism can interfere. Your saved layout is kept. Native hiding will remain off after recovery.")
         }
         .errorAlert(failedAction?.errorTitle ?? "Couldn’t run tool", message: $errorMessage, role: .cancel)
     }

@@ -5,7 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Foundation
+import AppKit
 import Testing
 import ThawModuleTestSupport
 @testable import WidgetsCore
@@ -93,6 +93,47 @@ struct StatusIconWidgetControllerTests {
         #expect(liveState.isLive)
         #expect(liveState.samples.network == .wifi, "Live mode uses the sampler's connection")
         #expect(liveState.samples.volume == 0.62, "Volume stays manual in live mode")
+    }
+
+    @Test("The icon's size, thickness and status colours come back from settings, with defaults first")
+    func storedStyle() throws {
+        let controller = try makeController()
+        #expect(controller.currentState().style == StatusIconStyle())
+        controller.defaults.set(StatusIconStyle.Size.large.rawValue, forKey: WidgetKeys.size)
+        controller.defaults.set(StatusIconStyle.Thickness.thick.rawValue, forKey: WidgetKeys.thickness)
+        controller.defaults.set(false, forKey: WidgetKeys.statusColors)
+        let style = controller.currentState().style
+        #expect(style == StatusIconStyle(size: .large, thickness: .thick, statusColors: false))
+    }
+}
+
+@MainActor
+@Suite("Status item rendering")
+struct StatusItemRenderingTests {
+    @Test("The menu bar image is a template unless a reading in it is coloured")
+    func templateUnlessColored() {
+        var samples = StatusIconSamples()
+        samples.battery = 0.9
+        var state = StatusIconPreviewState(composition: StatusIconComposition(), samples: samples, isLive: true)
+        #expect(StatusItemPublisher.image(for: state, darkMenuBar: false).isTemplate)
+        state.samples.isCharging = true
+        let colored = StatusItemPublisher.image(for: state, darkMenuBar: true)
+        #expect(!colored.isTemplate)
+        #expect(colored.size == CGSize(width: 22, height: 22))
+    }
+
+    @Test("A coloured icon is redrawn when the menu bar turns light or dark")
+    func redrawsOnAppearanceChange() {
+        let publisher = StatusItemPublisher()
+        let button = NSButton(frame: CGRect(x: 0, y: 0, width: 22, height: 22))
+        var samples = StatusIconSamples()
+        samples.isCharging = true
+        publisher.lastState = StatusIconPreviewState(composition: StatusIconComposition(), samples: samples, isLive: true)
+        let observation = publisher.observeAppearance(of: button)
+        defer { observation.invalidate() }
+        button.appearance = NSAppearance(named: .darkAqua)
+        #expect(button.image != nil)
+        #expect(button.image?.isTemplate == false)
     }
 }
 

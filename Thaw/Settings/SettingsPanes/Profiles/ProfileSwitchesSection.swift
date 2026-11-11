@@ -148,7 +148,7 @@ struct ProfileSwitchesSection: View {
         } label: {
             ThawRowLabel(
                 "With a Focus",
-                detail: "Add \(Constants.displayName) as a Focus filter in System Settings > Focus and pick this profile. When the Focus ends, the display's profile comes back."
+                detail: "Add \(Constants.displayName) as a Focus filter in System Settings \(Constants.menuArrow) Focus and pick this profile. When the Focus ends, the display's profile comes back."
             )
         }
     }
