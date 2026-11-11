@@ -48,18 +48,23 @@ struct LayoutGroupNavigation {
             }
         )
         if case let .refused(section) = outcome {
-            appState.layoutFeedback.post(LayoutBarFeedbackCenter.Refusal(
-                title: String(
-                    localized: "Only items in \(section.localizedName) can join “\(appState.groupFolders.folderName(for: group))”",
-                    comment: "Title shown when items from another section are dropped on a Layout group"
-                ),
-                message: String(
-                    localized: "Move the items to \(section.localizedName) first, then drop them on the group again.",
-                    comment: "Explanation shown when items from another section are dropped on a Layout group"
-                )
-            ))
+            appState.layoutFeedback.post(Self.refusal(section: section, groupName: appState.groupFolders.folderName(for: group)))
         }
         return outcome == .added
+    }
+
+    /// What the pane says when items from another section are dropped on a group in section.
+    static func refusal(section: MenuBarSectionName, groupName: String) -> LayoutBarFeedbackCenter.Refusal {
+        LayoutBarFeedbackCenter.Refusal(
+            title: String(
+                localized: "Only items in \(section.localizedName) can join “\(groupName)”",
+                comment: "Title shown when items from another section are dropped on a Layout group"
+            ),
+            message: String(
+                localized: "Move the items to \(section.localizedName) first, then drop them on the group again.",
+                comment: "Explanation shown when items from another section are dropped on a Layout group"
+            )
+        )
     }
 
     enum AddOutcome: Equatable {
