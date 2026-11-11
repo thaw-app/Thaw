@@ -69,8 +69,7 @@ final class MenuBarSearchPanel: NSPanel {
         Self.monitoredKey(event, panel: self)
     }
 
-    /// The monitor's answer: what the panel's handler returns, nil for a key it took, or the event
-    /// itself once the panel is gone. `self?.handleKeyDown(event) ?? event` turned a taken key back into the event.
+    /// The handler's answer, nil for a key it took, or the event itself once the panel is gone.
     static func monitoredKey(_ event: NSEvent, panel: MenuBarSearchPanel?) -> NSEvent? {
         guard let panel else { return event }
         return panel.handleKeyDown(event)
