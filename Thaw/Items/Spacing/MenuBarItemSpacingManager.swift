@@ -60,6 +60,14 @@ final class MenuBarItemSpacingManager {
     /// Delay before force terminating an app.
     private let forceTerminateDelay = 5
 
+    /// Where this manager reads and writes the spacing, kept from its creation so a write
+    /// that lands later still goes there.
+    let store: SystemSpacingStore
+
+    init(store: SystemSpacingStore = .current) {
+        self.store = store
+    }
+
     /// The offset to apply to the default spacing and padding.
     /// Does not take effect until applyOffset() is called.
     var offset = 0
@@ -75,7 +83,7 @@ final class MenuBarItemSpacingManager {
     private let applyOffsetSemaphore = SimpleSemaphore(value: 1)
 
     /// Runs a command with the given arguments.
-    private func runCommand(_ command: String, with arguments: [String]) async throws {
+    fileprivate static func runCommand(_ command: String, with arguments: [String]) async throws {
         let terminationStatus: TerminationStatus
         do {
             terminationStatus = try await Subprocess.run(
@@ -104,13 +112,7 @@ final class MenuBarItemSpacingManager {
 
     /// Sets the value for the specified key to the key's default value plus the given offset.
     private func setOffset(_ offset: Int, forKey key: Key) async throws {
-        try await runCommand(
-            "defaults",
-            with: [
-                "-currentHost", "write", "-globalDomain", key.rawValue, "-int",
-                String(key.defaultValue + offset),
-            ]
-        )
+        try await store.write(key.rawValue, key.defaultValue + offset)
     }
 
     /// Sleeps for the given duration without observing the caller's
@@ -228,13 +230,7 @@ final class MenuBarItemSpacingManager {
     /// Reads the value for the given key from the byHost global domain.
     /// Returns the key's default when no value is set.
     private func currentlyAppliedValue(forKey key: Key) -> Int {
-        let value = CFPreferencesCopyValue(
-            key.rawValue as CFString,
-            kCFPreferencesAnyApplication,
-            kCFPreferencesCurrentUser,
-            kCFPreferencesCurrentHost
-        ) as? Int
-        return value ?? key.defaultValue
+        store.read(key.rawValue) ?? key.defaultValue
     }
 
     /// Returns true when applying the given offset would rewrite the on-disk
@@ -518,4 +514,24 @@ private extension NSRunningApplication {
     var logString: String {
         localizedName ?? bundleIdentifier ?? "<NIL>"
     }
+}
+
+nonisolated extension SystemSpacingStore {
+    /// The byHost global domain, written with the defaults command so running apps' preferences see it.
+    static let live = SystemSpacingStore(
+        read: { key in
+            CFPreferencesCopyValue(
+                key as CFString,
+                kCFPreferencesAnyApplication,
+                kCFPreferencesCurrentUser,
+                kCFPreferencesCurrentHost
+            ) as? Int
+        },
+        write: { key, value in
+            try await MenuBarItemSpacingManager.runCommand(
+                "defaults",
+                with: ["-currentHost", "write", "-globalDomain", key, "-int", String(value)]
+            )
+        }
+    )
 }

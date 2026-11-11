@@ -283,12 +283,7 @@ final class DisplaySettingsManager {
     /// distinguish "user has explicitly configured spacing" from "macOS
     /// default applies".
     static func currentSystemSpacing() -> Int? {
-        CFPreferencesCopyValue(
-            "NSStatusItemSpacing" as CFString,
-            kCFPreferencesAnyApplication,
-            kCFPreferencesCurrentUser,
-            kCFPreferencesCurrentHost
-        ) as? Int
+        SystemSpacingStore.current.read("NSStatusItemSpacing")
     }
 
     /// Adopts an NSStatusItemSpacing the user set outside Thaw by seeding each
