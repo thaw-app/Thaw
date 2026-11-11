@@ -38,6 +38,7 @@ the items under New and Fixed.
 - Thaw's memory no longer jumps by about 50 MB for a few seconds each time you switch apps or show a section while a menu bar shape, tint or shadow is on.
 - After you log in, Thaw no longer stays unable to see other apps' menu bar items when macOS refused its Accessibility reads during startup, which left the menu bar shape covering only part of the items. Thaw now notices and restarts itself once.
 - The Thaw Bar preview in Settings sits on the menu bar's own colour instead of a picture of your wallpaper, which could hold about 60 MB while the page was open.
+- **New pictures of hidden items replace ones left too wide by a spacing change.** A picture taken before you narrowed the menu bar spacing kept its extra space, so some items in the Thaw Bar had bigger gaps, and taking new pictures didn't fix it.
 
 ## [3.0.0-alpha.14] - 2026-11-14
 
