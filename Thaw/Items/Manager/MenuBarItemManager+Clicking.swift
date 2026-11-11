@@ -411,23 +411,23 @@ extension MenuBarItemManager {
         // isWindowOnScreen: macOS 27 status items carry synthetic window IDs.
         await eventSleep(for: Constants.MenuBarTuning.thawBarRevealSettle)
 
-        // Only the drawn-element press needs the frame now; the real click re-reads it. A transient "Item-N"
-        // title can change between reads, so fall back to same-owner, then the cached item.
-        var liveItem = item
+        // Only the drawn-element press needs the frame now; the real click re-reads it. Without a fresh
+        // item that is surely this one (ClickBoundsRead.pressTarget), nothing is pressed.
+        var pressTarget: MenuBarItem?
         if methods.contains(.revealAndPress), let fresh = await ClickBoundsRead.ownApp(of: item) {
-            liveItem = fresh.first { $0.hasSameIdentity(as: item) } ?? fresh.first { $0.hasSameOwner(as: item) } ?? item
+            pressTarget = ClickBoundsRead.pressTarget(for: item, among: fresh)
         }
 
         var opened: ConcealedItemOpenMethod?
-        if methods.contains(.revealAndPress), mouseButton == .left,
-           await MenuBarItemDirectPresser.press(item: liveItem)?.didReact == true
+        if methods.contains(.revealAndPress), mouseButton == .left, let pressTarget,
+           await MenuBarItemDirectPresser.press(item: pressTarget)?.didReact == true
         {
             MenuBarItemManager.diagLog.debug("Opened \(item.logString) without synthesizing events")
-            failureLedger.recordSuccess(for: liveItem)
+            failureLedger.recordSuccess(for: pressTarget)
             opened = .revealAndPress
         } else if methods.contains(.revealAndClick) {
             do {
-                let reaction = try await click(item: liveItem, with: mouseButton, requireObservedReaction: true, pressFirst: false)
+                let reaction = try await click(item: pressTarget ?? item, with: mouseButton, requireObservedReaction: true, pressFirst: false)
                 opened = reaction.didReact ? .revealAndClick : nil
             } catch {
                 MenuBarItemManager.diagLog.error(

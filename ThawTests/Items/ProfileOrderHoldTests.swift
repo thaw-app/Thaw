@@ -16,6 +16,8 @@ import Testing
 @Suite("Profile order hold")
 struct ProfileOrderHoldTests {
     private static let start = ContinuousClock.now
+    /// A pass saw the profile's members a second after it was applied.
+    private static let seen = start + .seconds(1)
 
     // MARK: isOver
 
@@ -23,28 +25,36 @@ struct ProfileOrderHoldTests {
     func holdsWhileMembersAreLeftOut() {
         let hold = ProfileOrderHold(startedAt: Self.start)
 
-        #expect(!hold.isOver(membersStillLeftOut: true, userArrangedAt: nil, now: Self.start + .seconds(30)))
+        #expect(!hold.isOver(membersSeenAt: Self.seen, membersStillLeftOut: true, userArrangedAt: nil, now: Self.start + .seconds(30)))
     }
 
-    @Test("The hold ends once no member is left out")
+    @Test("A pass that read nothing, or saw the members only before the profile was applied, doesn't end it")
+    func emptyReadKeepsTheHold() {
+        let hold = ProfileOrderHold(startedAt: Self.start)
+
+        #expect(!hold.isOver(membersSeenAt: nil, membersStillLeftOut: false, userArrangedAt: nil, now: Self.start + .seconds(5)))
+        #expect(!hold.isOver(membersSeenAt: Self.start - .seconds(1), membersStillLeftOut: false, userArrangedAt: nil, now: Self.start + .seconds(5)))
+    }
+
+    @Test("The hold ends once a pass saw the members and none is left out")
     func endsWhenNothingIsLeftOut() {
-        #expect(ProfileOrderHold(startedAt: Self.start).isOver(membersStillLeftOut: false, userArrangedAt: nil, now: Self.start))
+        #expect(ProfileOrderHold(startedAt: Self.start).isOver(membersSeenAt: Self.seen, membersStillLeftOut: false, userArrangedAt: nil, now: Self.start))
     }
 
     @Test("A drag since the profile was applied ends the hold; one before it doesn't")
     func userArrangementEndsTheHold() {
         let hold = ProfileOrderHold(startedAt: Self.start)
 
-        #expect(hold.isOver(membersStillLeftOut: true, userArrangedAt: Self.start + .seconds(5), now: Self.start + .seconds(6)))
-        #expect(!hold.isOver(membersStillLeftOut: true, userArrangedAt: Self.start - .seconds(5), now: Self.start + .seconds(6)))
+        #expect(hold.isOver(membersSeenAt: Self.seen, membersStillLeftOut: true, userArrangedAt: Self.start + .seconds(5), now: Self.start + .seconds(6)))
+        #expect(!hold.isOver(membersSeenAt: Self.seen, membersStillLeftOut: true, userArrangedAt: Self.start - .seconds(5), now: Self.start + .seconds(6)))
     }
 
     @Test("A member that never appears can't hold the record past the limit")
     func limitEndsTheHold() {
         let hold = ProfileOrderHold(startedAt: Self.start)
 
-        #expect(!hold.isOver(membersStillLeftOut: true, userArrangedAt: nil, now: Self.start + ProfileOrderHold.limit - .seconds(1)))
-        #expect(hold.isOver(membersStillLeftOut: true, userArrangedAt: nil, now: Self.start + ProfileOrderHold.limit))
+        #expect(!hold.isOver(membersSeenAt: Self.seen, membersStillLeftOut: true, userArrangedAt: nil, now: Self.start + ProfileOrderHold.limit - .seconds(1)))
+        #expect(hold.isOver(membersSeenAt: Self.seen, membersStillLeftOut: true, userArrangedAt: nil, now: Self.start + ProfileOrderHold.limit))
     }
 
     // MARK: The bar's record
@@ -97,17 +107,33 @@ struct ProfileOrderHoldTests {
         }
     }
 
-    @Test("With nothing left out, the hold ends and the record follows the bar")
+    @Test("Once a pass saw the members and none is left out, the hold ends and the record follows the bar")
     func recordFollowsTheBarAfterTheHold() {
         Self.withSavedOrderDefaults {
             let manager = MenuBarItemManager()
             manager.savedSectionOrder = [Self.visibleKey: Self.profileOrder]
             manager.profileOrderHold = ProfileOrderHold(startedAt: .now)
+            manager.missingRepublishMemo.noteArrived(Self.profileOrder)
 
             Self.mirror(manager)
 
             #expect(manager.savedSectionOrder[Self.visibleKey] == Self.partialBar.map(\.uniqueIdentifier))
             #expect(manager.profileOrderHold == nil)
+        }
+    }
+
+    @Test("A pass that read nothing leaves no one out, but the record still keeps the profile's order")
+    func emptyReadKeepsTheRecord() {
+        Self.withSavedOrderDefaults {
+            let manager = MenuBarItemManager()
+            manager.savedSectionOrder = [Self.visibleKey: Self.profileOrder]
+            manager.profileOrderHold = ProfileOrderHold(startedAt: .now)
+            manager.missingRepublishMemo.noteArrived([String]())
+
+            Self.mirror(manager)
+
+            #expect(manager.savedSectionOrder[Self.visibleKey] == Self.profileOrder)
+            #expect(manager.profileOrderHold != nil)
         }
     }
 

@@ -397,7 +397,7 @@ extension MenuBarItemManager {
         let mirrored = computeSectionOrder(from: cache)
         let visibleKey = sectionKey(for: .visible)
         let preservedVisible = visibleOrderPreservedAcrossArrival(mirrored: mirrored, cache: cache)
-        if placedByUser || profileOrderHold?.isOver(membersStillLeftOut: missingRepublishMemo.hasLeftOutMembers(), userArrangedAt: lastUserMenuBarDragEnd) == true {
+        if placedByUser || profileOrderHold?.isOver(membersSeenAt: missingRepublishMemo.lastSawMembers, membersStillLeftOut: missingRepublishMemo.hasLeftOutMembers(), userArrangedAt: lastUserMenuBarDragEnd) == true {
             profileOrderHold = nil
         }
         let resolvedMirrored: [String: [String]] = if authoredVisibleOrderPendingPhysicalApply || profileOrderHold != nil {

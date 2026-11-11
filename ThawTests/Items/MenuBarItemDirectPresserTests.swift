@@ -23,9 +23,10 @@ struct MenuBarItemDirectPresserTests {
         #expect(!MenuBarItemDirectPresser.isPressable(elementPID: 964, for: [990]))
     }
 
-    @Test("An item with no known process is pressed as before")
-    func unknownOwnerIsPressable() {
-        #expect(MenuBarItemDirectPresser.isPressable(elementPID: 964, for: [0]))
-        #expect(MenuBarItemDirectPresser.isPressable(elementPID: 964, for: []))
+    @Test("An item with no known process presses nothing, since the element can't be checked")
+    func unknownOwnerIsNotPressable() {
+        #expect(!MenuBarItemDirectPresser.isPressable(elementPID: 964, for: [0]))
+        #expect(!MenuBarItemDirectPresser.isPressable(elementPID: 964, for: []))
+        #expect(!MenuBarItemDirectPresser.isPressable(elementPID: 0, for: [0]))
     }
 }

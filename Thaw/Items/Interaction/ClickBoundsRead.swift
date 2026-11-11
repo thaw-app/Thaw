@@ -23,6 +23,17 @@ nonisolated enum ClickBoundsRead {
         )
     }
 
+    /// The fresh item to press for item: the one with its identity, or the app's only item when a
+    /// transient title such as "Item-N" changed. Nil when the app has several and none matches,
+    /// since a press there could open a sibling.
+    static func pressTarget(for item: MenuBarItem, among fresh: [MenuBarItem]) -> MenuBarItem? {
+        if let same = fresh.first(where: { $0.hasSameIdentity(as: item) }) {
+            return same
+        }
+        let siblings = fresh.filter { $0.hasSameOwner(as: item) }
+        return siblings.count == 1 ? siblings.first : nil
+    }
+
     /// A fresh read of only the item's own processes, or nil when it has none or they didn't answer.
     static func ownApp(of item: MenuBarItem) async -> [MenuBarItem]? {
         let owners = item.reactionPIDs.filter { $0 > 0 }

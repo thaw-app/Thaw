@@ -46,11 +46,16 @@ nonisolated struct RepublishAbsenceMemo {
         leftOutSince = leftOutSince.filter { $0.value.duration(to: now) < Self.leftOutMemory }
     }
 
+    /// When a pass last saw any of its members live. A read that returned nothing names no one
+    /// missing, so it can't say the members are back.
+    private(set) var lastSawMembers: ContinuousClock.Instant?
+
     /// Forgets members that are live again. The pass that sees them live places them.
-    mutating func noteArrived(_ identifiers: some Sequence<String>) {
+    mutating func noteArrived(_ identifiers: some Sequence<String>, at now: ContinuousClock.Instant = .now) {
         for identifier in identifiers {
             missingSince.removeValue(forKey: identifier)
             leftOutSince.removeValue(forKey: identifier)
+            lastSawMembers = now
         }
     }
 

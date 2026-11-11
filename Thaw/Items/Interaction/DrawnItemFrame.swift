@@ -22,22 +22,20 @@ nonisolated enum DrawnItemFrame {
     static let agreementTolerance: CGFloat = 4
 
     /// The frame the item is drawn at: x and width from its drawn entry, y and height from
-    /// axFrame. Nil unless the read is settled and exactly one entry belongs to the item's app,
-    /// trying the source process first for an item MenuBarAgent hosts.
+    /// axFrame. Nil unless the read is settled and exactly one entry belongs to the item's app:
+    /// its source process for an item MenuBarAgent hosts, whose own entries are other items.
     static func drawnFrame(
         for axFrame: CGRect,
         ownerPID: pid_t,
         sourcePID: pid_t?,
         in entries: [MenuBarAgentWindow.Entry]?
     ) -> CGRect? {
-        guard let entries = entries.flatMap(MenuBarAgentWindow.settled) else { return nil }
-        for pid in processes(ownerPID: ownerPID, sourcePID: sourcePID) {
-            let own = entries.filter { $0.ownerPID == pid }
-            guard !own.isEmpty else { continue }
-            guard own.count == 1, let drawn = own.first else { return nil }
-            return CGRect(x: drawn.frame.minX, y: axFrame.minY, width: drawn.frame.width, height: axFrame.height)
-        }
-        return nil
+        guard let entries = entries.flatMap(MenuBarAgentWindow.settled),
+              let app = processes(ownerPID: ownerPID, sourcePID: sourcePID).first
+        else { return nil }
+        let own = entries.filter { $0.ownerPID == app }
+        guard own.count == 1, let drawn = own.first else { return nil }
+        return CGRect(x: drawn.frame.minX, y: axFrame.minY, width: drawn.frame.width, height: axFrame.height)
     }
 
     /// Whether axFrame sits on an item another app has drawn: a shared left edge or a large

@@ -95,4 +95,30 @@ struct ClickBoundsTests {
             try await Self.bounds(for: Self.item(owner: Self.warp, x: 900), ownApp: [], everyApp: [], reads: Reads())
         }
     }
+
+    // MARK: pressTarget
+
+    @Test("The press goes to the fresh item with the same identity")
+    func pressTargetMatchesIdentity() {
+        let held = Self.item(owner: Self.warp, x: 900)
+        let fresh = [Self.item(owner: Self.warp, x: 960, title: "Item-1"), Self.item(owner: Self.warp, x: 930)]
+
+        #expect(ClickBoundsRead.pressTarget(for: held, among: fresh)?.bounds.minX == 930)
+    }
+
+    @Test("A changed transient title still finds the app's only item")
+    func pressTargetTakesTheOnlySibling() {
+        let held = Self.item(owner: Self.warp, x: 900)
+
+        #expect(ClickBoundsRead.pressTarget(for: held, among: [Self.item(owner: Self.warp, x: 931, title: "Item-3")])?.bounds.minX == 931)
+    }
+
+    @Test("With several items of the app and none matching, nothing is pressed")
+    func pressTargetRefusesASibling() {
+        let held = Self.item(owner: Self.warp, x: 900)
+        let fresh = [Self.item(owner: Self.warp, x: 931, title: "Item-3"), Self.item(owner: Self.warp, x: 961, title: "Item-4")]
+
+        #expect(ClickBoundsRead.pressTarget(for: held, among: fresh) == nil)
+        #expect(ClickBoundsRead.pressTarget(for: held, among: [Self.item(owner: 777, x: 931)]) == nil)
+    }
 }

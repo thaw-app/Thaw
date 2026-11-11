@@ -215,4 +215,18 @@ struct RepublishAbsenceMemoTests {
 
         #expect(unreachable.isEmpty)
     }
+
+    @Test("A pass that sees members records when, and one that saw none leaves it alone")
+    func lastSawMembers() {
+        var memo = RepublishAbsenceMemo()
+        #expect(memo.lastSawMembers == nil)
+
+        memo.noteArrived([String](), at: start)
+        #expect(memo.lastSawMembers == nil)
+
+        memo.noteArrived(["a"], at: start + .seconds(2))
+        #expect(memo.lastSawMembers == start + .seconds(2))
+        memo.noteArrived([String](), at: start + .seconds(4))
+        #expect(memo.lastSawMembers == start + .seconds(2))
+    }
 }

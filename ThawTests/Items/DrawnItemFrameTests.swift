@@ -58,6 +58,12 @@ struct DrawnItemFrameTests {
         #expect(drawn?.minX == 908)
     }
 
+    @Test("A hosted item whose app has nothing drawn doesn't take MenuBarAgent's own entry")
+    func hostedItemIgnoresTheHost() {
+        // The bar has exactly one entry of MenuBarAgent's, an item of its own.
+        #expect(DrawnItemFrame.drawnFrame(for: Self.axFrame, ownerPID: Self.agent, sourcePID: 555, in: Self.bar) == nil)
+    }
+
     @Test("A read taken while an item leaves the bar is not trusted")
     func unsettledRead() {
         let bar = Self.bar + [Self.entry(0, x: 0, width: 0)]

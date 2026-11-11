@@ -78,10 +78,9 @@ nonisolated enum MenuBarItemDirectPresser {
     }
 
     /// Whether an element of elementPID may be pressed for an item whose reaction can come from
-    /// reactionPIDs. An item with no known process can't be checked, so it is pressed as before.
+    /// reactionPIDs. An item with no known process can't be checked, so nothing is pressed for it.
     static func isPressable(elementPID: pid_t, for reactionPIDs: Set<pid_t>) -> Bool {
-        let known = reactionPIDs.filter { $0 > 0 }
-        return known.isEmpty || known.contains(elementPID)
+        reactionPIDs.contains { $0 > 0 && $0 == elementPID }
     }
 
     /// The accessibility element at a screen point.
