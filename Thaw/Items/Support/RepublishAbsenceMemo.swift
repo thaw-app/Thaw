@@ -52,9 +52,11 @@ nonisolated struct RepublishAbsenceMemo {
     private(set) var lastSawMembers: ContinuousClock.Instant?
 
     /// Forgets members that are live again. The pass that sees them live places them. `now` is
-    /// when that pass took its order; a pass that finishes late can't move lastSawMembers back.
+    /// when that pass took its order; a pass that finishes late can't move lastSawMembers back,
+    /// and one that took its order before a member was left out can't forget it.
     mutating func noteArrived(_ identifiers: some Sequence<String>, at now: ContinuousClock.Instant = .now) {
         for identifier in identifiers {
+            if let since = leftOutSince[identifier], since > now { continue }
             missingSince.removeValue(forKey: identifier)
             leftOutSince.removeValue(forKey: identifier)
             lastSawMembers = max(lastSawMembers ?? now, now)

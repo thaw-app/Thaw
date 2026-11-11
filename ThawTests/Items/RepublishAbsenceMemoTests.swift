@@ -239,4 +239,18 @@ struct RepublishAbsenceMemoTests {
 
         #expect(memo.lastSawMembers == start + .seconds(5))
     }
+
+    @Test("A pass that took its order before a member was left out can't forget it; a later pass can")
+    func olderPassKeepsANewerOmission() {
+        var memo = RepublishAbsenceMemo()
+        memo.noteMissing(["a"], at: start + .seconds(5))
+
+        memo.noteArrived(["a"], at: start + .seconds(1))
+        #expect(memo.isKnownAbsent("a"))
+        #expect(memo.leftOutMembers(amongLive: ["a"], now: start + .seconds(6)) == ["a"])
+
+        memo.noteArrived(["a"], at: start + .seconds(6))
+        #expect(!memo.isKnownAbsent("a"))
+        #expect(!memo.hasLeftOutMembers(now: start + .seconds(6)))
+    }
 }
