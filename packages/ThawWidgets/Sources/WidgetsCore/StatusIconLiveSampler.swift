@@ -20,6 +20,7 @@ final class StatusIconLiveSampler: ObservableObject {
 
     private var timer: Timer?
     private var networkTask: Task<Void, Never>?
+    private var audioTask: Task<Void, Never>?
     private let cpuSource = CPUSource()
     private let wifiSource = WiFiSource()
     private var previousCpuTicks: (user: UInt64, system: UInt64, total: UInt64) = (0, 0, 0)
@@ -32,11 +33,13 @@ final class StatusIconLiveSampler: ObservableObject {
                 guard !Task.isCancelled, let self else { return }
                 // availableInterfaces includes idle radios. Only interfaces
                 // actually used by the default path describe this connection.
-                samples.network = StatusIconNetwork(
+                var next = samples
+                next.network = StatusIconNetwork(
                     status: path.status,
                     usedInterfaces: [.wiredEthernet, .wifi, .cellular, .other].filter { path.usesInterfaceType($0) }
                 )
-                samples.wifi = wifiStrength()
+                next.wifi = wifiStrength()
+                samples = next
             }
         }
         poll()
@@ -45,17 +48,39 @@ final class StatusIconLiveSampler: ObservableObject {
         }
     }
 
+    var isRunning: Bool {
+        timer != nil
+    }
+
     func stop() {
         networkTask?.cancel()
         networkTask = nil
+        audioTask?.cancel()
+        audioTask = nil
         timer?.invalidate()
         timer = nil
     }
 
     private func poll() {
-        samples.battery = BatteryLevelSource.level()
-        samples.wifi = wifiStrength()
-        samples.cpu = cpuUsage()
+        // Assembled first and assigned once: each change to samples is a separate delivery.
+        var next = samples
+        let battery = BatteryLevelSource.reading()
+        next.battery = battery.level
+        next.isCharging = battery.isCharging
+        next.hasBattery = battery.hasBattery
+        next.isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+        next.wifi = wifiStrength()
+        next.cpu = cpuUsage()
+        samples = next
+        // A sleeping Bluetooth device can make CoreAudio slow to answer, so it's read off the main actor.
+        // A read still running is left to finish, so a slow device can't pile them up or starve the reading.
+        guard audioTask == nil else { return }
+        audioTask = Task { [weak self] in
+            let output = await Task.detached { AudioOutputSource.defaultOutput() }.value
+            guard !Task.isCancelled, let self else { return }
+            samples.audioOutput = output
+            audioTask = nil
+        }
     }
 
     // MARK: Wi-Fi

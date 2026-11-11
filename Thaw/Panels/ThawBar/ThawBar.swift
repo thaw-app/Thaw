@@ -53,6 +53,8 @@ final class ThawBarPanel: NSPanel {
     /// Stop repeated failed WindowServer measurements until the control item gets a new ID.
     private var staleAnchorWindowID: CGWindowID?
 
+    private var clampReport = ThawBarClampReport()
+
     /// Observe the lock setting through Observation rather than a Combine projection.
     private var lockPositionObservationTask: Task<Void, Never>?
 
@@ -128,8 +130,8 @@ final class ThawBarPanel: NSPanel {
 
         // Observations delivers the current lock value before subsequent changes.
         lockPositionObservationTask?.cancel()
-        lockPositionObservationTask = Task { @MainActor [weak self, generalSettings = appState.settings.general] in
-            let changes = Observations { generalSettings.lockThawBarPosition }
+        lockPositionObservationTask = Task { @MainActor [weak self, thawBarSettings = appState.settings.thawBar] in
+            let changes = Observations { thawBarSettings.lockThawBarPosition }
             for await locked in changes {
                 guard let self else { return }
                 isMovableByWindowBackground = !locked
@@ -306,7 +308,7 @@ final class ThawBarPanel: NSPanel {
             return CGPoint(x: rightEdgeX, y: y)
         }
         let clamped = desiredX.clamped(to: xRange)
-        if abs(clamped - desiredX) > 1 {
+        if clampReport.isNew(desiredX: desiredX, clamped: clamped, since: lastShowTimestamp) {
             diagLog.debug(
                 "ThawBar: \(resolved) wanted x=\(desiredX) but the fittable range \(xRange) clamped it to \(clamped)"
             )
@@ -315,12 +317,10 @@ final class ThawBarPanel: NSPanel {
     }
 
     private func updateOrigin(for screen: NSScreen) {
-        guard let appState else {
-            return
-        }
-
-        let location = appState.settings.displaySettings.thawBarLocation(for: screen.displayID)
-        setFrameOrigin(floatingOrigin(for: location, on: screen, appState: appState))
+        guard let appState else { return }
+        let origin = floatingOrigin(for: appState.settings.displaySettings.thawBarLocation(for: screen.displayID), on: screen, appState: appState)
+        guard origin != frame.origin else { return }
+        setFrameOrigin(origin)
     }
 
     func show(
@@ -348,7 +348,7 @@ final class ThawBarPanel: NSPanel {
 
         let menuBarHeight = screen.getMenuBarHeightEstimate()
         diagLog.notice("""
-        show: screen=\(screen.displayID) \
+        show: window=\(windowNumber) screen=\(screen.displayID) \
         backingScaleFactor=\(Double(screen.backingScaleFactor)) \
         hasNotch=\(screen.hasNotch) \
         menuBarHeight=\(Double(menuBarHeight)) \
@@ -356,7 +356,7 @@ final class ThawBarPanel: NSPanel {
         visibleFrame=\(screen.visibleFrame.debugDescription)
         """)
 
-        hotkeyLocationOverride = triggeredByHotkey && appState.settings.general.thawBarLocationOnHotkey
+        hotkeyLocationOverride = triggeredByHotkey && appState.settings.thawBar.thawBarLocationOnHotkey
         // Probe once per open; the stale marker only suppresses repeated layout-pass lookups.
         staleAnchorWindowID = nil
 
@@ -390,7 +390,7 @@ final class ThawBarPanel: NSPanel {
         colorManager.updateAllProperties(with: frame, screen: screen)
 
         // Keep the frontmost app's focus; keyboard-triggered opens take key focus separately.
-        orderFrontRegardless()
+        ThawBarEntrance.present(self)
 
         // Shortcut opens highlight the first item and take key focus without activating Thaw.
         acceptsKeyboard = triggeredByHotkey
@@ -535,7 +535,7 @@ final class ThawBarPanel: NSPanel {
         let ownedSection = presentation == .section
         presentation = .section
         appState?.navigationState.isThawBarPresented = false
-        orderOut(nil)
+        ThawBarEntrance.dismiss(self)
         super.close()
         if ownedSection {
             resetSectionStateAfterClose(closingSection)

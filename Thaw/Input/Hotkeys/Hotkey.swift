@@ -91,10 +91,7 @@ extension Hotkey {
                         Task {
                             // Report failures so the hotkey does not appear unresponsive.
                             do {
-                                let profile = try profileManager.loadProfile(id: profileID)
-                                let previousID = profileManager.activeProfileID
-                                profileManager.activeProfileID = profileID
-                                profileManager.applyProfile(profile, to: appState, previousProfileID: previousID)
+                                try profileManager.switchToProfile(id: profileID, on: appState)
                             } catch {
                                 Hotkey.diagLog.error("Could not apply profile \(profileID) from a hotkey: \(error)")
                                 NSAlert(error: error).runModal()

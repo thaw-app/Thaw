@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/thaw-app/ThawUI",
       "state" : {
-        "revision" : "205a9ea0631aa71f8dace0505970dcb6b2cff7d1",
-        "version" : "1.2.1"
+        "revision" : "f9dcca45c4daa339dda2613a3bfa2d5b2a52cf8a",
+        "version" : "1.4.0"
       }
     }
   ],

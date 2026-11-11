@@ -12,7 +12,7 @@ import PlatformRuntimeKit
 // MARK: - Stand-in
 
 /// A Thaw-owned status item that takes the place of an Apple menu extra Thaw
-/// has removed natively.
+/// has removed natively, or, for the Space indicator, adds one macOS lacks.
 ///
 /// Each runs from its own bundle in Contents/Library/Extras because macOS 27
 /// conceals per bundle; inside Thaw it could not be hidden apart from Thaw.
@@ -24,6 +24,7 @@ enum SystemExtraStandIn: String, CaseIterable {
     case nowPlaying = "nowplaying"
     case userSwitcher = "user"
     case textInput = "textinput"
+    case space
 
     init(_ item: SystemExtraItem) {
         switch item {
@@ -47,6 +48,7 @@ enum SystemExtraStandIn: String, CaseIterable {
         case .nowPlaying: "Thaw.Extra.NowPlaying"
         case .userSwitcher: "Thaw.Extra.UserSwitcher"
         case .textInput: "Thaw.Extra.TextInput"
+        case .space: "Thaw.Extra.Space"
         }
     }
 
@@ -64,6 +66,7 @@ enum SystemExtraStandIn: String, CaseIterable {
         case .nowPlaying: "Thaw Now Playing"
         case .userSwitcher: "Thaw User Switcher"
         case .textInput: "Thaw Text Input"
+        case .space: "Thaw Space"
         }
     }
 
@@ -94,15 +97,17 @@ enum SystemExtraStandIn: String, CaseIterable {
 
 // MARK: - Visibility
 
-/// Hides Thaw's extra bundles itself: Control Center's app list may have no record of them.
-/// Must match ExtraVisibilityChannel in ThawExtraHelper.
+/// Hides Thaw's extra and module bundles itself: Control Center's app list may have no record of
+/// them, and native hiding never switches off a bundle under Thaw's own identifier.
+/// Must match ExtraVisibilityChannel in ThawExtraHelper and WidgetVisibility in the Widgets module.
 @MainActor
 enum ExtraVisibilityChannel {
     private static let log = DiagLog(category: "SystemExtraStandIn")
     private static var lastHidden: Set<String>?
 
     static func ownsBundle(_ bundleID: String) -> Bool {
-        bundleID.hasPrefix("\(ThawMenuBarIdentity.bundleIdentifier).extra.")
+        let own = ThawMenuBarIdentity.bundleIdentifier
+        return bundleID.hasPrefix("\(own).extra.") || bundleID.hasPrefix("\(own).module.")
     }
 
     /// Bundles native hiding must not switch off in the system's Menu Bar list: the extras, which are

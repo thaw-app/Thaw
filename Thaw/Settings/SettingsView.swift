@@ -13,7 +13,6 @@ import ThawUI
 
 struct SettingsView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @AppStorage(AppUIZoom.defaultsKey) private var zoomPercent = 100
 
     let appState: AppState
     let navigationState: AppNavigationState
@@ -45,8 +44,8 @@ struct SettingsView: View {
         // the full layout's would otherwise hold Simple Mode open at a sidebar's
         // width forever.
         .frame(
-            minWidth: SettingsWindowMetrics.minimum(simpleMode: generalSettings.simpleMode).width / zoomScale,
-            minHeight: SettingsWindowMetrics.minimum(simpleMode: generalSettings.simpleMode).height / zoomScale
+            minWidth: SettingsWindowMetrics.minimum(simpleMode: generalSettings.simpleMode).width,
+            minHeight: SettingsWindowMetrics.minimum(simpleMode: generalSettings.simpleMode).height
         )
         .environment(\.settingsDescriptionsVisible, generalSettings.showSettingDescriptions)
         .settingsTheme(generalSettings.settingsAppearance, drawsBackground: true)
@@ -59,9 +58,7 @@ struct SettingsView: View {
             settingsWindow = window
             if let window {
                 appState.settingsProcessHost.appWindowOpened(window)
-                SettingsWindowDiagnostics.logWhenLaidOut(
-                    window, zoomPercent: zoomPercent, isSimpleMode: generalSettings.simpleMode
-                )
+                SettingsWindowDiagnostics.logWhenLaidOut(window, isSimpleMode: generalSettings.simpleMode)
             }
         }
         .onChange(of: generalSettings.simpleMode) { _, isSimpleMode in
@@ -72,10 +69,6 @@ struct SettingsView: View {
             navigationState.isSimpleModeSettings = isSimpleMode
         }
         .disablesAnimations(when: reduceMotion)
-    }
-
-    private var zoomScale: CGFloat {
-        CGFloat(AppUIZoom.normalized(zoomPercent)) / 100
     }
 
     private var simpleModeScreen: some View {
@@ -115,9 +108,8 @@ struct SettingsView: View {
             sidebar
         } detail: {
             detailContent
-                .onChange(of: navigationState.settingsNavigationIdentifier) { previous, _ in
-                    paneHistory.record(leaving: previous)
-                }
+                .modifier(SettingsSearchScroller(navigationState: navigationState))
+                .onChange(of: navigationState.settingsNavigationIdentifier) { previous, _ in paneHistory.record(leaving: previous) }
                 .background {
                     // History's shortcuts live in the content, not on the
                     // toolbar buttons: a toolbar item that carries a
@@ -180,14 +172,12 @@ struct SettingsView: View {
     private var paneTransition: AnyTransition {
         // Insertion-only: cross-fading two full panes doubles the glass and
         // material layers WindowServer composites for the whole fade, which
-        // reads as pane-switch lag. Removing the old pane instantly keeps at
-        // most one pane's worth of glass on screen.
-        reduceMotion
-            ? .identity
-            : .asymmetric(
-                insertion: .opacity.animation(ThawMotion.pane),
-                removal: .identity
-            )
+        // reads as pane-switch lag. Removing the old pane instantly keeps one
+        // pane's glass on screen. Reduce Motion shortens the fade to 0.12 s.
+        .asymmetric(
+            insertion: .fade(reduceMotion: reduceMotion, animation: ThawMotion.pane),
+            removal: .identity
+        )
     }
 
     /// Brings the window to the size the incoming layout wants.
@@ -247,45 +237,36 @@ struct SettingsView: View {
         case .menuBarLayout:
             MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
         case .visibility:
-            MenuBarAccessPane(
-                settings: appState.settings.general,
-                advancedSettings: appState.settings.advanced
-            )
+            MenuBarAccessPane(settings: appState.settings.visibility)
         case .thawBar:
             ThawBarSettingsPane(displaySettings: appState.settings.displaySettings)
         case .menuBarAppearance:
             MenuBarAppearanceSettingsPane(appearanceManager: appState.appearanceManager)
         case .widgets:
-            WidgetsSettingsPane(settings: appState.settings.advanced)
+            WidgetsSettingsPane(settings: appState.settings.widgets)
         case .profiles:
             ProfileSettingsPane(profileManager: appState.profileManager)
         case .hotkeys:
             HotkeysSettingsPane(settings: appState.settings.hotkeys)
-        case .automation, .triggers:
+        case .triggers:
             TriggersSettingsPane()
-        case .displays, .spaces:
+        case .displays:
             DisplaySettingsPane(displaySettings: appState.settings.displaySettings)
-        case .general, .theLab:
-            GeneralSettingsPane(
-                settings: appState.settings.general,
-                advancedSettings: appState.settings.advanced
-            )
+        case .general:
+            GeneralSettingsPane(settings: appState.settings.general)
         case .privacy:
             PrivacySettingsPane(
                 updatesManager: appState.updatesManager,
-                advancedSettings: appState.settings.advanced
+                privacySettings: appState.settings.privacy
             )
         case .tools:
-            ToolsSettingsPane(settings: appState.settings.advanced)
+            ToolsSettingsPane(settings: appState.settings.tools)
         case .modules:
             ModulesSettingsPane(moduleHost: appState.moduleHost, profiles: appState.profilesFeature)
         case .about:
             ThawAboutPane(updatesManager: appState.updatesManager)
         case .scripts:
             ScriptsSettingsPane()
-        case .advanced:
-            // Advanced was dissolved, so a saved pane that names it opens Layout.
-            MenuBarLayoutSettingsPane(itemManager: appState.itemManager)
         }
     }
 }
@@ -307,12 +288,6 @@ private struct SettingsOverflowMenu: View {
             }
             Button(menuBarManager.isZenModeActive ? "Leave Zen Mode" : "Zen Mode") {
                 menuBarManager.toggleZenMode()
-            }
-            Divider()
-            Menu {
-                AppUIZoomControls(strings: .thaw, showsShortcuts: false)
-            } label: {
-                Text("Zoom")
             }
             Divider()
             Toggle("Simple Mode", isOn: $generalSettings.simpleMode)
@@ -344,7 +319,7 @@ private struct SettingsSearchResults: View {
             VStack(alignment: .leading, spacing: 0) {
                 // A count makes a long list read as bounded, and tells the
                 // reader whether narrowing the query is worth it.
-                SettingsSearchResultCount(Text("^[\(resultCount) result](inflect: true)"))
+                SettingsSearchResultCount(Text("^[\(resultCount) result](inflect: true)")).rollingNumber(resultCount)
                     .padding(.horizontal, SettingsDetailLayout.titleHorizontalInset + 6)
                     .padding(.bottom, ThawSpacing.compact)
 

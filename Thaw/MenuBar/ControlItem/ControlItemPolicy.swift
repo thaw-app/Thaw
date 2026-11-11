@@ -75,6 +75,10 @@ extension ControlItem {
 
 extension ControlItem {
     struct PrimaryActivationSequence {
+        /// The longest gap that pairs two clicks. macOS lets the double-click speed go up to about
+        /// five seconds, and with that ordinary clicks paired up and skipped Hidden.
+        static let maximumPairingInterval: TimeInterval = 0.5
+
         private var previous: (timestamp: TimeInterval, location: CGPoint, modifiers: NSEvent.ModifierFlags)?
 
         mutating func clickCount(
@@ -90,8 +94,8 @@ extension ControlItem {
             }
             if let previous,
                timestamp > previous.timestamp,
-               timestamp - previous.timestamp <= interval,
-               hypot(location.x - previous.location.x, location.y - previous.location.y) <= 4,
+               timestamp - previous.timestamp <= min(interval, Self.maximumPairingInterval),
+               location.distance(to: previous.location) <= 4,
                modifiers == previous.modifiers
             {
                 self.previous = nil
@@ -114,6 +118,11 @@ extension ControlItem {
         case contextMenu
         /// Deliberately do nothing.
         case none
+    }
+
+    /// The icon's double-click shortcut requires both the section and its own preference.
+    static nonisolated func usesIconDoubleClickForAlwaysHidden(isSectionEnabled: Bool, isGestureEnabled: Bool) -> Bool {
+        isSectionEnabled && isGestureEnabled
     }
 
     /// Resolves a click delivered through AppKit's target/action path.

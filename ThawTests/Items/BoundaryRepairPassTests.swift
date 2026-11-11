@@ -25,6 +25,13 @@ struct BoundaryRepairPassTests {
         )
     }
 
+    @Test("The give-up line names the budget the pass spent, not the turn that ended it")
+    func giveUpMessageNamesBudget() {
+        var pass = BoundaryRepairPass()
+        while pass.takeTurn() {}
+        #expect(pass.giveUpMessage(for: "Battery") == "macOS 27 visible boundary repair gave up after \(BoundaryRepairPass.strandBudget) strands for Battery")
+    }
+
     @Test("An attempted strand is not attempted again but still requests another pass")
     func partialMoveStillNeedsRetry() throws {
         var pass = BoundaryRepairPass()
@@ -89,5 +96,13 @@ struct BoundaryRepairPassTests {
 
         #expect(!pass.needsRetry(in: [hiddenByMacOS]))
         #expect(pass.needsRetry(in: [hiddenByMacOS, stranded]))
+    }
+
+    @Test("A pass takes at most its strand budget of turns")
+    func strandBudget() {
+        var pass = BoundaryRepairPass()
+        let granted = (0 ... BoundaryRepairPass.strandBudget).map { _ in pass.takeTurn() }
+        #expect(granted == Array(repeating: true, count: BoundaryRepairPass.strandBudget) + [false])
+        #expect(pass.turns == BoundaryRepairPass.strandBudget + 1)
     }
 }

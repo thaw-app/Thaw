@@ -31,9 +31,9 @@ struct ControlItemPanelTests {
         let appState = AppState()
         let controller = ControlItemPanelController()
         controller.performSetup(with: appState)
-        appState.settings.advanced.enableControlItemPanel = false
+        appState.settings.widgets.enableControlItemPanel = false
         #expect(!controller.isEnabled)
-        appState.settings.advanced.enableControlItemPanel = true
+        appState.settings.widgets.enableControlItemPanel = true
         #expect(controller.isEnabled)
     }
 
@@ -153,7 +153,7 @@ struct ControlItemPanelTests {
     func anchorWithoutAPoint() throws {
         let controller = ControlItemPanelController()
         let frame = try #require(controller.anchorFrame(fallbackPoint: nil))
-        let screen = try #require(NSScreen.screenWithMouse ?? NSScreen.main)
+        let screen = try #require(NSScreen.screenWithMouseOrMain)
         #expect(frame == CGRect(x: screen.frame.midX, y: screen.frame.maxY - screen.getMenuBarHeightEstimate(), width: 1, height: 1))
     }
 }

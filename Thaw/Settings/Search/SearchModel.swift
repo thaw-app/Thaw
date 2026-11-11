@@ -84,13 +84,17 @@ final class SearchModel {
 
         let fuseResults = fuse.searchSync(query, in: searchItems, by: \.properties)
 
-        let scored = fuseResults.map { result in
-            (item: searchItems[result.index], diffScore: result.diffScore)
+        // A row that exists only with diagnostic logging on isn't offered while it is off.
+        let showsLogSettings = Defaults.bool(forKey: .enableDiagnosticLogging)
+        let scored = fuseResults.compactMap { result -> (item: SearchItem, diffScore: Double)? in
+            let item = searchItems[result.index]
+            guard showsLogSettings || !item.entry.needsDiagnosticLogging else { return nil }
+            return (item: item, diffScore: result.diffScore)
         }
 
         // Rank globally by relevance, then group by pane preserving the rank
         // order within each pane. Pane order follows the best-scoring entry.
-        let ranked = SearchIndex.sortedByRelevance(scored)
+        let ranked = SearchRanker.sortedByRelevance(scored)
 
         var grouped: [SettingsNavigationIdentifier: [SearchEntry]] = [:]
         var paneOrder: [SettingsNavigationIdentifier] = []

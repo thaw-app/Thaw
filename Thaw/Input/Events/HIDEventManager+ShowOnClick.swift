@@ -205,8 +205,7 @@ extension HIDEventManager {
     /// Drops a pending smart rehide, so a section the user has just revealed
     /// is not put away by the click that preceded the reveal.
     func cancelSmartRehide() {
-        smartRehideTask?.cancel()
-        smartRehideTask = nil
+        rehideController?.note(.inputReveal)
     }
 
     /// Reveals section at once, the way a scroll does, or puts it away if
@@ -392,111 +391,27 @@ extension HIDEventManager {
 
     // MARK: Handle Smart Rehide
 
-    /// Reacts to a click that landed outside the menu bar while a section is
-    /// revealed, by putting the sections away again a moment later.
-    ///
-    /// Every condition is rechecked after the wait, not trusted from click time.
+    /// The rehide controller checks these click-time conditions only under smart rehide.
     func handleSmartRehide(
         with event: NSEvent,
         appState: AppState,
         screen: NSScreen
     ) {
-        guard
-            configuration.autoRehide,
-            case .smart = configuration.rehideStrategy
-        else {
-            return
-        }
-
-        // Thaw's own windows are off limits: clicking the visible control item
-        // or the Thaw Bar is how the user drives the sections, not a signal to
-        // put them away.
-        if
-            let controlItem = appState.menuBarManager.controlItem(withName: .visible),
-            event.window === controlItem.window
-        {
-            return
-        }
-        if event.window === appState.menuBarManager.thawBarPanel {
-            return
-        }
-
-        // There is nothing to rehide unless something is showing, and clicks
-        // that landed on the menu bar itself belong to the show-on-click path.
-        guard
-            appState.menuBarManager.hasVisibleSection,
-            !isMouseInsideMenuBar(appState: appState, screen: screen)
-        else {
-            return
-        }
-
-        let spaceIDAtClick = Bridging.getActiveSpaceID()
-        let delay = configuration.rehideInterval
-        let menuOpenMonitor = self.menuOpenMonitor
-
-        // The newest outside click decides, so drop any rehide still waiting
-        // out an earlier one.
-        smartRehideTask?.cancel()
-        // A pending rehide must not be what keeps the manager alive, so the
-        // task captures the monitor and app state it consults rather than self.
-        smartRehideTask = Task {
-            do {
-                try await Task.sleep(for: .seconds(delay))
-            } catch {
-                return
+        rehideController?.note(.outsideClick { [self] in
+            // Clicking the visible control item or the Thaw Bar drives the sections, so it never rehides them.
+            if
+                let controlItem = appState.menuBarManager.controlItem(withName: .visible),
+                event.window === controlItem.window
+            {
+                return false
             }
-            guard !Task.isCancelled else { return }
-
-            // A click that moved us to another space settles the question by
-            // itself; inspecting a window on the space we just left is moot.
-            if Bridging.getActiveSpaceID() != spaceIDAtClick {
-                Self.hideEverySection(of: appState)
-                return
+            if event.window === appState.menuBarManager.thawBarPanel {
+                return false
             }
 
-            guard let owner = Self.applicationOwningWindowUnderCursor() else {
-                return
-            }
-
-            // The Dock is the exception: it never becomes the active
-            // application, yet clicking it is still a move away from here.
-            if owner.bundleIdentifier != "com.apple.dock" {
-                guard owner.isActive, owner.activationPolicy == .regular else {
-                    return
-                }
-            }
-
-            // An open menu means the user is still working in the menu bar.
-            if await menuOpenMonitor?.isAnyMenuOpen() == true {
-                return
-            }
-            guard !Task.isCancelled else { return }
-
-            Self.hideEverySection(of: appState)
-        }
-    }
-
-    /// Puts every menu bar section away.
-    private static func hideEverySection(of appState: AppState) {
-        for section in appState.menuBarManager.sections {
-            section.hide()
-        }
-    }
-
-    /// The application that owns the topmost titled window under the pointer.
-    ///
-    /// Skips the cursor layer and above, and untitled windows (overlays and
-    /// shadows).
-    private static func applicationOwningWindowUnderCursor() -> NSRunningApplication? {
-        guard let mouseLocation = MouseHelpers.locationCoreGraphics else {
-            return nil
-        }
-        return WindowInfo.createWindows(option: .onScreen)
-            .first { window in
-                window.layer < CGWindowLevelForKey(.cursorWindow)
-                    && window.bounds.contains(mouseLocation)
-                    && window.title?.isEmpty == false
-            }?
-            .owningApplication
+            // Clicks on the menu bar itself belong to the show-on-click path.
+            return appState.menuBarManager.hasVisibleSection
+                && !isMouseInsideMenuBar(screen: screen)
+        })
     }
 }

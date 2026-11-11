@@ -16,7 +16,7 @@ nonisolated extension SearchIndex {
         SearchEntry(
             id: "privacy.accessibility",
             title: "Accessibility",
-            descriptionText: String(localized: "Lets Thaw read and move menu bar items. Required."),
+            descriptionText: String(localized: "Lets \(Constants.displayName) read and move menu bar items. Required."),
             pane: .privacy,
             section: "Permissions",
             keywords: ["accessibility", "permission", "grant", "access", "privacy", "required"],
@@ -32,11 +32,20 @@ nonisolated extension SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "privacy.notifications",
+            title: "Notifications",
+            descriptionText: String(localized: "Lets Thaw tell you when an update is ready and when a shortcut changes a setting. Optional."),
+            pane: .privacy,
+            section: "Permissions",
+            keywords: ["notifications", "alerts", "permission", "banner", "update", "optional"],
+            property: nil
+        ),
+        SearchEntry(
             id: "privacy.captureInspector",
             // The row is the section itself: "What Thaw sees" is the pane's
             // section header, so no separate section is attached.
             title: "What Thaw sees",
-            descriptionText: String(localized: "Crop regions are the exact pixels Thaw reads for each menu bar item. Frames are shown once and never saved to disk."),
+            descriptionText: String(localized: "Crop regions are the exact pixels \(Constants.displayName) reads for each menu bar item. Frames are shown once and never saved to disk."),
             pane: .privacy,
             keywords: ["capture", "crop", "inspector", "privacy", "screen", "screen recording", "band", "pixels", "sees"],
             property: nil
@@ -57,7 +66,16 @@ nonisolated extension SearchIndex {
             pane: .privacy,
             section: "Network access",
             keywords: ["network", "release notes", "whats new", "what's new", "fetch", "changelog", "privacy", "offline"],
-            property: .advanced("fetchReleaseNotes")
+            property: .privacy("fetchReleaseNotes")
+        ),
+        SearchEntry(
+            id: "privacy.showReleaseNotesAfterUpdate",
+            title: "Show release notes after an update",
+            descriptionText: String(localized: "Opens What’s New the first time \(Constants.displayName) starts after an update. You can still open it from \(Constants.displayName)’s menu or About."),
+            pane: .privacy,
+            section: "Network access",
+            keywords: ["release notes", "whats new", "what's new", "update", "changelog", "window", "after update"],
+            property: .privacy("showReleaseNotesAfterUpdate")
         ),
     ]
 }

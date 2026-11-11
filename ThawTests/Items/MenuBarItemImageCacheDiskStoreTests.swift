@@ -46,6 +46,43 @@ struct MenuBarItemImageCacheDiskStoreTests {
         try PropertyListSerialization.data(fromPropertyList: root, format: .binary, options: 0).write(to: url)
     }
 
+    @Test("A second instance is saved with its index, a first instance without one")
+    func savesInstanceIndex() async throws {
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = store
+        let url = try #require(store.cacheFileURL)
+        let first = MenuBarItemTag(namespace: .string("com.example.two"), title: "Item-0", instanceIndex: 0)
+        let second = MenuBarItemTag(namespace: .string("com.example.two"), title: "Item-0", instanceIndex: 1)
+        store.enqueueSave([first: Self.capture(), second: Self.capture()])
+        #expect(await waitForFile(url))
+
+        let entries = try #require(store.readSaveFile()?.entries)
+        #expect(entries["com.example.two:Item-0:1"]?["instance"] as? Int == 1)
+        #expect(entries["com.example.two:Item-0"]?["instance"] == nil)
+    }
+
+    @Test("A load that starts after a delete was queued waits for it and finds nothing")
+    func loadAfterQueuedRemovalFindsNothing() async throws {
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = store
+        let url = try #require(store.cacheFileURL)
+        let tag = MenuBarItemTag(namespace: .string("com.example.a"), title: "A", instanceIndex: 0)
+        store.enqueueSave([tag: Self.capture()])
+        #expect(await waitForFile(url))
+        #expect(await store.readSaveFileAfterQueuedWork() != nil)
+
+        // Holding the queue stands in for a delete that has not had its turn yet.
+        queue.suspend()
+        store.removeCacheFiles()
+        #expect(store.readSaveFile() != nil, "a plain read would still get the file")
+        let foundNothing = Task { await store.readSaveFileAfterQueuedWork() == nil }
+        await Task.yield()
+        queue.resume()
+
+        #expect(await foundNothing.value)
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
+
     @Test("A saved cache reads back with its concealed flag")
     func saveAndRead() async throws {
         defer { try? FileManager.default.removeItem(at: directory) }

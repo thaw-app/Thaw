@@ -11,6 +11,31 @@ import Testing
 @testable import Thaw
 
 struct ClockActivationHitTests {
+    @MainActor
+    @Test("The taps follow Native hiding only once the manager has its app state, and leave them down without an engine")
+    func followerNeedsAppState() async throws {
+        let appState = AppState()
+        let manager = appState.hidEventManager
+        #expect(manager.nativeHidingFollower().isEmpty)
+
+        manager.appState = appState
+        let follower = manager.nativeHidingFollower()
+        #expect(follower.count == 1)
+        // The first value arrives a turn later and brings the taps in line: no engine, so they stay down.
+        for _ in 0 ..< 20 { await Task.yield() }
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(!manager.clockActivationTap.isEnabled)
+        #expect(!manager.notificationCenterHotkeyTap.isEnabled)
+        follower.forEach { $0.cancel() }
+    }
+
+    @Test("The bridge taps are only possible with a real engine and Native hiding off")
+    func bridgeNeedsTheStandardMethod() {
+        #expect(ClockBridgeAvailability.isPossible(engineIsOperational: true, nativeHidingActive: false))
+        #expect(!ClockBridgeAvailability.isPossible(engineIsOperational: true, nativeHidingActive: true))
+        #expect(!ClockBridgeAvailability.isPossible(engineIsOperational: false, nativeHidingActive: false))
+    }
+
     private let bands = [
         CGRect(x: 0, y: 0, width: 1470, height: 40),
         CGRect(x: -1920, y: -200, width: 1920, height: 24),

@@ -44,20 +44,6 @@ extension HIDEventManager {
         Self.holdsHoverChanges(modifierFlags: NSEvent.modifierFlags, isDraggingMenuBarItem: isDraggingMenuBarItem)
     }
 
-    private func isMouseNearMenuBar(screen: NSScreen, verticalPadding: CGFloat = 80) -> Bool {
-        guard
-            let mouseLocation = MouseHelpers.locationAppKit,
-            let menuBarHeight = screen.getMenuBarHeight()
-        else {
-            return false
-        }
-
-        return mouseLocation.x >= screen.frame.minX
-            && mouseLocation.x <= screen.frame.maxX
-            && mouseLocation.y <= screen.frame.maxY
-            && mouseLocation.y >= screen.frame.maxY - menuBarHeight - verticalPadding
-    }
-
     func scheduleHoverRearmChecks(appState: AppState) {
         let taskToken = UUID()
         hoverRearmTaskToken = taskToken
@@ -94,11 +80,11 @@ extension HIDEventManager {
                     mouseMovedTap.start()
                 }
 
-                guard let screen = NSScreen.screenWithMouse ?? bestScreen(appState: appState) else {
+                guard let screen = NSScreen.screenWithMouse ?? NSScreen.activeMenuBarScreenOrMain else {
                     continue
                 }
 
-                guard isMouseNearMenuBar(screen: screen) else {
+                guard isMouseInsideMenuBar(screen: screen, padding: 80) else {
                     return
                 }
 
@@ -200,8 +186,8 @@ extension HIDEventManager {
         // The task rechecks items, app menus, and widgets before revealing.
         guard pendingHoverAction != .show else {
             if
-                !isMouseInsideMenuBar(appState: appState, screen: screen)
-                || isMouseInsideNotch(appState: appState, screen: screen)
+                !isMouseInsideMenuBar(screen: screen)
+                || isMouseInsideNotch(screen: screen)
             {
                 Self.diagLog.debug("hover show: cancelled, the pointer left the menu bar")
                 cancelPendingHover(.show)
@@ -240,7 +226,7 @@ extension HIDEventManager {
             }
             self.cancelSmartRehide()
             Self.diagLog.debug("hover show: revealing")
-            hiddenSection.show()
+            hiddenSection.show(on: screen)
             self.isHoverReveal = true
             Self.thawIconHoverGate.noteHoverReveal(at: .now)
         }
@@ -254,7 +240,7 @@ extension HIDEventManager {
         screen: NSScreen
     ) {
         guard
-            !isMouseInsideMenuBarHoverBand(appState: appState, screen: screen),
+            !isMouseInsideMenuBarHoverBand(screen: screen),
             !isMouseInsideThawBar(appState: appState)
         else {
             if pendingHoverAction == .hide {
@@ -282,7 +268,7 @@ extension HIDEventManager {
             guard
                 self.isEnabled,
                 self.configuration.autoRehide,
-                !self.isMouseInsideMenuBarHoverBand(appState: appState, screen: screen),
+                !self.isMouseInsideMenuBarHoverBand(screen: screen),
                 !self.isMouseInsideThawBar(appState: appState)
             else {
                 Self.diagLog.debug("hover hide: skipped, the pointer came back or the setting changed")
@@ -299,7 +285,7 @@ extension HIDEventManager {
                 !self.hoverChangesAreHeld,
                 self.isEnabled,
                 self.configuration.autoRehide,
-                !self.isMouseInsideMenuBarHoverBand(appState: appState, screen: screen),
+                !self.isMouseInsideMenuBarHoverBand(screen: screen),
                 !self.isMouseInsideThawBar(appState: appState)
             else {
                 return
@@ -335,7 +321,7 @@ extension HIDEventManager {
         let delta = (event.scrollingDeltaX + event.scrollingDeltaY) / 2
         if delta > threshold {
             cancelSmartRehide()
-            hiddenSection.show()
+            hiddenSection.show(on: screen)
         } else if delta < -threshold {
             hiddenSection.hide()
         }

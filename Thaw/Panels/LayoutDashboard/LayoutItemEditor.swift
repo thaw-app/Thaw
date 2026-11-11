@@ -1,0 +1,292 @@
+//
+//  LayoutItemEditor.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 René Jiménez
+//  Licensed under the GNU GPLv3
+
+import AppKit
+import MenuBarModel
+import SwiftUI
+import ThawUI
+
+/// The Layout window's editor for the selected item, built from the bars' own actions.
+struct LayoutItemEditor: View {
+    @Environment(AppState.self) private var appState
+    let selection: LayoutSelectionModel
+    /// False while the window is away from the bar it edits: the editor shows the item but changes nothing.
+    var isEditable = true
+
+    var body: some View {
+        switch LayoutItemEditorContent.make(selectedIDs: selection.orderedItemIDs, itemCache: appState.itemManager.itemCache) {
+        case .empty:
+            ThawEmptyState(
+                systemImage: "cursorarrow.click",
+                title: "No item selected",
+                caption: "Select an item in the list or the bars to edit it."
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case let .single(item, section):
+            ThawForm(readingWidth: .full) {
+                LayoutSingleItemEditor(item: item, section: section, selection: selection)
+                    // On the rows, not the form, so the editor still scrolls.
+                    .disabled(!isEditable)
+            }
+            // A fresh editor per item, so a draft name never carries over.
+            .id(item.uniqueIdentifier)
+        case let .several(count, section):
+            ThawForm(readingWidth: .full) {
+                ThawSection("\(count) items selected") {
+                    LayoutSectionPicker(section: section, selection: selection, isLocked: !isEditable)
+                }
+                if let grouping = LayoutSelectionGrouping.make(selection: selection, appState: appState) {
+                    LayoutSelectionGroupingSection(grouping: grouping)
+                        // A read-only window lists the selection but groups nothing.
+                        .disabled(!isEditable)
+                }
+            }
+        }
+    }
+}
+
+/// Group Selected, Add to Group and Make Folder for several selected items, as in their menu.
+private struct LayoutSelectionGroupingSection: View {
+    @Environment(AppState.self) private var appState
+    let grouping: LayoutSelectionGrouping
+
+    var body: some View {
+        ThawSection("Group") {
+            if let refusal = grouping.refusal {
+                Text(LayoutSelectionGrouping.explanation(for: refusal))
+                    .font(ThawType.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                LabeledContent("Selected items") {
+                    ThawActionGroup {
+                        Button("Group") { grouping.group() }
+                            .disabled(!grouping.canGroup)
+                        Button("Make Folder") { grouping.makeFolder(folders: appState.groupFolders) }
+                            .disabled(grouping.isFolder(appState.groupFolders))
+                    }
+                    .buttonStyle(.thawGrouped)
+                }
+                let joinable = grouping.joinableGroups
+                if !joinable.isEmpty {
+                    LabeledContent("Add to group") {
+                        Menu("Choose") {
+                            ForEach(joinable, id: \.origin) { group in
+                                Button(grouping.name(of: group)) { grouping.add(to: group) }
+                            }
+                        }
+                        .fixedSize()
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Visible, Hidden or Always Hidden for the selection, through the bars' move path.
+struct LayoutSectionPicker: View {
+    @Environment(AppState.self) private var appState
+    let section: MenuBarSectionName?
+    let selection: LayoutSelectionModel
+    let isLocked: Bool
+
+    var body: some View {
+        let destinations = MenuBarSearchItemActions.moveDestinations(appState: appState).compactMap(\.self)
+        ThawPicker("Section", selection: Binding(get: { section }, set: { target in
+            guard let target, target != section else { return }
+            LayoutItemVisibility.moveSelection(to: target, selection: selection, appState: appState)
+        })) {
+            ForEach(destinations, id: \.self) { name in
+                Text(name.localizedName).tag(Optional(name))
+            }
+        }
+        .disabled(isLocked)
+    }
+}
+
+/// One item's name, icon, section, group, shortcut and app.
+private struct LayoutSingleItemEditor: View {
+    @Environment(AppState.self) private var appState
+    let item: MenuBarItem
+    let section: MenuBarSectionName
+    let selection: LayoutSelectionModel
+
+    /// Committed on Return and when the editor goes away, as in the bars' inspector.
+    @State private var draftName: String
+    @FocusState private var isNameFocused: Bool
+    /// MenuBarItemAlertReveals isn't observable, so keep a copy and write through.
+    @State private var revealsOnIconChange: Bool
+
+    init(item: MenuBarItem, section: MenuBarSectionName, selection: LayoutSelectionModel) {
+        self.item = item
+        self.section = section
+        self.selection = selection
+        _draftName = State(initialValue: item.customName ?? "")
+        _revealsOnIconChange = State(initialValue: MenuBarItemAlertReveals.contains(item.tag.tagIdentifier))
+    }
+
+    var body: some View {
+        let lock = LayoutItemVisibility.lockReason(
+            for: item,
+            in: section,
+            experimentalSystemItemHiding: appState.settings.layout.enableExperimentalSystemItemHiding
+        )
+        let storedName = LayoutItemNameDraft.stored(for: item)
+        ThawSection("Name and icon") {
+            LabeledContent("Name") {
+                TextField("Name", text: $draftName, prompt: Text(item.autoDetectedName))
+                    .labelsHidden()
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: LayoutItemNameDraft.fieldWidth)
+                    .focused($isNameFocused)
+                    .onSubmit {
+                        commitName()
+                        // Out of the field, so ⌘Z reaches the layout history and not the typing.
+                        isNameFocused = false
+                    }
+            }
+            LabeledContent("Icon") {
+                Button("Choose…") { ItemIconPicker.present(for: item, appState: appState) }
+            }
+        }
+        ThawSection("Section and group") {
+            LayoutSectionPicker(section: section, selection: selection, isLocked: lock != nil)
+                .help(lock ?? "")
+            LayoutItemGroupRow(item: item, section: section)
+        }
+        ThawSection("Shortcut and behavior") {
+            LabeledContent("Shortcut") {
+                if let hotkey = appState.menuBarManager.itemHotkeys[item.uniqueIdentifier] {
+                    HotkeyRecorder(hotkey: hotkey) { EmptyView() }
+                } else {
+                    Text("Available while its app runs")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Toggle("Show when its icon changes", isOn: $revealsOnIconChange)
+                .onChange(of: revealsOnIconChange) { _, isOn in
+                    MenuBarItemAlertReveals.setEnabled(isOn, for: item.tag.tagIdentifier)
+                }
+        }
+        LayoutItemAppSection(details: LayoutItemAppDetails(item: item))
+            .onDisappear(perform: commitName)
+            // A rename undone or made elsewhere replaces the draft, unless someone is typing a new one.
+            .onChange(of: storedName) { old, new in
+                draftName = LayoutItemNameDraft.following(draft: draftName, oldStored: old, newStored: new, isEditing: isNameFocused)
+            }
+    }
+
+    private func commitName() {
+        guard let name = LayoutItemNameDraft.commit(draft: draftName, stored: LayoutItemNameDraft.stored(for: item)) else { return }
+        LayoutEditUndo.rename(item, to: name.isEmpty ? nil : name, undoManager: appState.layoutUndo)
+    }
+}
+
+/// The item's group, with the bars' group menu to change it.
+private struct LayoutItemGroupRow: View {
+    @Environment(AppState.self) private var appState
+    let item: MenuBarItem
+    let section: MenuBarSectionName
+
+    var body: some View {
+        let running = NSWorkspace.shared.runningApplications.filter { !$0.isTerminated }
+        let ordered = LayoutDisplayedItems.items(in: section, appState: appState, runningApplications: running)
+        let manager = appState.itemGroupManager
+        let group = LayoutBarItemMenu.group(of: item, in: manager.resolvedGroups(for: ordered), orderedItems: ordered)
+        LabeledContent("Group") {
+            HStack(spacing: ThawSpacing.base) {
+                Text(group.map { manager.displayName(for: $0, in: ordered) } ?? String(localized: "None"))
+                    .foregroundStyle(.secondary)
+                LayoutMenuButton(title: String(localized: "Edit")) {
+                    LayoutBarItemMenu.groupMenu(for: item, section: section, orderedItems: ordered, appState: appState)
+                }
+                .fixedSize()
+            }
+        }
+    }
+}
+
+/// The owning app: its name, whether it runs, and where to find it.
+private struct LayoutItemAppSection: View {
+    let details: LayoutItemAppDetails
+
+    var body: some View {
+        ThawSection("App") {
+            if details.isPartOfMacOS {
+                LabeledContent("App", value: String(localized: "Part of macOS"))
+            } else if details.isPartOfThaw {
+                LabeledContent {
+                    Text(details.isRunning ? "Running" : "Not running")
+                        .foregroundStyle(.secondary)
+                } label: {
+                    Label {
+                        Text("Part of \(Constants.displayName)")
+                    } icon: {
+                        Image(nsImage: NSApp.applicationIconImage)
+                            .resizable()
+                            .frame(width: 16, height: 16)
+                    }
+                }
+            } else {
+                LabeledContent {
+                    Text(details.isRunning ? "Running" : "Not running")
+                        .foregroundStyle(.secondary)
+                } label: {
+                    Label {
+                        Text(verbatim: details.name ?? String(localized: "Unknown app"))
+                    } icon: {
+                        if let url = details.url {
+                            Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+                                .resizable()
+                                .frame(width: 16, height: 16)
+                        } else {
+                            Image(systemName: "app.dashed")
+                        }
+                    }
+                }
+                if let url = details.url {
+                    ThawActionGroup {
+                        Button("Open App") {
+                            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+                        }
+                        Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+                    }
+                    .buttonStyle(.thawGrouped)
+                }
+            }
+        }
+    }
+}
+
+/// A push button that opens an NSMenu, since SwiftUI can't host the bars' menus.
+struct LayoutMenuButton: NSViewRepresentable {
+    let title: String
+    let makeMenu: @MainActor () -> NSMenu?
+
+    func makeNSView(context _: Context) -> MenuButton {
+        let button = MenuButton(title: title, target: nil, action: nil)
+        button.bezelStyle = .push
+        button.controlSize = .small
+        button.target = button
+        button.action = #selector(MenuButton.openMenu)
+        button.makeMenu = makeMenu
+        return button
+    }
+
+    func updateNSView(_ button: MenuButton, context _: Context) {
+        button.title = title
+        button.makeMenu = makeMenu
+    }
+
+    final class MenuButton: NSButton {
+        var makeMenu: (@MainActor () -> NSMenu?)?
+
+        @objc func openMenu() {
+            guard let menu = makeMenu?() else { return }
+            menu.popUp(positioning: nil, at: NSPoint(x: 0, y: bounds.maxY + 4), in: self)
+        }
+    }
+}

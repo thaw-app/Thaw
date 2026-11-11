@@ -67,12 +67,12 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     /// Matches all com.apple.* owners except app-owned helpers, which can be concealed per bundle.
     public var isNonConcealableSystemItem: Bool {
         let owner = namespace.description
-        if owner.hasPrefix("com.apple."), Self.isAppleAppOwnedBundle(owner) {
+        if SharedConstants.isAppleBundleIdentifier(owner), Self.isAppleAppOwnedBundle(owner) {
             return false
         }
         // Game Mode's indicator is the one system agent item users may put away.
         guard namespace != .gamePolicyAgent else { return false }
-        return isSystemItem || owner.hasPrefix("com.apple.")
+        return isSystemItem || SharedConstants.isAppleBundleIdentifier(owner)
     }
 
     /// Agents in /System/Library/CoreServices cannot conceal hosted items individually; other Apple bundles are app-owned.
@@ -314,7 +314,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
 
     /// Whether this item's owner is in agentUngovernedOwners.
     public var isAgentUngoverned: Bool {
-        if case let .string(owner) = namespace {
+        if let owner = namespace.bundleIdentifier {
             return MenuBarItemTag.agentUngovernedOwners.contains(owner)
         }
         return false
@@ -322,7 +322,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
 
     /// Whether this item's owner is in hidingUnsupportedBundleIDs.
     public var isHidingUnsupported: Bool {
-        if case let .string(bundleID) = namespace {
+        if let bundleID = namespace.bundleIdentifier {
             return MenuBarItemTag.hidingUnsupportedBundleIDs.contains(bundleID)
         }
         return false
@@ -472,7 +472,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     /// place that shape is spelled out.
     public static func isGenericItemTitle(_ title: String?) -> Bool {
         guard let title else { return false }
-        return title.wholeMatch(of: /Item-\d+/) != nil
+        return title.hasPrefix("Item-") && title.wholeMatch(of: TagRegex.genericItem) != nil
     }
 
     /// Generic hosting-process identity (such as a Live Activity) with the pattern <hostingProcess>:Item-\d+.
@@ -606,7 +606,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     }
 
     public static func canonicalTitle(namespace: Namespace, title: String) -> String {
-        guard case let .string(bundleID) = namespace else {
+        guard let bundleID = namespace.bundleIdentifier else {
             return title
         }
         return migratedAppKitPlaceholderTitle(bundleID: bundleID, title: title) ?? migratedWidgetTitle(bundleID: bundleID, title: title)
@@ -620,7 +620,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     /// the live-title registry so AX attribute precedence remains unchanged.
     private static func migratedAppKitPlaceholderTitle(bundleID: String, title: String) -> String? {
         guard bundleID == "com.knollsoft.Rectangle",
-              title.wholeMatch(of: /_NS:\d+/) != nil
+              title.wholeMatch(of: TagRegex.appKitPlaceholderTitle) != nil
         else { return nil }
         return "Item-0"
     }
@@ -631,7 +631,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
         }
         let prefix = "\(bundleID):"
         // The first number belongs to AppKit's title, not to our instance index.
-        if let match = suffix.wholeMatch(of: /(_NS:\d+)(?::(\d+))?/),
+        if suffix.hasPrefix("_NS:"), let match = suffix.wholeMatch(of: TagRegex.appKitPlaceholder),
            let title = migratedAppKitPlaceholderTitle(bundleID: bundleID, title: String(match.1))
         {
             let instance = match.2.map { ":\($0)" } ?? ""
@@ -643,7 +643,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
 
         // A clock's trailing minutes are not an instance index; splitting them would churn identity every minute.
         // Distinguish times by digits before the colon and two digits after it.
-        if !suffix.contains(/\d{1,2}:\d{2}(?::\d{2})?$/), !isSingleItemCalendar(bundleID),
+        if !suffix.contains(TagRegex.trailingClock), !isSingleItemCalendar(bundleID),
            let separator = suffix.lastIndex(of: ":")
         {
             let title = String(suffix[..<separator])
@@ -666,7 +666,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
             && identifiers.contains { title(of: $0)?.hasPrefix("OneDrive \u{2014} ") == true }
         return identifiers.filter { identifier in
             guard let title = title(of: identifier) else { return true }
-            if title.wholeMatch(of: /_NS:\d+(?::\d+)?/) != nil {
+            if title.hasPrefix("_NS:"), title.wholeMatch(of: TagRegex.appKitPlaceholderIdentifier) != nil {
                 return false
             }
             return !(hasOneDriveAccountTitle && title == "OneDrive")
@@ -688,7 +688,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     /// - Note: A bare clock ("15:41") has no ": " and canonicalizes to "#:#".
     public static func canonicalIStatMetricTitle(_ raw: String) -> String {
         // An untitled extra's Item-N is a stable identity that keys the position store, not a reading.
-        if raw.wholeMatch(of: /Item-\d+/) != nil {
+        if raw.wholeMatch(of: TagRegex.genericItem) != nil {
             return raw
         }
         if let separator = raw.range(of: ": ") {
@@ -698,9 +698,9 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
             }
         }
         return collapsingReadingWords(raw
-            .replacing(/[-+]?\d+(?:[.,]\d+)?/, with: "#")
-            .replacing(/#\s*[KMGTPE]?[Bb]\/s/, with: "# B/s")
-            .replacing(/#\s*[KMGTPE]?[Bb]/, with: "# B"))
+            .replacing(TagRegex.number, with: "#")
+            .replacing(TagRegex.byteRate, with: "# B/s")
+            .replacing(TagRegex.byteSize, with: "# B"))
     }
 
     /// Keeps the name after ": " without matching localized countdown words; identity changes only when the meeting changes.

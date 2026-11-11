@@ -521,7 +521,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func openWhatsNewWindow() {
         Task { @MainActor in
-            appState.activate(withPolicy: .regular)
+            appState.activate(withPolicy: appState.userWindowActivationPolicy)
             appState.openWindow(.whatsNew)
         }
     }
@@ -532,7 +532,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(100))
-            appState.activate(withPolicy: .regular)
+            appState.activate(withPolicy: appState.userWindowActivationPolicy)
             appState.openWindow(.settings)
         }
     }

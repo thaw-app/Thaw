@@ -165,7 +165,7 @@ struct ThawBarContentView: View {
             section: section,
             displayID: screen.displayID,
             sizing: itemSizing,
-            tooltipDelay: appState.settings.advanced.tooltipDelay,
+            tooltipDelay: appState.settings.visibility.tooltipDelay,
             displayImage: image,
             isKeyboardFocused: keyboardFocus.index == index,
             activationRequest: keyboardFocus.activationRequest,
@@ -190,15 +190,12 @@ struct ThawBarContentView: View {
     }
 
     var body: some View {
-        let items = if let folderMembers {
-            folderMembers.compactMap { identifier in
-                itemManager.managedItems.first {
-                    MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier) == identifier
-                }
-            }
-        } else {
-            UserSwitchedOffApps.excluding(itemManager.managedItems(for: section), switchedOff: menuBarManager.nativeAppHidingExperiment.userSwitchedOffBundleIDs)
-        }
+        let items = ThawBarItems.items(
+            in: section,
+            folderMembers: folderMembers,
+            itemManager: itemManager,
+            switchedOff: menuBarManager.nativeAppHidingExperiment.userSwitchedOffBundleIDs
+        )
         ZStack {
             ThawBarChrome(
                 colorManager: colorManager,
@@ -283,7 +280,7 @@ struct ThawBarContentView: View {
     private func openPermissionsSettings() {
         menuBarManager.section(withName: section)?.hide()
         appState.navigationState.settingsNavigationIdentifier = .privacy
-        appState.activate(withPolicy: .regular)
+        appState.activate(withPolicy: appState.userWindowActivationPolicy)
         appState.openWindow(.settings)
     }
 
@@ -306,7 +303,7 @@ struct ThawBarContentView: View {
             openPermissionsSettings()
         } label: {
             // Link blue may miss 4.5:1 on sampled wallpaper; use an underline for the affordance.
-            Text("Check permissions")
+            Text("Check Permissions")
                 .underline()
                 .padding(.horizontal, ThawSpacing.tight)
                 .padding(.vertical, ThawSpacing.hairline)

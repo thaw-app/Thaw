@@ -66,11 +66,11 @@ struct WideDisplayRuleTests {
         let settings = AppSettings()
         settings.displaySettings.wideDisplayRule.isEnabled = true
         settings.displaySettings.wideDisplayRule.minimumWidth = 3200
-        settings.advanced.skippedModuleStandIns = ["airdrop"]
+        settings.layout.skippedModuleStandIns = ["airdrop"]
         settings.resetDisplay()
-        settings.resetAdvanced()
+        settings.resetLayout()
         #expect(!settings.displaySettings.wideDisplayRule.isEnabled)
         #expect(settings.displaySettings.wideDisplayRule.minimumWidth == 2560)
-        #expect(settings.advanced.skippedModuleStandIns == Set(Defaults.DefaultValue.skippedModuleStandIns))
+        #expect(settings.layout.skippedModuleStandIns == Set(Defaults.DefaultValue.skippedModuleStandIns))
     }
 }

@@ -14,11 +14,12 @@ import ThawUI
 /// name needs Screen Recording, so a note asks for it while it is missing.
 struct HoverReadoutsRow: View {
     @Environment(AppState.self) private var appState
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: VisibilitySettings
 
     var body: some View {
         ToggleButtonRow("On hover, show") {
             Toggle("Name", isOn: $settings.showMenuBarTooltips)
+                .settingsSearchAnchor("general.showMenuBarTooltips")
                 .help("A tooltip with the item's name.")
                 .disabled(!ScreenCapture.hasCachedScreenRecordingPermission)
             Toggle(isOn: $settings.enableMenuBarItemDescenders) {
@@ -27,6 +28,7 @@ struct HoverReadoutsRow: View {
                     ThawBadge.beta
                 }
             }
+            .settingsSearchAnchor("lab.enableMenuBarItemDescenders")
             .help("A small readout below the item with what it reports, such as a temperature or a count.")
         }
         .annotation(

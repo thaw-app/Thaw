@@ -34,6 +34,7 @@ struct ThawBarItemView: View {
     var onPointerEntered: () -> Void = { /* Items outside a keyboard-driven list have no highlight to clear. */ }
 
     @State private var isHovered = false
+    @State private var isPressed = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Hover and keyboard highlight look the same: both say "this one".
@@ -87,6 +88,14 @@ struct ThawBarItemView: View {
         }
     }
 
+    /// Pressed in, lifted while highlighted, or at rest. Reduce Motion drops the lift.
+    private var glyphScale: CGFloat {
+        if isPressed {
+            return 0.96
+        }
+        return isHighlighted && !reduceMotion ? 1.12 : 1.0
+    }
+
     var body: some View {
         if let image = displayImage {
             // Colour icons keep their own colours so they stay recognizable;
@@ -100,17 +109,18 @@ struct ThawBarItemView: View {
             )
             .contentShape(Rectangle())
             .background {
-                if isHighlighted {
+                if isHighlighted || isPressed {
                     Color.clear.thawGlass(
-                        .selection(.accentColor, strength: .hover),
+                        .selection(.accentColor, strength: isPressed ? .selected : .hover),
                         in: RoundedRectangle(cornerRadius: ThawRadius.control, style: .continuous)
                     )
                 }
             }
             // Stronger lift than the 1.02 row token for the small glyph. Reduce
-            // Motion drops the lift and leaves the hover wash.
-            .scaleEffect(isHighlighted && !reduceMotion ? 1.12 : 1.0)
-            .thawAnimation(ThawMotion.interactive, value: isHighlighted)
+            // Motion drops the lift and leaves the hover wash. Only the pointer
+            // springs it; arrow keys move the highlight at once, and a press shows at once.
+            .scaleEffect(glyphScale)
+            .thawAnimation(ThawMotion.interactive, value: isHovered)
             .onChange(of: activationRequest) {
                 if isKeyboardFocused {
                     leftClickAction()
@@ -128,7 +138,8 @@ struct ThawBarItemView: View {
                             onPointerEntered()
                         }
                     },
-                    thawMenuProvider: thawMenuProvider
+                    thawMenuProvider: thawMenuProvider,
+                    onPress: { isPressed = $0 }
                 )
             }
             // displayName mints an NSRunningApplication per call, faster than
@@ -145,25 +156,9 @@ struct ThawBarItemView: View {
 // MARK: - ThawBarItemClickView
 
 struct ThawBarItemClickView: NSViewRepresentable {
-    /// A click must be quick and short; anything else is a drag of the panel,
-    /// which is movable by its background.
-    private struct PressTracker {
-        private var start: ContinuousClock.Instant?
-        private var startLocation = CGPoint.zero
-
-        mutating func pressBegan() {
-            start = .now
-            startLocation = NSEvent.mouseLocation
-        }
-
-        var releaseIsClick: Bool {
-            guard let start else { return false }
-            return start.duration(to: .now) < .milliseconds(500)
-                && startLocation.distance(to: NSEvent.mouseLocation) < 5
-        }
-    }
-
     final class Represented: NSView {
+        private static let diagLog = DiagLog(category: "ThawBar.ItemView")
+
         var item: MenuBarItem
         var tooltipDelay: TimeInterval
 
@@ -171,8 +166,10 @@ struct ThawBarItemClickView: NSViewRepresentable {
         var rightClickAction: () -> Void
         var onHover: (Bool) -> Void
 
-        private var leftPress = PressTracker()
-        private var rightPress = PressTracker()
+        private var leftPress = ThawBarItemPress()
+        private var rightPress = ThawBarItemPress()
+        /// Told when a press starts, and when it ends or turns into a drag of the panel.
+        var onPress: (Bool) -> Void = { _ in /* Set by the SwiftUI side. */ }
 
         /// Resolved through MenuBarItemDisplayName so the continuous
         /// updateNSView calls do not leak an NSRunningApplication per tick.
@@ -242,12 +239,22 @@ struct ThawBarItemClickView: NSViewRepresentable {
             super.mouseExited(with: event)
             tooltipController.cancel()
             onHover(false)
+            onPress(false)
         }
 
         override func mouseDown(with event: NSEvent) {
             super.mouseDown(with: event)
             tooltipController.cancel()
-            leftPress.pressBegan()
+            leftPress.began(at: NSEvent.mouseLocation)
+            Self.diagLog.debug("press(left): began on \(item.logString)")
+            onPress(true)
+        }
+
+        override func mouseDragged(with event: NSEvent) {
+            super.mouseDragged(with: event)
+            if leftPress.isActive, !leftPress.isClick(at: NSEvent.mouseLocation) {
+                onPress(false)
+            }
         }
 
         override func rightMouseDown(with event: NSEvent) {
@@ -260,7 +267,7 @@ struct ThawBarItemClickView: NSViewRepresentable {
             }
             super.rightMouseDown(with: event)
             tooltipController.cancel()
-            rightPress.pressBegan()
+            rightPress.began(at: NSEvent.mouseLocation)
         }
 
         /// The item menu every Thaw surface offers. See LayoutBarItemMenu.
@@ -272,14 +279,23 @@ struct ThawBarItemClickView: NSViewRepresentable {
 
         override func mouseUp(with event: NSEvent) {
             super.mouseUp(with: event)
-            if leftPress.releaseIsClick {
+            let pressBegan = leftPress.isActive
+            let isClick = leftPress.isClick(at: NSEvent.mouseLocation)
+            leftPress.ended()
+            onPress(false)
+            if isClick {
                 leftClickAction()
+            } else {
+                // Says why a press that reached the item opened nothing.
+                Self.diagLog.debug("press(left): released on \(item.logString) without a click (press began here: \(pressBegan))")
             }
         }
 
         override func rightMouseUp(with event: NSEvent) {
             super.rightMouseUp(with: event)
-            if rightPress.releaseIsClick {
+            let isClick = rightPress.isClick(at: NSEvent.mouseLocation)
+            rightPress.ended()
+            if isClick {
                 rightClickAction()
             }
         }
@@ -294,6 +310,7 @@ struct ThawBarItemClickView: NSViewRepresentable {
 
     /// Builds Thaw's item menu on demand. Nil where no app state is at hand.
     var thawMenuProvider: (() -> NSMenu?)?
+    var onPress: (Bool) -> Void = { _ in /* Callers without a pressed look ignore presses. */ }
 
     func makeNSView(context _: Context) -> Represented {
         let view = Represented(
@@ -304,6 +321,7 @@ struct ThawBarItemClickView: NSViewRepresentable {
             onHover: onHover
         )
         view.thawMenuProvider = thawMenuProvider
+        view.onPress = onPress
         return view
     }
 
@@ -318,5 +336,6 @@ struct ThawBarItemClickView: NSViewRepresentable {
             onHover: onHover
         )
         nsView.thawMenuProvider = thawMenuProvider
+        nsView.onPress = onPress
     }
 }

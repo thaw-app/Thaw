@@ -60,6 +60,7 @@ struct CaptureInspectorSection: View {
                 results(for: inspection)
             }
         }
+        .settingsSearchAnchor("privacy.captureInspector")
     }
 
     // MARK: Controls
@@ -75,7 +76,7 @@ struct CaptureInspectorSection: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             Label {
-                Text("Thaw is capturing nothing. Screen Recording permission has not been granted.")
+                Text("\(Constants.displayName) is capturing nothing. Screen Recording permission has not been granted.")
             } icon: {
                 Image(systemName: "eye.slash")
             }
@@ -96,7 +97,7 @@ struct CaptureInspectorSection: View {
             )
         }
         guard let frame else {
-            return String(localized: "Thaw reads a band at the top of the display. Nothing else on screen is captured.")
+            return String(localized: "\(Constants.displayName) reads a band at the top of the display. Nothing else on screen is captured.")
         }
         return String(
             localized: "Thaw reads a \(Int(frame.width)) × \(Int(frame.height)) pt band at the top of the display. Nothing else on screen is captured."
@@ -171,7 +172,7 @@ struct CaptureInspectorSection: View {
                     title: "Your menu bar",
                     // Naming the incidental contents is the honest half of the
                     // claim: this really is a slice of the user's screen.
-                    subtitle: "The band Thaw reads, exactly as captured. That includes the "
+                    subtitle: "The band \(Constants.displayName) reads, exactly as captured. That includes the "
                         + "frontmost app's menus and the wallpaper behind the bar."
                 )
             }
@@ -196,11 +197,11 @@ struct CaptureInspectorSection: View {
                 Text(concealedItemCount == 1
                     ? "1 hidden item is not captured"
                     : "\(concealedItemCount) hidden items are not captured")
-                    .font(.caption)
+                    .font(ThawType.caption)
                     .foregroundStyle(.secondary)
             }
             Text(concealedItemsExplanation)
-                .font(.caption)
+                .font(ThawType.caption)
                 .foregroundStyle(ThawInk.supporting)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -228,7 +229,7 @@ struct CaptureInspectorSection: View {
                 regions: showsCropRegions ? cropRegions(in: capture) : []
             )
             Text("\(capture.image.width) × \(capture.image.height) px at \(capture.scale, format: .number)×")
-                .font(.caption)
+                .font(ThawType.caption)
                 .foregroundStyle(ThawInk.supporting)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

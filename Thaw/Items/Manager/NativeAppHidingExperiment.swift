@@ -129,7 +129,7 @@ final class NativeAppHidingExperiment {
     }
 
     @ObservationIgnored private var observationTask: Task<Void, Never>?
-    @ObservationIgnored private weak var settings: AdvancedSettings?
+    @ObservationIgnored private weak var settings: LayoutSettings?
 
     deinit {
         observationTask?.cancel()
@@ -140,7 +140,7 @@ final class NativeAppHidingExperiment {
         controller.recoverPreviousSession()
     }
 
-    func start(controller sectionController: RuntimeSectionController, settings: AdvancedSettings) {
+    func start(controller sectionController: RuntimeSectionController, settings: LayoutSettings) {
         controller.attach(to: sectionController)
         self.settings = settings
         // Before the first start, which takes over the apps it hides.
@@ -172,7 +172,7 @@ final class NativeAppHidingExperiment {
         enable(settings: settings, isLaunch: false)
     }
 
-    private func enable(settings: AdvancedSettings, isLaunch: Bool) {
+    private func enable(settings: LayoutSettings, isLaunch: Bool) {
         failedStartNotice = nil
         if !controller.enable(), !NativeHidingStart.keepsChoice(afterFailedStartAtLaunch: isLaunch) {
             failedStartNotice = NativeHidingStart.failureNotice(reason: controller.lastError)

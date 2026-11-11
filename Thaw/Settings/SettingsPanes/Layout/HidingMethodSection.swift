@@ -12,7 +12,7 @@ import ThawUI
 ///
 /// Native rewrites another app's settings, so it stays opt-in.
 struct HidingMethodSection: View {
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: LayoutSettings
     @Environment(AppState.self) private var appState
     @State private var confirmsSetAside = false
     @State private var setAsideError: String?
@@ -43,6 +43,7 @@ struct HidingMethodSection: View {
             Text("Hiding")
         } content: {
             ThawPillPicker("Hiding method", selection: methodBinding, values: HidingMethod.allCases, title: \.localized)
+                .settingsSearchAnchor("advanced.enableNativeAppHiding")
                 .disabled(!NativeHidingStart.allowsMethodChange(journalNeedsAttention: experiment.journalNeedsAttention))
                 .annotation {
                     VStack(alignment: .leading, spacing: ThawSpacing.tight) {

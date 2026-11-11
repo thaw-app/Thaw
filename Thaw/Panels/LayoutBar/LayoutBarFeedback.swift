@@ -24,6 +24,8 @@ final class LayoutBarFeedbackCenter {
         let id = UUID()
         let title: String
         let message: String
+        /// Refusals that come from macOS keeping its own items in place, which the pane explains in one line.
+        var isAboutSystemItems = false
 
         static func == (lhs: Refusal, rhs: Refusal) -> Bool {
             lhs.id == rhs.id
@@ -106,9 +108,10 @@ final class LayoutBarFeedbackCenter {
                 comment: "Title shown when an Apple item was refused because system item hiding is off"
             ),
             message: String(
-                localized: "It’s one of Apple’s own items, which macOS keeps in the menu bar unless \(Constants.displayName) asks it not to. Choose Everything under Hiding method in Settings \(Constants.menuArrow) Layout to move it.",
+                localized: "It’s one of Apple’s own items, which macOS keeps in the menu bar unless \(Constants.displayName) asks it not to. Choose Standard under Hiding method in Settings \(Constants.menuArrow) Layout to move it.",
                 comment: "Explanation shown when an Apple item was refused because system item hiding is off"
-            )
+            ),
+            isAboutSystemItems: true
         )
     }
 
@@ -129,7 +132,8 @@ final class LayoutBarFeedbackCenter {
             message: String(
                 localized: "macOS doesn’t allow this item to leave its place in the menu bar.",
                 comment: "Explanation shown when an item cannot be assigned to a section"
-            )
+            ),
+            isAboutSystemItems: true
         )
     }
 
@@ -143,7 +147,8 @@ final class LayoutBarFeedbackCenter {
             message: String(
                 localized: "macOS doesn’t allow this item to leave its place in the menu bar.",
                 comment: "Explanation shown when an item cannot be assigned to a section"
-            )
+            ),
+            isAboutSystemItems: true
         )
     }
 

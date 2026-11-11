@@ -11,8 +11,8 @@ import Testing
 @testable import Thaw
 import ThawUI
 
-/// The General and Advanced settings models on their own, with settings in a
-/// throwaway suite. None is wired to an AppState, so no change reaches the menu bar.
+/// The page settings models on their own, with settings in a throwaway
+/// suite. None is wired to an AppState, so no change reaches the menu bar.
 @MainActor
 @Suite("Preference models", .serialized, .scratchDefaults)
 struct PreferenceModelsTests {
@@ -33,28 +33,11 @@ struct PreferenceModelsTests {
         settings.showSettingDescriptions = !Defaults.DefaultValue.showSettingDescriptions
         settings.settingsAppearance = .black
         settings.simpleModeShowsPreview = !Defaults.DefaultValue.simpleModeShowsPreview
-        settings.lockThawBarPosition = !Defaults.DefaultValue.lockThawBarPosition
-        settings.roundScreenCorners = !Defaults.DefaultValue.roundScreenCorners
-        settings.screenCornerRadius = 22
-        settings.openHiddenItemsInMenuBar = !Defaults.DefaultValue.openHiddenItemsInMenuBar
-        settings.useThawBar = !Defaults.DefaultValue.useThawBar
-        settings.useThawBarOnlyOnNotchedDisplay = !Defaults.DefaultValue.useThawBarOnlyOnNotchedDisplay
-        settings.thawBarLocation = .leftAligned
-        settings.thawBarLocationOnHotkey = !Defaults.DefaultValue.thawBarLocationOnHotkey
-        settings.showOnClick = !Defaults.DefaultValue.showOnClick
-        settings.showOnHover = !Defaults.DefaultValue.showOnHover
-        settings.showOnScroll = !Defaults.DefaultValue.showOnScroll
-        settings.autoRehide = !Defaults.DefaultValue.autoRehide
-        settings.rehideStrategy = .focusedApp
-        settings.rehideInterval = 42
-        settings.tempShowInterval = 7
+        settings.hideApplicationMenus = !Defaults.DefaultValue.hideApplicationMenus
+        settings.enableSecondaryContextMenu = !Defaults.DefaultValue.enableSecondaryContextMenu
+        settings.enableDesktopMenuHiding = !Defaults.DefaultValue.enableDesktopMenuHiding
 
         #expect(Defaults.bool(forKey: .showThawIcon) == false)
-        #expect(Defaults.double(forKey: .screenCornerRadius) == 22)
-        #expect(Defaults.integer(forKey: .thawBarLocation) == ThawBarLocation.leftAligned.rawValue)
-        #expect(Defaults.integer(forKey: .rehideStrategy) == RehideStrategy.focusedApp.rawValue)
-        #expect(Defaults.double(forKey: .rehideInterval) == 42)
-        #expect(Defaults.double(forKey: .tempShowInterval) == 7)
 
         let reloaded = GeneralSettings()
         reloaded.loadInitialState()
@@ -64,21 +47,9 @@ struct PreferenceModelsTests {
         #expect(reloaded.showSettingDescriptions == settings.showSettingDescriptions)
         #expect(reloaded.settingsAppearance == .black)
         #expect(reloaded.simpleModeShowsPreview == settings.simpleModeShowsPreview)
-        #expect(reloaded.lockThawBarPosition == settings.lockThawBarPosition)
-        #expect(reloaded.roundScreenCorners == settings.roundScreenCorners)
-        #expect(reloaded.screenCornerRadius == 22)
-        #expect(reloaded.openHiddenItemsInMenuBar == settings.openHiddenItemsInMenuBar)
-        #expect(reloaded.useThawBar == settings.useThawBar)
-        #expect(reloaded.useThawBarOnlyOnNotchedDisplay == settings.useThawBarOnlyOnNotchedDisplay)
-        #expect(reloaded.thawBarLocation == .leftAligned)
-        #expect(reloaded.thawBarLocationOnHotkey == settings.thawBarLocationOnHotkey)
-        #expect(reloaded.showOnClick == settings.showOnClick)
-        #expect(reloaded.showOnHover == settings.showOnHover)
-        #expect(reloaded.showOnScroll == settings.showOnScroll)
-        #expect(reloaded.autoRehide == settings.autoRehide)
-        #expect(reloaded.rehideStrategy == .focusedApp)
-        #expect(reloaded.rehideInterval == 42)
-        #expect(reloaded.tempShowInterval == 7)
+        #expect(reloaded.hideApplicationMenus == settings.hideApplicationMenus)
+        #expect(reloaded.enableSecondaryContextMenu == settings.enableSecondaryContextMenu)
+        #expect(reloaded.enableDesktopMenuHiding == settings.enableDesktopMenuHiding)
     }
 
     @Test("A custom icon is remembered as the last custom icon and survives a reload")
@@ -100,11 +71,15 @@ struct PreferenceModelsTests {
         Defaults.set(Data("x".utf8), forKey: .thawIcon)
         Defaults.set(99, forKey: .thawBarLocation)
         Defaults.set(99, forKey: .rehideStrategy)
-        let settings = GeneralSettings()
-        settings.loadInitialState()
-        #expect(settings.thawIcon == Defaults.DefaultValue.thawIcon)
-        #expect(settings.thawBarLocation == Defaults.DefaultValue.thawBarLocation)
-        #expect(settings.rehideStrategy == Defaults.DefaultValue.rehideStrategy)
+        let general = GeneralSettings()
+        general.loadInitialState()
+        let thawBar = ThawBarSettings()
+        thawBar.loadInitialState()
+        let visibility = VisibilitySettings()
+        visibility.loadInitialState()
+        #expect(general.thawIcon == Defaults.DefaultValue.thawIcon)
+        #expect(thawBar.thawBarLocation == Defaults.DefaultValue.thawBarLocation)
+        #expect(visibility.rehideStrategy == Defaults.DefaultValue.rehideStrategy)
     }
 
     @Test("General URI changes set the matching property and ignore everything else")
@@ -115,10 +90,8 @@ struct PreferenceModelsTests {
         let paths: [String: ReferenceWritableKeyPath<GeneralSettings, Bool>] = [
             "showThawIcon": \.showThawIcon, "customThawIconIsTemplate": \.customThawIconIsTemplate,
             "simpleMode": \.simpleMode, "showSettingDescriptions": \.showSettingDescriptions,
-            "lockThawBarPosition": \.lockThawBarPosition, "openHiddenItemsInMenuBar": \.openHiddenItemsInMenuBar,
-            "useThawBarOnlyOnNotchedDisplay": \.useThawBarOnlyOnNotchedDisplay,
-            "thawBarLocationOnHotkey": \.thawBarLocationOnHotkey, "showOnClick": \.showOnClick,
-            "showOnHover": \.showOnHover, "showOnScroll": \.showOnScroll, "autoRehide": \.autoRehide,
+            "hideApplicationMenus": \.hideApplicationMenus, "enableSecondaryContextMenu": \.enableSecondaryContextMenu,
+            "enableDesktopMenuHiding": \.enableDesktopMenuHiding,
         ]
         for (key, path) in paths {
             let flipped = !settings[keyPath: path]
@@ -127,112 +100,216 @@ struct PreferenceModelsTests {
             #expect(settings[keyPath: path] == flipped, "\(key) follows the URI")
         }
 
-        NotificationCenter.default.post(uriChange("rehideInterval", ["doubleValue": 99.0]))
-        NotificationCenter.default.post(uriChange("tempShowInterval", ["doubleValue": 3.0]))
-        NotificationCenter.default.post(uriChange("rehideStrategy", ["rawEnumValue": RehideStrategy.timed.rawValue]))
         NotificationCenter.default.post(uriChange("settingsAppearance", ["rawEnumValue": SettingsAppearance.black.rawValue]))
-        await waitUntil { settings.rehideStrategy == .timed && settings.settingsAppearance == .black }
+        await waitUntil { settings.settingsAppearance == .black }
         #expect(settings.settingsAppearance == .black)
-        #expect(settings.rehideInterval == 99)
-        #expect(settings.tempShowInterval == 3)
-        #expect(settings.rehideStrategy == .timed)
 
-        NotificationCenter.default.post(uriChange("rehideStrategy", ["rawEnumValue": 42]))
         NotificationCenter.default.post(uriChange("settingsAppearance", ["rawEnumValue": 42]))
         NotificationCenter.default.post(uriChange("unknown", ["value": true, "doubleValue": 1.0]))
         NotificationCenter.default.post(Notification(name: .settingsDidChangeViaURI, userInfo: ["value": true]))
-        NotificationCenter.default.post(uriChange("tempShowInterval", ["doubleValue": 4.0]))
-        await waitUntil { settings.tempShowInterval == 4 }
-        #expect(settings.rehideStrategy == .timed, "an unknown raw value changes nothing")
+        NotificationCenter.default.post(uriChange("showThawIcon", ["value": !settings.showThawIcon]))
+        let expected = !settings.showThawIcon
+        await waitUntil { settings.showThawIcon == expected }
         #expect(settings.settingsAppearance == .black, "an unknown raw value changes nothing")
-        #expect(settings.rehideInterval == 99)
     }
 
-    // MARK: Advanced
+    // MARK: Visibility, Thaw Bar and screen corners
 
-    @Test("Advanced settings write each change through to Defaults and load back")
-    func advancedPersists() {
-        let settings = AdvancedSettings()
-        settings.enableAlwaysHiddenSection = !Defaults.DefaultValue.enableAlwaysHiddenSection
-        settings.showAllSectionsOnUserDrag = !Defaults.DefaultValue.showAllSectionsOnUserDrag
-        settings.sectionDividerStyle = .slash
-        settings.customSectionDividerImage = Data([9, 9])
-        settings.customSectionDividerIsTemplate = !Defaults.DefaultValue.customSectionDividerIsTemplate
-        settings.menuBarArrangementMode = .manual
-        settings.hideApplicationMenus = !Defaults.DefaultValue.hideApplicationMenus
-        settings.enableSecondaryContextMenu = !Defaults.DefaultValue.enableSecondaryContextMenu
-        settings.showOnHoverDelay = 0.9
-        settings.tooltipDelay = 1.1
-        settings.showMenuBarTooltips = !Defaults.DefaultValue.showMenuBarTooltips
-        settings.iconRefreshInterval = 2
-        settings.autoZenWhileSharingScreen = !Defaults.DefaultValue.autoZenWhileSharingScreen
-        settings.enableMenuBarItemDescenders = !Defaults.DefaultValue.enableMenuBarItemDescenders
-        settings.enableSwapBar = !Defaults.DefaultValue.enableSwapBar
-        settings.swapOnThawIconClick = !Defaults.DefaultValue.swapOnThawIconClick
-        settings.enableControlItemPanel = !Defaults.DefaultValue.enableControlItemPanel
-        settings.fetchReleaseNotes = !Defaults.DefaultValue.fetchReleaseNotes
-        settings.enableModuleStandIns = !Defaults.DefaultValue.enableModuleStandIns
-        settings.skippedModuleStandIns = ["b", "a"]
-        settings.enableTimeMachineTakeover = !Defaults.DefaultValue.enableTimeMachineTakeover
-        settings.enableTimerTakeover = !Defaults.DefaultValue.enableTimerTakeover
-        settings.enableTextInputTakeover = !Defaults.DefaultValue.enableTextInputTakeover
-        settings.enableRecordingWatch = !Defaults.DefaultValue.enableRecordingWatch
-        settings.zenModeWhileRecording = !Defaults.DefaultValue.zenModeWhileRecording
-        settings.recordingWatchScreen = .mainDisplay
-        settings.recordingWatchPlacement = .leading
-        settings.enableDesktopMenuHiding = !Defaults.DefaultValue.enableDesktopMenuHiding
-        settings.enableExperimentalOverflowPrevention = !Defaults.DefaultValue.enableExperimentalOverflowPrevention
-        settings.alwaysUseAppIconForMenuBarItems = !Defaults.DefaultValue.alwaysUseAppIconForMenuBarItems
-        settings.menuBarOrderFulfillmentTimeout = 9
-        settings.menuBarSearchPresentation = .launcher
+    @Test("Visibility, Thaw Bar and screen-corner settings write through to Defaults and load back")
+    func visibilityThawBarAndCornersPersist() {
+        let visibility = VisibilitySettings()
+        visibility.showOnClick = !Defaults.DefaultValue.showOnClick
+        visibility.showOnHover = !Defaults.DefaultValue.showOnHover
+        visibility.showOnScroll = !Defaults.DefaultValue.showOnScroll
+        visibility.autoRehide = !Defaults.DefaultValue.autoRehide
+        visibility.rehideStrategy = .focusedApp
+        visibility.rehideInterval = 42
+        visibility.tempShowInterval = 7
+        visibility.showOnHoverDelay = 0.9
+        visibility.tooltipDelay = 1.1
+        visibility.showMenuBarTooltips = !Defaults.DefaultValue.showMenuBarTooltips
+        visibility.autoZenWhileSharingScreen = !Defaults.DefaultValue.autoZenWhileSharingScreen
+        visibility.enableMenuBarItemDescenders = !Defaults.DefaultValue.enableMenuBarItemDescenders
+        visibility.enableSwapBar = !Defaults.DefaultValue.enableSwapBar
+        visibility.swapOnThawIconClick = !Defaults.DefaultValue.swapOnThawIconClick
+        visibility.enableRecordingWatch = !Defaults.DefaultValue.enableRecordingWatch
+        visibility.zenModeWhileRecording = !Defaults.DefaultValue.zenModeWhileRecording
+        visibility.recordingWatchScreen = .mainDisplay
+        visibility.recordingWatchPlacement = .leading
+        visibility.menuBarSearchPresentation = .compact
+        let thawBar = ThawBarSettings()
+        thawBar.lockThawBarPosition = !Defaults.DefaultValue.lockThawBarPosition
+        thawBar.openHiddenItemsInMenuBar = !Defaults.DefaultValue.openHiddenItemsInMenuBar
+        thawBar.useThawBar = !Defaults.DefaultValue.useThawBar
+        thawBar.useThawBarOnlyOnNotchedDisplay = !Defaults.DefaultValue.useThawBarOnlyOnNotchedDisplay
+        thawBar.thawBarLocation = .leftAligned
+        thawBar.thawBarLocationOnHotkey = !Defaults.DefaultValue.thawBarLocationOnHotkey
+        let corners = AppearanceSettings()
+        corners.roundScreenCorners = !Defaults.DefaultValue.roundScreenCorners
+        corners.screenCornerRadius = 22
+
+        #expect(Defaults.double(forKey: .screenCornerRadius) == 22)
+        #expect(Defaults.integer(forKey: .thawBarLocation) == ThawBarLocation.leftAligned.rawValue)
+        #expect(Defaults.integer(forKey: .rehideStrategy) == RehideStrategy.focusedApp.rawValue)
+        #expect(Defaults.string(forKey: .recordingWatchScreen) == "mainDisplay")
+
+        let reloadedVisibility = VisibilitySettings()
+        reloadedVisibility.loadInitialState()
+        #expect(reloadedVisibility.showOnClick == visibility.showOnClick)
+        #expect(reloadedVisibility.showOnHover == visibility.showOnHover)
+        #expect(reloadedVisibility.showOnScroll == visibility.showOnScroll)
+        #expect(reloadedVisibility.autoRehide == visibility.autoRehide)
+        #expect(reloadedVisibility.rehideStrategy == .focusedApp)
+        #expect(reloadedVisibility.rehideInterval == 42)
+        #expect(reloadedVisibility.tempShowInterval == 7)
+        #expect(reloadedVisibility.showOnHoverDelay == 0.9)
+        #expect(reloadedVisibility.tooltipDelay == 1.1)
+        #expect(reloadedVisibility.showMenuBarTooltips == visibility.showMenuBarTooltips)
+        #expect(reloadedVisibility.autoZenWhileSharingScreen == visibility.autoZenWhileSharingScreen)
+        #expect(reloadedVisibility.enableMenuBarItemDescenders == visibility.enableMenuBarItemDescenders)
+        #expect(reloadedVisibility.enableSwapBar == visibility.enableSwapBar)
+        #expect(reloadedVisibility.swapOnThawIconClick == visibility.swapOnThawIconClick)
+        #expect(reloadedVisibility.enableRecordingWatch == visibility.enableRecordingWatch)
+        #expect(reloadedVisibility.zenModeWhileRecording == visibility.zenModeWhileRecording)
+        #expect(reloadedVisibility.recordingWatchScreen == .mainDisplay)
+        #expect(reloadedVisibility.recordingWatchPlacement == .leading)
+        #expect(reloadedVisibility.menuBarSearchPresentation == .compact)
+
+        let reloadedThawBar = ThawBarSettings()
+        reloadedThawBar.loadInitialState()
+        #expect(reloadedThawBar.lockThawBarPosition == thawBar.lockThawBarPosition)
+        #expect(reloadedThawBar.openHiddenItemsInMenuBar == thawBar.openHiddenItemsInMenuBar)
+        #expect(reloadedThawBar.useThawBar == thawBar.useThawBar)
+        #expect(reloadedThawBar.useThawBarOnlyOnNotchedDisplay == thawBar.useThawBarOnlyOnNotchedDisplay)
+        #expect(reloadedThawBar.thawBarLocation == .leftAligned)
+        #expect(reloadedThawBar.thawBarLocationOnHotkey == thawBar.thawBarLocationOnHotkey)
+
+        let reloadedCorners = AppearanceSettings()
+        reloadedCorners.loadInitialState()
+        #expect(reloadedCorners.roundScreenCorners == corners.roundScreenCorners)
+        #expect(reloadedCorners.screenCornerRadius == 22)
+    }
+
+    @Test("Visibility and Thaw Bar URI changes set the matching property and ignore everything else")
+    func visibilityAndThawBarURIChanges() {
+        let visibility = VisibilitySettings()
+        let bools: [String: ReferenceWritableKeyPath<VisibilitySettings, Bool>] = [
+            "showOnClick": \.showOnClick, "showOnHover": \.showOnHover, "showOnScroll": \.showOnScroll,
+            "autoRehide": \.autoRehide, "showMenuBarTooltips": \.showMenuBarTooltips,
+            "autoZenWhileSharingScreen": \.autoZenWhileSharingScreen,
+            "enableMenuBarItemDescenders": \.enableMenuBarItemDescenders, "enableSwapBar": \.enableSwapBar,
+            "swapOnThawIconClick": \.swapOnThawIconClick,
+            "showAlwaysHiddenOnIconDoubleClick": \.showAlwaysHiddenOnIconDoubleClick,
+            "enableRecordingWatch": \.enableRecordingWatch, "zenModeWhileRecording": \.zenModeWhileRecording,
+        ]
+        for (key, path) in bools {
+            let flipped = !visibility[keyPath: path]
+            visibility.handleExternalSettingsChange(uriChange(key, ["value": flipped]))
+            #expect(visibility[keyPath: path] == flipped, "\(key) follows the URI")
+        }
+        let doubles: [String: ReferenceWritableKeyPath<VisibilitySettings, Double>] = [
+            "showOnHoverDelay": \.showOnHoverDelay, "tooltipDelay": \.tooltipDelay,
+            "rehideInterval": \.rehideInterval, "tempShowInterval": \.tempShowInterval,
+        ]
+        for (key, path) in doubles {
+            visibility.handleExternalSettingsChange(uriChange(key, ["doubleValue": 4.5]))
+            #expect(visibility[keyPath: path] == 4.5, "\(key) follows the URI")
+        }
+        visibility.handleExternalSettingsChange(uriChange("rehideStrategy", ["rawEnumValue": RehideStrategy.timed.rawValue]))
+        #expect(visibility.rehideStrategy == .timed)
+        visibility.handleExternalSettingsChange(uriChange("rehideStrategy", ["rawEnumValue": 42]))
+        #expect(visibility.rehideStrategy == .timed, "an unknown raw value changes nothing")
+
+        let thawBar = ThawBarSettings()
+        let thawBarPaths: [String: ReferenceWritableKeyPath<ThawBarSettings, Bool>] = [
+            "lockThawBarPosition": \.lockThawBarPosition, "openHiddenItemsInMenuBar": \.openHiddenItemsInMenuBar,
+            "useThawBarOnlyOnNotchedDisplay": \.useThawBarOnlyOnNotchedDisplay,
+            "thawBarLocationOnHotkey": \.thawBarLocationOnHotkey,
+        ]
+        for (key, path) in thawBarPaths {
+            let flipped = !thawBar[keyPath: path]
+            thawBar.handleExternalSettingsChange(uriChange(key, ["value": flipped]))
+            #expect(thawBar[keyPath: path] == flipped, "\(key) follows the URI")
+        }
+        let before = visibility.tooltipDelay
+        visibility.handleExternalSettingsChange(uriChange("unknown", ["value": true, "doubleValue": 8.0]))
+        visibility.handleExternalSettingsChange(Notification(name: .settingsDidChangeViaURI))
+        #expect(visibility.tooltipDelay == before)
+    }
+
+    // MARK: Layout and the smaller pages
+
+    @Test("Layout and the smaller pages write each change through to Defaults and load back")
+    func layoutAndSmallPagesPersist() {
+        let layout = LayoutSettings()
+        layout.enableAlwaysHiddenSection = !Defaults.DefaultValue.enableAlwaysHiddenSection
+        layout.showAllSectionsOnUserDrag = !Defaults.DefaultValue.showAllSectionsOnUserDrag
+        layout.sectionDividerStyle = .slash
+        layout.customSectionDividerImage = Data([9, 9])
+        layout.customSectionDividerIsTemplate = !Defaults.DefaultValue.customSectionDividerIsTemplate
+        layout.menuBarArrangementMode = .manual
+        layout.iconRefreshInterval = 2
+        layout.enableModuleStandIns = !Defaults.DefaultValue.enableModuleStandIns
+        layout.skippedModuleStandIns = ["b", "a"]
+        layout.enableTimeMachineTakeover = !Defaults.DefaultValue.enableTimeMachineTakeover
+        layout.enableTimerTakeover = !Defaults.DefaultValue.enableTimerTakeover
+        layout.enableTextInputTakeover = !Defaults.DefaultValue.enableTextInputTakeover
+        layout.enableExperimentalOverflowPrevention = !Defaults.DefaultValue.enableExperimentalOverflowPrevention
+        layout.alwaysUseAppIconForMenuBarItems = !Defaults.DefaultValue.alwaysUseAppIconForMenuBarItems
+        layout.menuBarOrderFulfillmentTimeout = 9
+        let privacy = PrivacySettings()
+        privacy.fetchReleaseNotes = !Defaults.DefaultValue.fetchReleaseNotes
+        privacy.showReleaseNotesAfterUpdate = !Defaults.DefaultValue.showReleaseNotesAfterUpdate
+        let tools = ToolsSettings()
+        tools.enableDiagnosticLogging = !Defaults.DefaultValue.enableDiagnosticLogging
+        let widgets = WidgetsSettings()
+        widgets.enableControlItemPanel = !Defaults.DefaultValue.enableControlItemPanel
+        let spaces = SpacesSettings()
+        spaces.showSpaceIndicator = !Defaults.DefaultValue.showSpaceIndicator
 
         #expect(Defaults.stringArray(forKey: .skippedModuleStandIns) == ["a", "b"])
-        #expect(Defaults.string(forKey: .recordingWatchScreen) == "mainDisplay")
         #expect(Defaults.data(forKey: .customSectionDividerImage) == Data([9, 9]))
 
-        let reloaded = AdvancedSettings()
-        reloaded.loadInitialState()
-        #expect(reloaded.enableAlwaysHiddenSection == settings.enableAlwaysHiddenSection)
-        #expect(reloaded.isAlwaysHiddenSectionEnabled == settings.enableAlwaysHiddenSection)
-        #expect(reloaded.showAllSectionsOnUserDrag == settings.showAllSectionsOnUserDrag)
-        #expect(reloaded.sectionDividerStyle == .slash)
-        #expect(reloaded.customSectionDividerImage == Data([9, 9]))
-        #expect(reloaded.customSectionDividerIsTemplate == settings.customSectionDividerIsTemplate)
-        #expect(reloaded.menuBarArrangementMode == .manual)
-        #expect(reloaded.hideApplicationMenus == settings.hideApplicationMenus)
-        #expect(reloaded.enableSecondaryContextMenu == settings.enableSecondaryContextMenu)
-        #expect(reloaded.showOnHoverDelay == 0.9)
-        #expect(reloaded.tooltipDelay == 1.1)
-        #expect(reloaded.showMenuBarTooltips == settings.showMenuBarTooltips)
-        #expect(reloaded.iconRefreshInterval == 2)
-        #expect(reloaded.autoZenWhileSharingScreen == settings.autoZenWhileSharingScreen)
-        #expect(reloaded.enableMenuBarItemDescenders == settings.enableMenuBarItemDescenders)
-        #expect(reloaded.enableSwapBar == settings.enableSwapBar)
-        #expect(reloaded.swapOnThawIconClick == settings.swapOnThawIconClick)
-        #expect(reloaded.enableControlItemPanel == settings.enableControlItemPanel)
-        #expect(reloaded.fetchReleaseNotes == settings.fetchReleaseNotes)
-        #expect(reloaded.enableModuleStandIns == settings.enableModuleStandIns)
-        #expect(reloaded.skippedModuleStandIns == ["a", "b"])
-        #expect(reloaded.enableTimeMachineTakeover == settings.enableTimeMachineTakeover)
-        #expect(reloaded.enableTimerTakeover == settings.enableTimerTakeover)
-        #expect(reloaded.enableTextInputTakeover == settings.enableTextInputTakeover)
-        #expect(reloaded.enableRecordingWatch == settings.enableRecordingWatch)
-        #expect(reloaded.zenModeWhileRecording == settings.zenModeWhileRecording)
-        #expect(reloaded.recordingWatchScreen == .mainDisplay)
-        #expect(reloaded.recordingWatchPlacement == .leading)
-        #expect(reloaded.enableDesktopMenuHiding == settings.enableDesktopMenuHiding)
-        #expect(reloaded.enableExperimentalOverflowPrevention == settings.enableExperimentalOverflowPrevention)
-        #expect(reloaded.alwaysUseAppIconForMenuBarItems == settings.alwaysUseAppIconForMenuBarItems)
-        #expect(reloaded.menuBarOrderFulfillmentTimeout == 9)
-        #expect(reloaded.menuBarSearchPresentation == .launcher)
+        let reloadedLayout = LayoutSettings()
+        reloadedLayout.loadInitialState()
+        #expect(reloadedLayout.enableAlwaysHiddenSection == layout.enableAlwaysHiddenSection)
+        #expect(reloadedLayout.isAlwaysHiddenSectionEnabled == layout.enableAlwaysHiddenSection)
+        #expect(reloadedLayout.showAllSectionsOnUserDrag == layout.showAllSectionsOnUserDrag)
+        #expect(reloadedLayout.sectionDividerStyle == .slash)
+        #expect(reloadedLayout.customSectionDividerImage == Data([9, 9]))
+        #expect(reloadedLayout.customSectionDividerIsTemplate == layout.customSectionDividerIsTemplate)
+        #expect(reloadedLayout.menuBarArrangementMode == .manual)
+        #expect(reloadedLayout.iconRefreshInterval == 2)
+        #expect(reloadedLayout.enableModuleStandIns == layout.enableModuleStandIns)
+        #expect(reloadedLayout.skippedModuleStandIns == ["a", "b"])
+        #expect(reloadedLayout.enableTimeMachineTakeover == layout.enableTimeMachineTakeover)
+        #expect(reloadedLayout.enableTimerTakeover == layout.enableTimerTakeover)
+        #expect(reloadedLayout.enableTextInputTakeover == layout.enableTextInputTakeover)
+        #expect(reloadedLayout.enableExperimentalOverflowPrevention == layout.enableExperimentalOverflowPrevention)
+        #expect(reloadedLayout.alwaysUseAppIconForMenuBarItems == layout.alwaysUseAppIconForMenuBarItems)
+        #expect(reloadedLayout.menuBarOrderFulfillmentTimeout == 9)
 
-        settings.customSectionDividerImage = nil
+        let reloadedPrivacy = PrivacySettings()
+        reloadedPrivacy.loadInitialState()
+        #expect(reloadedPrivacy.fetchReleaseNotes == privacy.fetchReleaseNotes)
+        #expect(reloadedPrivacy.showReleaseNotesAfterUpdate == privacy.showReleaseNotesAfterUpdate)
+        let reloadedTools = ToolsSettings()
+        reloadedTools.loadInitialState()
+        #expect(reloadedTools.enableDiagnosticLogging == tools.enableDiagnosticLogging)
+        let reloadedWidgets = WidgetsSettings()
+        reloadedWidgets.loadInitialState()
+        #expect(reloadedWidgets.enableControlItemPanel == widgets.enableControlItemPanel)
+        let reloadedSpaces = SpacesSettings()
+        reloadedSpaces.loadInitialState()
+        #expect(reloadedSpaces.showSpaceIndicator == spaces.showSpaceIndicator)
+
+        layout.customSectionDividerImage = nil
         #expect(Defaults.data(forKey: .customSectionDividerImage) == nil)
     }
 
     @Test("Native hiding and Apple-item hiding are opposites")
     func nativeHidingFlipsAppleItems() {
-        let settings = AdvancedSettings()
+        let settings = LayoutSettings()
         settings.enableNativeAppHiding = false
         #expect(settings.enableExperimentalSystemItemHiding)
         settings.enableNativeAppHiding = true
@@ -241,63 +318,74 @@ struct PreferenceModelsTests {
     }
 
     @Test("Stored enum values that are not recognised leave the defaults")
-    func advancedIgnoresGarbage() {
+    func pageModelsIgnoreGarbage() {
         Defaults.set("nowhere", forKey: .recordingWatchScreen)
         Defaults.set("nowhere", forKey: .recordingWatchPlacement)
         Defaults.set("nowhere", forKey: .menuBarSearchPresentation)
         Defaults.set(99, forKey: .sectionDividerStyle)
         Defaults.set(99, forKey: .menuBarArrangementMode)
-        let settings = AdvancedSettings()
-        settings.loadInitialState()
-        #expect(settings.recordingWatchScreen == Defaults.DefaultValue.recordingWatchScreen)
-        #expect(settings.recordingWatchPlacement == Defaults.DefaultValue.recordingWatchPlacement)
-        #expect(settings.menuBarSearchPresentation == Defaults.DefaultValue.menuBarSearchPresentation)
-        #expect(settings.sectionDividerStyle == Defaults.DefaultValue.sectionDividerStyle)
-        #expect(settings.menuBarArrangementMode == Defaults.DefaultValue.menuBarArrangementMode)
+        let visibility = VisibilitySettings()
+        visibility.loadInitialState()
+        let layout = LayoutSettings()
+        layout.loadInitialState()
+        #expect(visibility.recordingWatchScreen == Defaults.DefaultValue.recordingWatchScreen)
+        #expect(visibility.recordingWatchPlacement == Defaults.DefaultValue.recordingWatchPlacement)
+        #expect(visibility.menuBarSearchPresentation == Defaults.DefaultValue.menuBarSearchPresentation)
+        #expect(layout.sectionDividerStyle == Defaults.DefaultValue.sectionDividerStyle)
+        #expect(layout.menuBarArrangementMode == Defaults.DefaultValue.menuBarArrangementMode)
     }
 
-    @Test("Advanced URI changes set booleans and intervals by key")
-    func advancedURIChanges() {
-        let settings = AdvancedSettings()
-        let paths: [String: ReferenceWritableKeyPath<AdvancedSettings, Bool>] = [
+    @Test("Layout and the smaller pages' URI changes set booleans and intervals by key")
+    func layoutAndSmallPagesURIChanges() {
+        let layout = LayoutSettings()
+        let bools: [String: ReferenceWritableKeyPath<LayoutSettings, Bool>] = [
             "enableAlwaysHiddenSection": \.enableAlwaysHiddenSection,
             "showAllSectionsOnUserDrag": \.showAllSectionsOnUserDrag,
-            "hideApplicationMenus": \.hideApplicationMenus,
-            "enableSecondaryContextMenu": \.enableSecondaryContextMenu,
-            "showMenuBarTooltips": \.showMenuBarTooltips,
-            "autoZenWhileSharingScreen": \.autoZenWhileSharingScreen,
-            "enableDiagnosticLogging": \.enableDiagnosticLogging,
             "enableMenuBarItemOverflow": \.enableMenuBarItemOverflow,
             "enableExperimentalOverflowPrevention": \.enableExperimentalOverflowPrevention,
             "alwaysUseAppIconForMenuBarItems": \.alwaysUseAppIconForMenuBarItems,
-            "enableMenuBarItemDescenders": \.enableMenuBarItemDescenders,
-            "enableSwapBar": \.enableSwapBar,
-            "swapOnThawIconClick": \.swapOnThawIconClick,
-            "enableControlItemPanel": \.enableControlItemPanel,
-            "fetchReleaseNotes": \.fetchReleaseNotes,
-            "enableRecordingWatch": \.enableRecordingWatch,
-            "zenModeWhileRecording": \.zenModeWhileRecording,
-            "enableDesktopMenuHiding": \.enableDesktopMenuHiding,
         ]
-        for (key, path) in paths {
-            let flipped = !settings[keyPath: path]
-            settings.handleExternalSettingsChange(uriChange(key, ["value": flipped]))
-            #expect(settings[keyPath: path] == flipped, "\(key) follows the URI")
+        for (key, path) in bools {
+            let flipped = !layout[keyPath: path]
+            layout.handleExternalSettingsChange(uriChange(key, ["value": flipped]))
+            #expect(layout[keyPath: path] == flipped, "\(key) follows the URI")
         }
-        let doubles: [String: ReferenceWritableKeyPath<AdvancedSettings, Double>] = [
-            "showOnHoverDelay": \.showOnHoverDelay,
-            "tooltipDelay": \.tooltipDelay,
+        let doubles: [String: ReferenceWritableKeyPath<LayoutSettings, Double>] = [
             "iconRefreshInterval": \.iconRefreshInterval,
             "menuBarOrderFulfillmentTimeout": \.menuBarOrderFulfillmentTimeout,
         ]
         for (key, path) in doubles {
-            settings.handleExternalSettingsChange(uriChange(key, ["doubleValue": 4.5]))
-            #expect(settings[keyPath: path] == 4.5, "\(key) follows the URI")
+            layout.handleExternalSettingsChange(uriChange(key, ["doubleValue": 4.5]))
+            #expect(layout[keyPath: path] == 4.5, "\(key) follows the URI")
         }
-        let before = settings.tooltipDelay
-        settings.handleExternalSettingsChange(uriChange("unknown", ["value": true, "doubleValue": 8.0]))
-        settings.handleExternalSettingsChange(Notification(name: .settingsDidChangeViaURI))
-        #expect(settings.tooltipDelay == before)
+
+        let privacy = PrivacySettings()
+        let fetch = !privacy.fetchReleaseNotes
+        privacy.handleExternalSettingsChange(uriChange("fetchReleaseNotes", ["value": fetch]))
+        #expect(privacy.fetchReleaseNotes == fetch)
+        let show = !privacy.showReleaseNotesAfterUpdate
+        privacy.handleExternalSettingsChange(uriChange("showReleaseNotesAfterUpdate", ["value": show]))
+        #expect(privacy.showReleaseNotesAfterUpdate == show)
+
+        let tools = ToolsSettings()
+        let logging = !tools.enableDiagnosticLogging
+        tools.handleExternalSettingsChange(uriChange("enableDiagnosticLogging", ["value": logging]))
+        #expect(tools.enableDiagnosticLogging == logging)
+
+        let widgets = WidgetsSettings()
+        let panel = !widgets.enableControlItemPanel
+        widgets.handleExternalSettingsChange(uriChange("enableControlItemPanel", ["value": panel]))
+        #expect(widgets.enableControlItemPanel == panel)
+
+        let spaces = SpacesSettings()
+        let indicator = !spaces.showSpaceIndicator
+        spaces.handleExternalSettingsChange(uriChange("showSpaceIndicator", ["value": indicator]))
+        #expect(spaces.showSpaceIndicator == indicator)
+
+        let before = layout.iconRefreshInterval
+        layout.handleExternalSettingsChange(uriChange("unknown", ["value": true, "doubleValue": 8.0]))
+        layout.handleExternalSettingsChange(Notification(name: .settingsDidChangeViaURI))
+        #expect(layout.iconRefreshInterval == before)
     }
 
     /// Yields to the main actor until condition holds or a generous bound passes.
@@ -310,31 +398,34 @@ struct PreferenceModelsTests {
 
     // MARK: Reset
 
-    @Test("Resetting Advanced and Display settings puts back every default")
-    func resetAdvancedAndDisplay() throws {
+    @Test("Resetting the page and Display settings puts back every default")
+    func resetPagesAndDisplay() throws {
         try Defaults.set(JSONEncoder().encode([String: DisplayThawBarConfiguration]()), forKey: .displayThawBarConfigurations)
         let settings = AppSettings()
-        settings.advanced.enableAlwaysHiddenSection = !Defaults.DefaultValue.enableAlwaysHiddenSection
-        settings.advanced.sectionDividerStyle = .custom
-        settings.advanced.customSectionDividerImage = Data([1])
-        settings.advanced.tooltipDelay = 9
-        settings.advanced.skippedModuleStandIns = ["x"]
-        settings.advanced.menuBarSearchPresentation = .assisted
+        settings.layout.enableAlwaysHiddenSection = !Defaults.DefaultValue.enableAlwaysHiddenSection
+        settings.layout.sectionDividerStyle = .custom
+        settings.layout.customSectionDividerImage = Data([1])
+        settings.visibility.tooltipDelay = 9
+        settings.layout.skippedModuleStandIns = ["x"]
+        settings.visibility.menuBarSearchPresentation = .compact
+        Defaults.set(false, forKey: .showSearchShortcutBar)
         settings.displaySettings.configurations = ["X": DisplayThawBarConfiguration.defaultConfiguration.withUseThawBar(true)]
         settings.displaySettings.globalConfiguration = DisplayThawBarConfiguration.defaultConfiguration.withGridColumns(8)
         settings.displaySettings.confirmSpacingRelaunch = !Defaults.DefaultValue.confirmSpacingRelaunch
         settings.displaySettings.wideDisplayRule.isEnabled = !Defaults.DefaultValue.showEveryItemOnWideDisplays
 
-        settings.resetAdvanced()
+        settings.resetLayout()
+        settings.resetVisibility()
         settings.resetDisplay()
         settings.resetAppearance()
 
-        #expect(settings.advanced.enableAlwaysHiddenSection == Defaults.DefaultValue.enableAlwaysHiddenSection)
-        #expect(settings.advanced.sectionDividerStyle == Defaults.DefaultValue.sectionDividerStyle)
-        #expect(settings.advanced.customSectionDividerImage == nil)
-        #expect(settings.advanced.tooltipDelay == Defaults.DefaultValue.tooltipDelay)
-        #expect(settings.advanced.skippedModuleStandIns == Set(Defaults.DefaultValue.skippedModuleStandIns))
-        #expect(settings.advanced.menuBarSearchPresentation == Defaults.DefaultValue.menuBarSearchPresentation)
+        #expect(settings.layout.enableAlwaysHiddenSection == Defaults.DefaultValue.enableAlwaysHiddenSection)
+        #expect(settings.layout.sectionDividerStyle == Defaults.DefaultValue.sectionDividerStyle)
+        #expect(settings.layout.customSectionDividerImage == nil)
+        #expect(settings.visibility.tooltipDelay == Defaults.DefaultValue.tooltipDelay)
+        #expect(settings.layout.skippedModuleStandIns == Set(Defaults.DefaultValue.skippedModuleStandIns))
+        #expect(settings.visibility.menuBarSearchPresentation == Defaults.DefaultValue.menuBarSearchPresentation)
+        #expect(Defaults.bool(forKey: .showSearchShortcutBar) == Defaults.DefaultValue.showSearchShortcutBar)
         #expect(settings.displaySettings.configurations == Defaults.DefaultValue.displayThawBarConfigurations)
         #expect(settings.displaySettings.globalConfiguration == Defaults.DefaultValue.globalDisplayConfiguration)
         #expect(settings.displaySettings.confirmSpacingRelaunch == Defaults.DefaultValue.confirmSpacingRelaunch)
@@ -353,12 +444,12 @@ struct PreferenceModelsTests {
     @Test("Reloading stored values picks up writes made by another process")
     func loadStoredValues() {
         let settings = AppSettings()
-        Defaults.set(!settings.general.showOnScroll, forKey: .showOnScroll)
+        Defaults.set(!settings.visibility.showOnScroll, forKey: .showOnScroll)
         Defaults.set(7.0, forKey: .tooltipDelay)
-        let expected = !settings.general.showOnScroll
+        let expected = !settings.visibility.showOnScroll
         settings.loadStoredValues()
-        #expect(settings.general.showOnScroll == expected)
-        #expect(settings.advanced.tooltipDelay == 7)
+        #expect(settings.visibility.showOnScroll == expected)
+        #expect(settings.visibility.tooltipDelay == 7)
     }
 
     // MARK: Small enums

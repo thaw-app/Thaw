@@ -22,7 +22,8 @@ extension MenuBarItemManager {
     /// normalization pass checks.
     func structuralNormalizationSituation() -> WriteHold.Situation {
         var situation = WriteHold.Situation()
-        situation.startupSettling = isInStartupSettling
+        let barHolds = barSettling.holds(for: .structuralPass)
+        situation.startupSettling = barHolds.contains(.settling)
         situation.circuitBreakerOpen = moveCircuitBreaker.isOpen
         situation.notificationCenterSuspended = isNotificationCenterLayoutSuspended
         situation.userDragging = appState?.isDraggingMenuBarItem ?? false
@@ -30,16 +31,17 @@ extension MenuBarItemManager {
         situation.membershipReadPending = manualMembershipTask != nil
         situation.layoutPublicationStale = !layoutPublication.canPublish(generation: layoutPublication.generation)
         situation.sectionRevealed = appState?.menuBarManager.sectionController.revealedSection != nil
-        situation.revealTransitionActive = appState?.menuBarManager.isRevealHideTransitionActive ?? false
-        let barDisplayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+        situation.revealTransitionActive = barHolds.contains(.revealTransition)
+        let barDisplayID = Bridging.activeMenuBarDisplayID
         situation.barOnUncachedDisplay = itemDisplayID.map { $0 != barDisplayID } ?? false
+        situation.barReadIncomplete = !cacheCycleState.lastRead.isComplete
         return situation
     }
 
-    /// Reads the bar in full when it moved to a display the cache hasn't followed: only a full
-    /// read moves the cache, and an unchanged window list never asks for one.
-    func readBarIfItMoved(_ situation: WriteHold.Situation) {
-        guard situation.barOnUncachedDisplay else { return }
+    /// Kicks a full read of the bar when the deferred pass can't get a current
+    /// cache on its own; see StructuralNormalizationHolds.needsFreshRead.
+    func refreshBarForRetry(_ situation: WriteHold.Situation) {
+        guard StructuralNormalizationHolds.needsFreshRead(situation) else { return }
         Task { await cacheItemsRegardless() }
     }
 }

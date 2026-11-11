@@ -18,7 +18,10 @@ struct ThawBarItemSizeRow: View {
             ThawSlider(value: $scale, in: ThawBarItemSize.scaleRange, step: ThawBarItemSize.scaleStep) {
                 Text(scale, format: .percent.precision(.fractionLength(0)))
                     .monospacedDigit()
+                    .contentTransition(.numericText(value: scale))
+                    .thawAnimation(ThawMotion.quick, value: scale)
             }
+            .snapHaptic(scale, at: 1, tolerance: ThawBarItemSize.scaleStep / 2)
         } label: {
             HStack(spacing: ThawSpacing.compact) {
                 Text("Item size")

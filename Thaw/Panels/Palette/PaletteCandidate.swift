@@ -11,7 +11,6 @@ import Ifrit
 import MenuBarModel
 
 /// Match display names, owner names and identity keys so app-name queries and live AX titles still find items.
-/// The launcher shares SearchPresentation's panel, not the inspector's search policy.
 struct PaletteCandidate: Searchable {
     let item: MenuBarItem
     let displayName: String
@@ -49,16 +48,17 @@ struct PaletteCandidate: Searchable {
 
 // MARK: - Inventory
 
+@MainActor
 extension PaletteCandidate {
     /// Use the warm item cache, not an AX walk: application timeouts do not propagate to children, so hung publishers could stall hotkeys.
-    @MainActor
     static func inventory(from itemManager: MenuBarItemManager) -> [PaletteCandidate] {
         inventory(from: itemManager.itemCache)
     }
 
-    @MainActor
     static func inventory(from cache: MenuBarItemCache) -> [PaletteCandidate] {
-        let items = cache.managedItems.filter(\.isUserActionable)
+        // One candidate per item: an item caught mid-move can sit in two cached
+        // sections, and a second candidate would list and scroll the same row twice.
+        let items = cache.managedItems.filter(\.isUserActionable).uniqued(on: \.uniqueIdentifier)
         // Menu bar order breaks equal-rank ties left to right.
         let ordered = items.sorted { $0.bounds.minX < $1.bounds.minX }
         return ordered.map { item in

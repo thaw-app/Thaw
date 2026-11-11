@@ -25,6 +25,17 @@ extension NSScreen {
         return screen(for: activeDisplayID)
     }
 
+    /// The screen whose menu bar is active, else the main screen: where hover, scroll and tooltips act,
+    /// so nothing reveals on an inactive bar where clicks would do nothing.
+    static var activeMenuBarScreenOrMain: NSScreen? {
+        screenWithActiveMenuBar ?? main
+    }
+
+    /// The screen the pointer is over, else the main screen: where a click or a panel opened by one lands.
+    static var screenWithMouseOrMain: NSScreen? {
+        screenWithMouse ?? main
+    }
+
     /// The connected screen for a display, or nil when it is not connected.
     static func screen(for displayID: CGDirectDisplayID) -> NSScreen? {
         screens.first { $0.displayID == displayID }

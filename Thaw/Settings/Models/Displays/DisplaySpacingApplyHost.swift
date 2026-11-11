@@ -12,11 +12,16 @@ struct DisplaySpacingApplyHost {
     let spacingManager: MenuBarItemSpacingManager
     /// Writes the spacing and, when asked, relaunches the apps that read it.
     let applyOffset: @MainActor (_ forceRelaunch: Bool, _ relaunchApps: Bool) async throws -> MenuBarItemSpacingManager.ApplyOutcome
-    let startSettling: @MainActor (_ reason: String, _ expectedBundleIDs: Set<String>) -> Void
-    let cancelSettling: @MainActor (_ reason: String) -> Void
+    /// Reports the wave to the bar's settle, which holds restores off until relaunched apps reattach.
+    let noteSettling: @MainActor (BarSettling.Disturbance) -> Void
     let reapplyActiveProfile: @MainActor () -> Void
     /// Asks before a relaunch wave; nil shows the display settings' own alert.
     var confirmRelaunch: (@MainActor () -> Bool)?
+    /// Saves a spacing change to the active profile, or to every profile, so the next
+    /// profile apply keeps it. Does nothing while no profile is active.
+    var saveSpacingToProfiles: @MainActor (_ displayUUID: String, _ offset: Double, _ scope: SpacingProfileSaveScope) throws -> Void = { _, _, _ in
+        // Stand-ins in tests save nothing.
+    }
 }
 
 extension DisplaySpacingApplyHost {
@@ -26,9 +31,17 @@ extension DisplaySpacingApplyHost {
         self.init(
             spacingManager: spacingManager,
             applyOffset: { try await spacingManager.applyOffset(forceRelaunch: $0, relaunchApps: $1) },
-            startSettling: { [weak appState] in appState?.itemManager.startSettlingPeriod(reason: $0, expectedBundleIDs: $1) },
-            cancelSettling: { [weak appState] in appState?.itemManager.cancelSettlingPeriod(reason: $0) },
-            reapplyActiveProfile: { [weak appState] in appState?.profileManager.reapplyActiveProfile() }
+            noteSettling: { [weak appState] in appState?.itemManager.barSettling.note($0) },
+            reapplyActiveProfile: { [weak appState] in appState?.profileManager.reapplyActiveProfile() },
+            saveSpacingToProfiles: { [weak appState] displayUUID, offset, scope in
+                guard let appState, let id = appState.profileManager.activeProfileID else { return }
+                switch scope {
+                case .activeProfile:
+                    try appState.profileManager.updateProfile(id: id, scope: .configurationOnly, appState: appState)
+                case .allProfiles:
+                    try appState.profileManager.updateAllProfilesItemSpacingOffset(displayUUID: displayUUID, offset: offset)
+                }
+            }
         )
     }
 }

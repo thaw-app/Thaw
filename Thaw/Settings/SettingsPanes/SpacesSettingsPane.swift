@@ -11,9 +11,10 @@ import ThawUI
 
 // MARK: - SpacesControlsContent
 
-/// The Spaces controls shown on Displays. They are commands, not preferences:
-/// the menu bar agent keeps the state for this session and puts it back when Thaw quits.
+/// The Spaces controls shown on Displays. The menu bar agent forgets them when
+/// Thaw quits, so SpaceMenuBarKeeper stores them and sends them again.
 struct SpacesControlsContent: View {
+    @Environment(AppState.self) private var appState
     let activeSpaceID: UInt64
 
     /// What the hiding picker last asked for. Held here because This Space's
@@ -27,20 +28,38 @@ struct SpacesControlsContent: View {
 
     var body: some View {
         controls
-            // A different Space has its own override, which can't be read,
-            // so the picker starts from neutral there.
+            .onAppear(perform: loadStoredChoices)
             .onChange(of: activeSpaceID) { _, _ in
-                isHiddenInSpace = false
+                loadStoredChoices()
             }
+    }
+
+    /// macOS can't report these overrides, so the controls start from what Thaw stored.
+    private func loadStoredChoices() {
+        let keeper = appState.spaceMenuBarKeeper
+        isHiddenInSpace = keeper.choice(forSpaceID: activeSpaceID, in: appState.spaceDirectory.spaces).isHidden
+        isHiddenEverywhere = keeper.choices.isHiddenEverywhere
+    }
+
+    private func record(_ request: MenuBarHidingScope.Request, spaceID: UInt64) {
+        let keeper = appState.spaceMenuBarKeeper
+        switch request {
+        case let .everySpace(hidden):
+            keeper.recordHiddenEverywhere(hidden)
+        case let .thisSpace(hidden):
+            keeper.record(spaceID: spaceID, in: appState.spaceDirectory.spaces) { $0.isHidden = hidden }
+        }
     }
 
     @ViewBuilder
     private var controls: some View {
+        SpaceIndicatorSection(settings: appState.settings.spaces)
         if presentation.isSupported {
             MenuBarHidingSection(
                 spaceID: activeSpaceID,
                 isHiddenInSpace: $isHiddenInSpace,
-                isHiddenEverywhere: $isHiddenEverywhere
+                isHiddenEverywhere: $isHiddenEverywhere,
+                onAccepted: record
             )
             ThisSpaceSection(spaceID: activeSpaceID, isHidden: $isHiddenInSpace)
             AllSpacesSection()
@@ -51,12 +70,28 @@ struct SpacesControlsContent: View {
     }
 }
 
+/// Turns on the menu bar item that names the active Space. It works without the per-Space controls.
+private struct SpaceIndicatorSection: View {
+    @Bindable var settings: SpacesSettings
+
+    var body: some View {
+        ThawSection {
+            Text("Space indicator")
+        } content: {
+            Toggle("Show the current Space in the menu bar", isOn: $settings.showSpaceIndicator)
+                .settingsSearchAnchor("spaces.showSpaceIndicator")
+                .annotation("Adds a menu bar item with the name of the Space you're in. Its menu lists the Spaces on each display.")
+        }
+    }
+}
+
 /// Menu bar overrides scoped to one Space.
 ///
 /// This is the part macOS has no UI for at all: System Settings' menu bar
 /// controls are global, and the reveal-strip height is not exposed anywhere,
 /// at any scope.
 private struct ThisSpaceSection: View {
+    @Environment(AppState.self) private var appState
     /// The Space these controls act on. A change to this value means the user
     /// switched Spaces, which invalidates every mirror below.
     let spaceID: UInt64
@@ -100,6 +135,7 @@ private struct ThisSpaceSection: View {
             }
 
             Toggle("Disable hover reveal in this Space", isOn: autoShowDisabledBinding)
+                .settingsSearchAnchor("spaces.disableHoverReveal")
                 .annotation("Stops a hidden menu bar from sliding down when the pointer reaches the top edge of the screen in this Space.")
 
             LabeledContent {
@@ -113,10 +149,11 @@ private struct ThisSpaceSection: View {
                 }
             } label: {
                 Text("Reveal strip height")
+                    .settingsSearchAnchor("spaces.revealStripHeight")
             }
             .annotation(
                 "How tall the invisible strip at the top of the screen is before a hidden menu bar reveals itself.",
-                more: "macOS doesn’t show this setting anywhere, so \(Constants.displayName) can’t read your current value. This starts at a default instead."
+                more: "macOS doesn’t show this setting anywhere, so \(Constants.displayName) can’t read its value. This starts at the height you last chose here, or at a default."
             )
 
             HStack(alignment: .top, spacing: ThawSpacing.inset) {
@@ -140,13 +177,9 @@ private struct ThisSpaceSection: View {
             }
         }
         .disabled(!hasKnownSpace)
+        .onAppear(perform: loadStoredChoice)
         .onChange(of: spaceID) { _, _ in
-            // A different Space has different overrides, and we cannot read
-            // them. Reset to neutral rather than show the previous Space's
-            // settings as if they applied here.
-            isAutoShowDisabled = false
-            revealStripHeight = Self.defaultRevealStripHeight
-            hasAdjustedRevealStrip = false
+            loadStoredChoice()
             failure = nil
         }
         // Debounced so dragging the slider sends one request at rest instead
@@ -157,16 +190,26 @@ private struct ThisSpaceSection: View {
             guard hasAdjustedRevealStrip, hasKnownSpace else {
                 return
             }
+            let height = revealStripHeight
+            let spaceID = spaceID
             try? await Task.sleep(for: .milliseconds(200))
             guard !Task.isCancelled else {
                 return
             }
-            let succeeded = await presentation.setSystemMenuBarAutohideHeight(
-                revealStripHeight,
-                spaceID: spaceID
-            )
+            let succeeded = await presentation.setSystemMenuBarAutohideHeight(height, spaceID: spaceID)
+            if succeeded {
+                appState.spaceMenuBarKeeper.record(spaceID: spaceID, in: appState.spaceDirectory.spaces) { $0.revealStripHeight = height }
+            }
             failure = succeeded ? nil : "The reveal strip height could not be applied to this Space."
         }
+    }
+
+    /// The stored choice for this Space; Thaw can't read it back from macOS.
+    private func loadStoredChoice() {
+        let choice = appState.spaceMenuBarKeeper.choice(forSpaceID: spaceID, in: appState.spaceDirectory.spaces)
+        isAutoShowDisabled = choice.isAutoShowDisabled
+        revealStripHeight = choice.revealStripHeight ?? Self.defaultRevealStripHeight
+        hasAdjustedRevealStrip = false
     }
 
     // MARK: Bindings
@@ -192,9 +235,12 @@ private struct ThisSpaceSection: View {
         } set: { newValue in
             isAutoShowDisabled = newValue
             failure = nil
+            let spaceID = spaceID
             Task {
                 let succeeded = await presentation.setSystemMenuBarAutoShowDisabled(newValue, spaceID: spaceID)
-                if !succeeded {
+                if succeeded {
+                    appState.spaceMenuBarKeeper.record(spaceID: spaceID, in: appState.spaceDirectory.spaces) { $0.isAutoShowDisabled = newValue }
+                } else {
                     isAutoShowDisabled = !newValue
                     failure = "The hover reveal setting could not be changed for this Space."
                 }
@@ -204,9 +250,11 @@ private struct ThisSpaceSection: View {
 
     private func resetSpace() {
         failure = nil
+        let spaceID = spaceID
         Task {
             let succeeded = await presentation.clearSystemMenuBarOverrides(forSpace: spaceID)
             if succeeded {
+                appState.spaceMenuBarKeeper.forget(spaceID: spaceID, in: appState.spaceDirectory.spaces)
                 // The Space is back to system defaults, so the mirrors return
                 // to neutral with it.
                 isHidden = false
@@ -226,6 +274,7 @@ private struct ThisSpaceSection: View {
 /// Overrides that are not scoped to a Space, they change the menu bar
 /// everywhere at once.
 private struct AllSpacesSection: View {
+    @Environment(AppState.self) private var appState
     @State private var usesFullScreenAppearance = false
     @State private var failure: LocalizedStringResource?
 
@@ -238,7 +287,11 @@ private struct AllSpacesSection: View {
             Text("All Spaces")
         } content: {
             Toggle("Use the full-screen menu bar appearance everywhere", isOn: fullScreenAppearanceBinding)
+                .settingsSearchAnchor("spaces.fullScreenAppearanceEverywhere")
                 .annotation("Gives ordinary desktop Spaces the menu bar appearance macOS normally reserves for full-screen apps.")
+                .onAppear {
+                    usesFullScreenAppearance = appState.spaceMenuBarKeeper.choices.usesFullScreenAppearanceEverywhere
+                }
         } footer: {
             if let failure {
                 SettingsWarningPill(
@@ -259,7 +312,9 @@ private struct AllSpacesSection: View {
             failure = nil
             Task {
                 let succeeded = await presentation.setFullScreenAppearanceOnUserSpace(newValue)
-                if !succeeded {
+                if succeeded {
+                    appState.spaceMenuBarKeeper.recordFullScreenAppearanceEverywhere(newValue)
+                } else {
                     usesFullScreenAppearance = !newValue
                     failure = "The full-screen menu bar appearance could not be applied."
                 }
@@ -270,10 +325,7 @@ private struct AllSpacesSection: View {
 
 // MARK: - SessionScopeNotice
 
-/// The one thing a user must understand before touching this pane: none of it
-/// survives a quit. Stated as its own row rather than buried in a caption,
-/// because the alternative is someone hiding their menu bar, relaunching, and
-/// filing a bug about settings that "don't save".
+/// Says that macOS forgets these controls when Thaw quits and Thaw puts them back.
 private struct SessionScopeNotice: View {
     var body: some View {
         // Footer-only section: the one placement where a pill renders without
@@ -282,8 +334,8 @@ private struct SessionScopeNotice: View {
             EmptyView()
         } footer: {
             SettingsWarningPill(
-                title: "These controls last for this session",
-                message: "macOS gives \(Constants.displayName) this state for as long as it is running. Everything on this page reverts when \(Constants.displayName) quits, and none of it is saved to your settings or profiles.",
+                title: "\(Constants.displayName) applies these again when it starts",
+                message: "macOS forgets them when \(Constants.displayName) quits, so \(Constants.displayName) saves them and sends them again at launch and when a Space is added.",
                 systemImage: "info.circle.fill",
                 tint: .blue
             )

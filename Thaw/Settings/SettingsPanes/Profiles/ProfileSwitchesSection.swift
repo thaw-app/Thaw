@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import MenuBarModel
 import SwiftUI
 import ThawUI
 
@@ -24,6 +25,7 @@ struct ProfileSwitchesSection: View {
             if let hotkey = profileManager.profileHotkeys[profile.id] {
                 HotkeyRecorder(hotkey: hotkey) {
                     Text("Keyboard shortcut")
+                        .settingsSearchAnchor("profiles.shortcuts")
                 }
                 // The recorder keeps its capture in State, so a new profile needs a new recorder.
                 .id(profile.id)
@@ -36,6 +38,7 @@ struct ProfileSwitchesSection: View {
                 .font(ThawType.footnote)
                 .foregroundStyle(ThawInk.supporting)
         }
+        .settingsSearchAnchor("profiles.switching")
     }
 
     // MARK: Display
@@ -104,33 +107,33 @@ struct ProfileSwitchesSection: View {
     // MARK: Space
 
     private var spaceRow: some View {
-        let current = profileManager.profiles.first { $0.id == profile.id }
-        let activeSpace = appState.activeSpace
-        let activeKey = activeSpace.persistentKey
-        return LabeledContent {
-            HStack(spacing: ThawSpacing.base) {
-                if current?.associatedSpaceKey != nil {
-                    Button("Remove") {
-                        profileManager.setAssociatedSpace(key: nil, forProfileID: profile.id)
-                        reportManifestFailure()
-                    }
-                    .buttonStyle(.settingsGlass)
-                }
-                if let activeKey, current?.associatedSpaceKey != activeKey {
-                    Button("Use This Space") {
-                        profileManager.setAssociatedSpace(key: activeKey, spaceName: activeSpace.localizedLabel, forProfileID: profile.id)
-                        reportManifestFailure()
-                    }
-                    .buttonStyle(.settingsGlass)
-                }
-            }
-        } label: {
-            ThawRowLabel(
-                "In this Space",
-                verbatimDetail: current?.associatedSpaceKey == nil
-                    ? String(localized: "None. \(Constants.displayName) names a Space by its place in Mission Control.")
-                    : current?.associatedSpaceName ?? String(localized: "A Space")
-            )
+        let spaces = appState.spaceDirectory.spaces
+        let groups = SpaceLabels.groups(
+            spaces,
+            displayNames: Dictionary(displaySettings.connectedDisplays().map { ($0.id, $0.name) }) { first, _ in first },
+            menuBarDisplay: Bridging.getActiveMenuBarDisplayUUID(),
+            ownerName: SpaceLabels.liveOwnerName
+        )
+        let mapped = profileManager.profiles.compactMap { profile in
+            profile.associatedSpaceKey.map { (key: $0, name: profile.associatedSpaceName) }
+        }
+        return SpaceChoicePicker(
+            groups: groups,
+            missing: SpaceLabels.missing(mapped: mapped, present: spaces),
+            selection: spaceBinding(groups: groups)
+        )
+        .onAppear { appState.spaceDirectory.refresh() }
+    }
+
+    private func spaceBinding(groups: [SpaceDisplayGroup]) -> Binding<String> {
+        Binding {
+            profileManager.profiles.first { $0.id == profile.id }?.associatedSpaceKey ?? ""
+        } set: { key in
+            // A missing Space keeps the name stored with it.
+            let name = groups.lazy.flatMap(\.spaces).first { $0.id == key }?.label
+                ?? profileManager.profiles.first { $0.associatedSpaceKey == key }?.associatedSpaceName
+            profileManager.setAssociatedSpace(key: key.isEmpty ? nil : key, spaceName: name, forProfileID: profile.id)
+            reportManifestFailure()
         }
     }
 
@@ -147,7 +150,7 @@ struct ProfileSwitchesSection: View {
         } label: {
             ThawRowLabel(
                 "With a Focus",
-                detail: "Add \(Constants.displayName) as a Focus filter in System Settings > Focus and pick this profile. When the Focus ends, the display's profile comes back."
+                detail: "Add \(Constants.displayName) as a Focus filter in System Settings \(Constants.menuArrow) Focus and pick this profile. When the Focus ends, the display's profile comes back."
             )
         }
     }

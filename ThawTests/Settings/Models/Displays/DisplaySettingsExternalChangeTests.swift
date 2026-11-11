@@ -170,23 +170,31 @@ struct DisplaySettingsExternalChangeTests {
         }
     }
 
-    @Test("Scopes a setting doesn't support leave every display alone")
-    func unsupportedScopes() throws {
+    @Test("Every key works in every scope, and an unknown scope leaves every display alone")
+    func everyScope() throws {
         let uuids = connectedUUIDs
         var configurations: [String: DisplayThawBarConfiguration] = [:]
         for uuid in uuids {
-            configurations[uuid] = base.withUseThawBar(true)
+            configurations[uuid] = base.withUseThawBar(true).withAlwaysShowHiddenItems(false)
         }
         let manager = try makeManager(configurations: configurations)
         let before = manager.configurations
 
-        send(manager, key: "thawBarLocation", scope: "active", ["stringValue": String(ThawBarLocation.mousePointer.rawValue)])
-        send(manager, key: "thawBarLayout", scope: "allNonThawBar", ["stringValue": "grid"])
         send(manager, key: "gridColumns", scope: "somewhere", ["stringValue": "5"])
-        send(manager, key: "alwaysShowHiddenItems", scope: "allEnabled", ["value": true])
-        send(manager, key: "alwaysShowHiddenItems", scope: "active", ["toggle": true])
+        #expect(manager.configurations == before, "an unknown scope changes nothing")
 
-        #expect(manager.configurations == before)
+        send(manager, key: "thawBarLayout", scope: "allNonThawBar", ["stringValue": "grid"])
+        #expect(manager.configurations == before, "every display uses the Thaw Bar, so none is changed")
+
+        send(manager, key: "alwaysShowHiddenItems", scope: "allEnabled", ["value": true])
+        for uuid in uuids {
+            #expect(manager.configuration(forUUID: uuid).alwaysShowHiddenItems, "it used to log not implemented")
+        }
+
+        if let active = Bridging.getActiveMenuBarDisplayUUID(), uuids.contains(active) {
+            send(manager, key: "thawBarLocation", scope: "active", ["stringValue": String(ThawBarLocation.mousePointer.rawValue)])
+            #expect(manager.configuration(forUUID: active).thawBarLocation == .mousePointer)
+        }
     }
 
     @Test("Toggling the Thaw Bar for the active display flips that display only")
@@ -200,6 +208,41 @@ struct DisplaySettingsExternalChangeTests {
         } else {
             #expect(manager.configurations.isEmpty)
         }
+    }
+
+    @Test("A link's spacing is saved to the profiles in the chosen scope, and a failed save puts it back")
+    func linkSpacingSavesToProfiles() throws {
+        let manager = try makeManager(configurations: [Self.uuid: base])
+        var saves = [(String, Double, SpacingProfileSaveScope)]()
+        var fails = false
+        struct SaveFailed: Error {}
+        var host = DisplaySpacingApplyHost(
+            spacingManager: MenuBarItemSpacingManager(),
+            applyOffset: { _, _ in .init(didRelaunch: false, recoveredBundleIDs: [], failedAppNames: []) },
+            noteSettling: { _ in },
+            reapplyActiveProfile: {}
+        )
+        host.saveSpacingToProfiles = { uuid, offset, scope in
+            saves.append((uuid, offset, scope))
+            if fails {
+                throw SaveFailed()
+            }
+        }
+        manager.spacingHost = host
+
+        manager.unconfirmedSpacingProfileScope = .allProfiles
+        send(manager, key: "itemSpacingOffset", ["stringValue": "4"])
+        #expect(manager.configuration(forUUID: Self.uuid).itemSpacingOffset == 4)
+        #expect(saves.map(\.0) == [Self.uuid])
+        #expect(saves.map(\.1) == [4])
+        #expect(saves.map(\.2) == [.allProfiles])
+
+        send(manager, key: "useThawBar", ["value": true])
+        #expect(saves.count == 1, "only spacing is saved to the profiles")
+
+        fails = true
+        send(manager, key: "itemSpacingOffset", ["stringValue": "-3"])
+        #expect(manager.configuration(forUUID: Self.uuid).itemSpacingOffset == 4, "a failed save puts the old spacing back")
     }
 
     @Test("Spacing set outside Thaw seeds connected displays that have no entry yet")

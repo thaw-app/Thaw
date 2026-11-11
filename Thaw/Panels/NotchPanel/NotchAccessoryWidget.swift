@@ -70,7 +70,7 @@ final class NotchAccessoryWidget: NotchWidget {
     /// Matches anything: whether there is something to show is decided in
     /// isAvailable, once the item's accessibility strings have been read.
     func matches(_ item: MenuBarItem) -> Bool {
-        guard case let .string(bundleID) = item.tag.namespace else {
+        guard let bundleID = item.tag.namespace.bundleIdentifier else {
             return false
         }
         return !ThawMenuBarIdentity.owns(bundleIdentifier: bundleID)
@@ -103,7 +103,7 @@ final class NotchAccessoryWidget: NotchWidget {
 
     static func accessibilityStrings(of item: MenuBarItem) -> [String?]? {
         let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
-        guard bounds.width > 0, let element = AXHelpers.element(at: CGPoint(x: bounds.midX, y: bounds.midY)) else {
+        guard bounds.width > 0, let element = AXHelpers.element(at: bounds.center) else {
             return nil
         }
         return [
@@ -125,7 +125,7 @@ final class NotchAccessoryWidget: NotchWidget {
             item.tag.title,
             item.owningApplication?.localizedName,
         ]
-        if case let .string(bundleID) = item.tag.namespace {
+        if let bundleID = item.tag.namespace.bundleIdentifier {
             names.append(contentsOf: bundleID.split(separator: ".").map(String.init))
         }
         return names

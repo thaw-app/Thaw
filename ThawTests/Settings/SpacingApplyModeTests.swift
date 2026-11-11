@@ -104,6 +104,20 @@ struct SpacingApplyModeTests {
         #expect(DisplaySettingsManager.spacingApplyRelaunchesApps(reason: edited))
     }
 
+    @Test("A thaw:// link's spacing never relaunches apps while a relaunch needs confirming")
+    func linkSpacingWaitsForConfirmation() {
+        let unconfirmed = DisplaySettingsManager.configurationsChangeReason(
+            writeOnlyReason: DisplaySettingsManager.linkWriteOnlyReason(confirmRelaunch: true)
+        )
+        #expect(!DisplaySettingsManager.spacingApplyRelaunchesApps(reason: unconfirmed))
+
+        // With the confirmation turned off the person has agreed to relaunches, and a link behaves like an edit.
+        let agreed = DisplaySettingsManager.configurationsChangeReason(
+            writeOnlyReason: DisplaySettingsManager.linkWriteOnlyReason(confirmRelaunch: false)
+        )
+        #expect(DisplaySettingsManager.spacingApplyRelaunchesApps(reason: agreed))
+    }
+
     @Test("A profile a display change switches to writes its spacing without relaunching apps")
     func displayProfileSwitchNeverRelaunches() {
         let reason = DisplaySettingsManager.configurationsChangeReason(writeOnlyReason: DisplaySettingsManager.displayProfileSwitchReason)

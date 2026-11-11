@@ -20,7 +20,7 @@ final class DisplaySettingsManager {
     private(set) var isReapplyingSpacing = false
     private(set) var lastSpacingApplyFailure: String?
     @ObservationIgnored
-    private let diagLog = DiagLog(category: "DisplaySettingsManager")
+    let diagLog = DiagLog(category: "DisplaySettingsManager")
 
     /// Per-display configurations, keyed by display UUID string.
     ///
@@ -434,7 +434,7 @@ final class DisplaySettingsManager {
             // Preflight settling so intermediate restore logic is
             // suppressed while the wave runs. Cancelled
             // below if applyOffset turns out to be a no-op.
-            host.startSettling("spacingRelaunch:\(reason):preflight", [])
+            host.noteSettling(.spacingWaveStarted(cause: reason))
             do {
                 // Read the captured request, not a later display's offset.
                 host.spacingManager.offset = desired
@@ -446,10 +446,7 @@ final class DisplaySettingsManager {
                     lastSpacingApplyFailure = String(localized: "Could not relaunch: \(outcome.failedAppNames.formatted(.list(type: .and)))")
                 }
                 if outcome.didRelaunch {
-                    host.startSettling(
-                        "spacingRelaunch:\(reason)",
-                        outcome.recoveredBundleIDs
-                    )
+                    host.noteSettling(.appsRelaunched(expecting: outcome.recoveredBundleIDs, cause: reason))
                     // The relaunched apps reattach at OS-default positions.
                     // Drive the active profile's layout pass so they end up
                     // in the saved order. Auto-switch doesn't fire when the
@@ -458,14 +455,10 @@ final class DisplaySettingsManager {
                     // restore and leave within-section ordering untouched.
                     host.reapplyActiveProfile()
                 } else {
-                    host.cancelSettling(
-                        "spacingRelaunch:\(reason):noOp"
-                    )
+                    host.noteSettling(.spacingWaveEnded(cause: reason, outcome: .noOp))
                 }
             } catch {
-                host.cancelSettling(
-                    "spacingRelaunch:\(reason):error"
-                )
+                host.noteSettling(.spacingWaveEnded(cause: reason, outcome: .error))
                 diagLog.error("applyActiveDisplaySpacing(\(reason)) failed: \(error)")
                 lastSpacingApplyFailure = error.localizedDescription
             }
@@ -495,242 +488,6 @@ final class DisplaySettingsManager {
             rememberSpacingRelaunchAnswer(approved: apply)
         }
         return apply
-    }
-
-    /// Handles per-display settings changed externally via Settings URI scheme.
-    func handleExternalPerDisplaySettingsChange(_ notification: Notification) {
-        guard let key = notification.userInfo?["key"] as? String,
-              let scopeRaw = notification.userInfo?["scope"] as? String
-        else {
-            return
-        }
-
-        // Parse scope - it might be a simple scope or "specific:UUID"
-        let (scope, specificUUID) = parseScope(from: scopeRaw)
-
-        // Validate specific UUID if provided (defense-in-depth)
-        if let uuid = specificUUID {
-            let connectedUUIDs = NSScreen.managedScreens.compactMap { Bridging.getDisplayUUIDString(for: $0.displayID) }
-            let hasConfig = configurations[uuid] != nil
-            guard connectedUUIDs.contains(uuid) || hasConfig else {
-                diagLog.warning("DisplaySettingsManager: Ignoring change for unknown display UUID '\(uuid)'")
-                return
-            }
-        }
-
-        diagLog.debug("DisplaySettingsManager: Received external change for \(key) with scope \(scope)\(specificUUID.map { " (UUID: \($0))" } ?? "")")
-
-        switch key {
-        case "useThawBar":
-            if notification.userInfo?["toggle"] as? Bool == true {
-                // Toggle operation
-                if let uuid = specificUUID {
-                    toggleUseThawBar(forDisplayUUID: uuid)
-                } else {
-                    toggleThawBarForActiveDisplay()
-                }
-            } else if let value = notification.userInfo?["value"] as? Bool {
-                // Set operation
-                if let uuid = specificUUID {
-                    setUseThawBar(value, forDisplayUUID: uuid)
-                } else {
-                    setUseThawBar(value, forActiveDisplay: true)
-                }
-            }
-
-        case "thawBarLocation":
-            if let rawValueString = notification.userInfo?["stringValue"] as? String,
-               let rawValue = Int(rawValueString),
-               let location = ThawBarLocation(rawValue: rawValue)
-            {
-                if let uuid = specificUUID {
-                    setThawBarLocation(location, forDisplayUUID: uuid)
-                } else {
-                    setThawBarLocation(location, scope: scope)
-                }
-            }
-
-        case "alwaysShowHiddenItems":
-            if notification.userInfo?["toggle"] as? Bool == true {
-                if let uuid = specificUUID {
-                    toggleAlwaysShowHiddenItems(forDisplayUUID: uuid)
-                } else {
-                    toggleAlwaysShowHiddenItems(scope: scope)
-                }
-            } else if let value = notification.userInfo?["value"] as? Bool {
-                if let uuid = specificUUID {
-                    setAlwaysShowHiddenItems(value, forDisplayUUID: uuid)
-                } else {
-                    setAlwaysShowHiddenItems(value, scope: scope)
-                }
-            }
-
-        case "thawBarLayout":
-            if let rawValueString = notification.userInfo?["stringValue"] as? String,
-               let layout = ThawBarLayout.fromString(rawValueString)
-            {
-                if let uuid = specificUUID {
-                    setThawBarLayout(layout, forDisplayUUID: uuid)
-                } else {
-                    setThawBarLayout(layout, scope: scope)
-                }
-            }
-
-        case "gridColumns":
-            if let rawValueString = notification.userInfo?["stringValue"] as? String,
-               let value = Int(rawValueString)
-            {
-                let clamped = Swift.max(2, Swift.min(value, 10))
-                if let uuid = specificUUID {
-                    setGridColumns(clamped, forDisplayUUID: uuid)
-                } else {
-                    setGridColumns(clamped, scope: scope)
-                }
-            }
-
-        default:
-            break
-        }
-    }
-
-    /// Parses scope string into scope enum and optional specific UUID.
-    /// Format: "active", "allEnabled", "allNonThawBar", or "specific:UUID"
-    private func parseScope(from scopeRaw: String) -> (SettingsURIHandler.PerDisplayScope, String?) {
-        if scopeRaw.hasPrefix("specific:") {
-            let uuid = String(scopeRaw.dropFirst("specific:".count))
-            return (.activeDisplay, uuid) // Use activeDisplay as placeholder, UUID determines actual target
-        }
-        switch scopeRaw {
-        case "active": return (.activeDisplay, nil)
-        case "allEnabled": return (.allEnabledDisplays, nil)
-        // "allNonIceBar" is the Ice-era spelling, kept for script compatibility.
-        case "allNonThawBar", "allNonIceBar": return (.allNonThawBarDisplays, nil)
-        default: return (.activeDisplay, nil)
-        }
-    }
-
-    private func setUseThawBar(_ value: Bool, forActiveDisplay: Bool) {
-        if forActiveDisplay {
-            guard let uuid = Bridging.getActiveMenuBarDisplayUUID() else {
-                diagLog.warning("Cannot set useThawBar, no active menu bar display UUID")
-                return
-            }
-            updateConfiguration(forDisplayUUID: uuid) { config in
-                config.withUseThawBar(value)
-            }
-        }
-    }
-
-    private func setUseThawBar(_ value: Bool, forDisplayUUID uuid: String) {
-        updateConfiguration(forDisplayUUID: uuid) { config in
-            config.withUseThawBar(value)
-        }
-    }
-
-    private func toggleUseThawBar(forDisplayUUID uuid: String) {
-        updateConfiguration(forDisplayUUID: uuid) { config in
-            config.withUseThawBar(!config.useThawBar)
-        }
-    }
-
-    private func setThawBarLocation(_ location: ThawBarLocation, scope: SettingsURIHandler.PerDisplayScope) {
-        if scope == .allEnabledDisplays {
-            for screen in NSScreen.managedScreens {
-                guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configuration(forUUID: uuid)
-                if config.useThawBar {
-                    updateConfiguration(forDisplayUUID: uuid) { $0.withThawBarLocation(location) }
-                }
-            }
-        } else {
-            diagLog.debug("setThawBarLocation not implemented for scope \(scope)")
-        }
-    }
-
-    private func setThawBarLocation(_ location: ThawBarLocation, forDisplayUUID uuid: String) {
-        updateConfiguration(forDisplayUUID: uuid) { config in
-            config.withThawBarLocation(location)
-        }
-    }
-
-    private func setThawBarLayout(_ layout: ThawBarLayout, scope: SettingsURIHandler.PerDisplayScope) {
-        if scope == .allEnabledDisplays {
-            for screen in NSScreen.managedScreens {
-                guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configuration(forUUID: uuid)
-                if config.useThawBar {
-                    updateConfiguration(forDisplayUUID: uuid) { $0.withThawBarLayout(layout) }
-                }
-            }
-        } else {
-            diagLog.debug("setThawBarLayout not implemented for scope \(scope)")
-        }
-    }
-
-    private func setThawBarLayout(_ layout: ThawBarLayout, forDisplayUUID uuid: String) {
-        updateConfiguration(forDisplayUUID: uuid) { config in
-            config.withThawBarLayout(layout)
-        }
-    }
-
-    private func setGridColumns(_ columns: Int, scope: SettingsURIHandler.PerDisplayScope) {
-        if scope == .allEnabledDisplays {
-            for screen in NSScreen.managedScreens {
-                guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configuration(forUUID: uuid)
-                if config.useThawBar {
-                    updateConfiguration(forDisplayUUID: uuid) { $0.withGridColumns(columns) }
-                }
-            }
-        } else {
-            diagLog.debug("setGridColumns not implemented for scope \(scope)")
-        }
-    }
-
-    private func setGridColumns(_ columns: Int, forDisplayUUID uuid: String) {
-        updateConfiguration(forDisplayUUID: uuid) { config in
-            config.withGridColumns(columns)
-        }
-    }
-
-    private func setAlwaysShowHiddenItems(_ value: Bool, scope: SettingsURIHandler.PerDisplayScope) {
-        if scope == .allNonThawBarDisplays {
-            for screen in NSScreen.managedScreens {
-                guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configuration(forUUID: uuid)
-                if !config.useThawBar {
-                    updateConfiguration(forDisplayUUID: uuid) { $0.withAlwaysShowHiddenItems(value) }
-                }
-            }
-        } else {
-            diagLog.debug("setAlwaysShowHiddenItems not implemented for scope \(scope)")
-        }
-    }
-
-    private func toggleAlwaysShowHiddenItems(scope: SettingsURIHandler.PerDisplayScope) {
-        if scope == .allNonThawBarDisplays {
-            for screen in NSScreen.managedScreens {
-                guard let uuid = Bridging.getDisplayUUIDString(for: screen.displayID) else { continue }
-                let config = configuration(forUUID: uuid)
-                if !config.useThawBar {
-                    updateConfiguration(forDisplayUUID: uuid) { $0.withAlwaysShowHiddenItems(!$0.alwaysShowHiddenItems) }
-                }
-            }
-        } else {
-            diagLog.debug("toggleAlwaysShowHiddenItems not implemented for scope \(scope)")
-        }
-    }
-
-    private func setAlwaysShowHiddenItems(_ value: Bool, forDisplayUUID uuid: String) {
-        updateConfiguration(forDisplayUUID: uuid) { config in
-            config.withAlwaysShowHiddenItems(value)
-        }
-    }
-
-    private func toggleAlwaysShowHiddenItems(forDisplayUUID uuid: String) {
-        updateConfiguration(forDisplayUUID: uuid) { config in
-            config.withAlwaysShowHiddenItems(!config.alwaysShowHiddenItems)
-        }
     }
 
     // MARK: - Lookup
@@ -879,39 +636,6 @@ final class DisplaySettingsManager {
                 isConnected: true
             )
         }
-    }
-
-    /// Returns info about all known displays, currently connected ones plus
-    /// previously-seen ones whose name/notch state was cached. Connected
-    /// displays come first (alphabetical within each group), then
-    /// disconnected ones (alphabetical).
-    ///
-    /// UUIDs with a saved configuration but no cached name are not surfaced:
-    /// a placeholder row is one the user can't identify. The data is kept, and
-    /// the display appears normally once it reconnects and its name is captured.
-    ///
-    /// - Complexity: O(n) in the number of connected screens plus known
-    ///   displays; walks NSScreen.managedScreens and the stored profile
-    ///   data on every access.
-    var displays: [DisplayInfo] {
-        let connected = connectedDisplays()
-        let connectedIDs = Set(connected.map(\.id))
-
-        let disconnected: [DisplayInfo] = knownDisplays
-            .filter { !connectedIDs.contains($0.key) }
-            .filter { !$0.value.name.trimmingCharacters(in: .whitespaces).isEmpty }
-            .map { uuid, known in
-                DisplayInfo(
-                    id: uuid,
-                    displayID: nil,
-                    name: known.name,
-                    hasNotch: known.hasNotch,
-                    isConnected: false
-                )
-            }
-
-        return connected.sorted { $0.name < $1.name }
-            + disconnected.sorted { $0.name < $1.name }
     }
 
     /// Returns the configuration for a given display UUID, falling back to

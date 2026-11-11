@@ -75,6 +75,7 @@ struct MenuBarManagerUnsetupTests {
         #expect(manager.setSection(.hidden, items: []) == nil)
         #expect(manager.nativeHiddenBundleIDs.isEmpty)
         #expect(manager.nativeUntrackedBundleIDs.isEmpty)
+        #expect(manager.nativeLeftAloneBundleIDs.isEmpty)
         var received = 0
         let first = manager.revealedSectionChanges.sink { _ in received += 1 }
         let second = manager.sectionLayoutChanges.sink { _ in received += 1 }
@@ -97,7 +98,6 @@ struct MenuBarManagerUnsetupTests {
     func housekeeping() {
         let appState = AppState()
         let manager = appState.menuBarManager
-        manager.updateLastShowTimestamp()
         manager.noteUserRevealOwnership()
         manager.dismissLayoutEditorPanel()
         manager.dismissAppearanceEditorPanel()
@@ -106,7 +106,7 @@ struct MenuBarManagerUnsetupTests {
         manager.openItem(withIdentifier: "com.example.missing")
         #expect(manager.lastUserRevealDate != nil)
         #expect(!manager.shouldAlwaysShowHiddenItems)
-        #expect(!manager.shouldDeferBarMutation)
+        #expect(manager.barSettling.hold(for: .barMutation) == nil)
         #expect(manager.hotkeyItemMap.isEmpty)
     }
 
@@ -114,10 +114,10 @@ struct MenuBarManagerUnsetupTests {
     func applicationMenusWithoutSetup() {
         let appState = AppState()
         let manager = appState.menuBarManager
-        manager.hideApplicationMenus(manual: true)
-        #expect(!manager.isHidingApplicationMenus)
-        manager.showApplicationMenus()
-        #expect(!manager.isHidingApplicationMenus)
+        manager.applicationMenuHider.hideApplicationMenus(manual: true)
+        #expect(!manager.applicationMenuHider.isHidingApplicationMenus)
+        manager.applicationMenuHider.showApplicationMenus()
+        #expect(!manager.applicationMenuHider.isHidingApplicationMenus)
     }
 }
 

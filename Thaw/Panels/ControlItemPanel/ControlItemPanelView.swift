@@ -183,21 +183,21 @@ struct ControlItemPanelView: View {
     }
 
     private var swapBarToggle: some View {
-        @Bindable var advanced = appState.settings.advanced
+        @Bindable var visibility = appState.settings.visibility
         return PanelToggleRow(
             symbol: "arrow.left.arrow.right",
             title: "Swap Bar",
             help: "Show a floating bar at the bottom of the screen with buttons to swap the shown and hidden items, show sections, switch profiles and turn on Zen Mode",
-            isOn: advanced.enableSwapBar
+            isOn: visibility.enableSwapBar
         ) {
-            advanced.enableSwapBar.toggle()
+            visibility.enableSwapBar.toggle()
         }
     }
 
     // MARK: Commands
 
     private var searchRow: some View {
-        PanelCommandRow(symbol: "magnifyingglass", title: "Search items…") {
+        PanelCommandRow(symbol: "magnifyingglass", title: "Search Menu Bar Items…") {
             dismiss()
             appState.menuBarManager.searchPanel.show()
         }
@@ -206,7 +206,7 @@ struct ControlItemPanelView: View {
     private var settingsRow: some View {
         PanelCommandRow(symbol: "gearshape", title: "Settings…") {
             dismiss()
-            appState.activate(withPolicy: .regular)
+            appState.activate(withPolicy: appState.userWindowActivationPolicy)
             appState.openWindow(.settings)
         }
     }
@@ -224,17 +224,12 @@ struct ControlItemPanelView: View {
         guard metadata.id != profileManager.activeProfileID else {
             return
         }
-        let profile: Profile
         do {
-            profile = try profileManager.loadProfile(id: metadata.id)
+            try profileManager.switchToProfile(id: metadata.id, on: appState)
         } catch {
             Self.diagLog.error("profile \(metadata.id) failed to load: \(error)")
             ThawHUD.show(symbol: "exclamationmark.triangle", text: "Profile not applied")
-            return
         }
-        let previousID = profileManager.activeProfileID
-        profileManager.activeProfileID = metadata.id
-        profileManager.applyProfile(profile, to: appState, previousProfileID: previousID)
     }
 }
 

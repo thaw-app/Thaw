@@ -24,6 +24,11 @@ extension MigrationManager {
     func migrateAll() {
         removeMenuBarHistory(from: Defaults.store)
         removeAXBridgeLogs()
+        removeReorderEditorFlag(from: Defaults.store)
+        migrateSearchPresentation(in: Defaults.store)
+        migrateLastSettingsPane(in: Defaults.store)
+        migrateSpaceAppearanceKeys(in: Defaults.store, spaces: Bridging.getManagedSpaces())
+        resetRecordingAlertsOnReturn(in: Defaults.store)
         let results = [
             migratePerDisplayThawBar(),
         ]
@@ -43,6 +48,17 @@ extension MigrationManager {
     }
 }
 
+// MARK: - Remove Retired Reorder Editor Flag
+
+extension MigrationManager {
+    /// The reorder editor is gone; Pop Out opens the Layout window instead.
+    static let reorderEditorFlagKey = "useReorderLayoutEditor"
+
+    func removeReorderEditorFlag(from defaults: UserDefaults) {
+        defaults.removeObject(forKey: Self.reorderEditorFlagKey)
+    }
+}
+
 // MARK: - Remove Retired AX Bridge Logs
 
 extension MigrationManager {
@@ -55,6 +71,84 @@ extension MigrationManager {
         for file in files where file.lastPathComponent.hasPrefix("ax-bridge-") && file.pathExtension == "txt" {
             try? FileManager.default.removeItem(at: file)
         }
+    }
+}
+
+// MARK: - Migrate Search Styles
+
+extension MigrationManager {
+    /// Search's three styles became two layouts: stores the layout a saved
+    /// style opens as, and drops the frames Detailed saved per display.
+    func migrateSearchPresentation(in defaults: UserDefaults) {
+        let key = Defaults.Key.menuBarSearchPresentation.rawValue
+        if let stored = defaults.string(forKey: key), let layout = SearchPresentation(storedValue: stored), layout.rawValue != stored {
+            defaults.set(layout.rawValue, forKey: key)
+        }
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("MenuBarSearchPanelFrame_") {
+            defaults.removeObject(forKey: key)
+        }
+    }
+}
+
+// MARK: - Migrate Retired Settings Pages
+
+extension MigrationManager {
+    /// Spaces, Automation, Experiments and Advanced are no longer pages: a
+    /// saved last page that names one is stored as the page it opens.
+    func migrateLastSettingsPane(in defaults: UserDefaults) {
+        let key = Defaults.Key.lastSettingsPane.rawValue
+        guard
+            let stored = defaults.string(forKey: key), let pane = SettingsNavigationIdentifier(storedValue: stored), pane.rawValue != stored
+        else {
+            return
+        }
+        defaults.set(pane.rawValue, forKey: key)
+    }
+}
+
+// MARK: - Migrate Per-Space Looks to Persistent Keys
+
+extension MigrationManager {
+    /// Rekeys per-Space looks from raw Space IDs, which macOS renumbers at logout, to
+    /// persistent keys. Unresolved ones wait for a later launch; a persistent entry wins.
+    func migrateSpaceAppearanceKeys(in defaults: UserDefaults, spaces: [Bridging.ManagedSpace]) {
+        let key = Defaults.Key.menuBarAppearanceSpaceOverrides.rawValue
+        guard
+            let data = defaults.data(forKey: key), var overrides = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        else {
+            return
+        }
+        let keysByID = Dictionary(spaces.map { (String($0.spaceID), $0.persistentKey) }) { first, _ in first }
+        var changed = false
+        for rawID in overrides.keys where rawID.allSatisfy(\.isNumber) {
+            guard let persistentKey = keysByID[rawID] else { continue }
+            if overrides[persistentKey] == nil {
+                overrides[persistentKey] = overrides[rawID]
+            }
+            overrides[rawID] = nil
+            changed = true
+        }
+        guard changed, let rewritten = try? JSONSerialization.data(withJSONObject: overrides, options: [.sortedKeys]) else {
+            return
+        }
+        defaults.set(rewritten, forKey: key)
+    }
+}
+
+// MARK: - Reset Returning Recording Alerts
+
+extension MigrationManager {
+    /// Marks that the alerts' saved switch was reset once.
+    static let recordingAlertsReturnedKey = "RecordingAlertsReturned"
+
+    /// The alerts stayed off while hidden, whatever was saved. Clearing the old switch
+    /// once keeps them off until it's turned on again in Visibility.
+    func resetRecordingAlertsOnReturn(in defaults: UserDefaults) {
+        guard !defaults.bool(forKey: Self.recordingAlertsReturnedKey) else {
+            return
+        }
+        defaults.removeObject(forKey: Defaults.Key.enableRecordingWatch.rawValue)
+        defaults.set(true, forKey: Self.recordingAlertsReturnedKey)
     }
 }
 

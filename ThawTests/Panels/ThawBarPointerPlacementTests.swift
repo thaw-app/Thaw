@@ -110,7 +110,7 @@ struct ThawBarPointerPlacementTests {
     @Test("Hotkey placement still uses the live pointer in both axes")
     func hotkeyOverridesRecordedPointer() throws {
         try withPanel { fixture in
-            fixture.appState.settings.general.thawBarLocationOnHotkey = true
+            fixture.appState.settings.thawBar.thawBarLocationOnHotkey = true
             fixture.show(triggeredByHotkey: true)
             let moved = CGPoint(x: fixture.screen.frame.midX, y: fixture.screen.frame.midY)
             fixture.pointer.location = moved
@@ -159,7 +159,7 @@ private struct PlacementFixture {
         screen = try #require(NSScreen.main)
         appState = AppState()
         appState.settings.general.showThawIcon = showsIcon
-        appState.settings.general.thawBarLocationOnHotkey = false
+        appState.settings.thawBar.thawBarLocationOnHotkey = false
         appState.settings.displaySettings.configurations = [:]
         appState.settings.displaySettings.globalConfiguration = .defaultConfiguration.withThawBarLocation(location)
         pointer.location = CGPoint(x: screen.frame.minX + screen.frame.width * 0.35, y: screen.frame.maxY - 10)

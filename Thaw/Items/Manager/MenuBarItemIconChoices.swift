@@ -39,12 +39,8 @@ final class MenuBarItemIconChoices {
         stored = data.flatMap { try? JSONDecoder().decode([String: Stored].self, from: $0) } ?? [:]
     }
 
-    private static func key(for item: MenuBarItem) -> String {
-        MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
-    }
-
     func image(for item: MenuBarItem) -> NSImage? {
-        let key = Self.key(for: item)
+        let key = item.canonicalIdentifier
         // Read before the image cache, so a SwiftUI caller observes a change.
         guard let entry = stored[key] else { return nil }
         if let image = images[key] {
@@ -57,12 +53,12 @@ final class MenuBarItemIconChoices {
     }
 
     func hasChoice(for item: MenuBarItem) -> Bool {
-        stored[Self.key(for: item)] != nil
+        stored[item.canonicalIdentifier] != nil
     }
 
     /// Saves image as the item's icon, or clears the choice when nil.
     func setImage(_ image: NSImage?, for item: MenuBarItem) {
-        let key = Self.key(for: item)
+        let key = item.canonicalIdentifier
         images[key] = nil
         if let image, let png = Self.pngData(for: image) {
             stored[key] = Stored(png: png, isTemplate: image.isTemplate)
@@ -79,7 +75,7 @@ final class MenuBarItemIconChoices {
     /// at no more than 3x: a picked file can be any size, and the PNG is kept in the defaults.
     private static func pngData(for image: NSImage) -> Data? {
         let pixelHeight = image.representations.map(\.pixelsHigh).max() ?? 0
-        let scale = min(max(CGFloat(pixelHeight) / max(image.size.height, 1), 1), 3)
+        let scale = (CGFloat(pixelHeight) / max(image.size.height, 1)).clamped(to: 1 ... 3)
         guard let rep = NSBitmapImageRep(
             bitmapDataPlanes: nil,
             pixelsWide: max(Int((image.size.width * scale).rounded()), 1),

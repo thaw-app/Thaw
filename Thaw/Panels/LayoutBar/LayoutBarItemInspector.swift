@@ -236,12 +236,8 @@ struct LayoutBarItemInspector: View {
     }
 
     private func commitName() {
-        var item = item
         let trimmed = draftName.trimmingCharacters(in: .whitespaces)
         // Empty or whitespace-only names remove the entry, matching the revert button.
-        guard item.customName != (trimmed.isEmpty ? nil : trimmed) else {
-            return
-        }
-        item.customName = trimmed.isEmpty ? nil : trimmed
+        LayoutEditUndo.rename(item, to: trimmed.isEmpty ? nil : trimmed, undoManager: appState.layoutUndo)
     }
 }

@@ -7,235 +7,80 @@
 
 import MenuBarModel
 
-// MARK: - Startup settling
+// MARK: - Bar settling host
 
 extension MenuBarItemManager {
-    /// Starts a settling period during which restore and section-order saves
-    /// are suppressed. The settling task polls cacheItemsRegardless until
-    /// the menu bar has stabilized, then runs two final cache passes that
-    /// trigger the saved-layout restore.
-    ///
-    /// With expectedBundleIDs, settling ends once all of them are cached;
-    /// otherwise once the managed-item count holds. Both also need sourcePIDs
-    /// resolved. maxDuration is generous because some apps take tens of
-    /// seconds to reattach. On re-entry the later deadline wins.
-    func startSettlingPeriod(
-        reason: String,
-        expectedBundleIDs: Set<String> = [],
-        maxDuration: Duration = .seconds(60)
-    ) {
-        let mergedExpected = settlingExpectedBundleIDs.union(expectedBundleIDs)
-        // An app launch names its bundle too, but only a relaunch wait may
-        // replace the boot's: a launch at login would end it once that one
-        // app is back, long before the rest of the login items.
-        let incomingKind: SettlingKind = if reason == "performSetup" {
-            .cold
-        } else if reason.hasPrefix("spacingRelaunch") {
-            // Its own IDs, not the shared set: a launch that yielded leaves its ID there,
-            // and a preflight counting it would replace the boot settling.
-            expectedBundleIDs.isEmpty ? .preflight : .expectedSet
-        } else {
-            .event
-        }
-
-        // A weaker settling must not demote a stronger one in flight: a
-        // preflight yields to everything else, and a display change or launch
-        // yields to the boot and relaunch waits. Keep the merged expected set.
-        if let existing = settlingKind,
-           Self.settlingYields(incoming: incomingKind, to: existing)
-        {
-            settlingExpectedBundleIDs = mergedExpected
-            MenuBarItemManager.diagLog.debug(
-                "\(reason): settling start ignored; \(existing) settling already in flight"
-            )
-            return
-        }
-
-        let newMaxDeadline = ContinuousClock.now.advanced(by: maxDuration)
-        let maxDeadline = max(settlingDeadline ?? newMaxDeadline, newMaxDeadline)
-        settlingDeadline = maxDeadline
-        settlingExpectedBundleIDs = mergedExpected
-        let adoptsObservedMembership = Self.settleAdoptsObservedMembership(incoming: incomingKind, replacing: settlingKind)
-        settlingKind = incomingKind
-        // The cancelled task exits without touching shared state.
-        startupSettlingTask?.cancel()
-        isInStartupSettling = true
-        PendingPassTeardown.callOff([.postRestrictionRepair, .structuralNormalization], of: self, on: repairs)
-        MenuBarItemManager.diagLog.debug("\(reason): settling period started (max duration: \(maxDuration))")
-        // @MainActor ensures the flag flip and final cache call are never
-        // interleaved with notification-triggered cache cycles between them.
-        startupSettlingTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            await self.initialCacheTask?.value
-
-            let stableTarget = 3
-            var lastSeenCount = -1
-            var stablePolls = 0
-            let useExpectedSet = !mergedExpected.isEmpty
-            let settlingStartedAt = ContinuousClock.now
-            if useExpectedSet {
-                MenuBarItemManager.diagLog.debug(
-                    "\(reason): waiting for \(mergedExpected.count) expected bundle ID(s) to reattach"
-                )
-            }
-
-            while !Task.isCancelled {
-                if ContinuousClock.now > maxDeadline {
-                    MenuBarItemManager.diagLog.debug(
-                        "\(reason): settling hit max deadline (\(maxDeadline)), ending with fallback"
-                    )
-                    break
-                }
-
-                await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: true)
-                let managedCount = itemCache.managedItems.count
-                let unresolved = SettlingSourcePIDs.unresolvedCount(in: itemCache.managedItems)
-                let pidsOK = managedCount > 0 && unresolved <= 1
-                let minimumElapsed = settlingStartedAt.duration(to: .now) >= Self.startupMinimumSettlingDuration
-                let hostReady = menuBarHostItemsReady(in: itemCache)
-                // After a display change macOS keeps re-laying the bar well past a
-                // stable item count, and a restore read from those frames scrambles it.
-                let barQuiet = !reason.hasPrefix("display") || savedOrderMirrorGate.isQuiet()
-
-                if useExpectedSet {
-                    // Read on every poll: an app launch that yielded to this wait adds its ID later.
-                    let waitingFor = settlingExpectedBundleIDs
-                    let presentBundleIDs: Set<String> = Set(
-                        itemCache.managedItems.compactMap { item in
-                            if case let .string(bid) = item.tag.namespace {
-                                return bid
-                            }
-                            return nil
-                        }
-                    )
-                    let stillMissing = waitingFor.subtracting(presentBundleIDs)
-                    if stillMissing.isEmpty,
-                       pidsOK,
-                       minimumElapsed,
-                       hostReady
-                    {
-                        MenuBarItemManager.diagLog.debug(
-                            "\(reason): all \(waitingFor.count) expected bundle ID(s) reattached, ending early"
-                        )
-                        break
-                    }
-                    MenuBarItemManager.diagLog.debug(
-                        "\(reason): \(stillMissing.count) bundle ID(s) still missing: \(stillMissing.sorted().joined(separator: ", "))"
-                    )
-                } else {
-                    if pidsOK,
-                       managedCount == lastSeenCount,
-                       minimumElapsed,
-                       hostReady,
-                       barQuiet
-                    {
-                        stablePolls += 1
-                        if stablePolls >= stableTarget {
-                            MenuBarItemManager.diagLog.debug(
-                                "\(reason): settled (count=\(managedCount) stable for \(stableTarget) polls, \(unresolved) nil PIDs), ending early"
-                            )
-                            break
-                        }
-                    } else {
-                        if managedCount != lastSeenCount {
-                            MenuBarItemManager.diagLog.debug(
-                                "\(reason): count changed \(lastSeenCount) -> \(managedCount) (\(unresolved) nil PIDs), resetting stability"
-                            )
-                        } else if !minimumElapsed {
-                            MenuBarItemManager.diagLog.debug(
-                                "\(reason): count stable but minimum settle \(Self.startupMinimumSettlingDuration) not elapsed yet"
-                            )
-                        } else if !hostReady {
-                            MenuBarItemManager.diagLog.debug(
-                                "\(reason): waiting for menu bar host modules (MenuBarAgent / BentoBox)"
-                            )
-                        } else if !barQuiet {
-                            MenuBarItemManager.diagLog.debug(
-                                "\(reason): waiting for the bar to go quiet after the display change"
-                            )
-                        }
-                        stablePolls = 0
-                        lastSeenCount = managedCount
-                    }
-                }
-
-                do {
-                    try await Task.sleep(
-                        for: Constants.MenuBarTuning.startupSettlingPollInterval,
-                        tolerance: .milliseconds(100)
-                    )
-                } catch is CancellationError {
-                    MenuBarItemManager.diagLog.debug("\(reason): settling task cancelled")
-                    return
-                } catch {
-                    return
-                }
-            }
-
-            guard !Task.isCancelled else {
-                return
-            }
-
-            isInStartupSettling = false
-            settlingDeadline = nil
-            settlingExpectedBundleIDs.removeAll()
-            settlingKind = nil
-            MenuBarItemManager.diagLog.debug(
-                "\(reason): settling period ended"
-            )
-            // A bar arranged by hand while Thaw was not running, or under an
-            // older build, has to be read once before its sections can be.
-            // Only items with no section yet: Layout's sections win over stale weights.
-            if adoptsObservedMembership {
-                adoptObservedMembership(reason: "settled launch", keepingAuthored: true)
-            }
-
-            // Once per launch, after login items register: hygiene asks
-            // NSWorkspace which apps exist. Latched because profile applies
-            // also settle through here.
-            if !didRunPositionStoreHygiene {
-                didRunPositionStoreHygiene = true
-                repairs.request(.storeHygiene, cause: .settled)
-                if let hold = await repairs.enter(.storeHygiene) {
-                    PositionStoreHygiene.pruneCurrentStore(permit: StoreWritePermit(hold))
-                    repairs.leave(hold)
-                }
-            }
-
-            await settleActiveProfile(reason: reason)
-
-            MenuBarItemManager.diagLog.debug(
-                "\(reason): running fast restore without sourcePID resolution"
-            )
-            // Moves stamped during settling would otherwise skip both passes
-            // through the recent-move cooldown.
-            await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: false)
-            // Resolves source PIDs for later readers.
-            await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: true)
-
-            // Repair only after the startup inventory and saved layout have
-            // settled; intermediate login-item frames can overlap or be parked.
-            schedulePostRestrictionRepair(cause: .settled)
-            scheduleStructuralNormalization(cause: .settled)
-
-            if reason == "performSetup" {
-                scheduleStartupLateItemRecheck()
-            }
-        }
+    /// Polls and the work after settling run on the main actor, so no notification-triggered cache
+    /// cycle slips between the flag flip and the final passes.
+    func makeSettlingHost() -> BarSettling.Host {
+        BarSettling.Host(
+            awaitInitialRead: { [weak self] in await self?.initialCacheTask?.value },
+            sample: { [weak self] in await self?.settlingSample() ?? BarSettling.Sample() },
+            didStart: { [weak self] in
+                guard let self else { return }
+                PendingPassTeardown.callOff([.postRestrictionRepair, .structuralNormalization], of: self, on: repairs)
+            },
+            didSettle: { [weak self] in await self?.finishSettling($0) }
+        )
     }
 
-    /// Whether a settling reads sections from the stored weights when it ends: only Thaw's own launch.
-    /// A concealed item's weight can still sit in the Visible band in Manual, so a later read would undo Layout edits.
-    /// An app relaunch that takes over the launch settling still owes that read.
-    static func settleAdoptsObservedMembership(incoming: SettlingKind, replacing existing: SettlingKind?) -> Bool {
-        incoming == .cold || existing == .cold
+    private func settlingSample() async -> BarSettling.Sample {
+        await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: true)
+        let items = itemCache.managedItems
+        return BarSettling.Sample(
+            managedCount: items.count,
+            unresolvedPIDs: SettlingSourcePIDs.unresolvedCount(in: items),
+            hostReady: menuBarHostItemsReady(in: itemCache),
+            bundleIDs: Set(items.compactMap { item in
+                if let bid = item.tag.namespace.bundleIdentifier {
+                    return bid
+                }
+                return nil
+            }),
+            readGeneration: cacheCycleState.lastRead.generation,
+            readComplete: cacheCycleState.lastRead.isSteady
+        )
     }
 
-    static func settlingYields(incoming: SettlingKind, to existing: SettlingKind) -> Bool {
-        switch incoming {
-        case .preflight: existing != .preflight
-        case .event: existing == .cold || existing == .expectedSet
-        case .cold, .expectedSet: false
+    private func finishSettling(_ ending: BarSettling.Ending) async {
+        let reason = ending.disturbance.label
+        // A bar arranged by hand while Thaw was not running, or under an
+        // older build, has to be read once before its sections can be.
+        // Only items with no section yet: Layout's sections win over stale weights.
+        if ending.adoptsObservedMembership {
+            adoptObservedMembership(reason: "settled launch", keepingAuthored: true)
+        }
+
+        // Once per launch, after login items register: hygiene asks
+        // NSWorkspace which apps exist. Latched because profile applies
+        // also settle through here.
+        if !didRunPositionStoreHygiene {
+            didRunPositionStoreHygiene = true
+            repairs.request(.storeHygiene, cause: .settled)
+            if let hold = await repairs.enter(.storeHygiene) {
+                PositionStoreHygiene.pruneCurrentStore(permit: StoreWritePermit(hold))
+                repairs.leave(hold)
+            }
+        }
+
+        await settleActiveProfile(reason: reason)
+
+        MenuBarItemManager.diagLog.debug(
+            "\(reason): running fast restore without sourcePID resolution"
+        )
+        // Moves stamped during settling would otherwise skip both passes
+        // through the recent-move cooldown.
+        await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: false)
+        // Resolves source PIDs for later readers.
+        await cacheItemsRegardless(skipRecentMoveCheck: true, resolveSourcePID: true)
+
+        // Repair only after the startup inventory and saved layout have
+        // settled; intermediate login-item frames can overlap or be parked.
+        schedulePostRestrictionRepair(cause: .settled)
+        scheduleStructuralNormalization(cause: .settled)
+
+        if ending.disturbance == .thawLaunched {
+            scheduleStartupLateItemRecheck()
         }
     }
 

@@ -36,7 +36,7 @@ struct HidingMethodTests {
     @Test("The Apple-items switch reads what each method needs", .scratchDefaults, arguments: HidingMethod.allCases)
     func appleItemsSwitchFollowsTheMethod(method: HidingMethod) {
         withPrivateSettingsChangeCenter {
-            let settings = AdvancedSettings()
+            let settings = LayoutSettings()
             settings.enableNativeAppHiding = method.usesNativeAppHiding
             #expect(settings.enableExperimentalSystemItemHiding == method.hidesAppleItems)
         }

@@ -23,10 +23,7 @@ extension ProfileManager {
         guard ProfilesFeature.isOnInDefaults, !keepsLiveLayoutAtLaunch(meta) else { return }
         diagLog.info("Auto-switching to profile \(meta.name) for \(trigger)")
         do {
-            let profile = try loadProfile(id: meta.id)
-            let previousID = activeProfileID
-            activeProfileID = meta.id
-            applyProfile(profile, to: appState, previousProfileID: previousID, relaunchesApps: relaunchesApps)
+            try switchToProfile(id: meta.id, on: appState, relaunchesApps: relaunchesApps)
         } catch {
             diagLog.error("Auto-switch for \(trigger) failed: \(error)")
         }

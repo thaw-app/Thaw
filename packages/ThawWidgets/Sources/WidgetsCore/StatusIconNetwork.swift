@@ -59,6 +59,7 @@ struct StatusIconPreviewState: Equatable {
     var composition: StatusIconComposition
     var samples: StatusIconSamples
     var isLive: Bool
+    var style = StatusIconStyle()
 
     var title: String {
         isLive ? String(localized: "Thaw widget · Live readings") : String(localized: "Thaw widget · Sample readings")
@@ -66,15 +67,18 @@ struct StatusIconPreviewState: Equatable {
 
     var sources: [StatusIconComposition.Source] {
         StatusIconComposition.Source.allCases.filter { source in
-            composition.activeSources.contains(source) || (source == .wifi && composition.center == .wifi && samples.network == .wifi)
+            composition.activeSources.contains(source)
+                || (source == .wifi && composition.center.showsNetwork(for: samples) && samples.network == .wifi)
         }
     }
 
     var details: [String] {
         guard !composition.isEmpty else { return [String(localized: "No indicators selected")] }
         var parts = [String]()
-        if composition.center == .wifi {
+        if composition.center.showsNetwork(for: samples) {
             parts.append(String(localized: "Connection: \(samples.network.title)"))
+        } else if composition.center == .bluetooth, let output = samples.audioOutput {
+            parts.append(String(localized: "Playing through \(output.name)"))
         } else if composition.center != .none {
             parts.append(String(localized: "Symbol: \(composition.center.title)"))
         }
@@ -92,4 +96,55 @@ struct StatusIconPreviewState: Equatable {
     var accessibilityDescription: String {
         ([title] + details).joined(separator: ". ")
     }
+
+    /// What the icon draws and says, to the precision either shows. A reading no indicator uses, or
+    /// a change of less than a percent, leaves it equal, so that sample need not redraw the icon.
+    var displayed: StatusIconDisplayedContent {
+        StatusIconDisplayedContent(
+            composition: composition,
+            style: style,
+            title: title,
+            details: details,
+            centerSymbol: composition.center.symbolName(for: samples),
+            tints: composition.activeSources.map { style.tint(for: $0, samples: samples) }
+        )
+    }
+}
+
+extension StatusIconPreviewState {
+    /// What the image draws, to the precision it shows: whole percents around the outside, lit
+    /// segments below and signal bars in the centre. A reading can change its text and not its picture.
+    var drawn: StatusIconDrawnContent {
+        let showsWifi = composition.center.showsNetwork(for: samples) && samples.network == .wifi
+        return StatusIconDrawnContent(
+            composition: composition,
+            style: style,
+            centerSymbol: composition.center.symbolName(for: samples),
+            tints: composition.activeSources.map { style.tint(for: $0, samples: samples) },
+            outerPercent: composition.outer == .none ? nil : Int((samples[composition.outerSource] * 100).rounded()),
+            signalBars: showsWifi ? StatusIconSignal.bars(strength: samples[.wifi]) : nil,
+            litSegments: composition.bottom == .none ? nil : samples.litSegments(for: composition.bottomSource)
+        )
+    }
+}
+
+/// The inputs of the menu bar image.
+struct StatusIconDrawnContent: Equatable {
+    var composition: StatusIconComposition
+    var style: StatusIconStyle
+    var centerSymbol: String?
+    var tints: [StatusIconTint?]
+    var outerPercent: Int?
+    var signalBars: Int?
+    var litSegments: Int?
+}
+
+/// The parts of a preview state that reach the screen or VoiceOver.
+struct StatusIconDisplayedContent: Equatable {
+    var composition: StatusIconComposition
+    var style: StatusIconStyle
+    var title: String
+    var details: [String]
+    var centerSymbol: String?
+    var tints: [StatusIconTint?]
 }

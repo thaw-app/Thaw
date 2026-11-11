@@ -13,7 +13,7 @@ import ThawUI
 /// runs in the Widgets module, and the panel behind Thaw's icon. The page leaves
 /// the sidebar with the module, but the panel keeps following its own setting.
 struct WidgetsSettingsPane: View {
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: WidgetsSettings
 
     var body: some View {
         ThawForm {
@@ -37,6 +37,7 @@ struct WidgetsSettingsPane: View {
         Toggle(isOn: $settings.enableControlItemPanel) {
             HStack(spacing: ThawSpacing.compact) {
                 Text("Panel instead of the status menu")
+                    .settingsSearchAnchor("lab.enableControlItemPanel")
                 ThawBadge.alpha
             }
         }

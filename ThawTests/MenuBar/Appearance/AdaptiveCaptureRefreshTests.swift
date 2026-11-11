@@ -8,7 +8,7 @@
 import Testing
 @testable import Thaw
 
-/// Covers what an appearance configuration asks the menu bar manager to sample,
+/// Covers what an appearance configuration asks the wallpaper colour monitor to sample,
 /// and what a change to it does to the running adaptive refresh.
 ///
 /// The captures themselves need a window server and a real wallpaper, so what
@@ -23,12 +23,12 @@ struct AdaptiveCaptureRefreshTests {
         tintKind: MenuBarTintKind = .noTint,
         backgroundKind: MenuBarBackgroundKind = .none,
         tintOpacity: Double = 0.2
-    ) -> MenuBarManager.AdaptiveCaptureRequirements {
+    ) -> MenuBarWallpaperColorMonitor.AdaptiveCaptureRequirements {
         var configuration = MenuBarAppearancePartialConfiguration.defaultConfiguration
         configuration.tintKind = tintKind
         configuration.backgroundKind = backgroundKind
         configuration.tintOpacity = tintOpacity
-        return MenuBarManager.AdaptiveCaptureRequirements(configuration: configuration)
+        return MenuBarWallpaperColorMonitor.AdaptiveCaptureRequirements(configuration: configuration)
     }
 
     // MARK: - Requirements
@@ -68,12 +68,12 @@ struct AdaptiveCaptureRefreshTests {
         let menu = MenuBarAppearancePartialConfiguration.defaultConfiguration
         var bar = menu
         bar.tintKind = .adaptiveGradient
-        let presented = MenuBarManager.AdaptiveCaptureRequirements(configuration: menu, thawBarConfiguration: bar)
-        let closed = MenuBarManager.AdaptiveCaptureRequirements(configuration: menu)
+        let presented = MenuBarWallpaperColorMonitor.AdaptiveCaptureRequirements(configuration: menu, thawBarConfiguration: bar)
+        let closed = MenuBarWallpaperColorMonitor.AdaptiveCaptureRequirements(configuration: menu)
         #expect(presented.needsAverageColor)
         #expect(presented.needsPalette)
         #expect(!closed.isAdaptive)
-        #expect(MenuBarManager.adaptiveRefreshAction(from: presented, to: closed) == .stop)
+        #expect(MenuBarWallpaperColorMonitor.adaptiveRefreshAction(from: presented, to: closed) == .stop)
     }
 
     // MARK: - Refresh Transitions
@@ -83,8 +83,8 @@ struct AdaptiveCaptureRefreshTests {
         let adaptive = requirements(tintKind: .adaptive)
         let gradient = requirements(tintKind: .adaptiveGradient)
 
-        #expect(MenuBarManager.adaptiveRefreshAction(from: adaptive, to: gradient) == .recapture)
-        #expect(MenuBarManager.adaptiveRefreshAction(from: gradient, to: adaptive) == .recapture)
+        #expect(MenuBarWallpaperColorMonitor.adaptiveRefreshAction(from: adaptive, to: gradient) == .recapture)
+        #expect(MenuBarWallpaperColorMonitor.adaptiveRefreshAction(from: gradient, to: adaptive) == .recapture)
     }
 
     @Test("An adaptive background gaining the gradient tint captures right away")
@@ -93,7 +93,7 @@ struct AdaptiveCaptureRefreshTests {
         let backgroundWithGradient = requirements(tintKind: .adaptiveGradient, backgroundKind: .adaptive)
 
         #expect(
-            MenuBarManager.adaptiveRefreshAction(from: background, to: backgroundWithGradient) == .recapture
+            MenuBarWallpaperColorMonitor.adaptiveRefreshAction(from: background, to: backgroundWithGradient) == .recapture
         )
     }
 
@@ -101,9 +101,9 @@ struct AdaptiveCaptureRefreshTests {
     func turningAdaptiveOnStartsTheRefresh() {
         let solid = requirements(tintKind: .solid)
 
-        #expect(MenuBarManager.adaptiveRefreshAction(from: solid, to: requirements(tintKind: .adaptive)) == .start)
+        #expect(MenuBarWallpaperColorMonitor.adaptiveRefreshAction(from: solid, to: requirements(tintKind: .adaptive)) == .start)
         #expect(
-            MenuBarManager.adaptiveRefreshAction(from: nil, to: requirements(tintKind: .adaptiveGradient)) == .start
+            MenuBarWallpaperColorMonitor.adaptiveRefreshAction(from: nil, to: requirements(tintKind: .adaptiveGradient)) == .start
         )
     }
 
@@ -112,10 +112,10 @@ struct AdaptiveCaptureRefreshTests {
         let gradient = requirements(tintKind: .adaptiveGradient)
         let solid = requirements(tintKind: .solid)
 
-        #expect(MenuBarManager.adaptiveRefreshAction(from: gradient, to: solid) == .stop)
+        #expect(MenuBarWallpaperColorMonitor.adaptiveRefreshAction(from: gradient, to: solid) == .stop)
         // The first configuration seen is stopped rather than left alone, so a
         // refresh from an earlier observer never outlives it.
-        #expect(MenuBarManager.adaptiveRefreshAction(from: nil, to: solid) == .stop)
+        #expect(MenuBarWallpaperColorMonitor.adaptiveRefreshAction(from: nil, to: solid) == .stop)
     }
 
     @Test("An appearance change that samples the same thing leaves the refresh alone")
@@ -123,6 +123,6 @@ struct AdaptiveCaptureRefreshTests {
         let gradient = requirements(tintKind: .adaptiveGradient, tintOpacity: 0.2)
         let fainterGradient = requirements(tintKind: .adaptiveGradient, tintOpacity: 0.6)
 
-        #expect(MenuBarManager.adaptiveRefreshAction(from: gradient, to: fainterGradient) == .unchanged)
+        #expect(MenuBarWallpaperColorMonitor.adaptiveRefreshAction(from: gradient, to: fainterGradient) == .unchanged)
     }
 }

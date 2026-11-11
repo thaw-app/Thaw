@@ -21,7 +21,7 @@ nonisolated enum ThawBarCornerRoundness {
     static func decode(from decoder: any Decoder) throws -> Double {
         let stored = try decoder.container(keyedBy: Keys.self)
         if let roundness = try? stored.decodeIfPresent(Double.self, forKey: .cornerRoundness) {
-            return roundness.isFinite ? min(max(roundness, 0), 1) : 0
+            return roundness.isFinite ? roundness.clamped(to: 0 ... 1) : 0
         }
         return (try? stored.decodeIfPresent(Bool.self, forKey: .hasRoundedShape)) == true ? 1 : 0
     }
@@ -63,27 +63,30 @@ nonisolated extension MenuBarAppearanceConfigurationV2 {
     }
 }
 
-/// The Thaw Bar's own Corners slider, from square to round, like the menu bar shape's.
-struct ThawBarCornersSlider: View {
+/// The Corners slider for the menu bar shape and the Thaw Bar: the value reads inside it,
+/// as the margins and the screen corner radius do.
+struct CornersSlider: View {
     @Binding var roundness: Double
 
     var body: some View {
         LabeledContent("Corners") {
-            HStack(spacing: ThawSpacing.base) {
-                Text("Square")
-                    .font(ThawType.caption)
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-                ThawSlider(value: $roundness, in: 0 ... 1) {
-                    EmptyView()
-                }
-                .accessibilityLabel("Corners")
-                Text("Round")
-                    .font(ThawType.caption)
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
+            ThawSlider(value: $roundness, in: 0 ... 1, step: 0.05) {
+                Text(Self.valueText(roundness))
+                    .monospacedDigit()
             }
+            .accessibilityLabel("Corners")
             .frame(maxWidth: 360)
         }
+    }
+
+    /// Square and Round at the ends, a percentage between.
+    static func valueText(_ roundness: Double) -> String {
+        if roundness <= 0.001 {
+            return String(localized: "Square", comment: "Corners slider at its square end")
+        }
+        if roundness >= 0.999 {
+            return String(localized: "Round", comment: "Corners slider at its round end")
+        }
+        return roundness.formatted(.percent.precision(.fractionLength(0)))
     }
 }

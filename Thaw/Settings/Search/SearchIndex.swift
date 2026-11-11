@@ -9,12 +9,19 @@ import SwiftUI
 
 // MARK: - SettingsProperty
 
-/// Links a search entry to the @Published property it represents on a
-/// settings model, so the drift-guard test can assert every user-facing
-/// property has a matching entry.
+/// Links a search entry to the property it represents on a page's settings
+/// model, so the drift-guard test can assert every user-facing property has
+/// a matching entry.
 nonisolated enum SettingsProperty: Hashable {
     case general(String)
-    case advanced(String)
+    case layout(String)
+    case visibility(String)
+    case thawBar(String)
+    case appearance(String)
+    case spaces(String)
+    case privacy(String)
+    case tools(String)
+    case widgets(String)
 }
 
 // MARK: - SearchEntry
@@ -25,7 +32,7 @@ nonisolated enum SettingsProperty: Hashable {
 /// Fuzzy matching uses the English source text, not the localized string.
 ///
 /// Unchecked Sendable because LocalizedStringKey is not Sendable; every
-/// field is an immutable let.
+/// field is an immutable let, except the flag a row is filtered by.
 nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
     let id: String
     let titleKey: LocalizedStringKey
@@ -36,13 +43,16 @@ nonisolated struct SearchEntry: Identifiable, @unchecked Sendable {
     let sectionText: String?
     let keywords: [String]
     let property: SettingsProperty?
+    /// The row only exists while diagnostic logging is on, so search hides the
+    /// entry with the row rather than jumping to nothing.
+    var needsDiagnosticLogging = false
 
     var disclosure: AppNavigationState.SettingsDisclosure? {
         switch id {
         case "layout.spacers":
             .layoutSpacers
         // Layout's Options tab.
-        case "advanced.menuBarArrangementMode", "advanced.enableAlwaysHiddenSection", "advanced.sectionDividerStyle",
+        case "advanced.menuBarArrangementMode", "advanced.enableAlwaysHiddenSection", "advanced.sectionDividerStyle", "layout.showAllSectionsOnUserDrag",
              "advanced.enableNativeAppHiding", "advanced.enableMenuBarItemOverflow",
              "advanced.alwaysUseAppIconForMenuBarItems", "layout.resetMenuBarLayout":
             .layoutOptions
@@ -71,7 +81,8 @@ nonisolated extension SearchEntry {
         pane: SettingsNavigationIdentifier,
         section: String.LocalizationValue? = nil,
         keywords: [String],
-        property: SettingsProperty?
+        property: SettingsProperty?,
+        needsDiagnosticLogging: Bool = false
     ) {
         let titleResource = LocalizedStringResource(title)
         self.init(
@@ -83,7 +94,8 @@ nonisolated extension SearchEntry {
             sectionKey: section.map { LocalizedStringKey(LocalizedStringResource($0).key) },
             sectionText: section.map { LocalizedStringResource($0).key },
             keywords: keywords,
-            property: property
+            property: property,
+            needsDiagnosticLogging: needsDiagnosticLogging
         )
     }
 }
@@ -100,11 +112,11 @@ nonisolated enum SearchIndex {
         SearchEntry(
             id: "advanced.menuBarArrangementMode",
             title: "Item arrangement",
-            descriptionText: String(localized: "Let Thaw keep items in your Layout order, or arrange them yourself by ⌘-dragging in the menu bar."),
+            descriptionText: String(localized: "Let \(Constants.displayName) keep items in your Layout order, or arrange them yourself by ⌘-dragging in the menu bar."),
             pane: .menuBarLayout,
             section: "Sections",
             keywords: ["arrangement", "arrange", "manual", "automatic", "who", "order", "layout"],
-            property: .advanced("menuBarArrangementMode")
+            property: .layout("menuBarArrangementMode")
         ),
         SearchEntry(
             id: "advanced.alwaysUseAppIconForMenuBarItems",
@@ -113,7 +125,7 @@ nonisolated enum SearchIndex {
             pane: .menuBarLayout,
             section: "Overflow and previews",
             keywords: ["app icon", "live preview", "screenshot", "capture", "overflow", "notch", "advanced layout controls"],
-            property: .advanced("alwaysUseAppIconForMenuBarItems")
+            property: .layout("alwaysUseAppIconForMenuBarItems")
         ),
         SearchEntry(
             id: "layout.captureHiddenItems",
@@ -124,13 +136,14 @@ nonisolated enum SearchIndex {
             keywords: ["capture", "screenshot", "picture", "sync", "images", "hidden", "always hidden", "icons", "app icon"],
             property: nil
         ),
-        // Displays › Spaces rows: agent-backed session state with no persisted
+        // Displays › Spaces rows: stored by SpaceMenuBarKeeper rather than a
         // settings property, indexed so the pane's controls are findable.
         SearchEntry(
             id: "spaces.hideInThisSpace",
             title: "Hide the menu bar",
             descriptionText: String(localized: "Hides the system menu bar while this Space is showing, or in every Space."),
             pane: .displays,
+            section: "This Space",
             keywords: ["hide", "space", "menu bar", "per-space", "desktop", "global", "every space", "everywhere"],
             property: nil
         ),
@@ -153,6 +166,15 @@ nonisolated enum SearchIndex {
             property: nil
         ),
         SearchEntry(
+            id: "spaces.showSpaceIndicator",
+            title: "Show the current Space in the menu bar",
+            descriptionText: String(localized: "Adds a menu bar item with the name of the Space you're in. Its menu lists the Spaces on each display."),
+            pane: .displays,
+            section: "Space indicator",
+            keywords: ["space", "desktop", "indicator", "current space", "mission control", "number"],
+            property: .spaces("showSpaceIndicator")
+        ),
+        SearchEntry(
             id: "spaces.fullScreenAppearanceEverywhere",
             title: "Use the full-screen menu bar appearance everywhere",
             descriptionText: String(localized: "Gives ordinary desktop Spaces the menu bar appearance macOS normally reserves for full-screen apps."),
@@ -168,59 +190,52 @@ nonisolated enum SearchIndex {
     /// Resolved once, since search reads it per keystroke.
     static let entries: [SearchEntry] = sharedEntries + platformEntries
 
+    static func entry(withID id: String) -> SearchEntry? {
+        entries.first { $0.id == id }
+    }
+
     /// @Published property names that are intentionally absent from the
     /// index because they are deprecated, internal, or currently commented out
     /// of the UI. The drift-guard test allows these.
-    private static let baseNonSearchableProperties: Set<SettingsProperty> = [
+    static let nonSearchableProperties: Set<SettingsProperty> = [
         .general("lastCustomThawIcon"),
-        .general("useThawBar"),
-        .general("useThawBarOnlyOnNotchedDisplay"),
-        .general("thawBarLocation"),
+        .thawBar("useThawBar"),
+        .thawBar("useThawBarOnlyOnNotchedDisplay"),
+        .thawBar("thawBarLocation"),
         // An error channel, not a setting.
         .general("thawIconPersistenceError"),
         // The radius slider shows only under Round screen corners.
-        .general("screenCornerRadius"),
+        .appearance("screenCornerRadius"),
         // Its switch is on Simple Mode's one page, which has no search.
         .general("simpleModeShowsPreview"),
         // Shown under Section divider style only while Custom is chosen; search finds that.
-        .advanced("customSectionDividerImage"),
-        .advanced("customSectionDividerIsTemplate"),
+        .layout("customSectionDividerImage"),
+        .layout("customSectionDividerIsTemplate"),
         // Its row is commented out of Layout: the timeout has no effect on macOS 27.
-        .advanced("menuBarOrderFulfillmentTimeout"),
-        // Set by Replace Control Center items, indexed under advanced.enableModuleStandIns.
-        .advanced("enableTimeMachineTakeover"),
-        .advanced("enableTextInputTakeover"),
-        .advanced("skippedModuleStandIns"),
+        .layout("menuBarOrderFulfillmentTimeout"),
+        // Set by Replace Control Center items, indexed under layout.enableModuleStandIns.
+        .layout("enableTimeMachineTakeover"),
+        .layout("enableTextInputTakeover"),
+        .layout("skippedModuleStandIns"),
         // Experimental toggles with no Settings UI.
-        .advanced("enableExperimentalOverflowPrevention"),
-        .advanced("enableTimerTakeover"),
-        // Set by Hide items again, indexed under general.autoRehide.
-        .general("rehideStrategy"),
-        .general("rehideInterval"),
+        .layout("enableExperimentalOverflowPrevention"),
+        .layout("enableTimerTakeover"),
+        // Set by Hide items again, indexed under visibility.autoRehide.
+        .visibility("rehideStrategy"),
+        .visibility("rehideInterval"),
         // Tuning kept out of Settings on purpose; settings URIs still reach it.
-        .advanced("swapOnThawIconClick"),
-        .advanced("showAllSectionsOnUserDrag"),
-        .advanced("showOnHoverDelay"),
-        .advanced("tooltipDelay"),
-        .advanced("iconRefreshInterval"),
-        // The camera and microphone alerts, hidden for now with no Settings UI.
-        .advanced("enableRecordingWatch"),
-        .advanced("recordingWatchScreen"),
-        .advanced("recordingWatchPlacement"),
+        .layout("iconRefreshInterval"),
+        // Shown under the alerts switch, which search finds.
+        .visibility("recordingWatchScreen"),
+        .visibility("recordingWatchPlacement"),
+        // Under Apps that change settings, which the pane entry finds; the
+        // allowed apps are a list, not a setting.
+        .privacy("isSettingsURIEnabled"),
+        .privacy("whitelistedApps"),
     ]
-
-    static var nonSearchableProperties: Set<SettingsProperty> {
-        return baseNonSearchableProperties
-    }
 
     /// Returns the entries that belong to the given pane.
     static func entries(for pane: SettingsNavigationIdentifier) -> [SearchEntry] {
         entries.filter { $0.pane == pane }
-    }
-
-    /// Lowest diffScore first (0 is a perfect match). Shares SearchRanker
-    /// with menu bar item search so the two cannot drift.
-    static func sortedByRelevance<T>(_ items: [(item: T, diffScore: Double)]) -> [T] {
-        SearchRanker.sortedByRelevance(items)
     }
 }

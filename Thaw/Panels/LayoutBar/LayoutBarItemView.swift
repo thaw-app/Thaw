@@ -15,7 +15,7 @@ import SwiftUI
 
 /// A view that displays an image in a menu bar layout view.
 final class LayoutBarItemView: LayoutBarArrangedView {
-    private enum Metrics {
+    enum Metrics {
         static let minWidth: CGFloat = 14
         static let maxWidth = OverflowFallbackIcon.maximumItemWidth
         /// A tile drawing an icon instead of the item is icon-sized, however
@@ -69,7 +69,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// when the container recycles this view for a refreshed item.
     private(set) var item: MenuBarItem
 
-    private lazy var tooltipController = CustomTooltipController(text: item.displayName, view: self)
+    lazy var tooltipController = CustomTooltipController(text: item.displayName, view: self)
     private var tooltipTrackingArea: NSTrackingArea?
 
     /// Delay hover spotlighting so sweeping across the editor does not strobe the agent with highlight calls.
@@ -86,8 +86,8 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     /// releaseInspectorHolds() releases the hold.
     private var isInspecting = false
 
-    /// A click is mouse-up without a drag, not a distance threshold, because dragging starts on the first pixel.
-    private var isClickCandidate = false
+    /// Hover, press and whether the gesture is still a click; a drag starts past a small threshold.
+    var pointer = LayoutTilePointer()
 
     /// Whether the current gesture has already posted a refusal, so a drag on
     /// an immovable item explains itself once rather than on every pixel.
@@ -132,7 +132,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     var isOwnerUnresponsive = false {
         didSet {
             guard isOwnerUnresponsive != oldValue else { return }
-            needsDisplay = true
+            refreshBadgeHelp()
         }
     }
 
@@ -140,9 +140,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     var visibilityLimit: LayoutBarVisibilityLimit? {
         didSet {
             guard visibilityLimit != oldValue else { return }
-            toolTip = visibilityLimit?.explanation
-            setAccessibilityHelp(visibilityLimit?.explanation)
-            needsDisplay = true
+            refreshBadgeHelp()
         }
     }
 
@@ -184,7 +182,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
         self.isOwnerUnresponsive = Bridging.isProcessUnresponsive(item.ownerPID)
 
-        let experimentalSystemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
+        let experimentalSystemItemHiding = appState.settings.layout.enableExperimentalSystemItemHiding
         isEnabled = LayoutBarPaddingView.acceptsLayoutDrag(of: item) &&
             item.isMovable(experimentalSystemItemHiding: experimentalSystemItemHiding)
 
@@ -214,7 +212,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
         cachedImage = appState.imageCache.image(for: item.tag)
 
-        let experimentalSystemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
+        let experimentalSystemItemHiding = appState.settings.layout.enableExperimentalSystemItemHiding
         isEnabled = LayoutBarPaddingView.acceptsLayoutDrag(of: item) &&
             item.isMovable(experimentalSystemItemHiding: experimentalSystemItemHiding)
 
@@ -270,7 +268,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 name: String(localized: "Move to \(name.localizedName)")
             ) { [weak appState] in
                 guard let appState else { return false }
-                MenuBarSearchItemActions.move(item, to: name, appState: appState)
+                MenuBarSearchItemActions.move(item, to: name, appState: appState, recordsUndo: true)
                 return true
             }
         })
@@ -306,8 +304,8 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    private var tooltipDelay: TimeInterval {
-        appState?.settings.advanced.tooltipDelay ?? 0.5
+    var tooltipDelay: TimeInterval {
+        appState?.settings.visibility.tooltipDelay ?? 0.5
     }
 
     private var desiredSystemItemHorizontalPadding: CGFloat {
@@ -361,13 +359,13 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     override func mouseEntered(with event: NSEvent) {
         super.mouseEntered(with: event)
-        tooltipController.scheduleShow(delay: tooltipDelay)
+        pointerEntered()
         scheduleSpotlight()
     }
 
     override func mouseExited(with event: NSEvent) {
         super.mouseExited(with: event)
-        tooltipController.cancel()
+        pointerExited()
         // Keep the real item lit while its inspector is open, the pointer has
         // to leave this view to reach the popover's controls.
         guard !isInspecting else {
@@ -378,22 +376,21 @@ final class LayoutBarItemView: LayoutBarArrangedView {
 
     /// Claim mouse-down without forwarding to the unused padding responder.
     /// AppKit still sends drag/up to the hit view, regardless of which responder handled down.
-    override func mouseDown(with _: NSEvent) {
+    override func mouseDown(with event: NSEvent) {
         tooltipController.cancel()
         // Focusing on click keeps the keyboard path continuous: having reached
         // a glyph with the pointer, the arrow keys act on that same glyph.
         _ = window?.makeFirstResponder(self)
-        isClickCandidate = true
+        pointerPressed(event)
         didRefuseDrag = false
     }
 
     /// Opens the inspector for a mouse-up that never turned into a drag.
     override func mouseUp(with event: NSEvent) {
         super.mouseUp(with: event)
-        guard isClickCandidate else {
+        guard pointerReleased() else {
             return
         }
-        isClickCandidate = false
         showInspector()
     }
 
@@ -583,10 +580,10 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                 }
             }
 
-            let advancedSettings = appState.settings.advanced
+            let layoutSettings = appState.settings.layout
             alwaysUseAppIconObservationTask?.cancel()
             alwaysUseAppIconObservationTask = Task { @MainActor [weak self] in
-                let changes = Observations { advancedSettings.alwaysUseAppIconForMenuBarItems }.removeDuplicates()
+                let changes = Observations { layoutSettings.alwaysUseAppIconForMenuBarItems }.removeDuplicates()
                 for await alwaysUseAppIcon in changes {
                     guard let self else { return }
                     let oldSize = frame.size
@@ -602,7 +599,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             // Observe system-item hiding so draggability follows setting changes and corrects init before preferences load.
             systemItemHidingObservationTask?.cancel()
             systemItemHidingObservationTask = Task { @MainActor [weak self] in
-                let changes = Observations { advancedSettings.enableExperimentalSystemItemHiding }.removeDuplicates()
+                let changes = Observations { layoutSettings.enableExperimentalSystemItemHiding }.removeDuplicates()
                 for await enabled in changes {
                     guard let self else { return }
                     self.isEnabled = LayoutBarPaddingView.acceptsLayoutDrag(of: self.item) &&
@@ -663,6 +660,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         guard !isDraggingPlaceholder else {
             return
         }
+        drawPointerWash()
         if shouldPreferPlaceholderImage {
             drawOverflowFallback()
         } else if let capturedImage = cachedDrawImage {
@@ -675,22 +673,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         } else {
             drawPlaceholder()
         }
-        if isOwnerUnresponsive {
-            drawWarningBadge(atLeadingEdge: false)
-        }
-        if visibilityLimit != nil {
-            drawWarningBadge(atLeadingEdge: true)
-        }
-    }
-
-    /// Draws the warning badge into the view's bottom-right corner (bottom-left
-    /// for a visibility limit), scaled to Metrics.unresponsiveBadgeWidth.
-    private func drawWarningBadge(atLeadingEdge: Bool) {
-        let badge = NSImage.warning
-        let badgeWidth = Metrics.unresponsiveBadgeWidth
-        let badgeSize = CGSize(width: badgeWidth, height: badge.size.height * (badgeWidth / badge.size.width))
-        let originX = atLeadingEdge ? bounds.minX : bounds.maxX - badgeSize.width
-        badge.draw(in: CGRect(x: originX, y: bounds.minY, width: badgeSize.width, height: badgeSize.height))
+        drawBadges()
     }
 
     private var shouldPreferPlaceholderImage: Bool {
@@ -757,7 +740,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         }
 
         let side = min(bounds.width, bounds.height)
-        return CGRect(
+        return (drawsBareModuleGlyph(for: item) ? bareGlyphRect(for: imageSize, in: bounds) : nil) ?? CGRect(
             x: bounds.midX - (side / 2),
             y: bounds.midY - (side / 2),
             width: side,
@@ -845,9 +828,8 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     override func mouseDragged(with event: NSEvent) {
         super.mouseDragged(with: event)
         tooltipController.cancel()
-        // Any movement disqualifies the gesture from being a click, including
-        // the movement that ends in one of the refusals below.
-        isClickCandidate = false
+        // A wobble stays a click; past the threshold the gesture is a drag, including one refused below.
+        guard pointerDragged(event) else { return }
 
         guard isEnabled else {
             refuseDrag(LayoutBarFeedbackCenter.itemNotMovable(itemName: item.displayName))
@@ -930,16 +912,15 @@ final class LayoutBarItemView: LayoutBarArrangedView {
     }
 
     private func drawPlaceholder() {
-        let iconRect = Self.drawPlaceholderBox(in: bounds)
-        guard let image = resolvedPlaceholderImage(), let iconRect else {
+        let bare = Self.drawsBareModuleGlyph(for: item)
+        guard let image = resolvedPlaceholderImage(), let iconRect = bare ? Self.bareGlyphRect(for: image.size, in: bounds) : Self.drawPlaceholderBox(in: bounds) else {
             return
         }
-
         draw(
             image,
             in: iconRect,
-            fraction: LayoutBarCaptureInk.placeholderFraction(isEnabled: isEnabled, isTemplate: image.isTemplate),
-            templateTint: item.tag.matchesVisibleControlItem ? menuBarForegroundColor : .secondaryLabelColor
+            fraction: bare ? Self.bareGlyphFraction(isEnabled: isEnabled) : LayoutBarCaptureInk.placeholderFraction(isEnabled: isEnabled, isTemplate: image.isTemplate),
+            templateTint: bare || item.tag.matchesVisibleControlItem ? menuBarForegroundColor : .secondaryLabelColor
         )
     }
 

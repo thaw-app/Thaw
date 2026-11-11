@@ -9,11 +9,7 @@ import Foundation
 import MenuBarModel
 import PlatformRuntimeKit
 import Subprocess
-#if canImport(System)
-    import System
-#else
-    import SystemPackage
-#endif
+import System
 
 /// Destructive troubleshooting helpers used by Settings → Tools.
 ///
@@ -130,17 +126,18 @@ nonisolated enum MaintenanceTools {
         try fileManager.removeItem(at: url)
     }
 
-    /// Resets Accessibility and Screen Recording TCC decisions for Thaw so the
-    /// user can re-grant them on the next launch.
+    /// Resets Thaw's Accessibility and Screen Recording decisions and its
+    /// picked-file grants, so each is granted again on the next launch.
     @concurrent
-    static func resetAppPermissions() async throws {
+    static func resetAppPermissions(defaults: UserDefaults = Defaults.store) async throws {
         for arguments in permissionResetArguments(bundleID: Constants.bundleIdentifier) {
             try await run(path: "/usr/bin/tccutil", arguments: arguments)
         }
+        removePickedFileGrants(from: defaults)
     }
 
     @concurrent
-    private static func run(path: String, arguments: [String]) async throws {
+    static func run(path: String, arguments: [String]) async throws {
         let result = try await Subprocess.run(
             .path(FilePath(path)),
             arguments: Arguments(arguments),

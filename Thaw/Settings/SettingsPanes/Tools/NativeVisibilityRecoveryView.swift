@@ -17,6 +17,7 @@ struct NativeVisibilityRecoveryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.gutter) {
             Text("Restore missing menu bar items")
+                .settingsSearchAnchor("tools.restoreMissingMenuBarItems")
                 .font(ThawType.heading)
             Text("Normal hiding is stopped in this window. Recovery changes app visibility only, not your saved layout or positions.")
                 .foregroundStyle(ThawInk.supporting)
@@ -49,7 +50,7 @@ struct NativeVisibilityRecoveryView: View {
                         } else {
                             Text("Other disabled apps")
                                 .font(ThawType.heading)
-                            Text("Thaw has no recovery record for these apps. Select only the ones you want to allow in the menu bar.")
+                            Text("\(Constants.displayName) has no recovery record for these apps. Select only the ones you want to allow in the menu bar.")
                                 .foregroundStyle(ThawInk.supporting)
                             ForEach(model.candidates) { candidate in
                                 Toggle(isOn: selection(for: candidate.id)) {
@@ -112,7 +113,7 @@ struct NativeVisibilityRecoveryView: View {
                 // Keep recovery active unless the user confirms.
             }
         } message: {
-            Text("Thaw will keep the recovery records as backups and continue with Native hiding off. Some apps may remain hidden. Your saved layout and positions will not be changed.")
+            Text("\(Constants.displayName) will keep the recovery records as backups and continue with Native hiding off. Some apps may remain hidden. Your saved layout and positions will not be changed.")
         }
         .alert("Set aside the unreadable record?", isPresented: $confirmsSetAside) {
             Button("Set Aside") { model.setAsideUnreadableRecords() }
@@ -120,16 +121,16 @@ struct NativeVisibilityRecoveryView: View {
                 // Closing the alert is all Cancel does; the record stays where it is.
             }
         } message: {
-            Text("Thaw keeps the file under a new name. Afterwards it can't tell which switched-off apps it hid, so you choose which ones to show and none are selected for you.")
+            Text("\(Constants.displayName) keeps the file under a new name. Afterwards it can't tell which switched-off apps it hid, so you choose which ones to show and none are selected for you.")
         }
     }
 
     /// Why there is no app list yet, and the one way forward.
     @ViewBuilder
     private var unreadableRecord: some View {
-        Text("Thaw can't read its record of the apps it hid")
+        Text("\(Constants.displayName) can't read its record of the apps it hid")
             .font(ThawType.heading)
-        Text("The file that lists which apps Thaw switched off in System Settings → Menu Bar is damaged or was written by a version this one can't read. Until it is set aside, Thaw can't show which apps it hid.")
+        Text("The file that lists which apps \(Constants.displayName) switched off in System Settings → Menu Bar is damaged or was written by a version this one can't read. Until it is set aside, \(Constants.displayName) can't show which apps it hid.")
             .foregroundStyle(ThawInk.supporting)
         Button("Set Aside Record…") { confirmsSetAside = true }
             .buttonStyle(.settingsGlass)

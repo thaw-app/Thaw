@@ -5,81 +5,60 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import SwiftUI
+import CoreGraphics
 import Testing
 @testable import Thaw
+import ThawUI
 
-/// The contract between the three search panel faces.
-@MainActor
-@Suite("Search presentation traits")
+/// The search panel's two layouts and the window they share.
+@Suite("Search panel layouts")
 struct SearchPresentationTests {
-    @Test("Raw values are the stored names and never change")
+    @Test("Raw values are the stored names")
     func rawValuesAreStorage() {
-        #expect(SearchPresentation.allCases.map(\.rawValue) == ["inspector", "launcher", "assisted"])
-        #expect(SearchPresentation.allCases.map(\.id) == ["inspector", "launcher", "assisted"])
-        #expect(SearchPresentation(rawValue: "launcher") == .launcher)
+        #expect(SearchPresentation.allCases.map(\.rawValue) == ["extended", "compact"])
         #expect(SearchPresentation(rawValue: "spotlight") == nil)
     }
 
-    @Test("Each face has its own name and its own picker annotation")
-    func localizedNamesDiffer() {
-        let names = SearchPresentation.allCases.map { "\($0.localized)" }
-        #expect(Set(names).count == 3)
-        let summaries = SearchPresentation.allCases.map { "\($0.summary)" }
-        #expect(Set(summaries).count == 3)
+    @Test("The three panel styles before the launcher migrate to a layout", arguments: [
+        ("inspector", SearchPresentation.extended),
+        ("assisted", .extended),
+        ("launcher", .compact),
+        ("extended", .extended),
+        ("compact", .compact),
+    ])
+    func storedValuesMigrate(stored: String, layout: SearchPresentation) {
+        #expect(SearchPresentation(storedValue: stored) == layout)
     }
 
-    @Test("Only the inspector remembers its spot, previews items and highlights them in the menu bar")
-    func inspectorOnlyTraits() {
-        for presentation in SearchPresentation.allCases {
-            let isInspector = presentation == .inspector
-            #expect(presentation.persistsFrame == isInspector)
-            #expect(presentation.warmsCachesOnShow == isInspector)
-            #expect(presentation.samplesMenuBarColor == isInspector)
-            #expect(presentation.spotlightsSelection == isInspector)
-        }
+    @Test("An unknown stored value reads as nothing, so the default stands")
+    func unknownStoredValue() {
+        #expect(SearchPresentation(storedValue: "spotlight") == nil)
     }
 
-    @Test("Each face has its own size, placement and log label")
-    func sizesAndPlacements() {
-        #expect(SearchPresentation.inspector.contentSize == CGSize(width: 600, height: 400))
-        #expect(SearchPresentation.launcher.contentSize == CGSize(width: 620, height: 420))
-        #expect(SearchPresentation.assisted.contentSize == CGSize(width: 680, height: 560))
-        #expect(SearchPresentation.inspector.placement == .remembered)
-        #expect(SearchPresentation.launcher.placement == .centered)
-        #expect(SearchPresentation.assisted.placement == .nearPointer)
-        #expect(SearchPresentation.inspector.logLabel == "search panel")
-        #expect(SearchPresentation.launcher.logLabel == "item palette")
-        #expect(SearchPresentation.assisted.logLabel == "assisted palette")
+    @Test("Only Compact with nothing typed collapses to the field")
+    func collapsing() {
+        #expect(SearchPresentation.compact.isCollapsed(query: ""))
+        #expect(SearchPresentation.compact.isCollapsed(query: "  "))
+        #expect(!SearchPresentation.compact.isCollapsed(query: "wi"))
+        #expect(!SearchPresentation.extended.isCollapsed(query: ""))
     }
 
-    @Test("Only the inspector's query field is a capsule with a trailing gap")
-    func queryFieldMetrics() {
-        let inspector = SearchPresentation.inspector.queryFieldMetrics
-        #expect(inspector.isCapsule)
-        #expect(inspector.hasTrailingSpacer)
-        #expect(inspector.padding.leading == 14)
-        for presentation in [SearchPresentation.launcher, .assisted] {
-            let metrics = presentation.queryFieldMetrics
-            #expect(!metrics.isCapsule)
-            #expect(!metrics.hasTrailingSpacer)
-            #expect(metrics.padding.leading == 18)
-        }
-        #expect(SearchPresentation.assisted.queryFieldMetrics.padding.top > SearchPresentation.launcher.queryFieldMetrics.padding.top)
+    @Test("The panel is Floe's launcher: 750 by 474 open, the field's piece alone collapsed")
+    func geometry() {
+        #expect(SearchPanelGeometry.contentSize(isCollapsed: false) == CGSize(width: 750, height: 474))
+        #expect(SearchPanelGeometry.contentSize(isCollapsed: true).height == PanelPieceHeights.launcherField)
+        let open = SearchPanelGeometry.windowSize(isCollapsed: false)
+        #expect(open.width == 750 + SearchPanelGeometry.margin * 2)
+        #expect(open.height == 474 + SearchPanelGeometry.margin * 2)
     }
 
-    @Test("The inspector draws no launcher row, and the assisted row is the larger one")
-    func rowMetrics() throws {
-        #expect(SearchPresentation.inspector.rowMetrics == nil)
-        let launcher = try #require(SearchPresentation.launcher.rowMetrics)
-        let assisted = try #require(SearchPresentation.assisted.rowMetrics)
-        #expect(assisted.iconLength > launcher.iconLength)
-        #expect(assisted.iconSpacing > launcher.iconSpacing)
-        #expect(assisted.nameLineLimit == 2)
-        #expect(launcher.nameLineLimit == 1)
-        #expect(assisted.minHeight == 44, "the assisted row keeps the smallest comfortable target")
-        #expect(launcher.minHeight == 0)
-        #expect(assisted.combinesAccessibilityChildren)
-        #expect(!launcher.combinesAccessibilityChildren)
+    @Test("Collapsing keeps the field where it is: the window's top stays put")
+    func collapsingKeepsTheTop() {
+        let visible = CGRect(x: 0, y: 0, width: 1920, height: 1050)
+        let open = SearchPanelGeometry.frame(isCollapsed: false, in: visible)
+        let collapsed = SearchPanelGeometry.frame(isCollapsed: true, in: visible)
+        #expect(open.maxY == collapsed.maxY)
+        #expect(open.midX == visible.midX)
+        #expect(collapsed.height < open.height)
     }
 }

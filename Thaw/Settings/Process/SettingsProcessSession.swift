@@ -63,7 +63,7 @@ final class SettingsProcessSession {
     }
 
     private func select(_ pane: String?) {
-        if let pane, let identifier = SettingsNavigationIdentifier(rawValue: pane) {
+        if let pane, let identifier = SettingsNavigationIdentifier(storedValue: pane) {
             navigationState.settingsNavigationIdentifier = identifier
         }
     }

@@ -47,7 +47,7 @@ struct HiddenMenuBarItemsSnippetView: View {
 
             if rows.isEmpty {
                 Text("Nothing is hidden right now.")
-                    .font(.callout)
+                    .font(ThawType.detail)
                     .foregroundStyle(.secondary)
             } else {
                 VStack(alignment: .leading, spacing: ThawSpacing.compact) {
@@ -56,7 +56,7 @@ struct HiddenMenuBarItemsSnippetView: View {
                     }
                     if overflowCount > 0 {
                         Text("and \(overflowCount) more")
-                            .font(.footnote)
+                            .font(ThawType.footnote)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -72,7 +72,7 @@ struct HiddenMenuBarItemsSnippetView: View {
                     Label("Hide", systemImage: "eye.slash")
                 }
             }
-            .font(.callout)
+            .font(ThawType.detail)
         }
         .padding(ThawSpacing.gutter)
         .frame(maxWidth: 360, alignment: .leading)
@@ -92,7 +92,7 @@ struct HiddenMenuBarItemsSnippetView: View {
             .frame(width: row.glyphWidth, height: Metrics.glyphHeight)
 
             Text(row.name)
-                .font(.callout)
+                .font(ThawType.detail)
                 .lineLimit(1)
                 .truncationMode(.middle)
 
@@ -102,7 +102,7 @@ struct HiddenMenuBarItemsSnippetView: View {
                 Button(intent: RevealMenuBarItemIntent(itemIdentifier: row.id)) {
                     Text("Show")
                 }
-                .font(.footnote)
+                .font(ThawType.footnote)
             }
         }
     }

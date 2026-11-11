@@ -10,7 +10,7 @@ import ThawUI
 
 /// The image a Custom section divider draws, chosen the way a custom Thaw icon is.
 struct CustomSectionDividerControls: View {
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: LayoutSettings
 
     @State private var isImporting = false
     @State private var presentedError: LocalizedErrorWrapper?

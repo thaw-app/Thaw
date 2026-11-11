@@ -89,7 +89,7 @@ struct ThawBarPreviewFooter: View {
 
     private var caption: some View {
         Text(captionText)
-            .font(.caption)
+            .font(ThawType.caption)
             .foregroundStyle(ThawInk.supporting)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -122,12 +122,12 @@ struct ThawBarPreviewFooter: View {
         } else if displayID != nil {
             // Disconnected display: explain rather than claim to open.
             Text("Reconnect this display to open the \(Constants.displayName) Bar.")
-                .font(.caption)
+                .font(ThawType.caption)
                 .foregroundStyle(ThawInk.supporting)
         } else {
             // Template: no display to open on.
             Text("Pick a connected display to open the \(Constants.displayName) Bar.")
-                .font(.caption)
+                .font(ThawType.caption)
                 .foregroundStyle(ThawInk.supporting)
         }
     }

@@ -32,7 +32,7 @@ struct SimpleModeSettingsPane: View {
             ThawSection {
                 LaunchAtLoginRow()
                 arrangementPicker
-                RehideChoiceRow(settings: settings)
+                RehideChoiceRow(settings: appState.settings.visibility)
                 alwaysHiddenToggle
                 previewToggle
                 hiddenSectionHotkeyRow
@@ -77,7 +77,7 @@ struct SimpleModeSettingsPane: View {
 
     private var howItWorks: some View {
         Label {
-            Text("Hold ⌘ and drag icons to the left of the divider in your menu bar to hide them. Click \(Constants.displayName)'s icon to show them again.")
+            Text(SimpleModeHowItWorks.text(showsIcon: settings.showThawIcon, showsOnClick: appState.settings.visibility.showOnClick))
                 .fixedSize(horizontal: false, vertical: true)
         } icon: {
             Image(systemName: "hand.draw")
@@ -89,14 +89,14 @@ struct SimpleModeSettingsPane: View {
 
     /// The same choice as on Layout, so Simple Mode doesn't decide it for you.
     private var arrangementPicker: some View {
-        @Bindable var advanced = appState.settings.advanced
+        @Bindable var layout = appState.settings.layout
         return ThawPillPicker(
             "Item arrangement",
-            selection: $advanced.menuBarArrangementMode,
+            selection: $layout.menuBarArrangementMode,
             values: MenuBarArrangementMode.allCases,
             title: \.localized
         )
-        .annotation(advanced.menuBarArrangementMode.explanation)
+        .annotation(layout.menuBarArrangementMode.explanation)
     }
 
     private var previewToggle: some View {
@@ -105,9 +105,18 @@ struct SimpleModeSettingsPane: View {
     }
 
     private var alwaysHiddenToggle: some View {
-        @Bindable var advanced = appState.settings.advanced
-        return Toggle("Always Hidden section", isOn: $advanced.enableAlwaysHiddenSection)
-            .annotation("Adds a second divider. Icons left of it stay hidden until you double-click \(Constants.displayName)'s icon.")
+        @Bindable var layout = appState.settings.layout
+        return Toggle("Always Hidden", isOn: $layout.enableAlwaysHiddenSection)
+            .annotation(alwaysHiddenSummary)
+    }
+
+    /// Names the double-click only while it works, as How it works names the icon only while it shows.
+    private var alwaysHiddenSummary: LocalizedStringResource {
+        if settings.showThawIcon, appState.settings.visibility.showAlwaysHiddenOnIconDoubleClick {
+            "Adds a second divider. Icons left of it stay hidden until you double-click \(Constants.displayName)'s icon."
+        } else {
+            "Adds a second divider. Icons left of it stay hidden when you show hidden items."
+        }
     }
 
     /// Gated the way the Shortcuts pane gates it: no recorder for a section

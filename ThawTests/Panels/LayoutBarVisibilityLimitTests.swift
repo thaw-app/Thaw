@@ -19,6 +19,7 @@ struct LayoutBarVisibilityLimitTests {
         native: Bool = false,
         hidesOthers: Bool = true,
         untracked: Set<String> = [],
+        leftAlone: Set<String> = [],
         pinned: Bool = false
     ) -> LayoutBarVisibilityLimit? {
         LayoutBarVisibilityLimit.limit(
@@ -28,6 +29,7 @@ struct LayoutBarVisibilityLimitTests {
             nativeAppHidingActive: native,
             hidesOtherIcons: hidesOthers,
             untrackedBundleIDs: untracked,
+            leftAloneBundleIDs: leftAlone,
             isPinnedControlCenterModule: pinned
         )
     }
@@ -56,5 +58,15 @@ struct LayoutBarVisibilityLimitTests {
         #expect(limit(section: section, native: false, untracked: untracked) == nil)
         #expect(limit(section: section, native: true, untracked: ["com.example.other"]) == nil)
         #expect(limit(section: .visible, native: true, untracked: untracked) == nil)
+    }
+
+    @Test("An app switched back on in System Settings is left alone, with its own explanation", arguments: [MenuBarSectionName.hidden, .alwaysHidden])
+    func appSwitchedBackOnIsLeftAlone(section: MenuBarSectionName) {
+        let leftAlone: Set = ["com.example.app"]
+        #expect(limit(section: section, native: true, leftAlone: leftAlone) == .leftAlone)
+        #expect(limit(section: section, native: false, leftAlone: leftAlone) == nil)
+        #expect(limit(section: .visible, native: true, leftAlone: leftAlone) == nil)
+        #expect(limit(section: section, native: true, untracked: leftAlone, leftAlone: leftAlone) == .cannotHide, "no record wins")
+        #expect(LayoutBarVisibilityLimit.leftAlone.explanation != LayoutBarVisibilityLimit.cannotHide.explanation)
     }
 }

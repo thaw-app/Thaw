@@ -28,7 +28,7 @@ extension MenuBarItemCache {
                 }
                 // Persisted conceal snapshots deliberately have no PID. Keep
                 // those only while their publishing bundle is actually running.
-                guard case let .string(bundleIdentifier) = item.tag.namespace else {
+                guard let bundleIdentifier = item.tag.namespace.bundleIdentifier else {
                     return false
                 }
                 return bundleIdentifiers.contains(bundleIdentifier)

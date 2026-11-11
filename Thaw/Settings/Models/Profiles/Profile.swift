@@ -83,45 +83,45 @@ nonisolated struct GeneralSettingsSnapshot: Codable {
     )
 
     @MainActor
-    static func capture(from settings: GeneralSettings) -> GeneralSettingsSnapshot {
+    static func capture(from settings: AppSettings) -> GeneralSettingsSnapshot {
         GeneralSettingsSnapshot(
-            showThawIcon: settings.showThawIcon,
-            thawIcon: settings.thawIcon,
-            lastCustomThawIcon: settings.lastCustomThawIcon,
-            customThawIconIsTemplate: settings.customThawIconIsTemplate,
-            useThawBar: settings.useThawBar,
-            useThawBarOnlyOnNotchedDisplay: settings.useThawBarOnlyOnNotchedDisplay,
-            thawBarLocation: settings.thawBarLocation,
-            thawBarLocationOnHotkey: settings.thawBarLocationOnHotkey,
-            showOnClick: settings.showOnClick,
-            showOnHover: settings.showOnHover,
-            showOnScroll: settings.showOnScroll,
-            autoRehide: settings.autoRehide,
-            rehideStrategyRawValue: settings.rehideStrategy.rawValue,
-            rehideInterval: settings.rehideInterval,
-            tempShowInterval: settings.tempShowInterval
+            showThawIcon: settings.general.showThawIcon,
+            thawIcon: settings.general.thawIcon,
+            lastCustomThawIcon: settings.general.lastCustomThawIcon,
+            customThawIconIsTemplate: settings.general.customThawIconIsTemplate,
+            useThawBar: settings.thawBar.useThawBar,
+            useThawBarOnlyOnNotchedDisplay: settings.thawBar.useThawBarOnlyOnNotchedDisplay,
+            thawBarLocation: settings.thawBar.thawBarLocation,
+            thawBarLocationOnHotkey: settings.thawBar.thawBarLocationOnHotkey,
+            showOnClick: settings.visibility.showOnClick,
+            showOnHover: settings.visibility.showOnHover,
+            showOnScroll: settings.visibility.showOnScroll,
+            autoRehide: settings.visibility.autoRehide,
+            rehideStrategyRawValue: settings.visibility.rehideStrategy.rawValue,
+            rehideInterval: settings.visibility.rehideInterval,
+            tempShowInterval: settings.visibility.tempShowInterval
         )
     }
 
     @MainActor
-    func apply(to settings: GeneralSettings) {
-        settings.showThawIcon = showThawIcon
-        settings.lastCustomThawIcon = lastCustomThawIcon
-        settings.customThawIconIsTemplate = customThawIconIsTemplate
-        settings.thawIcon = thawIcon
-        settings.useThawBar = useThawBar
-        settings.useThawBarOnlyOnNotchedDisplay = useThawBarOnlyOnNotchedDisplay
-        settings.thawBarLocation = thawBarLocation
-        settings.thawBarLocationOnHotkey = thawBarLocationOnHotkey
-        settings.showOnClick = showOnClick
-        settings.showOnHover = showOnHover
-        settings.showOnScroll = showOnScroll
-        settings.autoRehide = autoRehide
+    func apply(to settings: AppSettings) {
+        settings.general.showThawIcon = showThawIcon
+        settings.general.lastCustomThawIcon = lastCustomThawIcon
+        settings.general.customThawIconIsTemplate = customThawIconIsTemplate
+        settings.general.thawIcon = thawIcon
+        settings.thawBar.useThawBar = useThawBar
+        settings.thawBar.useThawBarOnlyOnNotchedDisplay = useThawBarOnlyOnNotchedDisplay
+        settings.thawBar.thawBarLocation = thawBarLocation
+        settings.thawBar.thawBarLocationOnHotkey = thawBarLocationOnHotkey
+        settings.visibility.showOnClick = showOnClick
+        settings.visibility.showOnHover = showOnHover
+        settings.visibility.showOnScroll = showOnScroll
+        settings.visibility.autoRehide = autoRehide
         if let strategy = RehideStrategy(rawValue: rehideStrategyRawValue) {
-            settings.rehideStrategy = strategy
+            settings.visibility.rehideStrategy = strategy
         }
-        settings.rehideInterval = rehideInterval
-        settings.tempShowInterval = tempShowInterval
+        settings.visibility.rehideInterval = rehideInterval
+        settings.visibility.tempShowInterval = tempShowInterval
     }
 
     enum CodingKeys: String, CodingKey {
@@ -215,39 +215,39 @@ nonisolated struct AdvancedSettingsSnapshot: Codable {
     )
 
     @MainActor
-    static func capture(from settings: AdvancedSettings) -> AdvancedSettingsSnapshot {
+    static func capture(from settings: AppSettings) -> AdvancedSettingsSnapshot {
         AdvancedSettingsSnapshot(
-            enableAlwaysHiddenSection: settings.enableAlwaysHiddenSection,
-            showAllSectionsOnUserDrag: settings.showAllSectionsOnUserDrag,
-            sectionDividerStyle: settings.sectionDividerStyle.rawValue,
-            hideApplicationMenus: settings.hideApplicationMenus,
-            enableSecondaryContextMenu: settings.enableSecondaryContextMenu,
-            showOnHoverDelay: settings.showOnHoverDelay,
-            tooltipDelay: settings.tooltipDelay,
-            showMenuBarTooltips: settings.showMenuBarTooltips,
-            iconRefreshInterval: settings.iconRefreshInterval,
-            autoZenWhileSharingScreen: settings.autoZenWhileSharingScreen,
-            enableDiagnosticLogging: settings.enableDiagnosticLogging,
-            enableMenuBarItemOverflow: settings.enableMenuBarItemOverflow
+            enableAlwaysHiddenSection: settings.layout.enableAlwaysHiddenSection,
+            showAllSectionsOnUserDrag: settings.layout.showAllSectionsOnUserDrag,
+            sectionDividerStyle: settings.layout.sectionDividerStyle.rawValue,
+            hideApplicationMenus: settings.general.hideApplicationMenus,
+            enableSecondaryContextMenu: settings.general.enableSecondaryContextMenu,
+            showOnHoverDelay: settings.visibility.showOnHoverDelay,
+            tooltipDelay: settings.visibility.tooltipDelay,
+            showMenuBarTooltips: settings.visibility.showMenuBarTooltips,
+            iconRefreshInterval: settings.layout.iconRefreshInterval,
+            autoZenWhileSharingScreen: settings.visibility.autoZenWhileSharingScreen,
+            enableDiagnosticLogging: settings.tools.enableDiagnosticLogging,
+            enableMenuBarItemOverflow: settings.layout.enableMenuBarItemOverflow
         )
     }
 
     @MainActor
-    func apply(to settings: AdvancedSettings) {
-        settings.enableAlwaysHiddenSection = enableAlwaysHiddenSection
-        settings.showAllSectionsOnUserDrag = showAllSectionsOnUserDrag
+    func apply(to settings: AppSettings) {
+        settings.layout.enableAlwaysHiddenSection = enableAlwaysHiddenSection
+        settings.layout.showAllSectionsOnUserDrag = showAllSectionsOnUserDrag
         if let style = SectionDividerStyle(rawValue: sectionDividerStyle) {
-            settings.sectionDividerStyle = style
+            settings.layout.sectionDividerStyle = style
         }
-        settings.hideApplicationMenus = hideApplicationMenus
-        settings.enableSecondaryContextMenu = enableSecondaryContextMenu
-        settings.showOnHoverDelay = showOnHoverDelay
-        settings.tooltipDelay = tooltipDelay
-        settings.showMenuBarTooltips = showMenuBarTooltips
-        settings.iconRefreshInterval = iconRefreshInterval
-        settings.autoZenWhileSharingScreen = autoZenWhileSharingScreen
-        settings.enableDiagnosticLogging = enableDiagnosticLogging
-        settings.enableMenuBarItemOverflow = enableMenuBarItemOverflow
+        settings.general.hideApplicationMenus = hideApplicationMenus
+        settings.general.enableSecondaryContextMenu = enableSecondaryContextMenu
+        settings.visibility.showOnHoverDelay = showOnHoverDelay
+        settings.visibility.tooltipDelay = tooltipDelay
+        settings.visibility.showMenuBarTooltips = showMenuBarTooltips
+        settings.layout.iconRefreshInterval = iconRefreshInterval
+        settings.visibility.autoZenWhileSharingScreen = autoZenWhileSharingScreen
+        settings.tools.enableDiagnosticLogging = enableDiagnosticLogging
+        settings.layout.enableMenuBarItemOverflow = enableMenuBarItemOverflow
     }
 }
 
@@ -325,7 +325,11 @@ nonisolated struct MenuBarLayoutSnapshot: Codable {
 nonisolated struct ProfileContent {
     var generalSettings: GeneralSettingsSnapshot
     var advancedSettings: AdvancedSettingsSnapshot
+    /// Whether the file this content came from stores the Always Hidden switch. A capture always does; content from an older file does not.
+    var storesAlwaysHiddenSection = true
     var hotkeys: [String: Data]
+    /// The shortcut actions that existed at save, so apply leaves newer ones alone. Nil in older profiles.
+    var hotkeyActions: [String]?
     var displayConfigurations: [String: DisplayThawBarConfiguration]
     var globalDisplayConfiguration: DisplayThawBarConfiguration = Defaults.DefaultValue.globalDisplayConfiguration
     var confirmSpacingRelaunch: Bool = Defaults.DefaultValue.confirmSpacingRelaunch
@@ -348,6 +352,7 @@ nonisolated struct Profile: Codable, Identifiable {
     var generalSettings: GeneralSettingsSnapshot
     var advancedSettings: AdvancedSettingsSnapshot
     var hotkeys: [String: Data]
+    var hotkeyActions: [String]?
     var displayConfigurations: [String: DisplayThawBarConfiguration]
     var globalDisplayConfiguration: DisplayThawBarConfiguration = Defaults.DefaultValue.globalDisplayConfiguration
     var confirmSpacingRelaunch: Bool = Defaults.DefaultValue.confirmSpacingRelaunch
@@ -357,6 +362,8 @@ nonisolated struct Profile: Codable, Identifiable {
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2
     var menuBarLayout: MenuBarLayoutSnapshot
     var automation: ProfileAutomation?
+    /// Whether the saved file stores the Always Hidden switch; older ones read it as off. Encoded, so a rewrite such as a rename keeps the fact.
+    var storesAlwaysHiddenSection = true
 
     /// Returns lightweight metadata for this profile.
     var metadata: ProfileMetadata {
@@ -373,7 +380,9 @@ nonisolated struct Profile: Codable, Identifiable {
         ProfileContent(
             generalSettings: generalSettings,
             advancedSettings: advancedSettings,
+            storesAlwaysHiddenSection: storesAlwaysHiddenSection,
             hotkeys: hotkeys,
+            hotkeyActions: hotkeyActions,
             displayConfigurations: displayConfigurations,
             globalDisplayConfiguration: globalDisplayConfiguration,
             confirmSpacingRelaunch: confirmSpacingRelaunch,
@@ -394,7 +403,9 @@ nonisolated struct Profile: Codable, Identifiable {
         case modifiedAt
         case generalSettings
         case advancedSettings
+        case storesAlwaysHiddenSection
         case hotkeys
+        case hotkeyActions
         case displayConfigurations
         case globalDisplayConfiguration
         case confirmSpacingRelaunch
@@ -418,7 +429,9 @@ nonisolated struct Profile: Codable, Identifiable {
         self.modifiedAt = modifiedAt
         self.generalSettings = content.generalSettings
         self.advancedSettings = content.advancedSettings
+        self.storesAlwaysHiddenSection = content.storesAlwaysHiddenSection
         self.hotkeys = content.hotkeys
+        self.hotkeyActions = content.hotkeyActions
         self.displayConfigurations = content.displayConfigurations
         self.globalDisplayConfiguration = content.globalDisplayConfiguration
         self.confirmSpacingRelaunch = content.confirmSpacingRelaunch
@@ -446,11 +459,10 @@ nonisolated struct Profile: Codable, Identifiable {
             AdvancedSettingsSnapshot.self,
             forKey: .advancedSettings
         ) ?? .defaults
+        storesAlwaysHiddenSection = try Self.readsStoredAlwaysHiddenSwitch(from: container)
 
-        hotkeys = try container.decodeIfPresent(
-            [String: Data].self,
-            forKey: .hotkeys
-        ) ?? [:]
+        hotkeys = try container.decodeIfPresent([String: Data].self, forKey: .hotkeys) ?? [:]
+        hotkeyActions = try container.decodeIfPresent([String].self, forKey: .hotkeyActions)
 
         displayConfigurations = try container.decodeIfPresent(
             [String: DisplayThawBarConfiguration].self,
@@ -462,10 +474,7 @@ nonisolated struct Profile: Codable, Identifiable {
             forKey: .globalDisplayConfiguration
         ) ?? Defaults.DefaultValue.globalDisplayConfiguration
 
-        confirmSpacingRelaunch = try container.decodeIfPresent(
-            Bool.self,
-            forKey: .confirmSpacingRelaunch
-        ) ?? Defaults.DefaultValue.confirmSpacingRelaunch
+        confirmSpacingRelaunch = try container.decodeIfPresent(Bool.self, forKey: .confirmSpacingRelaunch) ?? Defaults.DefaultValue.confirmSpacingRelaunch
 
         unconfirmedSpacingProfileScope = try container.decodeIfPresent(
             SpacingProfileSaveScope.self,
@@ -491,29 +500,6 @@ nonisolated struct Profile: Codable, Identifiable {
 
         automation = try container.decodeIfPresent(ProfileAutomation.self, forKey: .automation)
     }
-}
-
-// MARK: - ProfileExportEntry
-
-/// A single profile bundled with its metadata for export/import.
-/// Preserves display associations that live on the manifest.
-nonisolated struct ProfileExportEntry: Codable {
-    var profile: Profile
-    var associatedDisplayUUID: String?
-    var associatedDisplayName: String?
-    /// Space associations are exported too, but a key from another Mac will
-    /// never match locally, so importing one is harmless rather than useful.
-    var associatedSpaceKey: String?
-    var associatedSpaceName: String?
-    /// The profile's layout switches. Nil in files exported before them.
-    var keepsLayoutChanges: Bool?
-    var reappliesAtLaunch: Bool?
-}
-
-/// Wrapper for exporting multiple profiles as a single file.
-nonisolated struct ProfileExportBundle: Codable {
-    var version: Int = 1
-    var entries: [ProfileExportEntry]
 }
 
 // MARK: - Default-backed decoding

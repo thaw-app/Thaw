@@ -10,6 +10,7 @@ import Combine
 import MenuBarModel
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// The search panel's rename, lookup and escape handling, on a panel that is never shown.
 @MainActor
@@ -30,21 +31,19 @@ struct MenuBarSearchPanelTests {
         world.seat([alpha])
         let panel = panel(world)
 
-        #expect(panel.cachedItem(for: .item(alpha.tag, windowID: alpha.windowID))?.windowID == alpha.windowID)
-        #expect(panel.cachedItem(for: .item(alpha.tag, windowID: nil))?.windowID == alpha.windowID)
-        #expect(panel.cachedItem(for: .item(alpha.tag, windowID: 1)) == nil)
-        #expect(panel.cachedItem(for: .header(.visible)) == nil)
-        #expect(panel.cachedItem(for: .recentsHeader) == nil)
+        #expect(panel.cachedItem(for: MenuBarSearchModel.ItemID(alpha))?.windowID == alpha.windowID)
+        #expect(panel.cachedItem(for: MenuBarSearchModel.ItemID(tag: alpha.tag, windowID: nil))?.windowID == alpha.windowID)
+        #expect(panel.cachedItem(for: MenuBarSearchModel.ItemID(tag: alpha.tag, windowID: 1)) == nil)
     }
 
     @Test("A panel that was never set up finds no items")
     func unsetPanelFindsNothing() {
         let alpha = World.item("Alpha")
         let panel = MenuBarSearchPanel()
-        #expect(panel.cachedItem(for: .item(alpha.tag, windowID: alpha.windowID)) == nil)
+        #expect(panel.cachedItem(for: MenuBarSearchModel.ItemID(alpha)) == nil)
         #expect(panel.selectedItem == nil)
         #expect(panel.canBecomeKey)
-        #expect(panel.presentation == .inspector)
+        #expect(panel.presentation == .extended)
     }
 
     @Test("Rename… starts a rename seeded with the item's custom name")
@@ -58,7 +57,7 @@ struct MenuBarSearchPanelTests {
         panel.beginRenamingSelection()
         #expect(panel.model.renameSession == nil, "nothing is highlighted yet")
 
-        panel.model.selection = .item(alpha.tag, windowID: alpha.windowID)
+        panel.model.selection = MenuBarSearchModel.ItemID(alpha)
         #expect(panel.selectedItem?.tag == alpha.tag)
         panel.beginRenamingSelection()
         let session = try #require(panel.model.renameSession)
@@ -145,10 +144,135 @@ struct MenuBarSearchPanelTests {
         #expect(world.appState.layoutFeedback.refusal == nil)
 
         // Out-of-range destinations and a move to the item's own section do nothing.
-        panel.model.selection = .item(alpha.tag, windowID: alpha.windowID)
+        panel.model.selection = MenuBarSearchModel.ItemID(alpha)
         panel.moveSelection(toDestinationAt: 7)
         panel.presentItemActions()
         #expect(world.appState.layoutFeedback.refusal == nil)
+    }
+
+    @Test("Collapsed to the field alone, Return and the item shortcuts pass through")
+    func collapsedFacesDontActOnTheHiddenSelection() throws {
+        let world = World()
+        let alpha = World.item("Alpha")
+        world.seat([alpha])
+        let panel = panel(world)
+        panel.presentation = .compact
+        panel.model.results = [MenuBarSearchResult(item: alpha, ownerName: nil, section: nil)]
+        panel.model.selectFirstRow()
+
+        func key(_ code: KeyCode, _ flags: NSEvent.ModifierFlags = []) throws -> NSEvent {
+            try #require(NSEvent.keyEvent(
+                with: .keyDown,
+                location: .zero,
+                modifierFlags: flags,
+                timestamp: 0,
+                windowNumber: panel.windowNumber,
+                context: nil,
+                characters: "",
+                charactersIgnoringModifiers: "",
+                isARepeat: false,
+                keyCode: UInt16(code.rawValue)
+            ))
+        }
+
+        // Collapsed to just the field, no row shows, so keys that act on the
+        // hidden first result pass through instead.
+        #expect(!panel.showsAResultRow)
+        #expect(try panel.handleKeyDown(key(.returnKey)) != nil)
+        #expect(try panel.handleKeyDown(key(.e, .command)) != nil)
+        #expect(try panel.handleKeyDown(key(.two, .command)) != nil)
+        #expect(panel.model.renameSession == nil)
+
+        // Typed, the list shows and the same keys act on the highlighted row.
+        panel.model.searchText = "al"
+        #expect(panel.showsAResultRow)
+        #expect(try panel.handleKeyDown(key(.e, .command)) == nil)
+        #expect(panel.model.renameSession != nil)
+    }
+
+    @Test("Collapsed to the field alone, the arrows and Tab leave the hidden selection where it is")
+    func collapsedFacesDontMoveTheHiddenSelection() throws {
+        let world = World()
+        let alpha = World.item("Alpha"), beta = World.item("Alpha Beta")
+        world.seat([alpha, beta])
+        let panel = panel(world)
+        panel.presentation = .compact
+        panel.model.results = [alpha, beta].map { MenuBarSearchResult(item: $0, ownerName: nil, section: nil) }
+        panel.model.selectFirstRow()
+        let first = panel.model.selection
+
+        func key(_ code: KeyCode) throws -> NSEvent {
+            try #require(NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: panel.windowNumber,
+                context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: UInt16(code.rawValue)
+            ))
+        }
+
+        // No row shows, so the arrows pass through to move the field's text cursor.
+        #expect(!panel.showsAResultRow)
+        #expect(try panel.handleKeyDown(key(.downArrow)) != nil)
+        #expect(panel.model.selection == first)
+        // With no section to jump to, Tab passes through to move the keyboard focus.
+        #expect(try panel.handleKeyDown(key(.tab)) != nil)
+        #expect(panel.model.selection == first)
+
+        // Typed, the list shows and Down moves the highlight.
+        panel.model.searchText = "al"
+        #expect(panel.showsAResultRow)
+        #expect(try panel.handleKeyDown(key(.downArrow)) == nil)
+        #expect(panel.model.selection != first)
+    }
+
+    @Test("Tab jumps between sections, and passes through when there is only one")
+    func tabJumpsOnlyBetweenSections() throws {
+        let world = World()
+        let alpha = World.item("Alpha"), beta = World.item("Beta")
+        world.seat([alpha, beta])
+        let panel = panel(world)
+
+        func tab() throws -> NSEvent {
+            try #require(NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: panel.windowNumber,
+                context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: UInt16(KeyCode.tab.rawValue)
+            ))
+        }
+
+        panel.model.results = [
+            MenuBarSearchResult(item: alpha, ownerName: nil, section: "Visible"),
+            MenuBarSearchResult(item: beta, ownerName: nil, section: "Hidden"),
+        ]
+        panel.model.selectFirstRow()
+        #expect(try panel.handleKeyDown(tab()) == nil)
+        #expect(panel.model.selection == MenuBarSearchModel.ItemID(beta))
+
+        panel.model.results = [alpha, beta].map { MenuBarSearchResult(item: $0, ownerName: nil, section: "Visible") }
+        #expect(try panel.handleKeyDown(tab()) != nil)
+        #expect(panel.model.selection == MenuBarSearchModel.ItemID(beta))
+
+
+        // The key monitor hands on the handler's answer: a taken Tab stays taken.
+        panel.model.results[0] = MenuBarSearchResult(item: alpha, ownerName: nil, section: "Hidden")
+        #expect(try MenuBarSearchPanel.monitoredKey(tab(), panel: panel) == nil)
+        let event = try tab()
+        #expect(MenuBarSearchPanel.monitoredKey(event, panel: nil) === event)
+    }
+
+    @Test("A rename ends when its row leaves the list")
+    func renameEndsWithItsRow() {
+        let world = World()
+        let alpha = World.item("Clock"), beta = World.item("Battery")
+        world.seat([alpha, beta])
+        let panel = panel(world)
+        let inventory = DisplayedItemInventory.cache(appState: world.appState)
+
+        panel.model.renameSession = .init(tag: alpha.tag, windowID: alpha.windowID, draft: "New")
+        panel.model.searchText = "clock"
+        panel.model.refresh(from: inventory)
+        #expect(panel.model.renameSession != nil, "the row is still listed")
+
+        panel.model.searchText = "battery"
+        panel.model.refresh(from: inventory)
+        #expect(panel.model.renameSession == nil)
     }
 
     @Test("A section shortcut on an item macOS keeps in place explains the refusal")
@@ -157,7 +281,7 @@ struct MenuBarSearchPanelTests {
         let control = World.item(.visibleControlItem)
         world.seat([control])
         let panel = panel(world)
-        panel.model.selection = .item(control.tag, windowID: control.windowID)
+        panel.model.selection = MenuBarSearchModel.ItemID(control)
         // Checked first, so a backend that would allow it never starts a real move here.
         try #require(!MenuBarBackendProvider.current.canAssign(control, to: .hidden, experimentalSystemItemHiding: false))
 
@@ -165,49 +289,32 @@ struct MenuBarSearchPanelTests {
         #expect(world.appState.layoutFeedback.refusal != nil)
     }
 
-    @Test("Rename and section moves work in the launcher faces too", arguments: [SearchPresentation.launcher, .assisted])
-    func launcherFacesRenameAndMove(presentation: SearchPresentation) throws {
+    @Test("A rename drops the inventory ranked by the old name, and a section shortcut is attempted")
+    func renameAndMove() throws {
         let world = World()
         var alpha = World.item("Alpha")
         alpha.customName = "My Alpha"
         let control = World.item(.visibleControlItem)
         world.seat([alpha, control])
         let panel = panel(world)
-        #expect(panel.adopt(presentation))
-        #expect(panel.presentation == presentation)
-        #expect(!panel.adopt(presentation), "adopting the same face again changes nothing")
 
-        panel.model.selection = .item(alpha.tag, windowID: alpha.windowID)
+        panel.model.selection = MenuBarSearchModel.ItemID(alpha)
         panel.beginRenamingSelection()
         let session = try #require(panel.model.renameSession)
         #expect(session.draft == "My Alpha")
         panel.model.renameSession?.draft = "Renamed"
-        panel.model.launcherCandidates = [
+        panel.model.candidates = [
             PaletteCandidate(item: alpha, displayName: "My Alpha", ownerName: "", identityKey: alpha.uniqueIdentifier),
         ]
         panel.commitRename()
         #expect(alpha.customName == "Renamed")
-        #expect(panel.model.launcherCandidates.isEmpty, "a rename drops the inventory ranked by the old name")
+        #expect(!panel.model.candidates.contains { $0.displayName == "My Alpha" }, "the inventory is rebuilt with the new name")
 
-        // A refusal shows the move was attempted rather than ignored by the face.
+        // A refusal shows the move was attempted rather than ignored.
         try #require(!MenuBarBackendProvider.current.canAssign(control, to: .hidden, experimentalSystemItemHiding: false))
-        panel.model.selection = .item(control.tag, windowID: control.windowID)
+        panel.model.selection = MenuBarSearchModel.ItemID(control)
         panel.moveSelection(toDestinationAt: 1)
         #expect(world.appState.layoutFeedback.refusal != nil)
-    }
-
-    @Test("Remember last search keeps the query in the launcher faces too", arguments: [SearchPresentation.launcher, .assisted])
-    func launcherFacesKeepRememberedQuery(presentation: SearchPresentation) {
-        let world = World()
-        let panel = panel(world)
-        _ = panel.adopt(presentation)
-        Defaults.set(true, forKey: .rememberSearchQuery)
-        panel.model.searchText = "Kept"
-        panel.close()
-        #expect(panel.model.searchText == "Kept")
-        Defaults.set(false, forKey: .rememberSearchQuery)
-        panel.close()
-        #expect(panel.model.searchText.isEmpty)
     }
 
     @Test("The actions menu tracking keeps the panel up and closes it once it ends without key")

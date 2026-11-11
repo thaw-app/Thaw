@@ -18,11 +18,22 @@ struct ModulesSettingsPane: View {
     /// Cards about as wide as Floe's store cards, as many to a row as fit.
     private let columns = [GridItem(.adaptive(minimum: 160, maximum: 220), spacing: ThawSpacing.gutter, alignment: .top)]
 
+    /// The search entry for a card's row.
+    private static func searchAnchor(for card: ModuleCard) -> String {
+        switch card.id {
+        case "profiles": "modules.profiles"
+        case "triggers": "modules.triggers"
+        case "widgets": "modules.widgets"
+        default: "modules.scripts"
+        }
+    }
+
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: ThawSpacing.gutter) {
                 ForEach(cards) { card in
                     ModuleCardView(card: card, moduleHost: moduleHost, profiles: profiles)
+                        .settingsSearchAnchor(Self.searchAnchor(for: card))
                 }
             }
             .padding(ThawSpacing.inset)

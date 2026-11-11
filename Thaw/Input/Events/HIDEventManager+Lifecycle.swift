@@ -15,7 +15,7 @@ extension HIDEventManager {
     /// Subscribes to the settings and system notifications the manager has to
     /// react to, replacing any subscriptions from a previous call.
     func configureCancellables() {
-        var c = Set<AnyCancellable>()
+        var c = nativeHidingFollower()
 
         if let appState {
             // Pre-seed so the initial emission does no rearm work when
@@ -25,13 +25,12 @@ extension HIDEventManager {
             // Start or stop the mouse-moved tap when hover, tooltip or display
             // settings change. The continues below skip one event; a return
             // would end the observation.
-            let generalSettings = appState.settings.general
-            let advancedSettings = appState.settings.advanced
+            let visibilitySettings = appState.settings.visibility
             let displaySettings = appState.settings.displaySettings
             hoverSettingsObservationTask?.cancel()
             hoverSettingsObservationTask = Task { @MainActor [weak self] in
                 let changes = Observations {
-                    (generalSettings.showOnHover, advancedSettings.showMenuBarTooltips, displaySettings.configurations)
+                    (visibilitySettings.showOnHover, visibilitySettings.showMenuBarTooltips, displaySettings.configurations)
                 }
                 for await (showOnHover, _, _) in changes {
                     guard let self else { return }

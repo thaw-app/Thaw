@@ -30,6 +30,9 @@ extension MenuBarItemManager {
         /// Ordered owner/title identities for macOS 27, where synthetic AX window IDs churn without movement.
         /// Stable identities prevent a recache loop while detecting real additions, removals, and reorders.
         fileprivate(set) var cachedItemSignature = [String]()
+
+        /// Whether the cache's last read saw the whole bar, which settling and the structural pass check.
+        fileprivate(set) var lastRead = BarReadRecord()
     }
 
     /// Defined in MenuBarModel so backends can use section buckets without linking the orchestrator.
@@ -187,7 +190,7 @@ extension MenuBarItemManager {
                     let snapshot = await MenuBarItemAXProvider.menuBarInventoryConcurrent(freshOnly: true)
                     // An owner can exit during the re-scan, so the process table is read again with it.
                     running = await RunningApplicationSnapshot.current()
-                    guard snapshot.hasFreshKnownInventory,
+                    guard snapshot.knownInventory.isFresh,
                           layoutPublication.canPublish(generation: publicationGeneration)
                     else {
                         scheduleCoalescedCacheRerun()
@@ -352,7 +355,7 @@ extension MenuBarItemManager {
     }
 
     /// Mirror only settled, concealed geometry; reveal interleaving must not become saved order that reconciliation enforces.
-    /// `placedByUser` skips the quiet period after a ⌘-drag, whose order is the user's own; every other guard still applies.
+    /// placedByUser skips the quiet period after a ⌘-drag, whose order is the user's own; every other guard still applies.
     func mirrorSavedSectionOrderIfSettled(
         from cache: ItemCache,
         controlItems: ControlItemPair? = nil,
@@ -367,10 +370,10 @@ extension MenuBarItemManager {
             && LayoutSolver.shouldPersistSavedOrder(
                 isRestoringItemOrder: isRestoringItemOrder,
                 isResettingLayout: isResettingLayout,
-                isInStartupSettling: isInStartupSettling,
+                isInStartupSettling: barSettling.isSettling,
                 isApplyingProfileLayout: isApplyingProfileLayout
             )
-        guard placedByUser || savedOrderMirrorGate.allowsMirror(identifiers: Set(cache.managedItems.map(\.uniqueIdentifier)), restrictionChange: lastRestrictionChangeTimestamp, sectionRevealed: isAnySectionRevealed, transientFrame: SavedOrderMirrorGate.transientFrame(among: cache[.visible], displays: displays)), shouldPersistLayoutSnapshot else {
+        guard placedByUser || savedOrderMirrorGate.allowsMirror(identifiers: Set(cache.managedItems.map(\.uniqueIdentifier)), sectionRevealed: isAnySectionRevealed, transientFrame: SavedOrderMirrorGate.transientFrame(among: cache[.visible], displays: displays)), shouldPersistLayoutSnapshot else {
             return
         }
         // Concealed buckets retain old frames, which cannot describe the current bar.
@@ -499,7 +502,7 @@ extension MenuBarItemManager {
         hiddenControlItemWID: CGWindowID?,
         alwaysHiddenControlItemWID: CGWindowID?
     ) async {
-        if isInStartupSettling {
+        if barSettling.isSettling {
             MenuBarItemManager.diagLog.debug(
                 "cacheItemsRegardless: control items not yet registered by MenuBarAgent (startup settling); retaining last-good cache silently. Items remaining: \(items.count)"
             )
@@ -612,9 +615,12 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: serial cache operation already in progress, coalescing (will rerun)")
             return
         }
+        // Noted as the pass ends, so a caller that coalesced into it never sees the read before its cache.
+        var thisRead: BarReadRecord.Read?
         // Await gate release to avoid refusing callers after this pass returns.
         // end() has no cancellation check, so cancelled tasks still release the gate.
         defer {
+            cacheCycleState.lastRead.note(thisRead)
             let needsRerun = await cacheGate.end()
             // Rerun coalesced drags or resets so layout bars reflect the latest assignments.
             if needsRerun {
@@ -646,6 +652,7 @@ extension MenuBarItemManager {
             return
         }
         onScreenItemSnapshot.update(inventory.freshItems.filter(\.isOnScreen), fromCompleteWalk: inventory.completed)
+        thisRead = BarReadRecord.Read(hasFreshKnownInventory: inventory.knownInventory.isFresh, hasSteadyKnownInventory: inventory.knownInventory.isSteady)
 
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: getMenuBarItems returned \(items.count) items")
 
@@ -712,10 +719,8 @@ extension MenuBarItemManager {
             }
         }
 
-        // Partial scans can mistake alternating siblings for retitles; learn single-item owners only from complete, fresh inventory.
-        if inventory.completed, inventory.hasFreshKnownInventory {
-            learnVolatileTitleOwners(fresh: inventory.freshItems, current: &items)
-        }
+        // Each app in freshItems answered with all its items, so a read cut short can still show a retitle.
+        learnVolatileTitleOwners(fresh: inventory.freshItems, current: &items)
 
         // Seed corrected source-PID identities for known windows so relocation does not treat them as arrivals.
         // Skip unresolved PIDs to keep the placeholder Control Center namespace out of persisted identities.
@@ -756,6 +761,7 @@ extension MenuBarItemManager {
             previousCachedItems: itemCache.managedItems
         )
         if isPartialMerge {
+            thisRead?.mergedWithOlderItems = true
             guard await recoverPartialCacheSnapshot(&items, itemWindowIDs: itemWindowIDs) else { return }
         }
         cacheCycleState.cachedItemWindowIDs = itemWindowIDs
@@ -794,14 +800,14 @@ extension MenuBarItemManager {
         // Partial inventory, or one merged with cached items, can populate the editor, but cannot
         // authorize boundary repairs or replace saved order with retained geometry.
         lastKnownControlItems = CacheDividers.live(controlItems)
-        if isPartialMerge || !inventory.hasFreshKnownInventory {
+        if isPartialMerge || !inventory.knownInventory.isFresh {
             await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID, publicationGeneration: publicationGeneration, observationOnly: true)
             return
         }
 
         // Skip structural policy while login items repopulate MenuBarAgent positions in waves.
         // After settling, macOS 27 ambient passes remain observation-only; legacy backends enforce dividers.
-        if isInStartupSettling {
+        if barSettling.isSettling {
             MenuBarItemManager.diagLog.debug(
                 "cacheItemsRegardless: startup settling active, deferring structural control order"
             )
@@ -827,7 +833,7 @@ extension MenuBarItemManager {
         }
 
         // Defer restore until the final settling-end cache pass to avoid cascading moves during login or rapid app restarts.
-        guard !isInStartupSettling else {
+        guard !barSettling.isSettling else {
             await uncheckedCacheItems(items: items, controlItems: controlItems, displayID: displayID, publicationGeneration: publicationGeneration)
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: startup settling active, skipping restore")
             return
@@ -880,7 +886,7 @@ extension MenuBarItemManager {
         _ items: inout [MenuBarItem],
         itemWindowIDs: [CGWindowID]
     ) async -> Bool {
-        if isInStartupSettling {
+        if barSettling.isSettling {
             MenuBarItemManager.diagLog.debug(
                 "cacheItemsRegardless: Thaw control items not yet in AX snapshot (startup settling); retaining last-good cache silently. Items remaining: \(items.count), windowIDs: \(itemWindowIDs.count)"
             )

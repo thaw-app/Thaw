@@ -23,9 +23,8 @@ extension MenuBarItemImageCache {
 
     /// Chooses between an existing cache entry and a newly captured candidate.
     ///
-    /// Prefers keeping a settled non-blank glyph over blank or much-narrower
-    /// replacements (chevron bleed), while still allowing legitimate updates
-    /// when the candidate is at least as wide.
+    /// Keeps a settled glyph over a blank or much narrower (chevron bleed) one, and takes the candidate when
+    /// it's at least as wide. A live glyph can really lose its left ink, so only the reveal path rejects that.
     static nonisolated func preferredCachedImage(
         existing: MenuBarItemGlyphCapture,
         candidate: MenuBarItemGlyphCapture
@@ -48,9 +47,13 @@ extension MenuBarItemImageCache {
     /// expires by its volatility class on load, and recapturing every saved
     /// glyph meant that one missing item made the Thaw Bar reveal and capture
     /// the whole section, one batch after another.
+    ///
+    /// retakesClipped also retakes a picture whose ink runs into its left edge. Only a capture the user asked
+    /// for passes it, or an icon that really draws to its edge would be revealed by every automatic pass.
     static nonisolated func prewarmNeedsCapture(
         cachedImage: MenuBarItemGlyphCapture?,
-        wouldAttemptCapture: Bool
+        wouldAttemptCapture: Bool,
+        retakesClipped: Bool = false
     ) -> Bool {
         guard wouldAttemptCapture else { return false }
         guard let cachedImage, !cachedImage.isEffectivelyBlank else { return true }
@@ -58,7 +61,7 @@ extension MenuBarItemImageCache {
         if cachedImage.pointSize.width < Self.minimumTrustedGlyphWidth {
             return true
         }
-        return false
+        return retakesClipped && isClippedAtLeadingEdge(cachedImage)
     }
 
     /// Whether an item is too narrow for a glyph, such as a status item whose

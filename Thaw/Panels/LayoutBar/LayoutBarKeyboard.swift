@@ -112,9 +112,9 @@ enum LayoutBarKeyboard {
     }
 
     private static func handleCommandKey(_ key: KeyCode, shift: Bool, in view: LayoutBarItemView) -> Bool {
-        // Editor and Settings windows have no Undo menu item; route command-Z to their undo manager.
+        // Editor and Settings windows have no Undo menu item; route command-Z to the layout history.
         if key == .z {
-            guard let undoManager = view.window?.undoManager else { return false }
+            guard let undoManager = (view.superview as? LayoutBarContainer)?.appState?.layoutUndo else { return false }
             if shift {
                 undoManager.redo()
             } else {
@@ -247,7 +247,7 @@ enum LayoutBarKeyboard {
             previousOrder: items,
             section: section,
             appState: appState,
-            undoManager: view.window?.undoManager,
+            undoManager: appState.layoutUndo,
             actionName: moveActionName(view.item)
         )
         announce(
@@ -302,7 +302,7 @@ enum LayoutBarKeyboard {
         let item = view.item
         // Gate like drop and VoiceOver before registering undo to avoid phantom entries.
         // The shared move path still reports group refusals.
-        let experimentalSystemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
+        let experimentalSystemItemHiding = appState.settings.layout.enableExperimentalSystemItemHiding
         guard MenuBarBackendProvider.current.canAssign(
             item,
             to: target,
@@ -316,7 +316,7 @@ enum LayoutBarKeyboard {
             from: source,
             to: target,
             appState: appState,
-            undoManager: view.window?.undoManager,
+            undoManager: appState.layoutUndo,
             actionName: moveActionName(item)
         )
         announce(
@@ -328,7 +328,7 @@ enum LayoutBarKeyboard {
     }
 
     /// Register reverse-move undo before using VoiceOver's shared refusal-aware move path.
-    private static func performSectionMove(
+    static func performSectionMove(
         tag: MenuBarItemTag,
         from source: MenuBarSection.Name,
         to target: MenuBarSection.Name,
@@ -338,13 +338,9 @@ enum LayoutBarKeyboard {
     ) {
         guard let item = appState.itemManager.managedItem(withTag: tag) else { return }
         if let undoManager {
-            let undoTarget = LayoutBarUndoTarget(appState: appState, undoManager: undoManager)
-            undoManager.registerUndo(withTarget: undoTarget) { undoTarget in
-                guard let appState = undoTarget.appState,
-                      let undoManager = undoTarget.undoManager
-                else {
-                    return
-                }
+            // The target is the long-lived app state: the undo manager doesn't keep a throwaway one alive.
+            undoManager.registerUndo(withTarget: appState) { [weak undoManager] appState in
+                guard let undoManager else { return }
                 performSectionMove(
                     tag: tag,
                     from: target,
@@ -374,13 +370,8 @@ enum LayoutBarKeyboard {
         actionName: String
     ) {
         if let undoManager {
-            let undoTarget = LayoutBarUndoTarget(appState: appState, undoManager: undoManager)
-            undoManager.registerUndo(withTarget: undoTarget) { undoTarget in
-                guard let appState = undoTarget.appState,
-                      let undoManager = undoTarget.undoManager
-                else {
-                    return
-                }
+            undoManager.registerUndo(withTarget: appState) { [weak undoManager] appState in
+                guard let undoManager else { return }
                 applySectionOrder(
                     previousOrder,
                     previousOrder: order,
@@ -490,19 +481,6 @@ enum LayoutBarKeyboard {
                 .priority: NSAccessibilityPriorityLevel.high.rawValue,
             ]
         )
-    }
-}
-
-/// Undo retains its target across both stacks; keep app state here without retaining recycled item views.
-@MainActor
-private final class LayoutBarUndoTarget: NSObject {
-    weak var appState: AppState?
-    /// Weak to avoid a handler cycle; the manager stays alive through the undo operation.
-    weak var undoManager: UndoManager?
-
-    init(appState: AppState, undoManager: UndoManager) {
-        self.appState = appState
-        self.undoManager = undoManager
     }
 }
 

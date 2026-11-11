@@ -24,9 +24,9 @@ extension MenuBarItemTag {
         if neutralized.hasPrefix("Currently #°") {
             return "Currently"
         }
-        let month = /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?(?= #| at\b)/
+        let month = TagRegex.readingMonth
         return neutralized
             .replacing(month, with: "#")
-            .replacing(/(#:#)\s*[AaPp]\.?\s?[Mm]\.?$/) { $0.output.1 }
+            .replacing(TagRegex.readingMeridiem) { $0.output.1 }
     }
 }

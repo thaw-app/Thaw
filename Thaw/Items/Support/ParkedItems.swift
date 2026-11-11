@@ -15,11 +15,11 @@ nonisolated enum ParkedItems {
     static func parkedSetAndBarMidY(in items: [MenuBarItem], screens: [CGRect]) -> (barMidY: CGFloat?, parkedIDs: Set<CGWindowID>) {
         func barIndex(holding frame: CGRect) -> Int? {
             guard !screens.isEmpty else {
-                return frame.midY <= MenuBarItemGeometry.maxOnBarMidY ? 0 : nil
+                return frame.midY <= MenuBarItem.maxBarBandMidY ? 0 : nil
             }
             guard !frame.isEmpty else { return nil }
             if frame.origin.x == MenuBarItemGeometry.transientSentinelX {
-                return screens.firstIndex { (0 ... MenuBarItemGeometry.maxOnBarMidY).contains(frame.midY - $0.minY) }
+                return screens.firstIndex { (0 ... MenuBarItem.maxBarBandMidY).contains(frame.midY - $0.minY) }
             }
             guard let screen = MenuBarItemGeometry.barScreen(holding: frame, among: screens) else { return nil }
             return screens.firstIndex(of: screen)

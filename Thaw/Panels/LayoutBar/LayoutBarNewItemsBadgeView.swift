@@ -54,19 +54,13 @@ final class LayoutBarNewItemsBadgeView: LayoutBarArrangedView {
         bitmapImage()
     }
 
-    /// Plays a bounce-in scale animation, used when the badge first appears
-    /// for a newly detected item. No-op when reduce motion is enabled.
+    /// Grows the badge in from its center when it first appears for a newly detected item.
+    /// Reduce Motion fades it in instead.
     func animateAppearance() {
-        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
-            return
-        }
         wantsLayer = true
-        let animation = CASpringAnimation(keyPath: "transform.scale")
-        animation.fromValue = 0.6
-        animation.toValue = 1.0
-        animation.damping = 12
-        animation.initialVelocity = 4
-        animation.duration = animation.settlingDuration
+        let animation = LayoutBarMotion.badgeAppearance(
+            size: bounds.size, reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        )
         layer?.add(animation, forKey: "appearanceScale")
     }
 

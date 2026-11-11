@@ -20,9 +20,8 @@ nonisolated enum HotkeyAction: String, Codable, CaseIterable {
 
     // MARK: Menu Bar Items
 
-    /// Summons the search panel, in whichever face
-    /// AdvancedSettings.menuBarSearchPresentation asks for. The item palettes
-    /// are modes of this panel, so this is the only way in.
+    /// Summons the search panel, in the layout
+    /// VisibilitySettings.menuBarSearchPresentation asks for.
     case searchMenuBarItems = "SearchMenuBarItems"
 
     /// Puts a letter under every item on the menu bar; typing one opens that
@@ -65,8 +64,7 @@ nonisolated enum HotkeyAction: String, Codable, CaseIterable {
             }
         case .toggleAlwaysHiddenSection:
             guard
-                let section = appState.menuBarManager.section(withName: .alwaysHidden),
-                section.isEnabled
+                let section = appState.menuBarManager.section(withName: .alwaysHidden), section.isEnabled
             else {
                 return
             }
@@ -101,7 +99,7 @@ nonisolated enum HotkeyAction: String, Codable, CaseIterable {
         case .enableThawBar:
             appState.settings.displaySettings.toggleThawBarForActiveDisplay()
         case .toggleApplicationMenus:
-            appState.menuBarManager.toggleApplicationMenus()
+            appState.menuBarManager.applicationMenuHider.toggleApplicationMenus()
         case .toggleAutoRehide:
             toggleRehiding(appState: appState)
         case .toggleZenMode:
@@ -144,12 +142,12 @@ nonisolated enum HotkeyAction: String, Codable, CaseIterable {
     /// which Never keeps stored.
     @MainActor
     private func toggleRehiding(appState: AppState) {
-        let general = appState.settings.general
-        general.autoRehide.toggle()
+        let visibility = appState.settings.visibility
+        visibility.autoRehide.toggle()
         let choice = SimpleRehideChoice(
-            autoRehide: general.autoRehide,
-            strategy: general.rehideStrategy,
-            interval: general.rehideInterval
+            autoRehide: visibility.autoRehide,
+            strategy: visibility.rehideStrategy,
+            interval: visibility.rehideInterval
         )
         // The toggle has no visible effect until the next reveal, so
         // confirm the new state with a notification.

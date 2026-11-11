@@ -51,7 +51,7 @@ final class RevealCover {
                 x: screen.cgFrame.minX,
                 y: screen.cgFrame.minY,
                 width: screen.cgFrame.width,
-                height: screen.getMenuBarHeight() ?? screen.getMenuBarHeightEstimate()
+                height: screen.getMenuBarHeightEstimate()
             )
             guard let image = await appState.menuBarManager.backdrop.capture(rect) else { continue }
             guard !isShowing else { return }
@@ -161,7 +161,7 @@ final class RevealCover {
             RevealCoverGeometry.ScreenBar(
                 displayID: screen.displayID,
                 frame: screen.cgFrame,
-                height: screen.getMenuBarHeight() ?? screen.getMenuBarHeightEstimate()
+                height: screen.getMenuBarHeightEstimate()
             )
         }
         return Layout(bands: RevealCoverGeometry.bands(

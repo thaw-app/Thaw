@@ -20,7 +20,7 @@ nonisolated enum UserSwitchedOffApps {
     /// The apps that own these items, by bundle identifier.
     static func bundleIDs(of items: [MenuBarItem]) -> Set<String> {
         Set(items.compactMap { item in
-            guard case let .string(bundleID) = item.tag.namespace else { return nil }
+            guard let bundleID = item.tag.namespace.bundleIdentifier else { return nil }
             return bundleID
         })
     }
@@ -29,7 +29,7 @@ nonisolated enum UserSwitchedOffApps {
     static func excluding(_ items: [MenuBarItem], switchedOff: Set<String>) -> [MenuBarItem] {
         guard !switchedOff.isEmpty else { return items }
         return items.filter { item in
-            guard case let .string(bundleID) = item.tag.namespace else { return true }
+            guard let bundleID = item.tag.namespace.bundleIdentifier else { return true }
             return !switchedOff.contains(bundleID)
         }
     }

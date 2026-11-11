@@ -14,15 +14,14 @@ struct NotificationCenterLayoutSuspensionTests {
     @Test("Assertion changes cannot schedule repair or publish temporary geometry")
     func suspensionBlocksRepairAndPublication() async {
         let manager = MenuBarItemManager()
-        manager.isInStartupSettling = false
-        defer { manager.postRestrictionRepairTask?.cancel() }
+        defer { manager.restrictionRepairSchedule.task?.cancel() }
         manager.noteRestrictionChange()
-        #expect(manager.postRestrictionRepairTask != nil)
+        #expect(manager.restrictionRepairSchedule.task != nil)
         let before = manager.layoutPublication.generation
         manager.beginNotificationCenterLayoutSuspension()
         manager.noteRestrictionChange()
         manager.scheduleStructuralNormalization(cause: .restrictionChanged)
-        #expect(manager.postRestrictionRepairTask == nil)
+        #expect(manager.restrictionRepairSchedule.task == nil)
         #expect(manager.structuralNormalizationTask == nil)
         #expect(!manager.layoutPublication.canPublish(generation: before))
         #expect(!manager.layoutPublication.canPublish(generation: manager.layoutPublication.generation))
@@ -31,7 +30,7 @@ struct NotificationCenterLayoutSuspensionTests {
         #expect(manager.isNotificationCenterLayoutSuspended)
         await restore.value
         #expect(!manager.isNotificationCenterLayoutSuspended)
-        #expect(manager.postRestrictionRepairTask != nil)
+        #expect(manager.restrictionRepairSchedule.task != nil)
         #expect(manager.layoutPublication.canPublish(generation: manager.layoutPublication.generation))
         #expect(!manager.layoutPublication.canPublish(generation: before))
     }

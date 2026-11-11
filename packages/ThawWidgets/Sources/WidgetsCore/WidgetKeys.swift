@@ -16,4 +16,7 @@ enum WidgetKeys {
     static let center = prefix + "center"
     static let bottom = prefix + "bottom"
     static let bottomSource = prefix + "bottomSource"
+    static let size = prefix + "size"
+    static let thickness = prefix + "thickness"
+    static let statusColors = prefix + "statusColors"
 }

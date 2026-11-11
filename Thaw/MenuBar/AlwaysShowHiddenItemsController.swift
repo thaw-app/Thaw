@@ -26,7 +26,7 @@ final class AlwaysShowHiddenItemsController {
 
     init(
         activeDisplayID: @escaping () -> CGDirectDisplayID? = {
-            (NSScreen.screenWithActiveMenuBar ?? NSScreen.main)?.displayID
+            (NSScreen.activeMenuBarScreenOrMain)?.displayID
         },
         alwaysShow: @escaping (CGDirectDisplayID) -> Bool,
         usesThawBar: @escaping (CGDirectDisplayID) -> Bool,

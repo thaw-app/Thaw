@@ -35,11 +35,12 @@ extension RuntimeSectionController: StandInSectionControlling {
 final class SystemExtraTakeoverCoordinator {
     let engine: SystemExtraTakeoverEngine
 
-    @ObservationIgnored private weak var settings: AdvancedSettings?
+    @ObservationIgnored private weak var settings: LayoutSettings?
     @ObservationIgnored private weak var controller: (any StandInSectionControlling)?
     @ObservationIgnored private var observationTasks: [Task<Void, Never>] = []
     @ObservationIgnored private var layoutSubscription: AnyCancellable?
-    @ObservationIgnored private let launcher: SystemExtraStandInLauncher
+    /// Shared with the Space indicator, so one spacing restart reaches every stand-in.
+    @ObservationIgnored let launcher: SystemExtraStandInLauncher
     @ObservationIgnored private var activeModuleStandIns: Set<SystemExtraStandIn> = []
     @ObservationIgnored private let isShownInMenuBar: @MainActor (String) -> Bool
 
@@ -81,7 +82,7 @@ final class SystemExtraTakeoverCoordinator {
 
     func start(
         controller: any StandInSectionControlling,
-        settings: AdvancedSettings,
+        settings: LayoutSettings,
         markKnown: @escaping (String) -> Void
     ) {
         self.controller = controller

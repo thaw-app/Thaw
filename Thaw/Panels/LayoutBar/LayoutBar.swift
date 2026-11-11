@@ -13,13 +13,20 @@ struct LayoutBar: View {
         let appState: AppState
         let section: MenuBarSection.Name
         let selection: LayoutSelectionModel?
+        let wrapsRows: Bool
 
         func makeNSView(context _: Context) -> LayoutBarScrollView {
-            LayoutBarScrollView(appState: appState, section: section, selection: selection)
+            LayoutBarScrollView(appState: appState, section: section, selection: selection, wrapsRows: wrapsRows)
         }
 
         func updateNSView(_: LayoutBarScrollView, context _: Context) {
             // LayoutBarScrollView observes shared state itself; this hook needs no updates.
+        }
+
+        /// A bar that wraps is as tall as its rows at the offered width.
+        func sizeThatFits(_ proposal: ProposedViewSize, nsView: LayoutBarScrollView, context _: Context) -> CGSize? {
+            guard wrapsRows, let width = proposal.width, width.isFinite, width > 0 else { return nil }
+            return CGSize(width: width, height: nsView.height(forWidth: width))
         }
     }
 
@@ -38,6 +45,8 @@ struct LayoutBar: View {
     var chrome: Chrome = .card
     /// The pane's selection, shared by every section's bar.
     var selection: LayoutSelectionModel?
+    /// Wraps the items onto as many rows as the width needs, instead of scrolling one row.
+    var wrapsRows = false
 
     private var backgroundShape: some InsettableShape {
         RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous)
@@ -50,10 +59,15 @@ struct LayoutBar: View {
         }
     }
 
-    private var bare: some View {
-        mainContent
-            .frame(height: 48)
-            .frame(maxWidth: .infinity)
+    @ViewBuilder private var bare: some View {
+        if wrapsRows {
+            mainContent
+                .frame(maxWidth: .infinity)
+        } else {
+            mainContent
+                .frame(height: LayoutBarScrollView.barHeight)
+                .frame(maxWidth: .infinity)
+        }
     }
 
     private var card: some View {
@@ -72,6 +86,6 @@ struct LayoutBar: View {
 
     private var mainContent: some View {
         // Concealed items may lack captures; keep placeholders draggable rather than hiding the interactive bar.
-        Representable(appState: appState, section: section, selection: selection)
+        Representable(appState: appState, section: section, selection: selection, wrapsRows: wrapsRows)
     }
 }

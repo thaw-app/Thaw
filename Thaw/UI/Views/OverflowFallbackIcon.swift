@@ -339,7 +339,7 @@ enum OverflowFallbackIcon {
                 return cachedAppIcon(forPID: sourcePID)
             }
             // An app Native hiding switched off is never drawn and names no process for its item.
-            guard case let .string(bundleIdentifier) = item.tag.namespace else { return nil }
+            guard let bundleIdentifier = item.tag.namespace.bundleIdentifier else { return nil }
             return cachedAppIcon(forBundleIdentifier: bundleIdentifier)
         }
     }

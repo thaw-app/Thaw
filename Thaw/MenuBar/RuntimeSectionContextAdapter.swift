@@ -125,7 +125,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     }
 
     func shouldDeferMenuBarMutation() -> Bool {
-        appState?.menuBarManager.shouldDeferBarMutation ?? false
+        appState?.menuBarManager.barSettling.hold(for: .barMutation) != nil
     }
 
     func isThawBarShowing() -> Bool {
@@ -183,7 +183,10 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     }
 
     func updateControlItemStates() {
-        appState?.menuBarManager.updateControlItemStates()
+        guard let appState else { return }
+        appState.menuBarManager.updateControlItemStates()
+        // The engine calls this right after macOS's overflow appears or goes away.
+        appState.nativeOverflowPresence.refresh(displays: connectedDisplayIDs(), from: appState.menuBarManager.sectionController)
     }
 
     func scheduleNativeOverflowRebalance() {
@@ -197,9 +200,9 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     }
 
     func enableAlwaysHiddenSectionRevealIfNeeded() {
-        guard let advanced = appState?.settings.advanced else { return }
-        if !advanced.enableAlwaysHiddenSection {
-            advanced.enableAlwaysHiddenSection = true
+        guard let layout = appState?.settings.layout else { return }
+        if !layout.enableAlwaysHiddenSection {
+            layout.enableAlwaysHiddenSection = true
         }
     }
 
@@ -260,7 +263,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     }
 
     private func logControlItemCrops(reason: String, items: [MenuBarItem]) async {
-        let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+        let displayID = Bridging.activeMenuBarDisplayID
         await ScreenCapture.logMenuBarHostingWindowCandidates(displayID: displayID, reason: reason)
 
         guard let capture = await ScreenCapture.captureMenuBarHostingWindowAsync(displayID: displayID) else {
@@ -375,7 +378,7 @@ extension RuntimeSectionContextAdapter {
     func isMenuOpen(forItem identifier: String) async -> Bool {
         let key = MenuBarItemTag.canonicalPersistentIdentifier(identifier)
         guard let item = appState?.itemManager.managedItems.first(where: {
-            MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier) == key
+            $0.canonicalIdentifier == key
         }) else {
             return await menuOpenMonitor.isAnyMenuOpen()
         }

@@ -62,7 +62,7 @@ final class HIDEventManager {
     var cancellables = Set<AnyCancellable>()
 
     /// Task observing GeneralSettings.showOnHover,
-    /// AdvancedSettings.showMenuBarTooltips and
+    /// VisibilitySettings.showMenuBarTooltips and
     /// DisplaySettingsManager.configurations, which are all @Observable.
     var hoverSettingsObservationTask: Task<Void, Never>?
 
@@ -135,10 +135,8 @@ final class HIDEventManager {
     /// Performs the pending hidden-section reveal once the window closes.
     var pendingMenuBarClickTask: Task<Void, Never>?
 
-    /// The pending smart-rehide task armed by a click outside the menu bar,
-    /// tracked so a later reveal can cancel it before it hides the section the
-    /// user just brought back.
-    var smartRehideTask: Task<Void, Never>?
+    /// Captured at setup; a later reveal tells it to drop a pending outside-click rehide.
+    var rehideController: RehideController?
 
     var guardMouseUpState: GuardMouseUpState = .idle
 
@@ -247,7 +245,7 @@ final class HIDEventManager {
         // populated the menu bar window list). The downstream hit-testing in
         // isMouseInsideMenuBar() / isMouseInsideEmptyMenuBarSpace() handles the
         // case where the menu bar is genuinely absent (fullscreen app, etc.).
-        guard let screen = NSScreen.screenWithMouse ?? NSScreen.main ?? bestScreen(appState: appState) else {
+        guard let screen = NSScreen.screenWithMouseOrMain ?? NSScreen.screenWithActiveMenuBar else {
             return
         }
         // Cancel any pending secondary-context-menu task on every mouse-down so
@@ -367,12 +365,8 @@ final class HIDEventManager {
     private(set) lazy var mouseDraggedMonitor = EventMonitor.universal(
         for: .leftMouseDragged
     ) { [weak self] event in
-        if let self, isEnabled, let appState, let screen = bestScreen(appState: appState) {
-            handleMenuBarItemDragStart(
-                with: event,
-                appState: appState,
-                screen: screen
-            )
+        if let self, isEnabled, let appState, NSScreen.activeMenuBarScreenOrMain != nil {
+            handleMenuBarItemDragStart(with: event, appState: appState)
         }
         return event
     }
@@ -398,7 +392,7 @@ final class HIDEventManager {
         }
 
         if let appState {
-            guard let screen = NSScreen.screenWithMouse ?? NSScreen.main else {
+            guard let screen = NSScreen.screenWithMouseOrMain else {
                 return event
             }
             let screenID = screen.displayID
@@ -410,7 +404,7 @@ final class HIDEventManager {
 
             activeDisplayWatcher?.check(throttled: true)
 
-            if isMouseInsideMenuBar(appState: appState, screen: screen),
+            if isMouseInsideMenuBar(screen: screen),
                let mouseLocation = MouseHelpers.locationCoreGraphics
             {
                 pointerAXCache.refreshForeignWidget(at: mouseLocation)
@@ -427,7 +421,7 @@ final class HIDEventManager {
     private(set) lazy var scrollWheelMonitor = EventMonitor.universal(
         for: .scrollWheel
     ) { [weak self] event in
-        if let self, isEnabled, let appState, let screen = bestScreen(appState: appState) {
+        if let self, isEnabled, let appState, let screen = NSScreen.activeMenuBarScreenOrMain {
             handleShowOnScroll(with: event, appState: appState, screen: screen)
         }
         return event
@@ -556,6 +550,7 @@ final class HIDEventManager {
         self.activeDisplayWatcher = activeDisplayWatcher
         configuration = appState.settings
         menuOpenMonitor = appState.itemManager.menuOpenMonitor
+        rehideController = appState.menuBarManager.rehideController
         onScreenItems = appState.itemManager.onScreenItemSnapshot
         startAll()
         synchronizeClockActivationTap()
@@ -578,8 +573,8 @@ final class HIDEventManager {
     /// bridged.
     ///
     /// The tap that does the bridging is an active session-level tap on every
-    /// left press, so it is only worth installing when a real section engine
-    /// is behind the controller. The stand-in controller answers false for
+    /// left press, so it is only installed when a real section engine is behind the
+    /// controller and Native hiding is off. The stand-in controller answers false for
     /// MenuBarSectionControlling.shouldBridgeClockActivation forever, so
     /// with it the tap would only ever pass events straight through. The
     /// engine's own answer still swings with the assertion state at runtime;
@@ -587,7 +582,7 @@ final class HIDEventManager {
     /// learn of an assertion being acquired quickly enough to bring the tap
     /// up before the click that needs it.
     private var canBridgeClockActivation: Bool {
-        appState?.menuBarManager.sectionController.isOperational ?? false
+        appState.map { ClockBridgeAvailability.isPossible(engineIsOperational: $0.menuBarManager.sectionController.isOperational, nativeHidingActive: $0.menuBarManager.nativeAppHidingExperiment.isActive) } ?? false
     }
 
     /// Brings the Clock activation tap in line with whether bridging is

@@ -81,6 +81,10 @@ final class MenuBarSpacerManager {
     /// Otherwise a visible but unsaved spacer would silently disappear on relaunch; nil means storage is current.
     private(set) var lastPersistenceFailure: String?
 
+    /// The spacer whose width drag already has an undo step, and when it last moved.
+    /// The undo manager is kept by identity only, so this does not keep it alive.
+    @ObservationIgnored private var pendingWidthUndo: (id: UUID, undoManager: ObjectIdentifier, at: Date)?
+
     private var statusItems: [UUID: NSStatusItem] = [:]
     /// The spacer state each live status item was last configured with.
     private var applied: [UUID: MenuBarSpacer] = [:]
@@ -111,6 +115,74 @@ final class MenuBarSpacerManager {
     func removeSpacer(id: UUID) {
         spacers.removeAll { $0.id == id }
         reconcileStatusItems()
+    }
+
+    /// Adds a spacer with an undo that removes it, whose own undo puts it back.
+    func addSpacer(undoManager: UndoManager?) {
+        let added = MenuBarSpacer()
+        spacers.append(added)
+        reconcileStatusItems()
+        // Weak, since the undo manager keeps this closure: a strong capture would keep it alive for good.
+        undoManager?.registerUndo(withTarget: self) { [weak undoManager] in $0.removeSpacer(id: added.id, undoManager: undoManager) }
+        undoManager?.setActionName(Self.addActionName)
+    }
+
+    /// Removes the spacer with an undo that puts it back in the same slot, with the same width and colour.
+    func removeSpacer(id: UUID, undoManager: UndoManager?) {
+        guard let index = spacers.firstIndex(where: { $0.id == id }) else { return }
+        let removed = spacers[index]
+        // Removal clears the saved slot, so undo writes it back before the spacer returns.
+        let name = Self.autosaveName(for: id)
+        let position: CGFloat? = ControlItemDefaults[.preferredPosition, name]
+        removeSpacer(id: id)
+        undoManager?.registerUndo(withTarget: self) { [weak undoManager] manager in
+            if let position {
+                ControlItemDefaults[.preferredPosition, name] = position
+            }
+            manager.spacers.insert(removed, at: min(index, manager.spacers.count))
+            manager.reconcileStatusItems()
+            undoManager?.registerUndo(withTarget: manager) { $0.removeSpacer(id: removed.id, undoManager: undoManager) }
+            undoManager?.setActionName(Self.removeActionName)
+        }
+        undoManager?.setActionName(Self.removeActionName)
+    }
+
+    nonisolated static var removeActionName: String {
+        String(localized: "Remove Spacer", comment: "Undo menu action name for removing a menu bar spacer")
+    }
+
+    nonisolated static var addActionName: String {
+        String(localized: "Add Spacer", comment: "Undo menu action name for adding a menu bar spacer")
+    }
+
+    nonisolated static var widthActionName: String {
+        String(localized: "Change Spacer Width", comment: "Undo menu action name for resizing a menu bar spacer")
+    }
+
+    /// Sets the width with one undo step per drag: a slider sends a change per tick,
+    /// so steps for the same spacer within a second fold into the first one's undo.
+    func setWidth(_ width: CGFloat, for id: UUID, undoManager: UndoManager?) {
+        guard let old = spacers.first(where: { $0.id == id })?.width else { return }
+        setWidth(width, for: id)
+        guard let undoManager, old != spacers.first(where: { $0.id == id })?.width else { return }
+        if let pending = pendingWidthUndo, pending.id == id, pending.undoManager == ObjectIdentifier(undoManager),
+           Date.now.timeIntervalSince(pending.at) < 1
+        {
+            pendingWidthUndo?.at = .now
+            return
+        }
+        pendingWidthUndo = (id, ObjectIdentifier(undoManager), .now)
+        registerWidthUndo(restoring: old, for: id, undoManager: undoManager)
+    }
+
+    private func registerWidthUndo(restoring width: CGFloat, for id: UUID, undoManager: UndoManager) {
+        undoManager.registerUndo(withTarget: self) { [weak undoManager] manager in
+            guard let undoManager, let current = manager.spacers.first(where: { $0.id == id })?.width else { return }
+            manager.pendingWidthUndo = nil
+            manager.setWidth(width, for: id)
+            manager.registerWidthUndo(restoring: current, for: id, undoManager: undoManager)
+        }
+        undoManager.setActionName(Self.widthActionName)
     }
 
     func setWidth(_ width: CGFloat, for id: UUID) {

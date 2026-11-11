@@ -152,8 +152,8 @@ exact `xcode-version` instead if a release needs a fixed toolchain.
 signed, notarized DMG as an artifact retained for three days, with org-ci's
 `build-macos-app.yml` and no attestation. Select the workflow branch to build
 its triggering commit, or set **ref** to another branch, tag, or commit in this
-repository. Leaving **ref** empty does not switch to the default branch. The
-`.build` PR command uses this behavior to build the PR branch. The artifact is
+repository. Leaving **ref** empty does not switch to the default branch. To
+build a pull request, set **ref** to its branch. The artifact is
 `build-dev-<short sha>` and holds `Thaw-dev.dmg`, its checksum, the SBOM and
 the exported app as a ZIP.
 

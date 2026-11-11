@@ -16,7 +16,7 @@ import ThawUI
 struct PrivacySettingsPane: View {
     @Environment(AppState.self) private var appState
     @Bindable var updatesManager: UpdatesManager
-    @Bindable var advancedSettings: AdvancedSettings
+    @Bindable var privacySettings: PrivacySettings
 
     var body: some View {
         ThawForm {
@@ -32,10 +32,13 @@ struct PrivacySettingsPane: View {
             ThawSection("Permissions") {
                 ForEach(appState.permissions.allPermissions) { permission in
                     permissionRow(permission)
+                        .settingsSearchAnchor(Self.searchAnchor(for: permission))
                 }
+                notificationsRow(appState.userNotificationManager.permission)
+                    .settingsSearchAnchor("privacy.notifications")
             }
 
-            OtherAppsSection(settings: appState.settings.automation)
+            OtherAppsSection(settings: appState.settings.privacy)
 
             CaptureInspectorSection()
 
@@ -43,7 +46,7 @@ struct PrivacySettingsPane: View {
             // connection, so there is nothing to account for.
             if appState.moduleHost.isEnabled(.widgets) {
                 ThawSection("Local connection status") {
-                    Text("The widget icon reads the connection type from macOS on this Mac. It does not contact a server or send network details, and it stops reading when you turn Widgets off in Extras.")
+                    Text("The widget icon reads the connection type from macOS on this Mac. It does not contact a server or send network details, and it stops reading when you turn Widgets off in Modules.")
                         .foregroundStyle(ThawInk.supporting)
                 }
             }
@@ -69,6 +72,39 @@ struct PrivacySettingsPane: View {
         }
     }
 
+    /// Asked for only when Thaw first notifies, so a refusal would otherwise never show.
+    /// The search entry for a permission's row.
+    /// The settings search anchor for a permission's row. Each permission has its
+    /// own: a shared anchor scrolls and flashes whichever row comes first.
+    private static func searchAnchor(for permission: Permission) -> String {
+        switch permission {
+        case is AccessibilityPermission: "privacy.accessibility"
+        case is ScreenRecordingPermission: "privacy.screenRecording"
+        case is FullDiskAccessPermission: "privacy.fullDiskAccess"
+        case is ControlCenterAppListPermission: "privacy.controlCenterAppList"
+        default: "privacy.\(permission.iconName)"
+        }
+    }
+
+    private func notificationsRow(_ permission: NotificationPermission) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            PermissionLabel(permission: permission)
+            Spacer()
+            PermissionStatusControl(permission: permission)
+        }
+        .annotation {
+            Text(Self.notificationsNote(permission.authorization))
+        }
+    }
+
+    static func notificationsNote(_ authorization: NotificationAuthorization) -> LocalizedStringResource {
+        switch authorization {
+        case .allowed: "\(Constants.displayName) tells you when an update is ready and when a shortcut changes a setting."
+        case .off: "Notifications are off. \(Constants.displayName) can't tell you about updates or shortcut changes."
+        case .notAsked: "\(Constants.displayName) asks the first time it has something to tell you."
+        }
+    }
+
     // MARK: Network access
 
     @ViewBuilder
@@ -80,16 +116,24 @@ struct PrivacySettingsPane: View {
                     Text(mode.localized).tag(mode)
                 }
             }
+            .settingsSearchAnchor("privacy.automaticUpdates")
             .annotation {
                 Text("Checking asks \(updateHost) whether a newer version exists. Downloading also fetches it in the background; without it, the download starts only after you accept an update. The release notes shown with an update come from the same server.")
             }
 
-            Toggle(isOn: $advancedSettings.fetchReleaseNotes) {
+            Toggle(isOn: $privacySettings.fetchReleaseNotes) {
                 Text("What’s New notes")
+                    .settingsSearchAnchor("privacy.fetchReleaseNotes")
             }
             .annotation {
                 Text("Fetches the latest release notes from \(changelogHost) when you open What’s New and keeps a copy for offline use. When this is off, What’s New shows the last copy it fetched, if there is one.")
             }
+
+            Toggle("Show release notes after an update", isOn: $privacySettings.showReleaseNotesAfterUpdate)
+                .settingsSearchAnchor("privacy.showReleaseNotesAfterUpdate")
+                .annotation {
+                    Text("Opens What’s New the first time \(Constants.displayName) starts after an update. You can still open it from \(Constants.displayName)’s menu or About.")
+                }
         } else {
             Text("This build of \(Constants.displayName) makes no network calls.")
                 .foregroundStyle(ThawInk.supporting)

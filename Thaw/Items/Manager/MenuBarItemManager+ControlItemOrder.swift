@@ -73,7 +73,7 @@ extension MenuBarItemManager {
         // During settling, tags can carry wrong namespaces before sourcePID
         // resolves; relocating on them would move every hidden item to visible.
         // Seed identifiers only and leave placement to the settling-end restore.
-        if isInStartupSettling {
+        if barSettling.isSettling {
             knownItemIdentifiers.formUnion(seedableIdentifiers())
             persistKnownItemIdentifiers()
             return false
@@ -324,7 +324,7 @@ extension MenuBarItemManager {
         // Same stranded-control exemption from Manual as enforceControlItemOrder.
         // Startup settling still gates it: weight writes need a quiet bar.
         guard !arrangementIsManual || ControlOrderRules.visibleControlIsStranded(among: items),
-              !isInStartupSettling else { return false }
+              !barSettling.isSettling else { return false }
         guard !ControlOrderRules.framesSpanSeveralBars(items) else {
             MenuBarItemManager.diagLog.debug("Skipping \(diagnosticContext): item frames span more than one bar")
             return false
@@ -355,7 +355,7 @@ extension MenuBarItemManager {
         // A reveal or hide re-lays the bar natively; re-permuting weights now
         // churns the store and flickers Thaw's icon. The settled normalization
         // restores order once the bar is quiet.
-        if appState?.menuBarManager.isRevealHideTransitionActive == true {
+        if barSettling.isRevealTransitionActive {
             MenuBarItemManager.diagLog.debug(
                 "Skipping structural position rewrite: reveal/hide transition in flight"
             )
@@ -445,7 +445,7 @@ extension MenuBarItemManager {
             didRestoreOrder = true
         }
 
-        let experimentalSystemItemHiding = appState?.settings.advanced
+        let experimentalSystemItemHiding = appState?.settings.layout
             .enableExperimentalSystemItemHiding ?? false
         guard hidden.isPhysicallyOrderable(
             experimentalSystemItemHiding: experimentalSystemItemHiding

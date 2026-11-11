@@ -48,7 +48,7 @@ final class SettingsProcessAppSideTests {
         let side = appState.settingsProcessAppSide()
         Defaults.set(true, forKey: .enableRecordingWatch)
         side.reloadSettings()
-        #expect(appState.settings.advanced.enableRecordingWatch)
+        #expect(appState.settings.visibility.enableRecordingWatch)
     }
 
     @Test("The host reads the setting from the defaults")

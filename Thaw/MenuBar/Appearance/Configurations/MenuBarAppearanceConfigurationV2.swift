@@ -291,6 +291,12 @@ nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
     }
 
     func encode(to encoder: any Encoder) throws {
+        try encode(to: encoder, includesBorderStyle: true)
+    }
+
+    /// Writes every value beside whatever else the encoder holds. The Thaw Bar's own look has no border style
+    /// and has never stored one, so it leaves that key out.
+    func encode(to encoder: any Encoder, includesBorderStyle: Bool) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(hasShadow, forKey: .hasShadow)
         try values.encode(hasBorder, forKey: .hasBorder)
@@ -316,7 +322,9 @@ nonisolated extension MenuBarAppearancePartialConfiguration: Codable {
         try values.encode(tintUsesAccentColor, forKey: .tintUsesAccentColor)
         try values.encode(backgroundGlassIsTinted, forKey: .backgroundGlassIsTinted)
         try values.encode(tintGlassIsTinted, forKey: .tintGlassIsTinted)
-        try values.encode(borderStyle, forKey: .borderStyle)
+        if includesBorderStyle {
+            try values.encode(borderStyle, forKey: .borderStyle)
+        }
     }
 
     /// This configuration with every accent-following color set to accent.
@@ -357,177 +365,54 @@ private nonisolated extension KeyedEncodingContainer {
 // MARK: - ResolvedThawBarAppearance
 
 /// Resolves inheritance once so the renderer uses one consistent appearance.
+@dynamicMemberLookup
 nonisolated struct ResolvedThawBarAppearance: Hashable {
     var cornerRoundness: Double
     var fillConfiguration: MenuBarAppearancePartialConfiguration
 
-    var hasShadow: Bool {
-        fillConfiguration.hasShadow
-    }
-
-    var hasBorder: Bool {
-        fillConfiguration.hasBorder
-    }
-
-    var borderColor: CGColor {
-        fillConfiguration.borderColor
-    }
-
-    var borderWidth: Double {
-        fillConfiguration.borderWidth
-    }
-
-    var tintKind: MenuBarTintKind {
-        fillConfiguration.tintKind
-    }
-
-    var tintColor: CGColor {
-        fillConfiguration.tintColor
-    }
-
-    var tintGradient: ThawGradient {
-        fillConfiguration.tintGradient
-    }
-
-    var tintOpacity: Double {
-        fillConfiguration.tintOpacity
-    }
-
-    var backgroundKind: MenuBarBackgroundKind {
-        fillConfiguration.backgroundKind
-    }
-
-    var backgroundColor: CGColor {
-        fillConfiguration.backgroundColor
-    }
-
-    var backgroundGradient: ThawGradient {
-        fillConfiguration.backgroundGradient
-    }
-
-    var backgroundOpacity: Double {
-        fillConfiguration.backgroundOpacity
-    }
-
-    var backgroundHasShadow: Bool {
-        fillConfiguration.backgroundHasShadow
-    }
-
-    var backgroundHasBorder: Bool {
-        fillConfiguration.backgroundHasBorder
-    }
-
-    var backgroundBorderColor: CGColor {
-        fillConfiguration.backgroundBorderColor
-    }
-
-    var backgroundBorderWidth: Double {
-        fillConfiguration.backgroundBorderWidth
-    }
-
-    var backgroundGlassFinish: MenuBarGlassFinish {
-        fillConfiguration.backgroundGlassFinish
-    }
-
-    var tintGlassFinish: MenuBarGlassFinish {
-        fillConfiguration.tintGlassFinish
-    }
-
-    var backgroundGlassIsColored: Bool {
-        fillConfiguration.backgroundGlassIsColored
-    }
-
-    var tintGlassIsColored: Bool {
-        fillConfiguration.tintGlassIsColored
+    /// Reads a fill value, such as tintKind, straight off the resolved look.
+    subscript<Value>(dynamicMember keyPath: KeyPath<MenuBarAppearancePartialConfiguration, Value>) -> Value {
+        fillConfiguration[keyPath: keyPath]
     }
 }
 
 // MARK: - ThawBarAppearance
 
-/// An optional, independently stored appearance for the floating bar.
+/// An optional, independently stored appearance for the floating bar: MenuBarAppearancePartialConfiguration's
+/// fill values, stored flat beside the two the bar adds.
+@dynamicMemberLookup
 nonisolated struct ThawBarAppearance: Hashable {
     var overridesMenuBar: Bool
     var cornerRoundness: Double
-    var hasShadow: Bool
-    var hasBorder: Bool
-    var borderColor: CGColor
-    var borderWidth: Double
-    var tintKind: MenuBarTintKind
-    var tintColor: CGColor
-    var tintGradient: ThawGradient
-    var tintOpacity: Double
-    var backgroundKind: MenuBarBackgroundKind
-    var backgroundColor: CGColor
-    var backgroundGradient: ThawGradient
-    var backgroundOpacity: Double
-    var backgroundHasShadow: Bool
-    var backgroundHasBorder: Bool
-    var backgroundBorderColor: CGColor
-    var backgroundBorderWidth: Double
-    var backgroundGlassStyle: MenuBarGlassStyle
-    var tintGlassStyle: MenuBarGlassStyle
-    var backgroundGlassIsColored: Bool
-    var tintGlassIsColored: Bool
-    var backgroundUsesAccentColor = false
-    var tintUsesAccentColor = false
-    var backgroundGlassIsTinted = false
-    var tintGlassIsTinted = false
+    private var fill: MenuBarAppearancePartialConfiguration
 
+    /// The bar's tint, background, border and shadow. The Thaw Bar draws solid borders only,
+    /// so whatever border style comes in is set back to solid.
     var fillConfiguration: MenuBarAppearancePartialConfiguration {
-        get {
-            MenuBarAppearancePartialConfiguration(
-                hasShadow: hasShadow,
-                hasBorder: hasBorder,
-                borderColor: borderColor,
-                borderWidth: borderWidth,
-                tintKind: tintKind,
-                tintColor: tintColor,
-                tintGradient: tintGradient,
-                tintOpacity: tintOpacity,
-                backgroundKind: backgroundKind,
-                backgroundColor: backgroundColor,
-                backgroundGradient: backgroundGradient,
-                backgroundOpacity: backgroundOpacity,
-                backgroundHasShadow: backgroundHasShadow,
-                backgroundHasBorder: backgroundHasBorder,
-                backgroundBorderColor: backgroundBorderColor,
-                backgroundBorderWidth: backgroundBorderWidth,
-                backgroundGlassStyle: backgroundGlassStyle,
-                tintGlassStyle: tintGlassStyle,
-                backgroundGlassIsColored: backgroundGlassIsColored,
-                tintGlassIsColored: tintGlassIsColored,
-                backgroundUsesAccentColor: backgroundUsesAccentColor,
-                tintUsesAccentColor: tintUsesAccentColor,
-                backgroundGlassIsTinted: backgroundGlassIsTinted,
-                tintGlassIsTinted: tintGlassIsTinted
-            )
-        }
+        get { fill }
+        set { fill = Self.solidBordered(newValue) }
+    }
+
+    init(overridesMenuBar: Bool, cornerRoundness: Double, fillConfiguration: MenuBarAppearancePartialConfiguration) {
+        self.overridesMenuBar = overridesMenuBar
+        self.cornerRoundness = cornerRoundness
+        self.fill = Self.solidBordered(fillConfiguration)
+    }
+
+    /// Reads and writes a fill value, such as tintKind, straight on the look.
+    subscript<Value>(dynamicMember keyPath: WritableKeyPath<MenuBarAppearancePartialConfiguration, Value>) -> Value {
+        get { fill[keyPath: keyPath] }
         set {
-            hasShadow = newValue.hasShadow
-            hasBorder = newValue.hasBorder
-            borderColor = newValue.borderColor
-            borderWidth = newValue.borderWidth
-            tintKind = newValue.tintKind
-            tintColor = newValue.tintColor
-            tintGradient = newValue.tintGradient
-            tintOpacity = newValue.tintOpacity
-            backgroundKind = newValue.backgroundKind
-            backgroundColor = newValue.backgroundColor
-            backgroundGradient = newValue.backgroundGradient
-            backgroundOpacity = newValue.backgroundOpacity
-            backgroundHasShadow = newValue.backgroundHasShadow
-            backgroundHasBorder = newValue.backgroundHasBorder
-            backgroundBorderColor = newValue.backgroundBorderColor
-            backgroundBorderWidth = newValue.backgroundBorderWidth
-            backgroundGlassStyle = newValue.backgroundGlassStyle
-            tintGlassStyle = newValue.tintGlassStyle
-            backgroundGlassIsColored = newValue.backgroundGlassIsColored
-            tintGlassIsColored = newValue.tintGlassIsColored
-            backgroundUsesAccentColor = newValue.backgroundUsesAccentColor
-            tintUsesAccentColor = newValue.tintUsesAccentColor
-            backgroundGlassIsTinted = newValue.backgroundGlassIsTinted
-            tintGlassIsTinted = newValue.tintGlassIsTinted
+            var updated = fill
+            updated[keyPath: keyPath] = newValue
+            fillConfiguration = updated
         }
+    }
+
+    private static func solidBordered(_ configuration: MenuBarAppearancePartialConfiguration) -> MenuBarAppearancePartialConfiguration {
+        var configuration = configuration
+        configuration.borderStyle = .solid
+        return configuration
     }
 }
 
@@ -545,103 +430,26 @@ nonisolated extension MenuBarAppearanceConfigurationV2 {
 }
 
 nonisolated extension ThawBarAppearance {
-    static let defaultConfiguration = ThawBarAppearance(
-        overridesMenuBar: false,
-        cornerRoundness: 0,
-        hasShadow: MenuBarAppearancePartialConfiguration.defaultConfiguration.hasShadow,
-        hasBorder: MenuBarAppearancePartialConfiguration.defaultConfiguration.hasBorder,
-        borderColor: MenuBarAppearancePartialConfiguration.defaultConfiguration.borderColor,
-        borderWidth: MenuBarAppearancePartialConfiguration.defaultConfiguration.borderWidth,
-        tintKind: MenuBarAppearancePartialConfiguration.defaultConfiguration.tintKind,
-        tintColor: MenuBarAppearancePartialConfiguration.defaultConfiguration.tintColor,
-        tintGradient: MenuBarAppearancePartialConfiguration.defaultConfiguration.tintGradient,
-        tintOpacity: MenuBarAppearancePartialConfiguration.defaultConfiguration.tintOpacity,
-        backgroundKind: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundKind,
-        backgroundColor: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundColor,
-        backgroundGradient: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundGradient,
-        backgroundOpacity: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundOpacity,
-        backgroundHasShadow: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundHasShadow,
-        backgroundHasBorder: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundHasBorder,
-        backgroundBorderColor: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundBorderColor,
-        backgroundBorderWidth: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundBorderWidth,
-        backgroundGlassStyle: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundGlassStyle,
-        tintGlassStyle: MenuBarAppearancePartialConfiguration.defaultConfiguration.tintGlassStyle,
-        backgroundGlassIsColored: MenuBarAppearancePartialConfiguration.defaultConfiguration.backgroundGlassIsColored,
-        tintGlassIsColored: MenuBarAppearancePartialConfiguration.defaultConfiguration.tintGlassIsColored
-    )
+    static let defaultConfiguration = ThawBarAppearance(overridesMenuBar: false, cornerRoundness: 0, fillConfiguration: .defaultConfiguration)
 
     init(seededFrom resolved: ResolvedThawBarAppearance) {
-        self = .defaultConfiguration
-        overridesMenuBar = true
-        cornerRoundness = resolved.cornerRoundness
-        fillConfiguration = resolved.fillConfiguration
+        self.init(overridesMenuBar: true, cornerRoundness: resolved.cornerRoundness, fillConfiguration: resolved.fillConfiguration)
     }
 }
 
 nonisolated extension ThawBarAppearance: Codable {
     private enum CodingKeys: CodingKey {
         case overridesMenuBar
-        case hasRoundedShape
-        case hasShadow
-        case hasBorder
-        case borderColor
-        case borderWidth
-        case tintKind
-        case tintColor
-        case tintGradient
-        case tintOpacity
-        case backgroundKind
-        case backgroundColor
-        case backgroundGradient
-        case backgroundOpacity
-        case backgroundHasShadow
-        case backgroundHasBorder
-        case backgroundBorderColor
-        case backgroundBorderWidth
-        case backgroundGlassStyle
-        case tintGlassStyle
-        case backgroundGlassIsColored
-        case tintGlassIsColored
-        case backgroundUsesAccentColor
-        case tintUsesAccentColor
-        case backgroundGlassIsTinted
-        case tintGlassIsTinted
-        /// Only read, with the next key, to move Match System, which older builds wrote, to plain glass.
-        case backgroundGlassFollowsSystem
-        case tintGlassFollowsSystem
     }
 
+    /// The stored look is one flat dictionary: overridesMenuBar, the corner keys ThawBarCornerRoundness owns,
+    /// and the fill keys, which MenuBarAppearancePartialConfiguration reads with its own fallbacks.
     init(from decoder: any Decoder) throws {
         let stored = try decoder.container(keyedBy: CodingKeys.self)
-        let fallback = Self.defaultConfiguration
-        let (backgroundGlass, tintGlass) = try MenuBarGlassFinish.decodeSurfaces(from: stored, fallback: fallback.fillConfiguration)
         try self.init(
-            overridesMenuBar: stored.decodeIfPresent(Bool.self, forKey: .overridesMenuBar) ?? fallback.overridesMenuBar,
+            overridesMenuBar: stored.decodeIfPresent(Bool.self, forKey: .overridesMenuBar) ?? Self.defaultConfiguration.overridesMenuBar,
             cornerRoundness: ThawBarCornerRoundness.decode(from: decoder),
-            hasShadow: stored.value(forKey: .hasShadow, or: fallback.hasShadow),
-            hasBorder: stored.value(forKey: .hasBorder, or: fallback.hasBorder),
-            borderColor: stored.color(forKey: .borderColor, or: fallback.borderColor),
-            borderWidth: stored.value(forKey: .borderWidth, or: fallback.borderWidth),
-            tintKind: stored.value(forKey: .tintKind, or: fallback.tintKind),
-            tintColor: stored.color(forKey: .tintColor, or: fallback.tintColor),
-            tintGradient: stored.value(forKey: .tintGradient, or: fallback.tintGradient),
-            tintOpacity: stored.value(forKey: .tintOpacity, or: fallback.tintOpacity),
-            backgroundKind: stored.value(forKey: .backgroundKind, or: fallback.backgroundKind),
-            backgroundColor: stored.color(forKey: .backgroundColor, or: fallback.backgroundColor),
-            backgroundGradient: stored.value(forKey: .backgroundGradient, or: fallback.backgroundGradient),
-            backgroundOpacity: stored.value(forKey: .backgroundOpacity, or: fallback.backgroundOpacity),
-            backgroundHasShadow: stored.value(forKey: .backgroundHasShadow, or: fallback.backgroundHasShadow),
-            backgroundHasBorder: stored.value(forKey: .backgroundHasBorder, or: fallback.backgroundHasBorder),
-            backgroundBorderColor: stored.color(forKey: .backgroundBorderColor, or: fallback.backgroundBorderColor),
-            backgroundBorderWidth: stored.value(forKey: .backgroundBorderWidth, or: fallback.backgroundBorderWidth),
-            backgroundGlassStyle: backgroundGlass.style,
-            tintGlassStyle: tintGlass.style,
-            backgroundGlassIsColored: stored.value(forKey: .backgroundGlassIsColored, or: fallback.backgroundGlassIsColored),
-            tintGlassIsColored: stored.value(forKey: .tintGlassIsColored, or: fallback.tintGlassIsColored),
-            backgroundUsesAccentColor: stored.value(forKey: .backgroundUsesAccentColor, or: fallback.backgroundUsesAccentColor),
-            tintUsesAccentColor: stored.value(forKey: .tintUsesAccentColor, or: fallback.tintUsesAccentColor),
-            backgroundGlassIsTinted: backgroundGlass.isTinted,
-            tintGlassIsTinted: tintGlass.isTinted
+            fillConfiguration: MenuBarAppearancePartialConfiguration(from: decoder)
         )
     }
 
@@ -649,29 +457,6 @@ nonisolated extension ThawBarAppearance: Codable {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(overridesMenuBar, forKey: .overridesMenuBar)
         try ThawBarCornerRoundness.encode(cornerRoundness, to: encoder)
-        try values.encode(hasShadow, forKey: .hasShadow)
-        try values.encode(hasBorder, forKey: .hasBorder)
-        try values.encode(borderColor, forKey: .borderColor)
-        try values.encode(borderWidth, forKey: .borderWidth)
-        try values.encode(tintKind, forKey: .tintKind)
-        try values.encode(tintColor, forKey: .tintColor)
-        try values.encode(tintGradient, forKey: .tintGradient)
-        try values.encode(tintOpacity, forKey: .tintOpacity)
-        try values.encode(backgroundKind, forKey: .backgroundKind)
-        try values.encode(backgroundColor, forKey: .backgroundColor)
-        try values.encode(backgroundGradient, forKey: .backgroundGradient)
-        try values.encode(backgroundOpacity, forKey: .backgroundOpacity)
-        try values.encode(backgroundHasShadow, forKey: .backgroundHasShadow)
-        try values.encode(backgroundHasBorder, forKey: .backgroundHasBorder)
-        try values.encode(backgroundBorderColor, forKey: .backgroundBorderColor)
-        try values.encode(backgroundBorderWidth, forKey: .backgroundBorderWidth)
-        try values.encode(backgroundGlassStyle, forKey: .backgroundGlassStyle)
-        try values.encode(tintGlassStyle, forKey: .tintGlassStyle)
-        try values.encode(backgroundGlassIsColored, forKey: .backgroundGlassIsColored)
-        try values.encode(tintGlassIsColored, forKey: .tintGlassIsColored)
-        try values.encode(backgroundUsesAccentColor, forKey: .backgroundUsesAccentColor)
-        try values.encode(tintUsesAccentColor, forKey: .tintUsesAccentColor)
-        try values.encode(backgroundGlassIsTinted, forKey: .backgroundGlassIsTinted)
-        try values.encode(tintGlassIsTinted, forKey: .tintGlassIsTinted)
+        try fill.encode(to: encoder, includesBorderStyle: false)
     }
 }

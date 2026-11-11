@@ -35,7 +35,7 @@ final class ControlItemPanelController: NSObject, NSPopoverDelegate {
     /// Whether the experiment is on. Read live, so the secondary click changes
     /// what it raises without a relaunch.
     var isEnabled: Bool {
-        appState?.settings.advanced.enableControlItemPanel ?? false
+        appState?.settings.widgets.enableControlItemPanel ?? false
     }
 
     var isShown: Bool {
@@ -130,7 +130,7 @@ final class ControlItemPanelController: NSObject, NSPopoverDelegate {
         {
             return screen
         }
-        return NSScreen.screenWithMouse ?? NSScreen.main
+        return NSScreen.screenWithMouseOrMain
     }
 
     /// AppKit coordinates under the bar at the icon's x make the fallback popover hang like a menu.

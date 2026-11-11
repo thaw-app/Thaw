@@ -41,6 +41,27 @@ final class ReducedModeController: NSObject, NSMenuDelegate {
         set { Defaults.set(newValue, forKey: .reducedModeChosen) }
     }
 
+    /// Chosen from Troubleshooting: Reduced mode even with Accessibility granted.
+    /// Onboarding's choice gives way to the full app once access is granted.
+    static var isKeptWithAccessibility: Bool {
+        get { Defaults.store.bool(forKey: keptWithAccessibilityKey) }
+        set { Defaults.store.set(newValue, forKey: keptWithAccessibilityKey) }
+    }
+
+    static let keptWithAccessibilityKey = "ReducedModeKeptWithAccessibility"
+
+    /// The Troubleshooting choice: Reduced mode from the next launch, whatever the permissions.
+    static func choose(keepingWithAccessibility: Bool) {
+        isChosen = true
+        isKeptWithAccessibility = keepingWithAccessibility
+    }
+
+    /// Back to the full app, whichever way Reduced mode was chosen.
+    static func leave() {
+        isChosen = false
+        isKeptWithAccessibility = false
+    }
+
     var statusItem: NSStatusItem?
     let menu = NSMenu()
     weak var appState: AppState?

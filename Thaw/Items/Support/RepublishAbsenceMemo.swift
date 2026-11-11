@@ -59,9 +59,14 @@ nonisolated struct RepublishAbsenceMemo {
     /// still publish, so it is waited for. Members not named by a bundle identifier are kept.
     static func unreachable(wanted: Set<String>, liveNamespaces: Set<String>, runningBundleIDs: Set<String>) -> Set<String> {
         wanted.filter { identifier in
-            let namespace = String(identifier.prefix { $0 != ":" })
+            let namespace = MenuBarItemTag.persistentIdentifierParts(identifier)?.namespace ?? identifier
             return namespace.contains(".") && !liveNamespaces.contains(namespace) && !runningBundleIDs.contains(namespace)
         }
+    }
+
+    /// The missing members worth a warning: those whose app is running or still has an item on the bar.
+    static func reportable(_ missing: Set<String>, liveNamespaces: Set<String>, runningBundleIDs: Set<String>) -> Set<String> {
+        missing.subtracting(unreachable(wanted: missing, liveNamespaces: liveNamespaces, runningBundleIDs: runningBundleIDs))
     }
 
     /// Empties the memo so the next pass waits for every member again.

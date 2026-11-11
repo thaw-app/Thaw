@@ -16,6 +16,6 @@ public extension MenuBarItemTag {
     /// Whether a persisted title ends in a :<number> that may name a second
     /// instance of the item.
     static func hasInstanceSuffix(_ title: String) -> Bool {
-        title.wholeMatch(of: /.+:\d+/) != nil
+        title.wholeMatch(of: TagRegex.instanceSuffix) != nil
     }
 }

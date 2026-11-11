@@ -111,7 +111,7 @@ final class ControlItem: NSObject {
 
     /// Tasks backing the settings-observation reactions in
     /// observeSettings(appState:). GeneralSettings and
-    /// AdvancedSettings are @Observable (not Combine
+    /// LayoutSettings are @Observable (not Combine
     /// ObservableObjects), so their property changes are observed via the
     /// Observations async sequence instead of $property publishers.
     private var showThawIconObservationTask: Task<Void, Never>?
@@ -759,7 +759,7 @@ extension ControlItem {
 
     /// Whether a measured frame means the item never landed; judged by the screens, as a display left of the main one has negative x.
     static func isDegenerateMenuBarFrame(_ frame: CGRect, screenFrames: [CGRect] = NSScreen.screens.map(\.frame)) -> Bool {
-        frame.width <= 0 || frame.height <= 0 || frame.origin.x == -1 || !(screenFrames.isEmpty || screenFrames.contains { $0.contains(CGPoint(x: frame.midX, y: frame.midY)) })
+        frame.width <= 0 || frame.height <= 0 || frame.origin.x == -1 || !(screenFrames.isEmpty || screenFrames.contains { $0.contains(frame.center) })
     }
 
     /// Tracks the settings that change how this control item looks or whether it
@@ -780,7 +780,7 @@ extension ControlItem {
         AnyCancellable { dragTask.cancel() }
             .store(in: &cancellables)
 
-        // GeneralSettings and AdvancedSettings are @Observable, so
+        // The settings models are @Observable, so
         // their properties are watched via Observations sequences rather
         // than the old $property Combine projections. Each sequence
         // delivers the current value first, matching the old subscriptions'
@@ -815,10 +815,10 @@ extension ControlItem {
             // enableAlwaysHiddenSection setting (an Observations sequence) both
             // re-derive the same add/remove decision, so a section switched on
             // while the item is absent still brings it back.
-            let advancedSettings = appState.settings.advanced
+            let layoutSettings = appState.settings.layout
             let reactToAlwaysHiddenSectionState: () -> Void = { [weak self] in
                 guard let self else { return }
-                if advancedSettings.enableAlwaysHiddenSection {
+                if layoutSettings.enableAlwaysHiddenSection {
                     addToMenuBar()
                 } else {
                     removeFromMenuBar()
@@ -834,7 +834,7 @@ extension ControlItem {
 
             alwaysHiddenSectionObservationTask?.cancel()
             alwaysHiddenSectionObservationTask = Task { @MainActor in
-                let changes = Observations { advancedSettings.enableAlwaysHiddenSection }
+                let changes = Observations { layoutSettings.enableAlwaysHiddenSection }
                 for await _ in changes {
                     reactToAlwaysHiddenSectionState()
                 }
@@ -845,11 +845,11 @@ extension ControlItem {
         }
 
         if isSectionDivider {
-            let advancedSettings = appState.settings.advanced
+            let layoutSettings = appState.settings.layout
             sectionDividerStyleObservationTask?.cancel()
             sectionDividerStyleObservationTask = Task { @MainActor [weak self] in
                 let changes = Observations {
-                    (advancedSettings.sectionDividerStyle, advancedSettings.customSectionDividerImage, advancedSettings.customSectionDividerIsTemplate)
+                    (layoutSettings.sectionDividerStyle, layoutSettings.customSectionDividerImage, layoutSettings.customSectionDividerIsTemplate)
                 }
                 for await _ in changes {
                     guard let self else { return }
@@ -1236,11 +1236,9 @@ extension ControlItem {
         return true
     }
 
-    /// Whether the width nudge must be held off: the fixed reflow-settle window
-    /// or an in-flight reveal/hide transition (see
-    /// MenuBarManager.shouldSuppressMenuBarAgentNudge).
+    /// Whether the width nudge must be held off: the reveal reflow window or an in-flight reveal/hide transition.
     private var shouldSuppressPositionNudge: Bool {
-        appState?.menuBarManager.shouldSuppressMenuBarAgentNudge == true
+        appState?.menuBarManager.barSettling.hold(for: .agentNudge) != nil
     }
 }
 
@@ -1331,7 +1329,7 @@ extension ControlItem {
             identifier: identifier,
             modifierFlags: modifierFlags,
             clickCount: clickCount,
-            usesDoubleClick: configuration.isAlwaysHiddenSectionEnabled,
+            usesDoubleClick: configuration.usesIconDoubleClickForAlwaysHidden,
             usesOptionClick: configuration.isAlwaysHiddenSectionEnabled
         )
 
@@ -1399,14 +1397,14 @@ extension ControlItem {
             location: NSEvent.mouseLocation,
             modifiers: NSEvent.modifierFlags,
             interval: NSEvent.doubleClickInterval,
-            enabled: identifier == .visible && configuration.isAlwaysHiddenSectionEnabled
+            enabled: identifier == .visible && configuration.usesIconDoubleClickForAlwaysHidden
         )
         diagLog.debug("PrimaryActivationTrace: reportedClickCount=\(event?.clickCount ?? 0), resolvedClickCount=\(clickCount)")
         let intent = Self.menuBarAgentPrimaryActionIntent(
             identifier: identifier,
             modifierFlags: modifierFlags,
             clickCount: clickCount,
-            usesDoubleClick: configuration.isAlwaysHiddenSectionEnabled,
+            usesDoubleClick: configuration.usesIconDoubleClickForAlwaysHidden,
             usesOptionClick: configuration.isAlwaysHiddenSectionEnabled,
             diagLog: diagLog
         )

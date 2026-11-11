@@ -17,6 +17,9 @@ struct WidgetsView: View {
     @AppStorage(WidgetKeys.bottom) private var bottom = StatusIconComposition().bottom
     @AppStorage(WidgetKeys.bottomSource) private var bottomSource = StatusIconComposition().bottomSource
     @AppStorage(WidgetKeys.live) private var liveData = true
+    @AppStorage(WidgetKeys.size) private var size = StatusIconStyle().size
+    @AppStorage(WidgetKeys.thickness) private var thickness = StatusIconStyle().thickness
+    @AppStorage(WidgetKeys.statusColors) private var statusColors = StatusIconStyle().statusColors
     @State private var widget = StatusIconWidgetController.shared
     @State private var manualSamples = StatusIconSamples()
     @State private var didRestoreSamples = false
@@ -29,7 +32,14 @@ struct WidgetsView: View {
         var samples = liveData ? widget.liveSamples : manualSamples
         // Volume has no live source; the manual slider wins in both modes.
         samples.volume = manualSamples.volume
-        return StatusIconPreviewState(composition: composition, samples: samples, isLive: liveData)
+        let style = StatusIconStyle(size: size, thickness: thickness, statusColors: statusColors)
+        return StatusIconPreviewState(composition: composition, samples: samples, isLive: liveData, style: style)
+    }
+
+    /// What was set in this window, without the live readings: the controller publishes those itself.
+    private var edits: StatusIconPreviewState {
+        let style = StatusIconStyle(size: size, thickness: thickness, statusColors: statusColors)
+        return StatusIconPreviewState(composition: composition, samples: manualSamples, isLive: liveData, style: style)
     }
 
     var body: some View {
@@ -49,6 +59,9 @@ struct WidgetsView: View {
                     center = original.center
                     bottom = original.bottom
                     bottomSource = original.bottomSource
+                    size = StatusIconStyle().size
+                    thickness = StatusIconStyle().thickness
+                    statusColors = StatusIconStyle().statusColors
                     manualSamples = StatusIconSamples()
                 }
             }
@@ -68,7 +81,7 @@ struct WidgetsView: View {
                         Text(option.title).tag(option)
                     }
                 }
-                Text("Network follows the active connection: Wi-Fi, Ethernet, cellular, another connection, or disconnected. The other center symbols are decorative.")
+                Text("Network follows the active connection: Wi-Fi, Ethernet, cellular, another connection, or disconnected. Bluetooth audio shows your headphones or speaker while sound plays through them, and the network otherwise. The other center symbols are decorative.")
                     .font(ThawType.caption)
                     .foregroundStyle(ThawInk.supporting)
             }
@@ -82,6 +95,7 @@ struct WidgetsView: View {
                     sourcePicker("Bottom reading", selection: $bottomSource)
                 }
             }
+            appearanceSection
             readingsSection
         }
         .formStyle(.grouped)
@@ -96,7 +110,7 @@ struct WidgetsView: View {
             widget.setLive(liveData)
             widget.refresh(with: previewState)
         }
-        .onChange(of: previewState) { widget.refresh(with: previewState) }
+        .onChange(of: edits) { widget.refresh(with: previewState) }
     }
 
     /// Both states of the readings toggle need explaining, so the description
@@ -109,8 +123,29 @@ struct WidgetsView: View {
 
     private var readingsDetail: LocalizedStringResource {
         liveData
-            ? "Battery, Wi-Fi strength, and CPU refresh every 2 seconds. Volume is manual."
+            ? "Battery, charging, Wi-Fi strength, CPU, and the audio output refresh every 2 seconds. Volume is manual."
             : "Move the sliders to try other values."
+    }
+
+    private var appearanceSection: some View {
+        ThawSection("Appearance") {
+            ThawPicker("Size", selection: $size) {
+                ForEach(StatusIconStyle.Size.allCases, id: \.self) { option in
+                    Text(option.title).tag(option)
+                }
+            }
+            ThawPicker("Ring thickness", selection: $thickness) {
+                ForEach(StatusIconStyle.Thickness.allCases, id: \.self) { option in
+                    Text(option.title).tag(option)
+                }
+            }
+            VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
+                Toggle("Status colors", isOn: $statusColors)
+                Text("Battery turns green while charging, yellow in Low Power Mode and red below 20%. Volume turns blue while sound plays through Bluetooth.")
+                    .font(ThawType.caption)
+                    .foregroundStyle(ThawInk.supporting)
+            }
+        }
     }
 
     private var readingsSection: some View {
@@ -131,6 +166,13 @@ struct WidgetsView: View {
                     }
                 }
             }
+            if !liveData, composition.activeSources.contains(.battery) {
+                Toggle("Charging", isOn: $manualSamples.isCharging)
+                Toggle("Low Power Mode", isOn: $manualSamples.isLowPowerMode)
+            }
+            if !liveData, center == .bluetooth || composition.activeSources.contains(.volume) {
+                Toggle("Sound plays through Bluetooth", isOn: sampleBluetoothBinding)
+            }
             // Live readings drive every source but volume, so their sliders
             // would do nothing; only the ones the user can move are shown.
             ForEach(previewState.sources.filter { !liveData || $0 == .volume }, id: \.self) { source in
@@ -140,6 +182,14 @@ struct WidgetsView: View {
                 )
             }
         }
+    }
+
+    /// Sample mode stands in a pair of AirPods for any Bluetooth output.
+    private var sampleBluetoothBinding: Binding<Bool> {
+        Binding(
+            get: { manualSamples.audioOutput?.isBluetooth == true },
+            set: { manualSamples.audioOutput = $0 ? StatusIconAudioOutput(name: "AirPods Pro", isBluetooth: true) : nil }
+        )
     }
 
     private func sourcePicker(_ title: LocalizedStringResource, selection: Binding<StatusIconComposition.Source>) -> some View {
@@ -179,7 +229,7 @@ private struct StatusIconPreview: View {
 
     private func preview(size: CGFloat, title: LocalizedStringResource) -> some View {
         VStack(spacing: ThawSpacing.base) {
-            CompositeStatusIcon(composition: state.composition, samples: state.samples)
+            CompositeStatusIcon(composition: state.composition, samples: state.samples, style: state.style)
                 .frame(width: size, height: size)
                 .frame(height: 112)
             Text(title)

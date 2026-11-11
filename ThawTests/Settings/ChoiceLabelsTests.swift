@@ -76,12 +76,12 @@ struct ChoiceLabelsTests {
     @Test("A Custom divider's mark carries the chosen image and its template switch", .scratchDefaults)
     func customDividerMark() {
         let settings = AppSettings()
-        settings.advanced.customSectionDividerImage = nil
+        settings.layout.customSectionDividerImage = nil
         #expect(settings.customSectionDividerMark == nil)
-        settings.advanced.customSectionDividerImage = Data([4, 5, 6])
-        settings.advanced.customSectionDividerIsTemplate = false
+        settings.layout.customSectionDividerImage = Data([4, 5, 6])
+        settings.layout.customSectionDividerIsTemplate = false
         #expect(settings.customSectionDividerMark == SectionDividerCustomMark(data: Data([4, 5, 6]), isTemplate: false))
-        settings.advanced.customSectionDividerIsTemplate = true
+        settings.layout.customSectionDividerIsTemplate = true
         #expect(settings.customSectionDividerMark?.isTemplate == true)
     }
 

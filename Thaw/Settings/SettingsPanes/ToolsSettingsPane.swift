@@ -13,7 +13,7 @@ import ThawUI
 
 struct ToolsSettingsPane: View {
     @Environment(AppState.self) private var appState
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: ToolsSettings
 
     @State private var currentLogFileName: String?
     @State private var pendingAction: MaintenanceToolAction?
@@ -68,7 +68,7 @@ struct ToolsSettingsPane: View {
             Text(action.confirmationMessage)
         }
         .confirmationDialog("Open visibility recovery?", isPresented: $confirmsVisibilityRecovery, titleVisibility: .visible) {
-            Button("Quit Thaw and Open Recovery") {
+            Button("Quit \(Constants.displayName) and Open Recovery") {
                 Task {
                     isBusy = true
                     defer { isBusy = false }
@@ -82,7 +82,7 @@ struct ToolsSettingsPane: View {
             }
             Button("Cancel", role: .cancel) { /* The dialog dismisses itself; cancelling needs no other work. */ }
         } message: {
-            Text("Thaw will quit normal mode so neither hiding mechanism can interfere. Your saved layout is kept. Native hiding will remain off after recovery.")
+            Text("\(Constants.displayName) will quit normal mode so neither hiding mechanism can interfere. Your saved layout is kept. Native hiding will remain off after recovery.")
         }
         .errorAlert(failedAction?.errorTitle ?? "Couldn’t run tool", message: $errorMessage, role: .cancel)
     }
@@ -92,8 +92,19 @@ struct ToolsSettingsPane: View {
     @ViewBuilder
     private var diagnosticsTab: some View {
         ThawSection("Diagnostics") {
-            diagnosticLogging
+            diagnosticLoggingToggle
+            if settings.enableDiagnosticLogging {
+                DiagnosticLogRotationRows(settings: settings)
+                if let currentLogFileName {
+                    LabeledContent("Current file") {
+                        Text(currentLogFileName)
+                            .foregroundStyle(ThawInk.supporting)
+                            .textSelection(.enabled)
+                    }
+                }
+            }
         }
+        DiagnosticFilesSection()
         // The move record is the log's live view, so it shows only while
         // the log is being written.
         if settings.enableDiagnosticLogging {
@@ -122,6 +133,7 @@ struct ToolsSettingsPane: View {
             ) {
                 pendingAction = .restartMenuBar
             }
+            .settingsSearchAnchor("tools.restartMenuBar")
 
             toolRow(
                 title: "macOS's saved layout",
@@ -132,15 +144,26 @@ struct ToolsSettingsPane: View {
             ) {
                 pendingAction = .resetMenuBarLayoutPositions
             }
+            .settingsSearchAnchor("tools.resetMenuBarLayoutPositions")
 
             toolRow(
                 title: "Permissions",
-                detail: "Clear Accessibility and Screen Recording decisions for \(Constants.displayName), then quit so you can grant them again on next launch.",
+                detail: "Clear Accessibility, Screen Recording and the files you picked for \(Constants.displayName), then quit so you can grant them again on next launch.",
                 buttonTitle: "Reset Permissions…",
                 role: .destructive,
                 statusFor: .resetPermissions
             ) {
                 pendingAction = .resetPermissions
+            }
+            .settingsSearchAnchor("tools.resetPermissions")
+
+            toolRow(
+                title: "Reduced mode",
+                detail: "Run \(Constants.displayName) as one icon that hides whole apps, without reading the menu bar. Switch back from its menu.",
+                buttonTitle: "Switch to Reduced Mode…",
+                statusFor: .enterReducedMode
+            ) {
+                pendingAction = .enterReducedMode
             }
         }
         MenuBarLayoutBackupsSection(refreshToken: backupsRefreshToken)
@@ -150,22 +173,19 @@ struct ToolsSettingsPane: View {
         ThawSection("Reset") {
             toolRow(
                 title: "All settings",
-                detail: "Restore \(Constants.displayName) settings to their defaults. Saved profiles, allowed apps, and user data are not deleted. This cannot be undone.",
+                detail: "Restore every setting to its default and clear the apps allowed to change them, the welcome and What's New, dismissed tips and item pictures. Your menu bar layout and saved profiles stay. This can't be undone.",
                 buttonTitle: "Reset \(Constants.displayName)…",
                 role: .destructive,
                 statusFor: .resetSettings
             ) {
                 pendingAction = .resetSettings
             }
+            .settingsSearchAnchor("tools.resetAllSettings")
         }
     }
 
-    private var diagnosticLogging: some View {
-        VStack(alignment: .leading, spacing: ThawSpacing.inset) {
-            Toggle(
-                "Detailed logging",
-                isOn: $settings.enableDiagnosticLogging
-            )
+    private var diagnosticLoggingToggle: some View {
+        Toggle("Detailed logging", isOn: $settings.enableDiagnosticLogging)
             .annotation {
                 Text(
                     """
@@ -176,20 +196,7 @@ struct ToolsSettingsPane: View {
                     """
                 )
             }
-
-            HStack(spacing: ThawSpacing.inset) {
-                Button("Show Log Files in Finder") {
-                    NSWorkspace.shared.open(DiagnosticLogger.shared.logDirectory)
-                }
-                .buttonStyle(.settingsGlass)
-
-                if let currentLogFileName {
-                    Text(currentLogFileName)
-                        .font(ThawType.caption)
-                        .foregroundStyle(ThawInk.supporting)
-                }
-            }
-        }
+            .settingsSearchAnchor("advanced.enableDiagnosticLogging")
     }
 
     private func toolRow(
@@ -263,6 +270,9 @@ struct ToolsSettingsPane: View {
                 try await MaintenanceTools.resetAppPermissions()
                 reportSuccess(String(localized: "Permissions cleared. Quitting…"))
                 ApplicationTermination.request()
+            case .enterReducedMode:
+                ReducedModeController.choose(keepingWithAccessibility: true)
+                appState.restartSelf()
             }
         } catch {
             failedAction = action
@@ -281,6 +291,7 @@ private enum MaintenanceToolAction: Identifiable {
     case resetMenuBarLayoutPositions
     case restartMenuBar
     case resetPermissions
+    case enterReducedMode
 
     var id: Self {
         self
@@ -292,6 +303,7 @@ private enum MaintenanceToolAction: Identifiable {
         case .resetMenuBarLayoutPositions: String(localized: "Rebuild macOS's saved layout?")
         case .restartMenuBar: String(localized: "Restart the menu bar?")
         case .resetPermissions: String(localized: "Reset permissions?")
+        case .enterReducedMode: String(localized: "Switch to Reduced mode?")
         }
     }
 
@@ -301,6 +313,7 @@ private enum MaintenanceToolAction: Identifiable {
         case .resetMenuBarLayoutPositions: "Couldn’t rebuild macOS's saved layout"
         case .restartMenuBar: "Couldn’t restart the menu bar"
         case .resetPermissions: "Couldn’t reset permissions"
+        case .enterReducedMode: "Couldn’t switch to Reduced mode"
         }
     }
 
@@ -310,19 +323,22 @@ private enum MaintenanceToolAction: Identifiable {
         case .resetMenuBarLayoutPositions: "Rebuild Saved Layout"
         case .restartMenuBar: "Restart Menu Bar"
         case .resetPermissions: "Reset Permissions"
+        case .enterReducedMode: "Switch"
         }
     }
 
     var confirmationMessage: LocalizedStringResource {
         switch self {
         case .resetSettings:
-            "This will reset app settings to their default values. Saved profiles, allowed apps, and user data will not be deleted. This action cannot be undone."
+            "Every setting goes back to its default, and Thaw forgets the apps allowed to change settings, the welcome and What's New, dismissed tips and item pictures. Your menu bar layout and saved profiles stay. This can't be undone."
         case .resetMenuBarLayoutPositions:
             "Every menu bar item's saved position will be deleted and the menu bar will restart, so your whole arrangement is rebuilt from scratch. A backup is saved first, and Layout backups on this page can put it back. \(Constants.displayName) relaunches afterward."
         case .restartMenuBar:
             "The menu bar will disappear for a moment and come back. Your layout is kept. \(Constants.displayName) relaunches afterward."
         case .resetPermissions:
-            "Accessibility and Screen Recording permissions will be cleared for \(Constants.displayName). The app will quit so you can grant them again on next launch."
+            "Accessibility and Screen Recording are cleared for \(Constants.displayName), and so is its access to the files you picked: the menu bar layout table and Control Center's app list. \(Constants.displayName) quits so you can grant them again on next launch."
+        case .enterReducedMode:
+            "\(ReducedModeOfferButton.consequence) \(Constants.displayName) relaunches as one icon; switch back from its menu."
         }
     }
 }
@@ -335,7 +351,7 @@ nonisolated enum TroubleshootingTab: CaseIterable, ThawTab {
     /// The tab holding a search result's section.
     init?(section: String) {
         switch section {
-        case "Diagnostics": self = .diagnostics
+        case "Diagnostics", "Files for a bug report": self = .diagnostics
         case "Repair": self = .repair
         case "Reset": self = .reset
         default: return nil

@@ -112,7 +112,7 @@ struct WallpaperPaletteRefreshPolicyTests {
             previous: source(),
             current: source(),
             timeSinceLastRefresh: earliestPollGap,
-            fallbackInterval: MenuBarManager.paletteFallbackInterval
+            fallbackInterval: MenuBarWallpaperColorMonitor.paletteFallbackInterval
         ) == .fallbackIntervalElapsed)
     }
 }

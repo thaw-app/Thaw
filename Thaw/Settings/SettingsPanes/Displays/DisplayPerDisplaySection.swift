@@ -10,9 +10,9 @@ import ThawUI
 
 /// Selection and spacing controls for currently connected displays.
 extension DisplaySettingsPane {
-    /// Fall back to the first connected display for stale or unset selections.
+    /// Fall back to the first display for stale or unset selections; disconnected ones come after.
     var selectedDisplay: DisplaySettingsManager.DisplayInfo? {
-        let displays = displaySettings.connectedDisplays()
+        let displays = displaySettings.displays
         return displays.first(where: { $0.id == selectedDisplayID }) ?? displays.first
     }
 
@@ -21,7 +21,7 @@ extension DisplaySettingsPane {
     var displaySelector: some View {
         if let selected = selectedDisplay {
             DisplaySpatialSelector(
-                displays: displaySettings.connectedDisplays(),
+                displays: displaySettings.displays,
                 selectedDisplayID: Binding(
                     get: { selected.id },
                     set: { selectedDisplayID = $0 }
@@ -69,6 +69,14 @@ extension DisplaySettingsPane {
                 .controlSize(.small)
                 .help(Text("Copy the template’s settings onto this display"))
             }
+            if !display.isConnected {
+                Button("Forget Display…") {
+                    displayToForget = display
+                }
+                .buttonStyle(.settingsGlass)
+                .controlSize(.small)
+                .help(Text("Remove this display’s saved settings"))
+            }
         }
     }
 
@@ -94,6 +102,7 @@ extension DisplaySettingsPane {
                 .withGridColumns(template.gridColumns)
                 .withAlwaysShowHiddenItems(template.alwaysShowHiddenItems)
                 .withThawBarItemScale(template.thawBarItemScale)
+                .withUseThawBarForAlwaysHidden(template.useThawBarForAlwaysHidden)
         }
 
         if spacingDiffers {

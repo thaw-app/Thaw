@@ -30,6 +30,24 @@ struct PrimaryActivationSequenceTests {
         #expect(counts == [1, 2, 1])
     }
 
+    /// 2026-11-06: with a slow double-click speed in macOS, clicks about a second apart paired up,
+    /// so every other click went to the always-hidden section and Hidden seemed to ignore it.
+    @Test func slowSystemDoubleClickSpeedDoesNotPairOrdinaryClicks() {
+        var sequence = ControlItem.PrimaryActivationSequence()
+        let times = [14.967, 15.802, 17.134, 18.128, 20.880, 22.668, 23.652]
+        let counts = times.map {
+            sequence.clickCount(at: $0, location: .zero, modifiers: [], interval: 3.0, enabled: true)
+        }
+        #expect(counts == Array(repeating: 1, count: times.count))
+        #expect(sequence.clickCount(at: 23.9, location: .zero, modifiers: [], interval: 3.0, enabled: true) == 2)
+    }
+
+    @Test func fasterSystemDoubleClickSpeedIsKept() {
+        var sequence = ControlItem.PrimaryActivationSequence()
+        #expect(sequence.clickCount(at: 0, location: .zero, modifiers: [], interval: 0.25, enabled: true) == 1)
+        #expect(sequence.clickCount(at: 0.3, location: .zero, modifiers: [], interval: 0.25, enabled: true) == 1)
+    }
+
     @Test func differentLocationOrModifiersStartsANewPair() {
         var sequence = ControlItem.PrimaryActivationSequence()
         #expect(sequence.clickCount(at: 0, location: .zero, modifiers: [], interval: 0.5, enabled: true) == 1)
@@ -71,6 +89,75 @@ struct PrimaryActivationSequenceTests {
             liveModifiers: []
         )
         #expect(flags == .option)
+    }
+
+    @Test(arguments: [(false, false, false), (false, true, false), (true, false, false), (true, true, true)])
+    func iconDoubleClickRequiresBothSectionAndGesture(isSectionEnabled: Bool, isGestureEnabled: Bool, expected: Bool) {
+        #expect(ControlItem.usesIconDoubleClickForAlwaysHidden(
+            isSectionEnabled: isSectionEnabled, isGestureEnabled: isGestureEnabled
+        ) == expected)
+    }
+
+    @Test(arguments: [1, 2], [false, true])
+    func disabledIconDoubleClickPreservesOrdinaryAndOptionClicks(clickCount: Int, isSectionEnabled: Bool) {
+        let ordinary = primaryIntents(
+            clickCount: clickCount, isSectionEnabled: isSectionEnabled, isGestureEnabled: false
+        )
+        #expect(ordinary == [.toggleSection, .toggleSection])
+        let option = primaryIntents(
+            modifiers: .option, clickCount: clickCount, isSectionEnabled: isSectionEnabled, isGestureEnabled: false
+        )
+        let expected: ControlItem.PrimaryActionIntent = isSectionEnabled ? .toggleAlwaysHidden : .none
+        #expect(option == [expected, expected])
+    }
+
+    @Test(arguments: [ControlItem.Identifier.visible, .hidden, .alwaysHidden])
+    func enabledIconDoubleClickOnlyRevealsFromVisibleControl(identifier: ControlItem.Identifier) {
+        let intents = primaryIntents(
+            identifier: identifier, clickCount: 2, isSectionEnabled: true, isGestureEnabled: true
+        )
+        let expected: ControlItem.PrimaryActionIntent = identifier == .visible ? .showAlwaysHidden : .toggleSection
+        #expect(intents == [expected, expected])
+    }
+
+    @Test(arguments: [(false, false), (false, true), (true, false)])
+    func disabledIconDoubleClickDoesNotPairRapidNativeActivations(isSectionEnabled: Bool, isGestureEnabled: Bool) {
+        var sequence = ControlItem.PrimaryActivationSequence()
+        let enabled = ControlItem.usesIconDoubleClickForAlwaysHidden(
+            isSectionEnabled: isSectionEnabled, isGestureEnabled: isGestureEnabled
+        )
+        let counts = [0.0, 0.15].map {
+            sequence.clickCount(at: $0, location: .zero, modifiers: [], interval: 0.5, enabled: enabled)
+        }
+        #expect(counts == [1, 1])
+        for clickCount in counts {
+            let intents = primaryIntents(
+                clickCount: clickCount, isSectionEnabled: isSectionEnabled, isGestureEnabled: isGestureEnabled
+            )
+            #expect(intents == [.toggleSection, .toggleSection])
+        }
+    }
+
+    private func primaryIntents(
+        identifier: ControlItem.Identifier = .visible,
+        modifiers: NSEvent.ModifierFlags = [],
+        clickCount: Int,
+        isSectionEnabled: Bool,
+        isGestureEnabled: Bool
+    ) -> [ControlItem.PrimaryActionIntent] {
+        let usesDoubleClick = ControlItem.usesIconDoubleClickForAlwaysHidden(
+            isSectionEnabled: isSectionEnabled, isGestureEnabled: isGestureEnabled
+        )
+        return [
+            ControlItem.primaryActionIntent(
+                identifier: identifier, modifierFlags: modifiers, clickCount: clickCount,
+                usesDoubleClick: usesDoubleClick, usesOptionClick: isSectionEnabled
+            ),
+            ControlItem.menuBarAgentPrimaryActionIntent(
+                identifier: identifier, modifierFlags: modifiers, clickCount: clickCount,
+                usesDoubleClick: usesDoubleClick, usesOptionClick: isSectionEnabled
+            ),
+        ]
     }
 
     @Test func emptyRecordAndEventFallBackToTheLiveState() {

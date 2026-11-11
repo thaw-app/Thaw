@@ -22,7 +22,55 @@ nonisolated extension SearchIndex {
             pane: .tools,
             section: "Diagnostics",
             keywords: ["diagnostic", "logging", "debug", "logs", "troubleshoot", "tools"],
-            property: .advanced("enableDiagnosticLogging")
+            property: .tools("enableDiagnosticLogging")
+        ),
+        SearchEntry(
+            id: "tools.diagnosticLogMaxSizeMB",
+            title: "Maximum file size",
+            descriptionText: String(localized: "A new log file starts once the current one reaches this size."),
+            pane: .tools,
+            section: "Diagnostics",
+            keywords: ["log", "size", "megabytes", "rotate", "rotation", "diagnostics"],
+            property: .tools("diagnosticLogMaxSizeMB"),
+            needsDiagnosticLogging: true
+        ),
+        SearchEntry(
+            id: "tools.diagnosticLogRetentionDays",
+            title: "Delete logs after",
+            descriptionText: String(localized: "Older log files are deleted after this many days."),
+            pane: .tools,
+            section: "Diagnostics",
+            keywords: ["log", "retention", "days", "keep", "delete", "diagnostics"],
+            property: .tools("diagnosticLogRetentionDays"),
+            needsDiagnosticLogging: true
+        ),
+        SearchEntry(
+            id: "tools.diagnosticLogRotationInterval",
+            title: "Start a new file",
+            descriptionText: String(localized: "Start a new log file every hour or day, on top of the size limit."),
+            pane: .tools,
+            section: "Diagnostics",
+            keywords: ["log", "rotate", "rotation", "hourly", "daily", "diagnostics"],
+            property: .tools("diagnosticLogRotationInterval"),
+            needsDiagnosticLogging: true
+        ),
+        SearchEntry(
+            id: "tools.exportLogs",
+            title: "Export logs",
+            descriptionText: String(localized: "Zip the logs and any capture samples into one file to attach to a bug report."),
+            pane: .tools,
+            section: "Files for a bug report",
+            keywords: ["export", "logs", "zip", "bug report", "attach", "capture samples", "diagnostics"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "tools.saveItemList",
+            title: "Save item list",
+            descriptionText: String(localized: "Save a list of every menu bar item Thaw can see."),
+            pane: .tools,
+            section: "Files for a bug report",
+            keywords: ["item list", "dump", "items", "menu bar items", "bug report", "diagnostics"],
+            property: nil
         ),
         SearchEntry(
             id: "tools.resetAllSettings",

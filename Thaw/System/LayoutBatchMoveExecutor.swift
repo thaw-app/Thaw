@@ -112,7 +112,7 @@ extension LayoutBatchMoveExecutor {
     }
 
     static func snapshot(appState: AppState) -> LayoutBatchMoveSnapshot {
-        let systemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
+        let systemItemHiding = appState.settings.layout.enableExperimentalSystemItemHiding
         let reorderable = systemItemHiding && LayoutBarPaddingView.allowsAnchoredSystemItemReordering(appState: appState)
         let sections = editorItems(appState: appState)
         return LayoutBatchMoveSnapshot(sections: Dictionary(uniqueKeysWithValues: sections.map { section, items in

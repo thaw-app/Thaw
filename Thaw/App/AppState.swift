@@ -43,8 +43,16 @@ final class AppState {
 
     // Menu bar stack. Set up in dependency order; see bootstrapTask.
 
+    /// Whether the bar is settling or was disturbed recently, shared by the menu bar and item managers.
+    let barSettling: BarSettling
+    /// Reports wakes, display invalidations and reveals to barSettling.
+    private let barSettlingObservers: BarSettlingObservers
+
     /// The sections, their control items, and the show/hide state machine.
-    let menuBarManager = MenuBarManager()
+    let menuBarManager: MenuBarManager
+
+    /// The displays where macOS's own overflow arrow is showing, for Settings.
+    let nativeOverflowPresence = NativeOverflowPresence()
 
     /// Shared by the menu bar manager, which acts on a display move, and the
     /// event taps, which ask for a check.
@@ -52,6 +60,18 @@ final class AppState {
 
     /// Settles screen-parameter changes into one numbered snapshot.
     let displayEnvironment = DisplayEnvironment()
+
+    /// Space switches and Space list changes as soon as the window server reports them.
+    let spaceChanges = SpaceChanges()
+
+    /// The current Space list, re-read when a Space is created or deleted.
+    let spaceDirectory = SpaceDirectory()
+
+    /// The Spaces page's choices, sent to the menu bar agent again after it forgets them.
+    let spaceMenuBarKeeper = SpaceMenuBarKeeper()
+
+    /// The optional menu bar item that names the active Space.
+    @ObservationIgnored lazy var spaceIndicator = SpaceIndicator(launcher: menuBarManager.systemExtraTakeover.launcher)
 
     /// Runs the settle a display change owes, and the image cleanup after a removal, once per settled generation.
     @ObservationIgnored lazy var displayChangeCoordinator = DisplayChangeCoordinator(
@@ -67,7 +87,7 @@ final class AppState {
 
     /// The item inventory, what sits in the menu bar, where, and the moves
     /// that put it there. Everything below queries it.
-    let itemManager = MenuBarItemManager()
+    let itemManager: MenuBarItemManager
 
     /// Rendered pictures of the items, shared by the layout editor and the
     /// Thaw bar. Fed from itemManager, so it is set up after it.
@@ -87,14 +107,13 @@ final class AppState {
     let itemGroupManager = MenuBarItemGroupManager()
 
     /// Saves layout changes into the active profile when it keeps them.
-    @ObservationIgnored private(set) lazy var profileLayoutKeeper = ProfileLayoutKeeper(
-        profileManager: profileManager,
-        itemManager: itemManager,
-        groupManager: itemGroupManager
-    )
+    @ObservationIgnored private(set) lazy var profileLayoutKeeper = ProfileLayoutKeeper(profileManager: profileManager, itemManager: itemManager, groupManager: itemGroupManager)
 
     /// Transient, user-facing explanations for refused layout actions.
     let layoutFeedback = LayoutBarFeedbackCenter()
+
+    /// One undo history for layout edits, whichever window or tile made them.
+    let layoutUndo = UndoManager()
 
     // System services.
 
@@ -193,21 +212,21 @@ final class AppState {
     /// Prevent repeated restart attempts.
     private var isRestarting = false
 
+    init() {
+        let settling = BarSettling()
+        barSettling = settling
+        barSettlingObservers = BarSettlingObservers(settling: settling)
+        menuBarManager = MenuBarManager(barSettling: settling)
+        itemManager = MenuBarItemManager(barSettling: settling)
+    }
+
     // MARK: - Bootstrap
 
     /// Callers await the same lazy task so bootstrap runs once.
     /// Keep dependency order: each setup assumes preceding subsystems are live.
     @ObservationIgnored
     private lazy var bootstrapTask = Task { @MainActor [self] in
-        #if DEBUG
-            // Debug builds always have diagnostic logging on so logs are
-            // captured during development without depending on the toggle.
-            DiagnosticLogger.shared.isEnabled = true
-        #else
-            if Defaults.bool(forKey: .enableDiagnosticLogging) {
-                DiagnosticLogger.shared.isEnabled = true
-            }
-        #endif
+        ToolsSettings.startDiagnosticLogging()
 
         diagLog.debug("bootstrap: starting AppState setup sequence")
 
@@ -217,8 +236,13 @@ final class AppState {
         diagLog.debug("bootstrap: permissions state = \(String(describing: self.permissions.permissionsState)), accessibility = \(self.permissions.accessibility.hasPermission), screenRecording = \(self.permissions.screenRecording.hasPermission)")
 
         displayEnvironment.start()
+        spaceChanges.start(feed: SpaceChanges.liveFeed())
+        spaceDirectory.start(changes: spaceChanges)
+        spaceMenuBarKeeper.start(directory: spaceDirectory, agentRestarts: SpaceMenuBarKeeper.liveAgentRestarts())
         settings.performSetup(with: self)
         menuBarManager.performSetup(with: self, activeDisplayWatcher: activeDisplayWatcher, displays: displayEnvironment)
+        spaceIndicator.start(settings: settings.spaces, changes: spaceChanges, directory: spaceDirectory)
+        barSettlingObservers.observe(revealedSections: menuBarManager.revealedSectionChanges)
         // A refused preferences watcher stays stopped; recreate it after either a table-file grant or Full Disk Access.
         permissions.onPermissionTransition = { [weak self] permission, granted in
             guard let self, granted, permission === permissions.fullDiskAccess else { return }
@@ -252,7 +276,7 @@ final class AppState {
         userNotificationManager.performSetup(with: self)
         profileManager.performSetup(with: self)
         itemManager.repairs.onUserLayoutChange = { [weak self] in self?.profileLayoutKeeper.noteUserLayoutChange() }
-        itemManager.savedOrderMirrorGate.observe(displayInvalidations: displayEnvironment.invalidations)
+        barSettlingObservers.observe(displayInvalidations: displayEnvironment.invalidations)
         profilesFeature.onChange = { [weak profileManager] in profileManager?.rebuildProfileHotkeys() }
         controlCommandObserver.performSetup(with: self)
         controlStatePublisher.performSetup(with: self)
@@ -271,7 +295,7 @@ final class AppState {
     /// Called by AppDelegate and again after first-launch permission setup.
     /// - Parameter granted: True runs bootstrap with required grants; false keeps subsystems inert and opens permissions.
     func launch(withPermissions granted: Bool) {
-        guard granted else {
+        guard granted, !ReducedModeController.isKeptWithAccessibility else {
             if ReducedModeController.isChosen {
                 dismissWindow(.permissions)
                 ReducedModeController.shared.start(with: self)
@@ -281,7 +305,7 @@ final class AppState {
                 // The delegate is still inside its launch callback here;
                 // changing the activation policy out from under it races.
                 try? await Task.sleep(for: .milliseconds(100))
-                activate(withPolicy: .regular)
+                activate(withPolicy: userWindowActivationPolicy)
                 dismissWindow(.settings)
                 openWindow(.permissions)
             }
@@ -317,7 +341,7 @@ final class AppState {
         guard hasPermissions else { return }
 
         Task {
-            activate(withPolicy: .regular)
+            activate(withPolicy: userWindowActivationPolicy)
             openWindow(.settings)
         }
     }
@@ -352,18 +376,13 @@ final class AppState {
     /// First launches and upgrades without changelog content record the version silently, leaving onboarding to handle new users.
     /// Record synchronously before the async repository fetch to avoid repeated prompts after failures.
     func presentWhatsNewForUpgradeIfNeeded() {
-        let current = Constants.versionString
-        guard let lastSeen = Defaults.string(forKey: .lastWhatsNewVersion) else {
-            Defaults.set(current, forKey: .lastWhatsNewVersion)
-            return
-        }
-        guard lastSeen != current else { return }
-        Defaults.set(current, forKey: .lastWhatsNewVersion)
+        let opensAfterUpdate = Self.storedShowReleaseNotesAfterUpdate
+        guard WhatsNewUpgradeGate.recordVersion(Constants.versionString, opensAfterUpdate: opensAfterUpdate) else { return }
 
         Task {
-            let allowFetch = settings.advanced.fetchReleaseNotes
+            let allowFetch = Self.storedFetchReleaseNotes
             guard await ChangelogDocument.load(allowFetch: allowFetch, info: .thaw).document?.newestRelease != nil else { return }
-            activate(withPolicy: .regular)
+            activate(withPolicy: userWindowActivationPolicy)
             openWindow(.whatsNew)
         }
     }
@@ -379,7 +398,7 @@ final class AppState {
         isRestarting = true
 
         // Save image cache to disk before restarting so new instance can load it
-        imageCache.saveToDisk()
+        imageCache.saveToDiskAndWait()
 
         let config = NSWorkspace.OpenConfiguration()
         config.activates = false
@@ -554,7 +573,7 @@ final class AppState {
 
             if self.openWindows.contains(id) {
                 self.diagLog.debug("Window \(id) already open (openWindows=\(self.openWindows)), activating existing window")
-                self.activate(withPolicy: .regular)
+                self.activate(withPolicy: userWindowActivationPolicy)
                 return
             }
             self.diagLog.debug("openWindow(\(id)) proceeding, openWindows=\(self.openWindows)")
@@ -569,7 +588,7 @@ final class AppState {
             openWindowAction(id: id)
 
             try? await Task.sleep(for: .milliseconds(100))
-            self.activate(withPolicy: .regular)
+            self.activate(withPolicy: userWindowActivationPolicy)
         }
     }
 
@@ -694,7 +713,7 @@ final class AppState {
               !navigationState.isThawBarPresented,
               !navigationState.isSearchPresented,
               !menuBarManager.layoutEditorPanel.isShown,
-              !menuBarManager.isHidingApplicationMenus,
+              !menuBarManager.applicationMenuHider.isHidingApplicationMenus,
               NSApp.modalWindow == nil,
               !NSApp.windows.contains(where: {
                   ($0.isVisible || $0.isMiniaturized) && ($0.canBecomeKey || $0.canBecomeMain)

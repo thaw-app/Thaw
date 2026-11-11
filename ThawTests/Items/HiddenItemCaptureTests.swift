@@ -46,6 +46,16 @@ struct HiddenItemCaptureTests {
         #expect(!HiddenItemCaptureButton.retakesAll(modifierFlags: [.command]))
     }
 
+    @Test("Holding Option shows what the click will do, and a result with kept pictures says how to retake them")
+    func optionIsDiscoverable() {
+        #expect(HiddenItemCaptureButton.title(retakingAll: false) == "Capture Hidden Items")
+        #expect(HiddenItemCaptureButton.title(retakingAll: true) == "Retake All Pictures")
+        let kept = HiddenItemCaptureButton.message(for: .tally([(name: "Tailscale", hasImage: true)], kept: 2))
+        #expect(kept.hasSuffix("Option-click to retake them too."))
+        let none = HiddenItemCaptureButton.message(for: .tally([(name: "Tailscale", hasImage: true)]))
+        #expect(!none.contains("Option-click"))
+    }
+
     /// Preserves kept-picture accounting for both unchanged and rebuilt window identities.
     @Test("A kept picture stays kept when the menu bar rebuilds its window", arguments: [UInt32(9), UInt32(10)])
     func rebuiltKeptPicture(windowID: UInt32) {
@@ -87,13 +97,42 @@ struct HiddenItemCaptureTests {
         )
     }
 
+    /// Counts both new and kept pictures after Native hiding narrows an item's parked frame.
+    @Test("A narrow parked item with a confirmed picture stays in the result", arguments: [false, true])
+    func narrowPicturedItemsAreCounted(newlyCaptured: Bool) {
+        let current = item(.string("com.example.app"), "Item-0", width: 2)
+        let pictured = MenuBarItemTag(namespace: current.tag.namespace, title: current.tag.title, windowID: 10, instanceIndex: 0)
+        let result = MenuBarItemImageCache.hiddenItemCaptureResult(
+            items: [current], alreadyGood: newlyCaptured ? [] : [pictured], newlyCaptured: newlyCaptured ? [pictured] : []
+        )
+        let expected = newlyCaptured
+            ? HiddenItemCaptureResult(captured: 1, total: 1, missing: [])
+            : HiddenItemCaptureResult(captured: 0, total: 0, missing: [], kept: 1)
+        #expect(result == expected)
+    }
+
+    /// Leaves truly blank items out rather than reporting them as failed captures.
+    @Test("A narrow item without a picture stays excluded")
+    func narrowUnpicturedItemsAreExcluded() {
+        let current = item(.string("com.example.app"), "Item-0", width: 2)
+        let result = MenuBarItemImageCache.hiddenItemCaptureResult(items: [current], alreadyGood: [], newlyCaptured: [])
+        #expect(result == HiddenItemCaptureResult(captured: 0, total: 0, missing: []))
+    }
+
+    /// Keeps switched-off system modules excluded even if the tally contains their tags.
+    @Test("Control Center modules stay excluded even with a recorded picture")
+    func picturedControlCenterModulesAreExcluded() {
+        let current = item(.menuBarAgent, "com.apple.menuextra.bluetooth")
+        let result = MenuBarItemImageCache.hiddenItemCaptureResult(items: [current], alreadyGood: [], newlyCaptured: [current.tag])
+        #expect(result == HiddenItemCaptureResult(captured: 0, total: 0, missing: []))
+    }
+
     @Test("A hidden Control Center module is left out, since showing it never draws it")
     func controlCenterModulesAreSkipped() {
-        let cache = MenuBarItemImageCache(screenIsLocked: { false })
-        #expect(cache.prewarmSkips(item(.menuBarAgent, "com.apple.menuextra.bluetooth")))
-        #expect(cache.prewarmSkips(item(.menuBarAgent, "com.apple.menuextra.wifi")))
-        #expect(!cache.prewarmSkips(item(.string("com.example.app"), "Item-0")))
-        #expect(cache.prewarmSkips(item(.string("com.example.app"), "Item-0", width: 2)), "A blank item is still left out")
+        #expect(RevealCapturePrewarm.skips(item(.menuBarAgent, "com.apple.menuextra.bluetooth"), allowsCaptureReveal: false))
+        #expect(RevealCapturePrewarm.skips(item(.menuBarAgent, "com.apple.menuextra.wifi"), allowsCaptureReveal: false))
+        #expect(!RevealCapturePrewarm.skips(item(.string("com.example.app"), "Item-0"), allowsCaptureReveal: false))
+        #expect(RevealCapturePrewarm.skips(item(.string("com.example.app"), "Item-0", width: 2), allowsCaptureReveal: false), "A blank item is still left out")
     }
 
     @Test("Each outcome gets a message, naming what's missing")

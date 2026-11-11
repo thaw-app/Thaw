@@ -128,7 +128,7 @@ extension MenuBarItemManager {
             await (MenuBarItem.getMenuBarItems(option: .activeSpace))
                 .filter { !$0.isSystemClone && !$0.isNativeOverflowControl }
         }
-        guard let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main else {
+        guard let screen = NSScreen.activeMenuBarScreenOrMain else {
             return false
         }
 
@@ -309,7 +309,7 @@ extension MenuBarItemManager {
         let overflowIdentifiers = controller.overflowHiddenIdentifiers
         let concealedIdentifiers = controller.effectivelyConcealedIdentifiers
         let isBarSettled = controller.revealedSection == nil
-            && !appState.menuBarManager.isRevealHideTransitionActive
+            && !barSettling.isRevealTransitionActive
         let parkedWidths = !isBarSettled ? [] : visibleLive
             .filter { [screens = BarAxis.liveDisplayBounds()] item in
                 NotShownOnBar.isLeftOffTheBar(item, among: visibleLive, screens: screens)
@@ -569,39 +569,6 @@ extension MenuBarItemManager {
         return try await executeReset(for: .allVisible)
     }
 
-    /// Cancels preflight settling after a no-op spacing apply so restores are not needlessly suppressed.
-    /// Refuses expected-set settling: concurrent no-op applies must not release a relaunch wait into a partial cache.
-    func cancelSettlingPeriod(reason: String) {
-        guard isInStartupSettling || startupSettlingTask != nil else { return }
-        if !settlingExpectedBundleIDs.isEmpty {
-            MenuBarItemManager.diagLog.debug(
-                "\(reason): settling cancel ignored; \(settlingExpectedBundleIDs.count) expected bundle ID(s) still pending"
-            )
-            return
-        }
-        // A boot-time no-op applyOffset must not cancel cold settling while apps are still reattaching.
-        // A partial cache would falsely report that all items are in place.
-        if settlingKind == .cold {
-            MenuBarItemManager.diagLog.debug(
-                "\(reason): settling cancel ignored; performSetup settling in flight"
-            )
-            return
-        }
-        // The preflight joined a display or launch settling; that one owns its end.
-        if settlingKind == .event {
-            MenuBarItemManager.diagLog.debug(
-                "\(reason): settling cancel ignored; display or launch settling in flight"
-            )
-            return
-        }
-        startupSettlingTask?.cancel()
-        startupSettlingTask = nil
-        isInStartupSettling = false
-        settlingDeadline = nil
-        settlingKind = nil
-        MenuBarItemManager.diagLog.debug("\(reason): settling period cancelled")
-    }
-
     func clearActiveProfileLayout() {
         activeProfileLayout = nil
         isApplyingProfileLayout = false
@@ -708,19 +675,18 @@ extension MenuBarItemManager {
 
         // cacheItemsRegardless skips restore during settling, which would silently shadow these moves.
         // performSetup re-entry can replace the settling task, so the wait follows the replacement.
-        if isInStartupSettling {
+        if barSettling.isSettling {
             MenuBarItemManager.diagLog.debug("applyProfileLayout: waiting for startup settling to end")
         }
-        await SettlingWait.follow(isSettling: { isInStartupSettling }, currentTask: { startupSettlingTask })
+        await barSettling.settled()
 
         // A newer apply may cancel us during settling; do not arm the superseded profile's state.
         if Task.isCancelled {
             return true
         }
 
-        // Taken before any state is armed, so a profile superseded while it
-        // queued leaves nothing behind. Held for the whole apply: repairs must
-        // not write between its assignment and its order.
+        // Taken before any state is armed, so a superseded profile leaves nothing
+        // behind, and held so repairs write neither mid-assignment nor mid-order.
         repairs.request(.profileLayoutApply, cause: .profileApplied)
         guard let hold = await repairs.enter(.profileLayoutApply, priority: .user) else {
             return true
@@ -738,9 +704,8 @@ extension MenuBarItemManager {
             itemSectionMap: itemSectionMap,
             itemOrder: itemOrder
         )
-        // Every way out clears the gate. The early returns below used to leave
-        // it set, which kept saved-layout apply, normalization and the order
-        // mirror switched off until another profile applied.
+        // Every way out clears the gate. The early returns used to leave it set,
+        // keeping saved-layout apply, normalization and the order mirror off.
         defer { clearProfileState(source: source) }
 
         // Both apply sources must prevent the cache from saving intermediate positions.
@@ -755,6 +720,8 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.error("applyProfileLayout: missing appState")
             return false
         }
+        // Edits recorded before the switch could write the old layout back.
+        appState.layoutUndo.removeAllActions()
         guard !itemOrder.isEmpty else {
             MenuBarItemManager.diagLog.debug("applyProfileLayout: no item order, skipping")
             return true
@@ -821,14 +788,12 @@ extension MenuBarItemManager {
             scheduleDeferredLayoutReconcile(after: .seconds(1), reason: "user drag in progress")
             return false
         }
-        if let lastRestrictionChange = lastRestrictionChangeTimestamp,
-           lastRestrictionChange.duration(to: .now) < Self.restrictionChangeLayoutSettleWindow
-        {
+        if barSettling.hold(for: .layoutReorder) != nil {
             MenuBarItemManager.diagLog.debug(
                 "applySavedLayout: skipping, within restriction-reflow settle window"
             )
             scheduleDeferredLayoutReconcile(
-                after: Self.restrictionChangeLayoutSettleWindow,
+                after: BarSettling.restrictionReflowWindow,
                 reason: "restriction-reflow settle"
             )
             return false

@@ -87,6 +87,13 @@ final class FirstRunHintStore {
         persist()
     }
 
+    /// Brings every hint back, for Reset. Hints a newer build retired stay retired.
+    func reset() {
+        guard !dismissed.isEmpty else { return }
+        dismissed.removeAll()
+        persist()
+    }
+
     /// Called on the first drop into Hidden: shows the HUD once and dismisses
     /// FirstRunHint.firstHideConfirmed. Returns true if it fired, and
     /// false on every call after that.

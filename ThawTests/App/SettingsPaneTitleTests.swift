@@ -26,7 +26,7 @@ struct SettingsPaneTitleTests {
         (.menuBarAppearance, "Appearance"),
         (.hotkeys, "Shortcuts"),
         (.displays, "Displays"),
-        (.modules, "Extras"),
+        (.modules, "Modules"),
         (.triggers, "Triggers"),
         (.scripts, "Scripts"),
         (.widgets, "Widgets"),

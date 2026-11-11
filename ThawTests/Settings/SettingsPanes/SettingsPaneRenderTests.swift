@@ -57,10 +57,10 @@ struct SettingsPaneRenderTests {
     func generalPane() async throws {
         let appState = AppState()
         let settings = appState.settings
-        let render = render(GeneralSettingsPane(settings: settings.general, advancedSettings: settings.advanced), appState: appState)
+        let render = render(GeneralSettingsPane(settings: settings.general), appState: appState)
         let before = try await drawnPixels(render)
-        settings.general.showOnHover.toggle()
-        settings.general.autoRehide.toggle()
+        settings.general.enableSecondaryContextMenu.toggle()
+        settings.general.simpleMode.toggle()
         await render.settle { (try? render.pixels()) != before }
         #expect(try render.pixels() != before)
     }
@@ -69,13 +69,25 @@ struct SettingsPaneRenderTests {
     func visibilityPane() async throws {
         let appState = AppState()
         let settings = appState.settings
-        settings.general.autoRehide = true
-        settings.general.rehideStrategy = .smart
-        let render = render(MenuBarAccessPane(settings: settings.general, advancedSettings: settings.advanced), appState: appState)
+        settings.visibility.autoRehide = true
+        settings.visibility.rehideStrategy = .smart
+        let render = render(MenuBarAccessPane(settings: settings.visibility), appState: appState)
         let before = try await drawnPixels(render)
-        settings.general.showOnClick.toggle()
-        settings.general.showOnHover.toggle()
-        settings.general.rehideStrategy = .timed
+        settings.visibility.showOnClick.toggle()
+        settings.visibility.showOnHover.toggle()
+        settings.visibility.rehideStrategy = .timed
+        await render.settle { (try? render.pixels()) != before }
+        #expect(try render.pixels() != before)
+    }
+
+    @Test("Visibility draws the double-click switch with Always Hidden on, and turning it off redraws it")
+    func visibilityDoubleClickSwitch() async throws {
+        let appState = AppState()
+        let settings = appState.settings
+        settings.layout.enableAlwaysHiddenSection = true
+        let render = render(MenuBarAccessPane(settings: settings.visibility), appState: appState)
+        let before = try await drawnPixels(render)
+        settings.visibility.showAlwaysHiddenOnIconDoubleClick.toggle()
         await render.settle { (try? render.pixels()) != before }
         #expect(try render.pixels() != before)
     }
@@ -83,7 +95,7 @@ struct SettingsPaneRenderTests {
     @Test("Tools draws each of its tabs")
     func toolsPane() async throws {
         let appState = AppState()
-        let render = render(ToolsSettingsPane(settings: appState.settings.advanced), appState: appState)
+        let render = render(ToolsSettingsPane(settings: appState.settings.tools), appState: appState)
         try await expectTabsDraw(["Repair", "Reset"], appState: appState, render: render)
     }
 
@@ -111,7 +123,7 @@ struct SettingsPaneRenderTests {
     @Test("The allowed apps section draws")
     func allowedAppsSection() async throws {
         let appState = AppState()
-        let render = render(ThawForm { OtherAppsSection(settings: appState.settings.automation) }, appState: appState)
+        let render = render(ThawForm { OtherAppsSection(settings: appState.settings.privacy) }, appState: appState)
         _ = try await drawnPixels(render)
     }
 
@@ -119,10 +131,10 @@ struct SettingsPaneRenderTests {
     func remainingPanes() async throws {
         let appState = AppState()
         let settings = appState.settings
-        _ = try await drawnPixels(render(PrivacySettingsPane(updatesManager: appState.updatesManager, advancedSettings: settings.advanced), appState: appState))
+        _ = try await drawnPixels(render(PrivacySettingsPane(updatesManager: appState.updatesManager, privacySettings: settings.privacy), appState: appState))
         _ = try await drawnPixels(render(ThawAboutPane(updatesManager: appState.updatesManager), appState: appState))
         _ = try await drawnPixels(render(MenuBarAppearanceSettingsPane(appearanceManager: appState.appearanceManager), appState: appState))
-        _ = try await drawnPixels(render(WidgetsSettingsPane(settings: settings.advanced), appState: appState))
+        _ = try await drawnPixels(render(WidgetsSettingsPane(settings: settings.widgets), appState: appState))
         _ = try await drawnPixels(render(ScriptsSettingsPane(), appState: appState))
     }
 

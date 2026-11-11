@@ -5,7 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Foundation
+import AppKit
 import Testing
 import ThawModuleTestSupport
 @testable import WidgetsCore
@@ -40,6 +40,48 @@ struct StatusIconWidgetControllerTests {
 
         #expect(controller.liveSamples.network == .ethernet)
         #expect(publisher.published.last?.samples.network == .ethernet, "The icon must match the sampler")
+    }
+
+    @Test("A sample that changes nothing the icon shows is not published again")
+    func unusedReadingsAreNotRepublished() throws {
+        let controller = try makeController()
+        var samples = StatusIconSamples(network: .wifi)
+        controller.absorb(samples)
+        let published = publisher.published.count
+
+        samples.cpu = 0.9
+        controller.absorb(samples)
+        samples.battery += 0.001
+        controller.absorb(samples)
+        #expect(publisher.published.count == published, "the default icon shows battery and Wi-Fi, to the percent")
+
+        samples.battery = 0.4
+        controller.absorb(samples)
+        #expect(publisher.published.count == published + 1)
+        #expect(controller.liveSamples.cpu == 0.9, "the builder still gets every reading")
+    }
+
+    @Test("Manual mode stops the live sampler, and live mode starts it again")
+    func manualModeStopsSampling() throws {
+        let controller = try makeController()
+        controller.setLive(true)
+        #expect(!controller.isSampling, "nothing samples before the module starts")
+
+        controller.start()
+        #expect(controller.isSampling)
+        controller.setLive(false)
+        #expect(!controller.isSampling)
+        controller.setLive(true)
+        #expect(controller.isSampling)
+        controller.setLive(false)
+    }
+
+    @Test("A module started in manual mode does not sample")
+    func startInManualModeDoesNotSample() throws {
+        let controller = try makeController()
+        controller.setLive(false)
+        controller.start()
+        #expect(!controller.isSampling)
     }
 
     @Test("Manual readings are saved and come back for the sliders")
@@ -93,6 +135,116 @@ struct StatusIconWidgetControllerTests {
         #expect(liveState.isLive)
         #expect(liveState.samples.network == .wifi, "Live mode uses the sampler's connection")
         #expect(liveState.samples.volume == 0.62, "Volume stays manual in live mode")
+    }
+
+    @Test("The icon's size, thickness and status colours come back from settings, with defaults first")
+    func storedStyle() throws {
+        let controller = try makeController()
+        #expect(controller.currentState().style == StatusIconStyle())
+        controller.defaults.set(StatusIconStyle.Size.large.rawValue, forKey: WidgetKeys.size)
+        controller.defaults.set(StatusIconStyle.Thickness.thick.rawValue, forKey: WidgetKeys.thickness)
+        controller.defaults.set(false, forKey: WidgetKeys.statusColors)
+        let style = controller.currentState().style
+        #expect(style == StatusIconStyle(size: .large, thickness: .thick, statusColors: false))
+    }
+}
+
+@MainActor
+@Suite("Status item rendering")
+struct StatusItemRenderingTests {
+    @Test("The menu bar image is a template unless a reading in it is coloured")
+    func templateUnlessColored() {
+        var samples = StatusIconSamples()
+        samples.battery = 0.9
+        var state = StatusIconPreviewState(composition: StatusIconComposition(), samples: samples, isLive: true)
+        #expect(StatusItemPublisher.image(for: state, darkMenuBar: false).isTemplate)
+        state.samples.isCharging = true
+        let colored = StatusItemPublisher.image(for: state, darkMenuBar: true)
+        #expect(!colored.isTemplate)
+        #expect(colored.size == CGSize(width: 22, height: 22))
+    }
+
+    @Test("An appearance set again without changing, as AppKit does to snapshot the item, redraws nothing")
+    func sameAppearanceRedrawsNothing() {
+        let publisher = StatusItemPublisher()
+        let button = NSButton(frame: CGRect(x: 0, y: 0, width: 22, height: 22))
+        var samples = StatusIconSamples()
+        samples.isCharging = true
+        publisher.lastState = StatusIconPreviewState(composition: StatusIconComposition(), samples: samples, isLive: true)
+        button.appearance = NSAppearance(named: .darkAqua)
+        publisher.appearanceChanged(of: button)
+        let drawn = button.image
+
+        publisher.appearanceChanged(of: button)
+        #expect(button.image === drawn)
+
+        button.appearance = NSAppearance(named: .aqua)
+        publisher.appearanceChanged(of: button)
+        #expect(button.image !== drawn)
+    }
+
+    @Test("A template icon is left alone when the menu bar turns light or dark")
+    func templateIsNotRedrawn() {
+        let publisher = StatusItemPublisher()
+        let button = NSButton(frame: CGRect(x: 0, y: 0, width: 22, height: 22))
+        publisher.lastState = StatusIconPreviewState(composition: StatusIconComposition(), samples: StatusIconSamples(), isLive: true)
+        button.appearance = NSAppearance(named: .darkAqua)
+        publisher.appearanceChanged(of: button)
+        #expect(button.image == nil)
+    }
+
+    @Test("A reading that changes its text and not its picture leaves the drawn content equal")
+    func textOnlyChangesDrawNothingNew() {
+        var samples = StatusIconSamples(network: .wifi)
+        samples.wifi = 0.80
+        let state = StatusIconPreviewState(composition: StatusIconComposition(), samples: samples, isLive: true)
+        var nudged = state
+        nudged.samples.wifi = 0.81
+        #expect(nudged.displayed != state.displayed, "the menu says 81%")
+        #expect(nudged.drawn == state.drawn, "the same bars and dots are lit")
+
+        var weaker = state
+        weaker.samples.wifi = 0.2
+        #expect(weaker.drawn != state.drawn)
+        var charged = state
+        charged.samples.battery = 0.5
+        #expect(charged.drawn != state.drawn)
+    }
+
+    @Test("The icon shows only with something to draw and while Thaw doesn't hide it")
+    func visibilityFollowsThaw() {
+        #expect(StatusItemPublisher.shows(hasContent: true, hiddenByThaw: false))
+        #expect(!StatusItemPublisher.shows(hasContent: true, hiddenByThaw: true))
+        #expect(!StatusItemPublisher.shows(hasContent: false, hiddenByThaw: false))
+    }
+
+    @Test("Thaw's list of hidden bundles names this module's bundle, or doesn't")
+    func hiddenListIsRead() throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "WidgetVisibilityTests-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let own = "com.example.thaw.module.widgets"
+        #expect(!WidgetVisibility.isHidden(own, in: folder), "no file hides nothing")
+
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try "com.example.thaw.extra.space\n\(own)".write(to: folder.appending(path: "hidden-extras.txt"), atomically: true, encoding: .utf8)
+        #expect(WidgetVisibility.isHidden(own, in: folder))
+        #expect(!WidgetVisibility.isHidden("com.example.thaw.module.widget", in: folder), "a whole line, not a prefix")
+        #expect(WidgetVisibility.notification(host: "com.example.thaw").rawValue == "com.example.thaw.extra.visibility")
+        #expect(WidgetVisibility.folder(host: "com.example.thaw").path.hasSuffix("com.example.thaw/StandIns"))
+    }
+
+    @Test("A coloured icon is redrawn when the menu bar turns light or dark")
+    func redrawsOnAppearanceChange() {
+        let publisher = StatusItemPublisher()
+        let button = NSButton(frame: CGRect(x: 0, y: 0, width: 22, height: 22))
+        var samples = StatusIconSamples()
+        samples.isCharging = true
+        publisher.lastState = StatusIconPreviewState(composition: StatusIconComposition(), samples: samples, isLive: true)
+        let observation = publisher.observeAppearance(of: button)
+        defer { observation.invalidate() }
+        button.appearance = NSAppearance(named: .darkAqua)
+        #expect(button.image != nil)
+        #expect(button.image?.isTemplate == false)
     }
 }
 

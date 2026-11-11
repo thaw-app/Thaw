@@ -128,7 +128,7 @@ nonisolated enum ObservedMembership {
     ) -> [Candidate] {
         items.compactMap { item in
             guard isEligible(item), let itemWeight = weight(item) else { return nil }
-            let authored = assignment[MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)]
+            let authored = assignment[item.canonicalIdentifier]
             return Candidate(item: item, weight: itemWeight, authored: authored)
         }
     }
@@ -140,7 +140,7 @@ nonisolated enum ObservedMembership {
         init(candidates: [Candidate], dividers: Dividers) {
             var readings = [String: (weight: Int, section: MenuBarSectionName)]()
             for candidate in candidates {
-                readings[Self.key(for: candidate.item)] = (candidate.weight, dividers.section(for: candidate.weight))
+                readings[candidate.item.canonicalIdentifier] = (candidate.weight, dividers.section(for: candidate.weight))
             }
             self.readings = readings
         }
@@ -148,12 +148,8 @@ nonisolated enum ObservedMembership {
         /// Whether the drag gave candidate a new weight that reads as another
         /// section. An item the baseline never saw did not take part in the drag.
         func crossedDivider(_ candidate: Candidate, dividers: Dividers) -> Bool {
-            guard let before = readings[Self.key(for: candidate.item)] else { return false }
+            guard let before = readings[candidate.item.canonicalIdentifier] else { return false }
             return before.weight != candidate.weight && before.section != dividers.section(for: candidate.weight)
-        }
-
-        private static func key(for item: MenuBarItem) -> String {
-            MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
         }
     }
 

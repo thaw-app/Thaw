@@ -14,6 +14,10 @@ import ThawUI
 /// same-bundle clusters have no stored record until the user touches one.
 struct MenuBarLayoutGroupsSection: View {
     @Environment(AppState.self) private var appState
+    /// Set in the Layout window, where a group selects its members and takes dropped items.
+    var navigation: LayoutGroupNavigation?
+    /// The group a drag is over.
+    @State private var dropTargetID: UUID?
     @State private var editingNames = [UUID: String]()
     /// Indexed once per membership change, since every keystroke in the name
     /// fields re-runs body and a scan per row would be quadratic.
@@ -33,7 +37,7 @@ struct MenuBarLayoutGroupsSection: View {
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 ForEach(groups) { group in
-                    groupRow(group)
+                    navigableRow(group)
                         .contextMenu {
                             Button(group.isCollapsed ? "Expand" : "Collapse") {
                                 appState.itemGroupManager.setCollapsed(
@@ -47,14 +51,16 @@ struct MenuBarLayoutGroupsSection: View {
                             }
                             Divider()
                             Button("Ungroup", role: .destructive) {
-                                appState.itemGroupManager.ungroup(.user(group.id))
+                                UngroupUndo.ungroup(.user(group.id), name: appState.groupFolders.folderName(for: group), manager: appState.itemGroupManager, folders: appState.groupFolders, undoManager: appState.layoutUndo)
                             }
                         }
                     if group.id != groups.last?.id {
                         Divider()
                     }
                 }
-                Text("Groups always move and hide together. Drag any member in the bars above to move the whole group.")
+                Text(navigation == nil
+                    ? "Groups always move and hide together. Drag any member in the bars above to move the whole group."
+                    : "Groups always move and hide together. Select a group to select its items, or drop items on a group to add them.")
                     .font(ThawType.footnote)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -74,7 +80,7 @@ struct MenuBarLayoutGroupsSection: View {
         let style = folders.style(for: group.id)
         return HStack(spacing: ThawSpacing.base) {
             Text("Folder icon")
-                .font(.callout)
+                .font(ThawType.detail)
                 .foregroundStyle(.secondary)
             Picker("Folder icon", selection: Binding(
                 get: { style.symbol },
@@ -134,6 +140,56 @@ struct MenuBarLayoutGroupsSection: View {
         )
     }
 
+    /// The row, plus selecting and dropping when this list is the Layout window's navigator.
+    @ViewBuilder
+    private func navigableRow(_ group: MenuBarItemGroup) -> some View {
+        if let navigation {
+            groupRow(group)
+                .modifier(SearchRowBackground(selected: dropTargetID == group.id || navigation.isSelected(group)))
+                .overlay {
+                    LayoutGroupDropTarget(
+                        isTargeted: Binding(
+                            get: { dropTargetID == group.id },
+                            set: { dropTargetID = GroupDropTarget.after($0, on: group.id, current: dropTargetID) }
+                        ),
+                        selection: navigation.selection
+                    ) { ids in
+                        navigation.add(ids, to: group)
+                    }
+                }
+        } else {
+            groupRow(group)
+        }
+    }
+
+    /// Select (in the Layout window), Collapse, Folder and Ungroup for one group.
+    @ViewBuilder
+    private func groupActions(_ group: MenuBarItemGroup) -> some View {
+        if let navigation {
+            Button("Select") { navigation.select(group) }
+                .buttonStyle(.settingsGlass)
+                .help("Select this group’s items in the list and the bars")
+                .accessibilityLabel("Select the items in \(appState.groupFolders.folderName(for: group))")
+        }
+        Button(group.isCollapsed ? "Expand" : "Collapse") {
+            appState.itemGroupManager.setCollapsed(
+                !group.isCollapsed,
+                for: .user(group.id),
+                members: []
+            )
+        }
+        .buttonStyle(.settingsGlass)
+        Toggle("Folder", isOn: Binding(
+            get: { appState.groupFolders.isFolder(.user(group.id)) },
+            set: { _ in toggleFolder(group) }
+        ))
+        .help("Keeps the group's items in Hidden and puts a folder icon in the menu bar that opens them.")
+        Button("Ungroup", role: .destructive) {
+            UngroupUndo.ungroup(.user(group.id), name: appState.groupFolders.folderName(for: group), manager: appState.itemGroupManager, folders: appState.groupFolders, undoManager: appState.layoutUndo)
+        }
+        .buttonStyle(.settingsGlass)
+    }
+
     private func groupRow(_ group: MenuBarItemGroup) -> some View {
         VStack(alignment: .leading, spacing: ThawSpacing.base) {
             HStack {
@@ -149,23 +205,7 @@ struct MenuBarLayoutGroupsSection: View {
 
                 Spacer()
 
-                Button(group.isCollapsed ? "Expand" : "Collapse") {
-                    appState.itemGroupManager.setCollapsed(
-                        !group.isCollapsed,
-                        for: .user(group.id),
-                        members: []
-                    )
-                }
-                .buttonStyle(.settingsGlass)
-                Toggle("Folder", isOn: Binding(
-                    get: { appState.groupFolders.isFolder(.user(group.id)) },
-                    set: { _ in toggleFolder(group) }
-                ))
-                .help("Keeps the group's items in Hidden and puts a folder icon in the menu bar that opens them.")
-                Button("Ungroup", role: .destructive) {
-                    appState.itemGroupManager.ungroup(.user(group.id))
-                }
-                .buttonStyle(.settingsGlass)
+                groupActions(group)
             }
 
             if appState.groupFolders.isFolder(.user(group.id)) {
@@ -175,7 +215,7 @@ struct MenuBarLayoutGroupsSection: View {
             ForEach(group.memberIdentifiers, id: \.self) { identifier in
                 HStack(spacing: ThawSpacing.base) {
                     Text(memberName(identifier))
-                        .font(.callout)
+                        .font(ThawType.detail)
                         .foregroundStyle(liveItem(identifier) == nil ? .secondary : .primary)
                     if liveItem(identifier) == nil {
                         // A quit app keeps its membership, so say why it looks inactive.
@@ -239,5 +279,17 @@ struct MenuBarLayoutGroupsSection: View {
             return
         }
         appState.itemGroupManager.removeMember(item)
+    }
+}
+
+/// Which group row is the drop target once a row gains or loses the pointer.
+nonisolated enum GroupDropTarget {
+    /// The row itself when it gains the pointer. When it loses it, nothing if it was the target;
+    /// another row that took over in the meantime stays.
+    static func after(_ isTargeted: Bool, on group: UUID, current: UUID?) -> UUID? {
+        if isTargeted {
+            return group
+        }
+        return current == group ? nil : current
     }
 }

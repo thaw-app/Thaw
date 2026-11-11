@@ -17,9 +17,12 @@ enum LayoutDisplayedItems {
         appState: AppState,
         runningApplications: [NSRunningApplication]
     ) -> [MenuBarItem] {
-        DisplayedItemInventory.cache(appState: appState, runningApplications: runningApplications)
-            .managedItems(for: section)
-            // Thaw Bar Only items have their own row.
+        items(in: section, from: DisplayedItemInventory.cache(appState: appState, runningApplications: runningApplications), appState: appState)
+    }
+
+    /// The same, from an inventory already read, so several sections share one projection.
+    static func items(in section: MenuBarSection.Name, from inventory: MenuBarItemCache, appState: AppState) -> [MenuBarItem] {
+        inventory.managedItems(for: section)
             // A switched-off Thaw icon stays registered at zero width so it can
             // return in place, but it is not on the bar, so it gets no slot.
             .filter { appState.settings.general.showThawIcon || !$0.tag.matchesVisibleControlItem }
@@ -32,7 +35,11 @@ enum LayoutDisplayedItems {
         appState: AppState,
         runningApplications: [NSRunningApplication]
     ) -> [MenuBarItem] {
-        items(in: section, appState: appState, runningApplications: runningApplications)
+        editorItems(in: section, from: DisplayedItemInventory.cache(appState: appState, runningApplications: runningApplications), appState: appState)
+    }
+
+    static func editorItems(in section: MenuBarSection.Name, from inventory: MenuBarItemCache, appState: AppState) -> [MenuBarItem] {
+        items(in: section, from: inventory, appState: appState)
             .filter(LayoutBarPaddingView.acceptsLayoutDrag(of:))
             .uniqued(on: \.uniqueIdentifier)
     }

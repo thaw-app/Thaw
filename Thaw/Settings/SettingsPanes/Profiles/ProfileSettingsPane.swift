@@ -224,7 +224,7 @@ struct ProfileSettingsPane: View {
             profileManager.activeProfileID = profileID
             newProfileName = ""
             registerProfileUndo(
-                .delete(id: profileID, wasActive: true),
+                .delete(id: profileID),
                 actionName: String(localized: "Create Profile"),
                 manager: profileManager,
                 undoManager: undoManager,
@@ -250,13 +250,7 @@ struct ProfileSettingsPane: View {
             current: profileManager.currentLayoutSnapshot(from: appState),
             profile: profile.menuBarLayout
         )
-        diff.settingChanges = ProfileLayoutDiff.settingChanges(
-            current: GeneralSettingsSnapshot.capture(from: appState.settings.general),
-            profile: profile.generalSettings
-        ) + {
-            let current = AdvancedSettingsSnapshot.capture(from: appState.settings.advanced)
-            return ProfileLayoutDiff.settingChanges(current: current, profile: profile.advancedSettings.merged(onto: current))
-        }()
+        diff.settingChanges = ProfilePreviewChanges.settingChanges(of: profile, appState: appState)
 
         // Warn only if the spacing the apply leaves on the menu bar's display would relaunch apps.
         let offset = ProfileRelaunchSafety.spacingOffset(of: profile, activeDisplayUUID: appState.settings.displaySettings.activeMenuBarDisplayUUID)
@@ -367,7 +361,7 @@ struct ProfileSettingsPane: View {
             try profileManager.duplicateProfile(id: id, newName: name)
             if let created = profileManager.profiles.first(where: { !existingIDs.contains($0.id) }) {
                 registerProfileUndo(
-                    .delete(id: created.id, wasActive: false),
+                    .delete(id: created.id),
                     actionName: String(localized: "Duplicate Profile"),
                     manager: profileManager,
                     undoManager: undoManager,
@@ -420,7 +414,8 @@ struct ProfileSettingsPane: View {
     }
 
     private func exportAllProfiles() {
-        guard let json = profileManager.exportAllProfiles() else {
+        let (json, unreadable) = profileManager.exportAllProfiles()
+        guard let json else {
             errorMessage = String(localized: "Failed to encode profiles for export.")
             return
         }
@@ -432,6 +427,9 @@ struct ProfileSettingsPane: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try json.write(to: url, atomically: true, encoding: .utf8)
+            if !unreadable.isEmpty {
+                errorMessage = String(localized: "Exported, except profiles that couldn't be read: \(unreadable.formatted(.list(type: .and)))")
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -455,11 +453,11 @@ struct ProfileSettingsPane: View {
 // MARK: - Undo
 
 /// Value-based edits retain only the manager and profile data, allowing undo after pane teardown.
-private enum ProfileUndoStep {
+enum ProfileUndoStep {
     /// Puts back a profile the user deleted, at its old manifest position.
     case restore(profile: Profile, metadata: ProfileMetadata, at: Int, wasActive: Bool)
     /// Removes a profile the user created or duplicated.
-    case delete(id: UUID, wasActive: Bool)
+    case delete(id: UUID)
     case rename(id: UUID, to: String)
     /// Writes saved profile values back after a save or overwrite.
     case replace([Profile])
@@ -469,16 +467,16 @@ private enum ProfileUndoStep {
         switch self {
         case let .restore(profile, metadata, index, wasActive):
             try manager.restoreProfile(profile, metadata: metadata, at: index, wasActive: wasActive)
-            return .delete(id: metadata.id, wasActive: wasActive)
-        case let .delete(id, wasActive):
+            return .delete(id: metadata.id)
+        case let .delete(id):
             let profile = try manager.loadProfile(id: id)
-            guard let index = manager.profiles.firstIndex(where: { $0.id == id }) else {
-                throw CocoaError(.fileNoSuchFile)
-            }
+            guard let index = manager.profiles.firstIndex(where: { $0.id == id }) else { throw CocoaError(.fileNoSuchFile) }
             let metadata = manager.profiles[index]
+            let wasActive = manager.activeProfileID == id
             try manager.deleteProfile(id: id)
             if wasActive {
                 manager.activeProfileID = nil
+                manager.appState?.itemManager.clearActiveProfileLayout()
             }
             return .restore(profile: profile, metadata: metadata, at: index, wasActive: wasActive)
         case let .rename(id, to):

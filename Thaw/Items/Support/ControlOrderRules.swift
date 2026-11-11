@@ -102,7 +102,7 @@ enum ControlOrderRules {
         displays: [CGRect] = BarAxis.liveDisplayBounds()
     ) -> Bool {
         let divider = controlItems.hidden.bounds
-        let center = CGPoint(x: divider.midX, y: divider.midY)
+        let center = divider.center
         guard !CacheDividers.isStandIn(controlItems.hidden), !divider.isEmpty,
               let bar = displays.first(where: { $0.contains(center) })
         else {
@@ -112,7 +112,7 @@ enum ControlOrderRules {
             let rank = MenuBarItemTag.anchoredSystemItemRank(item.tag)
             // The rank reads titles only, so a third-party item with one of these titles must not count.
             return (rank == 1 || rank == 2) && item.tag.isSystemItem && item.isOnScreen
-                && bar.contains(CGPoint(x: item.bounds.midX, y: item.bounds.midY))
+                && bar.contains(item.bounds.center)
                 // Past the anchor's left edge: right of it, or over it, which can't be judged either.
                 && divider.maxX > item.bounds.minX
         }
@@ -141,7 +141,7 @@ enum ControlOrderRules {
         let bandHeight = MenuBarItemAXProvider.maxItemHeight(menuBarHeight: NSScreen.tallestCachedMenuBarHeight)
         var bars = Set<Int>()
         for item in items where item.isOnScreen && item.bounds.origin.x != -1 && !item.bounds.isEmpty {
-            let center = CGPoint(x: item.bounds.midX, y: item.bounds.midY)
+            let center = item.bounds.center
             if let bar = displays.firstIndex(where: { $0.contains(center) && center.y - $0.minY <= bandHeight }) {
                 bars.insert(bar)
             }
@@ -161,9 +161,7 @@ enum ControlOrderRules {
         savedOrder: [String]
     ) -> [MenuBarItem] {
         let canonicalOrder = MenuBarItemTag.canonicalPersistentIdentifiers(savedOrder)
-        let visibleCanonical = MenuBarItemTag.canonicalPersistentIdentifier(
-            visibleControl.uniqueIdentifier
-        )
+        let visibleCanonical = visibleControl.canonicalIdentifier
         let liveSegment = MenuBarItem.sortByVisualCenterThenIdentifier(
             ordinaryVisibleItems + [visibleControl]
         )
@@ -175,13 +173,13 @@ enum ControlOrderRules {
         let canonicalSet = Set(canonicalOrder)
         let newlyForcedVisible = liveSegment.filter {
             !canonicalSet.contains(
-                MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier)
+                $0.canonicalIdentifier
             )
         }
         let authoredVisible = MenuBarBackendProvider.current.overflowOrderedVisibleItems(
             liveSegment.filter {
                 canonicalSet.contains(
-                    MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier)
+                    $0.canonicalIdentifier
                 )
             },
             using: savedOrder

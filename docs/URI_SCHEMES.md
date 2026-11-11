@@ -102,6 +102,7 @@ Read and write Thaw settings via `thaw://` URLs, gated by a security whitelist. 
 | `showOnHover`                             | Bool | Show hidden items on hover                   |
 | `showOnScroll`                            | Bool | Show hidden items on scroll                  |
 | `useIceBarOnlyOnNotchedDisplay`           | Bool | Thaw Bar only on Macs with notch             |
+| `useThawBarOnNotchOverflow`               | Bool | Open items the notch pushes out in the Thaw Bar (default: true) |
 | `hideApplicationMenus`                    | Bool | Hide application menu titles                 |
 | `enableAlwaysHiddenSection`               | Bool | Enable the always-hidden section             |
 | `useOptionClickToShowAlwaysHiddenSection` | Bool | Option-click shows always-hidden items       |
@@ -154,6 +155,8 @@ These settings affect specific displays based on context. The **Scope** column i
 | `alwaysShowHiddenItems`  | Bool | All displays without IceBar | Show hidden items inline when IceBar is disabled |
 | `iceBarLayout`           | String | All displays with IceBar enabled | Thaw Bar layout: `horizontal`, `vertical`, or `grid` |
 | `gridColumns`            | Int | All displays with IceBar enabled | Maximum items per row in grid layout (2–10) |
+| `thawBarItemScale`       | Double | All displays with IceBar enabled | How large the Thaw Bar draws items: 0.6 to 1, where 1 is the menu bar's size |
+| `itemSpacingOffset`      | Double | Active display only | Menu bar item spacing for the display, from -16 to 16 points; applied when it has the active menu bar. A link can't ask first, so while **When spacing changes** is set to **Ask before restarting menu bar apps**, the value is saved and each app picks it up when it next starts |
 
 Find display UUIDs in System Settings → Displays, or via `system_profiler SPDisplaysDataType`.
 

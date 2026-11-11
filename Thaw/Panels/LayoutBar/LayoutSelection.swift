@@ -72,6 +72,40 @@ nonisolated struct LayoutSelection: Equatable, Sendable {
         anchor = nil
     }
 
+    /// Selects every selectable item in layout, keeping the anchor.
+    mutating func selectAll(in layout: [MenuBarSectionName: [Unit]]) {
+        itemIDs = layout.compactMapValues { units in
+            let ids = Set(units.filter(\.isSelectable).flatMap(\.memberIDs))
+            return ids.isEmpty ? nil : ids
+        }
+    }
+
+    /// Selects the selectable units in layout that hold any of itemIDs, keeping the anchor.
+    /// A group comes whole, as a click on one member brings the rest.
+    mutating func selectAll(among itemIDs: Set<String>, in layout: [MenuBarSectionName: [Unit]]) {
+        self.itemIDs = layout.compactMapValues { units in
+            let ids = Set(units.filter { $0.isSelectable && $0.memberIDs.contains(where: itemIDs.contains) }.flatMap(\.memberIDs))
+            return ids.isEmpty ? nil : ids
+        }
+    }
+
+    /// Selects exactly the selectable units that hold any of itemIDs, such as a group's members,
+    /// anchored on the leftmost one.
+    mutating func select(_ itemIDs: Set<String>, in layout: [MenuBarSectionName: [Unit]]) {
+        self.itemIDs = layout.compactMapValues { units in
+            let ids = Set(units.filter { $0.isSelectable && !itemIDs.isDisjoint(with: $0.memberIDs) }.flatMap(\.memberIDs))
+            return ids.isEmpty ? nil : ids
+        }
+        anchor = nil
+        for section in Self.barOrder {
+            let selected = self.itemIDs[section] ?? []
+            if let first = (layout[section] ?? []).flatMap(\.memberIDs).first(where: selected.contains) {
+                anchor = Anchor(section: section, itemID: first)
+                return
+            }
+        }
+    }
+
     /// Applies a click on itemID in section, whose units are listed left to right.
     mutating func click(_ itemID: String, in section: MenuBarSectionName, units: [Unit], kind: Click) {
         guard let index = units.firstIndex(where: { $0.memberIDs.contains(itemID) }), units[index].isSelectable else {
@@ -93,8 +127,7 @@ nonisolated struct LayoutSelection: Equatable, Sendable {
             }
             anchor = Anchor(section: section, itemID: itemID)
         case .extend:
-            guard let anchor, anchor.section == section,
-                  let start = units.firstIndex(where: { $0.memberIDs.contains(anchor.itemID) })
+            guard let anchor, anchor.section == section, let start = units.firstIndex(where: { $0.memberIDs.contains(anchor.itemID) })
             else {
                 click(itemID, in: section, units: units, kind: .replace)
                 return

@@ -20,6 +20,10 @@ class LayoutBarArrangedView: NSView {
     /// Temporary information retained while dragging between layout containers.
     var oldContainerInfo: (container: LayoutBarContainer, index: Int)?
 
+    /// The section's item order when the drag began, which a same-section undo restores. A view index
+    /// can't stand in: badges, collapsed groups and control items make view and item indexes disagree.
+    var dragStartSectionOrder: [MenuBarItem]?
+
     /// Capture the frozen source at drag start: superview disappears mid-drag and oldContainerInfo may never be set.
     private weak var frozenSourceContainer: LayoutBarContainer?
 
@@ -74,8 +78,11 @@ extension LayoutBarArrangedView: NSDraggingSource {
         let container = superview as? LayoutBarContainer
         container?.acceptsViewUpdates = false
         frozenSourceContainer = container
+        dragStartSectionOrder = container.map { LayoutReorderUndo.sectionOrder(for: $0) }
+        LayoutDragHaptics.begin(in: container?.section)
 
-        session.animatesToStartingPositionsOnCancelOrFail = false
+        // A cancelled drag slides back to where it started, as a group's does.
+        session.animatesToStartingPositionsOnCancelOrFail = true
 
         Task { @MainActor in
             isDraggingPlaceholder = true
@@ -89,6 +96,7 @@ extension LayoutBarArrangedView: NSDraggingSource {
         defer {
             oldContainerInfo = nil
             frozenSourceContainer = nil
+            dragStartSectionOrder = nil
             dragUnitCount = 1
         }
 
@@ -111,7 +119,7 @@ extension LayoutBarArrangedView: NSDraggingSource {
             guard let (container, index) = oldContainerInfo else {
                 return
             }
-            container.animatesNextLayoutPass = false
+            // The neighbours slide apart to take it back.
             // Only self carries oldContainerInfo; rebuild from the unchanged cache to restore all removed group members.
             if wasGroupDrag, container.appState != nil {
                 container.rebuildViews()

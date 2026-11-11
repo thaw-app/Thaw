@@ -5,19 +5,25 @@ import Testing
 struct StartupRepairSchedulingTests {
     @Test func startupRestrictionChangesDoNotQueueRepairs() {
         let manager = MenuBarItemManager()
-        manager.isInStartupSettling = true
-        defer { manager.postRestrictionRepairTask?.cancel() }
+        manager.barSettling.holdForTesting()
+        defer {
+            manager.barSettling.releaseForTesting()
+            manager.restrictionRepairSchedule.task?.cancel()
+        }
 
         manager.noteRestrictionChange()
         manager.noteRestrictionChange()
 
-        #expect(manager.postRestrictionRepairTask == nil)
+        #expect(manager.restrictionRepairSchedule.task == nil)
     }
 
     @Test func startupNormalizationDoesNotQueueARewrite() {
         let manager = MenuBarItemManager()
-        manager.isInStartupSettling = true
-        defer { manager.structuralNormalizationTask?.cancel() }
+        manager.barSettling.holdForTesting()
+        defer {
+            manager.barSettling.releaseForTesting()
+            manager.structuralNormalizationTask?.cancel()
+        }
 
         manager.scheduleStructuralNormalization(cause: .settled)
 
@@ -26,18 +32,18 @@ struct StartupRepairSchedulingTests {
 
     @Test func settledStartupCanScheduleRepairsAgain() {
         let manager = MenuBarItemManager()
-        manager.isInStartupSettling = true
+        manager.barSettling.holdForTesting()
         manager.noteRestrictionChange()
-        manager.isInStartupSettling = false
+        manager.barSettling.releaseForTesting()
         defer {
-            manager.postRestrictionRepairTask?.cancel()
+            manager.restrictionRepairSchedule.task?.cancel()
             manager.structuralNormalizationTask?.cancel()
         }
 
         manager.noteRestrictionChange()
         manager.scheduleStructuralNormalization(cause: .settled)
 
-        #expect(manager.postRestrictionRepairTask != nil)
+        #expect(manager.restrictionRepairSchedule.task != nil)
         #expect(manager.structuralNormalizationTask != nil)
     }
 }

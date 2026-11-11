@@ -72,7 +72,7 @@ Most of `com.stonerl.Thaw.plist` is safe on another Mac. Some keys only make sen
 |---|---|
 | `MenuBarLayoutTableBookmark`, `NativeAppHidingAppListBookmark`, `NativeVisibilityRecoveryFileBookmark` | Access you granted to one file. macOS ties it to this Mac, so on another Mac it does not work and you grant access again. |
 | `DisplayIceBarConfigurations`, `KnownDisplays`, and keys that start with `MenuBarSearchPanelFrame_` | Settings for each display, stored under this Mac's display IDs |
-| `UnresponsiveMenuBarItems`, `CannotCompleteMenuBarItems`, `StrandedMenuBarItems`, `MenuBarFailureLedgerVersion`, `OverlayItemWidths` | What Thaw learned about the items on this Mac |
+| `UnresponsiveMenuBarItems`, `CannotCompleteMenuBarItems`, `StrandedMenuBarItems`, `MenuBarFailureLedgerVersion` | What Thaw learned about the items on this Mac |
 | Keys that start with `SU` | The updater's own record of checks on this Mac |
 
 If you keep the file in dotfiles:

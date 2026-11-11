@@ -7,8 +7,6 @@
 
 import AppKit
 import MenuBarModel
-import os
-import QuartzCore
 
 @MainActor
 final class MenuBarSection {
@@ -20,24 +18,15 @@ final class MenuBarSection {
 
     private weak var appState: AppState?
 
-    /// Captured at setup so rehide reads menu state without reaching through the item manager.
-    private var menuOpenMonitor: MenuOpenMonitor?
-
     /// Engine-facing settings; see MenuBarEngineConfiguration for the dependency boundary.
     private var configuration: any MenuBarEngineConfiguration = AppSettings.engineDefaults
 
-    private var rehideTask: Task<Void, Never>?
-
-    /// Starts rehide when the mouse leaves the menu bar.
-    private var rehideMonitor: EventMonitor?
-
     private nonisolated let diagLog = DiagLog(category: "MenuBarSection")
 
-    private var useThawBar: Bool {
+    /// Whether a reveal on screen uses the Thaw Bar, by that display's own setting.
+    private func usesThawBar(on screen: NSScreen?) -> Bool {
         guard let appState else { return false }
-        let screen = screenForThawBar
-        let displayID = screen?.displayID ?? CGMainDisplayID()
-        return appState.menuBarManager.shouldUseThawBar(for: displayID)
+        return appState.menuBarManager.shouldUseThawBar(for: screen?.displayID ?? CGMainDisplayID(), section: name)
     }
 
     /// The gap that macOS leaves to the left and right of the notch (in points).
@@ -146,7 +135,7 @@ final class MenuBarSection {
 
     /// Use the active menu bar's screen so icon clicks activate their popups.
     private weak var screenForThawBar: NSScreen? {
-        NSScreen.screenWithActiveMenuBar ?? NSScreen.main
+        NSScreen.activeMenuBarScreenOrMain
     }
 
     /// The hiding state the user desires for the section.
@@ -212,7 +201,6 @@ final class MenuBarSection {
     func performSetup(with appState: AppState, displays: DisplayEnvironment) {
         self.appState = appState
         configuration = appState.settings
-        menuOpenMonitor = appState.itemManager.menuOpenMonitor
         controlItem.performSetup(with: appState, displayInvalidations: displays.invalidations)
         desiredState = controlItem.state
     }
@@ -236,7 +224,7 @@ final class MenuBarSection {
         }
 
         let displaySettings = appState.settings.displaySettings
-        let useThawBar = appState.menuBarManager.shouldUseThawBar(for: activeScreen.displayID)
+        let useThawBar = appState.menuBarManager.shouldUseThawBar(for: activeScreen.displayID, section: name)
         let alwaysShow = !appState.menuBarManager.isZenModeActive
             && displaySettings.alwaysShowHiddenItems(for: activeScreen.displayID)
 
@@ -248,7 +236,8 @@ final class MenuBarSection {
         controlItem.applyAppearanceNow()
     }
 
-    func show(triggeredByHotkey: Bool = false, forcingInline: Bool = false) {
+    /// eventScreen is the display a pointer reveal happened on; without one, the active menu bar's.
+    func show(triggeredByHotkey: Bool = false, forcingInline: Bool = false, on eventScreen: NSScreen? = nil) {
         // User reveals own the state; a racing capture prewarm must leave the section open.
         menuBarManager?.noteUserRevealOwnership()
         // Only the hover path marks its reveal after return to select the shorter hover hide.
@@ -260,15 +249,22 @@ final class MenuBarSection {
             return
         }
 
-        menuBarManager.updateLastShowTimestamp()
+        menuBarManager.rehideController?.revealed()
 
         // ThawBarPanel captures glyphs during a brief reveal and forwards clicks through revealClickAndConceal.
         // Use it when requested or when inline items would be unreachable behind native overflow.
-        let overflowsInline = !useThawBar && (screenForThawBar.map { overflowsInline(on: $0) } ?? false)
+        let revealScreen = eventScreen ?? screenForThawBar
+        let useThawBar = usesThawBar(on: revealScreen)
+        let overflowsInline = !useThawBar && (revealScreen.map { overflowsInline(on: $0) } ?? false)
         if overflowsInline {
             diagLog.info("show(\(name.logString)): the items do not fit inline; using the Thaw Bar")
         }
-        if !forcingInline, useThawBar || overflowsInline, let screen = screenForThawBar {
+        if !forcingInline, useThawBar || overflowsInline, let screen = revealScreen {
+            // A section left revealed inline would stay expanded behind the panel.
+            let revealedInline = menuBarManager.sectionController.revealedSection
+            if revealedInline != nil {
+                menuBarManager.sectionController.hideRevealedSections()
+            }
             for section in menuBarManager.sections {
                 section.desiredState = section.name == .visible ? .showSection : .hideSection
                 section.updateControlItemState(for: nil)
@@ -278,7 +274,7 @@ final class MenuBarSection {
                 on: screen,
                 triggeredByHotkey: triggeredByHotkey
             )
-            startRehideChecks()
+            menuBarManager.rehideController?.revealed(name)
             return
         }
 
@@ -297,16 +293,14 @@ final class MenuBarSection {
             }
         }
         refreshRevealedItemImages()
-        startRehideChecks()
+        menuBarManager.rehideController?.revealed(name)
     }
 
     /// Capture glyphs while the section is revealed to replace app-icon fallbacks in layout and search.
     private func refreshRevealedItemImages() {
         guard let appState else { return }
         let revealedName = name == .alwaysHidden ? Name.alwaysHidden : Name.hidden
-        let sections: [Name] = revealedName == .alwaysHidden
-            ? Name.allCases
-            : [.visible, .hidden]
+        let sections: [Name] = revealedName == .alwaysHidden ? Name.allCases : [.visible, .hidden]
 
         Task { @MainActor [weak appState] in
             // Wait for revealed AX elements before capture.
@@ -326,9 +320,7 @@ final class MenuBarSection {
                 skipSavedLayoutApply: true
             )
 
-            guard appState.menuBarManager.sectionController.revealedSection == revealedName else {
-                return
-            }
+            guard appState.menuBarManager.sectionController.revealedSection == revealedName else { return }
             await appState.imageCache.recaptureNow(sections: sections)
         }
     }
@@ -347,7 +339,7 @@ final class MenuBarSection {
             menuBarManager.thawBarPanel.close()
         }
         resetClosedPresentationState(using: menuBarManager)
-        stopRehideChecks()
+        menuBarManager.rehideController?.hidden(name)
     }
 
     private func resetClosedPresentationState(using menuBarManager: MenuBarManager) {
@@ -364,151 +356,5 @@ final class MenuBarSection {
         } else {
             hide()
         }
-    }
-
-    /// Pointer activity in either bar defers rehide.
-    private func isMouseInsideActiveArea() -> Bool {
-        guard let appState else { return false }
-        let hidEventManager = appState.hidEventManager
-        return NSScreen.screens.contains {
-            hidEventManager.isMouseInsideMenuBarHoverBand(appState: appState, screen: $0)
-        } || hidEventManager.isMouseInsideThawBar(appState: appState)
-    }
-
-    private func startRehideChecks() {
-        rehideTask?.cancel()
-        rehideTask = nil
-        rehideMonitor?.stop()
-
-        guard
-            let appState,
-            configuration.autoRehide
-        else {
-            return
-        }
-
-        switch configuration.rehideStrategy {
-        case .smart:
-            // The interval is a fallback for click-based smart rehide; task cancellation stops the wait.
-            rehideTask = makeRehideTask(interval: configuration.rehideInterval) { [weak self] in
-                self?.startRehideChecks()
-            }
-        case .timed:
-            rehideMonitor = EventMonitor.universal(for: .mouseMoved) { [weak self, weak appState] event in
-                // Throttle: process at most ~20fps regardless of mouse polling rate.
-                enum Context {
-                    static let lastTime = OSAllocatedUnfairLock(initialState: TimeInterval(0))
-                }
-                let now = CACurrentMediaTime()
-                guard now - Context.lastTime.withLock({ $0 }) > 0.05 else { return event }
-                Context.lastTime.withLock { $0 = now }
-
-                guard let self, appState != nil else { return event }
-                updateTimedRehide()
-                return event
-            }
-
-            rehideMonitor?.start()
-            // A reveal may be followed by no movement at all, so the countdown starts now.
-            updateTimedRehide()
-        case .focusedApp:
-            break
-        }
-    }
-
-    private func updateTimedRehide() {
-        switch TimedRehideStep.next(pointerInBar: isMouseInsideActiveArea(), countdownRunning: rehideTask != nil) {
-        case .start:
-            rehideTask = makeRehideTask(interval: configuration.rehideInterval) { [weak self] in
-                self?.diagLog.debug("Open menu detected - restarting timed rehide task")
-                await self?.restartTimedRehideTimer()
-            }
-        case .cancel:
-            rehideTask?.cancel()
-            rehideTask = nil
-        case .keep:
-            break
-        }
-    }
-
-    /// Restarts the timed rehide task (used when a menu is detected).
-    @MainActor
-    private func restartTimedRehideTimer() async {
-        guard
-            appState != nil,
-            configuration.autoRehide,
-            case .timed = configuration.rehideStrategy
-        else {
-            return
-        }
-
-        rehideTask?.cancel()
-        rehideTask = makeRehideTask(interval: configuration.rehideInterval) { [weak self] in
-            self?.diagLog.debug("Open menu still detected - restarting timed rehide task again")
-            await self?.restartTimedRehideTimer()
-        }
-    }
-
-    /// Require a full eligible interval; active-area mouse movement restarts checks, open menus defer to onOpenMenu.
-    private func makeRehideTask(
-        interval: TimeInterval,
-        onOpenMenu: @escaping @MainActor () async -> Void
-    ) -> Task<Void, Never> {
-        Task { @MainActor [weak self, weak appState] in
-            guard
-                let self,
-                let appState,
-                await self.waitForContinuousRehideEligibility(
-                    appState: appState,
-                    interval: interval
-                )
-            else { return }
-            if self.isMouseInsideActiveArea() {
-                self.startRehideChecks()
-                return
-            }
-            if await menuOpenMonitor?.isAnyMenuOpen() == true {
-                await onOpenMenu()
-                return
-            }
-            self.hide()
-        }
-    }
-
-    /// Open-menu time does not count toward rehide, avoiding immediate collapse after a menu choice.
-    private func waitForContinuousRehideEligibility(
-        appState _: AppState,
-        interval: TimeInterval
-    ) async -> Bool {
-        let pollInterval: TimeInterval = 0.25
-        let clock = ContinuousClock()
-        var eligibleSince = clock.now
-
-        while !Task.isCancelled {
-            try? await Task.sleep(for: .seconds(pollInterval))
-            guard !Task.isCancelled else { return false }
-
-            if isMouseInsideActiveArea() {
-                return false
-            }
-
-            if await menuOpenMonitor?.isAnyMenuOpen() == true {
-                eligibleSince = clock.now
-                continue
-            }
-
-            if eligibleSince.duration(to: clock.now) >= .seconds(interval) {
-                return true
-            }
-        }
-
-        return false
-    }
-
-    private func stopRehideChecks() {
-        rehideTask?.cancel()
-        rehideMonitor?.stop()
-        rehideTask = nil
-        rehideMonitor = nil
     }
 }

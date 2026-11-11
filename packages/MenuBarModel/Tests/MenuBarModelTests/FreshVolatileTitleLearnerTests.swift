@@ -74,4 +74,68 @@ struct FreshVolatileTitleLearnerTests {
         _ = learner.observe([item(bundle: "com.tencent.qq", title: "3")])
         #expect(learner.observe([item(bundle: "com.tencent.qq", title: "99+")]).isEmpty)
     }
+
+    /// 2026-11-06: DeskRest counts down in its title, and with about 100 apps running no read reached every app.
+    @Test("A countdown is learned across reads that skipped the app in between")
+    func learnsAcrossReadsThatSkippedTheOwner() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([item(bundle: "com.example.timer", title: "09:58")])
+        #expect(learner.observe([item(title: "3")]).isEmpty)
+        #expect(learner.observe([item(bundle: "com.example.timer", title: "09:51")]) == ["com.example.timer"])
+    }
+
+    @Test("A bundle seen from two live processes is never learned, since a read can skip one")
+    func refusesBundlesSharedByTwoProcesses() {
+        var learner = FreshVolatileTitleLearner()
+        let alive: (pid_t) -> Bool = { _ in true }
+        _ = learner.observe([item(title: "3", sourcePID: 1)], isAlive: alive)
+        _ = learner.observe([item(title: "Status", sourcePID: 2)], isAlive: alive)
+        _ = learner.observe([item(title: "4", sourcePID: 1)], isAlive: alive)
+        #expect(learner.observe([item(title: "5", sourcePID: 1)], isAlive: alive).isEmpty)
+
+        var together = FreshVolatileTitleLearner()
+        _ = together.observe([item(title: "3", sourcePID: 1, windowID: 1), item(title: "x", x: 1200, sourcePID: 2, windowID: 2)], isAlive: alive)
+        _ = together.observe([item(title: "4", sourcePID: 1)], isAlive: alive)
+        #expect(together.observe([item(title: "5", sourcePID: 1)], isAlive: alive).isEmpty)
+    }
+
+    @Test("A relaunch seen while the old process was still quitting is learned once that process is gone")
+    func relaunchOverlapIsNotSharedForGood() {
+        var learner = FreshVolatileTitleLearner()
+        var running: Set<pid_t> = [1, 2]
+        _ = learner.observe([item(title: "3", sourcePID: 1)], isAlive: { running.contains($0) })
+        _ = learner.observe([item(title: "4", sourcePID: 2)], isAlive: { running.contains($0) })
+        #expect(learner.observe([item(title: "5", sourcePID: 2)], isAlive: { running.contains($0) }).isEmpty, "both still run")
+
+        running = [2]
+        #expect(learner.observe([item(title: "6", sourcePID: 2)], isAlive: { running.contains($0) }).isEmpty)
+        #expect(learner.observe([item(title: "7", sourcePID: 2)], isAlive: { running.contains($0) }) == ["com.example.chat"])
+    }
+
+    @Test("A relaunched app is learned from its new process")
+    func learnsAfterARelaunch() {
+        var learner = FreshVolatileTitleLearner()
+        let gone: (pid_t) -> Bool = { _ in false }
+        _ = learner.observe([item(title: "3", sourcePID: 1)], isAlive: gone)
+        #expect(learner.observe([item(title: "4", sourcePID: 2)], isAlive: gone).isEmpty)
+        #expect(learner.observe([item(title: "5", sourcePID: 2)], isAlive: gone) == ["com.example.chat"])
+    }
+
+    @Test("A title kept longer than a few reads is not compared")
+    func forgetsOldTitles() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([item(title: "3")])
+        for _ in 0 ..< FreshVolatileTitleLearner.maxReadsBetweenTitles {
+            _ = learner.observe([item(bundle: "com.example.other", title: "x")])
+        }
+        #expect(learner.observe([item(title: "5")]).isEmpty)
+    }
+
+    @Test("An app seen with a second item since its last title is not learned")
+    func forgetsAnOwnerSeenWithSiblings() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([item(title: "3")])
+        _ = learner.observe([item(title: "3", windowID: 1), item(title: "Status", x: 1120, windowID: 2)])
+        #expect(learner.observe([item(title: "5")]).isEmpty)
+    }
 }

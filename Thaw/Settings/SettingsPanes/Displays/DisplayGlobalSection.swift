@@ -137,21 +137,11 @@ extension DisplaySettingsPane {
 
     // MARK: - Global Apply Confirmation
 
-    /// Routes the Apply-to-All button through the confirmation alert when a
-    /// profile is active. When no profile is active, the broadcast still
-    /// asks for confirmation because it overwrites every per-display entry,
-    /// which is destructive.
+    /// Routes the Apply-to-All button through the confirmation alert. It always asks, even with spacing
+    /// confirmations off, because it overwrites every display's own settings.
     private func requestGlobalApply() {
         let displayCount = displaySettings.displays.count
         let activeID = appState.profileManager.activeProfileID
-
-        // Confirmations disabled: broadcast directly, saving to the chosen
-        // profile target instead of staging the alert.
-        if !displaySettings.confirmSpacingRelaunch {
-            commitGlobalApplyWithoutConfirmation(activeProfileID: activeID)
-            return
-        }
-
         let activeName = activeID.flatMap { id in
             appState.profileManager.profiles.first(where: { $0.id == id })?.name
         }
@@ -168,34 +158,6 @@ extension DisplaySettingsPane {
     /// for the active display on the next main-queue dispatch.
     private func commitGlobalApply() {
         displaySettings.applyGlobalToAllKnownDisplays()
-    }
-
-    /// Broadcasts the global template and, when a profile is active,
-    /// persists it to the profile target chosen by
-    /// unconfirmedSpacingProfileScope. Used when confirmations are disabled;
-    /// mirrors the globalConfirmationButtons actions including rollback.
-    private func commitGlobalApplyWithoutConfirmation(activeProfileID: UUID?) {
-        let previousConfigurations = displaySettings.configurations
-        commitGlobalApply()
-        guard let id = activeProfileID else { return }
-        do {
-            switch displaySettings.unconfirmedSpacingProfileScope {
-            case .activeProfile:
-                try appState.profileManager.updateProfile(
-                    id: id,
-                    scope: .configurationOnly,
-                    appState: appState
-                )
-            case .allProfiles:
-                try appState.profileManager.updateAllProfilesGlobalConfiguration(
-                    displaySettings.globalConfiguration,
-                    propagateToDisplays: true
-                )
-            }
-        } catch {
-            displaySettings.configurations = previousConfigurations
-            errorMessage = error.localizedDescription
-        }
     }
 
     @ViewBuilder

@@ -74,13 +74,12 @@ enum MenuBarSearchItemActions {
     /// The gate is the layout editor's gate, and so is the explanation when it
     /// closes: see postAssignmentRefusal(for:to:experimentalSystemItemHiding:appState:)
     /// for why the same refusal is worth two different sentences.
-    static func move(_ item: MenuBarItem, to section: MenuBarSection.Name, appState: AppState) {
-        let experimentalSystemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
-        guard MenuBarBackendProvider.current.canAssign(
-            item,
-            to: section,
-            experimentalSystemItemHiding: experimentalSystemItemHiding
-        ) else {
+    ///
+    /// recordsUndo is for a caller that has no undo of its own, like the menus. Undo, redo and the
+    /// layout bar's keyboard move come through here too and register their own step, so they leave it off.
+    static func move(_ item: MenuBarItem, to section: MenuBarSection.Name, appState: AppState, recordsUndo: Bool = false) {
+        let experimentalSystemItemHiding = appState.settings.layout.enableExperimentalSystemItemHiding
+        guard MenuBarBackendProvider.current.canAssign(item, to: section, experimentalSystemItemHiding: experimentalSystemItemHiding) else {
             postAssignmentRefusal(
                 for: item,
                 to: section,
@@ -138,7 +137,27 @@ enum MenuBarSearchItemActions {
             }
 
             await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+            recordMoveUndo(of: item, groupMembers: groupMembers, from: sourceSection, to: section, committed: committed, recordsUndo: recordsUndo, appState: appState)
             if let committed { showMoveResult(for: item, to: section, committed: committed, appState: appState) }
+        }
+    }
+
+    /// Registers undo for a landed move or group move whose caller asked for it, so ⌘Z carries it back.
+    /// Only a move that landed is undoable; a refusal posts its own message instead.
+    static func recordMoveUndo(
+        of item: MenuBarItem,
+        groupMembers: [MenuBarItem]?,
+        from source: MenuBarSection.Name,
+        to section: MenuBarSection.Name,
+        committed: Bool?,
+        recordsUndo: Bool,
+        appState: AppState
+    ) {
+        guard recordsUndo, committed == true else { return }
+        if let groupMembers {
+            LayoutSectionMoveUndo.registerGroupUndo(of: groupMembers, from: source, to: section, appState: appState)
+        } else {
+            LayoutSectionMoveUndo.registerUndo(of: item, from: source, to: section, appState: appState, undoManager: appState.layoutUndo)
         }
     }
 
@@ -166,31 +185,40 @@ enum MenuBarSearchItemActions {
                 observed: observed
             )
         )
-        ThawHUD.show(symbol: message.symbol, text: "\(message.text)")
+        ThawHUD.show(symbol: message.symbol, text: "\(message.text)", displayDuration: message.displayDuration)
+        if let refusal = message.refusal { appState.layoutFeedback.post(refusal) } else { AccessibilityAnnouncements.post(message.text) }
     }
 
     /// Assigns several ungrouped items to section in one pass, for the
     /// Layout pane's suggestions. Items the section cannot take are skipped
     /// rather than refused one by one: a suggestion never offers them.
-    static func move(_ items: [MenuBarItem], to section: MenuBarSection.Name, appState: AppState) {
-        let experimentalSystemItemHiding = appState.settings.advanced.enableExperimentalSystemItemHiding
+    /// recordsUndo is as for a single move: the item menu's Move All asks for it.
+    static func move(_ items: [MenuBarItem], to section: MenuBarSection.Name, appState: AppState, recordsUndo: Bool = false) {
+        let experimentalSystemItemHiding = appState.settings.layout.enableExperimentalSystemItemHiding
         let assignable = items.filter {
             MenuBarBackendProvider.current.canAssign($0, to: section, experimentalSystemItemHiding: experimentalSystemItemHiding)
         }
         guard !assignable.isEmpty else { return }
+        let controller = appState.menuBarManager.sectionController
+        let sources = Dictionary(grouping: assignable) { controller.section(for: $0) }.mapValues { $0.map(\.tag) }
         ExplicitLayoutEdit.task {
+            var committed = false
             // Seated before the assertion flips, as for a single move.
             await appState.itemManager.seatItemsForSectionTransition(assignable, to: section) {
                 _ = appState.menuBarManager.setSection(section, items: assignable)
+                committed = true
             }
             await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
+            if recordsUndo, committed {
+                LayoutSectionMoveUndo.registerMoves(back: sources, forward: [section: assignable.map(\.tag)], appState: appState)
+            }
         }
     }
 
     /// Opens the pane the item's placement is edited in.
     static func openSettings(appState: AppState) {
         SettingsSearchNavigation.selectSidebarPane(.menuBarLayout, navigationState: appState.navigationState)
-        appState.activate(withPolicy: .regular)
+        appState.activate(withPolicy: appState.userWindowActivationPolicy)
         appState.openWindow(.settings)
     }
 

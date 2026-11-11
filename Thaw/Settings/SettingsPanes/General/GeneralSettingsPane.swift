@@ -11,7 +11,6 @@ import ThawUI
 
 struct GeneralSettingsPane: View {
     @Bindable var settings: GeneralSettings
-    @Bindable var advancedSettings: AdvancedSettings
     @State private var languageOverrideChanged = false
     @State private var relaunchErrorMessage: String?
 
@@ -28,8 +27,9 @@ struct GeneralSettingsPane: View {
                 thawIconOptions
             }
             ThawSection("Menu bar behavior") {
-                AppMenuHidingRow(settings: advancedSettings)
-                Toggle("Right-click the menu bar for the \(Constants.displayName) menu", isOn: $advancedSettings.enableSecondaryContextMenu)
+                AppMenuHidingRow(settings: settings)
+                Toggle("Right-click the menu bar for the \(Constants.displayName) menu", isOn: $settings.enableSecondaryContextMenu)
+                    .settingsSearchAnchor("advanced.enableSecondaryContextMenu")
                     .annotation(
                         "Right-click an empty area of the menu bar to open a minimal version of \(Constants.displayName)'s menu. If macOS opens its own menu instead, hold Option as you right-click.",
                         more: "Turn this off if another app also uses right-clicks on the menu bar."
@@ -45,7 +45,11 @@ struct GeneralSettingsPane: View {
     private var appOptions: some View {
         LaunchAtLoginRow()
         Toggle("Simple Mode", isOn: $settings.simpleMode)
+            .settingsSearchAnchor("general.simpleMode")
             .annotation("Shows only the essential settings, with a preview of your sections. Everything else keeps working as you set it.")
+        Toggle("Show Dock icon while Settings is open", isOn: $settings.showDockIconWithSettings)
+            .settingsSearchAnchor("general.showDockIconWithSettings")
+            .annotation("Off, \(Constants.displayName) stays out of the Dock and its recent apps.")
     }
 
     // MARK: Theme
@@ -53,8 +57,10 @@ struct GeneralSettingsPane: View {
     @ViewBuilder
     private var settingsAppearanceOptions: some View {
         ThawPillPicker("Theme", selection: $settings.settingsAppearance, values: SettingsAppearance.allCases, title: \.localized)
+            .settingsSearchAnchor("general.settingsAppearance")
             .annotation("Applies to Settings and onboarding. Black suits OLED displays.")
         Toggle("Show setting descriptions", isOn: $settings.showSettingDescriptions)
+            .settingsSearchAnchor("general.showSettingDescriptions")
             .annotation("Explains what a setting does directly beneath it, like this text.")
     }
 
@@ -112,12 +118,13 @@ struct GeneralSettingsPane: View {
                 Text(displayName(forLanguage: code)).tag(code)
             }
         }
+        .settingsSearchAnchor("general.appLanguage")
         .annotation("Use \(Constants.displayName) in a different language than the system.")
 
         if languageOverrideChanged {
             HStack {
                 Text("The language change applies after \(Constants.displayName) relaunches.")
-                    .font(.callout)
+                    .font(ThawType.detail)
                     .foregroundStyle(ThawInk.supporting)
                 Spacer()
                 Button("Relaunch Now") {
@@ -153,8 +160,7 @@ struct GeneralSettingsPane: View {
 #if DEBUG
     #Preview {
         GeneralSettingsPane(
-            settings: GeneralSettings(),
-            advancedSettings: AdvancedSettings()
+            settings: GeneralSettings()
         )
         .frame(width: 600, height: 500)
     }

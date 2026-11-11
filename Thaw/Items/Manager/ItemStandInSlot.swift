@@ -63,7 +63,7 @@ nonisolated struct ItemStandInSlot: Hashable, Comparable {
 
     /// The slot a menu bar item belongs to, if it is a stand-in.
     init?(tag: MenuBarItemTag) {
-        guard case let .string(bundleIdentifier) = tag.namespace else { return nil }
+        guard let bundleIdentifier = tag.namespace.bundleIdentifier else { return nil }
         self.init(bundleIdentifier: bundleIdentifier)
     }
 

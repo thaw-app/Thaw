@@ -89,7 +89,7 @@ struct ControlCenterReplacementsTests {
 
     @Test("The module choice round-trips through the settings", .scratchDefaults)
     func storesTheChoice() {
-        let settings = AdvancedSettings()
+        let settings = LayoutSettings()
         settings.controlCenterReplacements = ControlCenterReplacements(
             modules: true, timeMachine: false, textInput: false, skipped: [.userSwitcher]
         )

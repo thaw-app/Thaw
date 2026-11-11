@@ -44,7 +44,7 @@ final class ItemHints {
     }
 
     private func show() {
-        guard let appState, let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main else { return }
+        guard let appState, let screen = NSScreen.activeMenuBarScreenOrMain else { return }
         let targets = Array(Self.itemsOnBar(appState: appState, screen: screen).prefix(Self.letters.count))
         guard !targets.isEmpty else {
             diagLog.info("No menu bar items to hint on display \(screen.displayID)")
@@ -52,7 +52,7 @@ final class ItemHints {
         }
         let hints = zip(Self.letters, targets).map { Hint(letter: $0, item: $1.item, bounds: $1.bounds) }
 
-        let barHeight = screen.getMenuBarHeight() ?? screen.getMenuBarHeightEstimate()
+        let barHeight = screen.getMenuBarHeightEstimate()
         let frame = CGRect(
             x: screen.frame.minX,
             y: screen.frame.maxY - barHeight - Self.hintHeight - 4,

@@ -37,7 +37,7 @@ extension DisplaySettingsManager {
 
     /// Plugging or unplugging a display is not a spacing edit, so it only writes the value.
     static func spacingApplyRelaunchesApps(reason: String) -> Bool {
-        !["screenParametersChanged", "displaySeeded", displayProfileSwitchReason].contains(reason)
+        !["screenParametersChanged", "displaySeeded", displayProfileSwitchReason, settingsLinkReason].contains(reason)
     }
 
     /// Takes a profile's configurations; write-only when a display change switched to the profile.

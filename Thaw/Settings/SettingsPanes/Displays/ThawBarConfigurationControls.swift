@@ -51,23 +51,24 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
     }
 
     var body: some View {
-        ThawPillPicker(
-            "Show hidden items",
-            selection: presentation,
-            options: HiddenItemsPresentation.allCases.map {
-                ThawPillPicker.Option($0, title: $0.localized, systemImage: $0.systemImage)
-            }
-        )
-        .annotation { presentationAnnotation }
+        Toggle("\(Constants.displayName) Bar", isOn: thawBarSwitch)
+            .settingsSearchAnchor("displays.useThawBar")
+            .annotation { thawBarAnnotation }
+
+        Toggle("Always show hidden items", isOn: alwaysShowSwitch)
+            .settingsSearchAnchor("displays.alwaysShowHiddenItems")
+            .disabled(isAlwaysShowDisabled)
+            .annotation { alwaysShowAnnotation }
 
         extraControls()
 
-        if presentation.wrappedValue == .thawBar {
+        if useThawBar {
             ThawPicker("Location", selection: $location) {
                 ForEach(ThawBarLocation.allCases) { location in
                     Text(location.localized).tag(location)
                 }
             }
+            .settingsSearchAnchor("displays.thawBarLocation")
             .annotation { locationAnnotation }
 
             if let shortcutPlacement {
@@ -76,6 +77,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
                         Text(placement.localized).tag(placement)
                     }
                 }
+                .settingsSearchAnchor("general.thawBarLocationOnHotkey")
                 .annotation { shortcutPlacementAnnotation(shortcutPlacement.wrappedValue) }
             }
 
@@ -84,6 +86,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
                 selection: $layout,
                 options: ThawBarLayout.allCases.map { ThawPillPicker.Option($0, title: $0.localized, systemImage: $0.systemImage) }
             )
+            .settingsSearchAnchor("displays.thawBarLayout")
             .annotation { layoutAnnotation }
 
             if layout == .grid {
@@ -98,36 +101,44 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
             }
 
             ThawBarItemSizeRow(scale: $itemScale)
+                .settingsSearchAnchor("displays.thawBarItemSize")
         }
     }
 
-    /// Reads and writes the two switches as one choice.
-    var presentation: Binding<HiddenItemsPresentation> {
-        Binding(
-            get: {
-                HiddenItemsPresentation(useThawBar: useThawBar, alwaysShowHiddenItems: alwaysShowHiddenItems)
-            },
-            set: { choice in
-                let switches = choice.switches
-                useThawBar = switches.useThawBar
-                alwaysShowHiddenItems = switches.alwaysShowHiddenItems
-            }
-        )
+    /// Turns the Thaw Bar on or off and leaves the always-show switch as it is.
+    var thawBarSwitch: Binding<Bool> {
+        $useThawBar
+    }
+
+    /// Keeps hidden items in the menu bar; the Thaw Bar overrides it while it is on.
+    var alwaysShowSwitch: Binding<Bool> {
+        $alwaysShowHiddenItems
+    }
+
+    /// The always-show switch has no effect while the Thaw Bar is on, so it is dimmed then.
+    var isAlwaysShowDisabled: Bool {
+        useThawBar
     }
 
     @ViewBuilder
-    private var presentationAnnotation: some View {
-        switch (presentation.wrappedValue, context) {
-        case (.onClick, .display):
-            Text("Hidden items appear in the menu bar when you reveal them on this display. The \(Constants.displayName) Bar is off.")
-        case (.onClick, .globalTemplate):
-            Text("Hidden items appear in the menu bar when you reveal them. The \(Constants.displayName) Bar is off.")
-        case (.thawBar, _):
-            Text("The \(Constants.displayName) Bar is on. Hidden items appear in it, below the menu bar, when you reveal them.")
-        case (.alwaysShown, .display):
-            Text("Hidden items stay in the menu bar on this display. The \(Constants.displayName) Bar is off.")
-        case (.alwaysShown, .globalTemplate):
-            Text("Hidden items stay in the menu bar. The \(Constants.displayName) Bar is off.")
+    private var thawBarAnnotation: some View {
+        switch context {
+        case .display:
+            Text("When on, hidden items appear in the \(Constants.displayName) Bar below the menu bar on this display.")
+        case .globalTemplate:
+            Text("When on, hidden items appear in the \(Constants.displayName) Bar below the menu bar on new displays.")
+        }
+    }
+
+    @ViewBuilder
+    private var alwaysShowAnnotation: some View {
+        switch (isAlwaysShowDisabled, context) {
+        case (true, _):
+            Text("Has no effect while the \(Constants.displayName) Bar is on, because hidden items appear in it instead.")
+        case (false, .display):
+            Text("Hidden items stay in the menu bar on this display instead of waiting for you to reveal them.")
+        case (false, .globalTemplate):
+            Text("Hidden items stay in the menu bar on new displays instead of waiting for you to reveal them.")
         }
     }
 

@@ -198,7 +198,7 @@ final class UpdatesManager: NSObject {
         }
         startUpdaterIfNeeded()
         // Activate the app in case an alert needs to be displayed.
-        appState.activate(withPolicy: .regular)
+        appState.activate(withPolicy: appState.userWindowActivationPolicy)
         appState.openWindow(.settings)
         updater.checkForUpdates()
     }

@@ -43,20 +43,18 @@ final class MenuBarItemGlyphSlot {
 @Observable
 final class MenuBarItemImageCache: @unchecked Sendable {
     static nonisolated let diagLog = DiagLog(category: "MenuBarItemImageCache")
-    /// Seam over WindowServer reads; tests substitute a fake.
-    let windowServer: any WindowServerReading
     nonisolated let screenIsLocked: @Sendable () -> Bool
     /// Whether a capture asked for now would run; false while no Thaw surface is open.
     nonisolated let captureIsAllowed: @Sendable () -> Bool
+    nonisolated let boundsCropper: AXBoundsCropper
 
     init(
-        windowServer: any WindowServerReading = LiveWindowServerReader(),
         screenIsLocked: @escaping @Sendable () -> Bool = { ScreenLock.isLocked },
         captureIsAllowed: @escaping @Sendable () -> Bool = { ScreenCapture.acceptsCaptures }
     ) {
-        self.windowServer = windowServer
         self.screenIsLocked = screenIsLocked
         self.captureIsAllowed = captureIsAllowed
+        boundsCropper = AXBoundsCropper(screenIsLocked: screenIsLocked, captureIsAllowed: captureIsAllowed)
     }
 
     /// Consecutive capture passes skipped because the bar was mid-reflow.
@@ -66,13 +64,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// skipCaptureWhileScreenLocked(_:).
     @ObservationIgnored var screenLockTransitions = ScreenLockTransitions()
 
-    /// Whether a concealed-section prewarm is running, and the prewarms
-    /// queued behind it. Main actor only. See
-    /// prewarmConcealedImages(sections:onlyMissingImages:).
-    @ObservationIgnored var isConcealedPrewarmRunning = false
+    /// One concealed-section prewarm at a time. Taking it makes any pass admitted before it go stale.
+    @ObservationIgnored private(set) lazy var prewarmSlot = RevealCaptureSlot { [weak self] in self?.appState?.itemManager.layoutPublication.invalidate() }
+
     /// When recapture last asked for a fresh inventory walk; see requestInventoryRefresh(reason:).
     @ObservationIgnored var lastInventoryRefreshRequest: ContinuousClock.Instant?
-    @ObservationIgnored var concealedPrewarmWaiters = ConcealedPrewarmWaiters()
 
     /// Shares one recapture pass among overlapping requests. Main actor only.
     @ObservationIgnored let recaptureCoalescer = RecaptureCoalescer()
@@ -138,10 +134,6 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     let failedCapturesLock = OSAllocatedUnfairLock<[MenuBarItemTag: FailedCapture]>(initialState: [:])
 
-    /// Displays whose hosting-window capture already failed since it last
-    /// succeeded, so the repeats log at debug instead of warning.
-    let hostingFailureWarnedDisplays = OSAllocatedUnfairLock<Set<CGDirectDisplayID>>(initialState: [])
-
     /// Configuration for failed capture handling
     static nonisolated let maxFailuresBeforeBlacklist = 3
     static nonisolated let blacklistCooldownSeconds: TimeInterval = 30
@@ -173,11 +165,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// Watches AppNavigationState's @Observable properties.
     private var navigationStateObservationTask: Task<Void, Never>?
 
-    /// Task observing AdvancedSettings.iconRefreshInterval, which is
+    /// Task observing LayoutSettings.iconRefreshInterval, which is
     /// @Observable rather than a Combine ObservableObject.
     private var iconRefreshIntervalObservationTask: Task<Void, Never>?
 
-    /// Task observing AdvancedSettings.alwaysUseAppIconForMenuBarItems.
+    /// Task observing LayoutSettings.alwaysUseAppIconForMenuBarItems.
     private var alwaysUseAppIconObservationTask: Task<Void, Never>?
 
     private var memoryPressureSource: DispatchSourceMemoryPressure?
@@ -204,10 +196,10 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     @ObservationIgnored
     var diskLoadTask: Task<Void, Never>?
 
-    /// Bumped whenever the cache is emptied on purpose. A load merges only
-    /// under the generation it started with, so it cannot restore released images.
+    /// Where the lazy disk load stands: the generation a load must still be
+    /// in to merge, and whether a save is waiting for it.
     @ObservationIgnored
-    var diskLoadGeneration = 0
+    var diskLoad = DiskLoadState()
 
     /// A slot the cache publishes into, kept only for as long as the consumer
     /// that asked for it holds on.
@@ -384,8 +376,8 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             // Restart the live loop on interval changes. The initial emission
             // is a no-op through the liveRefreshTask guard.
             iconRefreshIntervalObservationTask?.cancel()
-            iconRefreshIntervalObservationTask = Task { @MainActor [weak self, advancedSettings = appState.settings.advanced] in
-                let changes = Observations { advancedSettings.iconRefreshInterval }
+            iconRefreshIntervalObservationTask = Task { @MainActor [weak self, layoutSettings = appState.settings.layout] in
+                let changes = Observations { layoutSettings.iconRefreshInterval }
                 for await _ in changes {
                     guard let self else { return }
                     guard self.liveRefreshTask != nil else { continue }
@@ -398,9 +390,9 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             // Entries rot unread while app icons are on, so rebuild the cache
             // when the preference turns off. The initial value is skipped.
             alwaysUseAppIconObservationTask?.cancel()
-            alwaysUseAppIconObservationTask = Task { @MainActor [weak self, advancedSettings = appState.settings.advanced] in
+            alwaysUseAppIconObservationTask = Task { @MainActor [weak self, layoutSettings = appState.settings.layout] in
                 var previous: Bool?
-                let changes = Observations { advancedSettings.alwaysUseAppIconForMenuBarItems }
+                let changes = Observations { layoutSettings.alwaysUseAppIconForMenuBarItems }
                 for await alwaysUseAppIcon in changes {
                     guard let self else { return }
                     defer { previous = alwaysUseAppIcon }
@@ -564,7 +556,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             let nav = makeNavigationStateSnapshot()
 
             let displayID = appState.itemManager.itemDisplayID
-                ?? windowServer.activeMenuBarDisplayID()
+                ?? Bridging.getActiveMenuBarDisplayID()
                 ?? CGMainDisplayID()
             guard NSScreen.screens.contains(where: { $0.displayID == displayID }) else {
                 changelessStreak = 0

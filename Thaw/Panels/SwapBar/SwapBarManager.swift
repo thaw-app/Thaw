@@ -24,7 +24,7 @@ final class SwapBarManager {
     @ObservationIgnored private weak var appState: AppState?
 
     /// The settings slice this manager observes, injected at setup.
-    @ObservationIgnored private var advancedSettings: AdvancedSettings?
+    @ObservationIgnored private var visibilitySettings: VisibilitySettings?
     @ObservationIgnored private var panel: SwapBarPanel?
     @ObservationIgnored private var cancellables = Set<AnyCancellable>()
     @ObservationIgnored private var pointerMonitor: EventMonitor?
@@ -37,12 +37,12 @@ final class SwapBarManager {
 
     /// Read live from settings so the bar tracks the switch.
     private var isEnabled: Bool {
-        advancedSettings?.enableSwapBar ?? false
+        visibilitySettings?.enableSwapBar ?? false
     }
 
     func performSetup(with appState: AppState, displaySettlements: some Publisher<EnvironmentChange, Never>) {
         self.appState = appState
-        advancedSettings = appState.settings.advanced
+        visibilitySettings = appState.settings.visibility
         cancellables = [
             observeSettingFlips(),
             observeDisplayChanges(displaySettlements),
@@ -52,8 +52,8 @@ final class SwapBarManager {
     // MARK: Observation
 
     private func observeSettingFlips() -> AnyCancellable {
-        guard let advanced = advancedSettings else { return AnyCancellable { /* Nothing was observed, so there is nothing to cancel. */ } }
-        return advanced.observe(\.enableSwapBar) { [weak self] _ in
+        guard let visibility = visibilitySettings else { return AnyCancellable { /* Nothing was observed, so there is nothing to cancel. */ } }
+        return visibility.observe(\.enableSwapBar) { [weak self] _ in
             self?.refresh()
         }
     }
@@ -120,7 +120,7 @@ final class SwapBarManager {
     }
 
     private func reposition(on screen: NSScreen? = nil) {
-        guard let panel, let screen = screen ?? NSScreen.screenWithMouse ?? NSScreen.main else {
+        guard let panel, let screen = screen ?? NSScreen.screenWithMouseOrMain else {
             return
         }
         currentDisplayID = screen.displayID
@@ -316,10 +316,10 @@ struct SwapBarView: View {
         .accessibilityValue(Text(isOn ? "Swapped" : "Not swapped"))
     }
 
-    /// Closing disables the bar; the Settings switch is the only way back.
+    /// The ✕ turns the feature off, so a notice says where to turn it back on.
     private var closeButton: some View {
         Button {
-            appState.settings.advanced.enableSwapBar = false
+            SwapBarTurnOff.turnOff(appState.settings.visibility)
         } label: {
             Image(systemName: "xmark")
                 .font(ThawType.caption.weight(.semibold))
@@ -329,8 +329,8 @@ struct SwapBarView: View {
         }
         .buttonStyle(.plain)
         .thawHoverLift()
-        .help("Close the Swap Bar")
-        .accessibilityLabel("Close")
+        .help(Text(SwapBarTurnOff.title))
+        .accessibilityLabel(Text(SwapBarTurnOff.title))
     }
 
     private var profileMenu: some View {
@@ -391,17 +391,12 @@ struct SwapBarView: View {
         guard metadata.id != profileManager.activeProfileID else {
             return
         }
-        let profile: Profile
         do {
-            profile = try profileManager.loadProfile(id: metadata.id)
+            try profileManager.switchToProfile(id: metadata.id, on: appState)
         } catch {
             Self.diagLog.error("swap bar: profile \(metadata.id) failed to load: \(error)")
             ThawHUD.show(symbol: "exclamationmark.triangle", text: "Profile not applied")
-            return
         }
-        let previousID = profileManager.activeProfileID
-        profileManager.activeProfileID = metadata.id
-        profileManager.applyProfile(profile, to: appState, previousProfileID: previousID)
     }
 }
 

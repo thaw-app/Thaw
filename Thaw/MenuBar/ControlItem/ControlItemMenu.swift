@@ -97,7 +97,7 @@ final class ControlItemMenuController: NSObject {
     }
 
     /// What is listening or watching right now; empty while the camera and
-    /// microphone alerts are off (see RecordingWatchPolicy.alertsAvailable). Only the microphone names an app: no public API says who
+    /// microphone alerts are off. Only the microphone names an app: no public API says who
     /// holds a camera.
     private func recordingWatchItems(appState: AppState) -> [NSMenuItem] {
         let activity = appState.recordingWatchManager.activity
@@ -152,7 +152,7 @@ final class ControlItemMenuController: NSObject {
             action: #selector(toggleSwapBar),
             keyEquivalent: ""
         )
-        item.state = appState.settings.advanced.enableSwapBar ? .on : .off
+        item.state = appState.settings.visibility.enableSwapBar ? .on : .off
         item.target = self
         return item
     }
@@ -300,8 +300,8 @@ final class ControlItemMenuController: NSObject {
     }
 
     @objc private func toggleSwapBar() {
-        guard let advanced = appState?.settings.advanced else { return }
-        advanced.enableSwapBar.toggle()
+        guard let visibility = appState?.settings.visibility else { return }
+        visibility.enableSwapBar.toggle()
     }
 
     @objc private func applyProfileFromMenu(_ menuItem: NSMenuItem) {
@@ -318,10 +318,7 @@ final class ControlItemMenuController: NSObject {
             // The menu is already closed, so a silent failure would look like
             // success. Report it the way the Profiles pane does.
             do {
-                let profile = try profileManager.loadProfile(id: profileID)
-                let previousID = profileManager.activeProfileID
-                profileManager.activeProfileID = profileID
-                profileManager.applyProfile(profile, to: appState, previousProfileID: previousID)
+                try profileManager.switchToProfile(id: profileID, on: appState)
             } catch {
                 Self.diagLog.error("Could not apply profile \(profileID) from the status menu: \(error)")
                 NSAlert(error: error).runModal()

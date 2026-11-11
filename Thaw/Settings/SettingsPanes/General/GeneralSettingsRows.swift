@@ -25,6 +25,7 @@ struct LaunchAtLoginRow: View {
                 Task { await setting.setEnabled(enabled) }
             }
         ))
+        .settingsSearchAnchor("general.launchAtLogin")
         .disabled(!setting.isLoaded || setting.isUpdating)
         .task {
             let activations = NotificationCenter.default.notifications(named: NSApplication.didBecomeActiveNotification)
@@ -45,11 +46,11 @@ struct ShowThawIconRow: View {
     @State private var placementBlock: ControlItem.PlacementBlock?
 
     /// Names only the gestures that currently do something: double-click needs
-    /// Always Hidden, and the swap option changes what a click does.
+    /// its shortcut enabled, and the swap option changes what a click does.
     private var gestureSummary: LocalizedStringResource {
-        let advanced = appState.settings.advanced
-        let doubleClickOpensAlwaysHidden = advanced.isAlwaysHiddenSectionEnabled
-        switch (advanced.swapOnThawIconClick, doubleClickOpensAlwaysHidden) {
+        let visibility = appState.settings.visibility
+        let doubleClickOpensAlwaysHidden = appState.settings.usesIconDoubleClickForAlwaysHidden
+        switch (visibility.swapOnThawIconClick, doubleClickOpensAlwaysHidden) {
         case (false, true):
             return "Click to show hidden items, double-click for Always Hidden, and right-click for settings."
         case (false, false):
@@ -63,6 +64,7 @@ struct ShowThawIconRow: View {
 
     var body: some View {
         Toggle("Show \(Constants.displayName) icon", isOn: $settings.showThawIcon)
+            .settingsSearchAnchor("general.showThawIcon")
             .annotation(gestureSummary)
             .task {
                 guard let item = appState.menuBarManager.controlItem(withName: .visible) else { return }
@@ -72,12 +74,13 @@ struct ShowThawIconRow: View {
             }
         if settings.showThawIcon {
             ThawIconPicker(settings: settings)
+                .settingsSearchAnchor("general.thawIcon")
             if let placementBlock {
                 ThawPlacementWarning(block: placementBlock)
             }
         } else {
             Text("Hiding the icon also shrinks the section dividers to nothing. If items start landing in the wrong section, show the icon again.")
-                .font(.footnote)
+                .font(ThawType.footnote)
                 .foregroundStyle(.secondary)
         }
         if !settings.showThawIcon, placementBlock == .deniedBySystem {
@@ -97,8 +100,8 @@ struct ThawPlacementWarning: View {
         case .unknown: "The \(Constants.displayName) icon isn't in the menu bar"
         }
         let message: LocalizedStringResource = switch block {
-        case .deniedBySystem: "\(Constants.displayName) can't hide or arrange anything until it is switched back on in System Settings > Menu Bar."
-        case .unknown: "macOS may be blocking it. Check that \(Constants.displayName) is switched on in System Settings > Menu Bar."
+        case .deniedBySystem: "\(Constants.displayName) can't hide or arrange anything until it is switched back on in System Settings \(Constants.menuArrow) Menu Bar."
+        case .unknown: "macOS may be blocking it. Check that \(Constants.displayName) is switched on in System Settings \(Constants.menuArrow) Menu Bar."
         }
         return SettingsWarningPill(
             title: title,
@@ -115,15 +118,18 @@ struct ThawPlacementWarning: View {
 
 /// Which gestures on an empty stretch of the menu bar reveal hidden items.
 struct ShowHiddenItemsOnRow: View {
-    @Bindable var settings: GeneralSettings
+    @Bindable var settings: VisibilitySettings
 
     var body: some View {
         ToggleButtonRow("Show hidden items on") {
             Toggle("Click", isOn: $settings.showOnClick)
+                .settingsSearchAnchor("general.showOnClick")
                 .help("Click an empty area of the menu bar to show hidden menu bar items.")
             Toggle("Hover", isOn: $settings.showOnHover)
+                .settingsSearchAnchor("general.showOnHover")
                 .help("Hover over an empty area of the menu bar or the \(Constants.displayName) icon to show hidden menu bar items.")
             Toggle("Scroll", isOn: $settings.showOnScroll)
+                .settingsSearchAnchor("general.showOnScroll")
                 .help("Scroll or swipe in the menu bar to show hidden menu bar items.")
         }
         .annotation("Show hidden menu bar items by clicking, hovering, or scrolling in an empty area of the menu bar.")
@@ -157,7 +163,7 @@ struct ToggleButtonRow<Toggles: View>: View {
 
 /// When revealed items hide themselves again, as one menu over the three stored settings.
 struct RehideChoiceRow: View {
-    @Bindable var settings: GeneralSettings
+    @Bindable var settings: VisibilitySettings
 
     private var choice: SimpleRehideChoice {
         SimpleRehideChoice(autoRehide: settings.autoRehide, strategy: settings.rehideStrategy, interval: settings.rehideInterval)
@@ -179,6 +185,7 @@ struct RehideChoiceRow: View {
                 Text(option.title).tag(option)
             }
         }
+        .settingsSearchAnchor("general.autoRehide")
         .annotation(choice.explanation)
     }
 }

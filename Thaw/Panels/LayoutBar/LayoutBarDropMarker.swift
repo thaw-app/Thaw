@@ -72,16 +72,17 @@ nonisolated enum LayoutBarDropMarker {
 }
 
 extension LayoutBarContainer {
-    /// Where a handle drop at x, in this view's coordinates, lands; the marker and the drop both read it.
+    /// Where a handle drop at x, along the single-row sweep, lands; the marker and the drop both read it.
     func groupDropDestination(atX x: CGFloat) -> LayoutBarDropMarker.GroupDestination {
         let identifiers = LayoutBarPaddingView.layoutItemsForPersistence(from: arrangedViews).map(\.uniqueIdentifier)
-        let slots = arrangedViews.filter { !$0.isNewItemsBadge }.map { view in
+        let slots = arrangedViews.indices.filter { !arrangedViews[$0].isNewItemsBadge }.map { index in
+            let view = arrangedViews[index]
             var itemIndex: Int?
             if case let .item(item) = view.kind {
                 itemIndex = identifiers.firstIndex(of: item.uniqueIdentifier)
             }
             let holdsItems = !LayoutBarPaddingView.persistableItems(from: [view.kind]).isEmpty
-            return LayoutBarDropMarker.Slot(frame: view.frame, itemIndex: itemIndex, holdsItems: holdsItems)
+            return LayoutBarDropMarker.Slot(frame: sweepFrame(at: index), itemIndex: itemIndex, holdsItems: holdsItems)
         }
         return LayoutBarDropMarker.groupDestination(forX: x, among: slots, itemCount: identifiers.count)
     }

@@ -52,8 +52,8 @@ struct ProfileManagerStorageTests {
     func saveCapturesCurrentState() throws {
         try ProfileTestDirectory.withManager(seeding: []) { manager, tmp in
             let appState = AppState()
-            appState.settings.general.showOnHover = !Defaults.DefaultValue.showOnHover
-            appState.settings.advanced.tooltipDelay = 2.5
+            appState.settings.visibility.showOnHover = !Defaults.DefaultValue.showOnHover
+            appState.settings.visibility.tooltipDelay = 2.5
             appState.settings.displaySettings.confirmSpacingRelaunch = false
 
             let id = try manager.saveProfile(name: "Work", from: appState)
@@ -129,6 +129,21 @@ struct ProfileManagerStorageTests {
         }
     }
 
+    @Test("Renaming or duplicating an older profile keeps it not storing the Always Hidden switch")
+    func rewritesKeepAnOldProfileNotStoringTheSwitch() throws {
+        try ProfileTestDirectory.withManager(seeding: ["Old"]) { manager, tmp in
+            let meta = try #require(manager.profiles.first)
+            #expect(try !manager.loadProfile(id: meta.id).storesAlwaysHiddenSection, "the seed is an older file")
+
+            try manager.renameProfile(id: meta.id, to: "Renamed")
+            #expect(try !manager.loadProfile(id: meta.id).storesAlwaysHiddenSection)
+
+            try manager.duplicateProfile(id: meta.id, newName: "Copy")
+            let copyID = try #require(manager.profiles.last { $0.name == "Copy" }?.id)
+            #expect(try !manager.loadProfile(id: copyID).storesAlwaysHiddenSection)
+        }
+    }
+
     @Test("Renaming changes the file and the manifest but keeps the identity")
     func renameProfile() throws {
         try ProfileTestDirectory.withManager(seeding: ["Old"]) { manager, tmp in
@@ -194,7 +209,7 @@ struct ProfileManagerStorageTests {
             let gone = manager.profiles[1].id
             try FileManager.default.removeItem(at: tmp.appendingPathComponent("\(gone.uuidString).json"))
 
-            let json = try #require(manager.exportAllProfiles())
+            let json = try #require(manager.exportAllProfiles().json)
             let bundle = try Self.decoder.decode(ProfileExportBundle.self, from: Data(json.utf8))
             #expect(bundle.entries.map(\.profile.name) == ["A", "C"])
             #expect(bundle.version == 1)
@@ -239,6 +254,64 @@ struct ProfileManagerStorageTests {
             #expect(manager.profiles[2].associatedSpaceKey == nil)
             #expect(manager.profiles[1].associatedDisplayUUID == "D")
             #expect(manager.activeProfileID == removed.id)
+        }
+    }
+
+    @Test("Undoing duplication clears a copy that became active after it was created")
+    func undoActiveDuplicate() throws {
+        try ProfileTestDirectory.withManager(seeding: ["A"]) { manager, _ in
+            let original = try #require(manager.profiles.first)
+            try manager.duplicateProfile(id: original.id, newName: "Copy")
+            let copy = try #require(manager.profiles.last)
+            manager.activeProfileID = copy.id
+            let appState = AppState()
+            manager.appState = appState
+            appState.itemManager.rearmActiveProfileLayout(
+                pinnedHidden: [], pinnedAlwaysHidden: [], sectionOrder: [:], itemSectionMap: [:], itemOrder: [:]
+            )
+            #expect(appState.itemManager.activeProfileLayout != nil)
+
+            let restore = try ProfileUndoStep.delete(id: copy.id).apply(to: manager)
+
+            #expect(manager.activeProfileID == nil)
+            #expect(appState.itemManager.activeProfileLayout == nil)
+            #expect(manager.profiles.map(\.id) == [original.id])
+            _ = try restore.apply(to: manager)
+            #expect(manager.activeProfileID == copy.id)
+        }
+    }
+
+    @Test("Undoing creation keeps a different profile active")
+    func undoCreationPreservesCurrentProfile() throws {
+        try ProfileTestDirectory.withManager(seeding: ["Created", "Current"]) { manager, _ in
+            let created = manager.profiles[0].id
+            let current = manager.profiles[1].id
+            manager.activeProfileID = current
+
+            let restore = try ProfileUndoStep.delete(id: created).apply(to: manager)
+
+            #expect(manager.activeProfileID == current)
+            #expect(manager.profiles.map(\.id) == [current])
+            _ = try restore.apply(to: manager)
+            #expect(manager.activeProfileID == current)
+        }
+    }
+
+    @Test("Redoing deletion checks the active profile again")
+    func redoDeletionPreservesLaterProfile() throws {
+        try ProfileTestDirectory.withManager(seeding: ["A", "B"]) { manager, _ in
+            let first = manager.profiles[0].id
+            let second = manager.profiles[1].id
+            manager.activeProfileID = first
+            let restore = try ProfileUndoStep.delete(id: first).apply(to: manager)
+            let redo = try restore.apply(to: manager)
+            #expect(manager.activeProfileID == first)
+            manager.activeProfileID = second
+
+            _ = try redo.apply(to: manager)
+
+            #expect(manager.activeProfileID == second)
+            #expect(manager.profiles.map(\.id) == [second])
         }
     }
 
@@ -328,7 +401,7 @@ struct ProfileManagerStorageTests {
             profile.automation = automation
             try manager.replaceProfile(profile)
             let appState = AppState()
-            appState.settings.advanced.showOnHoverDelay = 1.75
+            appState.settings.visibility.showOnHoverDelay = 1.75
             appState.settings.displaySettings.unconfirmedSpacingProfileScope = .allProfiles
 
             try manager.updateProfile(id: id, scope: .configurationOnly, appState: appState)
@@ -354,7 +427,7 @@ struct ProfileManagerStorageTests {
             original.automation = automation
             try manager.replaceProfile(original)
             let appState = AppState()
-            appState.settings.general.autoRehide = !Defaults.DefaultValue.autoRehide
+            appState.settings.visibility.autoRehide = !Defaults.DefaultValue.autoRehide
 
             try manager.updateProfile(id: meta.id, scope: .all, appState: appState)
 

@@ -22,6 +22,9 @@ struct MenuBarLayoutSettingsPane: View {
     @State private var isDeniedBySystem = false
     /// Refresh hidden occupancy from tags, not geometry, to avoid jitter; see MenuBarLayoutGroupsSection.
     @State private var isNothingHidden = false
+    /// Set while macOS's own overflow is hiding items on the display the bars show.
+    @State private var isOutOfRoom = false
+    @State private var namesNotDrawn: [String] = []
 
     private var menuBarManager: MenuBarManager {
         appState.menuBarManager
@@ -58,9 +61,7 @@ struct MenuBarLayoutSettingsPane: View {
     }
 
     private func syncHidingAvailability() {
-        let controller = menuBarManager.sectionController
-        // An absent engine does not prove hiding is unsupported; warn only for a running backend.
-        isHidingAvailable = controller.isOperational ? controller.isHidingAvailable : true
+        isHidingAvailable = !menuBarManager.sectionController.isHidingUnavailable
     }
 
     var body: some View {
@@ -76,6 +77,7 @@ struct MenuBarLayoutSettingsPane: View {
                 let banner = LayoutBanner.mostSerious(
                     isDeniedBySystem: isDeniedBySystem,
                     hasItemsOutOfReach: !itemManager.unseenHostBundleIDs.isEmpty,
+                    isOutOfRoom: isOutOfRoom,
                     hasScreenRecording: hasScreenRecordingPermission
                 )
                 switch banner {
@@ -95,6 +97,8 @@ struct MenuBarLayoutSettingsPane: View {
                             }
                         }
                     )
+                case .outOfRoom:
+                    OutOfRoomWarning(hiddenItemNames: namesNotDrawn)
                 case .noScreenRecording:
                     SettingsWarningPill(
                         title: "Showing app icons",
@@ -128,10 +132,17 @@ struct MenuBarLayoutSettingsPane: View {
             )
         }
         .thawAnimation(ThawMotion.settle, value: showsHideByDragHint)
+        .modifier(LayoutUndoShortcuts(undoManager: appState.layoutUndo))
         .errorAlert("Couldn’t relaunch \(Constants.displayName)", message: $relaunchErrorMessage)
         .modifier(
             HiddenSectionOccupancySync(itemManager: itemManager) {
                 syncHiddenSectionOccupancy()
+            }
+        )
+        .modifier(
+            OutOfRoomSync(itemManager: itemManager, presence: appState.nativeOverflowPresence) { isOutOfRoom, names in
+                self.isOutOfRoom = isOutOfRoom
+                namesNotDrawn = names
             }
         )
         .onAppear {
@@ -162,114 +173,31 @@ private struct HiddenSectionOccupancySync: ViewModifier {
     }
 }
 
-/// The lists under the bars, one at a time: Options, Groups, Spacers and Apple's Items.
-/// Search results switch to the tab that holds them.
-private struct LayoutDetailTabs: View {
-    @Environment(AppState.self) private var appState
-    let itemManager: MenuBarItemManager
-    let canArrangeLayout: Bool
-    let isHidingUnavailable: Bool
-
-    @State private var tab = LayoutDetailTab.options
-
-    var body: some View {
-        let settings = appState.settings.advanced
-        // Groups and Apple's items need the bars, so without them only Options and Spacers are offered.
-        let tabs = canArrangeLayout ? LayoutDetailTab.allCases : [.options, .spacers]
-        SettingsPaneTabs(selection: $tab, tabs: tabs, tabForDisclosure: { LayoutDetailTab.tab(for: $0) })
-        switch tabs.contains(tab) ? tab : .options {
-        case .groups:
-            MenuBarLayoutGroupsSection()
-        case .spacers:
-            ThawSection("Spacers") {
-                LayoutSpacersRows(spacerManager: appState.spacerManager)
-            }
-        case .appleItems:
-            ControlCenterReplacementsSection(settings: settings)
-        case .options:
-            LayoutSectionOptions(settings: settings, isHidingUnavailable: isHidingUnavailable)
-            HidingMethodSection(settings: settings)
-            LayoutOverflowSection(settings: settings)
-            if canArrangeLayout {
-                LayoutResetControls(
-                    itemManager: itemManager,
-                    controlItemsDisabled: itemManager.areControlItemsMissing,
-                    alwaysHiddenEnabled: settings.enableAlwaysHiddenSection
-                )
-            }
-        }
-    }
-}
-
-private struct LayoutOverflowSection: View {
-    @Bindable var settings: AdvancedSettings
+struct LayoutOverflowSection: View {
+    @Bindable var settings: LayoutSettings
 
     var body: some View {
         ThawSection("Overflow and previews") {
-            Toggle(
-                "Move items that don’t fit into Hidden",
-                isOn: $settings.enableMenuBarItemOverflow
-            )
-            .annotation(
-                "When the menu bar is full, move the Visible items that don’t fit into Hidden and open them from the \(Constants.displayName) Bar.",
-                more: "Leave this off if you prefer macOS’s » button: macOS keeps the items that don’t fit there, and your layout stays exactly as you arranged it."
-            )
-            Toggle(
-                "Use app icons instead of live previews",
-                isOn: $settings.alwaysUseAppIconForMenuBarItems
-            )
-            .annotation(
-                "Show each item's app icon in the Thaw Bar and Layout instead of a live screenshot.",
-                more: "Turn this on if macOS's overflow arrow shows up in item previews. The real menu bar is unaffected."
-            )
-        }
-    }
-}
-
-private struct LayoutSectionOptions: View {
-    @Bindable var settings: AdvancedSettings
-    let isHidingUnavailable: Bool
-
-    var body: some View {
-        ThawSection {
-            Text("Sections")
-        } content: {
-            // Arrangement leads because it gates the section controls.
-            ThawPillPicker(
-                "Item arrangement",
-                selection: $settings.menuBarArrangementMode,
-                values: MenuBarArrangementMode.allCases,
-                title: \.localized
-            )
-            .annotation(settings.menuBarArrangementMode.explanation)
-
-            Toggle(
-                "Always Hidden",
-                isOn: $settings.enableAlwaysHiddenSection
-            )
-            .annotation("Adds a third section for items you rarely need. They stay out of sight when you show your Hidden items.")
-            ThawPicker("Section divider style", selection: $settings.sectionDividerStyle) {
-                ForEach(SectionDividerStyle.allCases) { style in
-                    Text(style.localized).tag(style)
-                }
-            }
-            if settings.sectionDividerStyle == .custom {
-                CustomSectionDividerControls(settings: settings)
-            }
-        } footer: {
-            if isHidingUnavailable {
-                SettingsWarningPill(
-                    title: "Hiding unavailable",
-                    message: "This version of macOS doesn't let \(Constants.displayName) hide items. You can still reorder them in the bars above."
+            Toggle("Move items that don’t fit into Hidden", isOn: $settings.enableMenuBarItemOverflow)
+                .settingsSearchAnchor("advanced.enableMenuBarItemOverflow")
+                .annotation(
+                    "When the menu bar is full, move the Visible items that don’t fit into Hidden and open them from the \(Constants.displayName) Bar.",
+                    more: "Leave this off if you prefer macOS’s » button: macOS keeps the items that don’t fit there, and your layout stays exactly as you arranged it."
                 )
-            }
+            Toggle("Use app icons instead of live previews", isOn: $settings.alwaysUseAppIconForMenuBarItems)
+                .settingsSearchAnchor("advanced.alwaysUseAppIconForMenuBarItems")
+                .annotation(
+                    "Show each item's app icon in the Thaw Bar and Layout instead of a live screenshot.",
+                    more: "Turn this on if macOS's overflow arrow shows up in item previews. The real menu bar is unaffected."
+                )
         }
     }
 }
 
 /// Spacer rows use a collapsed disclosure rather than a separate card because tuning is infrequent.
-private struct LayoutSpacersRows: View {
+struct LayoutSpacersRows: View {
     let spacerManager: MenuBarSpacerManager
+    let undoManager: UndoManager
 
     var body: some View {
         if let failure = spacerManager.lastPersistenceFailure {
@@ -297,10 +225,7 @@ private struct LayoutSpacersRows: View {
                     .labelsHidden()
                     .help("Fill the spacer with a color. Fully transparent renders as an empty gap.")
                     ThawSlider(
-                        value: Binding(
-                            get: { Double(spacer.width) },
-                            set: { spacerManager.setWidth(CGFloat($0), for: spacer.id) }
-                        ),
+                        value: Binding(get: { Double(spacer.width) }, set: { spacerManager.setWidth(CGFloat($0), for: spacer.id, undoManager: undoManager) }),
                         in: Double(MenuBarSpacer.minWidth) ... Double(MenuBarSpacer.maxWidth),
                         step: 4
                     ) {
@@ -308,7 +233,7 @@ private struct LayoutSpacersRows: View {
                             .monospacedDigit()
                     }
                     Button {
-                        spacerManager.removeSpacer(id: spacer.id)
+                        spacerManager.removeSpacer(id: spacer.id, undoManager: undoManager)
                     } label: {
                         Image(systemName: "trash")
                     }
@@ -322,89 +247,13 @@ private struct LayoutSpacersRows: View {
         }
 
         Button("Add Spacer") {
-            spacerManager.addSpacer()
+            spacerManager.addSpacer(undoManager: undoManager)
         }
         .buttonStyle(.settingsGlass)
         .annotation(
             "Inserts an empty gap item into the menu bar.",
             more: "To move it, hold ⌘ Command and drag it in the menu bar, like any other item."
         )
-    }
-}
-
-struct LayoutBarsSection: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(AppState.self) private var appState
-    let itemManager: MenuBarItemManager
-
-    var body: some View {
-        // A header avoids row clipping 20pt below the card's top edge; no rows means no card obscuring the first bar.
-        Section {
-            EmptyView()
-        } header: {
-            FoldedMenuBar(itemManager: itemManager, arrangement: .spaced)
-                .textCase(nil)
-                .font(nil)
-                .foregroundStyle(.primary)
-                // Grouped Form rows stop growing at a fixed width; size from the scroll view less the Form's 20pt insets, but never set the Form's minimum.
-                .containerRelativeFrame(.horizontal) { width, _ in width - 40 }.frame(minWidth: 0, maxWidth: .infinity)
-        } footer: {
-            HStack(alignment: .firstTextBaseline, spacing: ThawSpacing.base) {
-                Text("Drag items between sections. Hold ⌘ Command to drag in the menu bar.")
-                    .font(ThawType.footnote)
-                    .foregroundStyle(ThawInk.supporting)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: ThawSpacing.base)
-                HiddenItemCaptureButton()
-                if showsPopOutButton {
-                    popOutButton
-                }
-            }
-        }
-
-        layoutRefusalNotice
-    }
-
-    /// Not inside the pop-out itself.
-    private var showsPopOutButton: Bool {
-        !appState.navigationState.isLayoutEditorPresented
-    }
-
-    private var popOutButton: some View {
-        Button("Pop Out Editor", systemImage: "rectangle.portrait.and.arrow.right") {
-            guard let screen = MenuBarLayoutEditorPanel.defaultScreen else { return }
-            let menuBarManager = appState.menuBarManager
-            menuBarManager.layoutEditorPanel.show(on: screen, usesReorderEditor: true) {
-                menuBarManager.dismissLayoutEditorPanel()
-            }
-        }
-        .buttonStyle(.settingsGlass)
-        .help("Opens the reorder editor in its own window.")
-    }
-
-    /// A refused group move snaps back with no other explanation, so the
-    /// reason appears here rather than in a modal that would cover the bars.
-    @ViewBuilder
-    private var layoutRefusalNotice: some View {
-        if let refusal = appState.layoutFeedback.refusal {
-            VStack(alignment: .leading, spacing: ThawSpacing.inset) {
-                Text("macOS 27 does not let \(Constants.displayName) hide some system items.")
-                    .font(ThawType.footnote)
-                    .foregroundStyle(ThawInk.supporting)
-                    .fixedSize(horizontal: false, vertical: true)
-                SettingsWarningPill(
-                    title: LocalizedStringResource(String.LocalizationValue(refusal.title)),
-                    message: LocalizedStringResource(String.LocalizationValue(refusal.message)),
-                    systemImage: "exclamationmark.triangle.fill",
-                    tint: .orange,
-                    actionTitle: "Dismiss"
-                ) {
-                    appState.layoutFeedback.clear()
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .transition(.fade(reduceMotion: reduceMotion))
-        }
     }
 }
 
@@ -422,6 +271,7 @@ struct LayoutResetControls: View {
                 controlItemsDisabled: controlItemsDisabled,
                 alwaysHiddenEnabled: alwaysHiddenEnabled
             )
+            .settingsSearchAnchor("layout.resetMenuBarLayout")
         }
     }
 }
@@ -581,7 +431,7 @@ struct CannotArrangeLayoutView: View {
         ThawEmptyState(
             systemImage: "menubar.rectangle",
             title: "\(Constants.displayName) cannot arrange menu bar items in automatically hidden menu bars.",
-            caption: "Turn off automatic menu bar hiding in System Settings > Control Center"
+            caption: "Turn off automatic menu bar hiding in System Settings \(Constants.menuArrow) Control Center"
         )
     }
 }
@@ -598,7 +448,7 @@ private struct LayoutSuggestionCards: View {
         itemManager.managedItems(for: .visible)
     }
 
-    // Hints suggest improvements, not failures; closing means "Not now" and suppresses them for a month.
+    /// Hints suggest improvements, not failures; closing means "Not now" and suppresses them for a month.
     var body: some View {
         // swiftlint:disable:next redundant_discardable_let
         let _ = dismissals

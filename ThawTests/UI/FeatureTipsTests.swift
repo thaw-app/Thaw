@@ -58,6 +58,16 @@ struct FeatureTipsTests {
         #expect(!LayoutMultiSelectTip.isUpgrade(previousVersion: ""))
     }
 
+    /// Only upgraders saw the multi-select tip, so new installs never learned ⌘- and ⇧-click.
+    @Test("The tip shows to new installs and upgraders, not to people already on multi-select")
+    func showsToNewInstalls() {
+        #expect(LayoutMultiSelectTip.shouldShow(previousVersion: nil))
+        #expect(LayoutMultiSelectTip.shouldShow(previousVersion: ""))
+        #expect(LayoutMultiSelectTip.shouldShow(previousVersion: "3.0.0-alpha.9"))
+        #expect(!LayoutMultiSelectTip.shouldShow(previousVersion: "3.0.0-alpha.11"))
+        #expect(!LayoutMultiSelectTip.shouldShow(previousVersion: "3.0.0"))
+    }
+
     @Test("The datastore sits in the build's own Application Support folder")
     func datastoreLocation() {
         let url = FeatureTips.datastoreURL(applicationSupport: Self.appSupport, bundleIdentifier: "com.stonerl.Thaw.debug")
@@ -103,7 +113,7 @@ struct FeatureTipsTests {
         recorder.failure = nil
         configure(tips)
         #expect(tips.isConfigured)
-        #expect(recorder.setups.map(\.isMultiSelectUpgrade) == [false])
+        #expect(recorder.setups.map(\.isMultiSelectUpgrade) == [true], "no recorded version is a new install")
     }
 
     @Test("Under the test runner nothing is configured and multi-select retires nothing")
@@ -128,7 +138,7 @@ struct FeatureTipsTests {
     @Test("The tip says what it announces, has no display limit and waits only for an upgrade")
     func tipContent() {
         let tip = LayoutMultiSelectTip()
-        #expect(String(localized: LayoutMultiSelectTip.titleResource) == "New: select several items")
+        #expect(String(localized: LayoutMultiSelectTip.titleResource) == "Select several items")
         #expect(String(localized: LayoutMultiSelectTip.messageResource).contains("right-click"))
         #expect(tip.message != nil)
         #expect(tip.image != nil)

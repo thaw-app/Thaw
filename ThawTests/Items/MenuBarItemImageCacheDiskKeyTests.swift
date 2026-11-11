@@ -41,6 +41,32 @@ struct MenuBarItemImageCacheDiskKeyTests {
         return MenuBarItemGlyphCapture(cgImage: context.makeImage()!, scale: scale)
     }
 
+    @Test("A second instance's saved identifier rebuilds a tag that matches the live item")
+    func secondInstanceRoundTrips() throws {
+        let live = MenuBarItemTag(namespace: .string("com.example.two"), title: "Item-0", windowID: 41, instanceIndex: 1)
+        let rebuilt = try #require(MenuBarItemImageCache.diskEntryTag(identifier: live.tagIdentifier, instanceIndex: 1))
+        #expect(rebuilt.title == "Item-0")
+        #expect(rebuilt.instanceIndex == 1)
+        #expect(rebuilt.matchesIgnoringWindowID(live))
+        #expect(rebuilt.tagIdentifier == live.tagIdentifier)
+    }
+
+    @Test("A title that ends in a number of its own keeps it when the entry names no instance")
+    func numberedTitleIsNotAnInstance() throws {
+        let rebuilt = try #require(MenuBarItemImageCache.diskEntryTag(identifier: "com.example.ns:_NS:12", instanceIndex: 0))
+        #expect(rebuilt.title == "_NS:12")
+        #expect(rebuilt.instanceIndex == 0)
+    }
+
+    @Test("An entry from before the instance was stored, or one that names no item, is read as before")
+    func oldAndBrokenIdentifiers() {
+        #expect(MenuBarItemImageCache.diskEntryTag(identifier: "com.example.old:Item-0:1", instanceIndex: 0)?.title == "Item-0:1")
+        #expect(MenuBarItemImageCache.diskEntryTag(identifier: "com.example.odd:Item-0", instanceIndex: 3)?.instanceIndex == 0)
+        #expect(MenuBarItemImageCache.diskEntryTag(identifier: "no-colon", instanceIndex: 0) == nil)
+        #expect(MenuBarItemImageCache.diskEntryTag(identifier: "com.example.empty:", instanceIndex: 0) == nil)
+        #expect(MenuBarItemImageCache.diskEntryTag(identifier: ":title", instanceIndex: 0) == nil)
+    }
+
     @Test("distinct identifiers all survive")
     func distinctIdentifiersSurvive() {
         let a = Self.tag("com.a", "A", windowID: 1)

@@ -132,6 +132,6 @@ nonisolated enum MoveTargeting {
     /// pins, mirroring MenuBarItemTag.isNonConcealableSystemItem for the
     /// case where only the identifier is in hand.
     static func namesPinnedSystemItem(_ identifier: String) -> Bool {
-        identifier.hasPrefix("com.apple.")
+        SharedConstants.isAppleBundleIdentifier(identifier)
     }
 }

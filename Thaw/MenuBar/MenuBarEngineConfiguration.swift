@@ -24,6 +24,7 @@ protocol MenuBarEngineConfiguration: AnyObject, Observable {
     var showOnHover: Bool { get }
     var showOnHoverDelay: TimeInterval { get }
     var showOnScroll: Bool { get }
+    var usesIconDoubleClickForAlwaysHidden: Bool { get }
     var swapOnThawIconClick: Bool { get }
 
     // Rehiding
@@ -61,57 +62,64 @@ extension AppSettings {
 
 extension AppSettings: MenuBarEngineConfiguration {
     var isAlwaysHiddenSectionEnabled: Bool {
-        advanced.isAlwaysHiddenSectionEnabled
+        layout.isAlwaysHiddenSectionEnabled
     }
 
     var sectionDividerStyle: SectionDividerStyle {
-        advanced.sectionDividerStyle
+        layout.sectionDividerStyle
     }
 
     var customSectionDividerMark: SectionDividerCustomMark? {
-        advanced.customSectionDividerImage.map {
-            SectionDividerCustomMark(data: $0, isTemplate: advanced.customSectionDividerIsTemplate)
+        layout.customSectionDividerImage.map {
+            SectionDividerCustomMark(data: $0, isTemplate: layout.customSectionDividerIsTemplate)
         }
     }
 
     var showAllSectionsOnUserDrag: Bool {
-        advanced.showAllSectionsOnUserDrag
+        layout.showAllSectionsOnUserDrag
     }
 
     var showOnClick: Bool {
-        general.showOnClick
+        visibility.showOnClick
     }
 
     var showOnHover: Bool {
-        general.showOnHover
+        visibility.showOnHover
     }
 
     var showOnHoverDelay: TimeInterval {
-        advanced.showOnHoverDelay
+        visibility.showOnHoverDelay
     }
 
     var showOnScroll: Bool {
-        general.showOnScroll
+        visibility.showOnScroll
+    }
+
+    var usesIconDoubleClickForAlwaysHidden: Bool {
+        ControlItem.usesIconDoubleClickForAlwaysHidden(
+            isSectionEnabled: layout.isAlwaysHiddenSectionEnabled,
+            isGestureEnabled: visibility.showAlwaysHiddenOnIconDoubleClick
+        )
     }
 
     var swapOnThawIconClick: Bool {
-        advanced.swapOnThawIconClick
+        visibility.swapOnThawIconClick
     }
 
     var autoRehide: Bool {
-        general.autoRehide
+        visibility.autoRehide
     }
 
     var rehideStrategy: RehideStrategy {
-        general.rehideStrategy
+        visibility.rehideStrategy
     }
 
     var rehideInterval: TimeInterval {
-        general.rehideInterval
+        visibility.rehideInterval
     }
 
     var tempShowInterval: TimeInterval {
-        general.tempShowInterval
+        visibility.tempShowInterval
     }
 
     var showThawIcon: Bool {
@@ -127,19 +135,19 @@ extension AppSettings: MenuBarEngineConfiguration {
     }
 
     var hideApplicationMenus: Bool {
-        advanced.hideApplicationMenus
+        general.hideApplicationMenus
     }
 
     var showMenuBarTooltips: Bool {
-        advanced.showMenuBarTooltips
+        visibility.showMenuBarTooltips
     }
 
     var enableSecondaryContextMenu: Bool {
-        advanced.enableSecondaryContextMenu
+        general.enableSecondaryContextMenu
     }
 
     var tooltipDelay: TimeInterval {
-        advanced.tooltipDelay
+        visibility.tooltipDelay
     }
 
     var simpleMode: Bool {
@@ -147,26 +155,26 @@ extension AppSettings: MenuBarEngineConfiguration {
     }
 
     var enableMenuBarItemOverflow: Bool {
-        advanced.enableMenuBarItemOverflow
+        layout.enableMenuBarItemOverflow
     }
 
     var enableExperimentalSystemItemHiding: Bool {
-        advanced.enableExperimentalSystemItemHiding
+        layout.enableExperimentalSystemItemHiding
     }
 
     var enableExperimentalOverflowPrevention: Bool {
-        advanced.enableExperimentalOverflowPrevention
+        layout.enableExperimentalOverflowPrevention
     }
 
     var iconRefreshInterval: TimeInterval {
-        advanced.iconRefreshInterval
+        layout.iconRefreshInterval
     }
 
     var alwaysUseAppIconForMenuBarItems: Bool {
-        advanced.alwaysUseAppIconForMenuBarItems
+        layout.alwaysUseAppIconForMenuBarItems
     }
 
     var menuBarOrderFulfillmentTimeout: TimeInterval {
-        advanced.menuBarOrderFulfillmentTimeout
+        layout.menuBarOrderFulfillmentTimeout
     }
 }

@@ -38,7 +38,7 @@ struct ControlCenterReplacements: Equatable {
         switch item {
         case .timeMachine: timeMachine
         case .textInput: textInput
-        case .timer: false
+        case .timer, .space: false
         case .focus, .airDrop, .nowPlaying, .userSwitcher: modules && !skipped.contains(item)
         }
     }
@@ -52,7 +52,7 @@ struct ControlCenterReplacements: Equatable {
             timeMachine = replaced
         case .textInput:
             textInput = replaced
-        case .timer:
+        case .timer, .space:
             break
         case .focus, .airDrop, .nowPlaying, .userSwitcher:
             if replaced {
@@ -72,7 +72,7 @@ struct ControlCenterReplacements: Equatable {
     }
 }
 
-extension AdvancedSettings {
+extension LayoutSettings {
     var controlCenterReplacements: ControlCenterReplacements {
         get {
             ControlCenterReplacements(
@@ -95,7 +95,7 @@ extension AdvancedSettings {
 /// macOS hides together, plus Time Machine and the Input menu, which it will not hide.
 /// While it is on, a list under it picks which ones are replaced.
 struct ControlCenterReplacementsSection: View {
-    @Bindable var settings: AdvancedSettings
+    @Bindable var settings: LayoutSettings
     @Environment(AppState.self) private var appState
 
     /// The extras that report whether their replacement is running.
@@ -108,6 +108,7 @@ struct ControlCenterReplacementsSection: View {
             Toggle(isOn: $settings.controlCenterReplacements.isOn) {
                 HStack(spacing: ThawSpacing.compact) {
                     Text("Replace Control Center items")
+                        .settingsSearchAnchor("layout.replaceControlCenterItems")
                     ThawBadge.beta
                 }
             }
@@ -126,6 +127,7 @@ struct ControlCenterReplacementsSection: View {
                     }
                 }
             }
+            FocusStandInNotice(settings: settings, focusShownInControlCenter: FocusStandInNotice.focusShownInControlCenter())
             if settings.controlCenterReplacements.isOn {
                 ForEach(ControlCenterReplacements.listed, id: \.self) { item in
                     Toggle(Self.name(of: item), isOn: Binding(
@@ -147,6 +149,7 @@ struct ControlCenterReplacementsSection: View {
         case .timeMachine: "Time Machine"
         case .textInput: "Input menu"
         case .timer: "Timer"
+        case .space: "Space"
         }
     }
 

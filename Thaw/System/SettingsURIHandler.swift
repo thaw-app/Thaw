@@ -32,7 +32,7 @@ enum SettingsURIHandler {
     }
 
     /// Keep global allow-lists, Defaults.Key mappings, and bounds together to prevent drift.
-    /// Per-display settings live in DisplaySettingsManager and perDisplayKeys instead.
+    /// Per-display settings live in DisplaySettingsManager and PerDisplayURIKeys instead.
     struct SettingURIEntry {
         /// How a setting's value is stored and parsed.
         enum Kind {
@@ -58,27 +58,7 @@ enum SettingsURIHandler {
     }
 
     /// Unset keys read registered Defaults values; SettingsURIKeyTableTests ensures every global table key is registered.
-    static let keyTable: [String: SettingURIEntry] = [
-        // MARK: - General
-
-        "showThawIcon": SettingURIEntry(defaultsKey: .showThawIcon, kind: .boolean, isWritable: true),
-        "customThawIconIsTemplate": SettingURIEntry(defaultsKey: .customThawIconIsTemplate, kind: .boolean, isWritable: true),
-        "simpleMode": SettingURIEntry(defaultsKey: .simpleMode, kind: .boolean, isWritable: true),
-        "showSettingDescriptions": SettingURIEntry(defaultsKey: .showSettingDescriptions, kind: .boolean, isWritable: true),
-        "blackSettingsBackground": SettingURIEntry(defaultsKey: .blackSettingsBackground, kind: .boolean, isWritable: true),
-        "lockThawBarPosition": SettingURIEntry(defaultsKey: .lockThawBarPosition, kind: .boolean, isWritable: true),
-        "openHiddenItemsInMenuBar": SettingURIEntry(defaultsKey: .openHiddenItemsInMenuBar, kind: .boolean, isWritable: true),
-        "useThawBarOnlyOnNotchedDisplay": SettingURIEntry(defaultsKey: .useThawBarOnlyOnNotchedDisplay, kind: .boolean, isWritable: true),
-        "thawBarLocationOnHotkey": SettingURIEntry(defaultsKey: .thawBarLocationOnHotkey, kind: .boolean, isWritable: true),
-        "showOnClick": SettingURIEntry(defaultsKey: .showOnClick, kind: .boolean, isWritable: true),
-        "showOnHover": SettingURIEntry(defaultsKey: .showOnHover, kind: .boolean, isWritable: true),
-        "showOnScroll": SettingURIEntry(defaultsKey: .showOnScroll, kind: .boolean, isWritable: true),
-        "autoRehide": SettingURIEntry(defaultsKey: .autoRehide, kind: .boolean, isWritable: true),
-        "rehideInterval": SettingURIEntry(defaultsKey: .rehideInterval, kind: .double(min: 1, max: 300), isWritable: true),
-        "tempShowInterval": SettingURIEntry(defaultsKey: .tempShowInterval, kind: .double(min: 0, max: 30), isWritable: true),
-        "rehideStrategy": SettingURIEntry(defaultsKey: .rehideStrategy, kind: .enumeration, isWritable: true),
-        "settingsAppearance": SettingURIEntry(defaultsKey: .settingsAppearance, kind: .enumeration, isWritable: true),
-
+    static let keyTable: [String: SettingURIEntry] = generalKeyTable.merging([
         // MARK: - Advanced
 
         "enableAlwaysHiddenSection": SettingURIEntry(defaultsKey: .enableAlwaysHiddenSection, kind: .boolean, isWritable: true),
@@ -99,14 +79,17 @@ enum SettingsURIHandler {
         "enableMenuBarItemDescenders": SettingURIEntry(defaultsKey: .enableMenuBarItemDescenders, kind: .boolean, isWritable: true),
         "enableSwapBar": SettingURIEntry(defaultsKey: .enableSwapBar, kind: .boolean, isWritable: true),
         "swapOnThawIconClick": SettingURIEntry(defaultsKey: .swapOnThawIconClick, kind: .boolean, isWritable: true),
+        "showAlwaysHiddenOnIconDoubleClick": SettingURIEntry(defaultsKey: .showAlwaysHiddenOnIconDoubleClick, kind: .boolean, isWritable: true),
         "enableControlItemPanel": SettingURIEntry(defaultsKey: .enableControlItemPanel, kind: .boolean, isWritable: true),
         "fetchReleaseNotes": SettingURIEntry(defaultsKey: .fetchReleaseNotes, kind: .boolean, isWritable: true),
+        "showReleaseNotesAfterUpdate": SettingURIEntry(defaultsKey: .showReleaseNotesAfterUpdate, kind: .boolean, isWritable: true),
+        "showSpaceIndicator": SettingURIEntry(defaultsKey: .showSpaceIndicator, kind: .boolean, isWritable: true),
         "enableRecordingWatch": SettingURIEntry(defaultsKey: .enableRecordingWatch, kind: .boolean, isWritable: true),
         "zenModeWhileRecording": SettingURIEntry(defaultsKey: .zenModeWhileRecording, kind: .boolean, isWritable: true),
         "enableDesktopMenuHiding": SettingURIEntry(defaultsKey: .enableDesktopMenuHiding, kind: .boolean, isWritable: true),
 
         // MARK: - Search
-    ]
+    ]) { general, _ in general }
 
     /// Derived from keyTable so the allow-lists can never disagree with it.
     static var supportedBooleanKeys: [String] {
@@ -130,15 +113,6 @@ enum SettingsURIHandler {
             return nil
         }.sorted()
     }
-
-    /// Per-display settings keys (stored in DisplaySettingsManager, not Defaults)
-    static let perDisplayKeys: [String] = [
-        "useThawBar",
-        "thawBarLocation",
-        "alwaysShowHiddenItems",
-        "thawBarLayout",
-        "gridColumns",
-    ]
 
     // MARK: - Security
 
@@ -577,69 +551,36 @@ enum SettingsURIHandler {
             return .specificDisplay(uuid: uuid)
         }
 
-        switch key {
-        case "useThawBar": return .activeDisplay
-        case "alwaysShowHiddenItems": return .allNonThawBarDisplays
-        case "thawBarLocation", "thawBarLayout", "gridColumns": return .allEnabledDisplays
-        default: return nil
-        }
+        return PerDisplayURIKeys.key(key)?.defaultScope
     }
 
-    private static func handlePerDisplaySet(key: String, value: String, displayUUID: String?) -> Bool {
-        guard let scope = resolvePerDisplayScope(key: key, displayUUID: displayUUID) else {
+    /// Per-display settings keys, stored in DisplaySettingsManager rather than Defaults.
+    static var perDisplayKeys: [String] {
+        PerDisplayURIKeys.all.map(\.name)
+    }
+
+    /// Validates the value against the key's entry and forwards it to the display settings.
+    static func handlePerDisplaySet(key: String, value: String, displayUUID: String?) -> Bool {
+        guard let entry = PerDisplayURIKeys.key(key), let scope = resolvePerDisplayScope(key: key, displayUUID: displayUUID) else {
             return false
         }
 
-        switch key {
-        case "useThawBar":
+        switch entry.kind {
+        case .flag:
             guard let boolValue = parseBool(value) else {
-                diagLog.warning("Settings URI: Invalid boolean value '\(value)' for useThawBar")
+                diagLog.warning("Settings URI: Invalid boolean value '\(value)' for \(key)")
                 return false
             }
             postPerDisplaySettingsDidChangeNotification(key: key, value: boolValue, scope: scope)
-            diagLog.info("Settings URI: Set useThawBar = \(boolValue) on \(scope.logDescription)")
-            return true
-
-        case "thawBarLocation":
-            guard let location = ThawBarLocation.fromString(value) else {
-                diagLog.warning("Settings URI: Invalid thawBarLocation value '\(value)'. Valid: dynamic, mousePointer, thawIcon, leftAligned, rightAligned (or 0-4)")
+        case let .value(accept, _, validValues):
+            guard let forwarded = accept(value) else {
+                diagLog.warning("Settings URI: Invalid \(key) value '\(value)'\(validValues.map { ". Valid: \($0)" } ?? "")")
                 return false
             }
-            postPerDisplaySettingsDidChangeNotification(key: key, stringValue: String(location.rawValue), scope: scope)
-            diagLog.info("Settings URI: Set thawBarLocation = \(location) on \(scope.logDescription)")
-            return true
-
-        case "alwaysShowHiddenItems":
-            guard let boolValue = parseBool(value) else {
-                diagLog.warning("Settings URI: Invalid boolean value '\(value)' for alwaysShowHiddenItems")
-                return false
-            }
-            postPerDisplaySettingsDidChangeNotification(key: key, value: boolValue, scope: scope)
-            diagLog.info("Settings URI: Set alwaysShowHiddenItems = \(boolValue) on \(scope.logDescription)")
-            return true
-
-        case "thawBarLayout":
-            guard let layout = ThawBarLayout.fromString(value) else {
-                diagLog.warning("Settings URI: Invalid thawBarLayout value '\(value)'. Valid: horizontal, vertical, grid (or 0, 1, 2)")
-                return false
-            }
-            postPerDisplaySettingsDidChangeNotification(key: key, stringValue: String(layout.rawValue), scope: scope)
-            diagLog.info("Settings URI: Set thawBarLayout = \(layout) on \(scope.logDescription)")
-            return true
-
-        case "gridColumns":
-            guard let intValue = Int(value) else {
-                diagLog.warning("Settings URI: Invalid gridColumns value '\(value)'")
-                return false
-            }
-            let clamped = Swift.max(2, Swift.min(intValue, 10))
-            postPerDisplaySettingsDidChangeNotification(key: key, stringValue: String(clamped), scope: scope)
-            diagLog.info("Settings URI: Set gridColumns = \(clamped) on \(scope.logDescription)")
-            return true
-
-        default:
-            return false
+            postPerDisplaySettingsDidChangeNotification(key: key, stringValue: forwarded, scope: scope)
         }
+        diagLog.info("Settings URI: Set \(key) = \(value) on \(scope.logDescription)")
+        return true
     }
 
     /// Handles "thaw://toggle?key=X" URLs.
@@ -678,9 +619,9 @@ enum SettingsURIHandler {
     }
 
     /// Handles toggling a per-display configuration value.
-    /// Currently only supports useThawBar and alwaysShowHiddenItems.
+    /// Supports the Boolean per-display keys.
     private static func handlePerDisplayToggle(key: String, displayUUID: String?) -> Bool {
-        guard key == "useThawBar" || key == "alwaysShowHiddenItems" else {
+        guard PerDisplayURIKeys.key(key)?.isFlag == true else {
             diagLog.warning("Settings URI: Toggle not supported for '\(key)'")
             return false
         }
@@ -728,7 +669,7 @@ enum SettingsURIHandler {
         )
     }
 
-    private static func postPerDisplaySettingsDidChangeNotification(
+    static func postPerDisplaySettingsDidChangeNotification(
         key: String,
         value: Bool? = nil,
         stringValue: String? = nil,
@@ -882,46 +823,9 @@ enum SettingsURIHandler {
 
     /// Gets a single setting value with metadata.
     private static func getSettingValue(key: String, displayUUID: String?) -> [String: Any]? {
-        if perDisplayKeys.contains(key) {
-            guard let config = getDisplayConfiguration(forUUID: displayUUID) else {
-                // Unknown display UUID
-                return nil
-            }
-
-            switch key {
-            case "useThawBar":
-                return [
-                    "value": config.useThawBar,
-                    "type": "boolean",
-                ]
-            case "thawBarLocation":
-                return [
-                    "value": String(describing: config.thawBarLocation),
-                    "rawValue": config.thawBarLocation.rawValue,
-                    "type": "enum",
-                    "validValues": ["dynamic": 0, "mousePointer": 1, "thawIcon": 2],
-                ]
-            case "alwaysShowHiddenItems":
-                return [
-                    "value": config.alwaysShowHiddenItems,
-                    "type": "boolean",
-                ]
-            case "thawBarLayout":
-                return [
-                    "value": String(describing: config.thawBarLayout),
-                    "rawValue": config.thawBarLayout.rawValue,
-                    "type": "enum",
-                    "validValues": ["horizontal": 0, "vertical": 1, "grid": 2],
-                ]
-            case "gridColumns":
-                return [
-                    "value": config.gridColumns,
-                    "type": "integer",
-                    "range": ["min": 2, "max": 10],
-                ]
-            default:
-                return nil
-            }
+        if let perDisplay = PerDisplayURIKeys.key(key) {
+            // An unknown display UUID has no configuration to read.
+            return getDisplayConfiguration(forUUID: displayUUID).map(perDisplay.reading)
         }
 
         guard let entry = keyTable[key] else { return nil }
@@ -1048,12 +952,7 @@ enum SettingsURIHandler {
             "isPrimary": screen == NSScreen.main,
             "hasNotch": screen.hasNotch,
             "resolution": "\(Int(screen.frame.width))x\(Int(screen.frame.height))",
-            "useThawBar": config.useThawBar,
-            "thawBarLocation": String(describing: config.thawBarLocation),
-            "alwaysShowHiddenItems": config.alwaysShowHiddenItems,
-            "thawBarLayout": String(describing: config.thawBarLayout),
-            "gridColumns": config.gridColumns,
-        ]
+        ].merging(PerDisplayURIKeys.values(of: config)) { _, value in value }
     }
 
     private static func getAllDisplays(requestId: String) -> [String: Any] {
@@ -1100,12 +999,7 @@ enum SettingsURIHandler {
                     "uuid": uuid,
                     "name": "Disconnected Display",
                     "isConnected": false,
-                    "useThawBar": config.useThawBar,
-                    "thawBarLocation": String(describing: config.thawBarLocation),
-                    "alwaysShowHiddenItems": config.alwaysShowHiddenItems,
-                    "thawBarLayout": String(describing: config.thawBarLayout),
-                    "gridColumns": config.gridColumns,
-                ],
+                ].merging(PerDisplayURIKeys.values(of: config)) { _, value in value },
             ]
         }
 

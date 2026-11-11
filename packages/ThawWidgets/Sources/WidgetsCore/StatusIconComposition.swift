@@ -40,12 +40,13 @@ struct StatusIconComposition: Equatable {
     }
 
     enum Center: String, CaseIterable {
-        case none, wifi, bolt, moon, cpu
+        case none, wifi, bluetooth, bolt, moon, cpu
 
         var title: String {
             switch self {
             case .none: String(localized: "None")
             case .wifi: String(localized: "Network (automatic)")
+            case .bluetooth: String(localized: "Bluetooth audio, else network")
             case .bolt: String(localized: "Lightning bolt")
             case .moon: String(localized: "Moon")
             case .cpu: String(localized: "CPU")
@@ -57,9 +58,19 @@ struct StatusIconComposition: Equatable {
             switch self {
             case .none: nil
             case .wifi: samples.network.symbolName
+            case .bluetooth: showsNetwork(for: samples) ? samples.network.symbolName : samples.audioOutput?.symbolName
             case .bolt: "bolt.fill"
             case .moon: "moon.fill"
             case .cpu: "cpu"
+            }
+        }
+
+        /// Whether the centre draws the network: always for network, and for Bluetooth audio when nothing plays through Bluetooth.
+        func showsNetwork(for samples: StatusIconSamples) -> Bool {
+            switch self {
+            case .wifi: true
+            case .bluetooth: samples.audioOutput?.isBluetooth != true
+            case .none, .bolt, .moon, .cpu: false
             }
         }
     }
@@ -97,6 +108,17 @@ struct StatusIconSamples: Codable, Equatable {
     var wifi = 1.0
     var volume = 0.5
     var cpu = 0.25
+    var isCharging = false
+    var isLowPowerMode = false
+    var audioOutput: StatusIconAudioOutput?
+    /// False on a Mac with no battery, where the charge reads 0 for want of a source.
+    /// Without it that 0 would look like an empty battery and force a fixed bitmap.
+    var hasBattery = true
+
+    /// The saved key names; a test pins them, since renaming one would drop saved readings.
+    enum CodingKeys: String, CodingKey {
+        case network, battery, wifi, volume, cpu, isCharging, isLowPowerMode, audioOutput, hasBattery
+    }
 
     subscript(source: StatusIconComposition.Source) -> Double {
         get {
@@ -121,5 +143,22 @@ struct StatusIconSamples: Codable, Equatable {
     /// Round up so a nonzero reading always lights at least one segment.
     func litSegments(for source: StatusIconComposition.Source) -> Int {
         Int((self[source] * 4).rounded(.up))
+    }
+}
+
+extension StatusIconSamples {
+    /// Readings saved before a field existed decode with its default.
+    init(from decoder: Decoder) throws {
+        self.init()
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        network = try container.decodeIfPresent(StatusIconNetwork.self, forKey: .network) ?? network
+        battery = try container.decodeIfPresent(Double.self, forKey: .battery) ?? battery
+        wifi = try container.decodeIfPresent(Double.self, forKey: .wifi) ?? wifi
+        volume = try container.decodeIfPresent(Double.self, forKey: .volume) ?? volume
+        cpu = try container.decodeIfPresent(Double.self, forKey: .cpu) ?? cpu
+        isCharging = try container.decodeIfPresent(Bool.self, forKey: .isCharging) ?? false
+        isLowPowerMode = try container.decodeIfPresent(Bool.self, forKey: .isLowPowerMode) ?? false
+        audioOutput = try container.decodeIfPresent(StatusIconAudioOutput.self, forKey: .audioOutput)
+        hasBattery = try container.decodeIfPresent(Bool.self, forKey: .hasBattery) ?? hasBattery
     }
 }

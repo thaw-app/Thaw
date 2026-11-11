@@ -118,6 +118,7 @@ nonisolated enum Defaults {
         [
             // General Settings
             .showThawIcon: DefaultValue.showThawIcon,
+            .showDockIconWithSettings: DefaultValue.showDockIconWithSettings,
             .customThawIconIsTemplate: DefaultValue.customThawIconIsTemplate,
             .simpleMode: DefaultValue.simpleMode,
             .showSettingDescriptions: DefaultValue.showSettingDescriptions,
@@ -125,6 +126,7 @@ nonisolated enum Defaults {
             .simpleModeShowsPreview: DefaultValue.simpleModeShowsPreview,
             .lockThawBarPosition: DefaultValue.lockThawBarPosition,
             .openHiddenItemsInMenuBar: DefaultValue.openHiddenItemsInMenuBar,
+            .useThawBarOnNotchOverflow: DefaultValue.useThawBarOnNotchOverflow,
             .roundScreenCorners: DefaultValue.roundScreenCorners,
             .screenCornerRadius: DefaultValue.screenCornerRadius,
             .useThawBar: DefaultValue.useThawBar,
@@ -164,8 +166,11 @@ nonisolated enum Defaults {
             // is unset, and unset already reads as false.
             .enableControlItemPanel: DefaultValue.enableControlItemPanel,
             .swapOnThawIconClick: DefaultValue.swapOnThawIconClick,
+            .showAlwaysHiddenOnIconDoubleClick: DefaultValue.showAlwaysHiddenOnIconDoubleClick,
             .swapActive: DefaultValue.swapActive,
             .fetchReleaseNotes: DefaultValue.fetchReleaseNotes,
+            .showReleaseNotesAfterUpdate: DefaultValue.showReleaseNotesAfterUpdate,
+            .showSpaceIndicator: DefaultValue.showSpaceIndicator,
             .enableRecordingWatch: DefaultValue.enableRecordingWatch,
             .enableNativeAppHiding: DefaultValue.enableNativeAppHiding,
             .enableModuleStandIns: DefaultValue.enableModuleStandIns,
@@ -181,6 +186,7 @@ nonisolated enum Defaults {
 
             // Search
             .rememberSearchQuery: DefaultValue.rememberSearchQuery,
+            .showSearchShortcutBar: DefaultValue.showSearchShortcutBar,
             .menuBarSearchPresentation: DefaultValue.menuBarSearchPresentation.rawValue,
 
             // Display Settings
@@ -194,7 +200,6 @@ nonisolated enum Defaults {
             .axMessagingTimeout: DefaultValue.axMessagingTimeout,
             .useLCSSectionOrderPlanner: DefaultValue.useLCSSectionOrderPlanner,
             .inputPauseThresholdMs: DefaultValue.inputPauseThresholdMs,
-            .useReorderLayoutEditor: DefaultValue.useReorderLayoutEditor,
         ]
     }
 
@@ -218,27 +223,15 @@ nonisolated enum Defaults {
 
 extension Defaults {
     nonisolated enum DefaultValue {
-        // MARK: General Settings
+        // MARK: General Settings (see Defaults+General.swift)
 
-        static let showThawIcon = true
-        static let thawIcon = ControlItemImageSet.defaultThawIcon
-        static let customThawIconIsTemplate = false
-        static let simpleMode = false
-        static let showSettingDescriptions = true
-        static let simpleModeShowsPreview = true
-        static let lockThawBarPosition = true
-        static let openHiddenItemsInMenuBar = false
         static let roundScreenCorners = false
         static let screenCornerRadius = 10.0
-        static let useThawBar = false
-        static let useThawBarOnlyOnNotchedDisplay = false
 
         /// Native Always-Hidden: writes NSStatusItem VisibleCC <label> = false
         /// into the owning app's domain so the host stops publishing the item.
         /// Touches other apps' domains, so off until validated. Default: false.
         static let useNativeAlwaysHide = false
-        static let thawBarLocation: ThawBarLocation = .dynamic
-        static let thawBarLocationOnHotkey = false
         static let showOnClick = true
         static let showOnHover = false
         static let showOnScroll = true
@@ -262,11 +255,6 @@ extension Defaults {
         static let iconRefreshInterval: TimeInterval = 0.25
         /// Minimum seconds between two alert reveals of the same item.
         static let autoZenWhileSharingScreen = false
-        #if DEBUG
-            static let enableDiagnosticLogging = true
-        #else
-            static let enableDiagnosticLogging = false
-        #endif
         static let enableMenuBarItemOverflow = false
         static let menuBarArrangementMode = MenuBarArrangementMode.automatic
         static let enableExperimentalOverflowPrevention = false
@@ -274,9 +262,12 @@ extension Defaults {
         static let enableMenuBarItemDescenders = false
         static let enableSwapBar = false
         static let swapOnThawIconClick = false
+        static let showAlwaysHiddenOnIconDoubleClick = true
         static let enableControlItemPanel = false
         static let swapActive = false
         static let fetchReleaseNotes = true
+        static let showReleaseNotesAfterUpdate = true
+        static let showSpaceIndicator = false
         static let enableRecordingWatch = false
         static let enableNativeAppHiding = false
         /// Stand-ins for Apple menu extras Thaw removes while they sit in a
@@ -304,13 +295,6 @@ extension Defaults {
         /// presses through the bundled AX helper, so a hung app blocks the
         /// helper instead of Thaw. On unless a user turned it off.
         static let axEnumerationViaSubprocess = true
-
-        // MARK: Search
-
-        static let rememberSearchQuery = false
-        /// How the menu bar search panel opens. Stored as the case's raw
-        /// value; the default is the behavior the panel shipped with.
-        static let menuBarSearchPresentation = SearchPresentation.inspector
 
         // MARK: Hotkeys Settings
 
@@ -343,7 +327,6 @@ extension Defaults {
         static let inputPauseThresholdMs = 50
 
         /// Edit Layout opens the SwiftUI reorder editor, in its own window, in place of the Layout pane pop-out. Default: false.
-        static let useReorderLayoutEditor = false
     }
 }
 
@@ -352,6 +335,8 @@ extension Defaults {
         // MARK: General Settings
 
         case showThawIcon = "ShowIceIcon"
+        /// Thaw 2's key, so a migrated choice carries over.
+        case showDockIconWithSettings = "ShowDockIconWithSettings"
         case thawIcon = "IceIcon"
         case customThawIconIsTemplate = "CustomIceIconIsTemplate"
         case simpleMode = "SimpleMode"
@@ -366,8 +351,10 @@ extension Defaults {
         case menuBarItemAlertReveals = "MenuBarItemAlertReveals"
         case autoZenWhileSharingScreen = "AutoZenWhileSharingScreen"
         case menuBarAppearanceSpaceOverrides = "MenuBarAppearanceSpaceOverrides"
+        case spaceMenuBarChoices = "SpaceMenuBarChoices"
         case lockThawBarPosition = "LockThawBarPosition"
         case openHiddenItemsInMenuBar = "OpenHiddenItemsInMenuBar"
+        case useThawBarOnNotchOverflow = "UseThawBarOnNotchOverflow"
         case roundScreenCorners = "RoundScreenCorners"
         case screenCornerRadius = "ScreenCornerRadius"
         case menuBarSpacers = "MenuBarSpacers"
@@ -417,6 +404,9 @@ extension Defaults {
         case iconRefreshInterval = "IconRefreshInterval"
         case showMenuBarTooltips = "ShowMenuBarTooltips"
         case enableDiagnosticLogging = "EnableDiagnosticLogging"
+        case diagnosticLogMaxSizeMB = "DiagnosticLogMaxSizeMB"
+        case diagnosticLogRetentionDays = "DiagnosticLogRetentionDays"
+        case diagnosticLogRotationInterval = "DiagnosticLogRotationInterval"
         case enableMenuBarItemOverflow = "EnableMenuBarItemOverflow"
         case enableExperimentalSystemItemHiding = "EnableExperimentalSystemItemHiding"
         /// Who arranges the menu bar: Thaw (MenuBarArrangementMode.automatic)
@@ -447,6 +437,7 @@ extension Defaults {
         /// the panel comes and goes with the switch.
         case enableSwapBar = "EnableSwapBar"
         case swapOnThawIconClick = "SwapOnThawIconClick"
+        case showAlwaysHiddenOnIconDoubleClick = "ShowAlwaysHiddenOnIconDoubleClick"
         /// The control item panel, hung under Thaw's own icon. Read live so the
         /// secondary click changes what it raises without a relaunch.
         case enableControlItemPanel = "EnableControlItemPanel"
@@ -460,6 +451,10 @@ extension Defaults {
         /// Off, it shows the notes that shipped with the build. A Privacy
         /// switch, so it is read live.
         case fetchReleaseNotes = "FetchReleaseNotes"
+        /// Whether What's New opens by itself after an update.
+        case showReleaseNotesAfterUpdate = "ShowReleaseNotesAfterUpdate"
+        /// Whether the Space indicator item runs.
+        case showSpaceIndicator = "ShowSpaceIndicator"
         /// Names the app holding the microphone, and reports that a camera is
         /// on, where macOS shows only a dot. Read live so the poller starts
         /// and stops without relaunching.
@@ -492,14 +487,13 @@ extension Defaults {
         // MARK: Search
 
         case rememberSearchQuery = "RememberSearchQuery"
+        case showSearchShortcutBar = "ShowSearchShortcutBar"
         case menuBarSearchRecents = "MenuBarSearchRecents"
-        /// Where the search panel opens: remembered, centered, or at the
-        /// pointer. Stored as the SearchPresentation case's raw value.
+        /// The search layout's raw value; old styles migrate in
+        /// SearchPresentation(storedValue:).
         case menuBarSearchPresentation = "MenuBarSearchPresentation"
 
         // MARK: Internal
-
-        case menuBarSearchPanelFrameWithConfig = "MenuBarSearchPanelFrame_"
 
         /// The marketing version whose release notes the user has been shown
         /// (or implicitly skipped). Absent until first recorded, and absence
@@ -509,12 +503,6 @@ extension Defaults {
         // MARK: Menu Bar Item Custom Names
 
         case menuBarItemCustomNames = "MenuBarItemCustomNames"
-
-        /// The overlay strip's persisted item widths, as JSON keyed by
-        /// canonical persistent identifier. Written by the Overlay Menu Bar
-        /// while engaged; read when a concealed item has no saner width
-        /// source. Absent until the first recorded measurement.
-        case overlayItemWidths = "OverlayItemWidths"
 
         // MARK: Menu Bar Layout Table Access
 
@@ -566,10 +554,6 @@ extension Defaults {
         ///
         /// Hidden escape hatch; not exposed in Settings. Default: 50.
         case inputPauseThresholdMs
-
-        /// Whether Edit Layout opens the SwiftUI reorder editor (see DefaultValue.useReorderLayoutEditor).
-        /// Hidden; not exposed in Settings. Default: false.
-        case useReorderLayoutEditor
 
         /// Whether Always-Hidden members are natively hidden via their
         /// owners' preference domains (see DefaultValue.useNativeAlwaysHide).

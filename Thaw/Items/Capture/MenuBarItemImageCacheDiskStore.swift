@@ -24,7 +24,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
 
     /// The save's wall clock, and its serial disk queue (background QoS: nothing on screen waits for a save).
     private let now: @Sendable () -> Date
-    private let queue: DispatchQueue
+    let queue: DispatchQueue
 
     init(cachesDirectory: URL? = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first, now: @escaping @Sendable () -> Date = Date.init, queue: DispatchQueue = DispatchQueue(label: "MenuBarItemImageCacheDiskStore", qos: .background)) {
         self.cachesDirectory = cachesDirectory
@@ -240,7 +240,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
             // knows. Fall through and write the whole thing.
         }
 
-        let cacheData = snapshot.map { tag, image -> (String, Data, CGFloat)? in
+        let cacheData = snapshot.map { tag, image -> (String, Data, CGFloat, Int)? in
             let png = NSMutableData()
             guard
                 let destination = CGImageDestinationCreateWithData(
@@ -251,7 +251,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
             guard CGImageDestinationFinalize(destination) else { return nil }
 
             let tagString = tag.tagIdentifier
-            return (tagString, png as Data, image.scale)
+            return (tagString, png as Data, image.scale, tag.instanceIndex)
         }.compactMap(\.self)
 
         guard cacheData.count == snapshot.count else { return }
@@ -268,8 +268,8 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
             // per identifier; uniquingKeysWith keeps a future collision a
             // last-one-wins overwrite rather than a trap on this queue.
             let images: [String: [String: Any]] = Dictionary(
-                cacheData.map { identifier, png, scale in
-                    var entry: [String: Any] = ["png": png, "scale": scale]
+                cacheData.map { identifier, png, scale, instanceIndex in
+                    var entry = Self.fileEntry(png: png, scale: scale, instanceIndex: instanceIndex)
                     if concealed.contains(identifier) {
                         entry["concealed"] = true
                     }
@@ -289,7 +289,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
                 format: .binary,
                 options: 0
             )
-            try plistData.write(to: url)
+            try plistData.write(to: url, options: Self.writeOptions)
 
             // The old JSON file is superseded; drop it so the stale copy
             // cannot sit in Caches indefinitely.
@@ -338,7 +338,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
             return false
         }
         do {
-            try plistData.write(to: url)
+            try plistData.write(to: url, options: Self.writeOptions)
         } catch {
             Self.diagLog.error("Failed to re-stamp disk image cache: \(error)")
             return false

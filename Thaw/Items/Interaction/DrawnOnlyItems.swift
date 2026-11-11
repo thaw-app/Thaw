@@ -137,7 +137,7 @@ nonisolated enum DrawnOnlyItems {
     /// on another display, which would move the entry there. With none, the entry keeps its frame.
     static func band(of axItems: [RawItem], around entry: CGRect, screens: [CGRect]) -> Band? {
         func bar(holding frame: CGRect) -> CGRect? {
-            guard !screens.isEmpty else { return frame.midY <= MenuBarItemGeometry.maxOnBarMidY ? .zero : nil }
+            guard !screens.isEmpty else { return frame.midY <= MenuBarItem.maxBarBandMidY ? .zero : nil }
             return MenuBarItemGeometry.barScreen(holding: frame, among: screens)
         }
         guard let entryBar = bar(holding: entry) else { return nil }

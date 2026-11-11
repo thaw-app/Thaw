@@ -32,7 +32,7 @@ extension MenuBarItemManager {
     }
 
     /// Collapse retitled single-item owners so changing counts or dates do not trigger new-arrival sorting.
-    /// Takes complete fresh scans only: the cache keeps old titles, which look like extra items.
+    /// Takes fresh answers only: the cache keeps old titles, which look like extra items.
     func learnVolatileTitleOwners(fresh: [MenuBarItem], current: inout [MenuBarItem]) {
         let learned = Self.freshVolatileTitleLearner.observe(fresh)
             .filter { !Self.isThawBundle($0) }
@@ -49,7 +49,7 @@ extension MenuBarItemManager {
         persistKnownItemIdentifiers()
         persistSavedSectionOrder()
         for (index, item) in current.enumerated() {
-            guard case let .string(bundleID) = item.tag.namespace, learned.contains(bundleID) else { continue }
+            guard let bundleID = item.tag.namespace.bundleIdentifier, learned.contains(bundleID) else { continue }
             let tag = MenuBarItemTag(
                 namespace: item.tag.namespace,
                 title: MenuBarItemTag.canonicalTitle(namespace: item.tag.namespace, title: item.tag.title),

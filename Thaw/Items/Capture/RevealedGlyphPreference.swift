@@ -14,40 +14,33 @@ extension MenuBarItemImageCache {
 
     /// preferredCachedImage(existing:candidate:) for a picture taken while revealing a hidden
     /// item. Under Native hiding the reveal rebuilds the bar, which draws the icon scaled down
-    /// before it settles, so a glyph much shorter than the one the cache has loses. Live items
-    /// skip this rule: a graph or a level really can get shorter.
+    /// before it settles, so a glyph much shorter than the one the cache has loses. The rebuild
+    /// can also catch the glyph mid-slide, its left part not drawn yet or cut off at the crop's
+    /// left edge, so such a candidate loses here too. Live items skip these rules: a graph or a
+    /// level really can get shorter or lose its left ink.
     static nonisolated func preferredRevealedImage(
         existing: MenuBarItemGlyphCapture,
         candidate: MenuBarItemGlyphCapture
     ) -> MenuBarItemGlyphCapture {
         let preferred = preferredCachedImage(existing: existing, candidate: candidate)
         guard preferred.cgImage === candidate.cgImage, !existing.isEffectivelyBlank else { return preferred }
+        if isLeadingCut(candidate, of: existing) || isNewlyClipped(candidate, comparedTo: existing) {
+            return existing
+        }
         let existingHeight = inkPointHeight(of: existing)
         guard existingHeight > 0 else { return preferred }
         return inkPointHeight(of: candidate) < existingHeight * revealedInkHeightTolerance ? existing : candidate
     }
 
+    /// Whether candidate has the existing picture's crop width but, unlike it, ink running into the left
+    /// edge. An item that changed width is a new picture.
+    static nonisolated func isNewlyClipped(_ candidate: MenuBarItemGlyphCapture, comparedTo existing: MenuBarItemGlyphCapture) -> Bool {
+        abs(candidate.pointSize.width - existing.pointSize.width) < 1
+            && isClippedAtLeadingEdge(candidate) && !isClippedAtLeadingEdge(existing)
+    }
+
     /// The height in points from the first to the last row with visible ink.
     static nonisolated func inkPointHeight(of capture: MenuBarItemGlyphCapture) -> CGFloat {
-        let image = capture.cgImage
-        let width = image.width, height = image.height
-        guard width > 0, height > 0, capture.scale > 0 else { return 0 }
-        let context = CGContext(
-            data: nil,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: width * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )
-        guard let context else { return 0 }
-        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-        guard let data = context.data?.assumingMemoryBound(to: UInt8.self) else { return 0 }
-        let inkRows = (0 ..< height).filter { row in
-            (0 ..< width).contains { column in data[(row * width + column) * 4 + 3] > 12 }
-        }
-        guard let first = inkRows.first, let last = inkRows.last else { return 0 }
-        return CGFloat(last - first + 1) / capture.scale
+        inkBounds(of: capture)?.height ?? 0
     }
 }

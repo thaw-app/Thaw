@@ -83,26 +83,37 @@ struct HotkeysSettingsPane: View {
                 switch action {
                 case .toggleHiddenSection:
                     Text("Show or hide hidden items")
+                        .settingsSearchAnchor("hotkeys.toggleHiddenSection")
                 case .toggleAlwaysHiddenSection:
                     Text("Show or hide Always Hidden items")
+                        .settingsSearchAnchor("hotkeys.toggleAlwaysHiddenSection")
                 case .toggleSwap:
                     Text("Swap shown and hidden items")
+                        .settingsSearchAnchor("hotkeys.toggleSwap")
                 case .searchMenuBarItems:
                     Text("Search menu bar items")
+                        .settingsSearchAnchor("hotkeys.searchMenuBarItems")
                 case .showItemHints:
                     Text("Open an item by letter")
+                        .settingsSearchAnchor("hotkeys.showItemHints")
                 case .revealSystemMenuBar:
                     Text("Reveal the menu bar")
+                        .settingsSearchAnchor("hotkeys.revealSystemMenuBar")
                 case .enableThawBar:
                     Text("Turn \(Constants.displayName) Bar on or off")
+                        .settingsSearchAnchor("hotkeys.enableThawBar")
                 case .toggleApplicationMenus:
                     Text("Hide or show app menus")
+                        .settingsSearchAnchor("hotkeys.toggleApplicationMenus")
                 case .toggleAutoRehide:
                     Text("Turn “Hide items again” on or off")
+                        .settingsSearchAnchor("hotkeys.toggleAutoRehide")
                 case .toggleZenMode:
                     Text("Toggle Zen Mode")
+                        .settingsSearchAnchor("hotkeys.toggleZenMode")
                 case .toggleLayoutEditor:
                     Text("Show Layout")
+                        .settingsSearchAnchor("hotkeys.toggleLayoutEditor")
                 case .profileApply:
                     EmptyView()
                 case .openMenuBarItem:
@@ -164,7 +175,7 @@ private struct MenuBarItemHotkeyList: View {
                                 .fixedSize(horizontal: true, vertical: false)
                                 .foregroundStyle(row.item != nil ? .primary : .secondary)
                             Text(row.bundle)
-                                .font(.callout)
+                                .font(ThawType.detail)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                                 .fixedSize(horizontal: true, vertical: false)
@@ -181,6 +192,7 @@ private struct MenuBarItemHotkeyList: View {
             }
         } label: {
             Text("Open menu bar items")
+                .settingsSearchAnchor("hotkeys.openMenuBarItems")
         }
         // The image cache runs live capture only while the list is expanded.
         .onChange(of: isExpanded, initial: true) { _, expanded in
@@ -289,7 +301,7 @@ private struct MenuBarItemHotkeyList: View {
 
     /// The bundle (namespace) component of an item identifier.
     private func bundle(forIdentifier identifier: String) -> String {
-        String(identifier.split(separator: ":").first ?? "")
+        MenuBarItemTag.persistentIdentifierParts(identifier)?.namespace ?? identifier
     }
 }
 

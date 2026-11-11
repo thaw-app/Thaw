@@ -131,11 +131,16 @@ final class ProfileManager {
         rebuildProfileHotkeys()
 
         // Debounce beyond the Space animation so rapid swipes apply only the final profile.
-        let spaceSwitchTask = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.activeSpaceDidChangeNotification, debounce: .seconds(0.75)) { [weak self] in
-            guard let self else { return }
-            await self.checkSpaceAndAutoSwitch()
+        let spaceSwitchTask = appState.spaceChanges.activeSpaceTask(debounce: .seconds(0.75)) { [weak self] _ in
+            await self?.checkSpaceAndAutoSwitch()
         }
-        cancellables.insert(AnyCancellable { spaceSwitchTask.cancel() })
+        // A new Space publishes its key only once the list is re-read.
+        let spaceListTask = Task { [weak self, directory = appState.spaceDirectory] in
+            for await _ in Observations({ directory.spaces }).dropFirst() {
+                await self?.checkSpaceAndAutoSwitch()
+            }
+        }
+        cancellables.insert(AnyCancellable { spaceSwitchTask.cancel(); spaceListTask.cancel() })
 
         // Any process can post these, so both only wake the check against the system's Focus filter state.
         let center = DistributedNotificationCenter.default()
@@ -302,7 +307,7 @@ final class ProfileManager {
             // Apply spacing before layout: relaunches reset item positions; matching offsets no-op.
             // Arm settling before relaunch to suppress partial cache restores, then wait for reattachment before layout.
 
-            appState.itemManager.startSettlingPeriod(reason: "spacingRelaunch:preflight")
+            appState.itemManager.barSettling.note(.spacingWaveStarted(cause: nil))
 
             let didRelaunch: Bool
             let recovered: Set<String>
@@ -315,7 +320,7 @@ final class ProfileManager {
                 recovered = outcome.recoveredBundleIDs
             } catch is CancellationError {
                 // Drop preflight settling on cancellation so stale layout work cannot overwrite a newer apply.
-                appState.itemManager.cancelSettlingPeriod(reason: "spacingRelaunch:cancelled")
+                appState.itemManager.barSettling.note(.spacingWaveEnded(cause: nil, outcome: .cancelled))
                 return
             } catch {
                 self?.diagLog.error("spacingRelaunch: applyOffset failed: \(error)")
@@ -324,18 +329,15 @@ final class ProfileManager {
             }
             // The wave ignores this task's cancellation; recheck now and clean up rather than lay out a superseded profile.
             if Task.isCancelled {
-                appState.itemManager.cancelSettlingPeriod(reason: "spacingRelaunch:cancelled")
+                appState.itemManager.barSettling.note(.spacingWaveEnded(cause: nil, outcome: .cancelled))
                 return
             }
             if didRelaunch {
-                appState.itemManager.startSettlingPeriod(
-                    reason: "spacingRelaunch",
-                    expectedBundleIDs: recovered
-                )
+                appState.itemManager.barSettling.note(.appsRelaunched(expecting: recovered, cause: nil))
             } else {
                 // No-op apply: nothing churned, drop the preflight so the
                 // following applyProfileLayout proceeds without waiting.
-                appState.itemManager.cancelSettlingPeriod(reason: "spacingRelaunch:noOp")
+                appState.itemManager.barSettling.note(.spacingWaveEnded(cause: nil, outcome: .noOp))
             }
             let layoutDidRun = await appState.itemManager.applyProfileLayout(
                 pinnedHidden: pinnedHidden,
@@ -361,21 +363,21 @@ final class ProfileManager {
 
     /// Returns whether the apply may restart apps for its spacing.
     private func applySnapshot(_ profile: Profile, to appState: AppState, relaunchesApps: Bool, spacingRelaunchApproved: Bool) -> Bool {
-        profile.generalSettings.apply(to: appState.settings.general)
-        profile.advancedSettings.merged(onto: .capture(from: appState.settings.advanced)).apply(to: appState.settings.advanced)
+        profile.generalSettings.apply(to: appState.settings)
+        profile.advancedSettings.merged(onto: .capture(from: appState.settings), storesAlwaysHiddenSection: profile.storesAlwaysHiddenSection)
+            .apply(to: appState.settings)
 
-        Defaults.set(profile.hotkeys, forKey: .hotkeys)
+        let hotkeys = ProfileHotkeyMerge.merged(
+            current: HotkeyBindingStore.actions.rawBindings(), profile: profile.hotkeys, knownActions: profile.hotkeyActions
+        )
+        HotkeyBindingStore.actions.setRawBindings(hotkeys)
         for hotkey in appState.settings.hotkeys.hotkeys {
-            guard let data = profile.hotkeys[hotkey.action.rawValue] else {
+            guard let data = hotkeys[hotkey.action.rawValue] else {
                 hotkey.keyCombination = nil
                 continue
             }
             do {
-                let keyCombination = try decoder.decode(
-                    KeyCombination?.self,
-                    from: data
-                )
-                hotkey.keyCombination = keyCombination
+                hotkey.keyCombination = try HotkeyBindingStore.combination(from: data)
             } catch {
                 diagLog.error(
                     "Failed to decode hotkey for \(hotkey.action.rawValue): \(error)"
@@ -404,10 +406,7 @@ final class ProfileManager {
 
         // Apply per-item hotkeys to UserDefaults, then rebuild the live hotkey
         // objects so the restored bindings register immediately.
-        Defaults.set(
-            profile.menuBarLayout.itemHotkeys ?? [:],
-            forKey: .menuBarItemHotkeys
-        )
+        HotkeyBindingStore.items.setRawBindings(profile.menuBarLayout.itemHotkeys ?? [:])
         appState.menuBarManager.rebuildItemHotkeys()
 
         // Resolve layout against this profile's groups, not the outgoing profile's.
@@ -454,7 +453,7 @@ final class ProfileManager {
         if let existing = profiles.firstIndex(where: { $0.id == metadata.id }) {
             profiles[existing] = metadata
         } else {
-            profiles.insert(metadata, at: min(max(index, 0), profiles.count))
+            profiles.insert(metadata, at: index.clamped(min: 0, max: profiles.count))
         }
         try saveManifest()
 
@@ -522,17 +521,7 @@ final class ProfileManager {
 
     /// Exports a profile to a file, including display associations.
     func exportProfile(id: UUID, to url: URL) throws {
-        let profile = try loadProfile(id: id).withCurrentScripts(moduleDefaults: .scriptsModule)
-        let meta = profiles.first { $0.id == id }
-        let entry = ProfileExportEntry(
-            profile: profile,
-            associatedDisplayUUID: meta?.associatedDisplayUUID,
-            associatedDisplayName: meta?.associatedDisplayName,
-            associatedSpaceKey: meta?.associatedSpaceKey,
-            associatedSpaceName: meta?.associatedSpaceName,
-            keepsLayoutChanges: meta?.keepsLayoutChangesSetting,
-            reappliesAtLaunch: meta?.reappliesAtLaunchSetting
-        )
+        let entry = try ProfileExportBuilder.entry(for: loadProfile(id: id), meta: profiles.first { $0.id == id })
         let bundle = ProfileExportBundle(entries: [entry])
         let data = try encoder.encode(bundle)
         try data.write(to: url, options: .atomic)
@@ -571,9 +560,10 @@ final class ProfileManager {
     /// layout when given. The one list of captured fields, so every kind of update saves the same ones.
     private func capturedContent(from appState: AppState, menuBarLayout: MenuBarLayoutSnapshot? = nil) -> ProfileContent {
         ProfileContent(
-            generalSettings: GeneralSettingsSnapshot.capture(from: appState.settings.general),
-            advancedSettings: AdvancedSettingsSnapshot.capture(from: appState.settings.advanced),
-            hotkeys: Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:],
+            generalSettings: GeneralSettingsSnapshot.capture(from: appState.settings),
+            advancedSettings: AdvancedSettingsSnapshot.capture(from: appState.settings),
+            hotkeys: HotkeyBindingStore.actions.rawBindings(),
+            hotkeyActions: ProfileHotkeyMerge.currentActions,
             displayConfigurations: appState.settings.displaySettings.configurations,
             globalDisplayConfiguration: appState.settings.displaySettings.globalConfiguration,
             confirmSpacingRelaunch: appState.settings.displaySettings.confirmSpacingRelaunch,
@@ -627,9 +617,7 @@ final class ProfileManager {
         let customNames = Defaults.dictionary(
             forKey: .menuBarItemCustomNames
         ) as? [String: String] ?? [:]
-        let itemHotkeys = Defaults.dictionary(
-            forKey: .menuBarItemHotkeys
-        ) as? [String: Data] ?? [:]
+        let itemHotkeys = HotkeyBindingStore.items.rawBindings()
 
         // Apply requires itemOrder and savedSectionOrder to agree; computeSectionOrder preserves closed apps and filters transient widgets.
         // Direct cache iteration would route closed saved apps through unmanaged placement instead of their saved section.
@@ -806,24 +794,10 @@ final class ProfileManager {
         try saveManifest()
     }
 
-    /// Exports all profiles as a single JSON file including metadata.
-    func exportAllProfiles() -> String? {
-        var entries = [ProfileExportEntry]()
-        for meta in profiles {
-            guard let profile = try? loadProfile(id: meta.id) else { continue }
-            entries.append(ProfileExportEntry(
-                profile: profile,
-                associatedDisplayUUID: meta.associatedDisplayUUID,
-                associatedDisplayName: meta.associatedDisplayName,
-                associatedSpaceKey: meta.associatedSpaceKey,
-                associatedSpaceName: meta.associatedSpaceName,
-                keepsLayoutChanges: meta.keepsLayoutChangesSetting,
-                reappliesAtLaunch: meta.reappliesAtLaunchSetting
-            ))
-        }
-        let bundle = ProfileExportBundle(entries: entries)
-        guard let data = try? encoder.encode(bundle) else { return nil }
-        return String(data: data, encoding: .utf8)
+    /// Exports all profiles as one JSON file, with the names of any that couldn't be read.
+    func exportAllProfiles() -> (json: String?, unreadableNames: [String]) {
+        let all = ProfileExportBuilder.all(profiles, load: loadProfile(id:))
+        return ((try? encoder.encode(all.bundle)).flatMap { String(data: $0, encoding: .utf8) }, all.unreadableNames)
     }
 
     // MARK: - Space Association
@@ -882,17 +856,12 @@ final class ProfileManager {
 
         // Clean up orphaned hotkey entries for deleted profiles.
         let profileIDs = Set(profiles.map(\.id.uuidString))
-        if var saved = Defaults.dictionary(forKey: .profileHotkeys) as? [String: Data] {
-            let before = saved.count
-            saved = saved.filter { profileIDs.contains($0.key) }
-            if saved.count != before {
-                Defaults.set(saved, forKey: .profileHotkeys)
-            }
+        let store = HotkeyBindingStore.profiles
+        let everySaved = store.rawBindings()
+        let saved = everySaved.filter { profileIDs.contains($0.key) }
+        if saved.count != everySaved.count {
+            store.setRawBindings(saved)
         }
-
-        let saved = Defaults.dictionary(forKey: .profileHotkeys) as? [String: Data] ?? [:]
-        let dec = JSONDecoder()
-        let enc = JSONEncoder()
 
         var newHotkeys: [UUID: Hotkey] = [:]
         for meta in profiles {
@@ -904,7 +873,7 @@ final class ProfileManager {
             hotkey.performSetup(with: appState)
 
             if let data = saved[meta.id.uuidString],
-               let combo = try? dec.decode(KeyCombination?.self, from: data)
+               let combo = try? HotkeyBindingStore.combination(from: data)
             {
                 hotkey.keyCombination = combo
             }
@@ -915,13 +884,7 @@ final class ProfileManager {
             hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
                 guard let self, let hotkey else { return }
                 let newCombo = hotkey.keyCombination
-                var dict = Defaults.dictionary(forKey: .profileHotkeys) as? [String: Data] ?? [:]
-                if let combo = newCombo, let data = try? enc.encode(combo) {
-                    dict[profileID.uuidString] = data
-                } else {
-                    dict.removeValue(forKey: profileID.uuidString)
-                }
-                Defaults.set(dict, forKey: .profileHotkeys)
+                try? store.set(newCombo, for: profileID.uuidString)
                 hotkeyProfileMap[ObjectIdentifier(hotkey)] = newCombo != nil ? profileID : nil
             }
 
@@ -1055,6 +1018,7 @@ final class ProfileManager {
                 keepsLayoutChangesSetting: entry.keepsLayoutChanges,
                 reappliesAtLaunchSetting: entry.reappliesAtLaunch
             ))
+            ProfileApplyShortcuts().adopt(entry.applyShortcut, for: imported.id)
 
             // Any existing profile that owns this display or Space gives it up; foreign-Mac Space keys stay inert.
             if let displayUUID = entry.associatedDisplayUUID {
