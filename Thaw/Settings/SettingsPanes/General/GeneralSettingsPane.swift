@@ -124,7 +124,7 @@ struct GeneralSettingsPane: View {
         if languageOverrideChanged {
             HStack {
                 Text("The language change applies after \(Constants.displayName) relaunches.")
-                    .font(.callout)
+                    .font(ThawType.detail)
                     .foregroundStyle(ThawInk.supporting)
                 Spacer()
                 Button("Relaunch Now") {

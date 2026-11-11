@@ -12,9 +12,6 @@ import MenuBarModel
 /// off the visible bar band (concealed items retain phantom AX frames far
 /// below the bar, or the transient x == -1 sentinel).
 nonisolated enum MenuBarItemGeometry {
-    /// Maximum mid-Y an item's bounds may have to count as "on the bar band".
-    static let maxOnBarMidY: CGFloat = 80
-
     /// Maximum |midY − barMidY| distance from the resolved bar mid-line for
     /// an item to count as on-bar when a live bar reference exists.
     static let maxDistanceFromBarMidY: CGFloat = 48
@@ -57,7 +54,7 @@ nonisolated enum MenuBarItemGeometry {
     static func barScreen(holding frame: CGRect, among screenFrames: [CGRect]) -> CGRect? {
         guard frame.width > 0, frame.origin.x != transientSentinelX else { return nil }
         return screenFrames.first { screen in
-            screen.contains(frame.origin) && frame.midY - screen.minY <= maxOnBarMidY
+            screen.contains(frame.origin) && frame.midY - screen.minY <= MenuBarItem.maxBarBandMidY
         }
     }
 }

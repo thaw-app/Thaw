@@ -175,7 +175,7 @@ private struct MenuBarItemHotkeyList: View {
                                 .fixedSize(horizontal: true, vertical: false)
                                 .foregroundStyle(row.item != nil ? .primary : .secondary)
                             Text(row.bundle)
-                                .font(.callout)
+                                .font(ThawType.detail)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                                 .fixedSize(horizontal: true, vertical: false)
@@ -301,7 +301,7 @@ private struct MenuBarItemHotkeyList: View {
 
     /// The bundle (namespace) component of an item identifier.
     private func bundle(forIdentifier identifier: String) -> String {
-        String(identifier.split(separator: ":").first ?? "")
+        MenuBarItemTag.persistentIdentifierParts(identifier)?.namespace ?? identifier
     }
 }
 

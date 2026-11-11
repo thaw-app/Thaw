@@ -99,7 +99,12 @@ public struct AXEnumerateRequest: Codable, Sendable, Equatable {
 /// relaunch. The helper and the app share this rule so the nested-child
 /// fallback the helper reads agrees with the in-process walk.
 public func isStableAXIdentifier(_ identifier: String) -> Bool {
-    !identifier.contains(/^_NS:\d+$/)
+    !identifier.hasPrefix("_NS:") || !identifier.contains(AppKitPlaceholder.pattern)
+}
+
+/// Built once: a regex literal is parsed again on every evaluation, and the walk checks every child.
+private enum AppKitPlaceholder {
+    static nonisolated(unsafe) let pattern = /^_NS:\d+$/
 }
 
 /// The helper's reply.

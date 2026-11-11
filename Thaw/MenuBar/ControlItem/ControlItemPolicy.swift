@@ -95,7 +95,7 @@ extension ControlItem {
             if let previous,
                timestamp > previous.timestamp,
                timestamp - previous.timestamp <= min(interval, Self.maximumPairingInterval),
-               hypot(location.x - previous.location.x, location.y - previous.location.y) <= 4,
+               location.distance(to: previous.location) <= 4,
                modifiers == previous.modifiers
             {
                 self.previous = nil

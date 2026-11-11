@@ -6,12 +6,10 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
+import ThawUI
 
 /// Reduce Motion drops movement and scaling but keeps a short cross-fade, which doesn't move anything.
 enum ReduceMotionFade {
-    /// The quick ease-out a fade keeps under Reduce Motion.
-    static let animation = Animation.easeOut(duration: 0.12)
-
     /// Under Reduce Motion, removes the transaction's animation so nothing moves, without disabling the
     /// animations transitions carry, so their fades still play.
     static func apply(to transaction: inout Transaction, reduceMotion: Bool) {
@@ -27,7 +25,7 @@ extension AnyTransition {
     }
 
     static func fadeAnimation(reduceMotion: Bool, animation: Animation?) -> Animation? {
-        reduceMotion ? ReduceMotionFade.animation : animation
+        reduceMotion ? ThawMotion.reducedFade : animation
     }
 }
 

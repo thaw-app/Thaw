@@ -192,6 +192,7 @@ extension LayoutBarScrollView: NSDraggingSource {
             return item
         }
         guard !items.isEmpty else { return }
+        LayoutDragHaptics.begin(in: container?.section)
         view.beginDraggingSession(with: items, event: event, source: self)
     }
 
@@ -201,6 +202,9 @@ extension LayoutBarScrollView: NSDraggingSource {
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         takesDraggedSelection = sender.draggingSource is LayoutBarScrollView && container?.acceptsSelection() == true
+        if takesDraggedSelection, let section = container?.section {
+            LayoutDragHaptics.enter(section)
+        }
         return selectionDragOperation(sender)
     }
 
@@ -220,6 +224,7 @@ extension LayoutBarScrollView: NSDraggingSource {
         guard takesDraggedSelection, let container else { return false }
         container.groupDropMarkerX = nil
         container.dropSelection(at: sender.draggingLocation)
+        ThawHaptics.land()
         return true
     }
 

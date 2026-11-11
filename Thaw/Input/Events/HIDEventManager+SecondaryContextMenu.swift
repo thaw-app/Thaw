@@ -183,7 +183,7 @@ extension HIDEventManager {
 
     /// The active display whose bounds contain frame's centre, if any.
     private static func displayBounds(containing frame: CGRect) -> CGRect? {
-        BarAxis.liveDisplayBounds().first { $0.contains(CGPoint(x: frame.midX, y: frame.midY)) }
+        BarAxis.liveDisplayBounds().first { $0.contains(frame.center) }
     }
 
     func handleSecondaryContextMenu(

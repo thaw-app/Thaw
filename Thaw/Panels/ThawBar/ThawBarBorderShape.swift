@@ -34,7 +34,7 @@ nonisolated struct ThawBarBorderShape: InsettableShape {
     /// slider: square corners get a continuous quarter-height radius, fully round ends a circular
     /// half-height one, and the values between them a radius between the two.
     static func thawBarClip(height: CGFloat, roundness: Double) -> ThawBarBorderShape {
-        let roundness = CGFloat(roundness.isFinite ? min(max(roundness, 0), 1) : 0)
+        let roundness = CGFloat(roundness.isFinite ? roundness.clamped(to: 0 ... 1) : 0)
         return ThawBarBorderShape(
             cornerRadius: height / 4 * (1 + roundness),
             cornerStyle: roundness >= 1 ? .circular : .continuous,

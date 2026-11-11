@@ -98,7 +98,7 @@ struct ThawBarSettingsPane: View {
         } content: {
             if displays.isEmpty {
                 Text("No displays are known yet. Settings for new displays are in Displays, under Template.")
-                    .font(.callout)
+                    .font(ThawType.detail)
                     .foregroundStyle(ThawInk.supporting)
             } else {
                 ThawPicker(selection: Binding(

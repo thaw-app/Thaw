@@ -103,7 +103,7 @@ final class NotchAccessoryWidget: NotchWidget {
 
     static func accessibilityStrings(of item: MenuBarItem) -> [String?]? {
         let bounds = Bridging.getWindowBounds(for: item.windowID) ?? item.bounds
-        guard bounds.width > 0, let element = AXHelpers.element(at: CGPoint(x: bounds.midX, y: bounds.midY)) else {
+        guard bounds.width > 0, let element = AXHelpers.element(at: bounds.center) else {
             return nil
         }
         return [

@@ -365,7 +365,7 @@ extension HIDEventManager {
         guard now - lastAppMenuClickTime >= 0.3 else { return true }
         lastAppMenuClickTime = now
 
-        let clickPoint = CGPoint(x: frame.midX, y: frame.midY)
+        let clickPoint = frame.center
         let pid = frontApp.processIdentifier
 
         guard let source = CGEventSource(stateID: .hidSystemState) else { return true }

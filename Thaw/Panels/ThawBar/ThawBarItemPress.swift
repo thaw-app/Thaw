@@ -29,6 +29,6 @@ nonisolated struct ThawBarItemPress: Equatable {
     /// Whether the pointer is still close enough to where the press began for its release to click.
     func isClick(at location: CGPoint) -> Bool {
         guard let start else { return false }
-        return hypot(location.x - start.x, location.y - start.y) < Self.dragDistance
+        return location.distance(to: start) < Self.dragDistance
     }
 }
