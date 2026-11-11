@@ -919,7 +919,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         draw(
             image,
             in: iconRect,
-            fraction: bare ? (isEnabled ? 1 : 0.67) : LayoutBarCaptureInk.placeholderFraction(isEnabled: isEnabled, isTemplate: image.isTemplate),
+            fraction: bare ? Self.bareGlyphFraction(isEnabled: isEnabled) : LayoutBarCaptureInk.placeholderFraction(isEnabled: isEnabled, isTemplate: image.isTemplate),
             templateTint: bare || item.tag.matchesVisibleControlItem ? menuBarForegroundColor : .secondaryLabelColor
         )
     }

@@ -247,7 +247,7 @@ final class MenuBarOverlayPanel: NSPanel {
 
     /// Space changes reshow the panel and clear Mission Control state the probe may not detect.
     private func observeActiveSpaceChanges() -> AnyCancellable {
-        guard let changes = appState?.spaceChanges else { return AnyCancellable {} }
+        guard let changes = appState?.spaceChanges else { return AnyCancellable { /* Nothing was subscribed. */ } }
         let task = changes.activeSpaceTask(debounce: .seconds(0.1)) { [weak self] _ in
             guard let self else { return }
             self.missionControlProbe.isActive = false

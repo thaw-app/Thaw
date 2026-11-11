@@ -19,7 +19,10 @@ nonisolated struct LayoutTilePointer: Equatable {
 
     /// The accent wash's opacity: stronger while pressed than while hovered.
     var washAlpha: CGFloat? {
-        isPressed ? 0.25 : isHovered ? 0.12 : nil
+        if isPressed {
+            return 0.25
+        }
+        return isHovered ? 0.12 : nil
     }
 
     mutating func press(at location: CGPoint) {

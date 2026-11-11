@@ -42,6 +42,6 @@ extension MenuBarItemImageCacheDiskStore {
 
     /// Blocks until the saves already queued are on disk; for the moment before the process exits.
     nonisolated func waitForQueuedSaves() {
-        queue.sync {}
+        queue.sync { /* Returns once the queued work has run. */ }
     }
 }

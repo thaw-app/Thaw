@@ -21,7 +21,7 @@ struct LayoutBarsSection: View {
 
     var body: some View {
         // A header avoids row clipping 20pt below the card's top edge; no rows means no card obscuring the first bar.
-        Section {} header: {
+        Section { /* No rows: the bars are the header. */ } header: {
             FoldedMenuBar(itemManager: itemManager, arrangement: .spaced, sharedSelection: selection, wrapsRows: isInLayoutWindow)
                 .onGeometryChange(for: CGFloat.self, of: \.size.height) { onBarsHeightChange?($0) }
                 .textCase(nil)

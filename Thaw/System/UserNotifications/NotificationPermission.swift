@@ -35,7 +35,7 @@ final class NotificationPermission: PermissionPresentable {
     private(set) var authorization = NotificationAuthorization.notAsked
 
     /// Asks macOS, then reads the answer back. Set by UserNotificationManager.
-    @ObservationIgnored var request: () -> Void = {}
+    @ObservationIgnored var request: () -> Void = { /* Does nothing until the owner sets it. */ }
 
     func update(_ authorization: NotificationAuthorization) {
         if self.authorization != authorization {

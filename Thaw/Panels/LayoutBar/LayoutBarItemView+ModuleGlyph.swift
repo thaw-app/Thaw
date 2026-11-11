@@ -14,6 +14,11 @@ extension LayoutBarItemView {
         item.tag.namespace == .menuBarAgent && SystemModuleGlyph.symbolName(forItemTitle: item.tag.title) != nil
     }
 
+    /// How strongly a bare module symbol is drawn: full, or dimmed on a tile that can't be used.
+    static func bareGlyphFraction(isEnabled: Bool) -> CGFloat {
+        isEnabled ? 1 : 0.67
+    }
+
     /// Where a bare module symbol is drawn: as large as fits the tile's centered square, at the symbol's
     /// own proportions. Symbols aren't square (Wi-Fi is 18 by 13), so filling the square squeezed them.
     static func bareGlyphRect(for imageSize: CGSize, in bounds: CGRect) -> CGRect? {

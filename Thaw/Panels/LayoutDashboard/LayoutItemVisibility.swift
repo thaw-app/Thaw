@@ -34,7 +34,7 @@ enum LayoutItemVisibility {
         in section: MenuBarSectionName,
         selection: LayoutSelectionModel,
         appState: AppState,
-        onMoved: @escaping @MainActor ([String]) -> Void = { _ in }
+        onMoved: @escaping @MainActor ([String]) -> Void = { _ in /* Nothing more to do by default. */ }
     ) {
         if !(selection.count > 1 && selection.contains(rowID)) {
             selection.click(rowID, in: section, kind: .replace)
@@ -48,7 +48,7 @@ enum LayoutItemVisibility {
         selection: LayoutSelectionModel,
         appState: AppState,
         keepsSelection: Bool = false,
-        onMoved: @escaping @MainActor ([String]) -> Void = { _ in }
+        onMoved: @escaping @MainActor ([String]) -> Void = { _ in /* Nothing more to do by default. */ }
     ) {
         LayoutSelectionActions(selection: selection, appState: appState)
             .move(to: section, placement: section == .visible ? .start : .end, keepsSelection: keepsSelection, onMoved: onMoved)

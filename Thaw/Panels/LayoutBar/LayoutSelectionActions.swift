@@ -119,7 +119,7 @@ struct LayoutSelectionActions {
         to target: MenuBarSectionName,
         placement: LayoutBatchMove.Placement,
         keepsSelection: Bool = false,
-        onMoved: @escaping @MainActor ([String]) -> Void = { _ in }
+        onMoved: @escaping @MainActor ([String]) -> Void = { _ in /* Nothing more to do by default. */ }
     ) {
         let restoring = selection.restoringMoves()
         let forward = selection.command(to: target, placement: placement)

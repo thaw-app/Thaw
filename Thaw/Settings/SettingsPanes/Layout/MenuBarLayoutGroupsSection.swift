@@ -150,7 +150,7 @@ struct MenuBarLayoutGroupsSection: View {
                     LayoutGroupDropTarget(
                         isTargeted: Binding(
                             get: { dropTargetID == group.id },
-                            set: { dropTargetID = $0 ? group.id : (dropTargetID == group.id ? nil : dropTargetID) }
+                            set: { dropTargetID = GroupDropTarget.after($0, on: group.id, current: dropTargetID) }
                         ),
                         selection: navigation.selection
                     ) { ids in
@@ -279,5 +279,17 @@ struct MenuBarLayoutGroupsSection: View {
             return
         }
         appState.itemGroupManager.removeMember(item)
+    }
+}
+
+/// Which group row is the drop target once a row gains or loses the pointer.
+nonisolated enum GroupDropTarget {
+    /// The row itself when it gains the pointer. When it loses it, nothing if it was the target;
+    /// another row that took over in the meantime stays.
+    static func after(_ isTargeted: Bool, on group: UUID, current: UUID?) -> UUID? {
+        if isTargeted {
+            return group
+        }
+        return current == group ? nil : current
     }
 }
