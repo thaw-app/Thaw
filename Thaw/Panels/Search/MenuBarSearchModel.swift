@@ -6,41 +6,52 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
-import Combine
 import Ifrit
 import MenuBarModel
 import Observation
 import ThawUI
 
-/// Observable state behind MenuBarSearchPanel: the query, the rows it
-/// renders, the highlighted row, the inline rename in progress, and the
-/// average menu bar color those rows are previewed against.
-///
-/// One model for all three modes. Only Detailed previews, so averageColorInfo stays nil in the others.
+/// One row of the search list: an item, the app that owns it when that says
+/// something the item's name doesn't, and the heading it sits under.
+struct MenuBarSearchResult: Identifiable {
+    let item: MenuBarItem
+    let ownerName: String?
+    /// The heading over this row, or nil for ranked matches, which have none.
+    let section: String?
+
+    var id: MenuBarSearchModel.ItemID {
+        MenuBarSearchModel.ItemID(item)
+    }
+}
+
+/// The search panel's state, as Floe's menu bar search keeps it: the query,
+/// the results, the highlighted row and the rename in progress.
 @MainActor
 @Observable
 final class MenuBarSearchModel {
-    /// Identifies a single row of the search list.
-    enum ItemID: Hashable {
-        /// A section heading. Headings are never selectable.
-        case header(MenuBarSection.Name)
-        /// The recents heading, shown above recently activated items when
-        /// the query is empty.
-        case recentsHeader
-        case item(MenuBarItemTag, windowID: CGWindowID?)
+    /// Identifies an item's row. The window ID tells two items with one tag apart.
+    struct ItemID: Hashable {
+        let tag: MenuBarItemTag
+        let windowID: CGWindowID?
+
+        init(tag: MenuBarItemTag, windowID: CGWindowID?) {
+            self.tag = tag
+            self.windowID = windowID
+        }
+
+        init(_ item: MenuBarItem) {
+            self.init(tag: item.tag, windowID: item.windowID)
+        }
     }
 
     /// Text currently typed into the search field.
     var searchText = ""
 
-    /// Rows to render, already filtered and ranked against searchText.
-    var displayedItems = [SectionedListItem<ItemID, MenuBarSearchListContent>]()
+    /// What the list shows for searchText.
+    var results = [MenuBarSearchResult]()
 
     /// The highlighted row, if there is one.
     var selection: ItemID?
-
-    /// Color sampled from behind the menu bar, used to tint item previews.
-    private(set) var averageColorInfo: MenuBarAverageColorInfo?
 
     /// An inline rename in progress. Bundling the target and the draft into
     /// one value means a draft can never outlive the row it belongs to.
@@ -64,103 +75,110 @@ final class MenuBarSearchModel {
     /// The rename in progress, or nil while nothing is being renamed.
     var renameSession: RenameSession?
 
-    /// Subscriptions tying this model to the panel it is attached to.
-    @ObservationIgnored
-    private var cancellables = Set<AnyCancellable>()
-
-    /// The capture still in flight, if any, so a clear or a newer capture can
-    /// supersede it and its late completion can't overwrite a freshly cleared
-    /// value or a newer capture's result.
-    @ObservationIgnored
-    private let captureSlot = TaskSlot()
-
-    /// Fuzzy matcher that ranks items against the query. One instance for all
-    /// three modes, so they agree on what counts as a match at all.
     let fuse = Fuse(threshold: 0.5)
 
-    /// The launcher modes' inventory, as the matcher sees it.
-    ///
-    /// Cached here rather than rebuilt per keystroke: building a candidate
-    /// resolves each item's owning application, and the content view empties
-    /// this whenever the item cache it was derived from turns over. Ignored by
-    /// Observation because no view body reads it, the rows built from it are
-    /// what SwiftUI renders.
+    /// Cached between keystrokes, since building one resolves each item's app.
+    /// Emptied when the item cache turns over or a rename changes a name.
     @ObservationIgnored
-    var launcherCandidates = [PaletteCandidate]()
+    var candidates = [PaletteCandidate]()
 
-    /// Attaches the model to panel, replacing any earlier attachment.
-    ///
-    /// While attached, the average menu bar color tracks whichever screen the
-    /// panel is showing on, and is dropped when the panel hides or
-    /// displayInvalidations fires.
-    func attach(to panel: MenuBarSearchPanel, displayInvalidations: some Publisher<Void, Never>) {
-        cancellables.removeAll()
+    /// Recently opened items, listed on top while nothing is typed.
+    @ObservationIgnored
+    let recents: MenuBarSearchRecents
 
-        panel.publisher(for: \.isVisible)
-            .combineLatest(panel.publisher(for: \.screen))
-            .compactMap { isVisible, screen in isVisible ? screen : nil }
-            .debounce(for: 0.1, scheduler: DispatchQueue.main)
-            .sink { [weak self] screen in self?.updateAverageColorInfo(for: screen) }
-            .store(in: &cancellables)
-
-        // Clear average color when search panel closes to free memory
-        // and invalidate any in-flight capture from the open lifetime.
-        panel.publisher(for: \.isVisible)
-            .filter { !$0 }
-            .sink { [weak self] _ in
-                self?.clearAverageColorInfo()
-            }
-            .store(in: &cancellables)
-
-        // Clear on display changes to prevent stale color info and invalidate
-        // any in-flight capture targeting the previous screen geometry.
-        displayInvalidations
-            .sink { [weak self] in
-                self?.clearAverageColorInfo()
-            }
-            .store(in: &cancellables)
+    init(recents: MenuBarSearchRecents = MenuBarSearchRecents()) {
+        self.recents = recents
     }
 
-    /// Drops the attachment, so nothing is sampled until the model is attached
-    /// again. Called when the search panel's mode stops previewing rows over
-    /// the menu bar color.
-    func detach() {
-        cancellables.removeAll()
-        clearAverageColorInfo()
+    // MARK: Results
+
+    /// With nothing typed: recents, then each section's items in menu bar order.
+    /// With a query: the ranked matches. The highlight stays while its row is listed.
+    func refresh(from inventory: MenuBarItemCache, sections: [MenuBarSection.Name] = MenuBarSection.Name.allCases) {
+        if candidates.isEmpty {
+            candidates = PaletteCandidate.inventory(from: inventory)
+        }
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        if query.isEmpty {
+            results = Self.grouped(recents.resolve(in: inventory), in: inventory, sections: sections, candidates: candidates)
+        } else {
+            results = PaletteCandidate.ranked(matching: query, in: candidates, using: fuse).map {
+                MenuBarSearchResult(item: $0.item, ownerName: $0.subtitle, section: nil)
+            }
+        }
+        revalidateSelection()
     }
 
-    /// Clears averageColorInfo and cancels any in-flight capture so a late
-    /// completion can't overwrite the cleared state with a stale value.
-    private func clearAverageColorInfo() {
-        captureSlot.cancel()
-        averageColorInfo = nil
+    /// Each item is listed once: a second row with the same ID stalls the arrows.
+    /// Spacers and control items drop out.
+    static func grouped(
+        _ recentItems: [MenuBarItem],
+        in inventory: MenuBarItemCache,
+        sections: [MenuBarSection.Name],
+        candidates: [PaletteCandidate]
+    ) -> [MenuBarSearchResult] {
+        let byIdentity = Dictionary(candidates.map { ($0.identityKey, $0) }, uniquingKeysWith: { first, _ in first })
+        let recent = recentItems.compactMap { byIdentity[$0.uniqueIdentifier] }
+        let recentKeys = Set(recent.map(\.identityKey))
+        let recentTitle = String(localized: "Recent")
+        var results = recent.map { MenuBarSearchResult(item: $0.item, ownerName: $0.subtitle, section: recentTitle) }
+        for name in sections {
+            // The cache lists a section right to left.
+            let items = inventory.managedItems(for: name).reversed()
+                .compactMap { byIdentity[$0.uniqueIdentifier] }
+                .filter { !recentKeys.contains($0.identityKey) }
+            results += items.map { MenuBarSearchResult(item: $0.item, ownerName: $0.subtitle, section: name.localizedName) }
+        }
+        return results
     }
 
-    /// Samples the color behind the menu bar on screen and publishes it.
-    ///
-    /// The capture is a one pixel tall slice of the wallpaper with the menu
-    /// bar composited over it, which is all the average needs.
-    private func updateAverageColorInfo(for screen: NSScreen) {
-        let displayID = screen.displayID
-        let onScreenWindows = WindowInfo.createWindows(option: .onScreen)
+    // MARK: Selection
 
-        // The slot supersedes the previous capture before we suspend. If
-        // clearAverageColorInfo cancels it or a newer update replaces it while
-        // we await, our completion is stale and must skip the write so we
-        // don't undo an intentional clear or clobber a fresher capture.
-        captureSlot.replace { [weak self] ticket in
-            let image = await MenuBarColorSampler.captureStrip(
-                for: displayID,
-                from: onScreenWindows
-            )?.image
-            guard let color = image?.averageColor(option: .ignoreAlpha) else {
-                return
-            }
-            guard let self, self.captureSlot.isCurrent(ticket) else { return }
-            let info = MenuBarAverageColorInfo(color: color, source: .menuBarWindow)
-            if self.averageColorInfo != info {
-                self.averageColorInfo = info
-            }
+    /// The highlighted row's position in results, if it is listed.
+    var selectedIndex: Int? {
+        results.firstIndex { $0.id == selection }
+    }
+
+    /// The highlighted row, if it is listed.
+    var selectedResult: MenuBarSearchResult? {
+        selectedIndex.map { results[$0] }
+    }
+
+    func selectFirstRow() {
+        selection = results.first?.id
+    }
+
+    /// Moves the highlight to the first row once its own row is gone.
+    func revalidateSelection() {
+        if selectedIndex == nil {
+            selectFirstRow()
+        }
+    }
+
+    /// Tab's jump to the next or previous section's first row, wrapping.
+    /// Ranked matches have no sections, so it does nothing then.
+    func moveSelection(toSectionFromCurrentBy step: Int) {
+        // Each section's first row, in order: headings start where the section changes.
+        let starts = results.indices.filter { $0 == 0 || results[$0].section != results[$0 - 1].section }
+        guard starts.count > 1, results.first?.section != nil else {
+            return
+        }
+        let index = selectedIndex ?? 0
+        let current = starts.lastIndex { $0 <= index } ?? 0
+        let target = (current + step % starts.count + starts.count) % starts.count
+        selection = results[starts[target]].id
+    }
+
+    /// Moves the highlight by delta rows, held to the rows there are. With no
+    /// highlight, any move starts at the first row.
+    func moveSelection(by delta: Int) {
+        guard let index = selectedIndex else {
+            selectFirstRow()
+            return
+        }
+        let target = LauncherListStep.moved(index, by: delta, count: results.count)
+        if target != index {
+            selection = results[target].id
         }
     }
 }

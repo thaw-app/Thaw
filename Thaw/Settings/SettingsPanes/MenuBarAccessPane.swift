@@ -13,6 +13,8 @@ struct MenuBarAccessPane: View {
     @Environment(AppState.self) private var appState
     @Bindable var settings: GeneralSettings
     @Bindable var advancedSettings: AdvancedSettings
+    @AppStorage(Defaults.Key.showSearchShortcutBar.rawValue) private var showSearchShortcutBar = Defaults.DefaultValue.showSearchShortcutBar
+    @AppStorage(Defaults.Key.rememberSearchQuery.rawValue) private var rememberSearchQuery = Defaults.DefaultValue.rememberSearchQuery
 
     var body: some View {
         ThawForm {
@@ -37,6 +39,10 @@ struct MenuBarAccessPane: View {
 
             ThawSection("Menu bar search") {
                 searchPresentationPicker
+                Toggle("Show shortcut bar", isOn: $showSearchShortcutBar)
+                    .annotation("The bar under the results with Settings, Rename, Actions and their keyboard shortcuts. The shortcuts work either way.")
+                Toggle("Remember last search", isOn: $rememberSearchQuery)
+                    .annotation("Open search with the text you last typed.")
             }
 
             ThawSection("On hover") {
@@ -99,7 +105,7 @@ struct MenuBarAccessPane: View {
     // MARK: - Search
 
     private var searchPresentationPicker: some View {
-        ThawPicker("Panel style", selection: $advancedSettings.menuBarSearchPresentation) {
+        ThawPicker("Panel layout", selection: $advancedSettings.menuBarSearchPresentation) {
             ForEach(SearchPresentation.allCases) { presentation in
                 Text(presentation.localized).tag(presentation)
             }

@@ -426,7 +426,7 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .menuBarOrderFulfillmentTimeout, assign: &menuBarOrderFulfillmentTimeout)
 
         Defaults.ifPresent(key: .menuBarSearchPresentation) { (raw: String) in
-            if let presentation = SearchPresentation(rawValue: raw) {
+            if let presentation = SearchPresentation(storedValue: raw) {
                 menuBarSearchPresentation = presentation
             }
         }

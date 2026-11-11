@@ -24,6 +24,7 @@ extension MigrationManager {
     func migrateAll() {
         removeMenuBarHistory(from: Defaults.store)
         removeAXBridgeLogs()
+        migrateSearchPresentation(in: Defaults.store)
         let results = [
             migratePerDisplayThawBar(),
         ]
@@ -54,6 +55,22 @@ extension MigrationManager {
         let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
         for file in files where file.lastPathComponent.hasPrefix("ax-bridge-") && file.pathExtension == "txt" {
             try? FileManager.default.removeItem(at: file)
+        }
+    }
+}
+
+// MARK: - Migrate Search Styles
+
+extension MigrationManager {
+    /// Search's three styles became two layouts: stores the layout a saved
+    /// style opens as, and drops the frames Detailed saved per display.
+    func migrateSearchPresentation(in defaults: UserDefaults) {
+        let key = Defaults.Key.menuBarSearchPresentation.rawValue
+        if let stored = defaults.string(forKey: key), let layout = SearchPresentation(storedValue: stored), layout.rawValue != stored {
+            defaults.set(layout.rawValue, forKey: key)
+        }
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("MenuBarSearchPanelFrame_") {
+            defaults.removeObject(forKey: key)
         }
     }
 }

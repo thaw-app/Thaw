@@ -62,16 +62,33 @@ nonisolated extension SearchIndex {
         ),
         SearchEntry(
             id: "general.menuBarSearchPresentation",
-            title: "Search panel style",
-            descriptionText: String(localized: "Choose how the search panel looks and where it opens. You can rename and move items in every style."),
+            title: "Search panel layout",
+            descriptionText: String(localized: "Choose whether the search panel lists your items before you type."),
             pane: .visibility,
             section: "Menu bar search",
             keywords: [
-                "search", "panel", "open", "position", "placement", "centered", "center", "spotlight",
-                "launcher", "palette", "pointer", "cursor", "large text", "accessibility", "low vision",
-                "big", "reach", "style", "detailed", "compact", "large", "where", "rename", "move",
+                "search", "panel", "layout", "style", "launcher", "spotlight", "floe",
+                "compact", "extended", "list", "collapse",
             ],
             property: .advanced("menuBarSearchPresentation")
+        ),
+        SearchEntry(
+            id: "general.showSearchShortcutBar",
+            title: "Show shortcut bar",
+            descriptionText: String(localized: "The bar under the results with Settings, Rename, Actions and their keyboard shortcuts. The shortcuts work either way."),
+            pane: .visibility,
+            section: "Menu bar search",
+            keywords: ["search", "panel", "shortcut", "bar", "bottom", "footer", "hints", "keys", "rename", "actions", "hide", "minimal"],
+            property: nil
+        ),
+        SearchEntry(
+            id: "general.rememberSearchQuery",
+            title: "Remember last search",
+            descriptionText: String(localized: "Open search with the text you last typed."),
+            pane: .visibility,
+            section: "Menu bar search",
+            keywords: ["search", "query", "remember", "last", "keep", "text", "restore"],
+            property: nil
         ),
         SearchEntry(
             id: "general.showMenuBarTooltips",
