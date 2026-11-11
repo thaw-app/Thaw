@@ -1865,7 +1865,7 @@ extension MenuBarItemManager {
         )
         let refreshed = presenceWait.items
         let liveIDs = Set(refreshed.map(\.uniqueIdentifier))
-        missingRepublishMemo.noteArrived(wantedIDs.intersection(liveIDs))
+        missingRepublishMemo.noteArrived(wantedIDs.intersection(liveIDs), at: now)
         var updatedOrder = desiredOrder
         let missing = RepublishAbsenceMemo.absentees(wanted: wantedIDs, live: liveIDs)
         if !missing.isEmpty {

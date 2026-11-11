@@ -23,9 +23,10 @@ nonisolated struct ProfileOrderHold: Equatable {
 
     let startedAt: ContinuousClock.Instant
 
-    /// Whether the hold is over: a pass since the profile was applied saw its members and none it
-    /// left out still waits to be placed, the user arranged the bar since, or the hold ran its
-    /// limit. A pass that read nothing leaves no one out, so it doesn't count as seeing them.
+    /// Whether the hold is over: a pass that took its order since the profile was applied saw its
+    /// members and none it left out still waits to be placed, the user arranged the bar since, or
+    /// the hold ran its limit. A pass that read nothing leaves no one out, so it doesn't count as
+    /// seeing them.
     func isOver(
         membersSeenAt: ContinuousClock.Instant?,
         membersStillLeftOut: Bool,

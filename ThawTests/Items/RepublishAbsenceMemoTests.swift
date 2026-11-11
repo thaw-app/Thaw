@@ -229,4 +229,14 @@ struct RepublishAbsenceMemoTests {
         memo.noteArrived([String](), at: start + .seconds(4))
         #expect(memo.lastSawMembers == start + .seconds(2))
     }
+
+    @Test("A pass that took its order earlier but finishes later doesn't move the sighting back")
+    func lastSawMembersKeepsTheLatest() {
+        var memo = RepublishAbsenceMemo()
+        memo.noteArrived(["a"], at: start + .seconds(5))
+
+        memo.noteArrived(["a"], at: start + .seconds(1))
+
+        #expect(memo.lastSawMembers == start + .seconds(5))
+    }
 }
