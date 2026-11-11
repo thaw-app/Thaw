@@ -60,10 +60,7 @@ extension HIDEventManager {
     ) -> Bool {
         guard isMouseInsideMenuBarItem(appState: appState) else {
             // Exclude the frontmost app's menu; indeterminate answers count as empty menu bar space.
-            return isMouseInsideApplicationMenuClickRegion(
-                appState: appState,
-                screen: screen
-            ) != true && appState.menuBarManager.section(withName: .hidden)?.isHidden == false
+            return isMouseInsideApplicationMenuClickRegion(screen: screen) != true && appState.menuBarManager.section(withName: .hidden)?.isHidden == false
         }
         switch event.type {
         case .leftMouseDown:

@@ -49,11 +49,7 @@ extension HIDEventManager {
     ///
     /// Holding command is what makes a drag in the menu bar a move of the item
     /// rather than a drag inside whichever app owns it.
-    func handleMenuBarItemDragStart(
-        with event: NSEvent,
-        appState: AppState,
-        screen: NSScreen
-    ) {
+    func handleMenuBarItemDragStart(with event: NSEvent, appState: AppState) {
         guard
             !isDraggingMenuBarItem,
             event.modifierFlags.contains(.command),

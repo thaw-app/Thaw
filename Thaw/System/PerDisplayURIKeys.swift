@@ -40,7 +40,7 @@ struct PerDisplayURIKey {
             if toggles {
                 return { apply($0, !$0[keyPath: keyPath]) }
             }
-            return flag.map { value in { apply($0, value) } }
+            return Self.change(to: flag, apply)
         case let .value(_, update, _):
             return text.flatMap(update)
         }
@@ -48,6 +48,12 @@ struct PerDisplayURIKey {
 }
 
 extension PerDisplayURIKey {
+    /// The change that writes value, or nil when there is no value to write.
+    static func change<Value>(to value: Value?, _ apply: @escaping (Configuration, Value) -> Configuration) -> Update? {
+        guard let value else { return nil }
+        return { apply($0, value) }
+    }
+
     static func flag(
         _ name: String,
         scope: SettingsURIHandler.PerDisplayScope,
@@ -72,7 +78,7 @@ extension PerDisplayURIKey {
             defaultScope: scope,
             kind: .value(
                 accept: { parse($0).map { String(describing: $0) } },
-                update: { text in parse(text).map { number in { apply($0, number) } } },
+                update: { change(to: parse($0), apply) },
                 validValues: nil
             ),
             reading: reading
@@ -94,7 +100,7 @@ enum PerDisplayURIKeys {
             kind: .value(
                 accept: { ThawBarLocation.fromString($0).map { String($0.rawValue) } },
                 // The forwarded text is always the raw value, so names are not read again here.
-                update: { text in Int(text).flatMap(ThawBarLocation.init(rawValue:)).map { location in { $0.withThawBarLocation(location) } } },
+                update: { PerDisplayURIKey.change(to: Int($0).flatMap(ThawBarLocation.init(rawValue:))) { $0.withThawBarLocation($1) } },
                 validValues: "dynamic, mousePointer, thawIcon, leftAligned, rightAligned (or 0-4)"
             ),
             reading: {
@@ -112,7 +118,7 @@ enum PerDisplayURIKeys {
             defaultScope: .allEnabledDisplays,
             kind: .value(
                 accept: { ThawBarLayout.fromString($0).map { String($0.rawValue) } },
-                update: { text in ThawBarLayout.fromString(text).map { layout in { $0.withThawBarLayout(layout) } } },
+                update: { PerDisplayURIKey.change(to: ThawBarLayout.fromString($0)) { $0.withThawBarLayout($1) } },
                 validValues: "horizontal, vertical, grid (or 0, 1, 2)"
             ),
             reading: {

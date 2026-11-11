@@ -181,10 +181,7 @@ extension HIDEventManager {
             return false
         }
 
-        let appMenuResult = isMouseInsideApplicationMenuClickRegion(
-            appState: appState,
-            screen: screen
-        )
+        let appMenuResult = isMouseInsideApplicationMenuClickRegion(screen: screen)
 
         // Fall back to geometry when AX is indeterminate, for example when
         // expanded divider windows interfere with the query.
@@ -258,10 +255,7 @@ extension HIDEventManager {
 
     /// Whether the cursor is in the app-menu region click-through uses, or nil
     /// when AX is indeterminate.
-    func isMouseInsideApplicationMenuClickRegion(
-        appState: AppState,
-        screen: NSScreen
-    ) -> Bool? {
+    func isMouseInsideApplicationMenuClickRegion(screen: NSScreen) -> Bool? {
         guard
             isMouseInsideMenuBar(screen: screen),
             let mouseLocation = MouseHelpers.locationCoreGraphics

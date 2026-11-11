@@ -365,12 +365,8 @@ final class HIDEventManager {
     private(set) lazy var mouseDraggedMonitor = EventMonitor.universal(
         for: .leftMouseDragged
     ) { [weak self] event in
-        if let self, isEnabled, let appState, let screen = NSScreen.activeMenuBarScreenOrMain {
-            handleMenuBarItemDragStart(
-                with: event,
-                appState: appState,
-                screen: screen
-            )
+        if let self, isEnabled, let appState, NSScreen.activeMenuBarScreenOrMain != nil {
+            handleMenuBarItemDragStart(with: event, appState: appState)
         }
         return event
     }
