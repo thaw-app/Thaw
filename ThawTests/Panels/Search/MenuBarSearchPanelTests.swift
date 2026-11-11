@@ -248,6 +248,13 @@ struct MenuBarSearchPanelTests {
         panel.model.results = [alpha, beta].map { MenuBarSearchResult(item: $0, ownerName: nil, section: "Visible") }
         #expect(try panel.handleKeyDown(tab()) != nil)
         #expect(panel.model.selection == MenuBarSearchModel.ItemID(beta))
+
+
+        // The key monitor hands on the handler's answer: a taken Tab stays taken.
+        panel.model.results[0] = MenuBarSearchResult(item: alpha, ownerName: nil, section: "Hidden")
+        #expect(try MenuBarSearchPanel.monitoredKey(tab(), panel: panel) == nil)
+        let event = try tab()
+        #expect(MenuBarSearchPanel.monitoredKey(event, panel: nil) === event)
     }
 
     @Test("A rename ends when its row leaves the list")

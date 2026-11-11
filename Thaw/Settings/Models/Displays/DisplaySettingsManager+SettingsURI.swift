@@ -32,9 +32,10 @@ extension DisplaySettingsManager {
     }
 
     /// Saves a link's spacing to the profiles as the Displays page does, so the next apply keeps it.
-    /// A failed save restores the old spacing.
+    /// A failed save restores the old spacing on the displays it didn't save, so live and saved spacing agree.
     private func saveLinkSpacingToProfiles(_ uuids: [String], previousOffsets: [String: Double]) {
         guard let host = spacingHost else { return }
+        var saved = Set<String>()
         do {
             switch unconfirmedSpacingProfileScope {
             case .activeProfile:
@@ -45,11 +46,12 @@ extension DisplaySettingsManager {
             case .allProfiles:
                 for uuid in uuids {
                     try host.saveSpacingToProfiles(uuid, configuration(forUUID: uuid).itemSpacingOffset, .allProfiles)
+                    saved.insert(uuid)
                 }
             }
         } catch {
             diagLog.error("DisplaySettingsManager: Could not save the link's spacing to profiles: \(error)")
-            for (uuid, offset) in previousOffsets {
+            for (uuid, offset) in previousOffsets where !saved.contains(uuid) {
                 updateConfiguration(forDisplayUUID: uuid) { $0.withItemSpacingOffset(offset) }
             }
         }

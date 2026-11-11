@@ -66,7 +66,14 @@ final class MenuBarSearchPanel: NSPanel {
 
     /// The panel's keys; see handleKeyDown(_:).
     private lazy var shortcutMonitor = EventMonitor.universal(for: [.keyDown]) { [weak self] event in
-        self?.handleKeyDown(event) ?? event
+        Self.monitoredKey(event, panel: self)
+    }
+
+    /// The monitor's answer: what the panel's handler returns, nil for a key it took, or the event
+    /// itself once the panel is gone. `self?.handleKeyDown(event) ?? event` turned a taken key back into the event.
+    static func monitoredKey(_ event: NSEvent, panel: MenuBarSearchPanel?) -> NSEvent? {
+        guard let panel else { return event }
+        return panel.handleKeyDown(event)
     }
 
     /// Set before the query field is refocused after a rename, so it gets

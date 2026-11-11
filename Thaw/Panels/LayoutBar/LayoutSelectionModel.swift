@@ -196,16 +196,38 @@ final class LayoutSelectionModel {
         placement: LayoutBatchMove.Placement,
         using mover: Mover
     ) async -> LayoutBatchMoveOutcome? {
-        guard let command = command(to: section, placement: placement) else { return nil }
-        clear()
-        return await mover(command)
+        await moveRestoringUnmoved(to: section, placement: placement, using: mover, restoresUnmoved: false)?.outcome
     }
 
-    /// Puts back a selection that a move cleared, unless something was selected since.
-    func restore(_ previous: LayoutSelection) {
-        guard selection.isEmpty else { return }
+    /// Like move(to:placement:using:), but a move that left the items in place selects them again,
+    /// unless the selection changed while it ran. restored says whether it did.
+    func moveRestoringUnmoved(
+        to section: MenuBarSectionName,
+        placement: LayoutBatchMove.Placement,
+        using mover: Mover,
+        restoresUnmoved: Bool = true
+    ) async -> (outcome: LayoutBatchMoveOutcome, restored: Bool)? {
+        guard let command = command(to: section, placement: placement) else { return nil }
+        let previous = selection
+        clear()
+        let revision = changeCount
+        let outcome = await mover(command)
+        let restored = restoresUnmoved && Self.leftItemsInPlace(outcome) && restore(previous, ifUnchangedSince: revision)
+        return (outcome, restored)
+    }
+
+    /// Puts back a selection a move cleared, keeping only what the bars still show.
+    /// Does nothing once anything changed the selection after revision.
+    private func restore(_ previous: LayoutSelection, ifUnchangedSince revision: Int) -> Bool {
+        guard changeCount == revision else { return false }
         pendingReselection = nil
-        change(announcing: false) { $0 = previous }
+        change(announcing: false) { selection in
+            selection = previous
+            for (section, sectionUnits) in units {
+                selection.retain(sectionUnits, in: section)
+            }
+        }
+        return !selection.isEmpty
     }
 
     /// Whether a move left every item where it was: refused, or nothing to change.
@@ -244,9 +266,11 @@ final class LayoutSelectionModel {
     }
 
     /// What the pane says when a move of the selection was refused. Nil for a move that went through.
+    /// With the selection restored, it asks only for a retry.
     static nonisolated func refusal(
         for outcome: LayoutBatchMoveOutcome,
         section: MenuBarSectionName,
+        selectionRestored: Bool = false,
         itemName: (String) -> String?
     ) -> LayoutBarFeedbackCenter.Refusal? {
         guard case let .refused(error) = outcome else { return nil }
@@ -263,10 +287,15 @@ final class LayoutSelectionModel {
                 localized: "The selected items couldn’t move to \(section.localizedName)",
                 comment: "Title shown when a move of several selected Layout items was refused"
             ),
-            message: String(
-                localized: "Nothing was moved. An item may have quit or changed since you selected it. Select the items again and retry.",
-                comment: "Explanation shown when a move of several selected Layout items was refused"
-            )
+            message: selectionRestored
+                ? String(
+                    localized: "Nothing was moved. An item may have quit or changed since you selected it. Try the move again.",
+                    comment: "Explanation shown when a move of several selected Layout items was refused and they are selected again"
+                )
+                : String(
+                    localized: "Nothing was moved. An item may have quit or changed since you selected it. Select the items again and retry.",
+                    comment: "Explanation shown when a move of several selected Layout items was refused"
+                )
         )
     }
 

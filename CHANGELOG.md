@@ -28,6 +28,8 @@ the items under New and Fixed.
 
 Layout gets a pop-out window and undo for every edit, search becomes Floe's launcher, and Settings fills its gaps.
 
+If you'd like to help, [#1529](https://github.com/thaw-app/Thaw/issues/1529) lists work that's ready to pick up. Some of it needs no Swift at all.
+
 ### New
 
 - **Pop Out Editor (work in progress).** Opens Layout in a window with every item in a list, a filter, an editor for the selected item and full keyboard control.
