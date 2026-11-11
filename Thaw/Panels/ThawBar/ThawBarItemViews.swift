@@ -88,6 +88,14 @@ struct ThawBarItemView: View {
         }
     }
 
+    /// Pressed in, lifted while highlighted, or at rest. Reduce Motion drops the lift.
+    private var glyphScale: CGFloat {
+        if isPressed {
+            return 0.96
+        }
+        return isHighlighted && !reduceMotion ? 1.12 : 1.0
+    }
+
     var body: some View {
         if let image = displayImage {
             // Colour icons keep their own colours so they stay recognizable;
@@ -111,7 +119,7 @@ struct ThawBarItemView: View {
             // Stronger lift than the 1.02 row token for the small glyph. Reduce
             // Motion drops the lift and leaves the hover wash. Only the pointer
             // springs it; arrow keys move the highlight at once, and a press shows at once.
-            .scaleEffect(isPressed ? 0.96 : isHighlighted && !reduceMotion ? 1.12 : 1.0)
+            .scaleEffect(glyphScale)
             .thawAnimation(ThawMotion.interactive, value: isHovered)
             .onChange(of: activationRequest) {
                 if isKeyboardFocused {

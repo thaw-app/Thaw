@@ -22,9 +22,9 @@ struct LayoutItemListPane: View {
     /// Space on a row: bring the item's editor forward.
     let showEditor: () -> Void
     /// Escape with an empty filter.
-    var close: () -> Void = {}
+    var close: () -> Void = { /* Does nothing until the owner sets it. */ }
     /// Gets the view behind the filter field, so the window can tell when the filter is being typed in.
-    var filterAnchor: (NSView) -> Void = { _ in }
+    var filterAnchor: (NSView) -> Void = { _ in /* Does nothing until the owner sets it. */ }
 
     @State private var anchors = LayoutItemListAnchors()
     /// The row the list's keys last landed on, and the selection's change count then.
@@ -335,5 +335,5 @@ struct LayoutFilterAnchor: NSViewRepresentable {
         return view
     }
 
-    func updateNSView(_: NSView, context _: Context) {}
+    func updateNSView(_: NSView, context _: Context) { /* The view is registered once, in makeNSView. */ }
 }

@@ -44,7 +44,7 @@ extension MenuBarItemImageCache {
         native.allowsCaptureReveal = true
         defer {
             native.allowsCaptureReveal = false
-            withExtendedLifetime(appState) {}
+            withExtendedLifetime(appState) { /* Only keeps appState alive to here. */ }
         }
         return await concealedPrewarm().captureHiddenItems(retakingAll: retakingAll)
     }

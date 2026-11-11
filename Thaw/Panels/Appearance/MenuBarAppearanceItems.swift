@@ -103,7 +103,7 @@ enum MenuBarAppearanceItems {
     ) -> AnyPublisher<Void, Never> {
         center.publisher(for: NSWorkspace.screensDidWakeNotification)
             .merge(with: center.publisher(for: NSWorkspace.sessionDidBecomeActiveNotification))
-            .map { _ in }
+            .map { _ in /* Only the event matters, not its notification. */ }
             .receive(on: RunLoop.main)
             .eraseToAnyPublisher()
     }

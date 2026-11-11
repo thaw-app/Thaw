@@ -111,6 +111,9 @@ struct LayoutBarItemViewTests {
         #expect(!LayoutBarItemView.drawsBareModuleGlyph(for: item(.menuBarAgent, "com.example.unknown")))
         #expect(!LayoutBarItemView.drawsBareModuleGlyph(for: item(.string("com.example.app"), "com.apple.menuextra.bluetooth")))
 
+        #expect(LayoutBarItemView.bareGlyphFraction(isEnabled: true) == 1)
+        #expect(LayoutBarItemView.bareGlyphFraction(isEnabled: false) == 0.67, "dimmed like a disabled picture")
+
         let tile = CGRect(x: 0, y: 0, width: 40, height: 24)
         let rect = try #require(LayoutBarItemView.bareGlyphRect(for: CGSize(width: 16, height: 16), in: tile))
         #expect(rect.width == rect.height)

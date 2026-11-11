@@ -72,7 +72,7 @@ struct MenuBarHidingSection: View {
     @Binding var isHiddenInSpace: Bool
     @Binding var isHiddenEverywhere: Bool
     /// Called for each override macOS accepted, with the Space it was sent for.
-    var onAccepted: (MenuBarHidingScope.Request, UInt64) -> Void = { _, _ in }
+    var onAccepted: (MenuBarHidingScope.Request, UInt64) -> Void = { _, _ in /* Does nothing until the owner sets it. */ }
     @State private var failure: LocalizedStringResource?
 
     private var presentation: any MenuBarPresentationControlling {

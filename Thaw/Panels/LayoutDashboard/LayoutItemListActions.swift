@@ -16,7 +16,7 @@ struct LayoutItemListActions {
     let selection: LayoutSelectionModel
     let appState: AppState
     /// Gets the moved items once a move lands.
-    var onMoved: @MainActor ([String]) -> Void = { _ in }
+    var onMoved: @MainActor ([String]) -> Void = { _ in /* Nothing more to do by default. */ }
 
     /// The section the whole selection is in, when it is in one.
     var selectedSection: MenuBarSectionName? {
@@ -105,7 +105,7 @@ enum LayoutItemListDrop {
         before row: LayoutItemListRow,
         selection: LayoutSelectionModel,
         appState: AppState,
-        onMoved: @escaping @MainActor ([String]) -> Void = { _ in }
+        onMoved: @escaping @MainActor ([String]) -> Void = { _ in /* Nothing more to do by default. */ }
     ) -> Bool {
         guard let moving = select(ids, in: selection) else { return false }
         let order = LayoutBatchMoveExecutor.snapshot(appState: appState).sections[row.section]?.map(\.id) ?? []
@@ -122,7 +122,7 @@ enum LayoutItemListDrop {
         section: MenuBarSectionName,
         selection: LayoutSelectionModel,
         appState: AppState,
-        onMoved: @escaping @MainActor ([String]) -> Void = { _ in }
+        onMoved: @escaping @MainActor ([String]) -> Void = { _ in /* Nothing more to do by default. */ }
     ) -> Bool {
         guard select(ids, in: selection) != nil else { return false }
         LayoutItemVisibility.moveSelection(to: section, selection: selection, appState: appState, keepsSelection: true, onMoved: onMoved)

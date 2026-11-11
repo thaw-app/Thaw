@@ -65,7 +65,7 @@ final class LayoutListMotion {
 
     @ObservationIgnored var scroll = Scroll()
     /// Moves the list to an offset. The scroll tracking sets it, so the pane holds no scroll state.
-    @ObservationIgnored var scrollTo: (CGFloat) -> Void = { _ in }
+    @ObservationIgnored var scrollTo: (CGFloat) -> Void = { _ in /* Does nothing until the owner sets it. */ }
     /// The scroll view's top in the window's content, top-down.
     @ObservationIgnored var viewportTop: CGFloat = 0
     @ObservationIgnored private var pending: [String] = []
@@ -131,7 +131,7 @@ final class LayoutListMotion {
 
     /// Scrolls while the mouse button is down and the pointer rests near an edge.
     /// pointer gets the pointer's height in the content after each step.
-    func startAutoscroll(pointer: @escaping (CGFloat) -> Void = { _ in }) {
+    func startAutoscroll(pointer: @escaping (CGFloat) -> Void = { _ in /* Nothing more to do by default. */ }) {
         autoscroll?.cancel()
         autoscroll = Task { @MainActor [weak self] in
             while !Task.isCancelled, NSEvent.pressedMouseButtons & 1 != 0, let self {

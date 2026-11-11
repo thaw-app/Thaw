@@ -18,7 +18,8 @@ extension MenuBarItemImageCache {
     /// The box around the visible ink in points, or nil for a picture with none.
     static nonisolated func inkBounds(of capture: MenuBarItemGlyphCapture) -> CGRect? {
         let image = capture.cgImage
-        let width = image.width, height = image.height
+        let width = image.width
+        let height = image.height
         guard width > 0, height > 0, capture.scale > 0 else { return nil }
         let context = CGContext(
             data: nil,
@@ -33,7 +34,10 @@ extension MenuBarItemImageCache {
         context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
         guard let data = context.data?.assumingMemoryBound(to: UInt8.self) else { return nil }
         let stride = context.bytesPerRow
-        var minX = width, maxX = -1, minY = height, maxY = -1
+        var minX = width
+        var maxX = -1
+        var minY = height
+        var maxY = -1
         for row in 0 ..< height {
             for column in 0 ..< width where data[row * stride + column * 4 + 3] > 12 {
                 minX = min(minX, column)

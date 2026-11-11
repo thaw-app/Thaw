@@ -29,9 +29,10 @@ struct LayoutDashboardSidePane: View {
         }
 
         var systemImage: String {
-            switch self {
-            case .item: "slider.horizontal.3"
-            default: tab?.systemImage ?? "circle"
+            if case .item = self {
+                "slider.horizontal.3"
+            } else {
+                tab?.systemImage ?? "circle"
             }
         }
 
