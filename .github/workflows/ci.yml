@@ -104,6 +104,10 @@ jobs:
     if: github.repository == 'thaw-app/Thaw'
     runs-on: xcode-27
     needs: [changes, static_analysis]
+    permissions:
+      contents: read
+      # Deleting older compilation caches; a pull request from a fork gets a read-only token regardless.
+      actions: write
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
@@ -125,21 +129,16 @@ jobs:
           restore-keys: |
             spm-${{ runner.os }}-
 
-      - name: Compute cache week
+      # Xcode's compilation cache, so the build recompiles only what changed since
+      # the cache was saved. Every run restores the newest one development saved.
+      # The key names this commit, which only a rerun matches.
+      - name: Restore Swift compilation cache
         if: needs.changes.outputs.code == 'true'
-        id: cache-week
-        run: echo "week=$(date +%Y-%U)" >> "$GITHUB_OUTPUT"
-
-      # Persists Xcode's compilation cache so most of the build is cache hits. Keyed
-      # by week to rotate it; restore-keys start from last week's.
-      - name: Cache Swift compilation cache
-        if: needs.changes.outputs.code == 'true'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: Build/CompilationCache.noindex
-          key: compilation-cache-${{ runner.os }}-${{ github.ref_name }}-${{ steps.cache-week.outputs.week }}
+          key: compilation-cache-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
-            compilation-cache-${{ runner.os }}-${{ github.ref_name }}-
             compilation-cache-${{ runner.os }}-
 
       # The Thaw target's lint build phase requires the pinned SwiftLint on PATH.
@@ -161,6 +160,30 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
+
+      # Only development saves, once per commit. A weekly key was written once and
+      # then never updated, so by the end of a week every run recompiled the week's
+      # changes. Pull requests don't save: at about 600 MB each they would push
+      # development's caches out of the repository's limit.
+      - name: Save Swift compilation cache
+        if: needs.changes.outputs.code == 'true' && github.ref == 'refs/heads/development'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: Build/CompilationCache.noindex
+          key: compilation-cache-${{ runner.os }}-${{ github.sha }}
+
+      # Keeps the two newest, so a save per commit doesn't fill the cache limit.
+      - name: Drop older compilation caches
+        if: needs.changes.outputs.code == 'true' && github.ref == 'refs/heads/development'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREFIX: compilation-cache-${{ runner.os }}-
+        run: |
+          gh cache list --repo "$GITHUB_REPOSITORY" --ref refs/heads/development --key "$PREFIX" \
+            --sort created_at --order desc --limit 100 --json id --jq '.[2:][].id' |
+            while IFS= read -r id; do
+              gh cache delete "$id" --repo "$GITHUB_REPOSITORY" || true
+            done
 
       - name: Check memory budget
         if: needs.changes.outputs.code == 'true'
