@@ -10,12 +10,22 @@ import MenuBarModel
 /// Tracks attempts separately from the fresh, unsuppressed strands supplied
 /// by the caller. An item may exhaust this pass without being repaired.
 struct BoundaryRepairPass {
+    /// Strands one pass may pick before it gives up.
+    static let strandBudget = 6
+
     private(set) var attempted: [MenuBarItem] = []
+    private(set) var turns = 0
     private var attemptedIDs = Set<String>()
     private var skippedIDs = Set<String>()
 
     func next(in strands: [MenuBarItem]) -> MenuBarItem? {
         strands.first { !attemptedIDs.contains($0.uniqueIdentifier) && !skippedIDs.contains($0.uniqueIdentifier) }
+    }
+
+    /// Counts a pick; false once the pass has spent its budget.
+    mutating func takeTurn() -> Bool {
+        turns += 1
+        return turns <= Self.strandBudget
     }
 
     mutating func recordAttempt(_ item: MenuBarItem) {

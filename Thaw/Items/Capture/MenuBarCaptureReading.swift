@@ -216,7 +216,7 @@ extension MenuBarItemImageCache {
                 "colorSpace=\((image.colorSpace?.name as String?) ?? "nil")"
         )
         let scale = CGFloat(image.width) / barWindow.frame.width
-        guard isPlausibleCaptureScale(scale) else {
+        guard AXCropRules.isPlausibleCaptureScale(scale) else {
             MenuBarItemImageCache.diagLog.warning(
                 "barWindowCapture: scale \(scale) implausible for a \(barWindow.frame.width)pt bar window"
             )

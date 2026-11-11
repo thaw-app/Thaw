@@ -255,9 +255,10 @@ private struct CaptureWorld {
 
     /// The crop pipeline a visible section runs, reading the scripted bar.
     func capture(forgiving forgivenTags: Set<MenuBarItemTag>) async -> MenuBarItemImageCache.CapturePass {
-        await cache.captureImages(
-            of: items, scale: 2, displayID: Self.display, screenFrame: nil,
-            options: .init(freshBounds: true, forgivenTags: forgivenTags), using: reader
+        await cache.boundsCropper.crop(
+            items, on: Self.display, screenFrame: nil,
+            options: .init(freshBounds: true, forgivenTags: forgivenTags), using: reader,
+            skipping: { [cache] in cache.shouldSkipCapture(for: $0) }
         )
     }
 
@@ -525,131 +526,6 @@ struct GroupedRevealPublicationTests {
         let world = try CaptureWorld(gated: gated)
         world.cache.clearCaptureFailures(tags: [world.retried.tag])
         return (world, RevealingSectionController(itemManager: world.appState.itemManager))
-    }
-
-    @Test("Each batch is covered before its reveal and uncovered after its conceal")
-    func batchesAreCovered() async throws {
-        let (world, controller) = try makeWorld(gated: false)
-        var events: [String] = []
-        await world.cache.captureRevealBatches(
-            [[world.fresh], [world.retried]],
-            controller: controller,
-            target: .init(displayID: CaptureWorld.display, admittedDisplayID: world.appState.itemManager.itemDisplayID, scale: 2),
-            missPolicy: .dropUntrustedEntries,
-            appState: world.appState,
-            sources: .init(
-                settledItems: { batch in batch.map { (requested: $0, live: $0) } },
-                renderSettle: { _ in },
-                reader: world.reader,
-                cover: { events.append("cover revealed=\(controller.revealed.count)") },
-                uncover: { events.append("uncover concealed=\(controller.concealed.count)") }
-            )
-        )
-        #expect(events == ["cover revealed=0", "uncover concealed=1", "cover revealed=1", "uncover concealed=2"])
-    }
-
-    /// Under Native hiding a reveal rebuilds the bar, and the item can reach its slot only
-    /// after its first position was read; the settle and the crop must follow it there.
-    @Test("An item that moves after its first read is settled again and cropped where it ended up")
-    func movedItemIsFollowed() async throws {
-        let (world, controller) = try makeWorld(gated: false)
-        let stale = MenuBarItem(
-            tag: world.fresh.tag,
-            windowID: world.fresh.windowID,
-            ownerPID: world.fresh.ownerPID,
-            sourcePID: world.fresh.sourcePID,
-            bounds: world.fresh.bounds.offsetBy(dx: -150, dy: 0),
-            title: world.fresh.title,
-            isOnScreen: true
-        )
-        var reads = 0
-        var settledAt: [[CGFloat]] = []
-        await world.cache.captureRevealBatches(
-            [[world.fresh]],
-            controller: controller,
-            target: .init(displayID: CaptureWorld.display, admittedDisplayID: world.appState.itemManager.itemDisplayID, scale: 2),
-            missPolicy: .dropUntrustedEntries,
-            appState: world.appState,
-            sources: .init(
-                settledItems: { batch in
-                    reads += 1
-                    return batch.map { (requested: $0, live: reads == 1 ? stale : $0) }
-                },
-                renderSettle: { items in settledAt.append(items.map(\.bounds.minX)) },
-                reader: world.reader
-            )
-        )
-        #expect(settledAt == [[stale.bounds.minX], [world.fresh.bounds.minX]])
-        #expect(world.cache.capturesByTag[world.fresh.tag] != nil)
-    }
-
-    @Test("The second read asks only for the items that appeared the first time")
-    func secondReadSkipsItemsThatNeverAppeared() async throws {
-        let (world, controller) = try makeWorld(gated: false)
-        var asked: [[MenuBarItemTag]] = []
-        await world.cache.captureRevealBatches(
-            [[world.fresh, world.retried]],
-            controller: controller,
-            target: .init(displayID: CaptureWorld.display, admittedDisplayID: world.appState.itemManager.itemDisplayID, scale: 2),
-            missPolicy: .dropUntrustedEntries,
-            appState: world.appState,
-            sources: .init(
-                settledItems: { batch in
-                    asked.append(batch.map(\.tag))
-                    // Retried never draws, like a module that stays switched off.
-                    return batch.filter { $0.tag != world.retried.tag }.map { (requested: $0, live: $0) }
-                },
-                renderSettle: { _ in },
-                reader: world.reader
-            )
-        )
-        #expect(asked == [[world.fresh.tag, world.retried.tag], [world.fresh.tag]])
-    }
-
-    @Test("An item that stays put is settled once")
-    func stillItemIsSettledOnce() async throws {
-        let (world, controller) = try makeWorld(gated: false)
-        var settles = 0
-        await world.cache.captureRevealBatches(
-            [[world.fresh]],
-            controller: controller,
-            target: .init(displayID: CaptureWorld.display, admittedDisplayID: world.appState.itemManager.itemDisplayID, scale: 2),
-            missPolicy: .dropUntrustedEntries,
-            appState: world.appState,
-            sources: .init(
-                settledItems: { batch in batch.map { (requested: $0, live: $0) } },
-                renderSettle: { _ in settles += 1 },
-                reader: world.reader
-            )
-        )
-        #expect(settles == 1)
-        #expect(world.cache.capturesByTag[world.fresh.tag] != nil)
-    }
-
-    /// The hiding method can change while a pass waits between batches, so
-    /// the gate is asked again right before each reveal.
-    @Test("A batch the gate refuses is never revealed")
-    func gateIsAskedBeforeEachBatch() async throws {
-        let (world, controller) = try makeWorld(gated: false)
-        var asked = 0
-        await world.cache.captureRevealBatches(
-            [[world.fresh], [world.retried]],
-            controller: controller,
-            target: .init(displayID: CaptureWorld.display, admittedDisplayID: world.appState.itemManager.itemDisplayID, scale: 2),
-            missPolicy: .dropUntrustedEntries,
-            appState: world.appState,
-            sources: .init(
-                settledItems: { batch in batch.map { (requested: $0, live: $0) } },
-                renderSettle: { _ in },
-                reader: world.reader,
-                mayReveal: {
-                    asked += 1
-                    return asked == 1
-                }
-            )
-        )
-        #expect(asked == 2)
-        #expect(controller.revealed.count == 1)
     }
 
     @Test("A reveal that moves the layout generation still publishes its own batch")

@@ -590,60 +590,7 @@ final class MenuBarItemManager {
         }
     }
 
-    /// Visible items that proved physically unrepairable after an assertion
-    /// reflow. Keeping them eligible makes every later restriction change pulse
-    /// the whole menu bar even though the synthetic move cannot succeed. Pairing
-    /// stable identity with the owning process keeps assertion-driven synthetic
-    /// ID churn from re-arming the loop, while naturally retrying after the app
-    /// relaunches with a new PID.
-    var postRestrictionUnrepairableItemIDs = Set<PostRestrictionRepairItemID>()
-
-    /// The visible-boundary repair's memory of each item: how many passes in a row
-    /// it failed, and whether the repair has given up on it for now. A suppression
-    /// clears when the item's owner quits, the display topology changes, its
-    /// cooldown passes, or on relaunch.
-    ///
-    /// A single failure is ordinary: a weight write needs a beat before
-    /// MenuBarAgent re-seats the item, and a display reflow can strand an item
-    /// once legitimately. An item that fails this many passes running is one
-    /// the ladder cannot place at all, and retrying it forever is what keeps
-    /// the repair pass, and the item cache and capture pipeline behind it,
-    /// awake on an otherwise idle machine.
-    var boundaryRepairBreaker = BoundaryRepairBreaker<PostRestrictionRepairItemID>()
-
-    /// Items whose persisted stranded verdict has already seeded this
-    /// session's suppression. Seeded once, so the cooldown and display-change
-    /// re-arms still apply afterwards.
-    var seededStrandedRepairItemIDs = Set<PostRestrictionRepairItemID>()
-
-    /// How long a suppression holds before the strand is re-armed. Long
-    /// enough that a structural blocker does not turn the repair pass into a
-    /// drag storm; short enough that a transient fight self-heals within a
-    /// minute of the fight ending.
-    var isBoundaryRepairDeclinedForWrappedMenu = false
-
-    /// Items the layout pane just moved into the visible section that still
-    /// owe a physical seat. MenuBarAgent re-allows a concealed item at the
-    /// slot it remembers, whatever the weight on file says, and while the
-    /// section is collapsed the boundary check cannot see the concealed
-    /// neighbours the item is standing among, so it reports the item as
-    /// placed and the mix only shows on the next reveal. The strand pass
-    /// drags these across the divider unconditionally.
-    var pendingPhysicalSeatIDs = Set<String>()
-
-    /// Consecutive failed passes before an item stops being repaired. Each
-    /// pass carries its own multi-attempt drag budget, so a third pass means
-    /// minutes of visible drags. A strand that two full passes cannot cross
-    /// has a structural blocker (a group pulling it back, or the store's
-    /// weights), and more drags will not change that.
-    static let boundaryRepairTripLimit = 2
-
-    /// Suppressions older than this are cleared on the next repair pass.
-    static let boundaryRepairSuppressionCooldown: Duration = .seconds(60)
-
-    /// The display the last repair pass ran against, so a topology change can
-    /// re-arm items that were only stranded by the old arrangement.
-    var lastBoundaryRepairDisplayID: CGDirectDisplayID?
+    @ObservationIgnored let boundaryRepair = BoundaryRepairMemory()
 
     /// Mirrors a macOS 27 layout-bar drop into the legacy saved-order gate
     /// immediately. The AX window signature changes as the drop/reveal settles;
