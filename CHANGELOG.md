@@ -22,7 +22,7 @@ Anything else goes before the first section, or in its own section after
 these four. The website shows each section's name beside its list, and counts
 the items under New and Fixed.
 
-## [3.0.0-alpha.14] - 2026-11-08
+## [3.0.0-alpha.14] - 2026-11-11
 
 **macOS 27 only · Build 125**
 
