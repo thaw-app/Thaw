@@ -12,23 +12,6 @@ import MenuBarModel
 extension MenuBarItemImageCache {
     // MARK: Reveal Capture Rules
 
-    /// Resolves which requested sections currently have live menu-bar pixels
-    /// available for capture. macOS 27 physically removes concealed items from
-    /// MenuBarAgent, but temporarily revealed sections can and should be
-    /// captured so their real glyphs remain cached after concealment resumes.
-    static nonisolated func capturableSections(
-        from requestedSections: [MenuBarSection.Name],
-        usesVisibilityRestrictions: Bool,
-        revealedSection: MenuBarSection.Name?
-    ) -> [MenuBarSection.Name] {
-        return MenuBarBackendProvider
-            .backend(usesVisibilityRestrictions: usesVisibilityRestrictions)
-            .capturableSections(
-                from: requestedSections,
-                revealedSection: revealedSection
-            )
-    }
-
     /// How many concealed items are revealed together on a display without a
     /// notch. See revealBatchSize(hasNotch:).
     ///
@@ -176,18 +159,6 @@ extension MenuBarItemImageCache {
         }
 
         return (nextSettled, nextPrevious)
-    }
-
-    /// What a grouped reveal does with a cache entry it could not refresh.
-    ///
-    /// The layout prewarm wants a blank or chevron-width entry gone once the
-    /// reveal proves nothing better is available, so the thumbnail falls back
-    /// to the app icon instead of a stale crop. The overlay keeps whatever it
-    /// holds: its strip is on screen, and swapping a glyph for a fallback icon
-    /// mid-pass is a visible regression.
-    enum RevealMissPolicy {
-        case keepExisting
-        case dropUntrustedEntries
     }
 
     /// Restoration action after temporarily revealing a section for prewarm capture.

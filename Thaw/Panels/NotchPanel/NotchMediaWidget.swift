@@ -55,14 +55,14 @@ final class NotchMediaWidget: NotchWidget {
     }
 
     func matches(_ item: MenuBarItem) -> Bool {
-        guard case let .string(bundleID) = item.tag.namespace else {
+        guard let bundleID = item.tag.namespace.bundleIdentifier else {
             return false
         }
         return Self.supportedApps[bundleID] != nil
     }
 
     func prepare(for item: MenuBarItem) {
-        guard case let .string(bundleID) = item.tag.namespace else {
+        guard let bundleID = item.tag.namespace.bundleIdentifier else {
             player = nil
             return
         }

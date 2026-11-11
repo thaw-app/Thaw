@@ -51,7 +51,7 @@ extension MenuBarItemManager {
             guard !self.arrangementIsManual, !self.barSettling.isSettling, !self.isNotificationCenterLayoutSuspended,
                   self.barSettling.hold(for: .barMutation) == nil
             else { return nil }
-            let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+            let displayID = Bridging.activeMenuBarDisplayID
             let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
             let capture = await ScreenCapture.captureMenuBarHostingWindowAsync(displayID: displayID)
             return PostRestrictionReading(items: items, displayID: displayID, barCapture: capture)
@@ -93,7 +93,7 @@ extension MenuBarItemManager {
 
         // A pulse can re-blank hiding-unsupported apps, so pulse only when
         // supported visible items are parked or blank.
-        let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+        let displayID = Bridging.activeMenuBarDisplayID
         // macOS can move the bar to a new main display after the display settle
         // ends. Until the cache follows, every visible item reads as parked.
         if let cachedDisplayID = itemDisplayID, cachedDisplayID != displayID {

@@ -28,9 +28,8 @@ struct MenuBarItemCaptureFallbackTests {
             isItemHotkeyListExpanded: false,
             isSimpleModeSettings: simpleMode
         )
-        let sections = MenuBarItemImageCache.capturableSections(
+        let sections = MenuBarBackendProvider.current.capturableSections(
             from: nav.liveCaptureScope.sections(thawBarSection: nil),
-            usesVisibilityRestrictions: true,
             revealedSection: nil
         )
         try #require(sections == [.visible])

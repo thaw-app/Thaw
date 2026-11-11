@@ -34,14 +34,6 @@ final class HotkeysSettings {
         Hotkey(action: action)
     }
 
-    /// Encoder for properties.
-    @ObservationIgnored
-    private let encoder = JSONEncoder()
-
-    /// Decoder for properties.
-    @ObservationIgnored
-    private let decoder = JSONDecoder()
-
     /// The shared app state.
     @ObservationIgnored
     private(set) weak var appState: AppState?
@@ -58,18 +50,13 @@ final class HotkeysSettings {
 
     /// Loads the model's initial state.
     private func loadInitialState() {
-        guard
-            let dictionary = Defaults.dictionary(forKey: .hotkeys) as? [String: Data],
-            !dictionary.isEmpty
-        else {
-            return
-        }
+        let bindings = HotkeyBindingStore.actions.rawBindings()
         for hotkey in hotkeys {
-            guard let data = dictionary[hotkey.action.rawValue] else {
+            guard let data = bindings[hotkey.action.rawValue] else {
                 continue
             }
             do {
-                if let keyCombination = try decoder.decode(KeyCombination?.self, from: data) {
+                if let keyCombination = try HotkeyBindingStore.combination(from: data) {
                     hotkey.keyCombination = keyCombination
                 }
             } catch {
@@ -87,17 +74,7 @@ final class HotkeysSettings {
             hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
                 guard let self, let hotkey else { return }
                 do {
-                    // A cleared binding removes the key; encoding the optional
-                    // would store a dead JSON null.
-                    let data = try hotkey.keyCombination.map { try encoder.encode($0) }
-                    withMutableCopy(of: Defaults.dictionary(forKey: .hotkeys) ?? [:]) { dictionary in
-                        if let data {
-                            dictionary[hotkey.action.rawValue] = data
-                        } else {
-                            dictionary.removeValue(forKey: hotkey.action.rawValue)
-                        }
-                        Defaults.set(dictionary, forKey: .hotkeys)
-                    }
+                    try HotkeyBindingStore.actions.set(hotkey.keyCombination, for: hotkey.action.rawValue)
                 } catch {
                     diagLog.error("Error encoding hotkey: \(error)")
                     lastPersistenceError = error.localizedDescription

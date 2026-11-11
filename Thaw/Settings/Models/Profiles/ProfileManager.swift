@@ -368,20 +368,16 @@ final class ProfileManager {
             .apply(to: appState.settings)
 
         let hotkeys = ProfileHotkeyMerge.merged(
-            current: Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:], profile: profile.hotkeys, knownActions: profile.hotkeyActions
+            current: HotkeyBindingStore.actions.rawBindings(), profile: profile.hotkeys, knownActions: profile.hotkeyActions
         )
-        Defaults.set(hotkeys, forKey: .hotkeys)
+        HotkeyBindingStore.actions.setRawBindings(hotkeys)
         for hotkey in appState.settings.hotkeys.hotkeys {
             guard let data = hotkeys[hotkey.action.rawValue] else {
                 hotkey.keyCombination = nil
                 continue
             }
             do {
-                let keyCombination = try decoder.decode(
-                    KeyCombination?.self,
-                    from: data
-                )
-                hotkey.keyCombination = keyCombination
+                hotkey.keyCombination = try HotkeyBindingStore.combination(from: data)
             } catch {
                 diagLog.error(
                     "Failed to decode hotkey for \(hotkey.action.rawValue): \(error)"
@@ -410,10 +406,7 @@ final class ProfileManager {
 
         // Apply per-item hotkeys to UserDefaults, then rebuild the live hotkey
         // objects so the restored bindings register immediately.
-        Defaults.set(
-            profile.menuBarLayout.itemHotkeys ?? [:],
-            forKey: .menuBarItemHotkeys
-        )
+        HotkeyBindingStore.items.setRawBindings(profile.menuBarLayout.itemHotkeys ?? [:])
         appState.menuBarManager.rebuildItemHotkeys()
 
         // Resolve layout against this profile's groups, not the outgoing profile's.
@@ -460,7 +453,7 @@ final class ProfileManager {
         if let existing = profiles.firstIndex(where: { $0.id == metadata.id }) {
             profiles[existing] = metadata
         } else {
-            profiles.insert(metadata, at: min(max(index, 0), profiles.count))
+            profiles.insert(metadata, at: index.clamped(min: 0, max: profiles.count))
         }
         try saveManifest()
 
@@ -569,7 +562,7 @@ final class ProfileManager {
         ProfileContent(
             generalSettings: GeneralSettingsSnapshot.capture(from: appState.settings),
             advancedSettings: AdvancedSettingsSnapshot.capture(from: appState.settings),
-            hotkeys: Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:],
+            hotkeys: HotkeyBindingStore.actions.rawBindings(),
             hotkeyActions: ProfileHotkeyMerge.currentActions,
             displayConfigurations: appState.settings.displaySettings.configurations,
             globalDisplayConfiguration: appState.settings.displaySettings.globalConfiguration,
@@ -624,9 +617,7 @@ final class ProfileManager {
         let customNames = Defaults.dictionary(
             forKey: .menuBarItemCustomNames
         ) as? [String: String] ?? [:]
-        let itemHotkeys = Defaults.dictionary(
-            forKey: .menuBarItemHotkeys
-        ) as? [String: Data] ?? [:]
+        let itemHotkeys = HotkeyBindingStore.items.rawBindings()
 
         // Apply requires itemOrder and savedSectionOrder to agree; computeSectionOrder preserves closed apps and filters transient widgets.
         // Direct cache iteration would route closed saved apps through unmanaged placement instead of their saved section.
@@ -865,17 +856,12 @@ final class ProfileManager {
 
         // Clean up orphaned hotkey entries for deleted profiles.
         let profileIDs = Set(profiles.map(\.id.uuidString))
-        if var saved = Defaults.dictionary(forKey: .profileHotkeys) as? [String: Data] {
-            let before = saved.count
-            saved = saved.filter { profileIDs.contains($0.key) }
-            if saved.count != before {
-                Defaults.set(saved, forKey: .profileHotkeys)
-            }
+        let store = HotkeyBindingStore.profiles
+        let everySaved = store.rawBindings()
+        let saved = everySaved.filter { profileIDs.contains($0.key) }
+        if saved.count != everySaved.count {
+            store.setRawBindings(saved)
         }
-
-        let saved = Defaults.dictionary(forKey: .profileHotkeys) as? [String: Data] ?? [:]
-        let dec = JSONDecoder()
-        let enc = JSONEncoder()
 
         var newHotkeys: [UUID: Hotkey] = [:]
         for meta in profiles {
@@ -887,7 +873,7 @@ final class ProfileManager {
             hotkey.performSetup(with: appState)
 
             if let data = saved[meta.id.uuidString],
-               let combo = try? dec.decode(KeyCombination?.self, from: data)
+               let combo = try? HotkeyBindingStore.combination(from: data)
             {
                 hotkey.keyCombination = combo
             }
@@ -898,13 +884,7 @@ final class ProfileManager {
             hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
                 guard let self, let hotkey else { return }
                 let newCombo = hotkey.keyCombination
-                var dict = Defaults.dictionary(forKey: .profileHotkeys) as? [String: Data] ?? [:]
-                if let combo = newCombo, let data = try? enc.encode(combo) {
-                    dict[profileID.uuidString] = data
-                } else {
-                    dict.removeValue(forKey: profileID.uuidString)
-                }
-                Defaults.set(dict, forKey: .profileHotkeys)
+                try? store.set(newCombo, for: profileID.uuidString)
                 hotkeyProfileMap[ObjectIdentifier(hotkey)] = newCombo != nil ? profileID : nil
             }
 

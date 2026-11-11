@@ -9,7 +9,6 @@ import SwiftUI
 import ThawUI
 
 struct LayoutBarsSection: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(AppState.self) private var appState
     let itemManager: MenuBarItemManager
     /// The Layout window's selection, shared with its item list.

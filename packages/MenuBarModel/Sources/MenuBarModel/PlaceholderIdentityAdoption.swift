@@ -54,7 +54,7 @@ public enum PlaceholderIdentityAdoption {
 
     /// Whether an item answered under a placeholder name that a saved title could stand for.
     public static func hasPlaceholderIdentity(_ item: MenuBarItem) -> Bool {
-        guard case let .string(bundleID) = item.tag.namespace, !item.isControlItem else { return false }
+        guard let bundleID = item.tag.namespace.bundleIdentifier, !item.isControlItem else { return false }
         return MenuBarItemTag.hasMultilineStatusTitles(bundleID) && isPlaceholderTitle(item.tag.title, bundleID: bundleID)
     }
 
@@ -70,7 +70,7 @@ public enum PlaceholderIdentityAdoption {
             var placeholders: [Int] = []
             var answered = Set<String>()
             for (index, item) in items.enumerated() {
-                guard case let .string(itemBundleID) = item.tag.namespace, itemBundleID == bundleID else { continue }
+                guard let itemBundleID = item.tag.namespace.bundleIdentifier, itemBundleID == bundleID else { continue }
                 if hasPlaceholderIdentity(item) {
                     placeholders.append(index)
                 } else {

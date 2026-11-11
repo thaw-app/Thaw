@@ -22,7 +22,7 @@ final class PopoverAnchor {
     /// The pointer's screen wins over .main: the user expects the surface
     /// where they made the gesture.
     static var defaultScreen: NSScreen? {
-        NSScreen.screenWithMouse ?? NSScreen.main
+        NSScreen.screenWithMouseOrMain
     }
 
     /// The invisible window the popover points at.

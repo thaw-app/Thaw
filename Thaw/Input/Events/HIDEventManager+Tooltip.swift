@@ -19,7 +19,7 @@ extension HIDEventManager {
         }
 
         guard
-            isMouseInsideMenuBar(appState: appState, screen: screen),
+            isMouseInsideMenuBar(screen: screen),
             let mouseLocation = MouseHelpers.locationCoreGraphics,
             let hoveredEntry = drawnSeat(at: mouseLocation)
         else {

@@ -224,17 +224,12 @@ struct ControlItemPanelView: View {
         guard metadata.id != profileManager.activeProfileID else {
             return
         }
-        let profile: Profile
         do {
-            profile = try profileManager.loadProfile(id: metadata.id)
+            try profileManager.switchToProfile(id: metadata.id, on: appState)
         } catch {
             Self.diagLog.error("profile \(metadata.id) failed to load: \(error)")
             ThawHUD.show(symbol: "exclamationmark.triangle", text: "Profile not applied")
-            return
         }
-        let previousID = profileManager.activeProfileID
-        profileManager.activeProfileID = metadata.id
-        profileManager.applyProfile(profile, to: appState, previousProfileID: previousID)
     }
 }
 

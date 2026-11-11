@@ -11,17 +11,10 @@ import Foundation
 import MenuBarModel
 
 extension HIDEventManager {
-    /// The screen owning the active menu bar, for hover, scroll and tooltips,
-    /// so nothing reveals on an inactive bar where clicks would do nothing.
-    /// Mouse-down uses NSScreen.screenWithMouse instead.
-    func bestScreen(appState _: AppState) -> NSScreen? {
-        NSScreen.screenWithActiveMenuBar ?? NSScreen.main
-    }
-
     // MARK: Mouse Location Helpers
 
-    /// Whether the pointer is over screen's menu bar strip.
-    func isMouseInsideMenuBar(appState _: AppState, screen: NSScreen) -> Bool {
+    /// Whether the pointer is over screen's menu bar strip, or within padding points below it.
+    func isMouseInsideMenuBar(screen: NSScreen, padding: CGFloat = 0) -> Bool {
         guard
             let mouseLocation = MouseHelpers.locationAppKit,
             let menuBarHeight = screen.getMenuBarHeight()
@@ -29,33 +22,22 @@ extension HIDEventManager {
             return false
         }
 
-        return mouseLocation.x >= screen.frame.minX
-            && mouseLocation.x <= screen.frame.maxX
-            && mouseLocation.y <= screen.frame.maxY
-            && mouseLocation.y >= screen.frame.maxY - menuBarHeight
-    }
-
-    /// The menu bar plus hoverRetentionPadding below it. Only the hide side of
-    /// show-on-hover and the rehide check use it, so pointer tremor at the bar
-    /// edge cannot start a show/hide loop; showing uses isMouseInsideMenuBar.
-    func isMouseInsideMenuBarHoverBand(appState _: AppState, screen: NSScreen) -> Bool {
-        guard
-            let mouseLocation = MouseHelpers.locationAppKit,
-            let menuBarHeight = screen.getMenuBarHeight()
-        else {
-            return false
-        }
-
-        let padding = Constants.MenuBarTuning.hoverRetentionPadding
         return mouseLocation.x >= screen.frame.minX
             && mouseLocation.x <= screen.frame.maxX
             && mouseLocation.y <= screen.frame.maxY
             && mouseLocation.y >= screen.frame.maxY - menuBarHeight - padding
     }
 
+    /// The menu bar plus hoverRetentionPadding below it. Only the hide side of
+    /// show-on-hover and the rehide check use it, so pointer tremor at the bar
+    /// edge cannot start a show/hide loop; showing uses isMouseInsideMenuBar.
+    func isMouseInsideMenuBarHoverBand(screen: NSScreen) -> Bool {
+        isMouseInsideMenuBar(screen: screen, padding: Constants.MenuBarTuning.hoverRetentionPadding)
+    }
+
     /// Whether the pointer is over the frontmost app's menu, counting the
     /// Apple menu at the far left but stopping short of the notch.
-    func isMouseInsideApplicationMenu(appState _: AppState, screen: NSScreen)
+    func isMouseInsideApplicationMenu(screen: NSScreen)
         -> Bool
     {
         guard
@@ -143,7 +125,7 @@ extension HIDEventManager {
     ///
     /// Tried cheapest first: the prebuilt bounds table, then the managed item
     /// cache, and only as a last resort a live query to the Window Server.
-    func isMouseInsideMenuBarItem(appState: AppState, screen _: NSScreen) -> Bool {
+    func isMouseInsideMenuBarItem(appState: AppState) -> Bool {
         guard let mouseLocation = MouseHelpers.locationCoreGraphics else {
             return false
         }
@@ -172,7 +154,7 @@ extension HIDEventManager {
     }
 
     /// Whether the pointer is over screen's notch.
-    func isMouseInsideNotch(appState _: AppState, screen: NSScreen) -> Bool {
+    func isMouseInsideNotch(screen: NSScreen) -> Bool {
         guard
             let mouseLocation = MouseHelpers.locationAppKit,
             let frameOfNotch = screen.frameOfNotch
@@ -193,8 +175,8 @@ extension HIDEventManager {
         -> Bool
     {
         guard
-            isMouseInsideMenuBar(appState: appState, screen: screen),
-            !isMouseInsideNotch(appState: appState, screen: screen)
+            isMouseInsideMenuBar(screen: screen),
+            !isMouseInsideNotch(screen: screen)
         else {
             return false
         }
@@ -209,11 +191,11 @@ extension HIDEventManager {
         let isInAppMenu: Bool = if let result = appMenuResult {
             result
         } else {
-            isMouseInsideApplicationMenu(appState: appState, screen: screen)
+            isMouseInsideApplicationMenu(screen: screen)
         }
 
         guard !isInAppMenu,
-              !isMouseInsideMenuBarItem(appState: appState, screen: screen),
+              !isMouseInsideMenuBarItem(appState: appState),
               !isMouseInsideThawIcon(appState: appState)
         else {
             return false
@@ -281,7 +263,7 @@ extension HIDEventManager {
         screen: NSScreen
     ) -> Bool? {
         guard
-            isMouseInsideMenuBar(appState: appState, screen: screen),
+            isMouseInsideMenuBar(screen: screen),
             let mouseLocation = MouseHelpers.locationCoreGraphics
         else {
             return false
@@ -320,7 +302,7 @@ extension HIDEventManager {
         screen: NSScreen
     ) -> Bool {
         guard
-            isMouseInsideMenuBar(appState: appState, screen: screen),
+            isMouseInsideMenuBar(screen: screen),
             let mouseLocation = MouseHelpers.locationCoreGraphics
         else {
             return false

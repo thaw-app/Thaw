@@ -304,10 +304,10 @@ extension MenuBarItemManager {
 
         let resolvedDisplayID: CGDirectDisplayID = if let displayID {
             displayID
-        } else if let window = appState.hidEventManager.bestScreen(appState: appState) {
+        } else if let window = NSScreen.activeMenuBarScreenOrMain {
             window.displayID
         } else {
-            Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+            Bridging.activeMenuBarDisplayID
         }
 
         appState.hidEventManager.stopAll()
@@ -1792,7 +1792,7 @@ extension MenuBarItemManager {
             isWithinSettleWindow: barSettling.hold(for: .layoutReorder) != nil,
             repairAfterRestriction: repairAfterRestriction,
             applicationMenuWrapsPastNotch: {
-                guard let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main,
+                guard let screen = NSScreen.activeMenuBarScreenOrMain,
                       MenuBarCapacitySnapshot.applicationMenuWrapsPastNotch(on: screen)
                 else { return nil }
                 return String(screen.displayID)

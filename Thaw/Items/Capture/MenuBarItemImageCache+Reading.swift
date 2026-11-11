@@ -159,7 +159,7 @@ extension MenuBarItemImageCache {
         let displayID = await MainActor.run {
             Self.captureDisplayID(
                 itemCacheDisplayID: appState.itemManager.itemDisplayID,
-                activeMenuBarDisplayID: windowServer.activeMenuBarDisplayID(),
+                activeMenuBarDisplayID: Bridging.getActiveMenuBarDisplayID(),
                 mainDisplayID: CGMainDisplayID()
             )
         }

@@ -508,7 +508,6 @@ struct GroupedRevealPublicationTests {
             [[world.fresh], [world.retried]],
             controller: controller,
             target: .init(displayID: CaptureWorld.display, admittedDisplayID: world.appState.itemManager.itemDisplayID, scale: 2),
-            missPolicy: .dropUntrustedEntries,
             appState: world.appState,
             sources: .init(
                 settledItems: { batch in

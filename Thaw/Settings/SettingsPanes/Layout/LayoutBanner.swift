@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import MenuBarModel
 
 /// The one warning the Layout pane shows above its bars.
@@ -45,9 +46,6 @@ nonisolated enum LayoutBanner: Equatable {
 
     /// The names of the Visible items macOS is not drawing, in bar order, each name once.
     static func namesNotDrawn(visibleItems: [MenuBarItem], notDrawnTags: Set<MenuBarItemTag>) -> [String] {
-        var seen = Set<String>()
-        return itemsNotDrawn(visibleItems: visibleItems, notDrawnTags: notDrawnTags)
-            .map(\.displayName)
-            .filter { seen.insert($0).inserted }
+        Array(itemsNotDrawn(visibleItems: visibleItems, notDrawnTags: notDrawnTags).map(\.displayName).uniqued())
     }
 }

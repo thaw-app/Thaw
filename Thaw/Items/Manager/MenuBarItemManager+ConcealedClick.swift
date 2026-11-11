@@ -29,7 +29,7 @@ extension MenuBarItemManager {
 
         // Opening an item on another display activates it; the repair pass must
         // not read that as a topology change.
-        if displayID != (Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()) {
+        if displayID != (Bridging.activeMenuBarDisplayID) {
             barSettling.note(.thawPressFlipsDisplay)
         }
 
@@ -58,7 +58,7 @@ extension MenuBarItemManager {
 
         // Closing an open menu removes a window, which reads as no reaction;
         // without this the fallbacks would reopen it.
-        let key = MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
+        let key = item.canonicalIdentifier
         let menusBefore = ownerMenuWindowIDs(item)
         if mouseButton == .left, let opened = menusOpenedByClick[key], !opened.isDisjoint(with: menusBefore) {
             menusOpenedByClick[key] = nil
@@ -135,7 +135,7 @@ extension MenuBarItemManager {
         // bar slid away there is nothing to press; with it on screen an item still undrawn has no room
         // on the bar, and the press it always had is the only way to open it.
         let drawn = await MenuBarAXQueries.waitForDrawnStatusItem(pid: resolvedPID(for: item), timeout: Constants.MenuBarTuning.thawBarRevealAXWait)
-        let barDisplay = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+        let barDisplay = Bridging.activeMenuBarDisplayID
         guard drawn || MenuBarItemImageCache.isMenuBarOnScreen(displayID: barDisplay), await pressConcealedItemInPlace(item) else {
             Self.handBackPressReveal(identifier, pressed: false, controller: controller)
             return false

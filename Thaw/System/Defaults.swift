@@ -504,12 +504,6 @@ extension Defaults {
 
         case menuBarItemCustomNames = "MenuBarItemCustomNames"
 
-        /// The overlay strip's persisted item widths, as JSON keyed by
-        /// canonical persistent identifier. Written by the Overlay Menu Bar
-        /// while engaged; read when a concealed item has no saner width
-        /// source. Absent until the first recorded measurement.
-        case overlayItemWidths = "OverlayItemWidths"
-
         // MARK: Menu Bar Layout Table Access
 
         /// The bookmark for MenuBarAgent's layout table from the open panel,

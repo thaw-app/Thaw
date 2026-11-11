@@ -311,7 +311,7 @@ extension ProfilePreviewModel {
         var images = [String: MenuBarItemDisplayImage]()
         for section in MenuBarSection.Name.allCases {
             for item in appState.itemManager.managedItems(for: section) {
-                let key = MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
+                let key = item.canonicalIdentifier
                 images[key] = OverflowFallbackIcon.resolvedImage(
                     for: item,
                     section: section,

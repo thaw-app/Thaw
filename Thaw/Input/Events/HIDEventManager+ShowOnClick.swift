@@ -411,7 +411,7 @@ extension HIDEventManager {
 
             // Clicks on the menu bar itself belong to the show-on-click path.
             return appState.menuBarManager.hasVisibleSection
-                && !isMouseInsideMenuBar(appState: appState, screen: screen)
+                && !isMouseInsideMenuBar(screen: screen)
         })
     }
 }

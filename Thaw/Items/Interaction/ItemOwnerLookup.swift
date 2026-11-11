@@ -21,7 +21,7 @@ nonisolated enum ItemOwnerLookup {
         runningPIDs: (String) -> [pid_t] = runningPIDs(forBundleID:)
     ) -> pid_t {
         let pid = item.sourcePID ?? item.ownerPID
-        guard pid <= 0, case let .string(bundleID) = item.tag.namespace else {
+        guard pid <= 0, let bundleID = item.tag.namespace.bundleIdentifier else {
             return pid
         }
         let running = runningPIDs(bundleID)

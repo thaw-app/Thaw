@@ -43,7 +43,7 @@ extension MenuBarItemManager {
 
         let ourBundleID = Bundle.main.bundleIdentifier ?? ""
         func isTracked(_ bundle: String) -> Bool {
-            !bundle.hasPrefix("com.apple.") && !bundle.hasPrefix(ourBundleID)
+            !SharedConstants.isAppleBundleIdentifier(bundle) && !bundle.hasPrefix(ourBundleID)
         }
         let bundlesByPID = running.bundleIdentifiersByPID
         let seen = Set(cache.managedItems.compactMap { item in

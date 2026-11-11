@@ -112,6 +112,6 @@ final class NotchIndicatorView: NSView {
 
     private var isBright: Bool {
         guard let colorInfo = averageColorInfo else { return false }
-        return colorInfo.isBright(for: NSScreen.screenWithActiveMenuBar ?? NSScreen.main)
+        return colorInfo.isBright(for: NSScreen.activeMenuBarScreenOrMain)
     }
 }

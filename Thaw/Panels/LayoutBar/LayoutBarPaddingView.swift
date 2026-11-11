@@ -31,40 +31,10 @@ final class LayoutBarPaddingView: NSView {
         MenuBarBackendProvider.current.anchoredSystemItemsTrail(in: items)
     }
 
-    /// Explains a refused drop rather than letting the item snap back in
-    /// silence.
-    ///
-    /// The common case is an Apple item (often Weather) refused because the
-    /// system item hiding switch, which sits below the editor, is off.
-    ///
-    /// Asking again with the switch flipped separates the two cases: if the
-    /// assignment would then be allowed, the message names the setting;
-    /// otherwise it says the item stays put.
-    private func postAssignmentRefusal(
-        for item: MenuBarItem,
-        to section: MenuBarSection.Name,
-        experimentalSystemItemHiding: Bool
-    ) {
+    /// Explains a refused drop into this bar's section rather than letting the item snap back in silence.
+    private func postAssignmentRefusal(for item: MenuBarItem, experimentalSystemItemHiding: Bool) {
         guard let appState = container.appState else { return }
-
-        let wouldBeAllowedWithSystemItemHiding = !experimentalSystemItemHiding
-            && MenuBarBackendProvider.current.canAssign(
-                item,
-                to: section,
-                experimentalSystemItemHiding: true
-            )
-
-        appState.layoutFeedback.post(
-            wouldBeAllowedWithSystemItemHiding
-                ? LayoutBarFeedbackCenter.systemItemHidingDisabled(
-                    itemName: item.displayName,
-                    section: section
-                )
-                : LayoutBarFeedbackCenter.itemCannotMove(
-                    itemName: item.displayName,
-                    section: section
-                )
-        )
+        MenuBarSearchItemActions.postAssignmentRefusal(for: item, to: container.section, experimentalSystemItemHiding: experimentalSystemItemHiding, appState: appState)
     }
 
     private func layoutWatchdogDuration() -> Duration {
@@ -315,7 +285,7 @@ final class LayoutBarPaddingView: NSView {
                 sourceSection != container.section || container.section != .visible
             else {
                 Self.diagLog.warning("Ignoring drag for anchored system item \(item.logString)")
-                postAssignmentRefusal(for: item, to: container.section, experimentalSystemItemHiding: experimentalSystemItemHiding)
+                postAssignmentRefusal(for: item, experimentalSystemItemHiding: experimentalSystemItemHiding)
                 container.handleDrag(sender, phase: .exited)
                 draggingSource.hasContainer = false
                 return false
@@ -337,7 +307,7 @@ final class LayoutBarPaddingView: NSView {
             // hidden assignment the assertion can't honor.
             guard MenuBarBackendProvider.current.canAssign(item, to: container.section, experimentalSystemItemHiding: experimentalSystemItemHiding) else {
                 Self.diagLog.warning("Refusing to assign non-hideable \(item.logString) to \(container.section.logString)")
-                postAssignmentRefusal(for: item, to: container.section, experimentalSystemItemHiding: experimentalSystemItemHiding)
+                postAssignmentRefusal(for: item, experimentalSystemItemHiding: experimentalSystemItemHiding)
                 container.handleDrag(sender, phase: .exited)
                 draggingSource.hasContainer = false
                 return false
@@ -355,11 +325,9 @@ final class LayoutBarPaddingView: NSView {
             // flips. MenuBarAgent republishes an item at the weight it already
             // holds, so otherwise the icon reappears on its old side of the
             // divider and the boundary repair drags it back seconds later.
-            let groupMembers = crossSectionGroupMembers(
-                for: item,
-                sourceSection: sourceSection,
-                controller: controller
-            )
+            let groupMembers = container.appState.flatMap {
+                MenuBarSearchItemActions.crossSectionGroupMembers(for: item, in: sourceSection, appState: $0)
+            }
             // The seat moves an item leaving the visible bar behind the
             // divider before it is concealed, so the assignment commit waits
             // for it. The drop is accepted now; a
@@ -384,7 +352,7 @@ final class LayoutBarPaddingView: NSView {
                                 .managedItems(for: sourceSection)
                             appState.layoutFeedback.post(
                                 LayoutBarFeedbackCenter.blockedGroupMove(
-                                    groupName: groupDisplayName(
+                                    groupName: MenuBarSearchItemActions.groupDisplayName(
                                         for: groupMembers,
                                         in: sourceItems,
                                         appState: appState
@@ -811,35 +779,6 @@ final class LayoutBarPaddingView: NSView {
         Self.layoutItemsForPersistence(from: arrangedViews)
     }
 
-    /// The members of the dragged item's group in its source section, or nil
-    /// when the item belongs to no group.
-    ///
-    /// The whole group travels together on a cross-section drop, honoring "one
-    /// section per group", even if its members are not currently adjacent in
-    /// the source section. Resolution goes through the shared resolver, so a
-    /// user-authored group spanning several bundles moves as one unit exactly
-    /// like an automatic same-bundle cluster does.
-    private func crossSectionGroupMembers(
-        for item: MenuBarItem,
-        sourceSection: MenuBarSection.Name,
-        controller: (any MenuBarSectionControlling)?
-    ) -> [MenuBarItem]? {
-        guard let appState = container.appState else {
-            return nil
-        }
-        let managed = appState.itemManager.managedItems(for: sourceSection)
-        // Display order, not recorded order: the indices below are read back
-        // against the rows the user is dragging, so a group has to be resolved
-        // over the same sequence the layout editor is showing.
-        let sourceItems = controller?.displayOrdered(managed, in: sourceSection) ?? managed
-        guard let group = appState.itemGroupManager.resolvedGroup(containing: item, in: sourceItems),
-              group.count >= 2
-        else {
-            return nil
-        }
-        return group.memberIndices.compactMap { sourceItems.indices.contains($0) ? sourceItems[$0] : nil }
-    }
-
     // MARK: Group handle drops
 
     /// Commits a whole-group drag started from a cluster's drag handle.
@@ -1061,7 +1000,7 @@ final class LayoutBarPaddingView: NSView {
                 let sourceItems = appState.itemManager.managedItems(for: section)
                 appState.layoutFeedback.post(
                     LayoutBarFeedbackCenter.groupRegatherIncomplete(
-                        groupName: groupDisplayName(for: members, in: sourceItems, appState: appState),
+                        groupName: MenuBarSearchItemActions.groupDisplayName(for: members, in: sourceItems, appState: appState),
                         section: section
                     )
                 )
@@ -1116,7 +1055,7 @@ final class LayoutBarPaddingView: NSView {
                 ) {
                     appState.layoutFeedback.post(
                         LayoutBarFeedbackCenter.blockedGroupMove(
-                            groupName: groupDisplayName(for: members, in: sourceItems, appState: appState),
+                            groupName: MenuBarSearchItemActions.groupDisplayName(for: members, in: sourceItems, appState: appState),
                             section: targetSection,
                             refusal: refusal
                         )
@@ -1130,21 +1069,6 @@ final class LayoutBarPaddingView: NSView {
         }
         noteDropIntoHiddenSection(from: handle.sourceSection)
         return true
-    }
-
-    /// A user-facing name for the group these members belong to, for use in
-    /// refusal copy.
-    private func groupDisplayName(
-        for members: [MenuBarItem],
-        in sourceItems: [MenuBarItem],
-        appState: AppState
-    ) -> String {
-        guard let first = members.first,
-              let group = appState.itemGroupManager.resolvedGroup(containing: first, in: sourceItems)
-        else {
-            return members.first?.displayName ?? ""
-        }
-        return appState.itemGroupManager.displayName(for: group, in: sourceItems)
     }
 
     private func orderedLayoutItemsForSectionOrder() -> [MenuBarItem] {
@@ -1321,7 +1245,7 @@ final class LayoutBarPaddingView: NSView {
         guard
             !wrapsRows,
             container.section == .visible,
-            let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main,
+            let screen = NSScreen.activeMenuBarScreenOrMain,
             screen.hasNotch,
             let notch = screen.frameOfNotch
         else {

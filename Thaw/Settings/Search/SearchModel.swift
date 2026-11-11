@@ -94,7 +94,7 @@ final class SearchModel {
 
         // Rank globally by relevance, then group by pane preserving the rank
         // order within each pane. Pane order follows the best-scoring entry.
-        let ranked = SearchIndex.sortedByRelevance(scored)
+        let ranked = SearchRanker.sortedByRelevance(scored)
 
         var grouped: [SettingsNavigationIdentifier: [SearchEntry]] = [:]
         var paneOrder: [SettingsNavigationIdentifier] = []

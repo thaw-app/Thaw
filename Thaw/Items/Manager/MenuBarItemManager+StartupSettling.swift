@@ -32,7 +32,7 @@ extension MenuBarItemManager {
             unresolvedPIDs: SettlingSourcePIDs.unresolvedCount(in: items),
             hostReady: menuBarHostItemsReady(in: itemCache),
             bundleIDs: Set(items.compactMap { item in
-                if case let .string(bid) = item.tag.namespace {
+                if let bid = item.tag.namespace.bundleIdentifier {
                     return bid
                 }
                 return nil

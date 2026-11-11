@@ -49,7 +49,7 @@ extension MenuBarItemManager {
         persistKnownItemIdentifiers()
         persistSavedSectionOrder()
         for (index, item) in current.enumerated() {
-            guard case let .string(bundleID) = item.tag.namespace, learned.contains(bundleID) else { continue }
+            guard let bundleID = item.tag.namespace.bundleIdentifier, learned.contains(bundleID) else { continue }
             let tag = MenuBarItemTag(
                 namespace: item.tag.namespace,
                 title: MenuBarItemTag.canonicalTitle(namespace: item.tag.namespace, title: item.tag.title),

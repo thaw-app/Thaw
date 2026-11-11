@@ -318,10 +318,7 @@ final class ControlItemMenuController: NSObject {
             // The menu is already closed, so a silent failure would look like
             // success. Report it the way the Profiles pane does.
             do {
-                let profile = try profileManager.loadProfile(id: profileID)
-                let previousID = profileManager.activeProfileID
-                profileManager.activeProfileID = profileID
-                profileManager.applyProfile(profile, to: appState, previousProfileID: previousID)
+                try profileManager.switchToProfile(id: profileID, on: appState)
             } catch {
                 Self.diagLog.error("Could not apply profile \(profileID) from the status menu: \(error)")
                 NSAlert(error: error).runModal()

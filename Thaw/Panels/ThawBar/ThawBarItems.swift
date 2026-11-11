@@ -20,7 +20,7 @@ enum ThawBarItems {
         if let folderMembers {
             return folderMembers.compactMap { identifier in
                 itemManager.managedItems.first {
-                    MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier) == identifier
+                    $0.canonicalIdentifier == identifier
                 }
             }
         }

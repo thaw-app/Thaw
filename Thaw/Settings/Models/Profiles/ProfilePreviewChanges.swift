@@ -37,10 +37,10 @@ enum ProfilePreviewChanges {
 
     private static func areas(of profile: Profile, appState: AppState) -> [Area] {
         let display = appState.settings.displaySettings
-        let shortcuts = Defaults.dictionary(forKey: .hotkeys) as? [String: Data] ?? [:]
+        let shortcuts = HotkeyBindingStore.actions.rawBindings()
         let mergedShortcuts = ProfileHotkeyMerge.merged(current: shortcuts, profile: profile.hotkeys, knownActions: profile.hotkeyActions)
         let names = Defaults.dictionary(forKey: .menuBarItemCustomNames) as? [String: String] ?? [:]
-        let itemShortcuts = Defaults.dictionary(forKey: .menuBarItemHotkeys) as? [String: Data] ?? [:]
+        let itemShortcuts = HotkeyBindingStore.items.rawBindings()
         return [
             area("appearance", String(localized: "Appearance"), appState.appearanceManager.configuration, profile.appearanceConfiguration),
             area("shortcuts", String(localized: "Shortcuts"), shortcuts, mergedShortcuts),

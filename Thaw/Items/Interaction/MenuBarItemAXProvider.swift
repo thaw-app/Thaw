@@ -1266,7 +1266,7 @@ nonisolated enum MenuBarItemAXProvider {
 
         // For apps with stable titles AXIdentifier is stable by convention;
         // return raw.
-        guard case let .string(bundleID) = namespace,
+        guard let bundleID = namespace.bundleIdentifier,
               MenuBarItemTag.hasCanonicalizableTitles(bundleID)
         else {
             return identifier?.nonEmpty ?? displayTitle

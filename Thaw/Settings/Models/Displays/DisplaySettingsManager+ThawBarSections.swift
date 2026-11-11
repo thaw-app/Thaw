@@ -13,9 +13,4 @@ extension DisplaySettingsManager {
         let configuration = configuration(for: displayID)
         return configuration.useThawBar || (section == .alwaysHidden && configuration.useThawBarForAlwaysHidden)
     }
-
-    /// Sets the Always-Hidden-only choice for one display.
-    func setUseThawBarForAlwaysHidden(_ value: Bool, forDisplayUUID uuid: String) {
-        updateConfiguration(forDisplayUUID: uuid) { $0.withUseThawBarForAlwaysHidden(value) }
-    }
 }

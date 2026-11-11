@@ -57,7 +57,7 @@ extension HIDEventManager {
         guard
             !isDraggingMenuBarItem,
             event.modifierFlags.contains(.command),
-            isMouseInsideMenuBarItem(appState: appState, screen: screen)
+            isMouseInsideMenuBarItem(appState: appState)
         else {
             return
         }

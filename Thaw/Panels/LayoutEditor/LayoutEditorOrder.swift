@@ -135,7 +135,7 @@ nonisolated enum LayoutEditorOrder {
             into: saved
         )
         let byIdentifier = Dictionary(
-            candidates.map { (MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier), $0) },
+            candidates.map { ($0.canonicalIdentifier, $0) },
             uniquingKeysWith: { first, _ in first }
         )
         return merged.compactMap { byIdentifier[$0] }

@@ -9,11 +9,7 @@ import Foundation
 import MenuBarModel
 import PlatformRuntimeKit
 import Subprocess
-#if canImport(System)
-    import System
-#else
-    import SystemPackage
-#endif
+import System
 
 /// Destructive troubleshooting helpers used by Settings → Tools.
 ///

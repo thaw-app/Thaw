@@ -128,7 +128,7 @@ extension MenuBarItemManager {
             await (MenuBarItem.getMenuBarItems(option: .activeSpace))
                 .filter { !$0.isSystemClone && !$0.isNativeOverflowControl }
         }
-        guard let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main else {
+        guard let screen = NSScreen.activeMenuBarScreenOrMain else {
             return false
         }
 

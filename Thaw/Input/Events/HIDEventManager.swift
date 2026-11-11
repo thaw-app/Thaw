@@ -245,7 +245,7 @@ final class HIDEventManager {
         // populated the menu bar window list). The downstream hit-testing in
         // isMouseInsideMenuBar() / isMouseInsideEmptyMenuBarSpace() handles the
         // case where the menu bar is genuinely absent (fullscreen app, etc.).
-        guard let screen = NSScreen.screenWithMouse ?? NSScreen.main ?? bestScreen(appState: appState) else {
+        guard let screen = NSScreen.screenWithMouseOrMain ?? NSScreen.screenWithActiveMenuBar else {
             return
         }
         // Cancel any pending secondary-context-menu task on every mouse-down so
@@ -365,7 +365,7 @@ final class HIDEventManager {
     private(set) lazy var mouseDraggedMonitor = EventMonitor.universal(
         for: .leftMouseDragged
     ) { [weak self] event in
-        if let self, isEnabled, let appState, let screen = bestScreen(appState: appState) {
+        if let self, isEnabled, let appState, let screen = NSScreen.activeMenuBarScreenOrMain {
             handleMenuBarItemDragStart(
                 with: event,
                 appState: appState,
@@ -396,7 +396,7 @@ final class HIDEventManager {
         }
 
         if let appState {
-            guard let screen = NSScreen.screenWithMouse ?? NSScreen.main else {
+            guard let screen = NSScreen.screenWithMouseOrMain else {
                 return event
             }
             let screenID = screen.displayID
@@ -408,7 +408,7 @@ final class HIDEventManager {
 
             activeDisplayWatcher?.check(throttled: true)
 
-            if isMouseInsideMenuBar(appState: appState, screen: screen),
+            if isMouseInsideMenuBar(screen: screen),
                let mouseLocation = MouseHelpers.locationCoreGraphics
             {
                 pointerAXCache.refreshForeignWidget(at: mouseLocation)
@@ -425,7 +425,7 @@ final class HIDEventManager {
     private(set) lazy var scrollWheelMonitor = EventMonitor.universal(
         for: .scrollWheel
     ) { [weak self] event in
-        if let self, isEnabled, let appState, let screen = bestScreen(appState: appState) {
+        if let self, isEnabled, let appState, let screen = NSScreen.activeMenuBarScreenOrMain {
             handleShowOnScroll(with: event, appState: appState, screen: screen)
         }
         return event

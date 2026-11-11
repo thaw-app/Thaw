@@ -56,7 +56,7 @@ public struct FreshVolatileTitleLearner: Sendable {
         reads &+= 1
         var itemsByOwner = [String: [MenuBarItem]]()
         for item in freshItems {
-            guard !item.isControlItem, !item.isSystemClone, item.sourcePID != nil, case let .string(bundleID) = item.tag.namespace, !MenuBarItemTag.hasCanonicalizableTitles(bundleID)
+            guard !item.isControlItem, !item.isSystemClone, item.sourcePID != nil, let bundleID = item.tag.namespace.bundleIdentifier, !MenuBarItemTag.hasCanonicalizableTitles(bundleID)
             else {
                 continue
             }

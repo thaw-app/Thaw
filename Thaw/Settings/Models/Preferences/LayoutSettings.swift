@@ -101,7 +101,7 @@ final class LayoutSettings: SettingsURIHandling {
     }
 
     /// Extreme hidden-item weights try to make native overflow collapse them first on macOS 27 notched displays.
-    /// Experimental URI/Defaults-only control has no Settings or search entry; see SearchIndex.baseNonSearchableProperties.
+    /// Experimental URI/Defaults-only control has no Settings or search entry; see SearchIndex.nonSearchableProperties.
     var enableExperimentalOverflowPrevention = Defaults.DefaultValue.enableExperimentalOverflowPrevention {
         didSet {
             guard oldValue != enableExperimentalOverflowPrevention else { return }

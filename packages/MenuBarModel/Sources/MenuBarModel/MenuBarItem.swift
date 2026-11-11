@@ -264,7 +264,7 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
             for candidate in candidates {
                 if let moduleName = SystemMenuBarModuleCatalog.moduleName(matching: candidate) {
                     // Keep human AX titles ("Wi-Fi"); map opaque IDs to catalog names.
-                    let useCatalogName = candidate.hasPrefix("com.apple.") || candidate.hasPrefix("BentoBox")
+                    let useCatalogName = SharedConstants.isAppleBundleIdentifier(candidate) || candidate.hasPrefix("BentoBox")
                     return Self.titleCased(useCatalogName ? moduleName : candidate)
                 }
             }
@@ -293,7 +293,7 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
         // snapshots, which carry no PID. The namespace is the creator's bundle
         // identifier, which beats "Menu Bar Item".
         var namespaceDerivedName: String? {
-            guard case let .string(bundleIdentifier) = tag.namespace else {
+            guard let bundleIdentifier = tag.namespace.bundleIdentifier else {
                 return nil
             }
             if

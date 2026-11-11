@@ -161,7 +161,7 @@ enum LayoutItemList {
     /// The owning app when it adds something: Apple's items name internal processes
     /// such as MenuBarAgent, which mean nothing to a person, so they show none.
     static func shownOwner(for item: MenuBarItem, name: String) -> String? {
-        guard case let .string(bundleID) = item.tag.namespace, !bundleID.hasPrefix("com.apple."), let owner = MenuBarItemDisplayName.ownerName(for: item), owner != name
+        guard let bundleID = item.tag.namespace.bundleIdentifier, !SharedConstants.isAppleBundleIdentifier(bundleID), let owner = MenuBarItemDisplayName.ownerName(for: item), owner != name
         else {
             return nil
         }

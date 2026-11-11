@@ -88,7 +88,7 @@ extension LayoutDashboardModel {
 
     /// The active menu bar's display and the Space showing on it.
     static func liveTarget(spaces: [Bridging.ManagedSpace]) -> LayoutEditTarget {
-        let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main
+        let screen = NSScreen.activeMenuBarScreenOrMain
         let displayID = screen?.displayID ?? CGMainDisplayID()
         let spaceID = Bridging.getActiveSpaceID()
         let space = spaces.first { $0.spaceID == spaceID }

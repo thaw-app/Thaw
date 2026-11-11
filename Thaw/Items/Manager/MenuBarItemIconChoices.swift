@@ -39,12 +39,8 @@ final class MenuBarItemIconChoices {
         stored = data.flatMap { try? JSONDecoder().decode([String: Stored].self, from: $0) } ?? [:]
     }
 
-    private static func key(for item: MenuBarItem) -> String {
-        MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
-    }
-
     func image(for item: MenuBarItem) -> NSImage? {
-        let key = Self.key(for: item)
+        let key = item.canonicalIdentifier
         // Read before the image cache, so a SwiftUI caller observes a change.
         guard let entry = stored[key] else { return nil }
         if let image = images[key] {
@@ -57,12 +53,12 @@ final class MenuBarItemIconChoices {
     }
 
     func hasChoice(for item: MenuBarItem) -> Bool {
-        stored[Self.key(for: item)] != nil
+        stored[item.canonicalIdentifier] != nil
     }
 
     /// Saves image as the item's icon, or clears the choice when nil.
     func setImage(_ image: NSImage?, for item: MenuBarItem) {
-        let key = Self.key(for: item)
+        let key = item.canonicalIdentifier
         images[key] = nil
         if let image, let png = Self.pngData(for: image) {
             stored[key] = Stored(png: png, isTemplate: image.isTemplate)
