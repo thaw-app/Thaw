@@ -38,10 +38,10 @@ extension MenuBarItemManager {
         return situation
     }
 
-    /// Reads the bar in full when it moved to a display the cache hasn't followed: only a full
-    /// read moves the cache, and an unchanged window list never asks for one.
-    func readBarIfItMoved(_ situation: WriteHold.Situation) {
-        guard situation.barOnUncachedDisplay else { return }
+    /// Kicks a full read of the bar when the deferred pass can't get a current
+    /// cache on its own; see StructuralNormalizationHolds.needsFreshRead.
+    func refreshBarForRetry(_ situation: WriteHold.Situation) {
+        guard StructuralNormalizationHolds.needsFreshRead(situation) else { return }
         Task { await cacheItemsRegardless() }
     }
 }

@@ -91,9 +91,25 @@ final class LayoutSelectionModel {
     }
 
     func click(_ itemID: String, in section: MenuBarSectionName, kind: LayoutSelection.Click) {
+        click(itemID, in: section, kind: kind, among: nil)
+    }
+
+    /// A click whose extend reaches only the listed items, so a filtered list never selects rows it
+    /// isn't showing. The anchor's unit stays reachable, so a range can start from a row since hidden.
+    func click(_ itemID: String, in section: MenuBarSectionName, kind: LayoutSelection.Click, among visibleIDs: Set<String>?) {
         pendingReselection = nil
         let previousCount = count
-        change { $0.click(itemID, in: section, units: units[section] ?? [], kind: kind) }
+        let sectionUnits = units[section] ?? []
+        let clickUnits: [Unit]
+        if let visibleIDs {
+            let anchorID = selection.anchor?.itemID
+            clickUnits = sectionUnits.filter { unit in
+                unit.memberIDs.contains(where: visibleIDs.contains) || (anchorID.map(unit.memberIDs.contains) ?? false)
+            }
+        } else {
+            clickUnits = sectionUnits
+        }
+        change { $0.click(itemID, in: section, units: clickUnits, kind: kind) }
         if Self.isMultiSelection(kind, from: previousCount, to: count) {
             onMultiSelect()
         }
@@ -105,22 +121,27 @@ final class LayoutSelectionModel {
         kind != .replace && oldCount < 2 && newCount >= 2
     }
 
+    /// Like a click, clearing or selecting drops a reselection still waiting for its bar, so a late bar update can't override it.
     func clear() {
+        pendingReselection = nil
         change { $0.clear() }
     }
 
     /// Selects every item the bars show.
     func selectAll() {
+        pendingReselection = nil
         change { $0.selectAll(in: units) }
     }
 
     /// Selects only the listed items, so ⌘A in a filtered list leaves out the rows it hides.
     func selectAll(among itemIDs: Set<String>) {
+        pendingReselection = nil
         change { $0.selectAll(among: itemIDs, in: units) }
     }
 
     /// Selects the items the bars show among itemIDs, such as a group's members.
     func select(_ itemIDs: [String]) {
+        pendingReselection = nil
         change { $0.select(Set(itemIDs), in: units) }
     }
 
@@ -141,14 +162,18 @@ final class LayoutSelectionModel {
         return LayoutBatchMove(itemIDs: itemIDs, section: section, placement: placement)
     }
 
-    /// One move per selected item that puts it back after its current left neighbour,
-    /// left to right, so each neighbour is already back in place when it's needed.
+    /// One move per selected unit, left to right, that puts it back after its old left neighbour.
+    /// A group restores as one move, since the move planner takes a group only whole.
     func restoringMoves() -> [LayoutBatchMove] {
         let selected = Set(orderedItemIDs)
-        return MenuBarSectionName.allCases.flatMap { section in
-            let ids = (units[section] ?? []).flatMap(\.memberIDs)
-            return ids.indices.filter { selected.contains(ids[$0]) }.map { index in
-                LayoutBatchMove(itemIDs: [ids[index]], section: section, placement: index == 0 ? .start : .after(ids[index - 1]))
+        return MenuBarSectionName.allCases.flatMap { section -> [LayoutBatchMove] in
+            let sectionUnits = units[section] ?? []
+            return sectionUnits.indices.compactMap { index -> LayoutBatchMove? in
+                let unit = sectionUnits[index]
+                guard unit.memberIDs.contains(where: selected.contains) else { return nil }
+                let anchor = sectionUnits[..<index].reversed().first(where: { !$0.memberIDs.isEmpty })?.memberIDs.last
+                let placement = anchor.map(LayoutBatchMove.Placement.after) ?? .start
+                return LayoutBatchMove(itemIDs: unit.memberIDs, section: section, placement: placement)
             }
         }
     }

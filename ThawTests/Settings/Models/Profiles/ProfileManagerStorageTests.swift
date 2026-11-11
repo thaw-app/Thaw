@@ -129,6 +129,21 @@ struct ProfileManagerStorageTests {
         }
     }
 
+    @Test("Renaming or duplicating an older profile keeps it not storing the Always Hidden switch")
+    func rewritesKeepAnOldProfileNotStoringTheSwitch() throws {
+        try ProfileTestDirectory.withManager(seeding: ["Old"]) { manager, tmp in
+            let meta = try #require(manager.profiles.first)
+            #expect(try !manager.loadProfile(id: meta.id).storesAlwaysHiddenSection, "the seed is an older file")
+
+            try manager.renameProfile(id: meta.id, to: "Renamed")
+            #expect(try !manager.loadProfile(id: meta.id).storesAlwaysHiddenSection)
+
+            try manager.duplicateProfile(id: meta.id, newName: "Copy")
+            let copyID = try #require(manager.profiles.last { $0.name == "Copy" }?.id)
+            #expect(try !manager.loadProfile(id: copyID).storesAlwaysHiddenSection)
+        }
+    }
+
     @Test("Renaming changes the file and the manifest but keeps the identity")
     func renameProfile() throws {
         try ProfileTestDirectory.withManager(seeding: ["Old"]) { manager, tmp in

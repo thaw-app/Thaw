@@ -53,6 +53,8 @@ final class ThawBarPanel: NSPanel {
     /// Stop repeated failed WindowServer measurements until the control item gets a new ID.
     private var staleAnchorWindowID: CGWindowID?
 
+    private var clampReport = ThawBarClampReport()
+
     /// Observe the lock setting through Observation rather than a Combine projection.
     private var lockPositionObservationTask: Task<Void, Never>?
 
@@ -306,7 +308,7 @@ final class ThawBarPanel: NSPanel {
             return CGPoint(x: rightEdgeX, y: y)
         }
         let clamped = desiredX.clamped(to: xRange)
-        if abs(clamped - desiredX) > 1 {
+        if clampReport.isNew(desiredX: desiredX, clamped: clamped, since: lastShowTimestamp) {
             diagLog.debug(
                 "ThawBar: \(resolved) wanted x=\(desiredX) but the fittable range \(xRange) clamped it to \(clamped)"
             )
@@ -315,12 +317,10 @@ final class ThawBarPanel: NSPanel {
     }
 
     private func updateOrigin(for screen: NSScreen) {
-        guard let appState else {
-            return
-        }
-
-        let location = appState.settings.displaySettings.thawBarLocation(for: screen.displayID)
-        setFrameOrigin(floatingOrigin(for: location, on: screen, appState: appState))
+        guard let appState else { return }
+        let origin = floatingOrigin(for: appState.settings.displaySettings.thawBarLocation(for: screen.displayID), on: screen, appState: appState)
+        guard origin != frame.origin else { return }
+        setFrameOrigin(origin)
     }
 
     func show(
@@ -348,7 +348,7 @@ final class ThawBarPanel: NSPanel {
 
         let menuBarHeight = screen.getMenuBarHeightEstimate()
         diagLog.notice("""
-        show: screen=\(screen.displayID) \
+        show: window=\(windowNumber) screen=\(screen.displayID) \
         backingScaleFactor=\(Double(screen.backingScaleFactor)) \
         hasNotch=\(screen.hasNotch) \
         menuBarHeight=\(Double(menuBarHeight)) \

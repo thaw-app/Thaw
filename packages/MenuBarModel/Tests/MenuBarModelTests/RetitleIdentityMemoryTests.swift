@@ -37,6 +37,18 @@ struct RetitleIdentityMemoryTests {
         #expect(fresh.resolve(owner: 7, slots: [Slot("Review", isStable: false)]) == ["Review"])
     }
 
+    @Test("A process identifier handed to another app does not inherit the old app's identity")
+    func reusedProcessIdentifier() {
+        var memory = RetitleIdentityMemory()
+        _ = memory.resolve(owner: 7, app: "com.example.calendar", slots: [Slot("calendar-events", isStable: true)])
+        #expect(memory.resolve(owner: 7, app: "com.example.other", slots: [Slot("Status", isStable: false)]) == ["Status"])
+        #expect(memory.resolve(owner: 7, app: "com.example.calendar", slots: [Slot("Standup", isStable: false)]) == ["Standup"],
+                "the other app's read replaced the memory")
+
+        _ = memory.resolve(owner: 8, app: "com.example.calendar", slots: [Slot("calendar-events", isStable: true)])
+        #expect(memory.resolve(owner: 8, app: "com.example.calendar", slots: [Slot("Standup", isStable: false)]) == ["calendar-events"])
+    }
+
     @Test("An identity another slot already has is not given out twice")
     func noDuplicateIdentities() {
         var memory = RetitleIdentityMemory()

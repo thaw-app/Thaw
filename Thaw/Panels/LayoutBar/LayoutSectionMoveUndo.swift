@@ -57,6 +57,29 @@ enum LayoutSectionMoveUndo {
         undoManager.setActionName(String(localized: "Move Group"))
     }
 
+    /// Undo for moving several ungrouped items into one section: each goes back to the section it came from.
+    /// The inverse is registered inside the undo, so it lands as the redo rather than as a new edit.
+    static func registerMoves(
+        back restoring: [MenuBarSection.Name: [MenuBarItemTag]],
+        forward: [MenuBarSection.Name: [MenuBarItemTag]],
+        appState: AppState
+    ) {
+        // An item already where it was going has nothing to go back to.
+        let restoring = restoring.filter { forward[$0.key] == nil && !$0.value.isEmpty }
+        let moved = Set(restoring.values.joined())
+        let forward = forward.mapValues { $0.filter(moved.contains) }.filter { !$0.value.isEmpty }
+        guard !restoring.isEmpty else { return }
+        let undoManager = appState.layoutUndo
+        undoManager.registerUndo(withTarget: appState) { appState in
+            registerMoves(back: forward, forward: restoring, appState: appState)
+            for (section, tags) in restoring {
+                let items = tags.compactMap { appState.itemManager.managedItem(withTag: $0) }
+                MenuBarSearchItemActions.move(items, to: section, appState: appState)
+            }
+        }
+        undoManager.setActionName(LayoutBatchMoveUndo.actionName(count: moved.count))
+    }
+
     static func registerUndo(
         of item: MenuBarItem,
         from source: MenuBarSection.Name,

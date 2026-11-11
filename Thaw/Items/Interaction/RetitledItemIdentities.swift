@@ -29,7 +29,10 @@ nonisolated enum RetitledItemIdentities {
             let slots = indices.map {
                 RetitleIdentityMemory.Slot(raw[$0].identityTitle, isStable: raw[$0].identityTitle != raw[$0].displayTitle)
             }
-            let identities = memory.resolve(owner: owner, slots: slots)
+            // One process can host several apps' items; then nothing names it, and only the process identifier keys the memory.
+            let namespaces = Set(indices.map { raw[$0].namespace })
+            let app = namespaces.count == 1 ? namespaces.first?.description : nil
+            let identities = memory.resolve(owner: owner, app: app, slots: slots)
             for (index, identity) in zip(indices, identities) where identity != raw[index].identityTitle {
                 let item = raw[index]
                 diagLog.debug("menuBarItems: kept \(identity) for an item read as '\(item.identityTitle)'")

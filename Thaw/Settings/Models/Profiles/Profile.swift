@@ -325,6 +325,8 @@ nonisolated struct MenuBarLayoutSnapshot: Codable {
 nonisolated struct ProfileContent {
     var generalSettings: GeneralSettingsSnapshot
     var advancedSettings: AdvancedSettingsSnapshot
+    /// Whether the file this content came from stores the Always Hidden switch. A capture always does; content from an older file does not.
+    var storesAlwaysHiddenSection = true
     var hotkeys: [String: Data]
     /// The shortcut actions that existed at save, so apply leaves newer ones alone. Nil in older profiles.
     var hotkeyActions: [String]?
@@ -360,7 +362,7 @@ nonisolated struct Profile: Codable, Identifiable {
     var appearanceConfiguration: MenuBarAppearanceConfigurationV2
     var menuBarLayout: MenuBarLayoutSnapshot
     var automation: ProfileAutomation?
-    /// Whether the saved file stores the Always Hidden switch; older ones read it as off. Never encoded.
+    /// Whether the saved file stores the Always Hidden switch; older ones read it as off. Encoded, so a rewrite such as a rename keeps the fact.
     var storesAlwaysHiddenSection = true
 
     /// Returns lightweight metadata for this profile.
@@ -378,6 +380,7 @@ nonisolated struct Profile: Codable, Identifiable {
         ProfileContent(
             generalSettings: generalSettings,
             advancedSettings: advancedSettings,
+            storesAlwaysHiddenSection: storesAlwaysHiddenSection,
             hotkeys: hotkeys,
             hotkeyActions: hotkeyActions,
             displayConfigurations: displayConfigurations,
@@ -400,6 +403,7 @@ nonisolated struct Profile: Codable, Identifiable {
         case modifiedAt
         case generalSettings
         case advancedSettings
+        case storesAlwaysHiddenSection
         case hotkeys
         case hotkeyActions
         case displayConfigurations
@@ -410,10 +414,6 @@ nonisolated struct Profile: Codable, Identifiable {
         case appearanceConfiguration
         case menuBarLayout
         case automation
-    }
-
-    private enum AlwaysHiddenKey: String, CodingKey {
-        case enableAlwaysHiddenSection
     }
 
     init(
@@ -429,6 +429,7 @@ nonisolated struct Profile: Codable, Identifiable {
         self.modifiedAt = modifiedAt
         self.generalSettings = content.generalSettings
         self.advancedSettings = content.advancedSettings
+        self.storesAlwaysHiddenSection = content.storesAlwaysHiddenSection
         self.hotkeys = content.hotkeys
         self.hotkeyActions = content.hotkeyActions
         self.displayConfigurations = content.displayConfigurations
@@ -458,8 +459,7 @@ nonisolated struct Profile: Codable, Identifiable {
             AdvancedSettingsSnapshot.self,
             forKey: .advancedSettings
         ) ?? .defaults
-        storesAlwaysHiddenSection = (try? container.nestedContainer(keyedBy: AlwaysHiddenKey.self, forKey: .advancedSettings))?
-            .contains(.enableAlwaysHiddenSection) ?? false
+        storesAlwaysHiddenSection = try Self.readsStoredAlwaysHiddenSwitch(from: container)
 
         hotkeys = try container.decodeIfPresent([String: Data].self, forKey: .hotkeys) ?? [:]
         hotkeyActions = try container.decodeIfPresent([String].self, forKey: .hotkeyActions)

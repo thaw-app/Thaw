@@ -17,13 +17,16 @@ final class SpaceChanges {
     private var subscribers: [UUID: AsyncStream<SpaceChange>.Continuation] = [:]
     private var pump: Task<Void, Never>?
     private let activeSpaceID: () -> CGSSpaceID
+    private let shownSpaceIDs: @MainActor () -> Set<CGSSpaceID>
     private let now: () -> ContinuousClock.Instant
 
     init(
         activeSpaceID: @escaping () -> CGSSpaceID = { Bridging.getActiveSpaceID() },
+        shownSpaceIDs: @escaping @MainActor () -> Set<CGSSpaceID> = { SpaceChanges.liveShownSpaceIDs() },
         now: @escaping () -> ContinuousClock.Instant = { .now }
     ) {
         self.activeSpaceID = activeSpaceID
+        self.shownSpaceIDs = shownSpaceIDs
         self.now = now
     }
 
@@ -44,7 +47,7 @@ final class SpaceChanges {
 
     /// Delivers signal to every subscriber unless it repeats a change already delivered.
     func admit(_ signal: SpaceSignal) {
-        guard let change = coalescer.admit(signal, activeSpaceID: activeSpaceID(), at: now()) else { return }
+        guard let change = coalescer.admit(signal, activeSpaceID: activeSpaceID(), shown: shownSpaceIDs(), at: now()) else { return }
         for continuation in subscribers.values {
             continuation.yield(change)
         }
@@ -104,11 +107,23 @@ final class SpaceChanges {
 extension SpaceChanges {
     private static let diagLog = DiagLog(category: "SpaceChanges")
 
+    /// The Space each connected display shows now.
+    static func liveShownSpaceIDs() -> Set<CGSSpaceID> {
+        Set(NSScreen.screens.compactMap { Bridging.getCurrentSpaceID(for: $0.displayID) })
+    }
+
     /// The window server's Space events merged with NSWorkspace's notification,
     /// which also covers the case where the window server registration fails.
-    static func liveFeed(center: NotificationCenter = NSWorkspace.shared.notificationCenter) -> AsyncStream<SpaceSignal> {
+    ///
+    /// The window server is the only source that says a Space was created or deleted. A display arriving
+    /// or leaving always counts as a possible list change, and without the window server each switch does too.
+    static func liveFeed(
+        center: NotificationCenter = NSWorkspace.shared.notificationCenter,
+        screenCenter: NotificationCenter = .default,
+        register: (@escaping @Sendable (WindowServerSpaceEvent) -> Void) -> Bool = { Bridging.setSpaceEventHandler($0) }
+    ) -> AsyncStream<SpaceSignal> {
         let (stream, continuation) = AsyncStream<SpaceSignal>.makeStream()
-        let registered = Bridging.setSpaceEventHandler { event in
+        let registered = register { event in
             switch event {
             case .activeSpaceChanged: continuation.yield(.activeSpace)
             case .spacesChanged: continuation.yield(.spaceList)
@@ -119,9 +134,18 @@ extension SpaceChanges {
         }
         nonisolated(unsafe) let observer = center.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: nil) { _ in
             continuation.yield(.activeSpace)
+            if !registered {
+                continuation.yield(.spaceList)
+            }
+        }
+        nonisolated(unsafe) let screenObserver = screenCenter.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: nil
+        ) { _ in
+            continuation.yield(.spaceList)
         }
         continuation.onTermination = { _ in
             center.removeObserver(observer)
+            screenCenter.removeObserver(screenObserver)
         }
         return stream
     }

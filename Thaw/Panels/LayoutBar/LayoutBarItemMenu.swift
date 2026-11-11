@@ -143,7 +143,7 @@ enum LayoutBarItemMenu {
             )
             menu.addItem(
                 ClosureMenuItem(title: title) {
-                    MenuBarSearchItemActions.move(members, to: destination, appState: appState)
+                    MenuBarSearchItemActions.move(members, to: destination, appState: appState, recordsUndo: true)
                 }
             )
         }
@@ -157,7 +157,7 @@ enum LayoutBarItemMenu {
         for (index, name) in MenuBarSearchItemActions.moveDestinations(appState: appState).enumerated() {
             guard let name else { continue }
             let entry = ClosureMenuItem(title: name.localizedName) {
-                MenuBarSearchItemActions.move(item, to: name, appState: appState)
+                MenuBarSearchItemActions.move(item, to: name, appState: appState, recordsUndo: true)
             }
             entry.state = name == current ? .on : .off
             entry.keyEquivalent = String(index + 1)

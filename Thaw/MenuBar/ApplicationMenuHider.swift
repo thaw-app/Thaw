@@ -80,6 +80,15 @@ final class ApplicationMenuHider {
         return .hideIfSectionNeedsRoom(isShowingAlwaysHidden ? .alwaysHidden : .hidden)
     }
 
+    /// The section a Thaw Bar check must name: the one a hide would make room for, or hidden when none
+    /// needs room. A display can use the Thaw Bar for Always Hidden alone.
+    static nonisolated func thawBarSection(for reconciliation: Reconciliation) -> MenuBarSectionName {
+        if case let .hideIfSectionNeedsRoom(name) = reconciliation {
+            return name
+        }
+        return .hidden
+    }
+
     /// Control state changes signal section reveals and concealment, requiring menu visibility reconciliation.
     func observeSectionStates(of sections: [MenuBarSection], into bag: inout Set<AnyCancellable>) {
         Publishers.MergeMany(sections.map(\.controlItem.$state))
@@ -98,22 +107,21 @@ final class ApplicationMenuHider {
         let menuBarManager = appState.menuBarManager
 
         let activeDisplayID = (environment.activeMenuBarScreen() ?? environment.mainScreen())?.displayID ?? CGMainDisplayID()
-        guard
-            appState.settings.hideApplicationMenus,
-            !menuBarManager.shouldUseThawBar(for: activeDisplayID),
-            !menuBarManager.isMenuBarHiddenBySystem,
-            !appState.activeSpace.isFullscreen,
-            !appState.navigationState.isSettingsPresented
-        else {
-            return
-        }
-
         let reconciliation = Self.reconciliation(
             isShowingHidden: menuBarManager.section(withName: .hidden).map { !$0.isHidden } ?? false,
             isShowingAlwaysHidden: menuBarManager.section(withName: .alwaysHidden).map { !$0.isHidden } ?? false,
             isHiding: isHidingApplicationMenus,
             isManual: isManuallyHidingApplicationMenus
         )
+        guard
+            appState.settings.hideApplicationMenus,
+            !menuBarManager.shouldUseThawBar(for: activeDisplayID, section: Self.thawBarSection(for: reconciliation)),
+            !menuBarManager.isMenuBarHiddenBySystem,
+            !appState.activeSpace.isFullscreen,
+            !appState.navigationState.isSettingsPresented
+        else {
+            return
+        }
         let shownName: MenuBarSectionName
         switch reconciliation {
         case .leaveMenus:

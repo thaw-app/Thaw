@@ -39,6 +39,14 @@ struct RevealedSectionSettleTests {
         #expect(await empty.captures.isEmpty, "nothing on the bar to wait for")
     }
 
+    @Test("A reflowing bar skips a pass, until enough were skipped in a row")
+    func reflowSkipIsBounded() {
+        #expect(Cache.skipsPassForReflow(reflowing: true, consecutiveSkips: 0))
+        #expect(Cache.skipsPassForReflow(reflowing: true, consecutiveSkips: Cache.maximumReflowSkips - 1))
+        #expect(Cache.skipsPassForReflow(reflowing: true, consecutiveSkips: Cache.maximumReflowSkips) == false)
+        #expect(Cache.skipsPassForReflow(reflowing: false, consecutiveSkips: 0) == false)
+    }
+
     @Test("A section just revealed waits; the visible section and later passes don't")
     func waitsOnlyRightAfterAReveal() {
         let now = ContinuousClock.now

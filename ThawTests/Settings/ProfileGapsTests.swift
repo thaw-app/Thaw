@@ -34,10 +34,20 @@ struct ProfileHotkeyMergeTests {
 
 @Suite("Profile file compatibility")
 struct ProfileFileCompatibilityTests {
+    private static let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }()
+
     private static func decode(_ json: String) throws -> Profile {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode(Profile.self, from: Data(json.utf8))
+    }
+
+    private static func encode(_ profile: Profile) throws -> String {
+        try String(decoding: encoder.encode(profile), as: UTF8.self)
     }
 
     @Test("A profile from an older build has no shortcut actions and no stored Always Hidden switch")
@@ -47,14 +57,35 @@ struct ProfileFileCompatibilityTests {
         #expect(!profile.storesAlwaysHiddenSection)
     }
 
-    @Test("A profile that stores the switch says so, and the flag is never written to the file")
+    @Test("A profile that stores the switch says so, and rewrites keep the fact")
     func storedSwitch() throws {
         let profile = try Self.decode(#"{"name": "New", "advancedSettings": {"enableAlwaysHiddenSection": false}, "hotkeyActions": ["a"]}"#)
         #expect(profile.storesAlwaysHiddenSection)
         #expect(profile.hotkeyActions == ["a"])
-        let json = try String(decoding: JSONEncoder().encode(profile), as: UTF8.self)
-        #expect(!json.contains("storesAlwaysHiddenSection"))
+        let json = try Self.encode(profile)
         #expect(json.contains("hotkeyActions"))
+        try Self.rewritesKeep(json: json, expected: true)
+    }
+
+    @Test("A rewritten old profile still only turns Always Hidden on")
+    func renamedOldProfileKeepsTheFact() throws {
+        let profile = try Self.decode(#"{"name": "Old", "advancedSettings": {"showMenuBarTooltips": true}}"#)
+        #expect(!profile.storesAlwaysHiddenSection)
+
+        let json = try Self.encode(profile)
+        try Self.rewritesKeep(json: json, expected: false)
+    }
+
+    /// Re-encoding a profile must not change whether its file stores the switch.
+    private static func rewritesKeep(json: String, expected: Bool) throws {
+        let reread = try Self.decode(json)
+        #expect(reread.storesAlwaysHiddenSection == expected)
+        // The advanced settings the rewritten file holds must not say otherwise.
+        if expected {
+            let data = try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any]
+            let advanced = data?["advancedSettings"] as? [String: Any]
+            #expect(advanced?["enableAlwaysHiddenSection"] != nil)
+        }
     }
 
     @Test("An export from an older build, without apply shortcuts, still reads")

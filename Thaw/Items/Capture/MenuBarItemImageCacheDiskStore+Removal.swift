@@ -17,4 +17,13 @@ extension MenuBarItemImageCacheDiskStore {
             }
         }
     }
+
+    /// Reads the save file once the disk work queued before this call has run. A load that starts
+    /// right after removeCacheFiles() then finds the files gone, instead of reading them back first.
+    nonisolated func readSaveFileAfterQueuedWork() async -> SaveFileContents? {
+        await withCheckedContinuation { continuation in
+            queue.async { continuation.resume() }
+        }
+        return readSaveFile()
+    }
 }

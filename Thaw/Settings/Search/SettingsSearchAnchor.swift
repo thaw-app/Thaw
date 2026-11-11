@@ -75,6 +75,7 @@ struct SettingsSearchScroller: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let navigationState: AppNavigationState
+    @State private var disarm = SettingsSearchDisarm()
 
     /// The page and its tab render a beat after the selection changes.
     private static let settle = Duration.milliseconds(150)
@@ -100,6 +101,24 @@ struct SettingsSearchScroller: ViewModifier {
             if NSWorkspace.shared.isVoiceOverEnabled, let entry = SearchIndex.entry(withID: row) {
                 AccessibilityAnnouncements.post(entry.titleText)
             }
+            // A row that never rendered can't disarm the highlight itself, and would flash whenever it later appears.
+            disarm.schedule(row, on: navigationState)
+        }
+    }
+}
+
+/// Clears a search jump's highlight once its flash is over. A newer jump cancels the pending
+/// clear, so jumping to the same row again keeps its whole flash.
+@MainActor
+final class SettingsSearchDisarm {
+    private var pending: Task<Void, Never>?
+
+    func schedule(_ row: String, on navigationState: AppNavigationState, after delay: Duration = SettingsSearchFlash.duration) {
+        pending?.cancel()
+        pending = Task { @MainActor in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled, navigationState.highlightedSettingsRow == row else { return }
+            navigationState.highlightedSettingsRow = nil
         }
     }
 }

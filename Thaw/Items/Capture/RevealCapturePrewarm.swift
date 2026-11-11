@@ -69,7 +69,7 @@ struct RevealCapturePrewarm {
             guard !items.isEmpty else { continue }
 
             let displayID = displayID()
-            let itemsToCapture = itemsToCapture(from: items, onlyMissingImages: onlyMissingImages, on: displayID)
+            let itemsToCapture = itemsToCapture(from: items, onlyMissingImages: onlyMissingImages, retakesClipped: tally != nil, on: displayID)
             guard !itemsToCapture.isEmpty else { continue }
 
             guard !Task.isCancelled else {
@@ -92,7 +92,7 @@ struct RevealCapturePrewarm {
 
         let sections: [MenuBarSection.Name] = [.hidden, .alwaysHidden]
         let alreadyGood = retakingAll ? [] : Set(sections.flatMap { sectionItems($0) ?? [] }
-            .filter { !MenuBarItemImageCache.prewarmNeedsCapture(cachedImage: cachedImage($0.tag), wouldAttemptCapture: true) }
+            .filter { !MenuBarItemImageCache.prewarmNeedsCapture(cachedImage: cachedImage($0.tag), wouldAttemptCapture: true, retakesClipped: true) }
             .map(\.tag))
         let tally = RequestedCaptureTally()
         await capture(sections: sections, onlyMissingImages: !retakingAll, tally: tally)
@@ -102,8 +102,11 @@ struct RevealCapturePrewarm {
         return MenuBarItemImageCache.hiddenItemCaptureResult(items: items, alreadyGood: alreadyGood, newlyCaptured: newlyCaptured)
     }
 
-    /// The items of one section a prewarm reveals, in section order.
-    private func itemsToCapture(from items: [MenuBarItem], onlyMissingImages: Bool, on displayID: CGDirectDisplayID) -> [MenuBarItem] {
+    /// The items of one section a prewarm reveals, in section order. A pass the user asked for
+    /// also retakes pictures clipped at their left edge.
+    private func itemsToCapture(
+        from items: [MenuBarItem], onlyMissingImages: Bool, retakesClipped: Bool, on displayID: CGDirectDisplayID
+    ) -> [MenuBarItem] {
         // Native notch overflow stays in force when Thaw lifts an item's concealment,
         // so a prewarm then captures only the system chevron.
         guard !isNativeOverflowActive(displayID) else { return [] }
@@ -112,7 +115,8 @@ struct RevealCapturePrewarm {
             guard !Self.skips(item, allowsCaptureReveal: allowsCaptureReveal) else { return false }
             return !onlyMissingImages || MenuBarItemImageCache.prewarmNeedsCapture(
                 cachedImage: cachedImage(item.tag),
-                wouldAttemptCapture: wouldAttemptCapture(item)
+                wouldAttemptCapture: wouldAttemptCapture(item),
+                retakesClipped: retakesClipped
             )
         }
     }

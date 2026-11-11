@@ -174,6 +174,26 @@ enum LayoutItemList {
         guard let current, let index = rows.firstIndex(where: { $0.id == current }) else { return rows.first }
         return rows[max(0, min(index + delta, rows.count - 1))]
     }
+
+    /// Where the keyboard's next step starts: the row the keys last landed on, as in Finder. The anchor
+    /// starts it once something else has changed the selection since.
+    static func stepStart(head: (id: String, atChangeCount: Int)?, anchor: String?, changeCount: Int) -> String? {
+        guard let head, head.atChangeCount == changeCount else {
+            return anchor
+        }
+        return head.id
+    }
+
+    /// A click on a row. Shift extends only across the rows the list shows, so a filter's hidden
+    /// rows are never selected or carried by a following move. The other clicks act on the one row.
+    static func click(
+        _ row: LayoutItemListRow,
+        kind: LayoutSelection.Click,
+        shownRowIDs: () -> Set<String>,
+        selection: LayoutSelectionModel
+    ) {
+        selection.click(row.id, in: row.section, kind: kind, among: kind == .extend ? shownRowIDs() : nil)
+    }
 }
 
 /// The Layout window's measures, so the list and the bars both keep a usable width.

@@ -82,7 +82,8 @@ final class MenuBarSpacerManager {
     private(set) var lastPersistenceFailure: String?
 
     /// The spacer whose width drag already has an undo step, and when it last moved.
-    @ObservationIgnored private var pendingWidthUndo: (id: UUID, undoManager: UndoManager, at: Date)?
+    /// The undo manager is kept by identity only, so this does not keep it alive.
+    @ObservationIgnored private var pendingWidthUndo: (id: UUID, undoManager: ObjectIdentifier, at: Date)?
 
     private var statusItems: [UUID: NSStatusItem] = [:]
     /// The spacer state each live status item was last configured with.
@@ -121,7 +122,8 @@ final class MenuBarSpacerManager {
         let added = MenuBarSpacer()
         spacers.append(added)
         reconcileStatusItems()
-        undoManager?.registerUndo(withTarget: self) { $0.removeSpacer(id: added.id, undoManager: undoManager) }
+        // Weak, since the undo manager keeps this closure: a strong capture would keep it alive for good.
+        undoManager?.registerUndo(withTarget: self) { [weak undoManager] in $0.removeSpacer(id: added.id, undoManager: undoManager) }
         undoManager?.setActionName(Self.addActionName)
     }
 
@@ -163,13 +165,13 @@ final class MenuBarSpacerManager {
         guard let old = spacers.first(where: { $0.id == id })?.width else { return }
         setWidth(width, for: id)
         guard let undoManager, old != spacers.first(where: { $0.id == id })?.width else { return }
-        if let pending = pendingWidthUndo, pending.id == id, pending.undoManager === undoManager,
+        if let pending = pendingWidthUndo, pending.id == id, pending.undoManager == ObjectIdentifier(undoManager),
            Date.now.timeIntervalSince(pending.at) < 1
         {
             pendingWidthUndo?.at = .now
             return
         }
-        pendingWidthUndo = (id, undoManager, .now)
+        pendingWidthUndo = (id, ObjectIdentifier(undoManager), .now)
         registerWidthUndo(restoring: old, for: id, undoManager: undoManager)
     }
 

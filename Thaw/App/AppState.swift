@@ -376,11 +376,11 @@ final class AppState {
     /// First launches and upgrades without changelog content record the version silently, leaving onboarding to handle new users.
     /// Record synchronously before the async repository fetch to avoid repeated prompts after failures.
     func presentWhatsNewForUpgradeIfNeeded() {
-        let opensAfterUpdate = settings.privacy.showReleaseNotesAfterUpdate
+        let opensAfterUpdate = Self.storedShowReleaseNotesAfterUpdate
         guard WhatsNewUpgradeGate.recordVersion(Constants.versionString, opensAfterUpdate: opensAfterUpdate) else { return }
 
         Task {
-            let allowFetch = settings.privacy.fetchReleaseNotes
+            let allowFetch = Self.storedFetchReleaseNotes
             guard await ChangelogDocument.load(allowFetch: allowFetch, info: .thaw).document?.newestRelease != nil else { return }
             activate(withPolicy: userWindowActivationPolicy)
             openWindow(.whatsNew)

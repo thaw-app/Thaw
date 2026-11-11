@@ -99,6 +99,19 @@ struct FreshVolatileTitleLearnerTests {
         #expect(together.observe([item(title: "5", sourcePID: 1)], isAlive: alive).isEmpty)
     }
 
+    @Test("A relaunch seen while the old process was still quitting is learned once that process is gone")
+    func relaunchOverlapIsNotSharedForGood() {
+        var learner = FreshVolatileTitleLearner()
+        var running: Set<pid_t> = [1, 2]
+        _ = learner.observe([item(title: "3", sourcePID: 1)], isAlive: { running.contains($0) })
+        _ = learner.observe([item(title: "4", sourcePID: 2)], isAlive: { running.contains($0) })
+        #expect(learner.observe([item(title: "5", sourcePID: 2)], isAlive: { running.contains($0) }).isEmpty, "both still run")
+
+        running = [2]
+        #expect(learner.observe([item(title: "6", sourcePID: 2)], isAlive: { running.contains($0) }).isEmpty)
+        #expect(learner.observe([item(title: "7", sourcePID: 2)], isAlive: { running.contains($0) }) == ["com.example.chat"])
+    }
+
     @Test("A relaunched app is learned from its new process")
     func learnsAfterARelaunch() {
         var learner = FreshVolatileTitleLearner()

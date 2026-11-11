@@ -149,6 +149,8 @@ struct ThawBarItemView: View {
 
 struct ThawBarItemClickView: NSViewRepresentable {
     final class Represented: NSView {
+        private static let diagLog = DiagLog(category: "ThawBar.ItemView")
+
         var item: MenuBarItem
         var tooltipDelay: TimeInterval
 
@@ -236,6 +238,7 @@ struct ThawBarItemClickView: NSViewRepresentable {
             super.mouseDown(with: event)
             tooltipController.cancel()
             leftPress.began(at: NSEvent.mouseLocation)
+            Self.diagLog.debug("press(left): began on \(item.logString)")
             onPress(true)
         }
 
@@ -268,11 +271,15 @@ struct ThawBarItemClickView: NSViewRepresentable {
 
         override func mouseUp(with event: NSEvent) {
             super.mouseUp(with: event)
+            let pressBegan = leftPress.isActive
             let isClick = leftPress.isClick(at: NSEvent.mouseLocation)
             leftPress.ended()
             onPress(false)
             if isClick {
                 leftClickAction()
+            } else {
+                // Says why a press that reached the item opened nothing.
+                Self.diagLog.debug("press(left): released on \(item.logString) without a click (press began here: \(pressBegan))")
             }
         }
 

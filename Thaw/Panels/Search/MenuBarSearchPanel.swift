@@ -22,8 +22,9 @@ extension EnvironmentValues {
 final class MenuBarSearchPanel: NSPanel {
     private static nonisolated let diagLog = DiagLog(category: "MenuBarSearchPanel")
 
-    /// The layout of this showing, adopted in show(on:).
-    private(set) var presentation: SearchPresentation = .extended
+    /// The layout of this showing, adopted in show(on:). Keyboard tests set it
+    /// to exercise the compact faces without showing the panel.
+    var presentation: SearchPresentation = .extended
 
     private(set) weak var appState: AppState?
 
@@ -185,7 +186,7 @@ final class MenuBarSearchPanel: NSPanel {
         guard destinations.indices.contains(index), let section = destinations[index] else {
             return
         }
-        MenuBarSearchItemActions.move(item, to: section, appState: appState)
+        MenuBarSearchItemActions.move(item, to: section, appState: appState, recordsUndo: true)
     }
 
     // MARK: Rename

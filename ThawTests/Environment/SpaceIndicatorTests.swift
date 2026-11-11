@@ -202,6 +202,22 @@ struct SpaceIndicatorTests {
         #expect(harness.system.opened(.space) == 1)
     }
 
+    @Test("A start the system refuses leaves the launcher without the item, and can be tried again")
+    func refusedOpenIsForgotten() async {
+        let harness = Harness()
+        harness.system.openError = CocoaError(.fileNoSuchFile)
+
+        await harness.indicator.setEnabled(true)
+        #expect(!harness.indicator.isEnabled)
+        #expect(!harness.launcher.wanted.contains(.space))
+        #expect(!harness.launcher.placed.contains(.space))
+
+        harness.system.openError = nil
+        await harness.indicator.setEnabled(true)
+        #expect(harness.indicator.isEnabled)
+        #expect(harness.launcher.wanted.contains(.space))
+    }
+
     @Test("The live read has a title and at most one current Space per display")
     func liveSnapshotIsWellFormed() {
         _ = SpaceIndicator(launcher: SystemExtraStandInLauncher(system: FakeStandInSystem().system))

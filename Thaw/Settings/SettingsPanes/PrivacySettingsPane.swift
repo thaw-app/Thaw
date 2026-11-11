@@ -74,8 +74,16 @@ struct PrivacySettingsPane: View {
 
     /// Asked for only when Thaw first notifies, so a refusal would otherwise never show.
     /// The search entry for a permission's row.
+    /// The settings search anchor for a permission's row. Each permission has its
+    /// own: a shared anchor scrolls and flashes whichever row comes first.
     private static func searchAnchor(for permission: Permission) -> String {
-        permission is ScreenRecordingPermission ? "privacy.screenRecording" : "privacy.accessibility"
+        switch permission {
+        case is AccessibilityPermission: "privacy.accessibility"
+        case is ScreenRecordingPermission: "privacy.screenRecording"
+        case is FullDiskAccessPermission: "privacy.fullDiskAccess"
+        case is ControlCenterAppListPermission: "privacy.controlCenterAppList"
+        default: "privacy.\(permission.iconName)"
+        }
     }
 
     private func notificationsRow(_ permission: NotificationPermission) -> some View {

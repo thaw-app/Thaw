@@ -95,6 +95,21 @@ struct StructuralNormalizationHoldsTests {
         let manager = MenuBarItemManager()
         #expect(manager.structuralNormalizationSituation().barReadIncomplete)
     }
+
+    /// 2026-11-06: with the last read incomplete, the pass deferred eight times
+    /// without ever asking for a fresh read, ran out, and never pinned a drag's order.
+    @Test("A deferral on an incomplete read, like a move to another display, asks for a fresh read")
+    func deferredPassAsksForAFreshRead() {
+        var situation = WriteHold.Situation()
+        #expect(!StructuralNormalizationHolds.needsFreshRead(situation))
+
+        situation.barReadIncomplete = true
+        #expect(StructuralNormalizationHolds.needsFreshRead(situation))
+
+        situation.barReadIncomplete = false
+        situation.barOnUncachedDisplay = true
+        #expect(StructuralNormalizationHolds.needsFreshRead(situation))
+    }
 }
 
 /// The record of the cache's last bar read, which the settle and the structural pass both trust.

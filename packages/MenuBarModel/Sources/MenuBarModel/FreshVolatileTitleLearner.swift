@@ -38,8 +38,9 @@ public struct FreshVolatileTitleLearner: Sendable {
     static let maxReadsBetweenTitles: UInt64 = 4
 
     private var lastObservationByOwner = [String: Observation]()
-    /// Bundles seen from two live processes. A read can skip one of them, so they are never learned.
-    private var sharedBundles = Set<String>()
+    /// Bundles seen from two live processes, with those processes. A read can skip one of them, so they
+    /// are not learned while both run. A relaunch overlaps its old process for a moment and looks the same.
+    private var sharedBundles = [String: Set<pid_t>]()
     private var reads: UInt64 = 0
 
     /// A learner that has seen no inventory yet.
@@ -63,10 +64,15 @@ public struct FreshVolatileTitleLearner: Sendable {
         }
 
         var learned = Set<String>()
-        for (bundleID, items) in itemsByOwner where !sharedBundles.contains(bundleID) {
+        for (bundleID, items) in itemsByOwner {
+            if let processes = sharedBundles[bundleID] {
+                guard processes.count(where: isAlive) < 2 else { continue }
+                sharedBundles[bundleID] = nil
+            }
             let previous = lastObservationByOwner.removeValue(forKey: bundleID)
-            if Set(items.compactMap(\.sourcePID)).count > 1 {
-                sharedBundles.insert(bundleID)
+            let sourcePIDs = Set(items.compactMap(\.sourcePID))
+            if sourcePIDs.count > 1 {
+                sharedBundles[bundleID] = sourcePIDs
                 continue
             }
             guard items.count == 1, let item = items.first, let sourcePID = item.sourcePID, let observation = Observation.make(for: item, sourcePID: sourcePID, read: reads)
@@ -74,7 +80,7 @@ public struct FreshVolatileTitleLearner: Sendable {
                 continue
             }
             if let previous, previous.sourcePID != sourcePID, isAlive(previous.sourcePID) {
-                sharedBundles.insert(bundleID)
+                sharedBundles[bundleID] = [previous.sourcePID, sourcePID]
                 continue
             }
             if let previous, reads - previous.read <= Self.maxReadsBetweenTitles, Self.isRename(from: previous, to: observation) {
