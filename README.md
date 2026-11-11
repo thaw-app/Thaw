@@ -49,8 +49,10 @@ Beyond hiding items, Thaw lets you organize them into groups, switch between pro
 </p>
 
 ```sh
-brew install thaw
-brew install thaw@beta
+brew install thaw                       # stable release
+brew install thaw@beta                  # Thaw 3 beta, macOS 27
+brew install thaw-app/tap/thaw@2        # Thaw 2 stable, macOS 26; stays on 2.x
+brew install thaw-app/tap/thaw@2-beta   # Thaw 2 beta, macOS 15 or later
 ```
 
 Or download the disk image from the [releases](https://github.com/thaw-app/Thaw/releases) and drag Thaw to Applications.
