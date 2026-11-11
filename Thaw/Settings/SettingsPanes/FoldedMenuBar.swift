@@ -26,8 +26,16 @@ struct FoldedMenuBar: View {
     /// Drag target published by LayoutBarContainer through layoutBarDragTargetChanged.
     @State private var dragTargetSection: MenuBarSection.Name?
 
-    /// The items selected across this surface's bars.
-    @State private var selection = LayoutSelectionModel(onMultiSelect: { FeatureTips.shared.noteMultiSelect() })
+    /// The items selected across this surface's bars, unless a host shares its own.
+    @State private var ownSelection = LayoutSelectionModel(onMultiSelect: { FeatureTips.shared.noteMultiSelect() })
+    /// The Layout window's selection, shared with its item list; nil uses this surface's own.
+    var sharedSelection: LayoutSelectionModel?
+    /// Spaced bars wrap their items onto rows instead of scrolling, as the Layout window's do.
+    var wrapsRows = false
+
+    private var selection: LayoutSelectionModel {
+        sharedSelection ?? ownSelection
+    }
 
     /// Fits "Always Hidden" at caption size in the shipped languages.
     private let gutterWidth: CGFloat = 92
@@ -62,7 +70,7 @@ struct FoldedMenuBar: View {
                         sortMenu(section)
                     }
                     .padding(.horizontal, ThawSpacing.tight)
-                    LayoutBar(imageCache: appState.imageCache, section: section, chrome: .card, selection: selection)
+                    LayoutBar(imageCache: appState.imageCache, section: section, chrome: .card, selection: selection, wrapsRows: wrapsRows)
                 }
                 .onReceive(
                     NotificationCenter.default.publisher(for: .layoutBarDragTargetChanged)

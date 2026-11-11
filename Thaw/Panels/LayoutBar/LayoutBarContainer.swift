@@ -12,7 +12,8 @@ import MenuBarModel
 
 /// The view that arranges one section's item views inside the layout editor.
 ///
-/// Places subviews by frame in one left-to-right sweep and publishes the extent
+/// Places subviews by frame in one left-to-right sweep, wrapped onto rows when
+/// rowWidth is set, and publishes the extent
 /// through two size pins, so reorders animate per view while the stack still
 /// sees a defined size.
 final class LayoutBarContainer: NSView {
@@ -80,6 +81,18 @@ final class LayoutBarContainer: NSView {
             rebuildViews()
         }
     }
+
+    /// The room a row has when the bar wraps its items onto several rows; nil keeps them on one.
+    var rowWidth: CGFloat? {
+        didSet {
+            guard oldValue != rowWidth else { return }
+            animatesNextLayoutPass = false
+            reflowViews()
+        }
+    }
+
+    /// Where the last layout pass put each arranged view, by index.
+    private(set) var flow = LayoutBarRowFlow(widths: [], leads: [], rowHeight: 0, rowWidth: nil)
 
     /// The item views this container positions, in the order they are drawn.
     ///
@@ -372,8 +385,14 @@ final class LayoutBarContainer: NSView {
             uniquingKeysWith: { first, _ in first }
         )
         let clusterLeaders = Set(clusters.compactMap(\.memberIndices.first))
+        let flow = LayoutBarRowFlow(
+            widths: arrangedViews.map(\.bounds.width),
+            leads: arrangedViews.indices.map { clusterLeaders.contains($0) ? GroupChrome.handleReservation : 0 },
+            rowHeight: rowHeight,
+            rowWidth: rowWidth
+        )
+        self.flow = flow
 
-        var sweepX: CGFloat = 0
         for (index, arranged) in arrangedViews.enumerated() {
             let slides: Bool
             if subviews.contains(arranged) {
@@ -384,19 +403,20 @@ final class LayoutBarContainer: NSView {
                 slides = false
             }
 
-            if clusterLeaders.contains(index) {
-                sweepX += GroupChrome.handleReservation
-            }
+            let band = flow.band(ofRow: flow.row[index], width: 0)
             LayoutBarMotion.place(
                 arranged,
                 sliding: slides,
-                at: CGPoint(x: sweepX, y: (rowHeight / 2) - arranged.bounds.midY)
+                at: CGPoint(x: flow.wrappedX[index], y: band.minY + (rowHeight / 2) - arranged.bounds.midY)
             )
-            sweepX += arranged.bounds.width
         }
 
-        sizePins.width.constant = sweepX
-        sizePins.height.constant = rowHeight
+        let heightChanged = sizePins.height.constant != flow.height
+        sizePins.width.constant = rowWidth ?? flow.contentWidth
+        sizePins.height.constant = flow.height
+        if heightChanged {
+            enclosingScrollView?.invalidateIntrinsicContentSize()
+        }
 
         // Grips and cluster chrome are both read off the frames the sweep just
         // assigned, so neither can be brought up to date any earlier.
@@ -547,15 +567,14 @@ final class LayoutBarContainer: NSView {
             NSColor.controlAccentColor.withAlphaComponent(0.9).setFill()
             NSBezierPath(rect: band).fill()
         }
-        let gap = arrangedViews.filter(\.isDraggingPlaceholder).map(\.frame)
-        if let markerX = groupDropMarkerX ?? LayoutBarDropMarker.x(inGap: gap) {
-            LayoutBarDropMarker.draw(atX: markerX, in: bounds)
+        if let marker = dropMarker() {
+            LayoutBarDropMarker.draw(atX: marker.x, in: marker.band)
         }
         for memberIndices in groupedMemberIndices() {
             // A bundle's members may be scattered; draw one rounded background
             // per contiguous sub-run so the chrome never encloses foreign items
             // that happen to sit between members. One handle still moves them all.
-            for run in Self.contiguousRuns(of: memberIndices) {
+            for run in Self.contiguousRuns(of: memberIndices).flatMap(flow.splitByRow) {
                 let views = run.compactMap { arrangedViews.indices.contains($0) ? arrangedViews[$0] : nil }
                 guard let first = views.first else {
                     continue
@@ -579,20 +598,6 @@ final class LayoutBarContainer: NSView {
                 path.stroke()
             }
         }
-    }
-
-    /// Splits an ascending index list into its maximal contiguous runs.
-    private static func contiguousRuns(of indices: [Int]) -> [[Int]] {
-        var runs = [[Int]]()
-        for index in indices {
-            if var last = runs.last, let tail = last.last, index == tail + 1 {
-                last.append(index)
-                runs[runs.count - 1] = last
-            } else {
-                runs.append([index])
-            }
-        }
-        return runs
     }
 
     /// Projects current assignments onto cached items, reusing existing views.
@@ -787,13 +792,6 @@ final class LayoutBarContainer: NSView {
         }
     }
 
-    /// Points the group marker at the slot a handle drop at windowLocation would take.
-    func showGroupDropMarker(at windowLocation: NSPoint) {
-        let frames = arrangedViews.filter { !$0.isNewItemsBadge }.map(\.frame)
-        let boundary = groupDropDestination(atX: convert(windowLocation, from: nil).x).boundary
-        groupDropMarkerX = LayoutBarDropMarker.x(insertingAt: boundary, among: frames)
-    }
-
     /// Whether a drag is hovering this container; drives the drop-target highlight.
     private var isDropTarget = false {
         didSet {
@@ -887,7 +885,7 @@ final class LayoutBarContainer: NSView {
             }
             return
         }
-        let cursorX = convert(windowLocation, from: nil).x
+        let cursorX = sweepX(at: windowLocation)
         // The whole group travels together, so a drop onto any of its own
         // members is a no-op rather than a reorder.
         let unitViews = dragUnitViews(for: sourceView)
@@ -906,8 +904,9 @@ final class LayoutBarContainer: NSView {
         }
         // Swap only inside the target's width, so passing does not displace it.
         // Blocks from another container are exempt: they have no slot here yet.
-        let reach = target.frame.width / 2
-        if !((target.frame.midX - reach) ... (target.frame.midX + reach)).contains(cursorX),
+        let targetFrame = sweepFrame(at: targetIndex)
+        let reach = targetFrame.width / 2
+        if !((targetFrame.midX - reach) ... (targetFrame.midX + reach)).contains(cursorX),
            sourceView.oldContainerInfo?.container === self
         {
             return
@@ -960,25 +959,6 @@ final class LayoutBarContainer: NSView {
         )
         let views = indices.compactMap { arrangedViews.indices.contains($0) ? arrangedViews[$0] : nil }
         return views.isEmpty ? [view] : views
-    }
-
-    /// The arranged view sitting closest to xPosition, comparing horizontal
-    /// centers in this container's own coordinate space.
-    ///
-    /// Center, not edge, so a wide view does not swallow its neighbours' slots.
-    /// Ties go to the leftmost view.
-    ///
-    /// - Parameters:
-    ///   - xPosition: The coordinate to measure from, usually a dragging
-    ///     location already converted out of window coordinates.
-    ///   - excludingBadge: Pass true to keep the new-items badge out of the
-    ///     running, so an ordinary drag never shoves it aside.
-    func closestView(toX xPosition: CGFloat, excludingBadge: Bool = false) -> LayoutBarArrangedView? {
-        let candidates = excludingBadge ? arrangedViews.filter { !$0.isNewItemsBadge } : arrangedViews
-        return candidates
-            .map { (view: $0, offset: abs($0.frame.midX - xPosition)) }
-            .min { $0.offset < $1.offset }?
-            .view
     }
 
     /// Rebuilds add and remove item views, so the Layout selection rereads the bar.

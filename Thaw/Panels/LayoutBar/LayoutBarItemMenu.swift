@@ -38,37 +38,9 @@ enum LayoutBarItemMenu {
 
         switch subject {
         case let .item(item):
-            if let group = groups.first(where: { group in
-                group.memberIndices.contains { index in
-                    orderedItems.indices.contains(index) && orderedItems[index].tag == item.tag
-                }
-            }) {
-                addMemberEntries(
-                    to: menu,
-                    item: item,
-                    group: group,
-                    orderedItems: orderedItems,
-                    manager: manager,
-                    folders: appState.groupFolders
-                )
-            } else {
-                addNonMemberEntries(
-                    to: menu,
-                    item: item,
-                    groups: groups,
-                    orderedItems: orderedItems,
-                    section: section,
-                    manager: manager
-                )
-            }
+            addGroupingEntries(to: menu, item: item, groups: groups, orderedItems: orderedItems, section: section, appState: appState)
         case let .group(group):
-            addGroupEntries(
-                to: menu,
-                group: group,
-                orderedItems: orderedItems,
-                manager: manager,
-                folders: appState.groupFolders
-            )
+            addGroupEntries(to: menu, group: group, orderedItems: orderedItems, manager: manager, folders: appState.groupFolders, undoManager: appState.layoutUndo)
         }
 
         if case let .item(item) = subject {
@@ -76,6 +48,39 @@ enum LayoutBarItemMenu {
         }
 
         return menu.items.isEmpty ? nil : menu
+    }
+
+    /// Only the item's group entries, for the Layout window's editor.
+    static func groupMenu(for item: MenuBarItem, section: MenuBarSection.Name, orderedItems: [MenuBarItem], appState: AppState) -> NSMenu? {
+        let menu = NSMenu()
+        let groups = appState.itemGroupManager.resolvedGroups(for: orderedItems)
+        addGroupingEntries(to: menu, item: item, groups: groups, orderedItems: orderedItems, section: section, appState: appState)
+        return menu.items.isEmpty ? nil : menu
+    }
+
+    /// The group the item is in, if any.
+    static func group(of item: MenuBarItem, in groups: [ResolvedGroup], orderedItems: [MenuBarItem]) -> ResolvedGroup? {
+        groups.first { group in
+            group.memberIndices.contains { index in
+                orderedItems.indices.contains(index) && orderedItems[index].tag == item.tag
+            }
+        }
+    }
+
+    private static func addGroupingEntries(
+        to menu: NSMenu,
+        item: MenuBarItem,
+        groups: [ResolvedGroup],
+        orderedItems: [MenuBarItem],
+        section: MenuBarSection.Name,
+        appState: AppState
+    ) {
+        let manager = appState.itemGroupManager
+        if let group = group(of: item, in: groups, orderedItems: orderedItems) {
+            addMemberEntries(to: menu, item: item, group: group, orderedItems: orderedItems, manager: manager, folders: appState.groupFolders, undoManager: appState.layoutUndo)
+        } else {
+            addNonMemberEntries(to: menu, item: item, groups: groups, orderedItems: orderedItems, section: section, manager: manager, undoManager: appState.layoutUndo)
+        }
     }
 
     /// Per-item temporary reveal is available on the same backend as this menu.
@@ -173,7 +178,8 @@ enum LayoutBarItemMenu {
         groups: [ResolvedGroup],
         orderedItems: [MenuBarItem],
         section _: MenuBarSection.Name,
-        manager: MenuBarItemGroupManager
+        manager: MenuBarItemGroupManager,
+        undoManager: UndoManager
     ) {
         guard MenuBarItemGrouping.isGroupable(item.tag) else {
             menu.addItem(
@@ -199,7 +205,7 @@ enum LayoutBarItemMenu {
             for partner in partners {
                 submenu.addItem(
                     ClosureMenuItem(title: partner.displayName) {
-                        manager.createGroup(name: nil, items: [item, partner])
+                        LayoutEditUndo.editGroups(String(localized: "Group Items"), manager: manager, undoManager: undoManager) { _ = manager.createGroup(name: nil, items: [item, partner]) }
                     }
                 )
             }
@@ -219,10 +225,10 @@ enum LayoutBarItemMenu {
                             let members = group.memberIndices.compactMap {
                                 orderedItems.indices.contains($0) ? orderedItems[$0] : nil
                             }
-                            manager.createGroup(name: name, items: members + [item])
+                            LayoutEditUndo.editGroups(String(localized: "Add to \(name)"), manager: manager, undoManager: undoManager) { _ = manager.createGroup(name: name, items: members + [item]) }
                             return
                         }
-                        manager.add(item, to: id)
+                        LayoutEditUndo.editGroups(String(localized: "Add to \(name)"), manager: manager, undoManager: undoManager) { manager.add(item, to: id) }
                     }
                 )
             }
@@ -240,13 +246,14 @@ enum LayoutBarItemMenu {
         group: ResolvedGroup,
         orderedItems: [MenuBarItem],
         manager: MenuBarItemGroupManager,
-        folders: GroupFolders
+        folders: GroupFolders,
+        undoManager: UndoManager
     ) {
-        addGroupEntries(to: menu, group: group, orderedItems: orderedItems, manager: manager, folders: folders)
+        addGroupEntries(to: menu, group: group, orderedItems: orderedItems, manager: manager, folders: folders, undoManager: undoManager)
         menu.addItem(.separator())
         menu.addItem(
             ClosureMenuItem(title: String(localized: "Remove “\(item.displayName)” from Group")) {
-                manager.removeMember(item)
+                LayoutEditUndo.editGroups(String(localized: "Remove from Group"), manager: manager, undoManager: undoManager) { manager.removeMember(item) }
             }
         )
     }
@@ -256,7 +263,8 @@ enum LayoutBarItemMenu {
         group: ResolvedGroup,
         orderedItems: [MenuBarItem],
         manager: MenuBarItemGroupManager,
-        folders: GroupFolders
+        folders: GroupFolders,
+        undoManager: UndoManager
     ) {
         let name = manager.displayName(for: group, in: orderedItems)
         let members = group.memberIndices.compactMap {
@@ -269,7 +277,7 @@ enum LayoutBarItemMenu {
                     ? String(localized: "Expand “\(name)”")
                     : String(localized: "Collapse “\(name)”")
             ) {
-                manager.setCollapsed(!group.isCollapsed, for: group.origin, members: members)
+                LayoutEditUndo.editGroups(group.isCollapsed ? String(localized: "Expand \(name)") : String(localized: "Collapse \(name)"), manager: manager, undoManager: undoManager) { manager.setCollapsed(!group.isCollapsed, for: group.origin, members: members) }
             }
         )
         let isFolder = folders.isFolder(group.origin)
@@ -279,12 +287,12 @@ enum LayoutBarItemMenu {
                     ? String(localized: "Stop Showing “\(name)” as a Folder")
                     : String(localized: "Show “\(name)” as a Folder")
             ) {
-                folders.setFolder(!isFolder, for: group.origin, members: members)
+                LayoutEditUndo.setFolder(!isFolder, for: group.origin, members: members, name: name, folders: folders, undoManager: undoManager)
             }
         )
         menu.addItem(
             ClosureMenuItem(title: String(localized: "Ungroup “\(name)”")) {
-                UngroupUndo.ungroup(group.origin, name: name, manager: manager, folders: folders, undoManager: NSApp.keyWindow?.undoManager)
+                UngroupUndo.ungroup(group.origin, name: name, manager: manager, folders: folders, undoManager: undoManager)
             }
         )
     }

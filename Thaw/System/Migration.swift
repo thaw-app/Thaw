@@ -24,6 +24,7 @@ extension MigrationManager {
     func migrateAll() {
         removeMenuBarHistory(from: Defaults.store)
         removeAXBridgeLogs()
+        removeReorderEditorFlag(from: Defaults.store)
         migrateSearchPresentation(in: Defaults.store)
         migrateLastSettingsPane(in: Defaults.store)
         migrateSpaceAppearanceKeys(in: Defaults.store, spaces: Bridging.getManagedSpaces())
@@ -44,6 +45,17 @@ extension MigrationManager {
         defaults.removeObject(forKey: "EnableBarHygieneAudit")
         defaults.removeObject(forKey: "MenuBarHygieneLedger")
         defaults.removeObject(forKey: "LayoutSuggestions.dismissed.unusedItems")
+    }
+}
+
+// MARK: - Remove Retired Reorder Editor Flag
+
+extension MigrationManager {
+    /// The reorder editor is gone; Pop Out opens the Layout window instead.
+    static let reorderEditorFlagKey = "useReorderLayoutEditor"
+
+    func removeReorderEditorFlag(from defaults: UserDefaults) {
+        defaults.removeObject(forKey: Self.reorderEditorFlagKey)
     }
 }
 

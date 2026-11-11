@@ -41,6 +41,14 @@ final class LayoutSelectionModel {
         selection.count
     }
 
+    /// The item the last plain or Command click landed on, where the keyboard works from.
+    var anchorItemID: String? {
+        selection.anchor?.itemID
+    }
+
+    /// How many times the selection changed; tests use it to catch a feedback loop.
+    @ObservationIgnored private(set) var changeCount = 0
+
     func contains(_ itemID: String) -> Bool {
         selection.contains(itemID)
     }
@@ -50,13 +58,40 @@ final class LayoutSelectionModel {
         selection.orderedItemIDs(in: units)
     }
 
+    /// Moved items to select again once their new section's bar lists them.
+    @ObservationIgnored private var pendingReselection: (itemIDs: [String], section: MenuBarSectionName)?
+
     /// Records what a section's bar shows now and deselects anything it no longer shows.
     func update(_ units: [Unit], in section: MenuBarSectionName) {
         self.units[section] = units
         change(announcing: false) { $0.retain(units, in: section) }
+        applyPendingReselection()
+    }
+
+    /// Selects itemIDs in section again after a move, now if its bar lists them already,
+    /// otherwise when it next reports them. The keyboard keeps working on what it moved.
+    func reselect(_ itemIDs: [String], in section: MenuBarSectionName) {
+        guard !itemIDs.isEmpty else { return }
+        pendingReselection = (itemIDs, section)
+        applyPendingReselection()
+    }
+
+    private func applyPendingReselection() {
+        guard let pending = pendingReselection else { return }
+        let shown = Set((units[pending.section] ?? []).flatMap(\.memberIDs))
+        guard pending.itemIDs.allSatisfy(shown.contains) else { return }
+        pendingReselection = nil
+        let sectionUnits = units[pending.section] ?? []
+        change(announcing: false) { selection in
+            selection.click(pending.itemIDs[0], in: pending.section, units: sectionUnits, kind: .replace)
+            for id in pending.itemIDs.dropFirst() where !selection.contains(id) {
+                selection.click(id, in: pending.section, units: sectionUnits, kind: .toggle)
+            }
+        }
     }
 
     func click(_ itemID: String, in section: MenuBarSectionName, kind: LayoutSelection.Click) {
+        pendingReselection = nil
         let previousCount = count
         change { $0.click(itemID, in: section, units: units[section] ?? [], kind: kind) }
         if Self.isMultiSelection(kind, from: previousCount, to: count) {
@@ -66,7 +101,7 @@ final class LayoutSelectionModel {
 
     /// Whether a click of kind that took the selection from oldCount to newCount items made a multi-selection.
     /// A plain click on a group selects several items too, but it is not the user selecting several.
-    nonisolated static func isMultiSelection(_ kind: LayoutSelection.Click, from oldCount: Int, to newCount: Int) -> Bool {
+    static nonisolated func isMultiSelection(_ kind: LayoutSelection.Click, from oldCount: Int, to newCount: Int) -> Bool {
         kind != .replace && oldCount < 2 && newCount >= 2
     }
 
@@ -74,11 +109,48 @@ final class LayoutSelectionModel {
         change { $0.clear() }
     }
 
+    /// Selects every item the bars show.
+    func selectAll() {
+        change { $0.selectAll(in: units) }
+    }
+
+    /// Selects only the listed items, so ⌘A in a filtered list leaves out the rows it hides.
+    func selectAll(among itemIDs: Set<String>) {
+        change { $0.selectAll(among: itemIDs, in: units) }
+    }
+
+    /// Selects the items the bars show among itemIDs, such as a group's members.
+    func select(_ itemIDs: [String]) {
+        change { $0.select(Set(itemIDs), in: units) }
+    }
+
+    /// The sections holding a selected item.
+    var sections: Set<MenuBarSectionName> {
+        selection.sections
+    }
+
+    /// The units a section's bar last reported, left to right.
+    func units(in section: MenuBarSectionName) -> [Unit] {
+        units[section] ?? []
+    }
+
     /// The move of the whole selection to section, or nil when nothing is selected.
     func command(to section: MenuBarSectionName, placement: LayoutBatchMove.Placement) -> LayoutBatchMove? {
         let itemIDs = orderedItemIDs
         guard !itemIDs.isEmpty else { return nil }
         return LayoutBatchMove(itemIDs: itemIDs, section: section, placement: placement)
+    }
+
+    /// One move per selected item that puts it back after its current left neighbour,
+    /// left to right, so each neighbour is already back in place when it's needed.
+    func restoringMoves() -> [LayoutBatchMove] {
+        let selected = Set(orderedItemIDs)
+        return MenuBarSectionName.allCases.flatMap { section in
+            let ids = (units[section] ?? []).flatMap(\.memberIDs)
+            return ids.indices.filter { selected.contains(ids[$0]) }.map { index in
+                LayoutBatchMove(itemIDs: [ids[index]], section: section, placement: index == 0 ? .start : .after(ids[index - 1]))
+            }
+        }
     }
 
     /// Whether section would take the whole selection.
@@ -110,20 +182,29 @@ final class LayoutSelectionModel {
         body(&updated)
         guard updated != selection else { return }
         let previousCount = selection.count
+        changeCount += 1
         selection = updated
         if announcing, updated.count != previousCount {
             announce(Self.announcement(count: updated.count))
         }
     }
 
-    nonisolated static func announcement(count: Int) -> String {
+    /// What VoiceOver says when a move of the selection lands.
+    static nonisolated func movedAnnouncement(count: Int, to section: MenuBarSectionName) -> String {
+        String(AttributedString(
+            localized: "Moved ^[\(count) item](inflect: true) to \(section.localizedName)",
+            comment: "VoiceOver announcement after selected Layout items moved to a section"
+        ).characters)
+    }
+
+    static nonisolated func announcement(count: Int) -> String {
         count == 0
             ? String(localized: "Selection cleared", comment: "VoiceOver announcement when the Layout pane's selection is cleared")
             : String(localized: "\(count) items selected", comment: "VoiceOver announcement of how many items are selected in the Layout pane")
     }
 
     /// What the pane says when a move of the selection was refused. Nil for a move that went through.
-    nonisolated static func refusal(
+    static nonisolated func refusal(
         for outcome: LayoutBatchMoveOutcome,
         section: MenuBarSectionName,
         itemName: (String) -> String?

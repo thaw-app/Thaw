@@ -58,6 +58,8 @@ struct ItemIconPickerView: View {
 
     @State private var isImporting = false
     @State private var importError: LocalizedErrorWrapper?
+    /// Optional, since the picker is also hosted without the app, in tests.
+    @Environment(AppState.self) private var appState: AppState?
 
     private let columns = [GridItem(.adaptive(minimum: 56, maximum: 72), spacing: ThawSpacing.base)]
 
@@ -135,7 +137,7 @@ struct ItemIconPickerView: View {
     }
 
     private func choose(_ image: NSImage?) {
-        MenuBarItemIconChoices.shared.setImage(image, for: item)
+        LayoutEditUndo.setIcon(image, for: item, undoManager: appState?.layoutUndo)
     }
 
     /// A picked file is drawn at menu bar height whatever its pixel size.

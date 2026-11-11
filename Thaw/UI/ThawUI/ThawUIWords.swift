@@ -20,6 +20,11 @@ extension ThawBadge {
     static var beta: ThawBadge {
         .beta("BETA")
     }
+
+    /// A feature that ships unfinished and is still changing.
+    static var workInProgress: ThawBadge {
+        ThawBadge("WIP", tone: .tinted(.orange))
+    }
 }
 
 extension ToggleStyle where Self == ThawCheckboxToggleStyle {

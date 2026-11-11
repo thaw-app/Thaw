@@ -8,6 +8,7 @@
 
 import AppKit
 import MenuBarModel
+import Observation
 
 // MARK: - MenuBarItemDisplayName
 
@@ -51,9 +52,24 @@ enum MenuBarItemDisplayName {
     /// costs inside a re-evaluating body.
     static func displayName(for item: MenuBarItem) -> String {
         // A user rename changes the name without moving the key, so the
-        // custom name is read back on each call instead of cached. It is only
-        // a dictionary lookup.
-        if let custom = item.customName, !custom.trimmingCharacters(in: .whitespaces).isEmpty {
+        // custom name is read back on each call instead of cached.
+        displayName(for: item, customName: item.customName)
+    }
+
+    /// The same, with the custom names read once by a caller naming many items:
+    /// each read copies the whole dictionary out of user defaults.
+    static func displayName(for item: MenuBarItem, customNames: [String: String]) -> String {
+        displayName(for: item, customName: customNames[item.uniqueIdentifier])
+    }
+
+    /// The user's names for items, by MenuBarItem.uniqueIdentifier. A view that reads
+    /// MenuBarItemCustomNamesRevision.shared.value first redraws when one changes.
+    static func customNames() -> [String: String] {
+        Defaults.dictionary(forKey: .menuBarItemCustomNames) as? [String: String] ?? [:]
+    }
+
+    private static func displayName(for item: MenuBarItem, customName: String?) -> String {
+        if let custom = customName, !custom.trimmingCharacters(in: .whitespaces).isEmpty {
             return custom
         }
 
@@ -89,8 +105,7 @@ enum MenuBarItemDisplayName {
             return cached
         }
         let pid = item.sourcePID ?? item.ownerPID
-        guard let resolved = NSRunningApplication(processIdentifier: pid)?.localizedName,
-              !resolved.isEmpty
+        guard let resolved = NSRunningApplication(processIdentifier: pid)?.localizedName, !resolved.isEmpty
         else {
             return nil
         }
@@ -123,5 +138,34 @@ enum MenuBarItemDisplayName {
     static func clear() {
         cache.removeAll()
         ownerCache.removeAll()
+    }
+}
+
+/// Counts changes to the custom names, so a view that shows them redraws on a rename or its undo.
+/// User defaults aren't observable, so it compares the names after each write to the store.
+@MainActor
+@Observable
+final class MenuBarItemCustomNamesRevision {
+    static let shared = MenuBarItemCustomNamesRevision()
+
+    private(set) var value = 0
+    @ObservationIgnored private var names = MenuBarItemDisplayName.customNames()
+    @ObservationIgnored private var observer: (any NSObjectProtocol)?
+
+    private init() {
+        observer = NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: nil) { _ in
+            if Thread.isMainThread {
+                MainActor.assumeIsolated { Self.shared.check() }
+            } else {
+                Task { @MainActor in Self.shared.check() }
+            }
+        }
+    }
+
+    private func check() {
+        let current = MenuBarItemDisplayName.customNames()
+        guard current != names else { return }
+        names = current
+        value &+= 1
     }
 }

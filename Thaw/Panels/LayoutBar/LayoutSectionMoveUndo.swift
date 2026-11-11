@@ -24,6 +24,39 @@ enum LayoutSectionMoveUndo {
         registerUndo(of: item, from: source, to: target, appState: appState, undoManager: undoManager)
     }
 
+    /// Moves a group as a whole and, when that worked, registers an undo that moves it back.
+    /// Returns the refusal, so a group that can't move leaves no undo step.
+    static func assignGroup(
+        _ members: [MenuBarItem],
+        to target: MenuBarSection.Name,
+        from source: MenuBarSection.Name,
+        appState: AppState?
+    ) -> MenuBarGroupMoveRefusal? {
+        guard let appState else { return nil }
+        let refusal = appState.menuBarManager.setSection(target, items: members, atomically: true)
+        if refusal == nil {
+            registerGroupUndo(of: members, from: source, to: target, appState: appState)
+        }
+        return refusal
+    }
+
+    static func registerGroupUndo(
+        of members: [MenuBarItem],
+        from source: MenuBarSection.Name,
+        to target: MenuBarSection.Name,
+        appState: AppState
+    ) {
+        guard source != target, !members.isEmpty else { return }
+        let undoManager = appState.layoutUndo
+        let tags = members.map(\.tag)
+        undoManager.registerUndo(withTarget: appState) { appState in
+            let current = tags.compactMap { appState.itemManager.managedItem(withTag: $0) }
+            guard appState.menuBarManager.setSection(source, items: current, atomically: true) == nil else { return }
+            registerGroupUndo(of: current, from: target, to: source, appState: appState)
+        }
+        undoManager.setActionName(String(localized: "Move Group"))
+    }
+
     static func registerUndo(
         of item: MenuBarItem,
         from source: MenuBarSection.Name,

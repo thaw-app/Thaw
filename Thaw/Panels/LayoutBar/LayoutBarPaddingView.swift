@@ -14,8 +14,10 @@ import MenuBarModel
 final class LayoutBarPaddingView: NSView {
     private static let diagLog = DiagLog(category: "LayoutBarPaddingView")
 
-    private let container: LayoutBarContainer
+    let container: LayoutBarContainer
     private var isStabilizing = false
+    /// Whether the bar wraps its items onto rows as wide as this view, rather than scrolling one row.
+    let wrapsRows: Bool
 
     private var notchView: NotchIndicatorView?
     private var notchWidthConstraint: NSLayoutConstraint?
@@ -24,26 +26,6 @@ final class LayoutBarPaddingView: NSView {
     private var containerLeadingAfterNotchConstraint: NSLayoutConstraint?
     private var containerLeadingInsetConstraint: NSLayoutConstraint?
     private var notchObservers = Set<AnyCancellable>()
-
-    /// Whether an item may be used as a layout-bar drag source on macOS 27.
-    /// The visible Thaw control is a real movable status item; the zero-width
-    /// divider controls remain structural and must never be reordered.
-    static func acceptsLayoutDrag(of item: MenuBarItem) -> Bool {
-        !item.isControlItem || item.tag.matchesVisibleControlItem
-    }
-
-    /// Whether anchored Apple system items may be freely reordered in the
-    /// layout editor. Without Thaw Bar, hidden anchored items still mirror the
-    /// real menu bar's trailing system-control placement.
-    static func allowsAnchoredSystemItemReordering(appState: AppState?) -> Bool {
-        guard let appState else {
-            return false
-        }
-        if let displayID = appState.itemManager.itemDisplayID {
-            return appState.settings.displaySettings.useThawBar(for: displayID)
-        }
-        return appState.settings.displaySettings.configurationForActiveDisplay().useThawBar
-    }
 
     private static func anchoredSystemItemsTrail(in items: [MenuBarItem]) -> [MenuBarItem] {
         MenuBarBackendProvider.current.anchoredSystemItemsTrail(in: items)
@@ -100,8 +82,10 @@ final class LayoutBarPaddingView: NSView {
     /// - Parameters:
     ///   - appState: The shared app state instance.
     ///   - section: The section whose items are represented.
-    init(appState: AppState, section: MenuBarSection.Name) {
+    ///   - wrapsRows: Whether items wrap onto rows as wide as this view.
+    init(appState: AppState, section: MenuBarSection.Name, wrapsRows: Bool = false) {
         self.container = LayoutBarContainer(appState: appState, section: section)
+        self.wrapsRows = wrapsRows
 
         super.init(frame: .zero)
 
@@ -327,25 +311,17 @@ final class LayoutBarPaddingView: NSView {
             Self.allowsAnchoredSystemItemReordering(appState: container.appState)
 
         guard item.isPhysicallyOrderable(experimentalSystemItemHiding: physicalOrderExperimentalSystemItemHiding) else {
-            guard MenuBarBackendProvider.current.canAssign(
-                item,
-                to: container.section,
-                experimentalSystemItemHiding: experimentalSystemItemHiding
-            ),
+            guard MenuBarBackendProvider.current.canAssign(item, to: container.section, experimentalSystemItemHiding: experimentalSystemItemHiding),
                 sourceSection != container.section || container.section != .visible
             else {
                 Self.diagLog.warning("Ignoring drag for anchored system item \(item.logString)")
-                postAssignmentRefusal(
-                    for: item,
-                    to: container.section,
-                    experimentalSystemItemHiding: experimentalSystemItemHiding
-                )
+                postAssignmentRefusal(for: item, to: container.section, experimentalSystemItemHiding: experimentalSystemItemHiding)
                 container.handleDrag(sender, phase: .exited)
                 draggingSource.hasContainer = false
                 return false
             }
 
-            LayoutDropCommit.recordIntent(of: item, orderedAs: orderedItems, from: sourceSection, to: container.section, controller: controller, appState: container.appState, undoManager: window?.undoManager)
+            LayoutDropCommit.recordIntent(of: item, orderedAs: orderedItems, from: sourceSection, to: container.section, controller: controller, appState: container.appState, undoManager: container.appState?.layoutUndo)
             if let appState = container.appState {
                 appState.itemManager.scheduleSectionOrderApply(for: container.section)
                 Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
@@ -359,17 +335,9 @@ final class LayoutBarPaddingView: NSView {
             // owner is on the hiding denylist. Reject a drop into a
             // non-visible section and snap it back, rather than committing a
             // hidden assignment the assertion can't honor.
-            guard MenuBarBackendProvider.current.canAssign(
-                item,
-                to: container.section,
-                experimentalSystemItemHiding: experimentalSystemItemHiding
-            ) else {
+            guard MenuBarBackendProvider.current.canAssign(item, to: container.section, experimentalSystemItemHiding: experimentalSystemItemHiding) else {
                 Self.diagLog.warning("Refusing to assign non-hideable \(item.logString) to \(container.section.logString)")
-                postAssignmentRefusal(
-                    for: item,
-                    to: container.section,
-                    experimentalSystemItemHiding: experimentalSystemItemHiding
-                )
+                postAssignmentRefusal(for: item, to: container.section, experimentalSystemItemHiding: experimentalSystemItemHiding)
                 container.handleDrag(sender, phase: .exited)
                 draggingSource.hasContainer = false
                 return false
@@ -409,11 +377,9 @@ final class LayoutBarPaddingView: NSView {
                     if let groupMembers {
                         // Dragging one member moves the whole group, so this must be
                         // atomic and must explain itself when it cannot apply.
-                        if let refusal = container.appState?.menuBarManager.setSection(
-                            targetSection,
-                            items: groupMembers,
-                            atomically: true
-                        ), let appState = container.appState {
+                        if let refusal = LayoutSectionMoveUndo.assignGroup(groupMembers, to: targetSection, from: sourceSection, appState: container.appState),
+                           let appState = container.appState
+                        {
                             let sourceItems = appState.itemManager.itemCache
                                 .managedItems(for: sourceSection)
                             appState.layoutFeedback.post(
@@ -429,7 +395,7 @@ final class LayoutBarPaddingView: NSView {
                             )
                         }
                     } else {
-                        LayoutSectionMoveUndo.setSection(targetSection, of: item, from: sourceSection, controller: controller, appState: container.appState, undoManager: self.window?.undoManager)
+                        LayoutSectionMoveUndo.setSection(targetSection, of: item, from: sourceSection, controller: controller, appState: container.appState, undoManager: container.appState?.layoutUndo)
                         controller?.setSectionOrder(from: orderedForCommit, for: targetSection)
                         container.appState?.itemManager.scheduleSectionOrderApply(for: targetSection)
                     }
@@ -441,6 +407,7 @@ final class LayoutBarPaddingView: NSView {
         }
 
         if let index = arrangedViews.firstIndex(of: draggingSource) {
+            let previousOrder = LayoutReorderUndo.orderBeforeDrag(of: item, in: orderedItems, from: draggingSource.oldContainerInfo?.index)
             if sectionIsPhysicallyLive(container.section, controller: controller) {
                 if container.section == .visible,
                    let appState = container.appState
@@ -479,6 +446,7 @@ final class LayoutBarPaddingView: NSView {
                             to: destination,
                             sourceContainer: sourceContainer,
                             sectionOrderToCommit: orderedItems,
+                            previousOrder: previousOrder,
                             anchorFallbacks: anchorFallbackChain(
                                 for: destination,
                                 planningItems: liveItems,
@@ -532,6 +500,7 @@ final class LayoutBarPaddingView: NSView {
                         to: destination,
                         sourceContainer: sourceContainer,
                         sectionOrderToCommit: orderedItems,
+                        previousOrder: previousOrder,
                         anchorFallbacks: anchorFallbackChain(
                             for: destination,
                             planningItems: orderedItems,
@@ -544,9 +513,10 @@ final class LayoutBarPaddingView: NSView {
 
             // Non-live sections record intent, not a completed move. Visible
             // intent needs an explicit apply; concealed sections wait for reveal.
-            LayoutDropCommit.recordIntent(of: item, orderedAs: orderedItems, from: sourceSection, to: container.section, controller: controller, appState: container.appState, undoManager: window?.undoManager)
+            LayoutDropCommit.recordIntent(of: item, orderedAs: orderedItems, from: sourceSection, to: container.section, controller: controller, appState: container.appState, undoManager: container.appState?.layoutUndo)
 
             if let appState = container.appState {
+                LayoutReorderUndo.register(orderedItems, previous: previousOrder, of: item, section: container.section, appState: appState)
                 appState.itemManager.scheduleSectionOrderApply(for: container.section)
                 Task { await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
             }
@@ -618,6 +588,7 @@ final class LayoutBarPaddingView: NSView {
         to destination: MenuBarItemManager.MoveDestination,
         sourceContainer: LayoutBarContainer? = nil,
         sectionOrderToCommit: [MenuBarItem]? = nil,
+        previousOrder: [MenuBarItem]? = nil,
         anchorFallbacks: [MenuBarItemManager.MoveDestination] = []
     ) {
         guard let appState = container.appState else {
@@ -718,10 +689,7 @@ final class LayoutBarPaddingView: NSView {
                         proposedOrder: sectionOrderToCommit,
                         liveItems: liveItems
                     ) else { throw MenuBarItemManager.EventError.cannotComplete }
-                    appState.menuBarManager.sectionController.setSectionOrder(
-                        from: completedOrder,
-                        for: container.section
-                    )
+                    appState.menuBarManager.sectionController.setSectionOrder(from: completedOrder, for: container.section)
                 }
                 await stabilizePlacement(
                     of: item,
@@ -730,6 +698,8 @@ final class LayoutBarPaddingView: NSView {
                     appState: appState,
                     anchorFallbacks: anchorFallbacks
                 )
+                // Only now: a refused or failed move leaves nothing to undo.
+                LayoutReorderUndo.register(sectionOrderToCommit, previous: previousOrder, of: item, section: container.section, appState: appState)
             } catch {
                 Self.diagLog.error("Error moving menu bar item: \(error)")
                 // The system event-driven move sometimes throws cannotComplete
@@ -881,7 +851,7 @@ final class LayoutBarPaddingView: NSView {
     /// fall out of a handle drag.
     private func performGroupHandleDrop(_ handle: LayoutBarGroupHandleView, sender: NSDraggingInfo) -> Bool {
         if handle.sourceSection == container.section {
-            let dropX = container.convert(sender.draggingLocation, from: nil).x
+            let dropX = container.sweepX(at: sender.draggingLocation)
             // The reorder path restores view updates itself (immediately for a
             // concealed section, or after its async move task for a live one).
             return performGroupHandleReorder(handle, dropX: dropX)
@@ -1347,7 +1317,9 @@ final class LayoutBarPaddingView: NSView {
     }
 
     private func updateNotchPresentation() {
+        // Rows that wrap are not the menu bar's shape, so the notch has no place among them.
         guard
+            !wrapsRows,
             container.section == .visible,
             let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main,
             screen.hasNotch,
