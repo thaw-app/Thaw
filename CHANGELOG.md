@@ -90,7 +90,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Two same-width items of one app can no longer show each other's picture.**
 - **An item with a changing title is recognized after its app restarts,** even when the old copy was still quitting.
 - **Capture Hidden Items retakes a picture that is cut off at its left edge,** and a cut-off picture can no longer replace a complete one. It used to count a cut picture as good and leave it.
-- **Pictures of hidden items survive a restart.** Restarting Thaw could leave the saved pictures half written, so all of them were gone at the next start. Thaw could also save before it had read them back in, and it never reused the picture of an app's second item with the same name. Reported by katla on Discord.
+- **Pictures of hidden items survive a restart.** Restarting Thaw could lose all of them. Reported by katla on Discord.
 
 #### Thaw Bar
 
@@ -107,7 +107,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Undo is cleared when a profile applies,** so ⌘Z can't write one profile's old order into another's layout.
 - **Spaces settings stay after Thaw quits,** and a Space's own look survives a logout.
 - **Editing the look in a Space with its own look changes that Space.**
-- **Applying a profile keeps shortcuts it doesn't know about,** and one saved with Always Hidden off turns it off.
+- **Applying a profile keeps shortcuts it doesn't know about,** and a new one saved with Always Hidden off turns it off. Older profiles still only turn it on.
 - **Export All includes scripts and shortcuts,** and a profile's preview lists everything it changes.
 - **Undoing a new or duplicated profile keeps the profile you're on.** By @Belligerently in [#1487](https://github.com/thaw-app/Thaw/pull/1487).
 - **Thaw's list of Spaces updates when a display connects or disconnects.**

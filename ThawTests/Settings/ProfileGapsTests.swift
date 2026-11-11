@@ -59,12 +59,36 @@ struct ProfileFileCompatibilityTests {
 
     @Test("A profile that stores the switch says so, and rewrites keep the fact")
     func storedSwitch() throws {
-        let profile = try Self.decode(#"{"name": "New", "advancedSettings": {"enableAlwaysHiddenSection": false}, "hotkeyActions": ["a"]}"#)
+        let profile = try Self.decode(
+            #"{"name": "New", "storesAlwaysHiddenSection": true, "advancedSettings": {"enableAlwaysHiddenSection": false}, "hotkeyActions": ["a"]}"#
+        )
         #expect(profile.storesAlwaysHiddenSection)
         #expect(profile.hotkeyActions == ["a"])
         let json = try Self.encode(profile)
         #expect(json.contains("hotkeyActions"))
         try Self.rewritesKeep(json: json, expected: true)
+    }
+
+    @Test("A profile from a released build, which holds the switch without saying it stores it, still only turns Always Hidden on")
+    func releasedBuildProfileOnlyTurnsOn() throws {
+        let profile = try Self.decode(#"{"name": "Released", "advancedSettings": {"enableAlwaysHiddenSection": false}}"#)
+        #expect(!profile.storesAlwaysHiddenSection)
+
+        var current = AdvancedSettingsSnapshot.defaults
+        current.enableAlwaysHiddenSection = true
+        let applied = profile.advancedSettings.merged(onto: current, storesAlwaysHiddenSection: profile.storesAlwaysHiddenSection)
+        #expect(applied.enableAlwaysHiddenSection, "applying it leaves Always Hidden on, as released builds do")
+
+        try Self.rewritesKeep(json: Self.encode(profile), expected: false)
+    }
+
+    @Test("A profile that says it stores the switch turns Always Hidden off")
+    func markedProfileTurnsOff() throws {
+        let profile = try Self.decode(#"{"name": "New", "storesAlwaysHiddenSection": true, "advancedSettings": {"enableAlwaysHiddenSection": false}}"#)
+        var current = AdvancedSettingsSnapshot.defaults
+        current.enableAlwaysHiddenSection = true
+        let applied = profile.advancedSettings.merged(onto: current, storesAlwaysHiddenSection: profile.storesAlwaysHiddenSection)
+        #expect(!applied.enableAlwaysHiddenSection)
     }
 
     @Test("A rewritten old profile still only turns Always Hidden on")
