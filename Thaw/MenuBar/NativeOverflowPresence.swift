@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import MenuBarModel
 import Observation
 
 /// The displays where macOS's own overflow arrow is showing, copied from the section engine,
@@ -22,6 +23,11 @@ final class NativeOverflowPresence {
         if active != displayIDs {
             displayIDs = active
         }
+    }
+
+    /// Copies the section engine's answer for every connected display.
+    func refresh(displays: Set<CGDirectDisplayID>, from controller: any MenuBarSectionControlling) {
+        refresh(displays: displays, isActive: controller.isNativeOverflowActive(on:))
     }
 
     /// Whether macOS's overflow is showing on displayID. False when there is no display.

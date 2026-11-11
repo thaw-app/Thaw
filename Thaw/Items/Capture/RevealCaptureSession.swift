@@ -16,7 +16,7 @@ struct RevealCaptureSession {
     /// reveal's settle and its screenshot without a screen.
     struct Sources {
         /// The revealed members that reached stable bounds, paired with the
-        /// request they answer. See waitForRevealedItems(matching:displayID:).
+        /// request they answer. See waitForRevealedItems(matching:clock:read:).
         let settledItems: @MainActor ([MenuBarItem]) async -> [(requested: MenuBarItem, live: MenuBarItem)]
         /// The wait between stable AX bounds and fully rendered glyphs at those bounds.
         let renderSettle: @MainActor ([MenuBarItem]) async -> Void

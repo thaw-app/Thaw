@@ -124,7 +124,7 @@ nonisolated enum SearchIndex {
             keywords: ["capture", "screenshot", "picture", "sync", "images", "hidden", "always hidden", "icons", "app icon"],
             property: nil
         ),
-        // Displays › Spaces rows: agent-backed session state with no persisted
+        // Displays › Spaces rows: stored by SpaceMenuBarKeeper rather than a
         // settings property, indexed so the pane's controls are findable.
         SearchEntry(
             id: "spaces.hideInThisSpace",

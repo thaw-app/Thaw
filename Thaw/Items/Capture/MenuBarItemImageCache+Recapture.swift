@@ -165,7 +165,7 @@ extension MenuBarItemImageCache {
         appState: AppState,
         captureSection: @MainActor (MenuBarSection.Name) async -> CapturePass
     ) async -> Bool {
-        guard !standsDownForConcealedPrewarm("recaptureNow") else { return false }
+        guard !prewarmSlot.standsDown("recaptureNow") else { return false }
         // Before the first await: what this pass publishes must still describe the layout it started from. See publicationRejection(of:).
         let admission = CapturePublicationPolicy.admit(
             layout: appState.itemManager.layoutPublication,
@@ -530,90 +530,6 @@ extension MenuBarItemImageCache {
         )
     }
 
-    /// Waits only as long as MenuBarAgent needs to publish precise AX reveal
-    /// bounds for a whole revealed group, resolving every member from the same
-    /// enumeration.
-    ///
-    /// A fixed sleep would make an N-item reveal N × settle long even when the
-    /// live AX items are available almost immediately. Waiting per item would
-    /// cost one AX enumeration per poll attempt per item, and each enumeration
-    /// walks every running app; this pays one poll loop per group. AX can
-    /// publish an item before MenuBarAgent has finished recompositing its
-    /// glyph, so one stable poll interval is required per member before it is
-    /// trusted, and members settle at different times.
-    ///
-    /// Bounds stability does not imply the glyph is rendered, see the
-    /// Constants.MenuBarTuning/layoutPrewarmRenderSettle delay the caller
-    /// inserts before the SCK screenshot.
-    ///
-    /// Returns the members that reached stable bounds, paired with the request
-    /// they answer, in request order. Members that never settled are absent
-    /// rather than reported with untrustworthy bounds; the caller treats a
-    /// missing member the same way it treats a missed reveal.
-    private func waitForRevealedItems(
-        matching items: [MenuBarItem],
-        displayID: CGDirectDisplayID
-    ) async -> [(requested: MenuBarItem, live: MenuBarItem)] {
-        guard !items.isEmpty else { return [] }
-
-        // MenuBarAgent can take over a second to publish a revealed item.
-        // The loop leaves as soon as every member settles.
-        let maxAttempts = 20
-        var previousByIdentifier = [String: MenuBarItem]()
-        var settledByIdentifier = [String: MenuBarItem]()
-        let deadline = ContinuousClock.now + Constants.MenuBarTuning.revealCaptureSettleBudget
-
-        for attempt in 0 ..< maxAttempts {
-            guard !Task.isCancelled, ContinuousClock.now < deadline else { break }
-
-            let liveItems = await MenuBarItem.getMenuBarItems(
-                on: displayID,
-                option: [.onScreen, .activeSpace]
-            )
-
-            // Every member is offered to the match, settled ones included, so a
-            // member that settled on an earlier poll keeps its claim and cannot
-            // be paired with a second request.
-            let matches = Self.revealMatches(requests: items, live: liveItems)
-            let currentByIdentifier = Dictionary(
-                matches.enumerated().compactMap { index, liveItem in
-                    liveItem.map { (items[index].uniqueIdentifier, $0) }
-                },
-                uniquingKeysWith: { first, _ in first }
-            )
-
-            let advanced = Self.advanceRevealSettle(
-                settled: settledByIdentifier,
-                previous: previousByIdentifier,
-                current: currentByIdentifier,
-                hasStable: { AXCropRules.hasStableCaptureBounds(before: $0, after: $1) }
-            )
-            settledByIdentifier = advanced.settled
-            previousByIdentifier = advanced.previous
-
-            if settledByIdentifier.count == items.count {
-                break
-            }
-            if attempt < maxAttempts - 1 {
-                try? await Task.sleep(for: .milliseconds(100))
-            }
-        }
-
-        if settledByIdentifier.count < items.count {
-            let missing = items
-                .filter { settledByIdentifier[$0.uniqueIdentifier] == nil }
-                .map(\.logString)
-            let budgetEnding = ContinuousClock.now < deadline ? "in \(maxAttempts) polls" : "within the settle budget"
-            let ending = Task.isCancelled ? "before the wait was cancelled" : budgetEnding
-            MenuBarItemImageCache.diagLog.debug(
-                "waitForRevealedItems: \(missing.count) of \(items.count) revealed item(s) never settled \(ending); no capture for \(missing)"
-            )
-        }
-        return items.compactMap { item in
-            settledByIdentifier[item.uniqueIdentifier].map { (requested: item, live: $0) }
-        }
-    }
-
     /// Reveals concealed items a few at a time and captures each group from
     /// one screenshot pair.
     ///
@@ -674,8 +590,12 @@ extension MenuBarItemImageCache {
             missPolicy: missPolicy,
             appState: appState,
             sources: RevealCaptureSession.Sources(
-                settledItems: { await self.waitForRevealedItems(matching: $0, displayID: displayID) },
-                renderSettle: { await self.settleRevealedPixels($0, displayID: displayID) },
+                settledItems: { batch in
+                    await RevealCaptureSession.waitForRevealedItems(matching: batch) {
+                        await MenuBarItem.getMenuBarItems(on: displayID, option: [.onScreen, .activeSpace])
+                    }
+                },
+                renderSettle: { await RevealCaptureSession.settleRevealedPixels($0, displayID: displayID, reader: LiveMenuBarCaptureReader()) },
                 reader: LiveMenuBarCaptureReader(),
                 // Captures never see Thaw's own windows, so the cover hides the reveal from the user only.
                 cover: { appState.menuBarManager.revealCover.show(lifetime: Constants.MenuBarTuning.revealCaptureCoverLifetime) },
@@ -810,129 +730,39 @@ extension MenuBarItemImageCache {
     /// captured before the assertion hides them again.
     @MainActor
     func prewarmConcealedImages(
-        sections requestedSections: [MenuBarSection.Name],
+        sections: [MenuBarSection.Name],
         onlyMissingImages: Bool = true,
         tally: RequestedCaptureTally? = nil
     ) async {
-        // Before the failure reset and the reveal: a locked pass must not toggle
-        // the lock screen's bar or clear strikes it did not earn back.
-        guard !skipCaptureWhileScreenLocked("prewarmConcealedImages"), ConcealedPrewarmGate.mayReveal(for: appState) else {
-            return
-        }
-
-        // One pass at a time: overlapping passes land one's conceal inside the
-        // other's screenshot. A queued pass whose bar closed stops here.
-        await beginConcealedPrewarm(tally: tally)
-        defer { endConcealedPrewarm() }
-        // The hiding method can change while a pass waits its turn.
-        guard !Task.isCancelled, !skipCaptureWhileScreenLocked("queued prewarm"),
-              ConcealedPrewarmGate.mayReveal(for: appState) else { return }
-
-        let sections = requestedSections.reduce(into: [MenuBarSection.Name]()) { result, section in
-            guard section != .visible, !result.contains(section) else { return }
-            result.append(section)
-        }
-
-        // Only a pass the user asked for (onlyMissingImages false) retries failed items at
-        // once. Automatic passes wait out the cooldown, so they don't rewrite the bar on every open.
-        if let itemManager = appState?.itemManager, !onlyMissingImages || tally != nil {
-            let tags = sections.reduce(into: Set<MenuBarItemTag>()) { result, section in
-                result.formUnion(itemManager.itemCache[section].map(\.tag))
-            }
-            if !tags.isEmpty {
-                clearCaptureFailures(tags: tags)
-                MenuBarItemImageCache.diagLog.debug(
-                    "prewarmConcealedImages: forgot recorded failures for \(tags.count) item(s) in " +
-                        "\(sections.map(\.rawValue))"
-                )
-            }
-        }
-
-        // Always-hidden items go through the same grouped reveal as hidden
-        // ones. Revealing the whole section does not work: closing the Thaw
-        // Bar conceals it again, and even revealed the items still report
-        // their parked frames.
-        //
-        // Inline in the caller's task, not an unstructured Task, so closing the
-        // Thaw Bar (which cancels cacheTask) stops the reveal loop.
-        for section in sections {
-            guard let appState else { break }
-            let controller = appState.menuBarManager.sectionController
-
-            let sectionItems = appState.itemManager.itemCache[section]
-            guard !sectionItems.isEmpty else { continue }
-
-            let displayID = appState.itemManager.itemDisplayID
-                ?? windowServer.activeMenuBarDisplayID()
-                ?? CGMainDisplayID()
-            let isNativeOverflowActive = controller.isNativeOverflowActive(on: displayID)
-            let itemsToCapture = sectionItems.filter { item in
-                // Native notch overflow remains in force when Thaw removes an item from its own
-                // concealment assertion. A prewarm in that state can only capture the system
-                // overflow chevron, never the item's real glyph.
-                guard !isNativeOverflowActive, !prewarmSkips(item) else {
-                    return false
-                }
-                return !onlyMissingImages || Self.prewarmNeedsCapture(
-                    cachedImage: image(for: item.tag),
-                    wouldAttemptCapture: wouldAttemptCapture(of: item)
-                )
-            }
-            guard !itemsToCapture.isEmpty else { continue }
-
-            guard !Task.isCancelled else {
-                MenuBarItemImageCache.diagLog.debug(
-                    "prewarmConcealedImages: capture cancelled before start for \(section.logString)"
-                )
-                break
-            }
-
-            let scale = NSScreen.screen(for: displayID)?.backingScaleFactor
-                ?? NSScreen.main?.backingScaleFactor
-                ?? 2
-
-            // Grouped precise reveal, shared with the overlay refresh:
-            // batches of a few items, one settle and one screenshot pair
-            // per batch, instead of one reveal per item. A blank or
-            // chevron-width entry that the reveal cannot better is dropped
-            // so the Layout thumbnail falls back to the app icon.
-            await captureConcealedItemsByGroupedReveal(
-                itemsToCapture,
-                controller: controller,
-                displayID: displayID,
-                scale: scale,
-                missPolicy: .dropUntrustedEntries
-            )
-        }
-
-        // One save after the whole pass rather than one per section: every
-        // save PNG-encodes and rewrites the entire cache, so a full prewarm
-        // would otherwise pay that cost once per section back-to-back for the
-        // same end state.
-        saveToDisk()
+        await concealedPrewarm().capture(sections: sections, onlyMissingImages: onlyMissingImages, tally: tally)
     }
 
-    /// Waits until no other concealed-section prewarm is running, then marks this one running and opens its
-    /// tally, so a queued request can't touch a running one's. Waiters are resumed in arrival order.
-    @MainActor
-    func beginConcealedPrewarm(tally: RequestedCaptureTally? = nil) async {
-        defer { markConcealedPrewarmStarted(tally: tally) }
-        guard isConcealedPrewarmRunning else {
-            isConcealedPrewarmRunning = true
-            return
-        }
-        await withCheckedContinuation { concealedPrewarmWaiters.append($0) }
-    }
-
-    /// Hands the running slot straight to the next queued prewarm, so no caller slips in between, or frees it.
-    @MainActor
-    func endConcealedPrewarm() {
-        Self.requestedCaptureTally = nil
-        if concealedPrewarmWaiters.isEmpty {
-            isConcealedPrewarmRunning = false
-        } else {
-            concealedPrewarmWaiters.removeFirst().resume()
-        }
+    /// The prewarm over this cache and the live bar.
+    func concealedPrewarm() -> RevealCapturePrewarm {
+        RevealCapturePrewarm(
+            slot: prewarmSlot,
+            isLocked: { self.skipCaptureWhileScreenLocked($0) },
+            mayReveal: { ConcealedPrewarmGate.mayReveal(for: self.appState) },
+            sectionItems: { self.appState?.itemManager.itemCache[$0] },
+            displayID: {
+                self.appState?.itemManager.itemDisplayID ?? self.windowServer.activeMenuBarDisplayID() ?? CGMainDisplayID()
+            },
+            isNativeOverflowActive: { self.appState?.menuBarManager.sectionController.isNativeOverflowActive(on: $0) == true },
+            allowsCaptureReveal: { self.appState?.menuBarManager.nativeAppHidingExperiment.allowsCaptureReveal == true },
+            cachedImage: { self.image(for: $0) },
+            wouldAttemptCapture: { self.wouldAttemptCapture(of: $0) },
+            forgetFailures: { self.clearCaptureFailures(tags: $0) },
+            captureSection: { items, displayID in
+                guard let controller = self.appState?.menuBarManager.sectionController else { return }
+                let scale = NSScreen.screen(for: displayID)?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
+                // A blank or chevron-width entry the reveal cannot better is dropped, so the
+                // Layout thumbnail falls back to the app icon.
+                await self.captureConcealedItemsByGroupedReveal(
+                    items, controller: controller, displayID: displayID, scale: scale, missPolicy: .dropUntrustedEntries
+                )
+            },
+            save: { self.saveToDisk() }
+        )
     }
 
     /// Whether the screen is locked, in which case pass skips its capture.

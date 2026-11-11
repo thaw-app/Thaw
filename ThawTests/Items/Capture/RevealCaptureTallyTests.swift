@@ -11,7 +11,6 @@ import MenuBarModel
 import Testing
 @testable import Thaw
 
-/// The tally is a static, so these tests run one at a time and put it back.
 @MainActor
 @Suite("Requested capture tally", .serialized, .scratchDefaults)
 struct RevealCaptureTallyTests {
@@ -46,63 +45,63 @@ struct RevealCaptureTallyTests {
         _ pass: Cache.CapturePass,
         revealed: [(requested: MenuBarItem, live: MenuBarItem)],
         in cache: Cache
-    ) -> Set<MenuBarItemTag> {
-        let tally = Cache.RequestedCaptureTally()
-        Cache.requestedCaptureTally = tally
-        defer { Cache.requestedCaptureTally = nil }
+    ) async -> Set<MenuBarItemTag> {
+        let tally = RequestedCaptureTally()
+        await cache.prewarmSlot.begin(tally: tally)
+        defer { cache.prewarmSlot.end() }
         cache.commitCaptureLedger(of: pass, notingRevealed: revealed)
         return tally.tags
     }
 
     @Test("A new picture of an item with none is tallied")
-    func firstPictureIsTallied() throws {
+    func firstPictureIsTallied() async throws {
         let cache = Cache(screenIsLocked: { false })
         let item = makeItem("New")
         var pass = Cache.CapturePass()
         pass.captured[item.tag] = try glyph(pixelWidth: 40)
 
-        #expect(tally(pass, revealed: [(requested: item, live: item)], in: cache) == [item.tag])
+        #expect(await tally(pass, revealed: [(requested: item, live: item)], in: cache) == [item.tag])
     }
 
     @Test("A picture the cache keeps over a narrower one is tallied")
-    func widerPictureIsTallied() throws {
+    func widerPictureIsTallied() async throws {
         let cache = Cache(screenIsLocked: { false })
         let item = makeItem("Wider")
         try cache.setCapture(glyph(pixelWidth: 20), for: item.tag)
         var pass = Cache.CapturePass()
         pass.captured[item.tag] = try glyph(pixelWidth: 40)
 
-        #expect(tally(pass, revealed: [(requested: item, live: item)], in: cache) == [item.tag])
+        #expect(await tally(pass, revealed: [(requested: item, live: item)], in: cache) == [item.tag])
     }
 
     @Test("A picture the cache turns down for the one it has is not tallied")
-    func preferredExistingIsNotTallied() throws {
+    func preferredExistingIsNotTallied() async throws {
         let cache = Cache(screenIsLocked: { false })
         let item = makeItem("Narrower")
         try cache.setCapture(glyph(pixelWidth: 40), for: item.tag)
         var pass = Cache.CapturePass()
         pass.captured[item.tag] = try glyph(pixelWidth: 20)
 
-        #expect(tally(pass, revealed: [(requested: item, live: item)], in: cache) == [])
+        #expect(await tally(pass, revealed: [(requested: item, live: item)], in: cache) == [])
     }
 
     @Test("A revealed item the pass got no picture of is not tallied")
-    func missingCropIsNotTallied() {
+    func missingCropIsNotTallied() async {
         let cache = Cache(screenIsLocked: { false })
         let item = makeItem("Missed")
 
-        #expect(tally(Cache.CapturePass(), revealed: [(requested: item, live: item)], in: cache) == [])
+        #expect(await tally(Cache.CapturePass(), revealed: [(requested: item, live: item)], in: cache) == [])
     }
 
     @Test("The tally names the item that was asked for, not the one the reveal found")
-    func requestedTagIsTallied() throws {
+    func requestedTagIsTallied() async throws {
         let cache = Cache(screenIsLocked: { false })
         let requested = makeItem("Rebuilt", instance: 0)
         let live = makeItem("Rebuilt", instance: 1)
         var pass = Cache.CapturePass()
         pass.captured[live.tag] = try glyph(pixelWidth: 40)
 
-        #expect(tally(pass, revealed: [(requested: requested, live: live)], in: cache) == [requested.tag])
+        #expect(await tally(pass, revealed: [(requested: requested, live: live)], in: cache) == [requested.tag])
     }
 
     @Test("Outside a requested capture nothing is tallied, and the ledger still commits")
@@ -113,34 +112,11 @@ struct RevealCaptureTallyTests {
         var pass = Cache.CapturePass()
         pass.captured[item.tag] = try glyph(pixelWidth: 40)
         pass.failedCaptureItems = [failed]
-        try #require(Cache.requestedCaptureTally == nil)
+        try #require(cache.prewarmSlot.tally == nil)
 
         cache.commitCaptureLedger(of: pass, notingRevealed: [(requested: item, live: item)])
 
-        #expect(Cache.requestedCaptureTally == nil)
+        #expect(cache.prewarmSlot.tally == nil)
         #expect(cache.failedCapturesLock.withLock { $0[failed.tag]?.failureCount } == 1)
-    }
-
-    @Test("A queued request's tally opens only when it holds the prewarm slot, and leaves the running one's alone")
-    func tallyFollowsTheSlot() async {
-        let cache = Cache(screenIsLocked: { false })
-        let running = Cache.RequestedCaptureTally()
-        let queued = Cache.RequestedCaptureTally()
-        await cache.beginConcealedPrewarm(tally: running)
-        #expect(Cache.requestedCaptureTally === running)
-
-        let waiter = Task { @MainActor in
-            await cache.beginConcealedPrewarm(tally: queued)
-            return Cache.requestedCaptureTally === queued
-        }
-        for _ in 0 ..< 5 {
-            await Task.yield()
-        }
-        #expect(Cache.requestedCaptureTally === running)
-
-        cache.endConcealedPrewarm()
-        #expect(await waiter.value)
-        cache.endConcealedPrewarm()
-        #expect(Cache.requestedCaptureTally == nil)
     }
 }

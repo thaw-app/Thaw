@@ -111,7 +111,7 @@ struct ThawIntentTests {
             _ = try await ToggleApplicationMenusIntent().perform()
         }
         #expect(appState.menuBarManager.showOnHoverAllowed)
-        #expect(!appState.menuBarManager.isHidingApplicationMenus)
+        #expect(!appState.menuBarManager.applicationMenuHider.isHidingApplicationMenus)
     }
 
     @Test("Opening an item the app does not know is a no-op")

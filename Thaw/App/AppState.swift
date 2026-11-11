@@ -61,6 +61,15 @@ final class AppState {
     /// Settles screen-parameter changes into one numbered snapshot.
     let displayEnvironment = DisplayEnvironment()
 
+    /// Space switches and Space list changes as soon as the window server reports them.
+    let spaceChanges = SpaceChanges()
+
+    /// The current Space list, re-read when a Space is created or deleted.
+    let spaceDirectory = SpaceDirectory()
+
+    /// The Spaces page's choices, sent to the menu bar agent again after it forgets them.
+    let spaceMenuBarKeeper = SpaceMenuBarKeeper()
+
     /// Runs the settle a display change owes, and the image cleanup after a removal, once per settled generation.
     @ObservationIgnored lazy var displayChangeCoordinator = DisplayChangeCoordinator(
         environment: displayEnvironment,
@@ -233,6 +242,9 @@ final class AppState {
         diagLog.debug("bootstrap: permissions state = \(String(describing: self.permissions.permissionsState)), accessibility = \(self.permissions.accessibility.hasPermission), screenRecording = \(self.permissions.screenRecording.hasPermission)")
 
         displayEnvironment.start()
+        spaceChanges.start(feed: SpaceChanges.liveFeed())
+        spaceDirectory.start(changes: spaceChanges)
+        spaceMenuBarKeeper.start(directory: spaceDirectory, agentRestarts: SpaceMenuBarKeeper.liveAgentRestarts())
         settings.performSetup(with: self)
         menuBarManager.performSetup(with: self, activeDisplayWatcher: activeDisplayWatcher, displays: displayEnvironment)
         barSettlingObservers.observe(revealedSections: menuBarManager.revealedSectionChanges)
@@ -706,7 +718,7 @@ final class AppState {
               !navigationState.isThawBarPresented,
               !navigationState.isSearchPresented,
               !menuBarManager.layoutEditorPanel.isShown,
-              !menuBarManager.isHidingApplicationMenus,
+              !menuBarManager.applicationMenuHider.isHidingApplicationMenus,
               NSApp.modalWindow == nil,
               !NSApp.windows.contains(where: {
                   ($0.isVisible || $0.isMiniaturized) && ($0.canBecomeKey || $0.canBecomeMain)
