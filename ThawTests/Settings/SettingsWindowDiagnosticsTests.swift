@@ -20,7 +20,6 @@ struct SettingsWindowDiagnosticsTests {
         screen: CGRect(x: 0, y: 0, width: 3008, height: 1692),
         backingScale: 2,
         hasFullSizeContent: true,
-        zoomPercent: 110,
         isSimpleMode: false
     )
 
@@ -29,10 +28,10 @@ struct SettingsWindowDiagnosticsTests {
         #expect(reading.chromeHeight == 52)
     }
 
-    @Test("The line carries the sizes, the zoom and the layout")
+    @Test("The line carries the sizes and the layout")
     func summaryNamesEverything() {
         #expect(reading.summary == "window=900x640 at (120, 80) contentLayout=900x588 contentView=900x640"
-            + " chromeHeight=52 fullSizeContent=true screen=3008x1692 backingScale=2.0 uiZoom=110% layout=full")
+            + " chromeHeight=52 fullSizeContent=true screen=3008x1692 backingScale=2.0 layout=full")
     }
 
     @Test("A reading takes the window's own frames, style and scale, and the settings passed in")
@@ -44,7 +43,7 @@ struct SettingsWindowDiagnosticsTests {
             backing: .buffered,
             defer: true
         )
-        let reading = SettingsWindowDiagnostics.reading(of: window, zoomPercent: 125, isSimpleMode: true)
+        let reading = SettingsWindowDiagnostics.reading(of: window, isSimpleMode: true)
 
         #expect(reading.frame == window.frame)
         #expect(reading.contentLayout == window.contentLayoutRect)
@@ -52,11 +51,9 @@ struct SettingsWindowDiagnosticsTests {
         #expect(reading.screen == (window.screen?.frame ?? .zero))
         #expect(reading.backingScale == window.backingScaleFactor)
         #expect(reading.hasFullSizeContent)
-        #expect(reading.zoomPercent == 125)
         #expect(reading.isSimpleMode)
         #expect(!SettingsWindowDiagnostics.reading(
             of: NSWindow(contentRect: .zero, styleMask: [.titled], backing: .buffered, defer: true),
-            zoomPercent: 100,
             isSimpleMode: false
         ).hasFullSizeContent)
     }

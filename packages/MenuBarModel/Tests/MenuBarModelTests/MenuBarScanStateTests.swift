@@ -120,6 +120,47 @@ struct MenuBarScanStateTests {
         #expect(state.hasFreshKnownInventory(generation: next.generation, excusing: nextExcused))
     }
 
+    @Test("A pass that skipped a hung owner with known items is steady but not fresh")
+    func skippedKnownOwnerIsSteady() {
+        var state = MenuBarScanState<String>()
+        let first = state.begin(owners: [1, 2], priorityOwners: [])
+        for owner in first.owners {
+            state.didAttempt(owner: owner, generation: first.generation)
+            state.record(["item-\(owner)"], owner: owner, generation: first.generation)
+        }
+        #expect(state.coverage(of: first) == InventoryCoverage(isFresh: true, isSteady: true))
+
+        // Owner 2 hangs: the next walk skips it and reads owner 1.
+        let pass = state.begin(owners: [1, 2], priorityOwners: [])
+        state.didAttempt(owner: 1, generation: pass.generation)
+        state.record(["item-1"], owner: 1, generation: pass.generation)
+
+        #expect(state.coverage(of: pass, skipped: [2]) == InventoryCoverage(isFresh: false, isSteady: true))
+        #expect(state.observations.sorted() == ["item-1", "item-2"], "its item is still in the inventory")
+        // Not named as skipped, the same gap is a read that didn't get to owner 2.
+        #expect(state.coverage(of: pass) == .none)
+    }
+
+    @Test("A skipped owner that was never read is not excused, and neither is a walk cut short")
+    func unreadOwnersAreNotSteady() {
+        var state = MenuBarScanState<String>()
+        // A launch walk: owner 1 answers, owner 2 is skipped as slow, and time runs out before owner 3.
+        let launch = state.begin(owners: [1, 2, 3], priorityOwners: [])
+        state.didAttempt(owner: 1, generation: launch.generation)
+        state.record(["item-1"], owner: 1, generation: launch.generation)
+        #expect(state.coverage(of: launch, skipped: [2]) == .none)
+
+        // Later every owner has answered once, then a walk reads owner 1 and is cut short before 2 and 3.
+        for owner: Int32 in [2, 3] {
+            state.didAttempt(owner: owner, generation: launch.generation)
+            state.record(["item-\(owner)"], owner: owner, generation: launch.generation)
+        }
+        let truncated = state.begin(owners: [1, 2, 3], priorityOwners: [])
+        state.didAttempt(owner: 1, generation: truncated.generation)
+        state.record(["item-1"], owner: 1, generation: truncated.generation)
+        #expect(state.coverage(of: truncated, skipped: [2]) == .none, "owner 3 was not skipped, only not reached")
+    }
+
     @Test("An unvisited owner survives, but a successful empty answer removes its items")
     func absenceRequiresAnObservation() {
         var state = MenuBarScanState<String>()

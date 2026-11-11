@@ -36,6 +36,12 @@ struct WidgetsView: View {
         return StatusIconPreviewState(composition: composition, samples: samples, isLive: liveData, style: style)
     }
 
+    /// What was set in this window, without the live readings: the controller publishes those itself.
+    private var edits: StatusIconPreviewState {
+        let style = StatusIconStyle(size: size, thickness: thickness, statusColors: statusColors)
+        return StatusIconPreviewState(composition: composition, samples: manualSamples, isLive: liveData, style: style)
+    }
+
     var body: some View {
         Form {
             ThawSection("Icon builder") {
@@ -104,7 +110,7 @@ struct WidgetsView: View {
             widget.setLive(liveData)
             widget.refresh(with: previewState)
         }
-        .onChange(of: previewState) { widget.refresh(with: previewState) }
+        .onChange(of: edits) { widget.refresh(with: previewState) }
     }
 
     /// Both states of the readings toggle need explaining, so the description

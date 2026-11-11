@@ -154,22 +154,24 @@ struct MenuBarItemImageCacheDiskSaveTests {
 
     @Test("A re-stamp that cannot write falls back to a full write, which also fails, and keeps nothing")
     func unwritableFileIsNotRecorded() throws {
-        defer {
-            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: directory.path)
-            try? FileManager.default.removeItem(at: directory)
-        }
         let store = makeStore()
         let url = try #require(store.cacheFileURL)
+        // The write is atomic, so it replaces the file through its folder: the folder is what has to refuse.
+        let folder = url.deletingLastPathComponent().path
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder)
+            try? FileManager.default.removeItem(at: directory)
+        }
         let capture = Self.capture()
         save(store, capture)
-        try FileManager.default.setAttributes([.posixPermissions: 0o444], ofItemAtPath: url.path)
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: folder)
 
         advance(by: 20)
         save(store, capture)
         #expect(try timestamp(at: url) == Self.base)
 
         // The failure was not recorded as a write, so a request a second later still reaches the file.
-        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: url.path)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder)
         advance(by: 1)
         save(store, capture)
         #expect(try timestamp(at: url) == Self.base + 21)

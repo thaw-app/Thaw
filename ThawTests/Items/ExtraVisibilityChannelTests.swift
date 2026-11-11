@@ -32,10 +32,12 @@ struct ExtraVisibilityChannelTests {
         try String(contentsOf: ExtraVisibilityChannel.file(in: folder), encoding: .utf8)
     }
 
-    @Test("Only Thaw's own extra bundles belong to the channel")
+    @Test("Only Thaw's own extra and module bundles belong to the channel")
     func ownsOnlyExtraBundles() {
         let own = ThawMenuBarIdentity.bundleIdentifier
         #expect(ExtraVisibilityChannel.ownsBundle("\(own).extra.wifi"))
+        #expect(ExtraVisibilityChannel.ownsBundle("\(own).module.widgets"), "the widget icon is hidden here too")
+        #expect(!ExtraVisibilityChannel.ownsBundle("\(own).modules"))
         #expect(!ExtraVisibilityChannel.ownsBundle(own))
         #expect(!ExtraVisibilityChannel.ownsBundle("\(own).extras"))
         #expect(!ExtraVisibilityChannel.ownsBundle("com.example.app.extra.wifi"))

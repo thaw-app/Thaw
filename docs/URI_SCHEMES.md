@@ -156,7 +156,7 @@ These settings affect specific displays based on context. The **Scope** column i
 | `iceBarLayout`           | String | All displays with IceBar enabled | Thaw Bar layout: `horizontal`, `vertical`, or `grid` |
 | `gridColumns`            | Int | All displays with IceBar enabled | Maximum items per row in grid layout (2–10) |
 | `thawBarItemScale`       | Double | All displays with IceBar enabled | How large the Thaw Bar draws items: 0.6 to 1, where 1 is the menu bar's size |
-| `itemSpacingOffset`      | Double | Active display only | Menu bar item spacing for the display, from -16 to 16 points; applied when it has the active menu bar |
+| `itemSpacingOffset`      | Double | Active display only | Menu bar item spacing for the display, from -16 to 16 points; applied when it has the active menu bar. A link can't ask first, so while **When spacing changes** is set to **Ask before restarting menu bar apps**, the value is saved and each app picks it up when it next starts |
 
 Find display UUIDs in System Settings → Displays, or via `system_profiler SPDisplaysDataType`.
 

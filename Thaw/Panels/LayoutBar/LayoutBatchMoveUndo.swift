@@ -31,10 +31,48 @@ enum LayoutBatchMoveUndo {
 
     private static func run(_ moves: [LayoutBatchMove], appState: AppState) {
         ExplicitLayoutEdit.task {
+            let executor = LayoutBatchMoveExecutor(appState: appState)
+            var outcomes = [LayoutBatchMoveOutcome]()
             for move in moves {
-                _ = await LayoutBatchMoveExecutor(appState: appState).run(move)
+                await outcomes.append(run(move) { await executor.run($0) })
+            }
+            if let refusal = refusal(for: outcomes) {
+                appState.layoutFeedback.post(refusal)
             }
         }
+    }
+
+    /// One step of an undo or redo. When the neighbour an item goes back after has quit or moved,
+    /// the item goes to the end of its old section instead.
+    static func run(
+        _ move: LayoutBatchMove,
+        using execute: (LayoutBatchMove) async -> LayoutBatchMoveOutcome
+    ) async -> LayoutBatchMoveOutcome {
+        let outcome = await execute(move)
+        guard case .refused(.unknownAnchor) = outcome else { return outcome }
+        return await execute(LayoutBatchMove(itemIDs: move.itemIDs, section: move.section, placement: .end))
+    }
+
+    /// What the pane says when part of an undo or redo was refused; nil when every step went through.
+    static nonisolated func refusal(for outcomes: [LayoutBatchMoveOutcome]) -> LayoutBarFeedbackCenter.Refusal? {
+        let wasRefused = outcomes.contains { outcome in
+            if case .refused = outcome {
+                true
+            } else {
+                false
+            }
+        }
+        guard wasRefused else { return nil }
+        return LayoutBarFeedbackCenter.Refusal(
+            title: String(
+                localized: "Some items couldn’t be moved back",
+                comment: "Title shown when undoing or redoing a move of several Layout items was partly refused"
+            ),
+            message: String(
+                localized: "An item has quit or changed since the move, so it stayed where it is.",
+                comment: "Explanation shown when undoing or redoing a move of several Layout items was partly refused"
+            )
+        )
     }
 
     /// Only a move that happened gets an undo step; a refused or unchanged one leaves none.

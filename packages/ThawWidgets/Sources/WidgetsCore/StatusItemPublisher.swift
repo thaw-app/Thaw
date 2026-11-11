@@ -27,6 +27,20 @@ final class StatusItemPublisher: NSObject {
     /// What the icon shows now.
     var lastState: StatusIconPreviewState?
     private var appearanceObservation: NSKeyValueObservation?
+    /// Whether the icon was last drawn for a dark menu bar.
+    private var renderedDark: Bool?
+    /// What the image on the button was drawn from.
+    private var rendered: StatusIconDrawnContent?
+    private var menuTitles: [String] = []
+    private var hasContent = false
+    /// Thaw's choice to hide the icon, which outlives every reading published after it.
+    var isHiddenByThaw = false {
+        didSet {
+            if oldValue != isHiddenByThaw {
+                applyVisibility()
+            }
+        }
+    }
 
     /// Creates (or reuses) a status item and sets its image to the rendered
     /// composition. The item appears immediately.
@@ -35,6 +49,7 @@ final class StatusItemPublisher: NSObject {
             hide()
             return
         }
+        hasContent = true
         if statusItem == nil {
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
             item.autosaveName = Self.autosaveName
@@ -47,31 +62,71 @@ final class StatusItemPublisher: NSObject {
         }
         lastState = state
         if let button = statusItem?.button {
-            Self.configure(button, for: state)
+            // A new image makes AppKit snapshot the item again, so it is set only when the picture changes.
+            // A reading often changes its text alone, as Wi-Fi strength does between bars.
+            let dark = Self.isDark(button)
+            if state.drawn != rendered || dark != renderedDark {
+                button.image = Self.image(for: state, darkMenuBar: dark)
+                rendered = state.drawn
+                renderedDark = dark
+            }
+            Self.describe(button, for: state)
         }
-        statusItem?.menu = makeMenu(for: state)
-        if statusItem?.isVisible != true {
-            statusItem?.isVisible = true
+        let titles = [state.title] + state.details
+        if titles != menuTitles || statusItem?.menu == nil {
+            statusItem?.menu = makeMenu(for: state)
+            menuTitles = titles
+        }
+        applyVisibility()
+    }
+
+    static func shows(hasContent: Bool, hiddenByThaw: Bool) -> Bool {
+        hasContent && !hiddenByThaw
+    }
+
+    private func applyVisibility() {
+        let visible = Self.shows(hasContent: hasContent, hiddenByThaw: isHiddenByThaw)
+        if statusItem?.isVisible != visible {
+            statusItem?.isVisible = visible
         }
     }
 
     /// A coloured icon is drawn in the menu bar's ink, so it's redrawn when the bar turns light or dark.
     func observeAppearance(of button: NSButton) -> NSKeyValueObservation {
         button.observe(\.effectiveAppearance) { [weak self] button, _ in
-            MainActor.assumeIsolated {
-                guard let state = self?.lastState else { return }
-                Self.configure(button, for: state)
-            }
+            MainActor.assumeIsolated { self?.appearanceChanged(of: button) }
         }
+    }
+
+    /// AppKit sets the appearance again each time it snapshots the item, and a template follows the
+    /// bar by itself, so only a coloured icon whose bar really turned light or dark is redrawn.
+    func appearanceChanged(of button: NSButton) {
+        guard let state = lastState else { return }
+        let dark = Self.isDark(button)
+        guard dark != renderedDark else { return }
+        renderedDark = dark
+        guard state.style.hasColor(composition: state.composition, samples: state.samples) else { return }
+        button.image = Self.image(for: state, darkMenuBar: dark)
+    }
+
+    static func isDark(_ button: NSButton) -> Bool {
+        button.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
     }
 
     /// Draws the readings and describes them to VoiceOver. The identifier stays fixed, because
     /// Thaw names its own items by it and the label changes with every reading.
     static func configure(_ button: NSButton, for state: StatusIconPreviewState) {
-        button.image = image(for: state, darkMenuBar: button.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
+        button.image = image(for: state, darkMenuBar: isDark(button))
+        describe(button, for: state)
+    }
+
+    /// Describes the readings to VoiceOver and the tooltip, leaving the picture alone.
+    static func describe(_ button: NSButton, for state: StatusIconPreviewState) {
+        let description = state.accessibilityDescription
         button.setAccessibilityIdentifier(autosaveName)
-        button.setAccessibilityLabel(state.accessibilityDescription)
-        button.toolTip = state.accessibilityDescription
+        guard button.toolTip != description else { return }
+        button.setAccessibilityLabel(description)
+        button.toolTip = description
     }
 
     /// The menu a click opens: the same readings the image shows.
@@ -103,7 +158,8 @@ final class StatusItemPublisher: NSObject {
 
     /// Hides the preview item without destroying it (so a re-publish is instant).
     func hide() {
-        statusItem?.isVisible = false
+        hasContent = false
+        applyVisibility()
     }
 
     /// A template that follows the menu bar, or in the bar's own ink once a reading is coloured, since a template drops colour.

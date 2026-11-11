@@ -25,7 +25,6 @@ enum SettingsWindowDiagnostics {
         var screen: CGRect
         var backingScale: CGFloat
         var hasFullSizeContent: Bool
-        var zoomPercent: Int
         var isSimpleMode: Bool
 
         /// Title bar and toolbar together.
@@ -41,21 +40,21 @@ enum SettingsWindowDiagnostics {
                 + " contentLayout=\(size(contentLayout)) contentView=\(size(contentView))"
                 + " chromeHeight=\(Int(chromeHeight)) fullSizeContent=\(hasFullSizeContent)"
                 + " screen=\(size(screen)) backingScale=\(backingScale)"
-                + " uiZoom=\(zoomPercent)% layout=\(isSimpleMode ? "simple" : "full")"
+                + " layout=\(isSimpleMode ? "simple" : "full")"
         }
     }
 
     /// Logs once the window has had a moment to lay out its toolbar.
-    static func logWhenLaidOut(_ window: NSWindow, zoomPercent: Int, isSimpleMode: Bool) {
+    static func logWhenLaidOut(_ window: NSWindow, isSimpleMode: Bool) {
         Task { @MainActor [weak window] in
             try? await Task.sleep(for: .milliseconds(500))
             guard let window, window.isVisible else { return }
-            let reading = reading(of: window, zoomPercent: zoomPercent, isSimpleMode: isSimpleMode)
+            let reading = reading(of: window, isSimpleMode: isSimpleMode)
             diagLog.info("Settings window opened: \(reading.summary)")
         }
     }
 
-    static func reading(of window: NSWindow, zoomPercent: Int, isSimpleMode: Bool) -> Reading {
+    static func reading(of window: NSWindow, isSimpleMode: Bool) -> Reading {
         Reading(
             frame: window.frame,
             contentLayout: window.contentLayoutRect,
@@ -63,7 +62,6 @@ enum SettingsWindowDiagnostics {
             screen: window.screen?.frame ?? .zero,
             backingScale: window.backingScaleFactor,
             hasFullSizeContent: window.styleMask.contains(.fullSizeContentView),
-            zoomPercent: zoomPercent,
             isSimpleMode: isSimpleMode
         )
     }

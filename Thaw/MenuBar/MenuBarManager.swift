@@ -106,7 +106,7 @@ final class MenuBarManager {
     private(set) var sectionController: any MenuBarSectionControlling = InertSectionController()
 
     /// Concrete access for platform-typed operations, exposed to callers only through this manager.
-    private var runtimeSectionController: RuntimeSectionController?
+    private(set) var runtimeSectionController: RuntimeSectionController?
 
     /// Preassign stand-ins before creation so they are not born into a concealed section.
     func assignSection(_ section: MenuBarSection.Name, identifier: String) {

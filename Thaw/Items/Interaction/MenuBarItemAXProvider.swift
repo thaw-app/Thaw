@@ -82,7 +82,7 @@ nonisolated enum MenuBarItemAXProvider {
             items: restoredIdentities(snapshot.items),
             freshItems: restoredIdentities(snapshot.freshItems),
             completed: snapshot.completed,
-            hasFreshKnownInventory: snapshot.hasFreshKnownInventory,
+            knownInventory: snapshot.knownInventory,
             hasFreshMoveInventory: snapshot.hasFreshMoveInventory,
             hasFreshOwnerInventory: snapshot.hasFreshOwnerInventory
         )
@@ -146,7 +146,7 @@ nonisolated enum MenuBarItemAXProvider {
 
     /// Owners that missed their per-app deadline. Cooldowns expire, so an app
     /// slow once in a launch storm is not banished; see SlowResponderLedger.
-    private static let slowResponders = OSAllocatedUnfairLock(
+    static let slowResponders = OSAllocatedUnfairLock(
         initialState: SlowResponderLedger()
     )
 
@@ -171,7 +171,7 @@ nonisolated enum MenuBarItemAXProvider {
         }
     }
 
-    private static let perAppWalkBudget = Duration.milliseconds(400)
+    static let perAppWalkBudget = Duration.milliseconds(400)
 
     /// Late answers from apps that missed their deadline, merged by the next
     /// walk so a slow app's icon is one pass late instead of absent.
@@ -255,7 +255,7 @@ nonisolated enum MenuBarItemAXProvider {
         // process-heavy machine is not cut off mid-pass; the 1.5 s floor
         // bounds small tables and the per-app deadline caps any one slow app.
         let globalBudget = max(
-            Duration.milliseconds(1500),
+            reader.minimumBudget,
             Duration.milliseconds(15) * pass.owners.count
         )
         let walkStart = ContinuousClock.now
@@ -346,7 +346,7 @@ nonisolated enum MenuBarItemAXProvider {
                 }
                 // Abandons, not awaits, a hung AX call. A timeout and a cancellation both
                 // yield nil here; Task.isCancelled tells them apart when it is collected.
-                let result = try? await withAbandoningTimeout(Self.perAppWalkBudget) {
+                let result = try? await withAbandoningTimeout(reader.perAppBudget) {
                     await collected.value
                 }
                 return ProbeOutcome(ownerPID: ownerPID, appBundleID: appBundleID, result: result, collected: collected)
@@ -414,7 +414,7 @@ nonisolated enum MenuBarItemAXProvider {
             items: items,
             freshItems: freshItems,
             completed: state.isComplete(generation: pass.generation),
-            hasFreshKnownInventory: state.hasFreshKnownInventory(generation: pass.generation, excusing: state.excusableDeferredOwners(of: pass)),
+            knownInventory: state.coverage(of: pass, skipped: Set(slowOwners.keys).subtracting(requiredOwners)),
             hasFreshMoveInventory: hasFreshMoveInventory,
             hasFreshOwnerInventory: passCovered && state.hasFreshItemOwners(generation: pass.generation, excusing: excused)
         ), state)
@@ -673,7 +673,7 @@ nonisolated enum MenuBarItemAXProvider {
         let items: [MenuBarItem]
         let freshItems: [MenuBarItem]
         let completed: Bool
-        let hasFreshKnownInventory: Bool
+        let knownInventory: InventoryCoverage
         let hasFreshMoveInventory: Bool
         /// Every requested owner and owner with items answered; apps never read, left to discovery, don't count.
         let hasFreshOwnerInventory: Bool
@@ -682,7 +682,7 @@ nonisolated enum MenuBarItemAXProvider {
             items: [],
             freshItems: [],
             completed: false,
-            hasFreshKnownInventory: false,
+            knownInventory: .none,
             hasFreshMoveInventory: false,
             hasFreshOwnerInventory: false
         )
@@ -746,7 +746,7 @@ nonisolated enum MenuBarItemAXProvider {
             priorityOwners: plan.priorityOwners,
             preemptsDiscovery: plan.scope == .discovery
         ) else { return .unavailable }
-        if plan.scope == .discovery, snapshot.completed || snapshot.hasFreshKnownInventory {
+        if plan.scope == .discovery, snapshot.completed || snapshot.knownInventory.isFresh {
             fullWalks.noteFullWalk()
         }
         return restoredIdentities(snapshot)

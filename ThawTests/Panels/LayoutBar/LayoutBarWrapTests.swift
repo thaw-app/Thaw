@@ -167,9 +167,18 @@ struct LayoutBarWrapTests {
 
     @Test("165 items wrap and relayout quickly when the width changes")
     func relayoutTime() throws {
-        let bar = try WrappedBar(count: 165, width: 900)
+        // The budget is 40 times a 33-item bar's time on the same machine, about half a second on a
+        // developer Mac. A fixed half second fails on a CI runner several times slower.
+        let small = try Self.fastestRelayout(count: 33)
+        let large = try Self.fastestRelayout(count: 165)
+        #expect(large.rows > 5)
+        #expect(large.elapsed < small.elapsed * 40, "13 relayouts of 165 items took \(large.elapsed), of 33 items \(small.elapsed)")
+    }
+
+    /// The fastest of three runs of 13 width changes, so a stall in the parallel suite can't decide it.
+    private static func fastestRelayout(count: Int) throws -> (elapsed: Duration, rows: Int) {
+        let bar = try WrappedBar(count: count, width: 900)
         let clock = ContinuousClock()
-        // The fastest of three, so a stall in the parallel suite can't fail it.
         let elapsed = (0 ..< 3).map { _ in
             bar.container.rowWidth = 900
             return clock.measure {
@@ -178,8 +187,7 @@ struct LayoutBarWrapTests {
                 }
             }
         }.min() ?? .zero
-        #expect(bar.container.flow.rowCount > 5)
-        #expect(elapsed < .milliseconds(500), "13 relayouts of 165 items took \(elapsed)")
+        return (elapsed, bar.container.flow.rowCount)
     }
 
     @Test("The bar in SwiftUI grows as items arrive, at the width it is given")

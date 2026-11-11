@@ -142,6 +142,15 @@ struct ProfileLayoutDiffTests {
         #expect(split.namespace == "ns")
         #expect(split.title == "a:b")
     }
+
+    @Test("A saved item not in the bar shows a system symbol or app icon, and nothing for an unknown app")
+    func savedItemIcons() {
+        let wifi = ProfilePreviewModel.savedItemIcon(for: "com.apple.MenuBarAgent:com.apple.menuextra.wifi")
+        #expect(wifi?.isTemplate == true)
+        #expect(ProfilePreviewModel.savedItemIcon(for: "com.apple.finder:Item-0") != nil)
+        #expect(ProfilePreviewModel.savedItemIcon(for: "com.example.not-installed:Item-0") == nil)
+        #expect(ProfilePreviewModel.savedItemIcon(for: "explorer.exe:Item-0") == nil)
+    }
 }
 
 /// The profile preview drawn off screen.

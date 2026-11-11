@@ -50,6 +50,20 @@ struct LogRotationSettingsTests {
         #expect(policy.maxFileSizeBytes == 1_000_000 * 1024 * 1024)
     }
 
+    @Test("Loading the stored settings hands the logger one policy, never one that is half defaults")
+    func loadSendsOnePolicy() {
+        Defaults.store.set(25, forKey: "DiagnosticLogMaxSizeMB")
+        Defaults.store.set(30, forKey: "DiagnosticLogRetentionDays")
+        let settings = ToolsSettings()
+        var sent = [DiagnosticLogger.RotationPolicy]()
+        settings.sendRotationPolicy = { sent.append($0) }
+
+        settings.loadInitialState()
+
+        #expect(sent.map(\.retentionDays) == [30], "a policy with the default 2 days would delete logs kept for 30")
+        #expect(sent.first?.maxFileSizeBytes == 25 * 1024 * 1024)
+    }
+
     @Test("Changing a setting stores it under Thaw 2's key and hands the logger the new policy")
     func changesReachTheLogger() {
         let settings = ToolsSettings()

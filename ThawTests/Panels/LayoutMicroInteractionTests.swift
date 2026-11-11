@@ -7,6 +7,7 @@
 
 import CoreGraphics
 import MenuBarModel
+import Combine
 import Testing
 @testable import Thaw
 
@@ -71,6 +72,24 @@ struct LayoutMicroInteractionTests {
         #expect(quiet.flashing == ["c"], "and a later layout change doesn't light it again")
     }
 
+    @Test("The list follows section changes through one subscription, however often it is asked")
+    func sectionChangesAreFollowedOnce() async throws {
+        let changes = CurrentValueSubject<Void, Never>(())
+        let motion = LayoutListMotion()
+        var runs = 0
+        motion.followSectionChanges(changes.eraseToAnyPublisher()) { runs += 1 }
+        motion.followSectionChanges(changes.eraseToAnyPublisher()) { runs += 100 }
+        for _ in 0 ..< 200 where runs < 1 {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(runs == 1, "the value sent on subscribing arrives once")
+        changes.send(())
+        for _ in 0 ..< 200 where runs < 2 {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(runs == 2)
+    }
+
     @Test("Moving the same row again scrolls to it again")
     func repeatedMoveScrolls() {
         let motion = LayoutListMotion()
@@ -95,7 +114,7 @@ struct LayoutMicroInteractionTests {
         var sweep = try #require(LayoutCheckboxSweep(startingAt: "a", rows: rows))
         motion.sweep = sweep
         #expect(!motion.isSweepClick(), "a drag still on its first row leaves the click to the checkbox")
-        sweep.extend(from: 5, to: 15, rows: rows)
+        sweep.extend(to: 15, rows: rows)
         motion.sweep = sweep
         #expect(motion.isSweepClick())
 

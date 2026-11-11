@@ -16,6 +16,9 @@ import ThawUI
 final class LayoutDashboardWindow: NSObject, NSWindowDelegate {
     private static let frameName = "ThawLayoutDashboard"
     private static let defaultSize = NSSize(width: 1100, height: 640)
+    /// No full screen: there the window showed no close button, which left only quitting Thaw.
+    /// The green button zooms the window instead.
+    static let collectionBehavior: NSWindow.CollectionBehavior = .fullScreenNone
 
     private var window: NSWindow?
     private(set) var model: LayoutDashboardModel?
@@ -90,6 +93,7 @@ final class LayoutDashboardWindow: NSObject, NSWindowDelegate {
         )
         window.title = String(localized: "Layout")
         window.isReleasedWhenClosed = false
+        window.collectionBehavior.formUnion(Self.collectionBehavior)
         window.contentMinSize = LayoutDashboardMetrics.windowMinSize
         window.delegate = self
         let host = NSHostingController(rootView: LayoutDashboardView(appState: appState, model: model))

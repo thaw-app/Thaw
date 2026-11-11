@@ -32,7 +32,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 
 - **Pop Out Editor (work in progress).** Opens Layout in a window with every item in a list, a filter, an editor for the selected item and full keyboard control.
 - **Every Layout edit can be undone,** with ⌘Z anywhere on the Layout page.
-- **Drag down the Layout window's checkboxes to show or hide several items at once.** A dragged row opens a gap where it will land, a section's name lights up when a drop there would move it, and the list scrolls when a drag reaches its edge. Moved rows flash where they landed, and the list follows them.
+- **Drag down the Layout window's checkboxes to show or hide several items at once.** A dragged row opens a gap where it will land, and the list scrolls at its edges.
 - **Trackpad taps for Layout and sliders.** A drag taps as it crosses into another section and when it lands, and the spacing and item size sliders tap at their defaults.
 - **The current Space in the menu bar,** in Displays › Spaces.
 - **Layout warns when items don't fit or macOS hides Focus,** with a one-click fix for each. Reported by @JosefGvirt in [#1477](https://github.com/thaw-app/Thaw/issues/1477).
@@ -47,9 +47,10 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 
 ### Changed
 
-- **Search is Floe's launcher,** grouped by section, with Extended and Compact layouts in Visibility. Detailed and Large become Extended. A moved item slides into its new section, and counts roll as they change.
+- **Search is Floe's launcher,** grouped by section, with Extended and Compact layouts in Visibility. Detailed and Large become Extended.
 - **Settings search goes to the row** and finds each module's switch.
 - **Extras is now Modules.**
+- **Segmented choices and the tabs in Settings are the system's own control.** The selection is a glass lens you can press and drag across the choices.
 - **One name for each section: Visible, Hidden and Always Hidden.**
 - **The Thaw Bar has its own switch again,** and so does double-clicking Thaw's icon for Always Hidden. By @malash in [#1339](https://github.com/thaw-app/Thaw/pull/1339).
 - **Apply to All Displays asks first.**
@@ -57,17 +58,23 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Thaw reads a busy menu bar faster,** and profiles and looks follow a Space switch sooner.
 - **The Thaw Bar drops in from the menu bar.**
 - **Corners sliders show their value,** Square, a percentage or Round, and match the other sliders.
-- **Switch to Reduced mode from Troubleshooting.**
+- **Switch to Reduced mode from Troubleshooting,** where Thaw runs as one icon that hides whole apps.
 - **The experimental reorder editor is gone.**
+- **Zoom is off for now.** ⌘+, ⌘− and the Zoom menu are gone until a zoomed Settings window stops ignoring clicks. Reported in [#1244](https://github.com/thaw-app/Thaw/issues/1244) and [#1265](https://github.com/thaw-app/Thaw/issues/1265).
 
 ### Fixed
 
 #### Layout and items
 
+- **The Layout window's green button zooms it instead of going full screen,** where only quitting Thaw got you out.
+- **The widget icon hides again with the Native hiding method.** It stayed on the menu bar in Hidden and Always Hidden.
+- **Native hiding starts again when a hidden app has no entry in System Settings › Menu Bar,** such as one you removed. Reported by @SebastienBn in [#1513](https://github.com/thaw-app/Thaw/issues/1513).
+- **Native hiding hides your apps again when macOS puts its list back right after Thaw changed it.** Thaw used to leave every app on the menu bar with a warning. Reported by @macdaddy1944 in [#1501](https://github.com/thaw-app/Thaw/issues/1501).
+- **An app you switched back on in System Settings says so in Layout,** instead of saying macOS won't let Thaw switch it off.
 - **Undo brings a moved group back whole again.** It used to restore only the batch's ungrouped items.
 - **Live item pictures update again when their left part changes,** like right-aligned text getting shorter on an item that keeps its width.
-- **Shift and the arrow keys extend the selection down the Layout window's list** instead of stopping after one row, a plain arrow key then carries on from where they stopped, and a filter stops a Shift-click selecting rows it hides.
-- **Reordering a group, moving it to another section and the Move to and Move All menu entries can be undone,** and a same-section drag puts the order back as it was even with groups, folders or the new-items badge in the list.
+- **Shift and the arrow keys extend the selection down the Layout window's list,** and a Shift-click no longer selects rows a filter hides.
+- **Reordering or moving a group, Move to and Move All can be undone,** and so can a same-section drag in a list with groups or folders.
 - **A read-only Layout window no longer groups the selection.**
 - **The order you drag the menu bar into is pinned,** even when an app is slow to answer Thaw at that moment.
 - **Hiding an item from Layout no longer sends Visible items to Always Hidden** after Thaw restarts.
@@ -82,11 +89,12 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **A selection you clear or change right after a move stays that way** instead of jumping back to the moved items.
 - **Two same-width items of one app can no longer show each other's picture.**
 - **An item with a changing title is recognized after its app restarts,** even when the old copy was still quitting.
-- **Capture Hidden Items retakes a picture that is cut off at its left edge,** and a cut-off picture can no longer replace a complete one. It used to count a cut picture as good and leave it.
+- **Capture Hidden Items retakes a picture that is cut off at its left edge,** and a cut-off picture can no longer replace a complete one.
+- **Pictures of hidden items survive a restart.** Restarting Thaw could lose all of them. Reported by katla on Discord.
 
 #### Thaw Bar
 
-- **App menus keep their place when Always Hidden is set to open in the Thaw Bar** for its display, and Hidden does not stay expanded inline behind the panel.
+- **App menus keep their place when Always Hidden opens in the Thaw Bar,** and Hidden no longer stays expanded behind the panel.
 - **One click on Thaw's icon works** when double-click opens Always Hidden and macOS's double-click speed is slow. Reported by @bortolatto-creator in [#1492](https://github.com/thaw-app/Thaw/issues/1492).
 - **A long click on a Thaw Bar item opens it,** and the arrow keys move the highlight at once.
 - **The preview shows what the bar shows,** and each display uses its own hover and scroll setting.
@@ -94,11 +102,12 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 
 #### Spaces and profiles
 
+- **The profile preview shows what your items look like,** with Layout's pictures for items in the menu bar and symbols for Wi-Fi, Clock and other system items.
 - **Renaming or duplicating an old profile no longer starts turning Always Hidden off** on the next apply or Space switch.
 - **Undo is cleared when a profile applies,** so ⌘Z can't write one profile's old order into another's layout.
 - **Spaces settings stay after Thaw quits,** and a Space's own look survives a logout.
 - **Editing the look in a Space with its own look changes that Space.**
-- **Applying a profile keeps shortcuts it doesn't know about,** and one saved with Always Hidden off turns it off.
+- **Applying a profile keeps shortcuts added since it was saved,** and a new one saved with Always Hidden off turns it off. Older profiles still only turn it on.
 - **Export All includes scripts and shortcuts,** and a profile's preview lists everything it changes.
 - **Undoing a new or duplicated profile keeps the profile you're on.** By @Belligerently in [#1487](https://github.com/thaw-app/Thaw/pull/1487).
 - **Thaw's list of Spaces updates when a display connects or disconnects.**
@@ -108,7 +117,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 
 #### Search
 
-- **With Compact search showing only its field, Return, the arrow keys and the item shortcuts no longer act on a row you can't see.** The arrow keys move the cursor in the field instead.
+- **With Compact search showing only its field, keys no longer act on a row you can't see.** The arrow keys move the cursor in the field.
 - **A wrong letter no longer clears what you typed,** the arrow keys keep working after the menu bar changes, and recent items show once.
 - **A failed move from search stays up** and is read aloud.
 - **A row is listed once while its item is mid-move,** so the arrow keys don't stall on it.
@@ -123,7 +132,9 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 
 #### Other
 
-- **Turning "Show release notes after an update" off now keeps the window closed** after Thaw updates.
+- **The widget icon is redrawn only when what it shows changes,** which cuts the Widgets module's memory and processor use.
+- **With the Native hiding method, Thaw no longer watches every click and drag for a press on the clock.** Only Standard needs that.
+- **Turning "Show release notes after an update" off keeps the window closed** after Thaw updates.
 - **A Mac without a battery draws its widget icon in the menu bar's own ink** instead of as a fixed grey picture.
 - **Reset Thaw also puts back the widgets switch, the recording alert position and Remember last search,** and forgets what it checked about your allowed apps.
 - **The Widgets and Scripts windows open at full size.**

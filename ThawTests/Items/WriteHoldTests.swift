@@ -115,6 +115,24 @@ struct StructuralNormalizationHoldsTests {
 /// The record of the cache's last bar read, which the settle and the structural pass both trust.
 @Suite("Bar read record")
 struct BarReadRecordTests {
+    @Test("A read that missed only a hung app whose items are known is steady for the settle, not complete for a write")
+    func hungAppReadIsSteadyNotComplete() {
+        var record = BarReadRecord()
+        record.note(.init(hasFreshKnownInventory: false, hasSteadyKnownInventory: true))
+        #expect(record.isSteady)
+        #expect(!record.isComplete)
+
+        record.note(.init(hasFreshKnownInventory: false, hasSteadyKnownInventory: true, mergedWithOlderItems: true))
+        #expect(!record.isSteady, "a read patched with older items shows nothing new")
+
+        record.note(.init(hasFreshKnownInventory: false))
+        #expect(!record.isSteady, "a truncated read is neither")
+
+        record.note(.init(hasFreshKnownInventory: true))
+        #expect(record.isSteady)
+        #expect(record.isComplete)
+    }
+
     @Test("Each read gets a new number and is complete only when every known owner answered it")
     func readsAreNumberedAndJudged() {
         var record = BarReadRecord()

@@ -20,6 +20,8 @@ extension DisplaySettingsManager {
             return
         }
         diagLog.debug("DisplaySettingsManager: thaw:// change for \(key) on \(scope), \(uuids.count) display(s)")
+        writeOnlyConfigurationsReason = Self.linkWriteOnlyReason(confirmRelaunch: confirmSpacingRelaunch)
+        defer { writeOnlyConfigurationsReason = nil }
         for uuid in uuids {
             updateConfiguration(forDisplayUUID: uuid, transform: update)
         }
@@ -55,6 +57,15 @@ extension DisplaySettingsManager {
         }
     }
 
+    /// The reason a thaw:// link's change applies its spacing under while a relaunch needs confirming.
+    static let settingsLinkReason = "settingsLink"
+
+    /// A link can't show the confirmation the Displays page asks for before it restarts every menu bar app.
+    /// While that confirmation is on, a link's spacing is saved and takes effect as each app next starts.
+    static func linkWriteOnlyReason(confirmRelaunch: Bool) -> String? {
+        confirmRelaunch ? settingsLinkReason : nil
+    }
+
     /// What a thaw:// key and its value do to one display's configuration, or nil for a bad value.
     static func update(forKey key: String, userInfo: [AnyHashable: Any]) -> ConfigurationUpdate? {
         let toggles = userInfo["toggle"] as? Bool == true
@@ -79,12 +90,17 @@ extension DisplaySettingsManager {
             Int(text).map { columns in { $0.withGridColumns(Swift.max(2, Swift.min(columns, 10))) } }
         },
         "thawBarItemScale": { text in
-            Double(text).map { scale in { $0.withThawBarItemScale(ThawBarItemSize.clampedScale(scale)) } }
+            DisplaySettingsManager.finite(text).map { scale in { $0.withThawBarItemScale(ThawBarItemSize.clampedScale(scale)) } }
         },
         "itemSpacingOffset": { text in
-            Double(text).map { offset in { $0.withItemSpacingOffset(Swift.max(-16, Swift.min(offset.rounded(), 16))) } }
+            DisplaySettingsManager.finite(text).map { offset in { $0.withItemSpacingOffset(Swift.max(-16, Swift.min(offset.rounded(), 16))) } }
         },
     ]
+
+    /// A number a link may set. "nan" and "inf" parse as numbers, and clamping turns them into a real value.
+    static func finite(_ text: String) -> Double? {
+        Double(text).flatMap { $0.isFinite ? $0 : nil }
+    }
 
     /// The Boolean keys: the value each reads and how each writes it.
     private static let flagKeys: [String: (KeyPath<DisplayThawBarConfiguration, Bool>, (DisplayThawBarConfiguration, Bool) -> DisplayThawBarConfiguration)] = [

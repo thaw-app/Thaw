@@ -58,8 +58,17 @@ final class ToolsSettings: SettingsURIHandling {
     /// Only guards the conversion to bytes against overflow from a stored value.
     private nonisolated static let maxDiagnosticLogSizeMB = 1_000_000
 
+    /// Where a changed policy goes; the logger prunes old files by it at once.
+    @ObservationIgnored
+    var sendRotationPolicy: (DiagnosticLogger.RotationPolicy) -> Void = { DiagnosticLogger.shared.setRotationPolicy($0) }
+
+    /// Set while the stored values load, so the logger never prunes by a policy that is half defaults.
+    @ObservationIgnored
+    private var isLoadingStoredValues = false
+
     func applyLogRotationPolicy() {
-        DiagnosticLogger.shared.setRotationPolicy(Self.rotationPolicy(
+        guard !isLoadingStoredValues else { return }
+        sendRotationPolicy(Self.rotationPolicy(
             maxSizeMB: diagnosticLogMaxSizeMB,
             retentionDays: diagnosticLogRetentionDays,
             interval: diagnosticLogRotationInterval
@@ -105,6 +114,7 @@ final class ToolsSettings: SettingsURIHandling {
     }
 
     func loadInitialState() {
+        isLoadingStoredValues = true
         Defaults.ifPresent(key: .enableDiagnosticLogging, assign: &enableDiagnosticLogging)
         Defaults.ifPresent(key: .diagnosticLogMaxSizeMB, assign: &diagnosticLogMaxSizeMB)
         Defaults.ifPresent(key: .diagnosticLogRetentionDays, assign: &diagnosticLogRetentionDays)
@@ -113,6 +123,7 @@ final class ToolsSettings: SettingsURIHandling {
                 diagnosticLogRotationInterval = interval
             }
         }
+        isLoadingStoredValues = false
         applyLogRotationPolicy()
     }
 

@@ -37,7 +37,7 @@ struct LayoutCheckboxSweepTests {
     @Test("Dragging down covers every row passed and changes only those not in the target state")
     func sweepDown() throws {
         var sweep = try #require(LayoutCheckboxSweep(startingAt: "a", rows: rows))
-        sweep.extend(from: 20, to: 150, rows: rows)
+        sweep.extend(to: 150, rows: rows)
         #expect(sweep.covered == ["a", "b", "c", "d"])
         #expect(sweep.changes(in: rows) == ["a", "b", "d"])
     }
@@ -45,9 +45,9 @@ struct LayoutCheckboxSweepTests {
     @Test("Dragging up covers the rows above, and locked rows neither preview nor change")
     func sweepUpOverLocked() throws {
         var sweep = try #require(LayoutCheckboxSweep(startingAt: "d", rows: rows))
-        sweep.extend(from: 150, to: 200, rows: rows)
+        sweep.extend(to: 200, rows: rows)
         #expect(sweep.preview(for: rows[4]) == nil)
-        sweep.extend(from: 150, to: 60, rows: rows)
+        sweep.extend(to: 60, rows: rows)
         #expect(sweep.covered == ["b", "c", "d"])
         #expect(sweep.changes(in: rows) == ["b", "d"])
     }
@@ -55,7 +55,32 @@ struct LayoutCheckboxSweepTests {
     @Test("A drag that stays on its first row is left to the checkbox's own click")
     func staysOnFirstRow() throws {
         var sweep = try #require(LayoutCheckboxSweep(startingAt: "b", rows: rows))
-        sweep.extend(from: 50, to: 80, rows: rows)
+        sweep.extend(to: 80, rows: rows)
         #expect(sweep.changes(in: rows).isEmpty)
+    }
+
+    @Test("Rows the sweep scrolled out of view stay covered and still change on release")
+    func scrolledAwayRowsStayCovered() throws {
+        var sweep = try #require(LayoutCheckboxSweep(startingAt: "a", rows: rows))
+        // The list scrolled: a and b are no longer laid out, and the pointer is on d.
+        let scrolled = rows.map { row in
+            ["a", "b"].contains(row.id)
+                ? LayoutCheckboxSweep.Row(id: row.id, span: nil, isShown: row.isShown, isLocked: row.isLocked)
+                : row
+        }
+        sweep.extend(to: 150, rows: scrolled)
+        #expect(sweep.covered == ["a", "b", "c", "d"])
+        #expect(sweep.changes(in: scrolled) == ["a", "b", "d"])
+    }
+
+    @Test("A pointer past the last row reaches the nearest one, and no laid-out rows leaves the sweep as it was")
+    func pointerOutsideRows() throws {
+        var sweep = try #require(LayoutCheckboxSweep(startingAt: "b", rows: rows))
+        sweep.extend(to: 900, rows: rows)
+        #expect(sweep.covered == ["b", "c", "d", "e"])
+
+        let unlaid = rows.map { LayoutCheckboxSweep.Row(id: $0.id, span: nil, isShown: $0.isShown, isLocked: $0.isLocked) }
+        sweep.extend(to: 0, rows: unlaid)
+        #expect(sweep.covered == ["b", "c", "d", "e"])
     }
 }

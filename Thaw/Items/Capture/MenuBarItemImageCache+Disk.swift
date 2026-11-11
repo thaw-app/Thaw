@@ -19,6 +19,8 @@ extension MenuBarItemImageCache {
 
     private func saveToDisk(concealedIdentifiers: Set<String>) {
         guard !capturesByTag.isEmpty else { return }
+        // A load in flight has not merged the file's pictures yet; saving now would drop them from disk.
+        guard !diskLoad.holdsSave() else { return }
 
         diskStore.enqueueSave(
             Self.diskPersistableCaptures(
@@ -68,6 +70,29 @@ extension MenuBarItemImageCache {
             volatilityIndex.classificationsByKey(),
             hiddenIdentifiers: appState.map(concealedIdentifiers(in:)) ?? []
         )
+    }
+
+    /// Saves and blocks until the file is written: restartSelf exits before a background save gets its turn.
+    func saveToDiskAndWait() {
+        saveToDisk()
+        diskStore.waitForQueuedSaves()
+    }
+
+    /// The tag a disk entry was saved under, or nil when its identifier names no item.
+    /// A title can end in :<number> of its own, so the instance index comes from the entry, not the identifier.
+    static nonisolated func diskEntryTag(identifier: String, instanceIndex: Int) -> MenuBarItemTag? {
+        guard let (namespace, rest) = MenuBarItemTag.persistentIdentifierParts(identifier), !namespace.isEmpty else {
+            return nil
+        }
+        var title = rest
+        var index = 0
+        let suffix = ":\(instanceIndex)"
+        if instanceIndex > 0, title.hasSuffix(suffix) {
+            title.removeLast(suffix.count)
+            index = instanceIndex
+        }
+        guard !title.isEmpty else { return nil }
+        return MenuBarItemTag(namespace: .string(namespace), title: title, windowID: nil, instanceIndex: index)
     }
 
     /// Collapses the live cache to one capture per tagIdentifier, the key the
@@ -159,8 +184,8 @@ extension MenuBarItemImageCache {
     @MainActor
     private func loadFromDisk() {
         diskLoadTask?.cancel()
-        let generation = diskLoadGeneration
-        diskLoadTask = Task.detached(priority: .background) { [weak self] in
+        let generation = diskLoad.generation
+        let load = Task.detached(priority: .background) { [weak self] in
             guard let self else { return }
             guard let file = await self.diskStore.readSaveFileAfterQueuedWork() else { return }
 
@@ -187,13 +212,10 @@ extension MenuBarItemImageCache {
                     expiredCount += 1
                     continue
                 }
-                let parts = MenuBarItemTag.persistentIdentifierParts(tagString)
-                guard let (namespace, title) = parts, !namespace.isEmpty, !title.isEmpty else { continue }
-                let tag = MenuBarItemTag(
-                    namespace: .string(namespace),
-                    title: title,
-                    windowID: nil
-                )
+                guard let tag = Self.diskEntryTag(
+                    identifier: tagString,
+                    instanceIndex: entry["instance"] as? Int ?? 0
+                ) else { continue }
                 parsed.append((tag, entry))
             }
 
@@ -224,7 +246,7 @@ extension MenuBarItemImageCache {
                     // A reset or an idle trim that landed while this task
                     // was decoding released these very pages on purpose.
                     // Restoring them here would undo that silently.
-                    guard self.diskLoadGeneration == generation else {
+                    guard self.diskLoad.generation == generation else {
                         MenuBarItemImageCache.diagLog.debug(
                             "Discarding a disk load that finished after the cache was released"
                         )
@@ -236,6 +258,20 @@ extension MenuBarItemImageCache {
                     )
                 }
             }
+        }
+        watchDiskLoad(load)
+    }
+
+    /// Holds saves until the load is done, then runs the one that came in meanwhile.
+    /// A load replaced or abandoned by then releases nothing.
+    @MainActor
+    private func watchDiskLoad(_ load: Task<Void, Never>) {
+        diskLoadTask = load
+        diskLoad.began()
+        Task { [weak self] in
+            await load.value
+            guard let self, self.diskLoadTask == load, self.diskLoad.finished() else { return }
+            self.saveToDisk()
         }
     }
 
@@ -267,6 +303,6 @@ extension MenuBarItemImageCache {
     func invalidateDiskLoad() {
         diskLoadTask?.cancel()
         diskLoadTask = nil
-        diskLoadGeneration &+= 1
+        diskLoad.abandoned()
     }
 }

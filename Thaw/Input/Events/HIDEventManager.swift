@@ -577,8 +577,8 @@ final class HIDEventManager {
     /// bridged.
     ///
     /// The tap that does the bridging is an active session-level tap on every
-    /// left press, so it is only worth installing when a real section engine
-    /// is behind the controller. The stand-in controller answers false for
+    /// left press, so it is only installed when a real section engine is behind the
+    /// controller and Native hiding is off. The stand-in controller answers false for
     /// MenuBarSectionControlling.shouldBridgeClockActivation forever, so
     /// with it the tap would only ever pass events straight through. The
     /// engine's own answer still swings with the assertion state at runtime;
@@ -586,7 +586,7 @@ final class HIDEventManager {
     /// learn of an assertion being acquired quickly enough to bring the tap
     /// up before the click that needs it.
     private var canBridgeClockActivation: Bool {
-        appState?.menuBarManager.sectionController.isOperational ?? false
+        appState.map { ClockBridgeAvailability.isPossible(engineIsOperational: $0.menuBarManager.sectionController.isOperational, nativeHidingActive: $0.menuBarManager.nativeAppHidingExperiment.isActive) } ?? false
     }
 
     /// Brings the Clock activation tap in line with whether bridging is

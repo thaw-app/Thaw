@@ -15,7 +15,7 @@ extension HIDEventManager {
     /// Subscribes to the settings and system notifications the manager has to
     /// react to, replacing any subscriptions from a previous call.
     func configureCancellables() {
-        var c = Set<AnyCancellable>()
+        var c = nativeHidingFollower()
 
         if let appState {
             // Pre-seed so the initial emission does no rearm work when

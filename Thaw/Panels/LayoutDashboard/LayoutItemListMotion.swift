@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Combine
 import Observation
 import SwiftUI
 import ThawUI
@@ -70,6 +71,7 @@ final class LayoutListMotion {
     @ObservationIgnored private var pending: [String] = []
     @ObservationIgnored private var pendingFallback: Task<Void, Never>?
     @ObservationIgnored private var flashToken = 0
+    @ObservationIgnored private var sectionChanges: AnyCancellable?
     /// When a sweep last moved a batch, so the checkbox it ended on doesn't move them again.
     @ObservationIgnored private var batchSweepEnd: ContinuousClock.Instant?
     @ObservationIgnored private var autoscroll: Task<Void, Never>?
@@ -83,6 +85,15 @@ final class LayoutListMotion {
             try? await Task.sleep(for: .milliseconds(250))
             guard !Task.isCancelled else { return }
             self?.revealPending()
+        }
+    }
+
+    /// Runs action on each section change, subscribing only the first time. A sink keeps the
+    /// publisher's main-actor closures on the main thread, which iterating its values does not.
+    func followSectionChanges(_ changes: AnyPublisher<Void, Never>, action: @escaping @MainActor () -> Void) {
+        guard sectionChanges == nil else { return }
+        sectionChanges = changes.receive(on: RunLoop.main).sink { _ in
+            MainActor.assumeIsolated(action)
         }
     }
 

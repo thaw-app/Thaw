@@ -111,15 +111,28 @@ struct LayoutBarItemViewTests {
         #expect(!LayoutBarItemView.drawsBareModuleGlyph(for: item(.menuBarAgent, "com.example.unknown")))
         #expect(!LayoutBarItemView.drawsBareModuleGlyph(for: item(.string("com.example.app"), "com.apple.menuextra.bluetooth")))
 
-        let rect = try #require(LayoutBarItemView.bareGlyphRect(in: CGRect(x: 0, y: 0, width: 40, height: 24)))
+        let tile = CGRect(x: 0, y: 0, width: 40, height: 24)
+        let rect = try #require(LayoutBarItemView.bareGlyphRect(for: CGSize(width: 16, height: 16), in: tile))
         #expect(rect.width == rect.height)
         #expect(rect.midX == 20 && rect.midY == 12)
-        #expect(rect.height == 24, "the full square, as the previews draw it")
+        #expect(rect.height == 24, "a square symbol fills the square")
+
+        // Wi-Fi's symbol is 18 by 13. Filling the square squeezed it.
+        let wide = try #require(LayoutBarItemView.bareGlyphRect(for: CGSize(width: 18, height: 13), in: tile))
+        #expect(wide.width == 24)
+        #expect(abs(wide.width / wide.height - 18.0 / 13.0) < 0.0001, "the symbol keeps its proportions")
+        #expect(wide.midX == 20 && wide.midY == 12)
+        #expect(wide == LayoutBarItemView.overflowFallbackDrawRect(
+            for: item(.menuBarAgent, "com.apple.menuextra.wifi"), imageSize: CGSize(width: 18, height: 13), bounds: tile
+        ))
+        let tall = try #require(LayoutBarItemView.bareGlyphRect(for: CGSize(width: 10, height: 20), in: tile))
+        #expect(tall.height == 24 && tall.width == 12)
+        #expect(LayoutBarItemView.bareGlyphRect(for: .zero, in: tile)?.size == CGSize(width: 24, height: 24), "no size to go by")
         #expect(rect == LayoutBarItemView.overflowFallbackDrawRect(
             for: item(.menuBarAgent, "com.apple.menuextra.bluetooth"), imageSize: CGSize(width: 16, height: 16),
             bounds: CGRect(x: 0, y: 0, width: 40, height: 24)
         ))
-        #expect(LayoutBarItemView.bareGlyphRect(in: .zero) == nil)
+        #expect(LayoutBarItemView.bareGlyphRect(for: CGSize(width: 16, height: 16), in: .zero) == nil)
 
         let bluetooth = item(.menuBarAgent, "com.apple.menuextra.bluetooth")
         let bar = try Bar([bluetooth])
@@ -128,7 +141,7 @@ struct LayoutBarItemViewTests {
         view.cacheDisplay(in: view.bounds, to: bitmap)
         let corner = try #require(bitmap.colorAt(x: 3, y: 3))
         #expect(corner.alphaComponent == 0, "no box behind the symbol")
-        let glyphRect = try #require(LayoutBarItemView.bareGlyphRect(in: view.bounds))
+        let glyphRect = try #require(LayoutBarItemView.bareGlyphRect(for: CGSize(width: 16, height: 16), in: view.bounds))
         let scale = CGFloat(bitmap.pixelsWide) / view.bounds.width
         let inked = (Int(glyphRect.minX * scale) ..< Int(glyphRect.maxX * scale)).contains { x in
             (Int(glyphRect.minY * scale) ..< Int(glyphRect.maxY * scale)).contains { y in
