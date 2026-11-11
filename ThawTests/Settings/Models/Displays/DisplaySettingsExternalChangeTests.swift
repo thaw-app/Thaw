@@ -210,6 +210,41 @@ struct DisplaySettingsExternalChangeTests {
         }
     }
 
+    @Test("A link's spacing is saved to the profiles in the chosen scope, and a failed save puts it back")
+    func linkSpacingSavesToProfiles() throws {
+        let manager = try makeManager(configurations: [Self.uuid: base])
+        var saves = [(String, Double, SpacingProfileSaveScope)]()
+        var fails = false
+        struct SaveFailed: Error {}
+        var host = DisplaySpacingApplyHost(
+            spacingManager: MenuBarItemSpacingManager(),
+            applyOffset: { _, _ in .init(didRelaunch: false, recoveredBundleIDs: [], failedAppNames: []) },
+            noteSettling: { _ in },
+            reapplyActiveProfile: {}
+        )
+        host.saveSpacingToProfiles = { uuid, offset, scope in
+            saves.append((uuid, offset, scope))
+            if fails {
+                throw SaveFailed()
+            }
+        }
+        manager.spacingHost = host
+
+        manager.unconfirmedSpacingProfileScope = .allProfiles
+        send(manager, key: "itemSpacingOffset", ["stringValue": "4"])
+        #expect(manager.configuration(forUUID: Self.uuid).itemSpacingOffset == 4)
+        #expect(saves.map(\.0) == [Self.uuid])
+        #expect(saves.map(\.1) == [4])
+        #expect(saves.map(\.2) == [.allProfiles])
+
+        send(manager, key: "useThawBar", ["value": true])
+        #expect(saves.count == 1, "only spacing is saved to the profiles")
+
+        fails = true
+        send(manager, key: "itemSpacingOffset", ["stringValue": "-3"])
+        #expect(manager.configuration(forUUID: Self.uuid).itemSpacingOffset == 4, "a failed save puts the old spacing back")
+    }
+
     @Test("Spacing set outside Thaw seeds connected displays that have no entry yet")
     func seedsFromSystemSpacing() throws {
         let uuids = connectedUUIDs

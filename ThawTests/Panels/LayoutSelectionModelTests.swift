@@ -168,6 +168,53 @@ struct LayoutSelectionModelTests {
         #expect(await model.move(to: .hidden, placement: .end) { _ in .refused(.moveRefused) } == nil)
     }
 
+    @Test("A move that left the items in place gets its selection back, and one that moved them doesn't")
+    func unmovedSelectionComesBack() async throws {
+        let model = model()
+        model.click("a", in: .visible, kind: .replace)
+        model.click("b", in: .visible, kind: .toggle)
+
+        let refused = try #require(await model.moveRestoringUnmoved(to: .hidden, placement: .end) { _ in .refused(.moveRefused) })
+        #expect(refused.restored)
+        #expect(model.orderedItemIDs == ["a", "b"])
+
+        let plan = LayoutBatchMovePlan(itemIDs: ["a", "b"], source: .visible, target: .hidden, previousTargetOrder: [], targetOrder: ["a", "b"])
+        let unchanged = try #require(await model.moveRestoringUnmoved(to: .hidden, placement: .end) { _ in .unchanged(plan) })
+        #expect(unchanged.restored)
+
+        let moved = try #require(await model.moveRestoringUnmoved(to: .hidden, placement: .end) { _ in .moved(plan) })
+        #expect(!moved.restored)
+        #expect(model.count == 0)
+    }
+
+    @Test("A late refusal doesn't bring back a selection the user changed meanwhile")
+    func lateRefusalKeepsNewerSelection() async throws {
+        let model = model()
+        model.click("a", in: .visible, kind: .replace)
+
+        let result = try #require(await model.moveRestoringUnmoved(to: .hidden, placement: .end) { _ in
+            model.click("h1", in: .hidden, kind: .replace)
+            model.clear()
+            return .refused(.moveRefused)
+        })
+        #expect(!result.restored)
+        #expect(model.count == 0)
+    }
+
+    @Test("A restored selection keeps only the items the bars still show")
+    func restoredSelectionDropsVanishedItems() async throws {
+        let model = model()
+        model.click("a", in: .visible, kind: .replace)
+        model.click("b", in: .visible, kind: .toggle)
+
+        let result = try #require(await model.moveRestoringUnmoved(to: .hidden, placement: .end) { _ in
+            model.update(LayoutSelectionTests.visible.filter { !$0.memberIDs.contains("b") }, in: .visible)
+            return .refused(.moveRefused)
+        })
+        #expect(result.restored)
+        #expect(model.orderedItemIDs == ["a"])
+    }
+
     @Test("A refused move names the item that cannot go, or explains the batch")
     func refusalsExplainThemselves() throws {
         let names = ["a": "Alpha"]
@@ -182,6 +229,8 @@ struct LayoutSelectionModelTests {
 
         let unnamed = try #require(LayoutSelectionModel.refusal(for: .refused(.notMovable("z", .hidden)), section: .hidden) { names[$0] })
         let general = try #require(LayoutSelectionModel.refusal(for: .refused(.moveRefused), section: .hidden) { names[$0] })
+        let restored = try #require(LayoutSelectionModel.refusal(for: .refused(.moveRefused), section: .hidden, selectionRestored: true) { names[$0] })
+        #expect(restored.message != general.message, "a restored selection isn't asked to be selected again")
         #expect(unnamed.title == general.title)
         #expect(!general.message.isEmpty)
     }

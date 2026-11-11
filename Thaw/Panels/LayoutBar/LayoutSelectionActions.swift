@@ -114,6 +114,7 @@ struct LayoutSelectionActions {
 
     /// One batch through the move path thaw://move-item uses, counted as a user edit and undoable.
     /// A move that lands is spoken to VoiceOver; keepsSelection selects the moved items again once their bar shows them.
+    /// A move that was refused or changed nothing gets its selection back.
     /// onMoved gets the moved items only when the move lands.
     func move(
         to target: MenuBarSectionName,
@@ -126,7 +127,8 @@ struct LayoutSelectionActions {
         let selection = selection
         let appState = appState
         ExplicitLayoutEdit.task {
-            let outcome = await selection.move(to: target, placement: placement, using: selection.makeMover(appState))
+            let result = await selection.moveRestoringUnmoved(to: target, placement: placement, using: selection.makeMover(appState))
+            let outcome = result?.outcome
             if LayoutBatchMoveUndo.records(outcome), let forward {
                 LayoutBatchMoveUndo.register(forward: forward, restoring: restoring, appState: appState)
             }
@@ -137,7 +139,7 @@ struct LayoutSelectionActions {
                 }
                 onMoved(forward.itemIDs)
             }
-            guard let outcome, let refusal = LayoutSelectionModel.refusal(for: outcome, section: target, itemName: { id in
+            guard let outcome, let refusal = LayoutSelectionModel.refusal(for: outcome, section: target, selectionRestored: result?.restored == true, itemName: { id in
                 appState.itemManager.managedItems.first { $0.uniqueIdentifier == id }?.displayName
             })
             else {

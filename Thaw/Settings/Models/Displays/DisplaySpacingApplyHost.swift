@@ -17,6 +17,11 @@ struct DisplaySpacingApplyHost {
     let reapplyActiveProfile: @MainActor () -> Void
     /// Asks before a relaunch wave; nil shows the display settings' own alert.
     var confirmRelaunch: (@MainActor () -> Bool)?
+    /// Saves a spacing change to the active profile, or to every profile, so the next
+    /// profile apply keeps it. Does nothing while no profile is active.
+    var saveSpacingToProfiles: @MainActor (_ displayUUID: String, _ offset: Double, _ scope: SpacingProfileSaveScope) throws -> Void = { _, _, _ in
+        // Stand-ins in tests save nothing.
+    }
 }
 
 extension DisplaySpacingApplyHost {
@@ -27,7 +32,16 @@ extension DisplaySpacingApplyHost {
             spacingManager: spacingManager,
             applyOffset: { try await spacingManager.applyOffset(forceRelaunch: $0, relaunchApps: $1) },
             noteSettling: { [weak appState] in appState?.itemManager.barSettling.note($0) },
-            reapplyActiveProfile: { [weak appState] in appState?.profileManager.reapplyActiveProfile() }
+            reapplyActiveProfile: { [weak appState] in appState?.profileManager.reapplyActiveProfile() },
+            saveSpacingToProfiles: { [weak appState] displayUUID, offset, scope in
+                guard let appState, let id = appState.profileManager.activeProfileID else { return }
+                switch scope {
+                case .activeProfile:
+                    try appState.profileManager.updateProfile(id: id, scope: .configurationOnly, appState: appState)
+                case .allProfiles:
+                    try appState.profileManager.updateAllProfilesItemSpacingOffset(displayUUID: displayUUID, offset: offset)
+                }
+            }
         )
     }
 }

@@ -22,8 +22,38 @@ extension DisplaySettingsManager {
         diagLog.debug("DisplaySettingsManager: thaw:// change for \(key) on \(scope), \(uuids.count) display(s)")
         writeOnlyConfigurationsReason = Self.linkWriteOnlyReason(confirmRelaunch: confirmSpacingRelaunch)
         defer { writeOnlyConfigurationsReason = nil }
+        let previousOffsets = Dictionary(uniqueKeysWithValues: uuids.map { ($0, configuration(forUUID: $0).itemSpacingOffset) })
         for uuid in uuids {
             updateConfiguration(forDisplayUUID: uuid, transform: update)
+        }
+        if key == "itemSpacingOffset" {
+            saveLinkSpacingToProfiles(uuids, previousOffsets: previousOffsets)
+        }
+    }
+
+    /// Saves a link's spacing to the profiles as the Displays page does, so the next apply keeps it.
+    /// A failed save restores the old spacing on the displays it didn't save, so live and saved spacing agree.
+    private func saveLinkSpacingToProfiles(_ uuids: [String], previousOffsets: [String: Double]) {
+        guard let host = spacingHost else { return }
+        var saved = Set<String>()
+        do {
+            switch unconfirmedSpacingProfileScope {
+            case .activeProfile:
+                // The active profile takes the whole live configuration at once.
+                if let uuid = uuids.first {
+                    try host.saveSpacingToProfiles(uuid, configuration(forUUID: uuid).itemSpacingOffset, .activeProfile)
+                }
+            case .allProfiles:
+                for uuid in uuids {
+                    try host.saveSpacingToProfiles(uuid, configuration(forUUID: uuid).itemSpacingOffset, .allProfiles)
+                    saved.insert(uuid)
+                }
+            }
+        } catch {
+            diagLog.error("DisplaySettingsManager: Could not save the link's spacing to profiles: \(error)")
+            for (uuid, offset) in previousOffsets where !saved.contains(uuid) {
+                updateConfiguration(forDisplayUUID: uuid) { $0.withItemSpacingOffset(offset) }
+            }
         }
     }
 

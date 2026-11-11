@@ -35,6 +35,22 @@ struct DiagnosticLoggerRotationTests {
         #expect(!DiagnosticLogger.shouldRotate(policy: Policy(), fileSize: .max, openFor: 1e9))
     }
 
+    @Test("The size is read from disk only at the limit or every check interval, never without a limit")
+    func countingSize() {
+        typealias Count = DiagnosticLogger.FileSizeCount
+        var count = Count(bytes: 10)
+        #expect(count.adding(5, limit: 0) == (15, false))
+        #expect(count.adding(Count.checkInterval, limit: 0).needsCheck == false)
+
+        count = Count(bytes: 10)
+        #expect(count.adding(5, limit: 1000) == (15, false))
+        #expect(count.adding(985, limit: 1000) == (1000, true))
+
+        count = Count()
+        #expect(count.adding(Count.checkInterval - 1, limit: .max).needsCheck == false)
+        #expect(count.adding(1, limit: .max).needsCheck)
+    }
+
     @Test("Pruning drops files past the retention or the count, never the open one")
     func pruning() {
         let now = Date(timeIntervalSince1970: 1_000_000)

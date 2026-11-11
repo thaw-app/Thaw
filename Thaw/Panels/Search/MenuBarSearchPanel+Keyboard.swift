@@ -45,19 +45,17 @@ extension MenuBarSearchPanel {
     }
 
     /// Tab moves the highlight to the next section, Shift-Tab to the previous
-    /// one. Taken either way, so Tab never moves the keyboard out of the field,
-    /// but with no row showing there is no highlight to move.
+    /// one. With no second section to jump to, Tab passes through and moves
+    /// the keyboard focus, so the panel's buttons stay reachable.
     private func handleSectionJump(_ event: NSEvent) -> Bool {
         let modifiers = Modifiers(nsEventFlags: event.modifierFlags)
         guard
-            event.window === self, model.renameSession == nil, KeyCode(rawValue: Int(event.keyCode)) == .tab, modifiers.isEmpty || modifiers == .shift
+            event.window === self, model.renameSession == nil, KeyCode(rawValue: Int(event.keyCode)) == .tab, modifiers.isEmpty || modifiers == .shift, showsAResultRow, model.canJumpBetweenSections
         else {
             return false
         }
-        if showsAResultRow {
-            model.moveSelection(toSectionFromCurrentBy: modifiers == .shift ? -1 : 1)
-            announceSelection()
-        }
+        model.moveSelection(toSectionFromCurrentBy: modifiers == .shift ? -1 : 1)
+        announceSelection()
         return true
     }
 

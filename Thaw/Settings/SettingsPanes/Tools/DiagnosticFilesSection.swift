@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Combine
 import MenuBarModel
 import SwiftUI
 import ThawUI
@@ -16,7 +17,7 @@ import UniformTypeIdentifiers
 struct DiagnosticFilesSection: View {
     @State private var isExporting = false
     @State private var errorMessage: String?
-    /// Read when the section appears, since samples are written while Thaw runs.
+    /// Read when the section appears and set again when a sample is written.
     @State private var hasCaptureSamples = false
 
     var body: some View {
@@ -60,6 +61,12 @@ struct DiagnosticFilesSection: View {
         }
         .onAppear {
             hasCaptureSamples = MaintenanceTools.hasCaptureSamples(in: CaptureDiagnostics.sampleDirectory)
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(for: CaptureDiagnostics.didWriteSample)
+                .receive(on: DispatchQueue.main)
+        ) { _ in
+            hasCaptureSamples = true
         }
         .alert(
             "Couldn’t save the file",

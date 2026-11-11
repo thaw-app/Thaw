@@ -107,7 +107,16 @@ struct SimpleModeSettingsPane: View {
     private var alwaysHiddenToggle: some View {
         @Bindable var layout = appState.settings.layout
         return Toggle("Always Hidden", isOn: $layout.enableAlwaysHiddenSection)
-            .annotation("Adds a second divider. Icons left of it stay hidden until you double-click \(Constants.displayName)'s icon.")
+            .annotation(alwaysHiddenSummary)
+    }
+
+    /// Names the double-click only while it works, as How it works names the icon only while it shows.
+    private var alwaysHiddenSummary: LocalizedStringResource {
+        if settings.showThawIcon, appState.settings.visibility.showAlwaysHiddenOnIconDoubleClick {
+            "Adds a second divider. Icons left of it stay hidden until you double-click \(Constants.displayName)'s icon."
+        } else {
+            "Adds a second divider. Icons left of it stay hidden when you show hidden items."
+        }
     }
 
     /// Gated the way the Shortcuts pane gates it: no recorder for a section

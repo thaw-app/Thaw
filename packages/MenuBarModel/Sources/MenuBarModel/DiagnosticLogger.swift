@@ -83,6 +83,9 @@ public final class DiagnosticLogger: Sendable {
     /// When the current file was opened, for rotation by time.
     let segmentOpenedAtLock = OSAllocatedUnfairLock<Date?>(initialState: nil)
 
+    /// The current file's size as this process last knew it, for rotation by size.
+    let fileSizeLock = OSAllocatedUnfairLock(initialState: FileSizeCount())
+
     /// Internal logger for DiagnosticLogger's own messages.
     let osLog = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "com.stonerl.Thaw",
@@ -204,6 +207,9 @@ public final class DiagnosticLogger: Sendable {
         if let data = header.data(using: .utf8) {
             handle.write(data)
         }
+        // The file can already hold another process's lines, so start from its real size.
+        let size = (try? FileManager.default.attributesOfItem(atPath: fileURL.path)[.size] as? UInt64) ?? 0
+        fileSizeLock.withLock { $0 = FileSizeCount(bytes: size) }
 
         osLog.info("Diagnostic logging started: \(fileURL.path, privacy: .public)")
 
@@ -257,7 +263,7 @@ public final class DiagnosticLogger: Sendable {
             self?.fileHandleLock.withLock { handle in
                 handle?.write(data)
             }
-            self?.rotateIfNeeded()
+            self?.rotateIfNeeded(afterWriting: UInt64(data.count))
         }
     }
 
