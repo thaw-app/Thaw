@@ -2,7 +2,7 @@ name: Build DMG
 
 # Manual signed, notarized DMG as a short-lived artifact, never a release. The
 # build runs in org-ci's build-macos-app.yml without an attestation, so any ref
-# builds; the `.build` PR command runs it on the pull request's branch.
+# builds.
 
 on:
   workflow_dispatch:
