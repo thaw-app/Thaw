@@ -60,6 +60,7 @@ struct CaptureInspectorSection: View {
                 results(for: inspection)
             }
         }
+        .settingsSearchAnchor("privacy.captureInspector")
     }
 
     // MARK: Controls

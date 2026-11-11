@@ -43,6 +43,7 @@ struct HidingMethodSection: View {
             Text("Hiding")
         } content: {
             ThawPillPicker("Hiding method", selection: methodBinding, values: HidingMethod.allCases, title: \.localized)
+                .settingsSearchAnchor("advanced.enableNativeAppHiding")
                 .disabled(!NativeHidingStart.allowsMethodChange(journalNeedsAttention: experiment.journalNeedsAttention))
                 .annotation {
                     VStack(alignment: .leading, spacing: ThawSpacing.tight) {

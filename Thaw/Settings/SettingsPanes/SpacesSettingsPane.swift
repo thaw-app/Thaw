@@ -79,6 +79,7 @@ private struct SpaceIndicatorSection: View {
             Text("Space indicator")
         } content: {
             Toggle("Show the current Space in the menu bar", isOn: $settings.showSpaceIndicator)
+                .settingsSearchAnchor("spaces.showSpaceIndicator")
                 .annotation("Adds a menu bar item with the name of the Space you're in. Its menu lists the Spaces on each display.")
         }
     }
@@ -134,6 +135,7 @@ private struct ThisSpaceSection: View {
             }
 
             Toggle("Disable hover reveal in this Space", isOn: autoShowDisabledBinding)
+                .settingsSearchAnchor("spaces.disableHoverReveal")
                 .annotation("Stops a hidden menu bar from sliding down when the pointer reaches the top edge of the screen in this Space.")
 
             LabeledContent {
@@ -147,6 +149,7 @@ private struct ThisSpaceSection: View {
                 }
             } label: {
                 Text("Reveal strip height")
+                    .settingsSearchAnchor("spaces.revealStripHeight")
             }
             .annotation(
                 "How tall the invisible strip at the top of the screen is before a hidden menu bar reveals itself.",
@@ -284,6 +287,7 @@ private struct AllSpacesSection: View {
             Text("All Spaces")
         } content: {
             Toggle("Use the full-screen menu bar appearance everywhere", isOn: fullScreenAppearanceBinding)
+                .settingsSearchAnchor("spaces.fullScreenAppearanceEverywhere")
                 .annotation("Gives ordinary desktop Spaces the menu bar appearance macOS normally reserves for full-screen apps.")
                 .onAppear {
                     usesFullScreenAppearance = appState.spaceMenuBarKeeper.choices.usesFullScreenAppearanceEverywhere

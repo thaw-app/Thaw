@@ -40,8 +40,7 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
 
     func show(on screen: NSScreen, onDone: (() -> Void)? = nil) {
         guard
-            let appState,
-            let anchorView = anchor.view(atTopOf: screen)
+            let appState, let anchorView = anchor.view(atTopOf: screen)
         else {
             return
         }
@@ -87,7 +86,7 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
         ]
         configurationObservationTask?.cancel()
         configurationObservationTask = Task { @MainActor [weak self, appearanceManager] in
-            let changes = Observations { appearanceManager.configuration }
+            let changes = Observations { appearanceManager.editedConfiguration }
             for await _ in changes {
                 guard let self else { return }
                 updateContentSize()
@@ -109,8 +108,7 @@ final class MenuBarAppearanceEditorPanel: NSObject, NSPopoverDelegate {
 
     private func updateContentSize() {
         guard
-            let popover,
-            let hostingController = popover.contentViewController as? MenuBarAppearanceEditorHostingController
+            let popover, let hostingController = popover.contentViewController as? MenuBarAppearanceEditorHostingController
         else {
             return
         }
@@ -135,7 +133,7 @@ private final class MenuBarAppearanceEditorHostingController: NSHostingControlle
         updatePreferredContentSize()
 
         configurationObservationTask = Task { @MainActor [weak self, appearanceManager = appState.appearanceManager] in
-            let changes = Observations { appearanceManager.configuration }
+            let changes = Observations { appearanceManager.editedConfiguration }
             for await _ in changes {
                 guard let self else { return }
                 updatePreferredContentSize()
@@ -157,7 +155,7 @@ private final class MenuBarAppearanceEditorHostingController: NSHostingControlle
             preferredContentSize = NSSize(width: 525, height: 620)
             return
         }
-        let configuration = appState.appearanceManager.configuration
+        let configuration = appState.appearanceManager.editedConfiguration
 
         // Single-editor layout: dynamic mode only adds the mode picker row.
         var height: CGFloat = configuration.isDynamic ? 610 : 555

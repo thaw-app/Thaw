@@ -97,7 +97,7 @@ final class ControlItemMenuController: NSObject {
     }
 
     /// What is listening or watching right now; empty while the camera and
-    /// microphone alerts are off (see RecordingWatchPolicy.alertsAvailable). Only the microphone names an app: no public API says who
+    /// microphone alerts are off. Only the microphone names an app: no public API says who
     /// holds a camera.
     private func recordingWatchItems(appState: AppState) -> [NSMenuItem] {
         let activity = appState.recordingWatchManager.activity

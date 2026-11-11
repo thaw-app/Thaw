@@ -17,6 +17,7 @@ struct AppMenuHidingRow: View {
     var body: some View {
         ToggleButtonRow("Hide app menus") {
             Toggle("When showing items", isOn: $settings.hideApplicationMenus)
+                .settingsSearchAnchor("advanced.hideApplicationMenus")
                 .help("Hides the current app's menus when hidden items need the room.")
             Toggle(isOn: $settings.enableDesktopMenuHiding) {
                 HStack(spacing: ThawSpacing.compact) {
@@ -24,6 +25,7 @@ struct AppMenuHidingRow: View {
                     ThawBadge.alpha
                 }
             }
+            .settingsSearchAnchor("lab.enableDesktopMenuHiding")
             .help("Covers the Finder's menus after you click the desktop, until you switch to something else.")
         }
         .annotation(

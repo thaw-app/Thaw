@@ -22,6 +22,11 @@ extension AppSettings {
         resetHotkeys()
         resetDisplay()
         resetAppearance()
+        resetAllowedApps()
+        Self.resetFirstRunState(in: Defaults.store)
+        FirstRunHintStore.shared.reset()
+        appState?.imageCache.clearAll()
+        appState?.imageCache.diskStore.removeCacheFiles()
         // Not a setting, but a learned verdict about the user's other apps.
         // A reset is the one moment they explicitly ask for a clean slate,
         // and it is the only way to clear a record from the UI.
@@ -45,6 +50,7 @@ extension AppSettings {
         general.customThawIconIsTemplate = Defaults.DefaultValue.customThawIconIsTemplate
         general.simpleMode = Defaults.DefaultValue.simpleMode
         general.simpleModeShowsPreview = Defaults.DefaultValue.simpleModeShowsPreview
+        general.showDockIconWithSettings = Defaults.DefaultValue.showDockIconWithSettings
         general.showSettingDescriptions = Defaults.DefaultValue.showSettingDescriptions
         general.settingsAppearance = .system
         general.hideApplicationMenus = Defaults.DefaultValue.hideApplicationMenus
@@ -99,6 +105,7 @@ extension AppSettings {
     func resetThawBar() {
         thawBar.lockThawBarPosition = Defaults.DefaultValue.lockThawBarPosition
         thawBar.openHiddenItemsInMenuBar = Defaults.DefaultValue.openHiddenItemsInMenuBar
+        thawBar.useThawBarOnNotchOverflow = Defaults.DefaultValue.useThawBarOnNotchOverflow
         thawBar.useThawBar = Defaults.DefaultValue.useThawBar
         thawBar.useThawBarOnlyOnNotchedDisplay = Defaults.DefaultValue.useThawBarOnlyOnNotchedDisplay
         thawBar.thawBarLocation = Defaults.DefaultValue.thawBarLocation
@@ -119,8 +126,42 @@ extension AppSettings {
         privacy.showReleaseNotesAfterUpdate = Defaults.DefaultValue.showReleaseNotesAfterUpdate
     }
 
+    /// Turns thaw:// links off and forgets every app allowed to send them.
+    /// Built-in partners such as Floe keep working, as on a fresh install.
+    func resetAllowedApps() {
+        privacy.isSettingsURIEnabled = false
+        for key in Self.allowedAppKeys {
+            Defaults.store.removeObject(forKey: key)
+        }
+        privacy.refreshWhitelist()
+    }
+
+    static let allowedAppKeys = [
+        Defaults.Key.settingsURIWhitelist.rawValue,
+        Defaults.Key.settingsURISigningIdentities.rawValue,
+    ]
+
+    /// What makes Thaw show its welcome and What's New again. Update consent
+    /// and first-launch setup stay, so a reset never re-runs setup or re-asks about updates.
+    static let firstRunKeys = [
+        Defaults.Key.hasSeenOnboarding.rawValue,
+        Defaults.Key.onboardingVersion.rawValue,
+        Defaults.Key.lastWhatsNewVersion.rawValue,
+    ]
+
+    /// Brings back the welcome screens and What's New, and the TipKit tips at the next launch.
+    static func resetFirstRunState(in defaults: UserDefaults) {
+        for key in firstRunKeys {
+            defaults.removeObject(forKey: key)
+        }
+        defaults.set(true, forKey: FeatureTips.resetAtNextLaunchKey)
+    }
+
     func resetTools() {
         tools.enableDiagnosticLogging = Defaults.DefaultValue.enableDiagnosticLogging
+        tools.diagnosticLogMaxSizeMB = Defaults.DefaultValue.diagnosticLogMaxSizeMB
+        tools.diagnosticLogRetentionDays = Defaults.DefaultValue.diagnosticLogRetentionDays
+        tools.diagnosticLogRotationInterval = Defaults.DefaultValue.diagnosticLogRotationInterval
     }
 
     func resetHotkeys() {

@@ -106,6 +106,12 @@ final class AppNavigationState {
     /// The section of the search result being opened, so a page with tabs opens the tab holding it.
     var requestedSettingsSection: String?
 
+    /// The search result's row, scrolled to once its page and tab show.
+    var requestedSettingsRow: String?
+
+    /// The row flashing after a search scrolled to it.
+    var highlightedSettingsRow: String?
+
     /// AppState selects About after window construction; the pane consumes this upgrade request by presenting the changelog.
     var isWhatsNewRequested = false
 

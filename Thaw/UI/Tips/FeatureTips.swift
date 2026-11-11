@@ -86,8 +86,15 @@ final class FeatureTips {
             .appending(path: "Tips", directoryHint: .isDirectory)
     }
 
+    /// Set by Reset: TipKit can only clear its store before it is configured, so the next launch does it.
+    nonisolated static let resetAtNextLaunchKey = "ResetsTipsAtNextLaunch"
+
     private static func applyToTipKit(_ setup: Setup) throws {
         try FileManager.default.createDirectory(at: setup.datastoreURL, withIntermediateDirectories: true)
+        if Defaults.store.bool(forKey: resetAtNextLaunchKey) {
+            try? Tips.resetDatastore()
+            Defaults.store.removeObject(forKey: resetAtNextLaunchKey)
+        }
         try Tips.configure([
             .datastoreLocation(.url(setup.datastoreURL)),
             .displayFrequency(.immediate),

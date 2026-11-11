@@ -39,6 +39,15 @@ nonisolated extension SearchIndex {
             property: .thawBar("lockThawBarPosition")
         ),
         SearchEntry(
+            id: "general.showDockIconWithSettings",
+            title: "Show Dock icon while Settings is open",
+            descriptionText: String(localized: "Off, Thaw stays out of the Dock and its recent apps."),
+            pane: .general,
+            section: "App",
+            keywords: ["dock", "icon", "recent apps", "app switcher"],
+            property: .general("showDockIconWithSettings")
+        ),
+        SearchEntry(
             id: "general.showSettingDescriptions",
             title: "Show setting descriptions",
             descriptionText: String(localized: "Explains what a setting does directly beneath it."),
@@ -102,6 +111,15 @@ nonisolated extension SearchIndex {
             section: "Options for all displays",
             keywords: ["ice bar", "thaw bar", "click", "open", "menu", "reveal", "show", "hidden", "open hidden items in the menu bar"],
             property: .thawBar("openHiddenItemsInMenuBar")
+        ),
+        SearchEntry(
+            id: "general.useThawBarOnNotchOverflow",
+            title: "Open items the notch pushes out in the Thaw Bar",
+            descriptionText: String(localized: "When items don't fit beside the notch, the \(Constants.displayName) Bar shows the ones macOS pushed out."),
+            pane: .thawBar,
+            section: "Options for all displays",
+            keywords: ["ice bar", "thaw bar", "notch", "overflow", "fit", "pushed out", "too many items"],
+            property: .thawBar("useThawBarOnNotchOverflow")
         ),
     ]
 }

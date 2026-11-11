@@ -33,7 +33,7 @@ enum ItemIconPicker {
         panel.setContentSize(NSSize(width: 460, height: 420))
         panel.center()
         window = panel
-        appState.activate(withPolicy: .regular)
+        appState.activate(withPolicy: appState.userWindowActivationPolicy)
         panel.makeKeyAndOrderFront(nil)
     }
 

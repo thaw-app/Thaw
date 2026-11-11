@@ -250,13 +250,7 @@ struct ProfileSettingsPane: View {
             current: profileManager.currentLayoutSnapshot(from: appState),
             profile: profile.menuBarLayout
         )
-        diff.settingChanges = ProfileLayoutDiff.settingChanges(
-            current: GeneralSettingsSnapshot.capture(from: appState.settings),
-            profile: profile.generalSettings
-        ) + {
-            let current = AdvancedSettingsSnapshot.capture(from: appState.settings)
-            return ProfileLayoutDiff.settingChanges(current: current, profile: profile.advancedSettings.merged(onto: current))
-        }()
+        diff.settingChanges = ProfilePreviewChanges.settingChanges(of: profile, appState: appState)
 
         // Warn only if the spacing the apply leaves on the menu bar's display would relaunch apps.
         let offset = ProfileRelaunchSafety.spacingOffset(of: profile, activeDisplayUUID: appState.settings.displaySettings.activeMenuBarDisplayUUID)
@@ -420,7 +414,8 @@ struct ProfileSettingsPane: View {
     }
 
     private func exportAllProfiles() {
-        guard let json = profileManager.exportAllProfiles() else {
+        let (json, unreadable) = profileManager.exportAllProfiles()
+        guard let json else {
             errorMessage = String(localized: "Failed to encode profiles for export.")
             return
         }
@@ -432,6 +427,9 @@ struct ProfileSettingsPane: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try json.write(to: url, atomically: true, encoding: .utf8)
+            if !unreadable.isEmpty {
+                errorMessage = String(localized: "Exported, except profiles that couldn't be read: \(unreadable.formatted(.list(type: .and)))")
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

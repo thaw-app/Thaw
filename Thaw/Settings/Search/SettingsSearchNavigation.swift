@@ -19,6 +19,8 @@ enum SettingsSearchNavigation {
         navigationState.requestedSettingsDisclosure = entry.disclosure
         navigationState.settingsNavigationIdentifier = entry.pane
         navigationState.requestedSettingsSection = entry.sectionText
+        // A whole page has no row to scroll to.
+        navigationState.requestedSettingsRow = entry.id.hasPrefix("pane.") ? nil : entry.id
         query = ""
     }
 
@@ -31,6 +33,7 @@ enum SettingsSearchNavigation {
         }
         navigationState.requestedSettingsDisclosure = nil
         navigationState.requestedSettingsSection = nil
+        navigationState.requestedSettingsRow = nil
         navigationState.settingsNavigationIdentifier = pane
     }
 

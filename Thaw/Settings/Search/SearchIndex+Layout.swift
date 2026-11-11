@@ -12,6 +12,15 @@ nonisolated extension SearchIndex {
 
     static let layoutEntries: [SearchEntry] = [
         SearchEntry(
+            id: "layout.showAllSectionsOnUserDrag",
+            title: "Show every section while dragging",
+            descriptionText: String(localized: "While you ⌘-drag an item, hidden sections open so you can drop it into any of them."),
+            pane: .menuBarLayout,
+            section: "Sections",
+            keywords: ["drag", "command", "sections", "drop", "move"],
+            property: .layout("showAllSectionsOnUserDrag")
+        ),
+        SearchEntry(
             id: "advanced.enableAlwaysHiddenSection",
             title: "Always Hidden",
             descriptionText: String(localized: "Adds a third section for items you rarely need. They stay out of sight when you show your Hidden items."),

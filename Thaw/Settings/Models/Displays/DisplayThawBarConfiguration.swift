@@ -40,6 +40,10 @@ nonisolated struct DisplayThawBarConfiguration: Codable, Equatable {
     /// size. See ThawBarItemSize for the range.
     let thawBarItemScale: Double
 
+    /// Whether only Always Hidden opens in the Thaw Bar on this display, as in
+    /// Thaw 2: reaching it inline would also open Hidden. Ignored while useThawBar is on.
+    var useThawBarForAlwaysHidden = false
+
     /// Default configuration (disabled, dynamic location, horizontal layout).
     static let defaultConfiguration = DisplayThawBarConfiguration(
         useThawBar: false,
@@ -48,7 +52,8 @@ nonisolated struct DisplayThawBarConfiguration: Codable, Equatable {
         thawBarLayout: .horizontal,
         gridColumns: 4,
         itemSpacingOffset: 0,
-        thawBarItemScale: ThawBarItemSize.defaultScale
+        thawBarItemScale: ThawBarItemSize.defaultScale,
+        useThawBarForAlwaysHidden: false
     )
 
     func withUseThawBar(_ value: Bool) -> DisplayThawBarConfiguration {
@@ -59,7 +64,8 @@ nonisolated struct DisplayThawBarConfiguration: Codable, Equatable {
             thawBarLayout: thawBarLayout,
             gridColumns: gridColumns,
             itemSpacingOffset: itemSpacingOffset,
-            thawBarItemScale: thawBarItemScale
+            thawBarItemScale: thawBarItemScale,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden
         )
     }
 
@@ -71,7 +77,8 @@ nonisolated struct DisplayThawBarConfiguration: Codable, Equatable {
             thawBarLayout: thawBarLayout,
             gridColumns: gridColumns,
             itemSpacingOffset: itemSpacingOffset,
-            thawBarItemScale: thawBarItemScale
+            thawBarItemScale: thawBarItemScale,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden
         )
     }
 
@@ -83,7 +90,8 @@ nonisolated struct DisplayThawBarConfiguration: Codable, Equatable {
             thawBarLayout: thawBarLayout,
             gridColumns: gridColumns,
             itemSpacingOffset: itemSpacingOffset,
-            thawBarItemScale: thawBarItemScale
+            thawBarItemScale: thawBarItemScale,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden
         )
     }
 
@@ -95,7 +103,8 @@ nonisolated struct DisplayThawBarConfiguration: Codable, Equatable {
             thawBarLayout: value,
             gridColumns: gridColumns,
             itemSpacingOffset: itemSpacingOffset,
-            thawBarItemScale: thawBarItemScale
+            thawBarItemScale: thawBarItemScale,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden
         )
     }
 
@@ -108,7 +117,8 @@ nonisolated struct DisplayThawBarConfiguration: Codable, Equatable {
             thawBarLayout: thawBarLayout,
             gridColumns: Swift.max(2, Swift.min(value, 10)),
             itemSpacingOffset: itemSpacingOffset,
-            thawBarItemScale: thawBarItemScale
+            thawBarItemScale: thawBarItemScale,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden
         )
     }
 
@@ -121,7 +131,8 @@ nonisolated struct DisplayThawBarConfiguration: Codable, Equatable {
             thawBarLayout: thawBarLayout,
             gridColumns: gridColumns,
             itemSpacingOffset: Swift.max(-16, Swift.min(value, 16)),
-            thawBarItemScale: thawBarItemScale
+            thawBarItemScale: thawBarItemScale,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden
         )
     }
 
@@ -134,8 +145,15 @@ nonisolated struct DisplayThawBarConfiguration: Codable, Equatable {
             thawBarLayout: thawBarLayout,
             gridColumns: gridColumns,
             itemSpacingOffset: itemSpacingOffset,
-            thawBarItemScale: ThawBarItemSize.clampedScale(value)
+            thawBarItemScale: ThawBarItemSize.clampedScale(value),
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden
         )
+    }
+
+    func withUseThawBarForAlwaysHidden(_ value: Bool) -> DisplayThawBarConfiguration {
+        var copy = self
+        copy.useThawBarForAlwaysHidden = value
+        return copy
     }
 
     /// Builds per-display configurations for all connected screens.
@@ -157,7 +175,8 @@ nonisolated struct DisplayThawBarConfiguration: Codable, Equatable {
                 thawBarLayout: .horizontal,
                 gridColumns: 4,
                 itemSpacingOffset: 0,
-                thawBarItemScale: ThawBarItemSize.defaultScale
+                thawBarItemScale: ThawBarItemSize.defaultScale,
+                useThawBarForAlwaysHidden: false
             )
         }
         return configs
@@ -177,6 +196,7 @@ nonisolated extension DisplayThawBarConfiguration {
         case gridColumns
         case itemSpacingOffset
         case thawBarItemScale
+        case useThawBarForAlwaysHidden
     }
 
     init(from decoder: Decoder) throws {
@@ -191,5 +211,7 @@ nonisolated extension DisplayThawBarConfiguration {
         self.itemSpacingOffset = Swift.max(-16, Swift.min(decodedSpacing, 16))
         let decodedItemScale = try container.decodeIfPresent(Double.self, forKey: .thawBarItemScale) ?? ThawBarItemSize.defaultScale
         self.thawBarItemScale = ThawBarItemSize.clampedScale(decodedItemScale)
+        // Thaw 2 wrote this key; reading it again restores the choice for configurations Thaw 3 hasn't rewritten.
+        self.useThawBarForAlwaysHidden = try container.decodeIfPresent(Bool.self, forKey: .useThawBarForAlwaysHidden) ?? false
     }
 }

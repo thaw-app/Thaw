@@ -194,7 +194,7 @@ struct ProfileManagerStorageTests {
             let gone = manager.profiles[1].id
             try FileManager.default.removeItem(at: tmp.appendingPathComponent("\(gone.uuidString).json"))
 
-            let json = try #require(manager.exportAllProfiles())
+            let json = try #require(manager.exportAllProfiles().json)
             let bundle = try Self.decoder.decode(ProfileExportBundle.self, from: Data(json.utf8))
             #expect(bundle.entries.map(\.profile.name) == ["A", "C"])
             #expect(bundle.version == 1)

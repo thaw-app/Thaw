@@ -105,6 +105,16 @@ final class GeneralSettings: SettingsURIHandling {
         }
     }
 
+    /// Whether Settings and the other windows you open put Thaw in the Dock.
+    /// Off, Thaw stays out of the Dock and its recent apps.
+    var showDockIconWithSettings = Defaults.DefaultValue.showDockIconWithSettings {
+        didSet {
+            guard oldValue != showDockIconWithSettings else { return }
+            Defaults.set(showDockIconWithSettings, forKey: .showDockIconWithSettings)
+            appState?.applyUserWindowActivationPolicy()
+        }
+    }
+
     /// Hide application menus when needed to fit menu bar items.
     var hideApplicationMenus = Defaults.DefaultValue.hideApplicationMenus {
         didSet {
@@ -160,6 +170,7 @@ final class GeneralSettings: SettingsURIHandling {
         Defaults.ifPresent(key: .showSettingDescriptions, assign: &showSettingDescriptions)
         settingsAppearance = SettingsAppearance.stored()
         Defaults.ifPresent(key: .simpleModeShowsPreview, assign: &simpleModeShowsPreview)
+        Defaults.ifPresent(key: .showDockIconWithSettings, assign: &showDockIconWithSettings)
         Defaults.ifPresent(key: .hideApplicationMenus, assign: &hideApplicationMenus)
         Defaults.ifPresent(key: .enableSecondaryContextMenu, assign: &enableSecondaryContextMenu)
         Defaults.ifPresent(key: .enableDesktopMenuHiding, assign: &enableDesktopMenuHiding)
@@ -182,6 +193,7 @@ final class GeneralSettings: SettingsURIHandling {
         "customThawIconIsTemplate": \.customThawIconIsTemplate,
         "simpleMode": \.simpleMode,
         "showSettingDescriptions": \.showSettingDescriptions,
+        "showDockIconWithSettings": \.showDockIconWithSettings,
         "hideApplicationMenus": \.hideApplicationMenus,
         "enableSecondaryContextMenu": \.enableSecondaryContextMenu,
         "enableDesktopMenuHiding": \.enableDesktopMenuHiding,

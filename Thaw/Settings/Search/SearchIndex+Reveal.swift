@@ -14,6 +14,42 @@ nonisolated extension SearchIndex {
     /// entries route to .visibility. The property: links are unchanged.
     static let revealEntries: [SearchEntry] = [
         SearchEntry(
+            id: "visibility.showOnHoverDelay",
+            title: "Hover delay",
+            descriptionText: String(localized: "How long the pointer rests on the menu bar before hidden items show."),
+            pane: .visibility,
+            section: "Reveal hidden items",
+            keywords: ["hover", "delay", "wait", "pointer"],
+            property: .visibility("showOnHoverDelay")
+        ),
+        SearchEntry(
+            id: "visibility.tooltipDelay",
+            title: "Name delay",
+            descriptionText: String(localized: "How long the pointer rests on an item before its name shows."),
+            pane: .visibility,
+            section: "On hover",
+            keywords: ["tooltip", "name", "delay", "hover"],
+            property: .visibility("tooltipDelay")
+        ),
+        SearchEntry(
+            id: "visibility.swapOnThawIconClick",
+            title: "Click the Thaw icon to swap",
+            descriptionText: String(localized: "A click on the icon swaps your shown and hidden items."),
+            pane: .visibility,
+            section: "Swap shown and hidden",
+            keywords: ["swap", "click", "icon", "trade"],
+            property: .visibility("swapOnThawIconClick")
+        ),
+        SearchEntry(
+            id: "visibility.enableRecordingWatch",
+            title: "Camera and microphone alerts",
+            descriptionText: String(localized: "A short notice when the camera or microphone turns on."),
+            pane: .visibility,
+            section: "Zen Mode",
+            keywords: ["camera", "microphone", "alert", "notice", "recording", "call"],
+            property: .visibility("enableRecordingWatch")
+        ),
+        SearchEntry(
             id: "general.showOnClick",
             title: "Show on click",
             descriptionText: String(localized: "Click an empty area of the menu bar to show hidden menu bar items."),

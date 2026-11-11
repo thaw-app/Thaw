@@ -28,4 +28,19 @@ nonisolated extension MaintenanceTools {
     static func permissionResetArguments(bundleID: String) -> [[String]] {
         [["reset", "Accessibility", bundleID], ["reset", "ScreenCapture", bundleID]]
     }
+
+    /// The files the user picked in an open panel to give Thaw access: the
+    /// menu bar layout table and Control Center's app list.
+    static let pickedFileBookmarkKeys = [
+        Defaults.Key.menuBarLayoutTableBookmark.rawValue,
+        "NativeAppHidingAppListBookmark",
+        "NativeVisibilityRecoveryFileBookmark",
+    ]
+
+    /// Forgets every picked-file grant, so each file has to be picked again.
+    static func removePickedFileGrants(from defaults: UserDefaults) {
+        for key in pickedFileBookmarkKeys {
+            defaults.removeObject(forKey: key)
+        }
+    }
 }

@@ -19,6 +19,8 @@ final class UserNotificationManager: NSObject {
     /// Thaw becomes active. Optimistic until the first read returns.
     private(set) var canAlert = true
 
+    let permission = NotificationPermission()
+
     var notificationCenter: UNUserNotificationCenter {
         .current()
     }
@@ -26,6 +28,7 @@ final class UserNotificationManager: NSObject {
     func performSetup(with appState: AppState) {
         self.appState = appState
         notificationCenter.delegate = self
+        permission.request = { [weak self] in self?.requestAuthorization() }
         refreshAlertPermission()
         activationTask?.cancel()
         activationTask = NotificationCenter.default.eventsTask(named: NSApplication.didBecomeActiveNotification) { [weak self] in
@@ -36,8 +39,9 @@ final class UserNotificationManager: NSObject {
     private func refreshAlertPermission() {
         Task {
             let settings = await notificationCenter.notificationSettings()
-            canAlert = [.authorized, .provisional].contains(settings.authorizationStatus)
-                && settings.alertSetting == .enabled
+            let authorization = NotificationAuthorization(status: settings.authorizationStatus, alertSetting: settings.alertSetting)
+            canAlert = authorization == .allowed
+            permission.update(authorization)
         }
     }
 
@@ -49,6 +53,7 @@ final class UserNotificationManager: NSObject {
             } catch {
                 diagLog.error("Failed to request notification authorization: \(error)")
             }
+            refreshAlertPermission()
         }
     }
 

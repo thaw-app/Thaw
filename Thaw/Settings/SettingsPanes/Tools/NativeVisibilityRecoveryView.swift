@@ -17,6 +17,7 @@ struct NativeVisibilityRecoveryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.gutter) {
             Text("Restore missing menu bar items")
+                .settingsSearchAnchor("tools.restoreMissingMenuBarItems")
                 .font(ThawType.heading)
             Text("Normal hiding is stopped in this window. Recovery changes app visibility only, not your saved layout or positions.")
                 .foregroundStyle(ThawInk.supporting)

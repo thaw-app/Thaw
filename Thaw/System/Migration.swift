@@ -26,6 +26,8 @@ extension MigrationManager {
         removeAXBridgeLogs()
         migrateSearchPresentation(in: Defaults.store)
         migrateLastSettingsPane(in: Defaults.store)
+        migrateSpaceAppearanceKeys(in: Defaults.store, spaces: Bridging.getManagedSpaces())
+        resetRecordingAlertsOnReturn(in: Defaults.store)
         let results = [
             migratePerDisplayThawBar(),
         ]
@@ -89,6 +91,52 @@ extension MigrationManager {
             return
         }
         defaults.set(pane.rawValue, forKey: key)
+    }
+}
+
+// MARK: - Migrate Per-Space Looks to Persistent Keys
+
+extension MigrationManager {
+    /// Rekeys per-Space looks from raw Space IDs, which macOS renumbers at logout, to
+    /// persistent keys. Unresolved ones wait for a later launch; a persistent entry wins.
+    func migrateSpaceAppearanceKeys(in defaults: UserDefaults, spaces: [Bridging.ManagedSpace]) {
+        let key = Defaults.Key.menuBarAppearanceSpaceOverrides.rawValue
+        guard
+            let data = defaults.data(forKey: key), var overrides = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        else {
+            return
+        }
+        let keysByID = Dictionary(spaces.map { (String($0.spaceID), $0.persistentKey) }) { first, _ in first }
+        var changed = false
+        for rawID in overrides.keys where rawID.allSatisfy(\.isNumber) {
+            guard let persistentKey = keysByID[rawID] else { continue }
+            if overrides[persistentKey] == nil {
+                overrides[persistentKey] = overrides[rawID]
+            }
+            overrides[rawID] = nil
+            changed = true
+        }
+        guard changed, let rewritten = try? JSONSerialization.data(withJSONObject: overrides, options: [.sortedKeys]) else {
+            return
+        }
+        defaults.set(rewritten, forKey: key)
+    }
+}
+
+// MARK: - Reset Returning Recording Alerts
+
+extension MigrationManager {
+    /// Marks that the alerts' saved switch was reset once.
+    static let recordingAlertsReturnedKey = "RecordingAlertsReturned"
+
+    /// The alerts stayed off while hidden, whatever was saved. Clearing the old switch
+    /// once keeps them off until it's turned on again in Visibility.
+    func resetRecordingAlertsOnReturn(in defaults: UserDefaults) {
+        guard !defaults.bool(forKey: Self.recordingAlertsReturnedKey) else {
+            return
+        }
+        defaults.removeObject(forKey: Defaults.Key.enableRecordingWatch.rawValue)
+        defaults.set(true, forKey: Self.recordingAlertsReturnedKey)
     }
 }
 

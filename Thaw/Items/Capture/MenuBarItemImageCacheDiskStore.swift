@@ -24,7 +24,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
 
     /// The save's wall clock, and its serial disk queue (background QoS: nothing on screen waits for a save).
     private let now: @Sendable () -> Date
-    private let queue: DispatchQueue
+    let queue: DispatchQueue
 
     init(cachesDirectory: URL? = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first, now: @escaping @Sendable () -> Date = Date.init, queue: DispatchQueue = DispatchQueue(label: "MenuBarItemImageCacheDiskStore", qos: .background)) {
         self.cachesDirectory = cachesDirectory

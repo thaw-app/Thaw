@@ -77,7 +77,7 @@ struct SimpleModeSettingsPane: View {
 
     private var howItWorks: some View {
         Label {
-            Text("Hold ⌘ and drag icons to the left of the divider in your menu bar to hide them. Click \(Constants.displayName)'s icon to show them again.")
+            Text(SimpleModeHowItWorks.text(showsIcon: settings.showThawIcon, showsOnClick: appState.settings.visibility.showOnClick))
                 .fixedSize(horizontal: false, vertical: true)
         } icon: {
             Image(systemName: "hand.draw")

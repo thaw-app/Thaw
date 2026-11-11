@@ -195,13 +195,12 @@ final class MenuBarManager {
 
     /// Native or Thaw overflow forces Thaw Bar without changing the display preference.
     /// Ejected items cannot fit an inline reveal; see MenuBarSection.forcesThawBarForNotchOverflow.
-    func shouldUseThawBar(for displayID: CGDirectDisplayID) -> Bool {
-        return appState?.settings.displaySettings.useThawBar(for: displayID) == true
+    func shouldUseThawBar(for displayID: CGDirectDisplayID, section: MenuBarSection.Name = .hidden) -> Bool {
+        return appState?.settings.displaySettings.useThawBar(for: displayID, section: section) == true
             || sectionController.isNativeOverflowActive(on: displayID) == true
             || MenuBarSection.forcesThawBarForNotchOverflow(
                 overflowEnabled: configuration.enableMenuBarItemOverflow,
-                // No preference exists yet; keep the parameter to add one without changing the rule or tests.
-                useThawBarOnOverflow: true,
+                useThawBarOnOverflow: appState?.settings.thawBar.useThawBarOnNotchOverflow ?? true,
                 hasEjectedItems: !sectionController.overflowHiddenIdentifiers.isEmpty
             )
     }

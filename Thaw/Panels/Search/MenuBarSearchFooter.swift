@@ -36,7 +36,7 @@ struct MenuBarSearchFooter: View {
     private var actionRow: some View {
         Button {
             panel.close()
-            appState.activate(withPolicy: .regular)
+            appState.activate(withPolicy: appState.userWindowActivationPolicy)
             appState.openWindow(.settings)
         } label: {
             Image(systemName: "gearshape")

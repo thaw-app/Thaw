@@ -118,6 +118,7 @@ nonisolated enum Defaults {
         [
             // General Settings
             .showThawIcon: DefaultValue.showThawIcon,
+            .showDockIconWithSettings: DefaultValue.showDockIconWithSettings,
             .customThawIconIsTemplate: DefaultValue.customThawIconIsTemplate,
             .simpleMode: DefaultValue.simpleMode,
             .showSettingDescriptions: DefaultValue.showSettingDescriptions,
@@ -125,6 +126,7 @@ nonisolated enum Defaults {
             .simpleModeShowsPreview: DefaultValue.simpleModeShowsPreview,
             .lockThawBarPosition: DefaultValue.lockThawBarPosition,
             .openHiddenItemsInMenuBar: DefaultValue.openHiddenItemsInMenuBar,
+            .useThawBarOnNotchOverflow: DefaultValue.useThawBarOnNotchOverflow,
             .roundScreenCorners: DefaultValue.roundScreenCorners,
             .screenCornerRadius: DefaultValue.screenCornerRadius,
             .useThawBar: DefaultValue.useThawBar,
@@ -222,27 +224,15 @@ nonisolated enum Defaults {
 
 extension Defaults {
     nonisolated enum DefaultValue {
-        // MARK: General Settings
+        // MARK: General Settings (see Defaults+General.swift)
 
-        static let showThawIcon = true
-        static let thawIcon = ControlItemImageSet.defaultThawIcon
-        static let customThawIconIsTemplate = false
-        static let simpleMode = false
-        static let showSettingDescriptions = true
-        static let simpleModeShowsPreview = true
-        static let lockThawBarPosition = true
-        static let openHiddenItemsInMenuBar = false
         static let roundScreenCorners = false
         static let screenCornerRadius = 10.0
-        static let useThawBar = false
-        static let useThawBarOnlyOnNotchedDisplay = false
 
         /// Native Always-Hidden: writes NSStatusItem VisibleCC <label> = false
         /// into the owning app's domain so the host stops publishing the item.
         /// Touches other apps' domains, so off until validated. Default: false.
         static let useNativeAlwaysHide = false
-        static let thawBarLocation: ThawBarLocation = .dynamic
-        static let thawBarLocationOnHotkey = false
         static let showOnClick = true
         static let showOnHover = false
         static let showOnScroll = true
@@ -266,11 +256,6 @@ extension Defaults {
         static let iconRefreshInterval: TimeInterval = 0.25
         /// Minimum seconds between two alert reveals of the same item.
         static let autoZenWhileSharingScreen = false
-        #if DEBUG
-            static let enableDiagnosticLogging = true
-        #else
-            static let enableDiagnosticLogging = false
-        #endif
         static let enableMenuBarItemOverflow = false
         static let menuBarArrangementMode = MenuBarArrangementMode.automatic
         static let enableExperimentalOverflowPrevention = false
@@ -352,6 +337,8 @@ extension Defaults {
         // MARK: General Settings
 
         case showThawIcon = "ShowIceIcon"
+        /// Thaw 2's key, so a migrated choice carries over.
+        case showDockIconWithSettings = "ShowDockIconWithSettings"
         case thawIcon = "IceIcon"
         case customThawIconIsTemplate = "CustomIceIconIsTemplate"
         case simpleMode = "SimpleMode"
@@ -369,6 +356,7 @@ extension Defaults {
         case spaceMenuBarChoices = "SpaceMenuBarChoices"
         case lockThawBarPosition = "LockThawBarPosition"
         case openHiddenItemsInMenuBar = "OpenHiddenItemsInMenuBar"
+        case useThawBarOnNotchOverflow = "UseThawBarOnNotchOverflow"
         case roundScreenCorners = "RoundScreenCorners"
         case screenCornerRadius = "ScreenCornerRadius"
         case menuBarSpacers = "MenuBarSpacers"
@@ -418,6 +406,9 @@ extension Defaults {
         case iconRefreshInterval = "IconRefreshInterval"
         case showMenuBarTooltips = "ShowMenuBarTooltips"
         case enableDiagnosticLogging = "EnableDiagnosticLogging"
+        case diagnosticLogMaxSizeMB = "DiagnosticLogMaxSizeMB"
+        case diagnosticLogRetentionDays = "DiagnosticLogRetentionDays"
+        case diagnosticLogRotationInterval = "DiagnosticLogRotationInterval"
         case enableMenuBarItemOverflow = "EnableMenuBarItemOverflow"
         case enableExperimentalSystemItemHiding = "EnableExperimentalSystemItemHiding"
         /// Who arranges the menu bar: Thaw (MenuBarArrangementMode.automatic)

@@ -29,22 +29,14 @@ struct MenuBarAppearanceEditor: View {
     let location: Location
     let onDone: (() -> Void)?
 
-    /// Read shorthand only; bindings go through $appearanceManager.configuration.
-    private var configuration: MenuBarAppearanceConfigurationV2 {
-        appearanceManager.configuration
-    }
+    /// Read shorthand only; bindings go through $appearanceManager.editedConfiguration.
+    private var configuration: MenuBarAppearanceConfigurationV2 { appearanceManager.editedConfiguration }
 
-    private var hasShape: Bool {
-        configuration.shapeKind != .noShape
-    }
+    private var hasShape: Bool { configuration.shapeKind != .noShape }
 
-    private var isMenuBarHiddenBySystem: Bool {
-        appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults
-    }
+    private var isMenuBarHiddenBySystem: Bool { appState.menuBarManager.isMenuBarHiddenBySystemUserDefaults }
 
-    private var hasCustomConfiguration: Bool {
-        configuration != .defaultConfiguration
-    }
+    private var hasCustomConfiguration: Bool { configuration != .defaultConfiguration }
 
     var body: some View {
         switch location {
@@ -116,11 +108,12 @@ struct MenuBarAppearanceEditor: View {
 
             // Shape determines which fill controls are available.
             ThawSection {
-                ThawTabStrip(selection: $appearanceManager.configuration.shapeKind, tabs: MenuBarShapeKind.allCases)
+                ThawTabStrip(selection: $appearanceManager.editedConfiguration.shapeKind, tabs: MenuBarShapeKind.allCases)
+                    .settingsSearchAnchor("appearance.shape")
                     .frame(maxWidth: .infinity)
                     .accessibilityLabel("Shape")
             } content: {
-                MenuBarShapePicker(configuration: $appearanceManager.configuration)
+                MenuBarShapePicker(configuration: $appearanceManager.editedConfiguration)
                 insetToggle
             } footer: {
                 VStack(alignment: .leading, spacing: ThawSpacing.compact) {
@@ -165,7 +158,7 @@ struct MenuBarAppearanceEditor: View {
         }
         .alert("Reset Appearance", isPresented: $isResetAlertPresented) {
             Button("Cancel", role: .cancel) { /* The alert dismisses itself; cancelling needs no other work. */ }
-            Button("Reset", role: .destructive) { appearanceManager.configuration = .defaultConfiguration }
+            Button("Reset", role: .destructive) { appearanceManager.editedConfiguration = .defaultConfiguration }
         } message: {
             Text("Your menu bar’s shape, colors and border go back to the defaults. This can’t be undone.")
         }
@@ -183,6 +176,7 @@ struct MenuBarAppearanceEditor: View {
                     Button("Reset Appearance…", role: .destructive) {
                         isResetAlertPresented = true
                     }
+                    .settingsSearchAnchor("appearance.reset")
                 }
             }
         } footer: {
@@ -214,7 +208,7 @@ struct MenuBarAppearanceEditor: View {
                 }
             }
         }
-        .annotation("Saves the look above for the Space you're on. Every other Space keeps the shared look.")
+        .annotation("A Space with its own look shows your edits only there. Every other Space keeps the shared look.")
     }
 
     /// Corners are global across displays, unlike the per-appearance and per-Space menu bar look.
@@ -224,6 +218,7 @@ struct MenuBarAppearanceEditor: View {
             Text("Screen corners")
         } content: {
             Toggle("Round screen corners", isOn: $corners.roundScreenCorners)
+                .settingsSearchAnchor("appearance.roundScreenCorners")
             if corners.roundScreenCorners {
                 LabeledContent("Radius") {
                     ThawSlider(value: $corners.screenCornerRadius, in: 4 ... 24, step: 1) {
@@ -237,7 +232,8 @@ struct MenuBarAppearanceEditor: View {
     }
 
     private var dynamicAppearanceToggle: some View {
-        Toggle("Separate looks for Light and Dark Mode", isOn: $appearanceManager.configuration.isDynamic)
+        Toggle("Separate looks for Light and Dark Mode", isOn: $appearanceManager.editedConfiguration.isDynamic)
+            .settingsSearchAnchor("appearance.isDynamic")
             .annotation("Choose which one you're editing at the top of this pane.")
     }
 
@@ -277,19 +273,19 @@ struct MenuBarAppearanceEditor: View {
                 }
             }
         return Binding(
-            get: { appearanceManager.configuration[keyPath: keyPath] },
-            set: { appearanceManager.configuration[keyPath: keyPath] = $0 }
+            get: { appearanceManager.editedConfiguration[keyPath: keyPath] },
+            set: { appearanceManager.editedConfiguration[keyPath: keyPath] = $0 }
         )
     }
 
     private func copyFromOppositeAppearance() {
         switch editingAppearance {
         case .light:
-            appearanceManager.configuration.lightModeConfiguration =
-                appearanceManager.configuration.darkModeConfiguration
+            appearanceManager.editedConfiguration.lightModeConfiguration =
+                appearanceManager.editedConfiguration.darkModeConfiguration
         case .dark:
-            appearanceManager.configuration.darkModeConfiguration =
-                appearanceManager.configuration.lightModeConfiguration
+            appearanceManager.editedConfiguration.darkModeConfiguration =
+                appearanceManager.editedConfiguration.lightModeConfiguration
         }
     }
 
@@ -339,7 +335,8 @@ struct MenuBarAppearanceEditor: View {
     @ViewBuilder
     private var insetToggle: some View {
         if hasShape {
-            Toggle("Inset on notched displays", isOn: $appearanceManager.configuration.isInset)
+            Toggle("Inset on notched displays", isOn: $appearanceManager.editedConfiguration.isInset)
+                .settingsSearchAnchor("appearance.isInset")
                 .annotation("Shrinks the shape slightly so it sits below the notch.")
         }
     }
@@ -457,12 +454,14 @@ private struct UnlabeledAppearanceFillEditor: View {
                                 Text(kind.localized).tag(kind)
                             }
                         }
+                        .settingsSearchAnchor("appearance.background")
                     case .shapeFill:
                         ThawPicker("Shape fill", selection: $configuration.tintKind) {
                             ForEach(MenuBarTintKind.allCases) { kind in
                                 Text(kind.localized).tag(kind)
                             }
                         }
+                        .settingsSearchAnchor("appearance.shapeFill")
                     }
                 }
                 .labelsHidden()
@@ -659,8 +658,8 @@ private struct HoldToPreviewButton: View {
 
     private func previewConfiguration(of manager: MenuBarAppearanceManager) -> MenuBarAppearancePartialConfiguration {
         switch previewedAppearance {
-        case .light: manager.configuration.lightModeConfiguration
-        case .dark: manager.configuration.darkModeConfiguration
+        case .light: manager.editedConfiguration.lightModeConfiguration
+        case .dark: manager.editedConfiguration.darkModeConfiguration
         }
     }
 }

@@ -87,6 +87,7 @@ struct MenuBarHidingSection: View {
                     .selectionDisabled(spaceID == 0)
                 Text("In every Space").tag(MenuBarHidingScope.everySpace)
             }
+            .settingsSearchAnchor("spaces.hideInThisSpace")
             .annotation(
                 "Hides the system menu bar while this Space is showing, or everywhere, full screen included.",
                 more: "In this Space leaves other Spaces as they are. It is unavailable while \(Constants.displayName) can't tell which Space is showing."

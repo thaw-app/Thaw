@@ -227,15 +227,7 @@ final class AppState {
     /// Keep dependency order: each setup assumes preceding subsystems are live.
     @ObservationIgnored
     private lazy var bootstrapTask = Task { @MainActor [self] in
-        #if DEBUG
-            // Debug builds always have diagnostic logging on so logs are
-            // captured during development without depending on the toggle.
-            DiagnosticLogger.shared.isEnabled = true
-        #else
-            if Defaults.bool(forKey: .enableDiagnosticLogging) {
-                DiagnosticLogger.shared.isEnabled = true
-            }
-        #endif
+        ToolsSettings.startDiagnosticLogging()
 
         diagLog.debug("bootstrap: starting AppState setup sequence")
 
@@ -304,7 +296,7 @@ final class AppState {
     /// Called by AppDelegate and again after first-launch permission setup.
     /// - Parameter granted: True runs bootstrap with required grants; false keeps subsystems inert and opens permissions.
     func launch(withPermissions granted: Bool) {
-        guard granted else {
+        guard granted, !ReducedModeController.isKeptWithAccessibility else {
             if ReducedModeController.isChosen {
                 dismissWindow(.permissions)
                 ReducedModeController.shared.start(with: self)
@@ -314,7 +306,7 @@ final class AppState {
                 // The delegate is still inside its launch callback here;
                 // changing the activation policy out from under it races.
                 try? await Task.sleep(for: .milliseconds(100))
-                activate(withPolicy: .regular)
+                activate(withPolicy: userWindowActivationPolicy)
                 dismissWindow(.settings)
                 openWindow(.permissions)
             }
@@ -350,7 +342,7 @@ final class AppState {
         guard hasPermissions else { return }
 
         Task {
-            activate(withPolicy: .regular)
+            activate(withPolicy: userWindowActivationPolicy)
             openWindow(.settings)
         }
     }
@@ -391,7 +383,7 @@ final class AppState {
         Task {
             let allowFetch = settings.privacy.fetchReleaseNotes
             guard await ChangelogDocument.load(allowFetch: allowFetch, info: .thaw).document?.newestRelease != nil else { return }
-            activate(withPolicy: .regular)
+            activate(withPolicy: userWindowActivationPolicy)
             openWindow(.whatsNew)
         }
     }
@@ -582,7 +574,7 @@ final class AppState {
 
             if self.openWindows.contains(id) {
                 self.diagLog.debug("Window \(id) already open (openWindows=\(self.openWindows)), activating existing window")
-                self.activate(withPolicy: .regular)
+                self.activate(withPolicy: userWindowActivationPolicy)
                 return
             }
             self.diagLog.debug("openWindow(\(id)) proceeding, openWindows=\(self.openWindows)")
@@ -597,7 +589,7 @@ final class AppState {
             openWindowAction(id: id)
 
             try? await Task.sleep(for: .milliseconds(100))
-            self.activate(withPolicy: .regular)
+            self.activate(withPolicy: userWindowActivationPolicy)
         }
     }
 
