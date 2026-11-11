@@ -108,9 +108,10 @@ struct ThawBarItemView: View {
                 }
             }
             // Stronger lift than the 1.02 row token for the small glyph. Reduce
-            // Motion drops the lift and leaves the hover wash.
+            // Motion drops the lift and leaves the hover wash. Only the pointer
+            // springs it; arrow keys move the highlight at once.
             .scaleEffect(isHighlighted && !reduceMotion ? 1.12 : 1.0)
-            .thawAnimation(ThawMotion.interactive, value: isHighlighted)
+            .thawAnimation(ThawMotion.interactive, value: isHovered)
             .onChange(of: activationRequest) {
                 if isKeyboardFocused {
                     leftClickAction()

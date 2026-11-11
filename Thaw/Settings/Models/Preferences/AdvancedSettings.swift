@@ -191,6 +191,13 @@ final class AdvancedSettings {
         }
     }
 
+    var showAlwaysHiddenOnIconDoubleClick = Defaults.DefaultValue.showAlwaysHiddenOnIconDoubleClick {
+        didSet {
+            guard oldValue != showAlwaysHiddenOnIconDoubleClick else { return }
+            Defaults.set(showAlwaysHiddenOnIconDoubleClick, forKey: .showAlwaysHiddenOnIconDoubleClick)
+        }
+    }
+
     /// Replaces Thaw's status menu with a panel; disabled secondary clicks use NSMenu.
     var enableControlItemPanel = Defaults.DefaultValue.enableControlItemPanel {
         didSet {
@@ -211,6 +218,14 @@ final class AdvancedSettings {
         didSet {
             guard oldValue != showReleaseNotesAfterUpdate else { return }
             Defaults.set(showReleaseNotesAfterUpdate, forKey: .showReleaseNotesAfterUpdate)
+        }
+    }
+
+    /// Whether a menu bar item shows the active Space's name.
+    var showSpaceIndicator = Defaults.DefaultValue.showSpaceIndicator {
+        didSet {
+            guard oldValue != showSpaceIndicator else { return }
+            Defaults.set(showSpaceIndicator, forKey: .showSpaceIndicator)
         }
     }
 
@@ -385,9 +400,11 @@ final class AdvancedSettings {
         Defaults.ifPresent(key: .legacyEnableTransportBar, assign: &enableSwapBar)
         Defaults.ifPresent(key: .enableSwapBar, assign: &enableSwapBar)
         Defaults.ifPresent(key: .swapOnThawIconClick, assign: &swapOnThawIconClick)
+        Defaults.ifPresent(key: .showAlwaysHiddenOnIconDoubleClick, assign: &showAlwaysHiddenOnIconDoubleClick)
         Defaults.ifPresent(key: .enableControlItemPanel, assign: &enableControlItemPanel)
         Defaults.ifPresent(key: .fetchReleaseNotes, assign: &fetchReleaseNotes)
         Defaults.ifPresent(key: .showReleaseNotesAfterUpdate, assign: &showReleaseNotesAfterUpdate)
+        Defaults.ifPresent(key: .showSpaceIndicator, assign: &showSpaceIndicator)
         Defaults.ifPresent(key: .enableModuleStandIns, assign: &enableModuleStandIns)
         skippedModuleStandIns = Defaults.stringArray(forKey: .skippedModuleStandIns).map(Set.init) ?? skippedModuleStandIns
         Defaults.ifPresent(key: .enableTimeMachineTakeover, assign: &enableTimeMachineTakeover)
@@ -478,12 +495,16 @@ final class AdvancedSettings {
                 enableSwapBar = boolValue
             case "swapOnThawIconClick":
                 swapOnThawIconClick = boolValue
+            case "showAlwaysHiddenOnIconDoubleClick":
+                showAlwaysHiddenOnIconDoubleClick = boolValue
             case "enableControlItemPanel":
                 enableControlItemPanel = boolValue
             case "fetchReleaseNotes":
                 fetchReleaseNotes = boolValue
             case "showReleaseNotesAfterUpdate":
                 showReleaseNotesAfterUpdate = boolValue
+            case "showSpaceIndicator":
+                showSpaceIndicator = boolValue
             case "enableRecordingWatch":
                 enableRecordingWatch = boolValue
             case "zenModeWhileRecording":

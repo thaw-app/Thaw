@@ -50,9 +50,15 @@ extension MenuBarItemImageCache {
     }
 
     /// Counts kept and attempted pictures using identities that survive a rebuilt menu bar.
+    /// Known pictures stay counted even when Native hiding makes their parked frames narrow.
     static nonisolated func hiddenItemCaptureResult(
         items: [MenuBarItem], alreadyGood: Set<MenuBarItemTag>, newlyCaptured: Set<MenuBarItemTag>
     ) -> HiddenItemCaptureResult {
+        let pictured = alreadyGood.union(newlyCaptured)
+        let items = items.filter {
+            Self.isCapturable($0) && !$0.tag.isControlCenterGovernable
+                && (!Self.isBlankItem($0.bounds) || Self.isTag($0.tag, in: pictured))
+        }
         let attempted = items.filter { !Self.isTag($0.tag, in: alreadyGood) || Self.isTag($0.tag, in: newlyCaptured) }
         return .tally(
             attempted.map { (name: $0.displayName, hasImage: Self.isTag($0.tag, in: newlyCaptured)) },

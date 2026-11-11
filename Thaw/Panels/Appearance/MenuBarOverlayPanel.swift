@@ -578,7 +578,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
 
     /// macOS 27 NSView animator alpha finishes in one frame regardless of duration or layer backing; window alpha still works.
     /// Set model alpha directly and use CABasicAnimation opacity for the fade.
-    private func fadeAlpha(to target: CGFloat, duration: CFTimeInterval = 0.25) {
+    private func fadeAlpha(to target: CGFloat) {
         wantsLayer = true
         guard let layer else {
             alphaValue = target
@@ -593,8 +593,8 @@ private final class MenuBarOverlayPanelContentView: NSView {
         let fade = CABasicAnimation(keyPath: "opacity")
         fade.fromValue = from
         fade.toValue = Float(target)
-        fade.duration = duration
-        fade.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        fade.duration = OverlayDragFade.duration(from: from, to: Float(target), reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+        fade.timingFunction = OverlayDragFade.timing
         layer.add(fade, forKey: Self.alphaFadeKey)
     }
 
@@ -839,6 +839,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                     self.scheduleAXItemBoundsRefresh()
                 }
                 .store(in: &subscriptions)
+            MenuBarAppearanceItems.rereadOnWake { [weak self] in self?.scheduleAXItemBoundsRefresh(.immediate) }.store(in: &subscriptions)
         }
 
         $fullConfiguration.replace(with: ())

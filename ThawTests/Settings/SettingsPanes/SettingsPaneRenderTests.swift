@@ -80,6 +80,18 @@ struct SettingsPaneRenderTests {
         #expect(try render.pixels() != before)
     }
 
+    @Test("Visibility draws the double-click switch with Always Hidden on, and turning it off redraws it")
+    func visibilityDoubleClickSwitch() async throws {
+        let appState = AppState()
+        let settings = appState.settings
+        settings.advanced.enableAlwaysHiddenSection = true
+        let render = render(MenuBarAccessPane(settings: settings.general, advancedSettings: settings.advanced), appState: appState)
+        let before = try await drawnPixels(render)
+        settings.advanced.showAlwaysHiddenOnIconDoubleClick.toggle()
+        await render.settle { (try? render.pixels()) != before }
+        #expect(try render.pixels() != before)
+    }
+
     @Test("Tools draws each of its tabs")
     func toolsPane() async throws {
         let appState = AppState()

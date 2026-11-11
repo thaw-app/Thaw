@@ -70,6 +70,9 @@ final class AppState {
     /// The Spaces page's choices, sent to the menu bar agent again after it forgets them.
     let spaceMenuBarKeeper = SpaceMenuBarKeeper()
 
+    /// The optional menu bar item that names the active Space.
+    @ObservationIgnored lazy var spaceIndicator = SpaceIndicator(launcher: menuBarManager.systemExtraTakeover.launcher)
+
     /// Runs the settle a display change owes, and the image cleanup after a removal, once per settled generation.
     @ObservationIgnored lazy var displayChangeCoordinator = DisplayChangeCoordinator(
         environment: displayEnvironment,
@@ -247,6 +250,7 @@ final class AppState {
         spaceMenuBarKeeper.start(directory: spaceDirectory, agentRestarts: SpaceMenuBarKeeper.liveAgentRestarts())
         settings.performSetup(with: self)
         menuBarManager.performSetup(with: self, activeDisplayWatcher: activeDisplayWatcher, displays: displayEnvironment)
+        spaceIndicator.start(settings: settings.advanced, changes: spaceChanges, directory: spaceDirectory)
         barSettlingObservers.observe(revealedSections: menuBarManager.revealedSectionChanges)
         // A refused preferences watcher stays stopped; recreate it after either a table-file grant or Full Disk Access.
         permissions.onPermissionTransition = { [weak self] permission, granted in

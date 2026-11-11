@@ -343,7 +343,7 @@ private struct MenuBarSearchContentView: View {
             ) {
                 appState.layoutFeedback.clear()
             }
-            .transition(.fade(reduceMotion: reduceMotion))
+            .transition(.fade(reduceMotion: reduceMotion, animation: ThawMotion.settle))
         }
     }
 

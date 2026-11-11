@@ -164,9 +164,11 @@ nonisolated enum Defaults {
             // is unset, and unset already reads as false.
             .enableControlItemPanel: DefaultValue.enableControlItemPanel,
             .swapOnThawIconClick: DefaultValue.swapOnThawIconClick,
+            .showAlwaysHiddenOnIconDoubleClick: DefaultValue.showAlwaysHiddenOnIconDoubleClick,
             .swapActive: DefaultValue.swapActive,
             .fetchReleaseNotes: DefaultValue.fetchReleaseNotes,
             .showReleaseNotesAfterUpdate: DefaultValue.showReleaseNotesAfterUpdate,
+            .showSpaceIndicator: DefaultValue.showSpaceIndicator,
             .enableRecordingWatch: DefaultValue.enableRecordingWatch,
             .enableNativeAppHiding: DefaultValue.enableNativeAppHiding,
             .enableModuleStandIns: DefaultValue.enableModuleStandIns,
@@ -275,10 +277,12 @@ extension Defaults {
         static let enableMenuBarItemDescenders = false
         static let enableSwapBar = false
         static let swapOnThawIconClick = false
+        static let showAlwaysHiddenOnIconDoubleClick = true
         static let enableControlItemPanel = false
         static let swapActive = false
         static let fetchReleaseNotes = true
         static let showReleaseNotesAfterUpdate = true
+        static let showSpaceIndicator = false
         static let enableRecordingWatch = false
         static let enableNativeAppHiding = false
         /// Stand-ins for Apple menu extras Thaw removes while they sit in a
@@ -450,6 +454,7 @@ extension Defaults {
         /// the panel comes and goes with the switch.
         case enableSwapBar = "EnableSwapBar"
         case swapOnThawIconClick = "SwapOnThawIconClick"
+        case showAlwaysHiddenOnIconDoubleClick = "ShowAlwaysHiddenOnIconDoubleClick"
         /// The control item panel, hung under Thaw's own icon. Read live so the
         /// secondary click changes what it raises without a relaunch.
         case enableControlItemPanel = "EnableControlItemPanel"
@@ -465,6 +470,8 @@ extension Defaults {
         case fetchReleaseNotes = "FetchReleaseNotes"
         /// Whether What's New opens by itself after an update.
         case showReleaseNotesAfterUpdate = "ShowReleaseNotesAfterUpdate"
+        /// Whether the Space indicator item runs.
+        case showSpaceIndicator = "ShowSpaceIndicator"
         /// Names the app holding the microphone, and reports that a camera is
         /// on, where macOS shows only a dot. Read live so the poller starts
         /// and stops without relaunching.
