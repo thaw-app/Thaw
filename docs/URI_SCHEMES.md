@@ -13,8 +13,12 @@ Thaw registers the `thaw://` scheme in `Info.plist` (`CFBundleURLTypes`).
 | `thaw://toggle-hidden`            | Toggle Hidden Section | Shows/hides the hidden menu bar section  |
 | `thaw://toggle-always-hidden`     | Toggle Always-Hidden  | Shows/hides the always-hidden section    |
 | `thaw://search`                   | Open Search Panel     | Displays the menu bar item search panel  |
+| `thaw://toggle-swap`              | Toggle Swap           | Trades the shown and hidden items; a second call trades them back |
 | `thaw://toggle-thawbar`           | Toggle Thaw Bar       | Toggles the Thaw Bar on the active display and saves it; needs Settings URI on and an approved app |
 | `thaw://toggle-application-menus` | Toggle App Menus      | Shows/hides application menus            |
+| `thaw://toggle-zen-mode`          | Toggle Zen Mode       | Turns Zen Mode on or off. Zen Mode locks reveal gestures and conceals sections until toggled back |
+| `thaw://toggle-layout-editor`     | Toggle Layout Editor  | Opens or closes the Layout editor        |
+| `thaw://item-hints`               | Item Hints            | Puts a letter under every menu bar item; typing a letter opens that item |
 | `thaw://open-settings`            | Open Settings         | Opens the Thaw settings window           |
 | `thaw://authorize`                | Authorize App         | Triggers auth dialog to grant an app whitelist access to settings |
 
@@ -98,29 +102,42 @@ Read and write Thaw settings via `thaw://` URLs, gated by a security whitelist. 
 | ----------------------------------------- | ---- | -------------------------------------------- |
 | `autoRehide`                              | Bool | Hide shown items again; `false` is Never in Hide items again |
 | `showOnClick`                             | Bool | Show hidden items when clicking the menu bar |
-| `showOnDoubleClick`                       | Bool | Show hidden items on double-click            |
 | `showOnHover`                             | Bool | Show hidden items on hover                   |
 | `showOnScroll`                            | Bool | Show hidden items on scroll                  |
-| `useIceBarOnlyOnNotchedDisplay`           | Bool | Thaw Bar only on Macs with notch             |
+| `showAlwaysHiddenOnIconDoubleClick`       | Bool | Double-click the Thaw icon to show always-hidden items (default: true) |
+| `useThawBarOnlyOnNotchedDisplay`          | Bool | Thaw Bar only on Macs with notch             |
 | `useThawBarOnNotchOverflow`               | Bool | Open items the notch pushes out in the Thaw Bar (default: true) |
+| `thawBarLocationOnHotkey`                 | Bool | When opened by a shortcut: `true` is "Centered on the pointer", `false` is "Use Location" |
+| `lockThawBarPosition`                     | Bool | Keep the Thaw Bar where it opens; `false` lets you drag it by its background (default: true) |
+| `openHiddenItemsInMenuBar`                | Bool | Show an item opened from the Thaw Bar or search in the menu bar and open its menu under its icon |
 | `hideApplicationMenus`                    | Bool | Hide application menu titles                 |
+| `enableDesktopMenuHiding`                 | Bool | Cover the Finder's menu titles while the desktop is frontmost |
 | `enableAlwaysHiddenSection`               | Bool | Enable the always-hidden section             |
-| `useOptionClickToShowAlwaysHiddenSection` | Bool | Option-click shows always-hidden items       |
-| `useDoubleClickToShowAlwaysHiddenSection` | Bool | Double-click Thaw icon shows always-hidden   |
 | `enableSecondaryContextMenu`              | Bool | Right-click shows alternate menu             |
 | `showAllSectionsOnUserDrag`               | Bool | Reveal all sections during drag              |
 | `showMenuBarTooltips`                     | Bool | Show hover tooltips on menu bar items        |
+| `enableMenuBarItemDescenders`             | Bool | Show a small readout below a menu bar item while the pointer rests on it |
 | `enableDiagnosticLogging`                 | Bool | Enable debug logging                         |
-| `customIceIconIsTemplate`                 | Bool | Custom icon renders as template              |
-| `showIceIcon`                             | Bool | Show the Thaw icon in menu bar               |
-| `hideDockIconWhenToggling`                | Bool | Hide Dock icon on menu-bar toggle; overflow uses Thaw Bar |
-| `iceBarLocationOnHotkey`                  | Bool | When opened by a shortcut: `true` is "Centered on the pointer", `false` is "Use Location" |
-| `enableMenuBarItemOverflow`                | Bool | Eject items that would fall behind the notch |
-| `useThawBarOnNotchOverflow`                | Bool | Send ejected overflow items to the Thaw Bar  |
-| `moveCursorToRevealedItem`                 | Bool | Move the cursor onto an item once revealed   |
-| `searchIncludeVisible`                     | Bool | Include visible items in search results      |
-| `searchIncludeHidden`                      | Bool | Include hidden items in search results       |
-| `searchIncludeAlwaysHidden`                | Bool | Include always-hidden items in search        |
+| `customThawIconIsTemplate`                | Bool | Custom icon renders as template              |
+| `showThawIcon`                            | Bool | Show the Thaw icon in menu bar               |
+| `simpleMode`                              | Bool | Show only the essential settings in Settings |
+| `showSettingDescriptions`                 | Bool | Explain each setting beneath it in Settings (default: true) |
+| `showDockIconWithSettings`                | Bool | Show the Dock icon while Settings is open (default: true) |
+| `enableMenuBarItemOverflow`               | Bool | Eject items that would fall behind the notch |
+| `enableExperimentalOverflowPrevention`    | Bool | Experimental. Give hidden items extreme weights so native overflow collapses them first on notched displays. Not in Settings |
+| `enableExperimentalSystemItemHiding`      | Bool | Read-only. `true` when the hiding method can hide Apple's own items |
+| `alwaysUseAppIconForMenuBarItems`         | Bool | Show each item's app icon in the Thaw Bar and Layout instead of a live screenshot |
+| `enableSwapBar`                           | Bool | Show the Swap Bar, a strip under the menu bar that trades shown and hidden items in one click |
+| `swapOnThawIconClick`                     | Bool | Clicking the Thaw icon swaps shown and hidden items |
+| `enableControlItemPanel`                  | Bool | Right-click the Thaw icon for a panel of controls instead of a text menu |
+| `showSpaceIndicator`                      | Bool | Add a menu bar item with the name of the current Space |
+| `enableRecordingWatch`                    | Bool | Show a short notice when the camera or microphone turns on |
+| `zenModeWhileRecording`                   | Bool | Turn on Zen Mode while any app uses the camera or microphone |
+| `autoZenWhileSharingScreen`               | Bool | Turn on Zen Mode while you share your screen or mirror a display |
+| `fetchReleaseNotes`                       | Bool | Fetch the latest release notes when you open What's New (default: true) |
+| `showReleaseNotesAfterUpdate`             | Bool | Open What's New the first time Thaw starts after an update (default: true) |
+
+Older Ice-era names still work: `showIceIcon`, `customIceIconIsTemplate`, `useIceBarOnlyOnNotchedDisplay`, `iceBarLocationOnHotkey`, `useIceBar`, `iceBarLocation` and `iceBarLayout` are accepted for `showThawIcon`, `customThawIconIsTemplate`, `useThawBarOnlyOnNotchedDisplay`, `thawBarLocationOnHotkey`, `useThawBar`, `thawBarLocation` and `thawBarLayout`. Responses use the current names.
 
 #### Double/Time Interval Settings
 
@@ -130,9 +147,10 @@ Read and write Thaw settings via `thaw://` URLs, gated by a security whitelist. 
 | `tempShowInterval`       | Double | 0-30 seconds | Keep opened items in the menu bar for: how long an item opened from search or the Thaw Bar stays (default: 15) |
 | `showOnHoverDelay`       | Double | 0-5 seconds | Delay before hover reveals items (default: 0.2) |
 | `tooltipDelay`           | Double | 0-5 seconds | Delay before showing tooltips (default: 0.5) |
-| `iconRefreshInterval`    | Double | 0-1 seconds | Interval between icon refreshes in panels; `0` means Off; positive values snap to `1/n` seconds for integer `n` in 1–30 (default: 0.25 ≈ 4 fps) |
+| `iconRefreshInterval`    | Double | 0-5 seconds | Interval between icon refreshes in panels; `0` means Off (default: 0.25) |
+| `menuBarOrderFulfillmentTimeout` | Double | 1-15 seconds | How long Thaw waits for the system to apply a menu bar reorder before it carries on (default: 3). The Layout setting for it is hidden because the timeout has no effect on macOS 27 |
 
-Values outside the valid range are clamped to the nearest boundary. `iconRefreshInterval` is additionally snapped onto the discrete fps grid above before it is stored.
+Values outside the valid range are clamped to the nearest boundary.
 
 #### Enum Settings
 
@@ -149,13 +167,13 @@ These settings affect specific displays based on context. The **Scope** column i
 
 | Key                      | Type | Scope | Description |
 | ------------------------ | ---- | ----- | ----------- |
-| `useIceBar`              | Bool | Active display only | Enable/disable Thaw Bar on the display with the active menu bar |
-| `useThawBarForAlwaysHidden` | Bool | All displays without IceBar | Open only the always-hidden section in the Thaw Bar, leaving hidden items to expand inline |
-| `iceBarLocation`         | String | All displays with IceBar enabled | Where the Thaw Bar opens: `dynamic` (Pointer or Thaw icon), `mousePointer` (Under the pointer), `thawIcon` or `iceIcon` (Under the Thaw icon), `leftAligned` (Left edge) or `rightAligned` (Right edge). Numbers 0 to 4 work too |
-| `alwaysShowHiddenItems`  | Bool | All displays without IceBar | Show hidden items inline when IceBar is disabled |
-| `iceBarLayout`           | String | All displays with IceBar enabled | Thaw Bar layout: `horizontal`, `vertical`, or `grid` |
-| `gridColumns`            | Int | All displays with IceBar enabled | Maximum items per row in grid layout (2–10) |
-| `thawBarItemScale`       | Double | All displays with IceBar enabled | How large the Thaw Bar draws items: 0.6 to 1, where 1 is the menu bar's size |
+| `useThawBar`              | Bool | Active display only | Enable/disable Thaw Bar on the display with the active menu bar |
+| `useThawBarForAlwaysHidden` | Bool | All displays without Thaw Bar | Open only the always-hidden section in the Thaw Bar, leaving hidden items to expand inline |
+| `thawBarLocation`         | String | All displays with Thaw Bar enabled | Where the Thaw Bar opens: `dynamic` (Pointer or Thaw icon), `mousePointer` (Under the pointer), `thawIcon` or `iceIcon` (Under the Thaw icon), `leftAligned` (Left edge) or `rightAligned` (Right edge). Numbers 0 to 4 work too |
+| `alwaysShowHiddenItems`  | Bool | All displays without Thaw Bar | Show hidden items inline when Thaw Bar is disabled |
+| `thawBarLayout`           | String | All displays with Thaw Bar enabled | Thaw Bar layout: `horizontal`, `vertical`, or `grid` |
+| `gridColumns`            | Int | All displays with Thaw Bar enabled | Maximum items per row in grid layout (2 to 10) |
+| `thawBarItemScale`       | Double | All displays with Thaw Bar enabled | How large the Thaw Bar draws items: 0.6 to 1, where 1 is the menu bar's size |
 | `itemSpacingOffset`      | Double | Active display only | Menu bar item spacing for the display, from -16 to 16 points; applied when it has the active menu bar. A link can't ask first, so while **When spacing changes** is set to **Ask before restarting menu bar apps**, the value is saved and each app picks it up when it next starts |
 
 Find display UUIDs in System Settings → Displays, or via `system_profiler SPDisplaysDataType`.
@@ -170,7 +188,7 @@ thaw://set?key=<setting>&value=<true|false>
 
 ```bash
 open "thaw://set?key=autoRehide&value=true"
-open "thaw://set?key=useIceBar&value=true&display=37D8832A-2D66-02CA-B9F7-8F30A301B230"
+open "thaw://set?key=useThawBar&value=true&display=37D8832A-2D66-02CA-B9F7-8F30A301B230"
 ```
 
 Toggle a boolean:
@@ -181,14 +199,14 @@ thaw://toggle?key=<setting>
 
 ```bash
 open "thaw://toggle?key=autoRehide"
-open "thaw://toggle?key=useIceBar&display=XYZ789-..."
+open "thaw://toggle?key=useThawBar&display=XYZ789-..."
 ```
 
 Set a non-boolean (enum, double, location, layout) with `thaw://set`:
 
 ```bash
-open "thaw://set?key=iceBarLocation&value=mousePointer"
-open "thaw://set?key=iceBarLayout&value=grid"
+open "thaw://set?key=thawBarLocation&value=mousePointer"
+open "thaw://set?key=thawBarLayout&value=grid"
 open "thaw://set?key=gridColumns&value=5"
 open "thaw://set?key=rehideInterval&value=10"
 open "thaw://set?key=showOnHoverDelay&value=0.5"
@@ -216,7 +234,7 @@ For security, full settings data is only sent via callback. `broadcast=true` ret
 ```bash
 open "thaw://get?key=all&callback=droppy://thaw-response&requestId=abc123"
 open "thaw://get?key=autoRehide&callback=droppy://thaw-response"
-open "thaw://get?key=useIceBar&display=37D8832A-...&callback=droppy://thaw-response"
+open "thaw://get?key=useThawBar&display=37D8832A-...&callback=droppy://thaw-response"
 open "thaw://get?key=displays&callback=droppy://thaw-response"
 open "thaw://get?key=display&display=37D8832A-...&callback=droppy://thaw-response"
 ```
@@ -250,9 +268,9 @@ All-settings (via callback):
         "isPrimary": true,
         "hasNotch": true,
         "resolution": "2560x1600",
-        "useIceBar": true,
+        "useThawBar": true,
         "useThawBarForAlwaysHidden": false,
-        "iceBarLocation": "mousePointer",
+        "thawBarLocation": "mousePointer",
         "alwaysShowHiddenItems": false
       }
     }
@@ -286,9 +304,9 @@ Displays:
         "isPrimary": true,
         "hasNotch": true,
         "resolution": "2560x1600",
-        "useIceBar": true,
+        "useThawBar": true,
         "useThawBarForAlwaysHidden": false,
-        "iceBarLocation": "mousePointer",
+        "thawBarLocation": "mousePointer",
         "alwaysShowHiddenItems": false
       }
     ]
@@ -504,7 +522,7 @@ open "thaw://release-item?item-id=com.example.app%3AItem-0"
 # @raycast.schemaVersion 1
 # @raycast.title Toggle Thaw Setting
 # @raycast.mode silent
-# @raycast.argument1 { "type": "dropdown", "placeholder": "Setting", "data": [{"title": "Auto-Rehide", "value": "autoRehide"}, {"title": "Hover Reveal", "value": "showOnHover"}, {"title": "Thaw Bar", "value": "useIceBar"}] }
+# @raycast.argument1 { "type": "dropdown", "placeholder": "Setting", "data": [{"title": "Auto-Rehide", "value": "autoRehide"}, {"title": "Hover Reveal", "value": "showOnHover"}, {"title": "Thaw Bar", "value": "useThawBar"}] }
 
 open "thaw://toggle?key=${1}"
 ```
