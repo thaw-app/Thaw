@@ -504,10 +504,7 @@ final class MenuBarManager {
         else { return }
         Task { [weak self] in
             do {
-                let profile = try appState.profileManager.loadProfile(id: profileID)
-                let previousID = appState.profileManager.activeProfileID
-                appState.profileManager.activeProfileID = profileID
-                appState.profileManager.applyProfile(profile, to: appState, previousProfileID: previousID)
+                try appState.profileManager.switchToProfile(id: profileID, on: appState)
             } catch {
                 // The menu is gone; report failure like the Profiles pane so the pick does not appear successful.
                 self?.diagLog.error("Failed to apply profile \(profileID): \(error)")
@@ -839,9 +836,8 @@ final class MenuBarManager {
     func rebuildItemHotkeys() {
         guard let appState else { return }
 
-        let saved = Defaults.dictionary(forKey: .menuBarItemHotkeys) as? [String: Data] ?? [:]
-        let dec = JSONDecoder()
-        let enc = JSONEncoder()
+        let store = HotkeyBindingStore.items
+        let saved = store.rawBindings()
 
         // Assign only actionable items with a resolved source; unresolved apps use unstable UUIDs.
         // Always retain saved bindings so filtering present items cannot strand recorded hotkeys.
@@ -863,7 +859,7 @@ final class MenuBarManager {
 
         for identifier in wantedIdentifiers {
             let savedCombo: KeyCombination? = saved[identifier].flatMap { data in
-                try? dec.decode(KeyCombination?.self, from: data)
+                try? HotkeyBindingStore.combination(from: data)
             }
 
             if let existing = newHotkeys[identifier] {
@@ -883,13 +879,7 @@ final class MenuBarManager {
             hotkey.keyCombinationDidChange = { [weak self, weak hotkey] in
                 guard let self, let hotkey else { return }
                 let newCombo = hotkey.keyCombination
-                var dict = Defaults.dictionary(forKey: .menuBarItemHotkeys) as? [String: Data] ?? [:]
-                if let combo = newCombo, let data = try? enc.encode(combo) {
-                    dict[identifier] = data
-                } else {
-                    dict.removeValue(forKey: identifier)
-                }
-                Defaults.set(dict, forKey: .menuBarItemHotkeys)
+                try? store.set(newCombo, for: identifier)
                 hotkeyItemMap[ObjectIdentifier(hotkey)] = newCombo != nil ? identifier : nil
             }
 

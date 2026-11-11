@@ -19,8 +19,8 @@ extension HIDEventManager {
             return true
         }
         return Self.thawIconHoverGate.mayArmFromIcon
-            && isMouseInsideMenuBar(appState: appState, screen: screen)
-            && !isMouseInsideNotch(appState: appState, screen: screen)
+            && isMouseInsideMenuBar(screen: screen)
+            && !isMouseInsideNotch(screen: screen)
             && isMouseOnShownThawIcon(appState: appState)
     }
 

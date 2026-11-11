@@ -35,8 +35,8 @@ public extension DiagnosticLogger {
         /// A negative retention or a zero count would delete every log, so each field is held in range.
         public func sanitized() -> RotationPolicy {
             var policy = self
-            policy.retentionDays = min(max(1, retentionDays), Self.maxRetentionDays)
-            policy.maxFileCount = min(max(1, maxFileCount), Self.maxRetainedFileCount)
+            policy.retentionDays = retentionDays.clamped(min: 1, max: Self.maxRetentionDays)
+            policy.maxFileCount = maxFileCount.clamped(min: 1, max: Self.maxRetainedFileCount)
             policy.maxFileSizeBytes = min(maxFileSizeBytes, Self.maxSizeBytes)
             policy.rotationInterval = rotationInterval.isFinite ? min(max(0, rotationInterval), Self.maxRotationInterval) : 0
             return policy

@@ -255,7 +255,7 @@ final class MenuBarSearchPanel: NSPanel {
         guard let appState else {
             return
         }
-        guard let screen = screen ?? NSScreen.screenWithMouse ?? NSScreen.main else {
+        guard let screen = screen ?? NSScreen.screenWithMouseOrMain else {
             Self.diagLog.error("Missing screen for the search panel")
             return
         }

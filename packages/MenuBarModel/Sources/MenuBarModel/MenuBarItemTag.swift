@@ -67,12 +67,12 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     /// Matches all com.apple.* owners except app-owned helpers, which can be concealed per bundle.
     public var isNonConcealableSystemItem: Bool {
         let owner = namespace.description
-        if owner.hasPrefix("com.apple."), Self.isAppleAppOwnedBundle(owner) {
+        if SharedConstants.isAppleBundleIdentifier(owner), Self.isAppleAppOwnedBundle(owner) {
             return false
         }
         // Game Mode's indicator is the one system agent item users may put away.
         guard namespace != .gamePolicyAgent else { return false }
-        return isSystemItem || owner.hasPrefix("com.apple.")
+        return isSystemItem || SharedConstants.isAppleBundleIdentifier(owner)
     }
 
     /// Agents in /System/Library/CoreServices cannot conceal hosted items individually; other Apple bundles are app-owned.
@@ -314,7 +314,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
 
     /// Whether this item's owner is in agentUngovernedOwners.
     public var isAgentUngoverned: Bool {
-        if case let .string(owner) = namespace {
+        if let owner = namespace.bundleIdentifier {
             return MenuBarItemTag.agentUngovernedOwners.contains(owner)
         }
         return false
@@ -322,7 +322,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
 
     /// Whether this item's owner is in hidingUnsupportedBundleIDs.
     public var isHidingUnsupported: Bool {
-        if case let .string(bundleID) = namespace {
+        if let bundleID = namespace.bundleIdentifier {
             return MenuBarItemTag.hidingUnsupportedBundleIDs.contains(bundleID)
         }
         return false
@@ -606,7 +606,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     }
 
     public static func canonicalTitle(namespace: Namespace, title: String) -> String {
-        guard case let .string(bundleID) = namespace else {
+        guard let bundleID = namespace.bundleIdentifier else {
             return title
         }
         return migratedAppKitPlaceholderTitle(bundleID: bundleID, title: title) ?? migratedWidgetTitle(bundleID: bundleID, title: title)

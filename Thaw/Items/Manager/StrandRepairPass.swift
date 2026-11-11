@@ -293,7 +293,7 @@ extension StrandRepairPass {
     ) async -> Step {
         liveItems = await environment.readBar()
         guard !isInterrupted else { return .finish((liveItems, true, false)) }
-        if satisfiesVisibleBoundary(strand, controlItems: controlItems) {
+        if selection.satisfiesVisibleBoundary(items: liveItems, item: strand, controlItems: controlItems) {
             MenuBarItemManager.diagLog.info("Repaired macOS 27 visible boundary for \(strand.logString) via verified move")
             return .nextStrand
         }
@@ -338,21 +338,11 @@ extension StrandRepairPass {
         environment.commitPreferredPositionWrite(controller: controller)
         liveItems = await environment.readBar()
         guard !isInterrupted else { return .aborted }
-        if satisfiesVisibleBoundary(strand, controlItems: controlItems) {
+        if selection.satisfiesVisibleBoundary(items: liveItems, item: strand, controlItems: controlItems) {
             MenuBarItemManager.diagLog.info("Repaired macOS 27 visible boundary for \(strand.logString) via \(label)")
             return .repaired
         }
         return .notRepaired
-    }
-
-    private func satisfiesVisibleBoundary(_ strand: MenuBarItem, controlItems: ControlItemPair) -> Bool {
-        MenuBarLayoutPlannerProvider.current.liveOrderSatisfiesSectionBoundary(
-            items: liveItems,
-            item: strand,
-            section: .visible,
-            controlItems: controlItems,
-            experimentalSystemItemHiding: experimentalSystemItemHiding
-        )
     }
 
     /// A repaired item's history is cleared; one still stranded after

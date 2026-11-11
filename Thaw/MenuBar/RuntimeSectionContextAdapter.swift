@@ -263,7 +263,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     }
 
     private func logControlItemCrops(reason: String, items: [MenuBarItem]) async {
-        let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
+        let displayID = Bridging.activeMenuBarDisplayID
         await ScreenCapture.logMenuBarHostingWindowCandidates(displayID: displayID, reason: reason)
 
         guard let capture = await ScreenCapture.captureMenuBarHostingWindowAsync(displayID: displayID) else {
@@ -378,7 +378,7 @@ extension RuntimeSectionContextAdapter {
     func isMenuOpen(forItem identifier: String) async -> Bool {
         let key = MenuBarItemTag.canonicalPersistentIdentifier(identifier)
         guard let item = appState?.itemManager.managedItems.first(where: {
-            MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier) == key
+            $0.canonicalIdentifier == key
         }) else {
             return await menuOpenMonitor.isAnyMenuOpen()
         }

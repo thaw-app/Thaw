@@ -76,7 +76,7 @@ final class ToolsSettings: SettingsURIHandling {
     }
 
     nonisolated static func rotationPolicy(maxSizeMB: Int, retentionDays: Int, interval: LogRotationInterval) -> DiagnosticLogger.RotationPolicy {
-        let megabytes = min(max(0, maxSizeMB), maxDiagnosticLogSizeMB)
+        let megabytes = maxSizeMB.clamped(min: 0, max: maxDiagnosticLogSizeMB)
         return DiagnosticLogger.RotationPolicy(
             maxFileSizeBytes: UInt64(megabytes) * 1024 * 1024,
             rotationInterval: interval.seconds,

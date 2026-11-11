@@ -1186,7 +1186,7 @@ final class MenuBarItemManager {
     }
 
     private func persistedNewItemsAnchorIdentifier(for item: MenuBarItem) -> String {
-        MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
+        item.canonicalIdentifier
     }
 
     private func resolvedNewItemsAnchorIndex(

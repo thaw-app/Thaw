@@ -42,7 +42,7 @@ extension MenuBarItemImageCache {
     ) async {
         let displayID = Self.captureDisplayID(
             itemCacheDisplayID: appState.itemManager.itemDisplayID,
-            activeMenuBarDisplayID: windowServer.activeMenuBarDisplayID(),
+            activeMenuBarDisplayID: Bridging.getActiveMenuBarDisplayID(),
             mainDisplayID: CGMainDisplayID()
         )
         let live = await reader.menuBarItems(displayID: displayID).filter { live in

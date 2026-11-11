@@ -31,12 +31,6 @@ nonisolated struct SearchWeights {
     /// identity key, ordered so a name match outranks an app match, which
     /// outranks a match on the raw identifier.
     static let palette = SearchWeights(title: 0.3, keywords: 0.6, description: 1.0)
-
-    /// The weighting used by menu bar item search (MenuBarSearchPanel),
-    /// which only matches on the item's display name. 1.0 is Ifrit's
-    /// FuseProp default weight, preserved here so adopting SearchRanker
-    /// doesn't change menu-bar-item search ranking.
-    static let menuBarItem = SearchWeights(title: 1.0, keywords: 1.0, description: 1.0)
 }
 
 // MARK: - SearchRanker

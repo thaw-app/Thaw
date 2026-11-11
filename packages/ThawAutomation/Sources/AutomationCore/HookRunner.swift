@@ -8,13 +8,9 @@
 import Foundation
 import os
 import Subprocess
+import System
 import ThawConcurrency
 import ThawModuleKit
-#if canImport(System)
-    import System
-#else
-    import SystemPackage
-#endif
 
 /// Executes user-supplied profile-apply hooks with a wall-clock timeout
 /// and pipes their output to the module's log.

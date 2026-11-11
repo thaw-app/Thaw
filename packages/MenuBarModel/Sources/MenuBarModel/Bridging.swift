@@ -285,72 +285,6 @@ public extension Bridging {
     }
 }
 
-// MARK: - SLSMenuBar
-
-public extension Bridging {
-    /// The window server's own account of menu bar reveal state.
-    ///
-    /// Thaw otherwise infers this from item geometry, which cannot distinguish
-    /// "settled" from "one frame into a reveal". Acting mid-reflow is what
-    /// produces mis-timed captures and synthetic moves against a layout that is
-    /// still moving.
-    struct MenuBarRevealState: Equatable, Sendable {
-        /// Progress through an autohide reveal, 0...1.
-        public let revealFraction: Float
-        /// Menu bar bounds while revealed; .zero when nothing is revealed.
-        public let revealedBounds: CGRect
-        public let isAutohideEnabled: Bool
-        public let isVisible: Bool
-        /// Whether the window server actually answered. False when SkyLight no
-        /// longer vends these symbols, in which case every other field is a
-        /// placeholder and callers must fall back to inferring from geometry.
-        public let isAvailable: Bool
-    }
-
-    /// Reads menu bar reveal state for spaceID, defaulting to the active space.
-    ///
-    /// Every call here is a plain window-server round trip on the main
-    /// connection, with no entitlement or private mach service. Failures degrade
-    /// to a settled-looking state rather than throwing, since callers use this to
-    /// defer work and "settled" on error means acting immediately.
-    static func menuBarRevealState(forSpace spaceID: CGSSpaceID? = nil) -> MenuBarRevealState {
-        guard
-            SLSMenuBar.isAvailable,
-            let getReveal = SLSMenuBar.getSpaceMenuBarReveal,
-            let getBounds = SLSMenuBar.getRevealedMenuBarBounds,
-            let getAutohide = SLSMenuBar.getMenuBarAutohideEnabled,
-            let isVisible = SLSMenuBar.isMenuBarVisibleOnSpace
-        else {
-            return MenuBarRevealState(
-                revealFraction: 0,
-                revealedBounds: .zero,
-                isAutohideEnabled: false,
-                isVisible: true,
-                isAvailable: false
-            )
-        }
-
-        let cid = cgsMainConnectionID()
-        let sid = spaceID ?? getActiveSpaceID()
-
-        var bounds = CGRect.zero
-        if getBounds(cid, &bounds) != .success {
-            bounds = .zero
-        }
-
-        var autohide: Int32 = 0
-        let autohideEnabled = getAutohide(cid, &autohide) == .success && autohide != 0
-
-        return MenuBarRevealState(
-            revealFraction: getReveal(sid),
-            revealedBounds: bounds,
-            isAutohideEnabled: autohideEnabled,
-            isVisible: isVisible(cid, sid) != 0,
-            isAvailable: true
-        )
-    }
-}
-
 // MARK: - Windows
 
 public extension Bridging {
@@ -457,9 +391,8 @@ public extension Bridging {
         }
 
         for wid in windowIDs {
-            let bounds = getWindowBounds(for: wid)
-            let level = getWindowLevel(for: wid)
-            diagLog.debug("getMenuBarWindowIDs: pid \(pid) → window \(wid) bounds=\(bounds?.debugDescription ?? "nil") level=\(level.map(String.init(describing:)) ?? "nil")")
+            // Read inside the message so the two window-server calls only run when debug logging is on.
+            diagLog.debug("getMenuBarWindowIDs: pid \(pid) → window \(wid) bounds=\(getWindowBounds(for: wid)?.debugDescription ?? "nil") level=\(getWindowLevel(for: wid).map(String.init(describing:)) ?? "nil")")
         }
         if !skipWidthFilter, windowIDs.isEmpty, outCount > 0 {
             diagLog.debug("getMenuBarWindowIDs: pid \(pid) → all \(outCount) returned windows were hosting windows, filtered out")

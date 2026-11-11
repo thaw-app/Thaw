@@ -161,9 +161,7 @@ enum ControlOrderRules {
         savedOrder: [String]
     ) -> [MenuBarItem] {
         let canonicalOrder = MenuBarItemTag.canonicalPersistentIdentifiers(savedOrder)
-        let visibleCanonical = MenuBarItemTag.canonicalPersistentIdentifier(
-            visibleControl.uniqueIdentifier
-        )
+        let visibleCanonical = visibleControl.canonicalIdentifier
         let liveSegment = MenuBarItem.sortByVisualCenterThenIdentifier(
             ordinaryVisibleItems + [visibleControl]
         )
@@ -175,13 +173,13 @@ enum ControlOrderRules {
         let canonicalSet = Set(canonicalOrder)
         let newlyForcedVisible = liveSegment.filter {
             !canonicalSet.contains(
-                MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier)
+                $0.canonicalIdentifier
             )
         }
         let authoredVisible = MenuBarBackendProvider.current.overflowOrderedVisibleItems(
             liveSegment.filter {
                 canonicalSet.contains(
-                    MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier)
+                    $0.canonicalIdentifier
                 )
             },
             using: savedOrder

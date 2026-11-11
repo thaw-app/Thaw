@@ -14,7 +14,7 @@ extension HIDEventManager {
         let manager = appState.menuBarManager
         // Zen Mode keeps hover paused until it ends.
         guard
-            !manager.showOnHoverAllowed, !manager.isZenModeActive, !isMouseInsideMenuBarHoverBand(appState: appState, screen: screen)
+            !manager.showOnHoverAllowed, !manager.isZenModeActive, !isMouseInsideMenuBarHoverBand(screen: screen)
         else {
             return
         }
@@ -37,7 +37,7 @@ extension HIDEventManager {
             return
         }
 
-        guard isMouseInsideMenuBar(appState: appState, screen: screen) else {
+        guard isMouseInsideMenuBar(screen: screen) else {
             return
         }
 
@@ -58,12 +58,9 @@ extension HIDEventManager {
         appState: AppState,
         screen: NSScreen
     ) -> Bool {
-        guard isMouseInsideMenuBarItem(appState: appState, screen: screen) else {
+        guard isMouseInsideMenuBarItem(appState: appState) else {
             // Exclude the frontmost app's menu; indeterminate answers count as empty menu bar space.
-            return isMouseInsideApplicationMenuClickRegion(
-                appState: appState,
-                screen: screen
-            ) != true && appState.menuBarManager.section(withName: .hidden)?.isHidden == false
+            return isMouseInsideApplicationMenuClickRegion(screen: screen) != true && appState.menuBarManager.section(withName: .hidden)?.isHidden == false
         }
         switch event.type {
         case .leftMouseDown:

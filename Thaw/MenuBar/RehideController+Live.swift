@@ -26,10 +26,10 @@ extension RehideController.Environment {
             },
             isAnyMenuOpen: { await menuOpenMonitor.isAnyMenuOpen() },
             isPointerAwayFromBars: { [weak appState] in
-                guard let appState, let screen = appState.hidEventManager.bestScreen(appState: appState) else {
+                guard let appState, let screen = NSScreen.activeMenuBarScreenOrMain else {
                     return false
                 }
-                return !appState.hidEventManager.isMouseInsideMenuBar(appState: appState, screen: screen)
+                return !appState.hidEventManager.isMouseInsideMenuBar(screen: screen)
                     && !appState.hidEventManager.isMouseInsideThawBar(appState: appState)
             },
             activeSpaceID: { Bridging.getActiveSpaceID() },
@@ -53,7 +53,7 @@ extension RehideController.Environment {
                 guard let appState else { return false }
                 let hidEventManager = appState.hidEventManager
                 return NSScreen.screens.contains {
-                    hidEventManager.isMouseInsideMenuBarHoverBand(appState: appState, screen: $0)
+                    hidEventManager.isMouseInsideMenuBarHoverBand(screen: $0)
                 } || hidEventManager.isMouseInsideThawBar(appState: appState)
             },
             hideSection: { [weak appState] name in

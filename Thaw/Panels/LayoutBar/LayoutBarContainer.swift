@@ -635,7 +635,7 @@ final class LayoutBarContainer: NSView {
         var recyclable = [String: LayoutBarArrangedView]()
         for view in arrangedViews {
             guard case let .item(shown) = view.kind else { continue }
-            let identifier = MenuBarItemTag.canonicalPersistentIdentifier(shown.uniqueIdentifier)
+            let identifier = shown.canonicalIdentifier
             if recyclable[identifier] == nil {
                 recyclable[identifier] = view
             }
@@ -643,7 +643,7 @@ final class LayoutBarContainer: NSView {
         var seenIdentifiers = Set<String>()
         var newViews = [LayoutBarArrangedView]()
         for item in displayedItems {
-            let identifier = MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
+            let identifier = item.canonicalIdentifier
             guard seenIdentifiers.insert(identifier).inserted else { continue }
             // A recycled view is only valid for the same live item: its canonical
             // identifier can survive a refresh that mints a new synthetic window ID.
@@ -662,7 +662,7 @@ final class LayoutBarContainer: NSView {
         if section != .visible {
             let sectionController = appState.menuBarManager.sectionController
             let liveIdentifiers = Set(
-                displayedItems.map { MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier) }
+                displayedItems.map { $0.canonicalIdentifier }
             )
             let placeholders = sectionController.sectionAssignment
                 .filter { $0.value == section }

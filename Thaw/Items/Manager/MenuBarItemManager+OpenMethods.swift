@@ -14,7 +14,7 @@ extension MenuBarItemManager {
         let version = bundleURL
             .flatMap { Bundle(url: $0)?.infoDictionary?["CFBundleVersion"] as? String } ?? ""
         return OpenMethodIdentity(
-            key: MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier),
+            key: item.canonicalIdentifier,
             appVersion: version
         )
     }

@@ -135,7 +135,7 @@ final class MenuBarSection {
 
     /// Use the active menu bar's screen so icon clicks activate their popups.
     private weak var screenForThawBar: NSScreen? {
-        NSScreen.screenWithActiveMenuBar ?? NSScreen.main
+        NSScreen.activeMenuBarScreenOrMain
     }
 
     /// The hiding state the user desires for the section.

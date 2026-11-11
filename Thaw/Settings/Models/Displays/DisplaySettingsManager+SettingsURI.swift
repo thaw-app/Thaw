@@ -98,58 +98,15 @@ extension DisplaySettingsManager {
 
     /// What a thaw:// key and its value do to one display's configuration, or nil for a bad value.
     static func update(forKey key: String, userInfo: [AnyHashable: Any]) -> ConfigurationUpdate? {
-        let toggles = userInfo["toggle"] as? Bool == true
-        let flag = userInfo["value"] as? Bool
-        let text = userInfo["stringValue"] as? String
-        if let (keyPath, apply) = flagKeys[key] {
-            return flagUpdate(toggles, flag, keyPath, apply)
-        }
-        guard let text, let parse = valueKeys[key] else { return nil }
-        return parse(text)
+        PerDisplayURIKeys.key(key)?.update(
+            toggles: userInfo["toggle"] as? Bool == true,
+            flag: userInfo["value"] as? Bool,
+            text: userInfo["stringValue"] as? String
+        )
     }
-
-    /// The keys with a value, each parsing its text into a change, or nil for a bad value.
-    private static let valueKeys: [String: (String) -> ConfigurationUpdate?] = [
-        "thawBarLocation": { text in
-            Int(text).flatMap(ThawBarLocation.init(rawValue:)).map { location in { $0.withThawBarLocation(location) } }
-        },
-        "thawBarLayout": { text in
-            ThawBarLayout.fromString(text).map { layout in { $0.withThawBarLayout(layout) } }
-        },
-        "gridColumns": { text in
-            Int(text).map { columns in { $0.withGridColumns(Swift.max(2, Swift.min(columns, 10))) } }
-        },
-        "thawBarItemScale": { text in
-            DisplaySettingsManager.finite(text).map { scale in { $0.withThawBarItemScale(ThawBarItemSize.clampedScale(scale)) } }
-        },
-        "itemSpacingOffset": { text in
-            DisplaySettingsManager.finite(text).map { offset in { $0.withItemSpacingOffset(Swift.max(-16, Swift.min(offset.rounded(), 16))) } }
-        },
-    ]
 
     /// A number a link may set. "nan" and "inf" parse as numbers, and clamping turns them into a real value.
     static func finite(_ text: String) -> Double? {
         Double(text).flatMap { $0.isFinite ? $0 : nil }
-    }
-
-    /// The Boolean keys: the value each reads and how each writes it.
-    private static let flagKeys: [String: (KeyPath<DisplayThawBarConfiguration, Bool>, (DisplayThawBarConfiguration, Bool) -> DisplayThawBarConfiguration)] = [
-        "useThawBar": (\.useThawBar, { $0.withUseThawBar($1) }),
-        "alwaysShowHiddenItems": (\.alwaysShowHiddenItems, { $0.withAlwaysShowHiddenItems($1) }),
-        "useThawBarForAlwaysHidden": (\.useThawBarForAlwaysHidden, { $0.withUseThawBarForAlwaysHidden($1) }),
-    ]
-
-    /// A Boolean key's change: a toggle flips the current value, a set writes it.
-    private static func flagUpdate(
-        _ toggles: Bool,
-        _ value: Bool?,
-        _ keyPath: KeyPath<DisplayThawBarConfiguration, Bool>,
-        _ apply: @escaping (DisplayThawBarConfiguration, Bool) -> DisplayThawBarConfiguration
-    ) -> ConfigurationUpdate? {
-        if toggles {
-            return { apply($0, !$0[keyPath: keyPath]) }
-        }
-        guard let value else { return nil }
-        return { apply($0, value) }
     }
 }

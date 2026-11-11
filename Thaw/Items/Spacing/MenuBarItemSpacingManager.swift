@@ -8,11 +8,7 @@
 import Cocoa
 import MenuBarModel
 import Subprocess
-#if canImport(System)
-    import System
-#else
-    import SystemPackage
-#endif
+import System
 
 @MainActor
 final class MenuBarItemSpacingManager {

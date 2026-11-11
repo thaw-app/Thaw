@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import MenuBarModel
 
 /// An app the reduced mode can hide.
 struct ReducedModeApp: Equatable, Identifiable {
@@ -35,7 +36,7 @@ enum ReducedModeInventory {
         var names = [String: String]()
         for app in running {
             guard let bundleID = app.bundleID, !app.isBackgroundOnly,
-                  !isOwn(bundleID), !bundleID.hasPrefix("com.apple.")
+                  !isOwn(bundleID), !SharedConstants.isAppleBundleIdentifier(bundleID)
             else { continue }
             if let tableKeys, !tableKeys.contains(where: { $0.hasPrefix("status:\(bundleID)::") }) {
                 continue

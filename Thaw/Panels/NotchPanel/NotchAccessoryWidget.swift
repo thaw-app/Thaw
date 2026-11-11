@@ -70,7 +70,7 @@ final class NotchAccessoryWidget: NotchWidget {
     /// Matches anything: whether there is something to show is decided in
     /// isAvailable, once the item's accessibility strings have been read.
     func matches(_ item: MenuBarItem) -> Bool {
-        guard case let .string(bundleID) = item.tag.namespace else {
+        guard let bundleID = item.tag.namespace.bundleIdentifier else {
             return false
         }
         return !ThawMenuBarIdentity.owns(bundleIdentifier: bundleID)
@@ -125,7 +125,7 @@ final class NotchAccessoryWidget: NotchWidget {
             item.tag.title,
             item.owningApplication?.localizedName,
         ]
-        if case let .string(bundleID) = item.tag.namespace {
+        if let bundleID = item.tag.namespace.bundleIdentifier {
             names.append(contentsOf: bundleID.split(separator: ".").map(String.init))
         }
         return names

@@ -202,10 +202,6 @@ nonisolated enum Constants {
     /// The Crowdin project URL for community translations.
     static let translateURL = URL(string: "https://crowdin.com/project/thaw")!
 
-    /// The Lab discussion category, where users vote on which experiments
-    /// should graduate to stable features.
-    static let labDiscussionURL = URL(string: "https://github.com/orgs/thaw-app/discussions/categories/the-lab")!
-
     /// The executable URL used by MenuBarItemSpacingManager.
     static let menuBarItemSpacingExecutableURL: URL = requiredInfoPlistURL(menuBarItemSpacingExecutableURIInfoPlistKey)
 

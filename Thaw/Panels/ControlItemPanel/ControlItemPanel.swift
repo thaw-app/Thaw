@@ -130,7 +130,7 @@ final class ControlItemPanelController: NSObject, NSPopoverDelegate {
         {
             return screen
         }
-        return NSScreen.screenWithMouse ?? NSScreen.main
+        return NSScreen.screenWithMouseOrMain
     }
 
     /// AppKit coordinates under the bar at the icon's x make the fallback popover hang like a menu.

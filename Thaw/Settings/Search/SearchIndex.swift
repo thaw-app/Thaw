@@ -197,7 +197,7 @@ nonisolated enum SearchIndex {
     /// @Published property names that are intentionally absent from the
     /// index because they are deprecated, internal, or currently commented out
     /// of the UI. The drift-guard test allows these.
-    private static let baseNonSearchableProperties: Set<SettingsProperty> = [
+    static let nonSearchableProperties: Set<SettingsProperty> = [
         .general("lastCustomThawIcon"),
         .thawBar("useThawBar"),
         .thawBar("useThawBarOnlyOnNotchedDisplay"),
@@ -234,18 +234,8 @@ nonisolated enum SearchIndex {
         .privacy("whitelistedApps"),
     ]
 
-    static var nonSearchableProperties: Set<SettingsProperty> {
-        return baseNonSearchableProperties
-    }
-
     /// Returns the entries that belong to the given pane.
     static func entries(for pane: SettingsNavigationIdentifier) -> [SearchEntry] {
         entries.filter { $0.pane == pane }
-    }
-
-    /// Lowest diffScore first (0 is a perfect match). Shares SearchRanker
-    /// with menu bar item search so the two cannot drift.
-    static func sortedByRelevance<T>(_ items: [(item: T, diffScore: Double)]) -> [T] {
-        SearchRanker.sortedByRelevance(items)
     }
 }

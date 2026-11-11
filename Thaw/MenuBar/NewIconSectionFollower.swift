@@ -48,7 +48,7 @@ nonisolated struct NewIconArrivals {
         seen.formUnion(arrivals)
         return arrivals.compactMap { arrival in
             // A stand-in is placed by its launcher, in the slot of the original it replaces.
-            guard let app = Self.app(of: arrival), !app.hasPrefix("com.apple."), !SystemExtraStandIn.owns(bundleIdentifier: app)
+            guard let app = Self.app(of: arrival), !SharedConstants.isAppleBundleIdentifier(app), !SystemExtraStandIn.owns(bundleIdentifier: app)
             else { return nil }
             let appIcons = known.filter { Self.app(of: $0) == app }
             // A new app's icon goes where Layout's New Items placeholder says. On macOS 27
@@ -71,7 +71,7 @@ nonisolated struct NewIconArrivals {
     /// others with identifier at index, the New Items placeholder's slot.
     static func order(placing identifier: String, among others: [String], at index: Int) -> [String] {
         var order = others
-        order.insert(identifier, at: min(max(index, 0), others.count))
+        order.insert(identifier, at: index.clamped(min: 0, max: others.count))
         return order
     }
 

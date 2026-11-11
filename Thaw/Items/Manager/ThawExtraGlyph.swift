@@ -17,7 +17,7 @@ import MenuBarModel
 enum ThawExtraGlyph {
     /// slotFolder is where Thaw writes the icons it hands its slots.
     static func image(for item: MenuBarItem, slotFolder: URL = ItemStandInSlot.folder) -> NSImage? {
-        guard case let .string(bundleID) = item.tag.namespace else { return nil }
+        guard let bundleID = item.tag.namespace.bundleIdentifier else { return nil }
         if let slot = ItemStandInSlot(bundleIdentifier: bundleID) {
             return slotImage(slot, in: slotFolder)
         }
@@ -34,7 +34,7 @@ enum ThawExtraGlyph {
     /// Whether an item is one of Thaw's stand-ins. Their images are bare symbols with
     /// no margin of their own, so previews draw them at their own size, not tile-filling.
     nonisolated static func isStandIn(_ tag: MenuBarItemTag) -> Bool {
-        guard case let .string(bundleID) = tag.namespace else { return false }
+        guard let bundleID = tag.namespace.bundleIdentifier else { return false }
         return SystemExtraStandIn.owns(bundleIdentifier: bundleID) || ItemStandInSlot(bundleIdentifier: bundleID) != nil
     }
 

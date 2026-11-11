@@ -78,7 +78,7 @@ struct ItemManagerStrandRepairEnvironment: StrandRepairEnvironment {
     }
 
     func displayWhereApplicationMenuWrapsPastNotch() -> CGDirectDisplayID? {
-        guard let screen = NSScreen.screenWithActiveMenuBar ?? NSScreen.main else { return nil }
+        guard let screen = NSScreen.activeMenuBarScreenOrMain else { return nil }
         return MenuBarCapacitySnapshot.applicationMenuWrapsPastNotch(on: screen) ? screen.displayID : nil
     }
 

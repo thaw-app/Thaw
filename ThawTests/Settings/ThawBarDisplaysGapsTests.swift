@@ -90,14 +90,60 @@ struct ThawBarDisplaysGapsTests {
         #expect(SettingsURIHandler.perDisplayKeys.contains("thawBarItemScale"))
         #expect(SettingsURIHandler.perDisplayKeys.contains("itemSpacingOffset"))
         #expect(SettingsURIHandler.perDisplayKeys.contains("useThawBarForAlwaysHidden"))
-        #expect(!SettingsURIHandler.handleDisplayLookSet(key: "thawBarItemScale", value: "big", scope: .activeDisplay))
-        #expect(!SettingsURIHandler.handleDisplayLookSet(key: "thawBarItemScale", value: "nan", scope: .activeDisplay))
-        #expect(!SettingsURIHandler.handleDisplayLookSet(key: "itemSpacingOffset", value: "nan", scope: .activeDisplay))
-        #expect(!SettingsURIHandler.handleDisplayLookSet(key: "itemSpacingOffset", value: "-inf", scope: .activeDisplay))
-        #expect(!SettingsURIHandler.handleDisplayLookSet(key: "useThawBarForAlwaysHidden", value: "maybe", scope: .activeDisplay))
+        #expect(!SettingsURIHandler.handlePerDisplaySet(key: "thawBarItemScale", value: "big", displayUUID: nil))
+        #expect(!SettingsURIHandler.handlePerDisplaySet(key: "thawBarItemScale", value: "nan", displayUUID: nil))
+        #expect(!SettingsURIHandler.handlePerDisplaySet(key: "itemSpacingOffset", value: "nan", displayUUID: nil))
+        #expect(!SettingsURIHandler.handlePerDisplaySet(key: "itemSpacingOffset", value: "-inf", displayUUID: nil))
+        #expect(!SettingsURIHandler.handlePerDisplaySet(key: "useThawBarForAlwaysHidden", value: "maybe", displayUUID: nil))
+        #expect(!SettingsURIHandler.handlePerDisplaySet(key: "notAKey", value: "1", displayUUID: nil))
         let config = DisplayThawBarConfiguration.defaultConfiguration.withThawBarItemScale(0.8)
-        #expect(SettingsURIHandler.displayLookValue(key: "thawBarItemScale", config: config)?["value"] as? Double == 0.8)
-        #expect(SettingsURIHandler.displayLookValue(key: "gridColumns", config: config) == nil)
+        #expect(PerDisplayURIKeys.key("thawBarItemScale")?.reading(config)["value"] as? Double == 0.8)
+        #expect(PerDisplayURIKeys.key("gridColumns")?.reading(config)["value"] as? Int == config.gridColumns)
+    }
+
+    @Test("Each per-display key keeps the default displays and the forwarded value it always had")
+    func uriKeyTable() {
+        let scopes = Dictionary(uniqueKeysWithValues: PerDisplayURIKeys.all.map { ($0.name, $0.defaultScope) })
+        #expect(scopes == [
+            "useThawBar": .activeDisplay, "itemSpacingOffset": .activeDisplay,
+            "alwaysShowHiddenItems": .allNonThawBarDisplays, "useThawBarForAlwaysHidden": .allNonThawBarDisplays,
+            "thawBarLocation": .allEnabledDisplays, "thawBarLayout": .allEnabledDisplays,
+            "gridColumns": .allEnabledDisplays, "thawBarItemScale": .allEnabledDisplays,
+        ])
+        #expect(SettingsURIHandler.perDisplayKeys == [
+            "useThawBar", "thawBarLocation", "alwaysShowHiddenItems", "thawBarLayout",
+            "gridColumns", "thawBarItemScale", "itemSpacingOffset", "useThawBarForAlwaysHidden",
+        ])
+        #expect(PerDisplayURIKeys.all.filter(\.isFlag).map(\.name) == ["useThawBar", "alwaysShowHiddenItems", "useThawBarForAlwaysHidden"])
+
+        func forwarded(_ key: String, _ value: String) -> String? {
+            guard case let .value(accept, _, _) = PerDisplayURIKeys.key(key)?.kind else { return nil }
+            return accept(value)
+        }
+        #expect(forwarded("thawBarLocation", "iceIcon") == "2")
+        #expect(forwarded("thawBarLocation", "rightAligned") == "4")
+        #expect(forwarded("thawBarLocation", "sideways") == nil)
+        #expect(forwarded("thawBarLayout", "grid") == "2")
+        #expect(forwarded("gridColumns", "40") == "10")
+        #expect(forwarded("gridColumns", "many") == nil)
+        #expect(forwarded("thawBarItemScale", "0.8") == "0.8")
+        #expect(forwarded("itemSpacingOffset", "3.4") == "3.0")
+        #expect(forwarded("itemSpacingOffset", "-40") == "-16.0")
+        #expect(forwarded("useThawBar", "true") == nil, "a Boolean key forwards a flag, not text")
+    }
+
+    @Test("A display listing reports every per-display key, and a location lists every place it can be")
+    func uriReadings() throws {
+        let config = DisplayThawBarConfiguration.defaultConfiguration.withThawBarLocation(.leftAligned).withGridColumns(6)
+        let values = PerDisplayURIKeys.values(of: config)
+        #expect(Set(values.keys) == Set(SettingsURIHandler.perDisplayKeys))
+        #expect(values["thawBarLocation"] as? String == "leftAligned")
+        #expect(values["gridColumns"] as? Int == 6)
+        #expect(values["useThawBar"] as? Bool == false)
+
+        let location = try #require(PerDisplayURIKeys.key("thawBarLocation")).reading(config)
+        #expect(location["rawValue"] as? Int == ThawBarLocation.leftAligned.rawValue)
+        #expect(location["validValues"] as? [String: Int] == ["dynamic": 0, "mousePointer": 1, "thawIcon": 2, "leftAligned": 3, "rightAligned": 4])
     }
 
     // MARK: Displays

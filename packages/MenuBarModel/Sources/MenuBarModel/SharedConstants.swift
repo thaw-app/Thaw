@@ -19,6 +19,13 @@ public enum SharedConstants {
     /// Path to the SkyLight private framework for window capture APIs.
     public static let skyLightFrameworkPath: String = requiredInfoPlistString(skyLightFrameworkPathInfoPlistKey)
 
+    // MARK: - Apple Bundle Identifiers
+
+    /// Whether the bundle identifier belongs to Apple, so the item is part of macOS.
+    public static func isAppleBundleIdentifier(_ bundleIdentifier: String) -> Bool {
+        bundleIdentifier.hasPrefix("com.apple.")
+    }
+
     // MARK: - Menu Bar Hosting Process
 
     /// Bundle identifier of MenuBarAgent, the process that hosts the menu bar

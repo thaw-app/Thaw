@@ -120,7 +120,7 @@ struct StrandSelection {
         return true
     }
 
-    private func satisfiesVisibleBoundary(items: [MenuBarItem], item: MenuBarItem, controlItems: ControlItemPair) -> Bool {
+    func satisfiesVisibleBoundary(items: [MenuBarItem], item: MenuBarItem, controlItems: ControlItemPair) -> Bool {
         MenuBarLayoutPlannerProvider.current.liveOrderSatisfiesSectionBoundary(
             items: items,
             item: item,

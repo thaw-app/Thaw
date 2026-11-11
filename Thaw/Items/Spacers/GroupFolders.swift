@@ -189,7 +189,7 @@ final class GroupFolders {
         }
         let items = appState?.itemManager.managedItems ?? []
         let names = group.memberIdentifiers.compactMap { identifier in
-            items.first { MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier) == identifier }?.displayName
+            items.first { $0.canonicalIdentifier == identifier }?.displayName
         }
         return names.isEmpty
             ? String(localized: "Folder")
@@ -242,7 +242,7 @@ final class GroupFolders {
             panel.close()
             return
         }
-        guard let screen = sender.window?.screen ?? NSScreen.screenWithActiveMenuBar ?? NSScreen.main else { return }
+        guard let screen = sender.window?.screen ?? NSScreen.activeMenuBarScreenOrMain else { return }
         panel.show(
             section: .hidden,
             on: screen,

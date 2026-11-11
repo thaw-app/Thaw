@@ -545,13 +545,13 @@ extension MenuBarItemImageCache {
     /// and check for cancellation before the first reveal. Merge semantics: a
     /// fresh crop replaces the entry unless
     /// preferredCachedImage(existing:candidate:) keeps the old one, an
-    /// unchanged crop is not republished, and a miss follows missPolicy.
+    /// unchanged crop is not republished, and a miss drops a blank or
+    /// chevron-width entry so the thumbnail falls back to the app icon.
     private func captureConcealedItemsByGroupedReveal(
         _ items: [MenuBarItem],
         controller: any MenuBarSectionControlling,
         displayID: CGDirectDisplayID,
-        scale: CGFloat,
-        missPolicy: RevealMissPolicy
+        scale: CGFloat
     ) async {
         guard !items.isEmpty, !Task.isCancelled,
               !skipCaptureWhileScreenLocked("grouped reveal capture"),
@@ -587,7 +587,6 @@ extension MenuBarItemImageCache {
             items.chunks(ofCount: batchSize).map(Array.init),
             controller: controller,
             target: RevealCaptureTarget(displayID: displayID, admittedDisplayID: admittedDisplayID, scale: scale),
-            missPolicy: missPolicy,
             appState: appState,
             sources: RevealCaptureSession.Sources(
                 settledItems: { batch in
@@ -605,7 +604,7 @@ extension MenuBarItemImageCache {
         )
     }
 
-    /// The reveal loop of captureConcealedItemsByGroupedReveal(_:controller:displayID:scale:missPolicy:),
+    /// The reveal loop of captureConcealedItemsByGroupedReveal(_:controller:displayID:scale:),
     /// one batch after another, stopping at the first batch that may not publish.
     ///
     /// admittedDisplayID is the item cache's display when the caller chose
@@ -616,7 +615,6 @@ extension MenuBarItemImageCache {
         _ batches: [[MenuBarItem]],
         controller: any MenuBarSectionControlling,
         target: RevealCaptureTarget,
-        missPolicy: RevealMissPolicy,
         appState: AppState,
         sources: RevealCaptureSession.Sources
     ) async {
@@ -648,7 +646,7 @@ extension MenuBarItemImageCache {
             },
             commit: { captureResult, revealed, admission in
                 self.commitRevealedBatch(
-                    captureResult, revealed: revealed, admission: admission, missPolicy: missPolicy, appState: appState
+                    captureResult, revealed: revealed, admission: admission, appState: appState
                 )
             }
         )
@@ -665,7 +663,6 @@ extension MenuBarItemImageCache {
         _ captureResult: CapturePass,
         revealed: [(requested: MenuBarItem, live: MenuBarItem)],
         admission: CapturePublicationAdmission,
-        missPolicy: RevealMissPolicy,
         appState: AppState
     ) -> Bool {
         guard !skipCaptureWhileScreenLocked("publishing capture batch") else { return false }
@@ -682,7 +679,7 @@ extension MenuBarItemImageCache {
         // A cancel, usually the Thaw Bar closing, also drops the strip's capture
         // ticket, so the misses after it say nothing about the items.
         let stoppedEarly = Task.isCancelled
-        if missPolicy == .dropUntrustedEntries, !stoppedEarly {
+        if !stoppedEarly {
             for tag in captureResult.invalidatedTags {
                 if !captureResult.unconditionallyInvalidatedTags.contains(tag),
                    let existing = capturesByTag[tag],
@@ -700,10 +697,9 @@ extension MenuBarItemImageCache {
             // cache is keyed by the concealed snapshot the caller holds.
             let tag = pair.requested.tag
             guard let image = captureResult.captured[pair.live.tag] else {
-                // A miss never wipes a settled glyph. Under the dropping
-                // policy a blank or chevron-width entry goes, so a failed
-                // reveal cannot leave a stale thumbnail behind.
-                if missPolicy == .dropUntrustedEntries, !stoppedEarly,
+                // A miss never wipes a settled glyph. A blank or chevron-width
+                // entry goes, so a failed reveal cannot leave a stale thumbnail behind.
+                if !stoppedEarly,
                    let existing = capturesByTag[tag],
                    !Self.isTrustedGlyph(existing)
                 {
@@ -745,7 +741,7 @@ extension MenuBarItemImageCache {
             mayReveal: { ConcealedPrewarmGate.mayReveal(for: self.appState) },
             sectionItems: { self.appState?.itemManager.itemCache[$0] },
             displayID: {
-                self.appState?.itemManager.itemDisplayID ?? self.windowServer.activeMenuBarDisplayID() ?? CGMainDisplayID()
+                self.appState?.itemManager.itemDisplayID ?? Bridging.activeMenuBarDisplayID
             },
             isNativeOverflowActive: { self.appState?.menuBarManager.sectionController.isNativeOverflowActive(on: $0) == true },
             allowsCaptureReveal: { self.appState?.menuBarManager.nativeAppHidingExperiment.allowsCaptureReveal == true },
@@ -758,7 +754,7 @@ extension MenuBarItemImageCache {
                 // A blank or chevron-width entry the reveal cannot better is dropped, so the
                 // Layout thumbnail falls back to the app icon.
                 await self.captureConcealedItemsByGroupedReveal(
-                    items, controller: controller, displayID: displayID, scale: scale, missPolicy: .dropUntrustedEntries
+                    items, controller: controller, displayID: displayID, scale: scale
                 )
             },
             save: { self.saveToDisk() }

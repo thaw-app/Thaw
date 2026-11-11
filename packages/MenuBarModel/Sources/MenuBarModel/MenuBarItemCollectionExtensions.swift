@@ -49,11 +49,11 @@ public extension MenuBarItemCache {
         withCachedItems cachedItems: [MenuBarItem]
     ) -> [MenuBarItem] {
         var identifiers = Set(snapshotItems.map {
-            MenuBarItemTag.canonicalPersistentIdentifier($0.uniqueIdentifier)
+            $0.canonicalIdentifier
         })
         var mergedItems = snapshotItems
         for item in cachedItems {
-            let identifier = MenuBarItemTag.canonicalPersistentIdentifier(item.uniqueIdentifier)
+            let identifier = item.canonicalIdentifier
             if identifiers.insert(identifier).inserted {
                 mergedItems.append(item)
             }

@@ -51,12 +51,8 @@ struct LayoutItemAppDetails {
     let isPartOfThaw: Bool
 
     init(item: MenuBarItem) {
-        let bundleID: String? = if case let .string(id) = item.tag.namespace {
-            id
-        } else {
-            nil
-        }
-        isPartOfMacOS = bundleID?.hasPrefix("com.apple.") ?? false
+        let bundleID = item.tag.namespace.bundleIdentifier
+        isPartOfMacOS = bundleID.map(SharedConstants.isAppleBundleIdentifier) ?? false
         isPartOfThaw = bundleID.map { Self.isThawModule($0) } ?? false
         let running = item.sourceApplication.flatMap { $0.isTerminated ? nil : $0 }
         isRunning = running != nil

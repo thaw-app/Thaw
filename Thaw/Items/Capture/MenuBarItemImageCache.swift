@@ -43,19 +43,15 @@ final class MenuBarItemGlyphSlot {
 @Observable
 final class MenuBarItemImageCache: @unchecked Sendable {
     static nonisolated let diagLog = DiagLog(category: "MenuBarItemImageCache")
-    /// Seam over WindowServer reads; tests substitute a fake.
-    let windowServer: any WindowServerReading
     nonisolated let screenIsLocked: @Sendable () -> Bool
     /// Whether a capture asked for now would run; false while no Thaw surface is open.
     nonisolated let captureIsAllowed: @Sendable () -> Bool
     nonisolated let boundsCropper: AXBoundsCropper
 
     init(
-        windowServer: any WindowServerReading = LiveWindowServerReader(),
         screenIsLocked: @escaping @Sendable () -> Bool = { ScreenLock.isLocked },
         captureIsAllowed: @escaping @Sendable () -> Bool = { ScreenCapture.acceptsCaptures }
     ) {
-        self.windowServer = windowServer
         self.screenIsLocked = screenIsLocked
         self.captureIsAllowed = captureIsAllowed
         boundsCropper = AXBoundsCropper(screenIsLocked: screenIsLocked, captureIsAllowed: captureIsAllowed)
@@ -560,7 +556,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             let nav = makeNavigationStateSnapshot()
 
             let displayID = appState.itemManager.itemDisplayID
-                ?? windowServer.activeMenuBarDisplayID()
+                ?? Bridging.getActiveMenuBarDisplayID()
                 ?? CGMainDisplayID()
             guard NSScreen.screens.contains(where: { $0.displayID == displayID }) else {
                 changelessStreak = 0

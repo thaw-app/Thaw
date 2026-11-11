@@ -119,6 +119,7 @@ If you'd like to help, [#1529](https://github.com/thaw-app/Thaw/issues/1529) lis
 - **Reset Thaw also forgets a Space choice made before macOS listed that Space.**
 - **Profile previews show current item pictures** after the layout changes.
 - **Spacing set with a thaw:// link is saved to your profile,** so applying it no longer puts the old spacing back.
+- **thaw:// reports every per-display setting.** A disconnected display now lists its item size, spacing and Always Hidden only choice, and the Thaw Bar location lists all five places.
 - **Use Template copies the Always Hidden only choice too.**
 
 #### Search
