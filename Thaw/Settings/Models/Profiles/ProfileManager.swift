@@ -302,7 +302,7 @@ final class ProfileManager {
             // Apply spacing before layout: relaunches reset item positions; matching offsets no-op.
             // Arm settling before relaunch to suppress partial cache restores, then wait for reattachment before layout.
 
-            appState.itemManager.startSettlingPeriod(reason: "spacingRelaunch:preflight")
+            appState.itemManager.barSettling.note(.spacingWaveStarted(cause: nil))
 
             let didRelaunch: Bool
             let recovered: Set<String>
@@ -315,7 +315,7 @@ final class ProfileManager {
                 recovered = outcome.recoveredBundleIDs
             } catch is CancellationError {
                 // Drop preflight settling on cancellation so stale layout work cannot overwrite a newer apply.
-                appState.itemManager.cancelSettlingPeriod(reason: "spacingRelaunch:cancelled")
+                appState.itemManager.barSettling.note(.spacingWaveEnded(cause: nil, outcome: .cancelled))
                 return
             } catch {
                 self?.diagLog.error("spacingRelaunch: applyOffset failed: \(error)")
@@ -324,18 +324,15 @@ final class ProfileManager {
             }
             // The wave ignores this task's cancellation; recheck now and clean up rather than lay out a superseded profile.
             if Task.isCancelled {
-                appState.itemManager.cancelSettlingPeriod(reason: "spacingRelaunch:cancelled")
+                appState.itemManager.barSettling.note(.spacingWaveEnded(cause: nil, outcome: .cancelled))
                 return
             }
             if didRelaunch {
-                appState.itemManager.startSettlingPeriod(
-                    reason: "spacingRelaunch",
-                    expectedBundleIDs: recovered
-                )
+                appState.itemManager.barSettling.note(.appsRelaunched(expecting: recovered, cause: nil))
             } else {
                 // No-op apply: nothing churned, drop the preflight so the
                 // following applyProfileLayout proceeds without waiting.
-                appState.itemManager.cancelSettlingPeriod(reason: "spacingRelaunch:noOp")
+                appState.itemManager.barSettling.note(.spacingWaveEnded(cause: nil, outcome: .noOp))
             }
             let layoutDidRun = await appState.itemManager.applyProfileLayout(
                 pinnedHidden: pinnedHidden,

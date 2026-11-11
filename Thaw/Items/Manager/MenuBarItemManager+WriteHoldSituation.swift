@@ -22,7 +22,8 @@ extension MenuBarItemManager {
     /// normalization pass checks.
     func structuralNormalizationSituation() -> WriteHold.Situation {
         var situation = WriteHold.Situation()
-        situation.startupSettling = isInStartupSettling
+        let barHolds = barSettling.holds(for: .structuralPass)
+        situation.startupSettling = barHolds.contains(.settling)
         situation.circuitBreakerOpen = moveCircuitBreaker.isOpen
         situation.notificationCenterSuspended = isNotificationCenterLayoutSuspended
         situation.userDragging = appState?.isDraggingMenuBarItem ?? false
@@ -30,7 +31,7 @@ extension MenuBarItemManager {
         situation.membershipReadPending = manualMembershipTask != nil
         situation.layoutPublicationStale = !layoutPublication.canPublish(generation: layoutPublication.generation)
         situation.sectionRevealed = appState?.menuBarManager.sectionController.revealedSection != nil
-        situation.revealTransitionActive = appState?.menuBarManager.isRevealHideTransitionActive ?? false
+        situation.revealTransitionActive = barHolds.contains(.revealTransition)
         let barDisplayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
         situation.barOnUncachedDisplay = itemDisplayID.map { $0 != barDisplayID } ?? false
         return situation

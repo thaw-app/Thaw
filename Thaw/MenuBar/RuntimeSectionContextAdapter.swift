@@ -125,7 +125,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     }
 
     func shouldDeferMenuBarMutation() -> Bool {
-        appState?.menuBarManager.shouldDeferBarMutation ?? false
+        appState?.menuBarManager.barSettling.hold(for: .barMutation) != nil
     }
 
     func isThawBarShowing() -> Bool {

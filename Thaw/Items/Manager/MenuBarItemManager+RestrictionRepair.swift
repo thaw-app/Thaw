@@ -13,16 +13,6 @@ import ThawCapture
 // MARK: - Restriction repair
 
 extension MenuBarItemManager {
-    /// Whether the kit's restriction was rebuilt recently enough that
-    /// automatic visible-section reorders should stand down. The image cache's
-    /// volatility recording reads it too, since a reflow shifts every crop.
-    var isWithinRestrictionReflowSettleWindow: Bool {
-        guard let lastRestrictionChange = lastRestrictionChangeTimestamp else {
-            return false
-        }
-        return lastRestrictionChange.duration(to: .now) < Self.restrictionChangeLayoutSettleWindow
-    }
-
     /// Forgets every stranded verdict after a positions reset, since the bar
     /// they described no longer exists. Otherwise the repair keeps skipping
     /// items it gave up on before the reset.
@@ -31,69 +21,24 @@ extension MenuBarItemManager {
         boundaryRepairBreaker.rearmAll()
     }
 
-    /// How long a Thaw press may take to flip the active display before a
-    /// display switch counts as the user's.
-    private static let selfInflictedDisplayChangeWindow: Duration = .seconds(6)
-
-    /// Marks the active display as about to change because of a Thaw press.
-    func noteSelfInflictedDisplayChange() {
-        selfInflictedDisplayChangeUntil = ContinuousClock.now.advanced(
-            by: Self.selfInflictedDisplayChangeWindow
-        )
-    }
-
     /// Records that the kit's restriction was torn down and rebuilt.
     /// The OS reflows the whole bar; defer saved-layout re-apply until geometry settles.
     func noteRestrictionChange() {
         layoutPublication.invalidate()
-        lastRestrictionChangeTimestamp = .now
+        barSettling.note(.restrictionChanged)
         schedulePostRestrictionRepair(cause: .restrictionChanged)
     }
 
     func schedulePostRestrictionRepair(cause: RepairOrchestrator.Cause) {
         // Hiding still invalidates geometry, but manual arrangement never
         // schedules corrective pulses, unparking, or boundary moves.
-        guard !arrangementIsManual, !isInStartupSettling, !isNotificationCenterLayoutSuspended else {
+        guard !arrangementIsManual, !barSettling.isSettling, !isNotificationCenterLayoutSuspended else {
             PendingPassTeardown.callOff([.postRestrictionRepair], of: self, on: repairs)
             return
         }
         repairs.request(.postRestrictionRepair, cause: cause)
-        // A repair pass re-applies the restriction and lands back here.
-        // Cancelling it would escalate its in-flight write to a racing drag,
-        // so coalesce into one more pass instead.
-        if isRunningPostRestrictionRepair {
-            postRestrictionRepairNeedsRerun = true
-            return
-        }
-        postRestrictionRepairTask?.cancel()
-        postRestrictionRepairNeedsRerun = false
-        postRestrictionRepairTask = Task { @MainActor [weak self] in
-            // Nudging MenuBarAgent mid-reflow parks collateral items at y≈1413;
-            // the wait also absorbs multi-hide bursts.
-            do {
-                try await Task.sleep(for: .milliseconds(1200))
-            } catch {
-                return
-            }
-            guard let self else { return }
-            self.isRunningPostRestrictionRepair = true
-            defer {
-                self.isRunningPostRestrictionRepair = false
-                self.postRestrictionRepairNeedsRerun = false
-            }
-            guard var stillParked = await self.repairVisibleLayoutInRepairLane() else { return }
-            var poll = 0
-            while poll < 4, stillParked || self.postRestrictionRepairNeedsRerun {
-                self.postRestrictionRepairNeedsRerun = false
-                do {
-                    try await Task.sleep(for: .seconds(1))
-                } catch {
-                    return
-                }
-                guard let parked = await self.repairVisibleLayoutInRepairLane() else { return }
-                stillParked = parked
-                poll += 1
-            }
+        restrictionRepairSchedule.schedule { [weak self] in
+            await self?.repairVisibleLayoutInRepairLane()
         }
     }
 
@@ -103,8 +48,8 @@ extension MenuBarItemManager {
     private func repairVisibleLayoutInRepairLane() async -> Bool? {
         let read: () async -> PostRestrictionReading? = {
             // A pass that will return at once must not take a picture first.
-            guard !self.arrangementIsManual, !self.isInStartupSettling, !self.isNotificationCenterLayoutSuspended,
-                  self.appState?.menuBarManager.shouldDeferBarMutation != true
+            guard !self.arrangementIsManual, !self.barSettling.isSettling, !self.isNotificationCenterLayoutSuspended,
+                  self.barSettling.hold(for: .barMutation) == nil
             else { return nil }
             let displayID = Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()
             let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
@@ -125,10 +70,10 @@ extension MenuBarItemManager {
         permit: consuming StoreWritePermit,
         writing: RepairTurn.Writing
     ) async -> Bool {
-        guard !arrangementIsManual, !isInStartupSettling, !Task.isCancelled,
+        guard !arrangementIsManual, !barSettling.isSettling, !Task.isCancelled,
               !isNotificationCenterLayoutSuspended
         else { return false }
-        if appState?.menuBarManager.shouldDeferBarMutation == true {
+        if barSettling.hold(for: .barMutation) != nil {
             MenuBarItemManager.diagLog.debug(
                 "post-restriction repair: deferred; native menu bar unavailable/transitioning"
             )
@@ -184,11 +129,10 @@ extension MenuBarItemManager {
         // Not when Thaw's own press activated another display: that would
         // re-ladder the band under an open menu.
         if let last = lastBoundaryRepairDisplayID, last != displayID {
-            if let until = selfInflictedDisplayChangeUntil, ContinuousClock.now < until {
+            if barSettling.takeThawPressDisplayFlip() {
                 MenuBarItemManager.diagLog.debug(
                     "post-restriction repair: display change came from Thaw's own press; not re-arming strands"
                 )
-                selfInflictedDisplayChangeUntil = nil
             } else {
                 if boundaryRepairBreaker.suppressedCount > 0 {
                     MenuBarItemManager.diagLog.info(

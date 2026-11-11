@@ -47,9 +47,6 @@ final class MenuBarManager {
         }
     }
 
-    /// Timestamp of the last time a section was shown.
-    private(set) var lastShowTimestamp: ContinuousClock.Instant?
-
     /// Track visibility to sample live colors only while settings needs them.
     private var settingsWindow: NSWindow?
 
@@ -67,13 +64,9 @@ final class MenuBarManager {
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
 
-    /// Cancel delayed focus rehide on a newer focus change or user reveal so it cannot override new state.
+    /// Built at setup; owns the rehides that focus changes and outside clicks arm.
     @ObservationIgnored
-    private var focusChangeRehideTask: Task<Void, Never>?
-
-    deinit {
-        focusChangeRehideTask?.cancel()
-    }
+    private(set) var rehideController: RehideController?
 
     /// Menu-opening hotkeys keyed by uniqueIdentifier, mirroring ProfileManager's per-profile bindings.
     private(set) var itemHotkeys: [String: Hotkey] = [:]
@@ -142,7 +135,6 @@ final class MenuBarManager {
 
     /// Manual URL/hotkey hiding must not be undone by automatic section state.
     private var isManuallyHidingApplicationMenus = false
-    private var nativeMenuBarStateChangedAt: ContinuousClock.Instant?
 
     let thawBarPanel = ThawBarPanel()
 
@@ -181,8 +173,13 @@ final class MenuBarManager {
     let newIconFollower = NewIconSectionFollower()
     /// Who opened the current reveal, so Thaw's own reveals are not counted as the user's.
     let revealAttribution = RevealAttribution()
-    /// Block nudges only during reveal reflow, not a settled reveal, so hidden moves retain their cursor-free path.
-    let revealReflow = RevealReflowWindow()
+    /// Holds nudges off during reveal reflow and the kit's transition, not a settled reveal, so hidden moves
+    /// retain their cursor-free path. Shared with the item manager.
+    @ObservationIgnored let barSettling: BarSettling
+
+    init(barSettling: BarSettling = BarSettling()) {
+        self.barSettling = barSettling
+    }
 
     /// Panels observe reveals without holding a platform type; emits nothing without an engine.
     var revealedSectionChanges: AnyPublisher<MenuBarSectionName?, Never> {
@@ -228,11 +225,6 @@ final class MenuBarManager {
     /// Re-applies "Always show hidden items" when the active menu bar moves to another display.
     private var activeDisplayWatcher: ActiveMenuBarDisplayWatcher?
 
-    var shouldDeferBarMutation: Bool {
-        guard let nativeMenuBarStateChangedAt else { return false }
-        return nativeMenuBarStateChangedAt.duration(to: .now) < Constants.MenuBarTuning.nativeMenuBarMutationSettle
-    }
-
     /// Fixed sections, built once and never reordered; access by section(withName:).
     let sections = [
         MenuBarSection(name: .visible),
@@ -276,14 +268,11 @@ final class MenuBarManager {
 
     // MARK: - Setup
 
-    /// Captured at launch setup so smart rehide reads menu-open state without reaching through the item manager.
-    private var menuOpenMonitor: MenuOpenMonitor?
-
     func performSetup(with appState: AppState, activeDisplayWatcher: ActiveMenuBarDisplayWatcher, displays: DisplayEnvironment) {
         self.appState = appState
         self.activeDisplayWatcher = activeDisplayWatcher
         configuration = appState.settings
-        menuOpenMonitor = appState.itemManager.menuOpenMonitor
+        rehideController = RehideController(environment: .live(appState: appState))
         installObservers()
         thawBarPanel.performSetup(with: appState, displayInvalidations: displays.invalidations, displaySettlements: displays.settlements)
         searchPanel.performSetup(with: appState, displayInvalidations: displays.invalidations)
@@ -304,7 +293,6 @@ final class MenuBarManager {
         sectionController = controller
         runtimeSectionController = controller
         revealAttribution.observe(revealedSectionChanges)
-        revealReflow.observe(revealedSectionChanges)
         nativeAppHidingExperiment.start(controller: controller, settings: appState.settings.advanced)
         systemExtraTakeover.start(controller: controller, settings: appState.settings.advanced) { [weak appState] identifier in
             guard let itemManager = appState?.itemManager,
@@ -353,7 +341,7 @@ final class MenuBarManager {
                 }
                 let hidden = options.contains(.hideMenuBar) || options.contains(.autoHideMenuBar)
                 if hidden != isMenuBarHiddenBySystem {
-                    nativeMenuBarStateChangedAt = .now
+                    barSettling.note(.nativeBarChanged)
                 }
                 isMenuBarHiddenBySystem = hidden
             }
@@ -382,61 +370,9 @@ final class MenuBarManager {
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                self?.scheduleFocusChangeRehide()
+                self?.rehideController?.note(.focusChanged)
             }
             .store(in: &bag)
-    }
-
-    /// Focus rehide leaves sections alone while the pointer is over either bar, since the user is still using them.
-    private func scheduleFocusChangeRehide() {
-        guard let appState, configuration.autoRehide else {
-            return
-        }
-        switch configuration.rehideStrategy {
-        case .focusedApp, .smart:
-            break
-        case .timed:
-            return
-        }
-        guard
-            let hiddenSection = section(withName: .hidden),
-            let screen = appState.hidEventManager.bestScreen(appState: appState),
-            !appState.hidEventManager.isMouseInsideMenuBar(appState: appState, screen: screen),
-            !appState.hidEventManager.isMouseInsideThawBar(appState: appState)
-        else {
-            return
-        }
-        focusChangeRehideTask?.cancel()
-        focusChangeRehideTask = Task {
-            await self.rehideAfterFocusChange(hiddenSection, appState: appState)
-        }
-    }
-
-    /// After the rehide interval, allow a half-second reveal grace period because focus often changes on the reveal click.
-    /// Smart rehide also waits while any item's menu is open.
-    private func rehideAfterFocusChange(_ section: MenuBarSection, appState _: AppState) async {
-        do {
-            try await Task.sleep(for: .seconds(configuration.rehideInterval))
-        } catch {
-            return
-        }
-
-        // A reveal can cancel this task even after sleep returns.
-        guard !Task.isCancelled else { return }
-
-        if let lastShow = lastShowTimestamp, lastShow.duration(to: .now) < .milliseconds(500) {
-            diagLog.debug("Skipping rehide due to grace period")
-            return
-        }
-
-        if
-            configuration.rehideStrategy == .smart,
-            await menuOpenMonitor?.isAnyMenuOpen() == true
-        {
-            return
-        }
-
-        section.hide()
     }
 
     private func observeSettingsWindowReference(into bag: inout Set<AnyCancellable>) {
@@ -1449,12 +1385,6 @@ final class MenuBarManager {
 
     // MARK: - Sections
 
-    /// A new reveal cancels pending focus rehide.
-    func updateLastShowTimestamp() {
-        lastShowTimestamp = .now
-        focusChangeRehideTask?.cancel()
-    }
-
     /// Updates the control item states for all sections.
     ///
     /// - Parameter screen: The screen to use for the update. If nil, the
@@ -1491,31 +1421,18 @@ final class MenuBarManager {
     }
 
     /// The kit suppresses nudges during assertion recompositing, which already lays out the bar; extra resizing flickers.
-    /// It clears this before position-restoring writes; revealReflow guards new transitions during suspended restores.
-    @ObservationIgnored
-    private var revealHideTransitionActive = false
-
-    /// Exposed for the nudge gate.
-    var isRevealHideTransitionActive: Bool {
-        revealHideTransitionActive
-    }
-
+    /// It clears this before position-restoring writes; the reveal reflow window guards new transitions during suspended restores.
     func setRevealHideTransitionActive(_ active: Bool) {
-        revealHideTransitionActive = active
+        barSettling.note(.revealTransition(active: active))
         // Either edge of the transition moves the items, so the pill should follow closely.
         leadingEdgeWatcher.expectChange()
-    }
-
-    /// Suppress width nudges and structural normalization during the transition or fixed settling window.
-    var shouldSuppressMenuBarAgentNudge: Bool {
-        revealReflow.isSettling || revealHideTransitionActive
     }
 
     /// Cursor-free invalidation after position writes; suppress during reflow to avoid missed rehide clicks, but allow settled reveals.
     /// Returns whether armed, not evidence about MenuBarAgent when skipped; see ControlItem.requestMenuBarAgentPositionRefresh.
     @discardableResult
     func requestMenuBarAgentPositionRefresh() -> Bool {
-        guard !shouldSuppressMenuBarAgentNudge else {
+        guard barSettling.hold(for: .agentNudge) == nil else {
             diagLog.debug(
                 "Skipping MenuBarAgent position refresh: reveal/hide transition or reflow still settling"
             )

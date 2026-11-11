@@ -394,7 +394,7 @@ extension MenuBarItemImageCache {
         // assertion rebuild shifts every item's crop, so pixel-diffing
         // across one marks unrelated items as changed on the same tick.
         // Skipping is cheap; polluted tallies are not.
-        let isSettling = appState.itemManager.isWithinRestrictionReflowSettleWindow
+        let isSettling = appState.barSettling.hold(for: .layoutReorder) != nil
         if !isSettling {
             for (tag, newImage) in newImages {
                 guard let existing = capturesByTag[tag] else { continue }

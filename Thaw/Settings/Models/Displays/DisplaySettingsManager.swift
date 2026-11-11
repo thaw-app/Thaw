@@ -434,7 +434,7 @@ final class DisplaySettingsManager {
             // Preflight settling so intermediate restore logic is
             // suppressed while the wave runs. Cancelled
             // below if applyOffset turns out to be a no-op.
-            host.startSettling("spacingRelaunch:\(reason):preflight", [])
+            host.noteSettling(.spacingWaveStarted(cause: reason))
             do {
                 // Read the captured request, not a later display's offset.
                 host.spacingManager.offset = desired
@@ -446,10 +446,7 @@ final class DisplaySettingsManager {
                     lastSpacingApplyFailure = String(localized: "Could not relaunch: \(outcome.failedAppNames.formatted(.list(type: .and)))")
                 }
                 if outcome.didRelaunch {
-                    host.startSettling(
-                        "spacingRelaunch:\(reason)",
-                        outcome.recoveredBundleIDs
-                    )
+                    host.noteSettling(.appsRelaunched(expecting: outcome.recoveredBundleIDs, cause: reason))
                     // The relaunched apps reattach at OS-default positions.
                     // Drive the active profile's layout pass so they end up
                     // in the saved order. Auto-switch doesn't fire when the
@@ -458,14 +455,10 @@ final class DisplaySettingsManager {
                     // restore and leave within-section ordering untouched.
                     host.reapplyActiveProfile()
                 } else {
-                    host.cancelSettling(
-                        "spacingRelaunch:\(reason):noOp"
-                    )
+                    host.noteSettling(.spacingWaveEnded(cause: reason, outcome: .noOp))
                 }
             } catch {
-                host.cancelSettling(
-                    "spacingRelaunch:\(reason):error"
-                )
+                host.noteSettling(.spacingWaveEnded(cause: reason, outcome: .error))
                 diagLog.error("applyActiveDisplaySpacing(\(reason)) failed: \(error)")
                 lastSpacingApplyFailure = error.localizedDescription
             }

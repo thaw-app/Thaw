@@ -30,7 +30,7 @@ extension MenuBarItemManager {
         // Opening an item on another display activates it; the repair pass must
         // not read that as a topology change.
         if displayID != (Bridging.getActiveMenuBarDisplayID() ?? CGMainDisplayID()) {
-            noteSelfInflictedDisplayChange()
+            barSettling.note(.thawPressFlipsDisplay)
         }
 
         // A visible-authored item can still be concealed by the automatic-overflow
