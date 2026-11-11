@@ -198,8 +198,12 @@ final class VisibilitySettings: SettingsURIHandling {
         Defaults.ifPresent(key: .showMenuBarTooltips, assign: &showMenuBarTooltips)
         Defaults.ifPresent(key: .autoZenWhileSharingScreen, assign: &autoZenWhileSharingScreen)
         Defaults.ifPresent(key: .enableMenuBarItemDescenders, assign: &enableMenuBarItemDescenders)
-        // Read the legacy key first so the current key takes precedence.
-        Defaults.ifPresent(key: .legacyEnableTransportBar, assign: &enableSwapBar)
+        // Read the legacy key only when the current key is absent. Assigning
+        // it first would write it over the current key through didSet.
+        if Defaults.object(forKey: .enableSwapBar) == nil {
+            Defaults.ifPresent(key: .legacyEnableTransportBar, assign: &enableSwapBar)
+        }
+        Defaults.removeObject(forKey: .legacyEnableTransportBar)
         Defaults.ifPresent(key: .enableSwapBar, assign: &enableSwapBar)
         Defaults.ifPresent(key: .swapOnThawIconClick, assign: &swapOnThawIconClick)
         Defaults.ifPresent(key: .showAlwaysHiddenOnIconDoubleClick, assign: &showAlwaysHiddenOnIconDoubleClick)

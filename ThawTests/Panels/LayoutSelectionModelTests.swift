@@ -168,6 +168,26 @@ struct LayoutSelectionModelTests {
         #expect(await model.move(to: .hidden, placement: .end) { _ in .refused(.moveRefused) } == nil)
     }
 
+    @Test("A move that left the items in place gets its selection back, unless something was selected since")
+    func restoreAfterMoveThatLeftItemsInPlace() async {
+        let model = model()
+        model.click("a", in: .visible, kind: .replace)
+        model.click("b", in: .visible, kind: .toggle)
+        let previous = model.selection
+        _ = await model.move(to: .hidden, placement: .end) { _ in .refused(.moveRefused) }
+        #expect(model.count == 0)
+
+        model.restore(previous)
+        #expect(model.orderedItemIDs == ["a", "b"])
+
+        model.click("h1", in: .hidden, kind: .replace)
+        model.restore(previous)
+        #expect(model.orderedItemIDs == ["h1"])
+
+        #expect(LayoutSelectionModel.leftItemsInPlace(.refused(.moveRefused)))
+        #expect(!LayoutSelectionModel.leftItemsInPlace(nil))
+    }
+
     @Test("A refused move names the item that cannot go, or explains the batch")
     func refusalsExplainThemselves() throws {
         let names = ["a": "Alpha"]

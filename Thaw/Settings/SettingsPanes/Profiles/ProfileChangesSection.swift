@@ -18,7 +18,7 @@ struct ProfileChangesSection: View {
     let update: (ProfileManager.ProfileUpdateScope) -> Void
     let updateAll: () -> Void
 
-    /// Read on a profile change, so drawing doesn't walk the item cache.
+    /// Read when the profile or the bar's layout changes, so drawing doesn't walk the item cache.
     @State private var liveImages: [String: MenuBarItemDisplayImage] = [:]
 
     var body: some View {
@@ -44,6 +44,9 @@ struct ProfileChangesSection: View {
             .help("Update this profile with the current layout and settings")
         }
         .onChange(of: profile?.id, initial: true) {
+            liveImages = ProfilePreviewModel.liveImages(in: appState)
+        }
+        .onChange(of: appState.itemManager.itemCache) {
             liveImages = ProfilePreviewModel.liveImages(in: appState)
         }
     }

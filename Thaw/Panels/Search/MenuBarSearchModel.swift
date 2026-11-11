@@ -130,6 +130,16 @@ final class MenuBarSearchModel {
             results = fresh
         }
         revalidateSelection()
+        endRenameIfRowGone()
+    }
+
+    /// A rename whose row left the list has no field to type into, so it ends
+    /// and the query field gets the keyboard back.
+    private func endRenameIfRowGone() {
+        guard let session = renameSession, !results.contains(where: { session.targets($0.item) }) else {
+            return
+        }
+        renameSession = nil
     }
 
     /// Whether the same query brought back the same rows reordered or regrouped, as after a move.
@@ -192,15 +202,24 @@ final class MenuBarSearchModel {
     /// Tab's jump to the next or previous section's first row, wrapping.
     /// Ranked matches have no sections, so it does nothing then.
     func moveSelection(toSectionFromCurrentBy step: Int) {
-        // Each section's first row, in order: headings start where the section changes.
-        let starts = results.indices.filter { $0 == 0 || results[$0].section != results[$0 - 1].section }
-        guard starts.count > 1, results.first?.section != nil else {
+        let starts = sectionStarts
+        guard canJumpBetweenSections else {
             return
         }
         let index = selectedIndex ?? 0
         let current = starts.lastIndex { $0 <= index } ?? 0
         let target = (current + step % starts.count + starts.count) % starts.count
         selection = results[starts[target]].id
+    }
+
+    /// Each section's first row, in order: headings start where the section changes.
+    private var sectionStarts: [Int] {
+        results.indices.filter { $0 == 0 || results[$0].section != results[$0 - 1].section }
+    }
+
+    /// Whether the results have more than one titled section to jump between.
+    var canJumpBetweenSections: Bool {
+        results.first?.section != nil && sectionStarts.count > 1
     }
 
     /// Moves the highlight by delta rows, held to the rows there are. With no

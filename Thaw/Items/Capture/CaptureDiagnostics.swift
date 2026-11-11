@@ -29,6 +29,9 @@ nonisolated enum CaptureDiagnostics {
     private static let frameSamples = OSAllocatedUnfairLock(initialState: SamplingBudget())
     private static let log = DiagLog(category: "CaptureDiagnostics")
 
+    /// Posted after a sample is written, so a view showing whether samples exist can update.
+    static let didWriteSample = Notification.Name("CaptureDiagnostics.didWriteSample")
+
     /// Where sampled crops are written: a folder per process in the temporary folder.
     static var sampleDirectory: URL {
         FileManager.default.temporaryDirectory
@@ -55,6 +58,7 @@ nonisolated enum CaptureDiagnostics {
             }
             CGImageDestinationAddImage(destination, image, nil)
             guard CGImageDestinationFinalize(destination) else { return }
+            NotificationCenter.default.post(name: didWriteSample, object: nil)
             log.info(
                 "[CapturePixelTrace] cleaned item=\(item.uniqueIdentifier) source=\(source) " +
                     "presence=\(String(describing: image.glyphPresenceOverNearUniformBackground())) " +
@@ -98,6 +102,7 @@ nonisolated enum CaptureDiagnostics {
             }
             CGImageDestinationAddImage(destination, image, nil)
             guard CGImageDestinationFinalize(destination) else { return }
+            NotificationCenter.default.post(name: didWriteSample, object: nil)
             log.info(
                 "[CapturePixelTrace] item=\(item.uniqueIdentifier) owner=\(item.ownerPID) " +
                     "source=\(source) bounds=\(bounds) " +

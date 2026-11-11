@@ -201,6 +201,21 @@ final class LayoutSelectionModel {
         return await mover(command)
     }
 
+    /// Puts back a selection that a move cleared, unless something was selected since.
+    func restore(_ previous: LayoutSelection) {
+        guard selection.isEmpty else { return }
+        pendingReselection = nil
+        change(announcing: false) { $0 = previous }
+    }
+
+    /// Whether a move left every item where it was: refused, or nothing to change.
+    static nonisolated func leftItemsInPlace(_ outcome: LayoutBatchMoveOutcome?) -> Bool {
+        switch outcome {
+        case .refused, .unchanged: true
+        case .moved, .notApplied, nil: false
+        }
+    }
+
     /// Applies body to the selection and, when announcing, tells VoiceOver if the count changed.
     private func change(announcing: Bool = true, _ body: (inout LayoutSelection) -> Void) {
         var updated = selection

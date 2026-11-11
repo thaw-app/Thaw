@@ -212,8 +212,8 @@ struct MenuBarSearchPanelTests {
         #expect(!panel.showsAResultRow)
         #expect(try panel.handleKeyDown(key(.downArrow)) != nil)
         #expect(panel.model.selection == first)
-        // Tab is still taken, so the keyboard stays in the field, but moves nothing.
-        #expect(try panel.handleKeyDown(key(.tab)) == nil)
+        // With no section to jump to, Tab passes through to move the keyboard focus.
+        #expect(try panel.handleKeyDown(key(.tab)) != nil)
         #expect(panel.model.selection == first)
 
         // Typed, the list shows and Down moves the highlight.
@@ -221,6 +221,51 @@ struct MenuBarSearchPanelTests {
         #expect(panel.showsAResultRow)
         #expect(try panel.handleKeyDown(key(.downArrow)) == nil)
         #expect(panel.model.selection != first)
+    }
+
+    @Test("Tab jumps between sections, and passes through when there is only one")
+    func tabJumpsOnlyBetweenSections() throws {
+        let world = World()
+        let alpha = World.item("Alpha"), beta = World.item("Beta")
+        world.seat([alpha, beta])
+        let panel = panel(world)
+
+        func tab() throws -> NSEvent {
+            try #require(NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: panel.windowNumber,
+                context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: UInt16(KeyCode.tab.rawValue)
+            ))
+        }
+
+        panel.model.results = [
+            MenuBarSearchResult(item: alpha, ownerName: nil, section: "Visible"),
+            MenuBarSearchResult(item: beta, ownerName: nil, section: "Hidden"),
+        ]
+        panel.model.selectFirstRow()
+        #expect(try panel.handleKeyDown(tab()) == nil)
+        #expect(panel.model.selection == MenuBarSearchModel.ItemID(beta))
+
+        panel.model.results = [alpha, beta].map { MenuBarSearchResult(item: $0, ownerName: nil, section: "Visible") }
+        #expect(try panel.handleKeyDown(tab()) != nil)
+        #expect(panel.model.selection == MenuBarSearchModel.ItemID(beta))
+    }
+
+    @Test("A rename ends when its row leaves the list")
+    func renameEndsWithItsRow() {
+        let world = World()
+        let alpha = World.item("Clock"), beta = World.item("Battery")
+        world.seat([alpha, beta])
+        let panel = panel(world)
+        let inventory = DisplayedItemInventory.cache(appState: world.appState)
+
+        panel.model.renameSession = .init(tag: alpha.tag, windowID: alpha.windowID, draft: "New")
+        panel.model.searchText = "clock"
+        panel.model.refresh(from: inventory)
+        #expect(panel.model.renameSession != nil, "the row is still listed")
+
+        panel.model.searchText = "battery"
+        panel.model.refresh(from: inventory)
+        #expect(panel.model.renameSession == nil)
     }
 
     @Test("A section shortcut on an item macOS keeps in place explains the refusal")

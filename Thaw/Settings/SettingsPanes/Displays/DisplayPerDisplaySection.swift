@@ -102,6 +102,7 @@ extension DisplaySettingsPane {
                 .withGridColumns(template.gridColumns)
                 .withAlwaysShowHiddenItems(template.alwaysShowHiddenItems)
                 .withThawBarItemScale(template.thawBarItemScale)
+                .withUseThawBarForAlwaysHidden(template.useThawBarForAlwaysHidden)
         }
 
         if spacingDiffers {

@@ -84,10 +84,10 @@ extension DiagnosticLogger {
     }
 
     /// Starts a new file once the current one is too big or too old. Runs on the write queue.
-    func rotateIfNeeded() {
+    func rotateIfNeeded(afterWriting written: UInt64) {
         guard let policy = rotationPolicy, policy.maxFileSizeBytes > 0 || policy.rotationInterval > 0, let file = currentLogFile
         else { return }
-        let size = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? UInt64) ?? 0
+        let size = fileSize(of: file, afterWriting: written, limit: policy.maxFileSizeBytes)
         let openedAt = segmentOpenedAtLock.withLock { $0 } ?? Date()
         guard Self.shouldRotate(policy: policy, fileSize: size, openFor: Date().timeIntervalSince(openedAt)) else { return }
         closeLogFile()
@@ -99,9 +99,36 @@ extension DiagnosticLogger {
             closeLogFile()
         }
     }
+
+    /// Counts this process's writes, rereading the size from disk now and then because the XPC service appends too.
+    private func fileSize(of file: URL, afterWriting written: UInt64, limit: UInt64) -> UInt64 {
+        let counted = fileSizeLock.withLock { $0.adding(written, limit: limit) }
+        guard counted.needsCheck else { return counted.bytes }
+        let size = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? UInt64) ?? counted.bytes
+        fileSizeLock.withLock { $0 = FileSizeCount(bytes: size) }
+        return size
+    }
 }
 
 nonisolated extension DiagnosticLogger {
+    /// The current file's size as last read from disk plus what this process wrote since.
+    struct FileSizeCount: Equatable {
+        /// How many bytes this process writes before reading the size from disk again.
+        static let checkInterval: UInt64 = 64 * 1024
+
+        var bytes: UInt64 = 0
+        var sinceCheck: UInt64 = 0
+
+        /// Adds a write and says whether the size should be read from disk:
+        /// never without a size limit, otherwise at the limit or every checkInterval bytes.
+        mutating func adding(_ written: UInt64, limit: UInt64) -> (bytes: UInt64, needsCheck: Bool) {
+            bytes += written
+            sinceCheck += written
+            let needsCheck = limit > 0 && (bytes >= limit || sinceCheck >= Self.checkInterval)
+            return (bytes, needsCheck)
+        }
+    }
+
     static func shouldRotate(policy: RotationPolicy, fileSize: UInt64, openFor: TimeInterval) -> Bool {
         (policy.maxFileSizeBytes > 0 && fileSize >= policy.maxFileSizeBytes)
             || (policy.rotationInterval > 0 && openFor >= policy.rotationInterval)

@@ -73,9 +73,28 @@ extension MenuBarItemImageCache {
     }
 
     /// Saves and blocks until the file is written: restartSelf exits before a background save gets its turn.
+    /// Loads the file first when it was never read, so the save keeps its pictures.
+    @MainActor
     func saveToDiskAndWait() {
+        if !hasLoadedFromDisk {
+            loadFromDiskNow()
+        }
         saveToDisk()
         diskStore.waitForQueuedSaves()
+    }
+
+    /// Reads and merges the file on the calling thread, for a save that is about to replace it.
+    @MainActor
+    private func loadFromDiskNow() {
+        hasLoadedFromDisk = true
+        diskStore.waitForQueuedSaves()
+        guard let file = diskStore.readSaveFile(), let decoded = decodeGapFill(
+            file,
+            classifications: diskLoadClassifications(),
+            occupiedIdentifiers: Set(capturesByTag.keys.map(\.tagIdentifier))
+        )
+        else { return }
+        mergeDiskCaptures(decoded.images)
     }
 
     /// The tag a disk entry was saved under, or nil when its identifier names no item.
@@ -197,51 +216,16 @@ extension MenuBarItemImageCache {
             }
             guard !Task.isCancelled else { return }
 
-            // Per-item TTL: the file carries one save timestamp, but each
-            // item's allowed age depends on its volatility class. The store
-            // has already deleted the file when even stable items would be
-            // expired.
-            var expiredCount = 0
-            var parsed = [(tag: MenuBarItemTag, entry: [String: Any])]()
-            for (tagString, entry) in file.entries {
-                let wasConcealed = entry["concealed"] as? Bool ?? false
-                guard file.age <= self.diskStore.diskCacheTTL(
-                    for: classifications[tagString],
-                    wasConcealed: wasConcealed
-                ) else {
-                    expiredCount += 1
-                    continue
-                }
-                guard let tag = Self.diskEntryTag(
-                    identifier: tagString,
-                    instanceIndex: entry["instance"] as? Int ?? 0
-                ) else { continue }
-                parsed.append((tag, entry))
-            }
+            guard let decoded = self.decodeGapFill(
+                file,
+                classifications: classifications,
+                occupiedIdentifiers: occupiedIdentifiers,
+                isCancelled: { Task.isCancelled }
+            ) else { return }
 
-            // Skip decoding entries whose identifier the live cache already
-            // holds; the load only fills gaps, and after an idle trim that is
-            // most of the file. The live cache can gain entries during the
-            // decode, so this is only a prefilter: the merge below still asks
-            // diskGapFillSelections. Same key and ordering, so the entries
-            // dropped here are exactly the ones it would drop.
-            var claimed = occupiedIdentifiers
-            let candidates = parsed
-                .sorted { $0.tag.tagIdentifier < $1.tag.tagIdentifier }
-                .filter { claimed.insert($0.tag.tagIdentifier).inserted }
-
-            var loadedImages = [MenuBarItemTag: MenuBarItemGlyphCapture]()
-
-            for (tag, entry) in candidates {
-                guard !Task.isCancelled else { return }
-                if let capture = self.diskStore.decodeEntry(entry, legacyJSON: file.isLegacyJSON) {
-                    loadedImages[tag] = capture
-                }
-            }
-
-            if !loadedImages.isEmpty {
-                let imagesToLoad = loadedImages
-                let skipped = expiredCount
+            if !decoded.images.isEmpty {
+                let imagesToLoad = decoded.images
+                let skipped = decoded.expiredCount
                 await MainActor.run {
                     // A reset or an idle trim that landed while this task
                     // was decoding released these very pages on purpose.
@@ -260,6 +244,43 @@ extension MenuBarItemImageCache {
             }
         }
         watchDiskLoad(load)
+    }
+
+    /// Decodes the entries still within their item's TTL that fill a gap in the live cache; nil when cancelled.
+    /// Only a prefilter: the cache can fill during the decode, so the merge still asks diskGapFillSelections.
+    nonisolated func decodeGapFill(
+        _ file: MenuBarItemImageCacheDiskStore.SaveFileContents,
+        classifications: [String: MenuBarItemVolatilityIndex.Volatility],
+        occupiedIdentifiers: Set<String>,
+        isCancelled: () -> Bool = { false }
+    ) -> (images: [MenuBarItemTag: MenuBarItemGlyphCapture], expiredCount: Int)? {
+        var expiredCount = 0
+        var parsed = [(tag: MenuBarItemTag, entry: [String: Any])]()
+        for (tagString, entry) in file.entries {
+            let wasConcealed = entry["concealed"] as? Bool ?? false
+            guard file.age <= diskStore.diskCacheTTL(for: classifications[tagString], wasConcealed: wasConcealed) else {
+                expiredCount += 1
+                continue
+            }
+            guard let tag = Self.diskEntryTag(identifier: tagString, instanceIndex: entry["instance"] as? Int ?? 0) else {
+                continue
+            }
+            parsed.append((tag, entry))
+        }
+
+        var claimed = occupiedIdentifiers
+        let candidates = parsed
+            .sorted { $0.tag.tagIdentifier < $1.tag.tagIdentifier }
+            .filter { claimed.insert($0.tag.tagIdentifier).inserted }
+
+        var images = [MenuBarItemTag: MenuBarItemGlyphCapture]()
+        for (tag, entry) in candidates {
+            guard !isCancelled() else { return nil }
+            if let capture = diskStore.decodeEntry(entry, legacyJSON: file.isLegacyJSON) {
+                images[tag] = capture
+            }
+        }
+        return (images, expiredCount)
     }
 
     /// Holds saves until the load is done, then runs the one that came in meanwhile.

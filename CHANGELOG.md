@@ -91,6 +91,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **An item with a changing title is recognized after its app restarts,** even when the old copy was still quitting.
 - **Capture Hidden Items retakes a picture that is cut off at its left edge,** and a cut-off picture can no longer replace a complete one.
 - **Pictures of hidden items survive a restart.** Restarting Thaw could lose all of them. Reported by katla on Discord.
+- **Layout keeps your selection when a move is refused or changes nothing.**
 
 #### Thaw Bar
 
@@ -114,6 +115,9 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Switching Spaces on a second display right after the first is no longer missed.**
 - **A Space indicator that could not start is fully turned off,** so turning it on again starts clean.
 - **Reset Thaw also forgets a Space choice made before macOS listed that Space.**
+- **Profile previews show current item pictures** after the layout changes.
+- **Spacing set with a thaw:// link is saved to your profile,** so applying it no longer puts the old spacing back.
+- **Use Template copies the Always Hidden only choice too.**
 
 #### Search
 
@@ -122,6 +126,8 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **A failed move from search stays up** and is read aloud.
 - **A row is listed once while its item is mid-move,** so the arrow keys don't stall on it.
 - **Return and the arrow keys are left to a Japanese or Chinese input method** while it is composing text.
+- **A rename ends when its item leaves the search results,** instead of blocking keys until Escape.
+- **Tab reaches the search buttons** when there is no other section to jump to.
 
 #### Settings
 
@@ -129,6 +135,9 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Hide the menu bar opens Displays on its Spaces tab.**
 - **Each permission row has its own search target,** so the jump lands on the one you picked.
 - **Log rotation rows are left out of search while diagnostic logging is off,** since the rows aren't there.
+- **The Swap Bar stays off** after an upgrade from a version that called it the Transport Bar.
+- **Simple Mode mentions double-clicking Thaw's icon only while that shortcut is on.**
+- **Show Samples turns on as soon as a capture sample is saved.**
 
 #### Other
 
@@ -145,6 +154,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Reset Thaw no longer brings old item pictures back** when a window opens right after it.
 - **Setup's checkmark bounces when you grant a permission,** not each time the page opens.
 - **Turning diagnostic logging off no longer leaves a new log file open.**
+- **Restarting Thaw keeps saved item pictures** it hadn't loaded yet.
 
 ## [3.0.0-alpha.13] - 2026-11-05
 

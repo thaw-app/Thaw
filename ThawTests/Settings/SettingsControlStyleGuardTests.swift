@@ -29,16 +29,36 @@ struct SettingsControlStyleGuardTests {
         ".pickerStyle(.segmented)",
     ]
 
+    /// The Settings panes, read and scanned once for every test here: the scan is the slow part.
+    private struct PaneScan {
+        let sources: [(path: String, lines: [String])]
+        let buttons: [(path: String, control: SwiftScopeScanner.Control)]
+        let pickers: [(path: String, control: SwiftScopeScanner.Control)]
+
+        init(sources: [(path: String, lines: [String])]) {
+            self.sources = sources
+            var buttons = [(path: String, control: SwiftScopeScanner.Control)]()
+            var pickers = [(path: String, control: SwiftScopeScanner.Control)]()
+            for (path, lines) in sources {
+                let scanner = SwiftScopeScanner(lines: lines)
+                buttons += scanner.controls(named: "Button").map { (path, $0) }
+                pickers += scanner.controls(named: "Picker").map { (path, $0) }
+            }
+            self.buttons = buttons
+            self.pickers = pickers
+        }
+    }
+
+    private static let paneScan = Result { try PaneScan(sources: readSources(in: scannedDirectory)) }
+
     @Test("every in-page button sets a style")
     func buttonsAreStyled() throws {
-        let violations = try Self.sources().flatMap { path, lines in
-            SwiftScopeScanner(lines: lines).controls(named: "Button").compactMap { control -> String? in
-                guard !control.ancestors.contains(where: Self.isSystemDrawn),
-                      !control.hasModifier(".hidden()"),
-                      !control.hasModifier(".buttonStyle(")
-                else { return nil }
-                return "\(path):\(control.line)"
-            }
+        let violations = try Self.paneScan.get().buttons.compactMap { path, control -> String? in
+            guard !control.ancestors.contains(where: Self.isSystemDrawn),
+                  !control.hasModifier(".hidden()"),
+                  !control.hasModifier(".buttonStyle(")
+            else { return nil }
+            return "\(path):\(control.line)"
         }
         #expect(
             violations.isEmpty,
@@ -48,13 +68,11 @@ struct SettingsControlStyleGuardTests {
 
     @Test("every bare picker sets a style")
     func pickersAreStyled() throws {
-        let violations = try Self.sources().flatMap { path, lines in
-            SwiftScopeScanner(lines: lines).controls(named: "Picker").compactMap { control -> String? in
-                guard !control.ancestors.contains(where: Self.isSystemDrawn),
-                      !control.hasModifier(".pickerStyle(")
-                else { return nil }
-                return "\(path):\(control.line)"
-            }
+        let violations = try Self.paneScan.get().pickers.compactMap { path, control -> String? in
+            guard !control.ancestors.contains(where: Self.isSystemDrawn),
+                  !control.hasModifier(".pickerStyle(")
+            else { return nil }
+            return "\(path):\(control.line)"
         }
         #expect(
             violations.isEmpty,
@@ -65,7 +83,7 @@ struct SettingsControlStyleGuardTests {
     @Test("no page uses a style the others do not")
     func noForeignStyles() throws {
         var violations = [String]()
-        for (path, lines) in try Self.sources() {
+        for (path, lines) in try Self.paneScan.get().sources {
             for (index, line) in lines.enumerated() where Self.foreignStyles.contains(where: line.contains) {
                 violations.append("\(path):\(index + 1)")
             }
@@ -76,7 +94,7 @@ struct SettingsControlStyleGuardTests {
     @Test("no checkbox is drawn by macOS, which fills it solid gold")
     func checkboxesUseThawStyle() throws {
         var violations = [String]()
-        let sources = try Self.sources(in: "Thaw")
+        let sources = try Self.readSources(in: "Thaw")
         // A moved directory would otherwise scan nothing and pass.
         #expect(sources.count > 100)
         for (path, lines) in sources {
@@ -90,10 +108,7 @@ struct SettingsControlStyleGuardTests {
     @Test("the scan sees the Settings panes")
     func scanIsNotEmpty() throws {
         // A moved directory would otherwise scan nothing and pass.
-        let buttons = try Self.sources().reduce(0) { count, source in
-            count + SwiftScopeScanner(lines: source.lines).controls(named: "Button").count
-        }
-        #expect(buttons > 50)
+        #expect(try Self.paneScan.get().buttons.count > 50)
     }
 
     private static func isSystemDrawn(_ ancestor: String) -> Bool {
@@ -106,8 +121,14 @@ struct SettingsControlStyleGuardTests {
         return ancestor.hasSuffix("Actions") || ancestor.contains("Menu") || ancestor.contains("Confirmation")
     }
 
-    private static func sources(in scanned: String = scannedDirectory) throws -> [(path: String, lines: [String])] {
-        let root = try #require(repositoryRoot(), "repository root not found from \(#filePath)")
+    private struct RepositoryRootNotFound: Error, CustomStringConvertible {
+        var description: String {
+            "repository root not found from \(#filePath)"
+        }
+    }
+
+    private static func readSources(in scanned: String) throws -> [(path: String, lines: [String])] {
+        guard let root = repositoryRoot() else { throw RepositoryRootNotFound() }
         let directory = root.appending(path: scanned)
         let enumerator = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: nil)
         var result = [(path: String, lines: [String])]()
