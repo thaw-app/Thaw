@@ -30,7 +30,9 @@ struct ProfileSwitchesSectionTests {
         .environment(appState)
         .frame(width: Self.size.width, height: Self.size.height)
         let render = OffscreenRender(AnyView(view), size: Self.size)
-        await render.settle { (try? render.pixels())?.contains { $0 != 0 } == true }
+        let title = "What switches to this profile"
+        await render.settle { render.texts().contains(title) }
+        #expect(render.texts().contains(title), "the section has appeared")
         return render
     }
 
