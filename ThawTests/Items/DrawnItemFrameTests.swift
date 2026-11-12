@@ -131,4 +131,51 @@ struct DrawnItemFrameTests {
         let clear = CGRect(x: 960, y: 4.5, width: 20, height: 24)
         #expect(DrawnItemFrame.canCrop(at: clear, ownerPID: Self.driveDx, sourcePID: nil, in: bar))
     }
+
+    // MARK: Displays
+
+    /// 2026-11-11, left display's bar active: DockDoor read at x=-191, but the click went to
+    /// x=1722.5, where MenuBarAgent's first window, the main display's bar, draws it.
+    private static let displays = [
+        CGRect(x: 0, y: 0, width: 1920, height: 1080),
+        CGRect(x: -2048, y: 0, width: 2048, height: 1152),
+    ]
+    private static let dockDoor: pid_t = 79536
+    private static let onSecondDisplay = CGRect(x: -191, y: 3, width: 24, height: 24)
+    private static let mainBar = [
+        entry(agent, x: 1088, width: 22),
+        entry(dockDoor, x: 1722.5, width: 38),
+    ]
+
+    @Test("Another display's bar neither moves the click there nor makes the frame a phantom")
+    func anotherDisplaysBarIsIgnored() {
+        let click = DrawnItemFrame.clickFrame(
+            for: Self.onSecondDisplay, ownerPID: Self.dockDoor, sourcePID: nil, in: Self.mainBar, displays: Self.displays
+        )
+
+        #expect(click == Self.onSecondDisplay)
+        #expect(DrawnItemFrame.drawnFrame(for: Self.onSecondDisplay, ownerPID: Self.dockDoor, sourcePID: nil, in: Self.mainBar, displays: Self.displays) == nil)
+        #expect(!DrawnItemFrame.isPhantom(Self.onSecondDisplay, ownerPID: Self.dockDoor, sourcePID: nil, in: Self.mainBar, displays: Self.displays))
+    }
+
+    @Test("The bar of the item's own display is still used")
+    func ownDisplaysBarIsUsed() {
+        let drawn = DrawnItemFrame.clickFrame(
+            for: CGRect(x: 1741, y: 3, width: 24, height: 24), ownerPID: Self.dockDoor, sourcePID: nil, in: Self.mainBar, displays: Self.displays
+        )
+
+        #expect(drawn?.minX == 1722.5)
+        #expect(drawn?.width == 38)
+    }
+
+    @Test("With stacked displays, an item drawn at the same x on the other bar doesn't make the frame a phantom")
+    func stackedDisplaysShareX() {
+        let displays = [CGRect(x: 0, y: 0, width: 1920, height: 1080), CGRect(x: 0, y: -1152, width: 2048, height: 1152)]
+        let onUpperBar = CGRect(x: 926, y: -1149, width: 20, height: 24)
+        let lowerBar = [Self.entry(Self.windowManager, x: 926, width: 24)]
+
+        #expect(DrawnItemFrame.isPhantom(onUpperBar, ownerPID: Self.driveDx, sourcePID: nil, in: lowerBar), "Without displays, the x alone decides")
+        #expect(!DrawnItemFrame.isPhantom(onUpperBar, ownerPID: Self.driveDx, sourcePID: nil, in: lowerBar, displays: displays))
+        #expect(DrawnItemFrame.clickFrame(for: onUpperBar, ownerPID: Self.driveDx, sourcePID: nil, in: lowerBar, displays: displays) == onUpperBar)
+    }
 }

@@ -28,12 +28,13 @@ nonisolated enum DrawnItemFrame {
         for axFrame: CGRect,
         ownerPID: pid_t,
         sourcePID: pid_t?,
-        in entries: [MenuBarAgentWindow.Entry]?
+        in entries: [MenuBarAgentWindow.Entry]?,
+        displays: [CGRect] = []
     ) -> CGRect? {
         guard let entries = entries.flatMap(MenuBarAgentWindow.settled),
               let app = processes(ownerPID: ownerPID, sourcePID: sourcePID).first
         else { return nil }
-        let own = entries.filter { $0.ownerPID == app }
+        let own = onDisplay(of: axFrame, entries, displays: displays).filter { $0.ownerPID == app }
         guard own.count == 1, let drawn = own.first else { return nil }
         return CGRect(x: drawn.frame.minX, y: axFrame.minY, width: drawn.frame.width, height: axFrame.height)
     }
@@ -44,11 +45,12 @@ nonisolated enum DrawnItemFrame {
         _ axFrame: CGRect,
         ownerPID: pid_t,
         sourcePID: pid_t?,
-        in entries: [MenuBarAgentWindow.Entry]?
+        in entries: [MenuBarAgentWindow.Entry]?,
+        displays: [CGRect] = []
     ) -> Bool {
         guard axFrame.width > 0, let entries = entries.flatMap(MenuBarAgentWindow.settled) else { return false }
         let own = Set(processes(ownerPID: ownerPID, sourcePID: sourcePID))
-        return entries.contains { entry in
+        return onDisplay(of: axFrame, entries, displays: displays).contains { entry in
             guard !own.contains(entry.ownerPID),
                   entry.frame.width >= MenuBarItemGeometry.phantomFramePeerMinimumWidth
             else { return false }
@@ -67,12 +69,13 @@ nonisolated enum DrawnItemFrame {
         for axFrame: CGRect,
         ownerPID: pid_t,
         sourcePID: pid_t?,
-        in entries: [MenuBarAgentWindow.Entry]?
+        in entries: [MenuBarAgentWindow.Entry]?,
+        displays: [CGRect] = []
     ) -> CGRect? {
-        if let drawn = drawnFrame(for: axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries) {
+        if let drawn = drawnFrame(for: axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries, displays: displays) {
             return drawn
         }
-        return isPhantom(axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries) ? nil : axFrame
+        return isPhantom(axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries, displays: displays) ? nil : axFrame
     }
 
     /// Whether a crop at axFrame shows the item: its drawn frame, when there is one, is on the
@@ -88,6 +91,19 @@ nonisolated enum DrawnItemFrame {
             return abs(drawn.midX - axFrame.midX) <= agreementTolerance
         }
         return !isPhantom(axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries)
+    }
+
+    /// The entries on the display holding axFrame, or all when none holds it: MenuBarAgent's first
+    /// window can be another display's bar.
+    private static func onDisplay(
+        of axFrame: CGRect,
+        _ entries: [MenuBarAgentWindow.Entry],
+        displays: [CGRect]
+    ) -> [MenuBarAgentWindow.Entry] {
+        guard let display = displays.first(where: { $0.contains(CGPoint(x: axFrame.midX, y: axFrame.midY)) }) else {
+            return entries
+        }
+        return entries.filter { display.contains(CGPoint(x: $0.frame.midX, y: $0.frame.midY)) }
     }
 
     /// The item's known processes, the source first, without repeats.
