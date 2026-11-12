@@ -16,9 +16,8 @@ import MenuBarModel
 /// wrong spot, so the watch asks for the arrival restore as soon as the item is in the cache. The
 /// restore marks the authored order pending at once, and the mirror keeps that order meanwhile.
 ///
-/// The cache only notices on its own an item that moves the menu bar window list, and on macOS 27
-/// a menu-bar-only app publishes its item without a window. So after the app of a left-out member
-/// starts, the watch re-reads the bar for a few looks.
+/// The cache misses a menu-bar-only app's item, which moves no menu bar window, so the watch
+/// re-reads the bar for a few looks after a left-out member's app starts.
 @MainActor
 enum LeftOutMemberWatch {
     private static let diagLog = DiagLog(category: "LeftOutMemberWatch")
@@ -26,9 +25,8 @@ enum LeftOutMemberWatch {
     /// How often the watch looks at the item cache.
     static nonisolated let pollInterval: Duration = .seconds(2)
 
-    /// How many restores are asked for one member until a pass places it, across watches: a
-    /// restore's own pass can leave the member out again and start a new watch. Another is asked
-    /// for only after the last one ended without placing the member, as when a gate turned it away.
+    /// Restores asked for one member until a pass places it, counted across watches since a
+    /// restore's own pass can start a new one. A retry follows only a restore that didn't place it.
     static nonisolated let maximumRestores = 3
 
     /// How many looks re-read the bar after the app of a left-out member starts. An app publishes
@@ -55,8 +53,7 @@ enum LeftOutMemberWatch {
         var isOrderApplyPending = false
         /// The arrival restore does not run this soon after a restriction change.
         var isWithinRestrictionSettleWindow = false
-        /// Whether the app of a left-out member started recently. On macOS 27 a menu-bar-only app
-        /// publishes its item without a window, so the cache's window-list gate misses it.
+        /// Whether the app of a left-out member started within the last few looks.
         var ownerRecentlyLaunched = false
     }
 
@@ -193,7 +190,7 @@ enum LeftOutMemberWatch {
         let liveVisible = Set(manager.itemCache[.visible].map(\.uniqueIdentifier))
         return Situation(
             isCurrentWatch: memo.watchGeneration == generation,
-            hasLeftOutMembers: memo.hasLeftOutMembers(now: now),
+            hasLeftOutMembers: memo.hasLeftOutMembers(among: savedVisibleMembers(of: manager), now: now),
             liveLeftOutMembers: memo.leftOutMembers(amongLive: liveVisible, restoreLimit: maximumRestores, now: now),
             arrangementIsManual: manager.arrangementIsManual,
             userDraggedSinceStart: manager.lastUserMenuBarDragEnd.map { $0 > startedAt } ?? false,
@@ -203,5 +200,11 @@ enum LeftOutMemberWatch {
             isOrderApplyPending: manager.authoredVisibleOrderPendingPhysicalApply,
             isWithinRestrictionSettleWindow: manager.barSettling.hold(for: .layoutReorder) != nil
         )
+    }
+
+    /// The members of the saved Visible order, or nil when there is none to go by.
+    static func savedVisibleMembers(of manager: MenuBarItemManager) -> Set<String>? {
+        guard let order = manager.savedSectionOrder[manager.sectionKey(for: .visible)], !order.isEmpty else { return nil }
+        return Set(order)
     }
 }

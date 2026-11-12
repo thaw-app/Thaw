@@ -728,8 +728,7 @@ final class MenuBarItemManager {
         guard !arrangementIsManual,
               let controller = appState?.menuBarManager.sectionController
         else { return }
-        let identifiers = savedSectionOrder[sectionKey(for: .visible)] ?? []
-        guard identifiers.count > 1 else { return }
+        guard (savedSectionOrder[sectionKey(for: .visible)]?.count ?? 0) > 1 else { return }
         repairs.request(.arrivalOrderRestore, cause: .arrivalDisturbedOrder)
         authoredVisibleOrderPendingPhysicalApply = true
         authoredVisibleOrderApplyTask?.cancel()
@@ -745,6 +744,7 @@ final class MenuBarItemManager {
                 }
             }
             guard let hold = await repairs.enter(.arrivalOrderRestore) else { return }
+            guard let identifiers = ProfileOrderHold.arrivalRestoreOrder(saved: savedSectionOrder[sectionKey(for: .visible)], isApplyingLayout: isApplyingProfileLayout || isResettingLayout) else { return repairs.leave(hold) }
             MenuBarItemManager.diagLog.info(
                 "macOS 27: restoring recorded visible order after an arrival (\(identifiers.count) item(s))"
             )

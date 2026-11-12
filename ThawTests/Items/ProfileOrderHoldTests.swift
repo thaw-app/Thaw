@@ -122,6 +122,30 @@ struct ProfileOrderHoldTests {
         }
     }
 
+    @Test("A left-out member moved out of Visible since doesn't keep the hold")
+    func memberMovedOutOfVisibleEndsTheHold() {
+        Self.withSavedOrderDefaults {
+            let manager = MenuBarItemManager()
+            manager.savedSectionOrder = [Self.visibleKey: Self.profileOrder]
+            manager.profileOrderHold = ProfileOrderHold(startedAt: .now)
+            manager.missingRepublishMemo.noteMissing(["com.example.movedToHidden:Item-0"])
+            manager.missingRepublishMemo.noteArrived(Self.profileOrder)
+
+            Self.mirror(manager)
+
+            #expect(manager.profileOrderHold == nil)
+            #expect(manager.savedSectionOrder[Self.visibleKey] == Self.partialBar.map(\.uniqueIdentifier))
+        }
+    }
+
+    @Test("An arrival restore writes the order saved when it runs, and none while a layout is applied")
+    func arrivalRestoreReadsTheOrderWhenItRuns() {
+        #expect(ProfileOrderHold.arrivalRestoreOrder(saved: Self.profileOrder, isApplyingLayout: false) == Self.profileOrder)
+        #expect(ProfileOrderHold.arrivalRestoreOrder(saved: Self.profileOrder, isApplyingLayout: true) == nil)
+        #expect(ProfileOrderHold.arrivalRestoreOrder(saved: ["com.example.only:Item-0"], isApplyingLayout: false) == nil)
+        #expect(ProfileOrderHold.arrivalRestoreOrder(saved: nil, isApplyingLayout: false) == nil)
+    }
+
     @Test("A pass that read nothing leaves no one out, but the record still keeps the profile's order")
     func emptyReadKeepsTheRecord() {
         Self.withSavedOrderDefaults {

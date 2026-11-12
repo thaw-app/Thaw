@@ -78,8 +78,11 @@ nonisolated struct RepublishAbsenceMemo {
     }
 
     /// Whether a member left out within the left-out window still waits for a pass to place it.
-    func hasLeftOutMembers(now: ContinuousClock.Instant = .now) -> Bool {
-        leftOutSince.values.contains { $0.duration(to: now) < Self.leftOutMemory }
+    /// With visibleMembers, only members still in Visible count.
+    func hasLeftOutMembers(among visibleMembers: Set<String>? = nil, now: ContinuousClock.Instant = .now) -> Bool {
+        leftOutSince.contains { identifier, since in
+            since.duration(to: now) < Self.leftOutMemory && visibleMembers?.contains(identifier) != false
+        }
     }
 
     /// The members left out within the left-out window that are among the live identifiers, less

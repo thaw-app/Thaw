@@ -41,4 +41,11 @@ nonisolated struct ProfileOrderHold: Equatable {
         }
         return membersSeenAt.map { $0 >= startedAt } == true && !membersStillLeftOut
     }
+
+    /// The Visible order an arrival restore writes, read when it runs: a profile applied meanwhile
+    /// saved its own. Nil while a profile or layout reset places the items, or with under two.
+    static func arrivalRestoreOrder(saved: [String]?, isApplyingLayout: Bool) -> [String]? {
+        guard !isApplyingLayout, let saved, saved.count > 1 else { return nil }
+        return saved
+    }
 }

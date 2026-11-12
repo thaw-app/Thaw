@@ -271,6 +271,16 @@ struct RepublishAbsenceMemoTests {
         #expect(memo.restoresAsked(for: "a") == 0)
     }
 
+    @Test("Only a left-out member still in Visible waits, when the Visible members are known")
+    func leftOutCountsOnlyVisibleMembers() {
+        var memo = RepublishAbsenceMemo()
+        memo.noteMissing(["moved"], at: start)
+
+        #expect(memo.hasLeftOutMembers(now: start))
+        #expect(!memo.hasLeftOutMembers(among: ["a", "b"], now: start))
+        #expect(memo.hasLeftOutMembers(among: ["a", "moved"], now: start))
+    }
+
     @Test("Restore counts lapse with the left-out window")
     func restoreCountsExpire() {
         var memo = RepublishAbsenceMemo()
