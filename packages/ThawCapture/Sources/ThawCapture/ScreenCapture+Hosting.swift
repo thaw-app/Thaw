@@ -564,15 +564,15 @@ public extension ScreenCapture {
         // SkyLight first: it takes the window's own contents, where SCK shreds
         // off-screen Liquid Glass into columns.
         if let skyLightImage = Bridging.captureWindowsImage(
-            windowIDs: [window.windowID],
-            options: [.boundsIgnoreFraming, .bestResolution]
-        ),
-            let normalized = normalizedHostingCapture(
-                image: skyLightImage,
-                windowFrame: window.frame,
-                displayFrame: displayFrame,
-                reportedScale: reportedScale
-            )
+               windowIDs: [window.windowID],
+               options: [.boundsIgnoreFraming, .bestResolution]
+           ),
+           let normalized = normalizedHostingCapture(
+               image: skyLightImage,
+               windowFrame: window.frame,
+               displayFrame: displayFrame,
+               reportedScale: reportedScale
+           )
         {
             diagLog.debug(
                 "captureMenuBarHostingWindowAsync: SkyLight took wid=\(window.windowID) " +

@@ -1113,7 +1113,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         case .adaptive:
             if let colorInfo = averageColorInfo,
                let color = NSColor(cgColor: colorInfo.color)?
-               .withAlphaComponent(configuration.tintOpacity)
+                   .withAlphaComponent(configuration.tintOpacity)
             {
                 color.setFill()
                 rect.fill()
@@ -1123,7 +1123,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 gradient.draw(in: rect, angle: 0)
             } else if let colorInfo = averageColorInfo,
                       let color = NSColor(cgColor: colorInfo.color)?
-                      .withAlphaComponent(configuration.tintOpacity)
+                          .withAlphaComponent(configuration.tintOpacity)
             {
                 // Use the average until the palette arrives to avoid an untinted flash.
                 color.setFill()
@@ -1375,7 +1375,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         case .adaptive:
             if let colorInfo = averageColorInfo,
                let color = NSColor(cgColor: colorInfo.color)?
-               .withAlphaComponent(configuration.backgroundOpacity)
+                   .withAlphaComponent(configuration.backgroundOpacity)
             {
                 color.setFill()
                 rect.fill()

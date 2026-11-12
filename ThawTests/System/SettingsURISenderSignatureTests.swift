@@ -15,7 +15,7 @@ import Testing
 /// Only Apple's own code is read, so the expectations hold on every Mac.
 @Suite("Settings URI sender signatures")
 struct SettingsURISenderSignatureTests {
-    private func descriptor<Value>(_ type: DescType, _ value: Value) -> NSAppleEventDescriptor? {
+    private func descriptor(_ type: DescType, _ value: some Any) -> NSAppleEventDescriptor? {
         var value = value
         return withUnsafeBytes(of: &value) { bytes in
             NSAppleEventDescriptor(descriptorType: type, bytes: bytes.baseAddress, length: bytes.count)

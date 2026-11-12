@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 
-ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+# The real path: under a symlink such as /tmp, SwiftLint ignores the baseline.
+ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd -P)
 IFS= read -r expected < "$ROOT/.swiftlint-version"
 # Where install-swiftlint.sh puts the pinned version; Xcode's PATH leaves it out.
 PATH="${HOME:-}/.local/bin:$PATH"

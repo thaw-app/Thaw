@@ -48,9 +48,7 @@ public extension MenuBarItemCache {
         _ snapshotItems: [MenuBarItem],
         withCachedItems cachedItems: [MenuBarItem]
     ) -> [MenuBarItem] {
-        var identifiers = Set(snapshotItems.map {
-            $0.canonicalIdentifier
-        })
+        var identifiers = Set(snapshotItems.map(\.canonicalIdentifier))
         var mergedItems = snapshotItems
         for item in cachedItems {
             let identifier = item.canonicalIdentifier

@@ -45,5 +45,5 @@ jobs:
               {"label": "hotkeys", "patterns": ["Hotkey"]},
               {"label": "updates", "patterns": ["Sparkle", "/Update", "appcast"]},
               {"label": "settings", "kind": "fallback", "prefixes": ["Thaw/Settings/"]},
-              {"label": "ops", "kind": "ops", "prefixes": [".github/", "scripts/"], "paths": ["AGENTS.md", "FREQUENT_ISSUES.md", "README.md", ".swiftformat", ".swiftlint.yml", "sonar-project.properties"]}
+              {"label": "ops", "kind": "ops", "prefixes": [".github/", "scripts/"], "paths": ["AGENTS.md", "FREQUENT_ISSUES.md", "README.md", ".swiftformat", ".swiftformat-version", ".swiftlint.yml", "sonar-project.properties"]}
             ]

@@ -10,8 +10,8 @@ import Combine
 import CoreGraphics
 import MenuBarModel
 import Testing
-import ThawAXCore
 @testable import Thaw
+import ThawAXCore
 
 @MainActor
 struct MenuBarAppearanceItemsTests {

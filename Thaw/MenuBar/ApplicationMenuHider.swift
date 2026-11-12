@@ -25,6 +25,7 @@ final class ApplicationMenuHider {
         var presentationMode: @MainActor (MenuBarSection, NSScreen) -> MenuBarSection.PresentationMode = {
             $0.presentationMode(on: $1)
         }
+
         var sleep: @MainActor (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
 
         /// Activates and deactivates the app through its app state.

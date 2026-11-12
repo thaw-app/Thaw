@@ -5,9 +5,9 @@
 //  Copyright (Thaw) © 2026 René Jiménez
 //  Licensed under the GNU GPLv3
 
+import Combine
 import CoreGraphics
 import MenuBarModel
-import Combine
 import Testing
 @testable import Thaw
 

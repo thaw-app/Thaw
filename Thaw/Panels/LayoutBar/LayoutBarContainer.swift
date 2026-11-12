@@ -662,7 +662,7 @@ final class LayoutBarContainer: NSView {
         if section != .visible {
             let sectionController = appState.menuBarManager.sectionController
             let liveIdentifiers = Set(
-                displayedItems.map { $0.canonicalIdentifier }
+                displayedItems.map(\.canonicalIdentifier)
             )
             let placeholders = sectionController.sectionAssignment
                 .filter { $0.value == section }

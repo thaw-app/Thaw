@@ -75,7 +75,7 @@ jobs:
 
       - name: Skip lint (no code changes)
         if: needs.changes.outputs.code != 'true'
-        run: echo "No code-related paths changed; skipping SwiftLint."
+        run: echo "No code-related paths changed; skipping SwiftLint and the format check."
 
       - name: Validate XCStrings
         if: needs.changes.outputs.code == 'true' && github.event_name == 'pull_request'
@@ -99,6 +99,22 @@ jobs:
           docker run --rm -v "$PWD:/work" -w /work \
             ghcr.io/realm/swiftlint:0.65.1@sha256:f47e083201e47a136cda5ae847595bfe00226c444ca226fa74fa5dc648a9b057 \
             /bin/sh scripts/lint.sh --strict
+
+      - name: Check the SwiftLint baseline only shrinks
+        if: needs.changes.outputs.code == 'true' && github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          bash scripts/tests/test-swiftlint-baseline.sh
+          git show "origin/$BASE_REF:.swiftlint.baseline" > "$RUNNER_TEMP/base.swiftlint.baseline"
+          python3 scripts/swiftlint-baseline.py check "$RUNNER_TEMP/base.swiftlint.baseline" .swiftlint.baseline
+
+      - name: Check formatting
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          bash scripts/tests/test-format.sh
+          sh scripts/install-swiftformat.sh
+          sh scripts/format.sh --lint
 
   build:
     if: github.repository == 'thaw-app/Thaw'

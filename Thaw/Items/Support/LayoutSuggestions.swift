@@ -29,7 +29,7 @@ nonisolated enum LayoutSuggestions {
     /// An empty inventory proves nothing, so it never reports.
     static func littleSnitchItemIsMissing(runningBundleIDs: Set<String>, items: [MenuBarItem]) -> Bool {
         guard runningBundleIDs.contains(littleSnitchAgentBundleID), !items.isEmpty else { return false }
-        return !items.contains { "\($0.tag.namespace)" == littleSnitchAgentBundleID }
+        return !items.contains { littleSnitchAgentBundleID == "\($0.tag.namespace)" }
     }
 
     /// A short, locale-formatted list of names, with "and N more" past three.
