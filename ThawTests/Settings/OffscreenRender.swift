@@ -39,9 +39,11 @@ final class OffscreenRender<Content: View> {
     ///
     /// SwiftUI says nothing when it has applied an update, so this checks
     /// between run-loop turns. The default bound is far past any update, so a
-    /// busy machine slows a passing test rather than failing it.
+    /// busy machine slows a passing test rather than failing it. CI runs several
+    /// test processes at once and a passing page test has taken up to a minute
+    /// there, so the bound is two minutes.
     @discardableResult
-    func settle(within timeout: Duration = .seconds(30), until condition: () -> Bool) async -> Bool {
+    func settle(within timeout: Duration = .seconds(120), until condition: () -> Bool) async -> Bool {
         let deadline = ContinuousClock.now.advanced(by: timeout)
         while ContinuousClock.now < deadline {
             host.layoutSubtreeIfNeeded()
