@@ -2615,9 +2615,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Settings/SettingsPanes/Profiles/ProfileSettingsPane.swift",
-    "line": 529
+    "line": 488
    },
-   "reason": "File should contain 400 lines or less: currently contains 529",
+   "reason": "File should contain 400 lines or less: currently contains 488",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",

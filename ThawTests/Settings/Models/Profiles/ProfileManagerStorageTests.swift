@@ -236,6 +236,52 @@ struct ProfileManagerStorageTests {
         }
     }
 
+    /// Undo restores the shortcut saved before deletion, unless another profile has claimed it.
+    @Test("Restoring a deleted profile preserves its shortcut without stealing one", arguments: [false, true])
+    func undoRestoresApplyShortcut(claimed: Bool) throws {
+        try ProfileTestDirectory.withManager(seeding: ["Deleted", "Other"]) { manager, _ in
+            let deleted = manager.profiles[0].id
+            let other = manager.profiles[1].id
+            let shortcut = Data("saved shortcut".utf8)
+            let store = HotkeyBindingStore.profiles
+            store.setRawBindings([deleted.uuidString: shortcut])
+            let restore = try ProfileUndoStep.delete(id: deleted).apply(to: manager)
+            // Live hotkey rebuilding drops deleted IDs. Model that cleanup without registering global shortcuts.
+            store.setRawBindings(claimed ? [other.uuidString: shortcut] : [:])
+
+            let redo = try restore.apply(to: manager)
+
+            #expect(ProfileApplyShortcuts().shortcut(for: deleted) == (claimed ? nil : shortcut))
+            #expect(ProfileApplyShortcuts().shortcut(for: other) == (claimed ? shortcut : nil))
+            #expect(manager.profiles.contains { $0.id == deleted })
+            if !claimed {
+                let restoreAgain = try redo.apply(to: manager)
+                store.setRawBindings([:])
+                _ = try restoreAgain.apply(to: manager)
+                #expect(ProfileApplyShortcuts().shortcut(for: deleted) == shortcut)
+            }
+        }
+    }
+
+    /// Rename and saved-content undo preserve their inverse operations across repeated edits.
+    @Test("Profile undo round-trips renaming and replacing saved content")
+    func undoRenameAndReplace() throws {
+        try ProfileTestDirectory.withManager(seeding: ["Original"]) { manager, _ in
+            let id = manager.profiles[0].id
+            let undoRename = try ProfileUndoStep.rename(id: id, to: "Renamed").apply(to: manager)
+            #expect(manager.profiles[0].name == "Renamed")
+            _ = try undoRename.apply(to: manager)
+            #expect(manager.profiles[0].name == "Original")
+            let original = try manager.loadProfile(id: id)
+            var updated = original
+            updated.generalSettings.showOnHover.toggle()
+            let undoReplace = try ProfileUndoStep.replace([updated]).apply(to: manager)
+            #expect(try manager.loadProfile(id: id).generalSettings.showOnHover == updated.generalSettings.showOnHover)
+            _ = try undoReplace.apply(to: manager)
+            #expect(try manager.loadProfile(id: id).generalSettings.showOnHover == original.generalSettings.showOnHover)
+        }
+    }
+
     @Test("Restoring a deleted profile puts it back at its old place and reclaims its display")
     func restoreProfile() throws {
         try ProfileTestDirectory.withManager(seeding: ["A", "B", "C"]) { manager, _ in
