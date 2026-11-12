@@ -48,8 +48,11 @@ struct StatusIconAudioOutputTests {
         #expect(!StatusIconComposition.Center.bluetooth.title.isEmpty)
     }
 
-    @Test("Reading the default output never fails, whatever this Mac plays through")
-    func liveReadDoesNotFail() {
-        _ = AudioOutputSource.defaultOutput()
+    @Test("Reading the default output gives nothing or a named output with a symbol, whatever this Mac plays through")
+    func liveReadIsEmptyOrNamed() {
+        // A Mac with no audio output (a CI runner, for one) reads nil, so only the named case is checked.
+        guard let output = AudioOutputSource.defaultOutput() else { return }
+        #expect(!output.name.isEmpty)
+        #expect(NSImage(systemSymbolName: output.symbolName, accessibilityDescription: nil) != nil, "the symbol exists")
     }
 }
