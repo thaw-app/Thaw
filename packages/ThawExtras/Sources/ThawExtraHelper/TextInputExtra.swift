@@ -84,8 +84,16 @@ final class TextInputExtra: NSObject {
         TISSelectInputSource((object as! TISInputSource))
     }
 
+    /// macOS opens no Character Viewer for a background app, even one brought forward,
+    /// so Thaw presses ⌃⌘Space in the app being typed in.
     @objc private func showCharacterPalette() {
-        NSApp.orderFrontCharacterPalette(nil)
+        guard let parent = ExtraRole.parentBundleIdentifier(of: Bundle.main.bundleIdentifier ?? "") else { return }
+        DistributedNotificationCenter.default().postNotificationName(
+            CharacterViewerChannel.notification(parent: parent),
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
     }
 
     @objc private func openKeyboardSettings() {

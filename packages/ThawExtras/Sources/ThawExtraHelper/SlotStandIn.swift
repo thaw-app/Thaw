@@ -87,3 +87,10 @@ enum ExtraVisibilityChannel {
         Notification.Name("\(parent).extra.visibility")
     }
 }
+
+/// Asks Thaw to open the Character Viewer. Must match CharacterViewerRelay in Thaw.
+enum CharacterViewerChannel {
+    static func notification(parent: String) -> Notification.Name {
+        Notification.Name("\(parent).extra.characterViewer")
+    }
+}
