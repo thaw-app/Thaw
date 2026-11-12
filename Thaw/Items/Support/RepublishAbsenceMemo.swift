@@ -23,6 +23,9 @@ nonisolated struct RepublishAbsenceMemo {
 
     private var missingSince: [String: ContinuousClock.Instant] = [:]
     private var leftOutSince: [String: ContinuousClock.Instant] = [:]
+    /// How many restores the watches asked for each left-out member. A restore's own pass can
+    /// leave the member out again and start a new watch, so the count outlives the watch.
+    private var restoresAsked: [String: Int] = [:]
 
     /// Counts the watches started for left-out members, so an older watch can tell it was replaced.
     private(set) var watchGeneration = 0
@@ -44,6 +47,7 @@ nonisolated struct RepublishAbsenceMemo {
     mutating func expire(now: ContinuousClock.Instant = .now) {
         missingSince = missingSince.filter { $0.value.duration(to: now) < Self.memory }
         leftOutSince = leftOutSince.filter { $0.value.duration(to: now) < Self.leftOutMemory }
+        restoresAsked = restoresAsked.filter { leftOutSince[$0.key] != nil }
     }
 
     /// When the latest pass that saw any of its members live took its order, so a pass that took
@@ -59,6 +63,7 @@ nonisolated struct RepublishAbsenceMemo {
             if let since = leftOutSince[identifier], since > now { continue }
             missingSince.removeValue(forKey: identifier)
             leftOutSince.removeValue(forKey: identifier)
+            restoresAsked.removeValue(forKey: identifier)
             lastSawMembers = max(lastSawMembers ?? now, now)
         }
     }
@@ -77,9 +82,29 @@ nonisolated struct RepublishAbsenceMemo {
         leftOutSince.values.contains { $0.duration(to: now) < Self.leftOutMemory }
     }
 
-    /// The members left out within the left-out window that are among the live identifiers.
-    func leftOutMembers(amongLive live: Set<String>, now: ContinuousClock.Instant = .now) -> Set<String> {
-        Set(leftOutSince.filter { live.contains($0.key) && $0.value.duration(to: now) < Self.leftOutMemory }.keys)
+    /// The members left out within the left-out window that are among the live identifiers, less
+    /// those that already had restoreLimit restores asked for them.
+    func leftOutMembers(
+        amongLive live: Set<String>,
+        restoreLimit: Int = .max,
+        now: ContinuousClock.Instant = .now
+    ) -> Set<String> {
+        Set(leftOutSince.filter {
+            live.contains($0.key) && $0.value.duration(to: now) < Self.leftOutMemory
+                && restoresAsked[$0.key, default: 0] < restoreLimit
+        }.keys)
+    }
+
+    /// Counts a restore asked for these members. Placing a member clears its count.
+    mutating func noteRestoreAsked(for identifiers: some Sequence<String>) {
+        for identifier in identifiers {
+            restoresAsked[identifier, default: 0] += 1
+        }
+    }
+
+    /// How many restores were asked for the member since it was last placed.
+    func restoresAsked(for identifier: String) -> Int {
+        restoresAsked[identifier, default: 0]
     }
 
     /// Starts a new watch generation. A watch from an earlier one stops at its next look.

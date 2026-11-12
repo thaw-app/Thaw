@@ -124,6 +124,79 @@ struct LeftOutMemberWatchTests {
         #expect(restored == 0)
     }
 
+    /// 2026-11-11: CodexBar, a menu-bar-only app, started 12 s after a pass left it out. Its item
+    /// moved no menu bar window, so the cache didn't see it for 30 s and the watch had nothing to restore.
+    @Test("The watch re-reads the bar while a left-out member's app has just started")
+    func readsTheBarAfterAnOwnerStarts() {
+        #expect(LeftOutMemberWatch.step(Situation(ownerRecentlyLaunched: true)) == .readBar)
+        #expect(LeftOutMemberWatch.step(Situation(liveLeftOutMembers: ["istat"], ownerRecentlyLaunched: true)) == .restore(["istat"]))
+        #expect(LeftOutMemberWatch.step(Situation(hasLeftOutMembers: false, ownerRecentlyLaunched: true)) == .stop)
+    }
+
+    @Test("A started owner asks for a few re-reads, and an owner already running asks for none")
+    func ownerLaunchesAskForBoundedReads() {
+        var owners = LeftOutMemberWatch.OwnerLaunches(running: ["com.example.running"])
+
+        let unchanged = owners.update(running: ["com.example.running"])
+        let reads = (0 ..< 5).map { _ in owners.update(running: ["com.example.running", "com.example.late"]) }
+        let another = owners.update(running: ["com.example.running", "com.example.late", "com.example.later"])
+
+        #expect(!unchanged)
+        #expect(reads == [true, true, true, false, false])
+        #expect(LeftOutMemberWatch.readsAfterOwnerLaunch == 3)
+        #expect(another, "Another start asks again")
+    }
+
+    @Test("Only members named by a running app's bundle identifier have an owner to watch for")
+    func runningOwnersNeedABundleIdentifier() {
+        let members: Set = ["com.example.late:Item-0", "com.example.quit:Item-0", "Floe:Floe"]
+
+        let owners = LeftOutMemberWatch.runningOwners(of: members, runningBundleIDs: ["com.example.late", "Floe"])
+
+        #expect(owners == ["com.example.late"])
+    }
+
+    @Test("A re-read is followed by another look, and the arrival it finds is restored")
+    func readBarThenRestore() async {
+        var looks = [Situation(ownerRecentlyLaunched: true), Self.arrived, Situation(hasLeftOutMembers: false)]
+        var reads = 0
+        var restored = [Set<String>]()
+
+        let restores = await LeftOutMemberWatch.run(
+            sleep: { _ in },
+            look: { looks.removeFirst() },
+            readBar: { reads += 1 },
+            restore: { restored.append($0) }
+        )
+
+        #expect(reads == 1)
+        #expect(restores == 1)
+        #expect(restored == [["istat"]])
+        #expect(looks.isEmpty)
+    }
+
+    /// The restore's own pass can leave the member out again, which starts a new watch with no
+    /// restores of its own; the cap holds across watches.
+    @Test("A member restored the most times is no longer offered for restore, even to a new watch")
+    func restoreCapOutlivesTheWatch() {
+        let late = Self.item("Late", x: 10)
+        let manager = MenuBarItemManager()
+        manager.itemCache[.visible] = [late]
+        let start = ContinuousClock.now
+
+        for generation in 1 ... LeftOutMemberWatch.maximumRestores {
+            LeftOutMemberWatch.noteLeftOut([late.uniqueIdentifier], by: manager).cancel()
+            let situation = LeftOutMemberWatch.situation(of: manager, generation: generation, startedAt: start)
+            #expect(LeftOutMemberWatch.step(situation) == .restore([late.uniqueIdentifier]))
+            manager.missingRepublishMemo.noteRestoreAsked(for: [late.uniqueIdentifier])
+        }
+        LeftOutMemberWatch.noteLeftOut([late.uniqueIdentifier], by: manager).cancel()
+        let capped = LeftOutMemberWatch.situation(of: manager, generation: LeftOutMemberWatch.maximumRestores + 1, startedAt: start)
+
+        #expect(capped.liveLeftOutMembers.isEmpty)
+        #expect(LeftOutMemberWatch.step(capped) == .wait)
+    }
+
     @Test("Leaving members out records them and replaces the running watch")
     func noteLeftOutStartsAWatch() {
         let manager = MenuBarItemManager()

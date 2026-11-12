@@ -253,4 +253,32 @@ struct RepublishAbsenceMemoTests {
         #expect(!memo.isKnownAbsent("a"))
         #expect(!memo.hasLeftOutMembers(now: start + .seconds(6)))
     }
+
+    @Test("Restores asked for a member hold it back at the limit, survive being left out again, and clear once it is placed")
+    func restoreCountsLastUntilPlaced() {
+        var memo = RepublishAbsenceMemo()
+        memo.noteMissing(["a", "b"], at: start)
+
+        memo.noteRestoreAsked(for: ["a"])
+        memo.noteRestoreAsked(for: ["a"])
+        memo.noteMissing(["a"], at: start + .seconds(1))
+
+        #expect(memo.restoresAsked(for: "a") == 2)
+        #expect(memo.leftOutMembers(amongLive: ["a", "b"], restoreLimit: 2, now: start + .seconds(2)) == ["b"])
+        #expect(memo.leftOutMembers(amongLive: ["a", "b"], restoreLimit: 3, now: start + .seconds(2)) == ["a", "b"])
+
+        memo.noteArrived(["a"], at: start + .seconds(2))
+        #expect(memo.restoresAsked(for: "a") == 0)
+    }
+
+    @Test("Restore counts lapse with the left-out window")
+    func restoreCountsExpire() {
+        var memo = RepublishAbsenceMemo()
+        memo.noteMissing(["a"], at: start)
+        memo.noteRestoreAsked(for: ["a"])
+
+        memo.expire(now: start + RepublishAbsenceMemo.leftOutMemory)
+
+        #expect(memo.restoresAsked(for: "a") == 0)
+    }
 }
