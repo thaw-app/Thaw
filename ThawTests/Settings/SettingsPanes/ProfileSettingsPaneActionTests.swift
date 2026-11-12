@@ -47,6 +47,7 @@ struct ProfileSettingsPaneActionTests {
     /// Draws the page over a folder seeded with the named profiles and waits for it to show.
     private func withPage(
         seeding names: [String],
+        fileChoosers: ProfileSettingsPane.FileChoosers = .init(),
         prepare: (ProfileManager, AppState) throws -> Void = { _, _ in /* Most tests start from the seeded profiles as they are. */ },
         _ body: (ProfileManager, AppState, Page) async throws -> Void
     ) async throws {
@@ -57,7 +58,7 @@ struct ProfileSettingsPaneActionTests {
         try prepare(manager, appState)
         let page = OffscreenRender(
             AnyView(
-                ProfileSettingsPane(profileManager: manager)
+                ProfileSettingsPane(profileManager: manager, fileChoosers: fileChoosers)
                     .environment(appState)
                     .environment(\.settingsPaneTitle, nil)
                     .frame(width: Self.size.width, height: Self.size.height)
@@ -182,6 +183,75 @@ struct ProfileSettingsPaneActionTests {
 
             undo.redo()
             #expect(manager.profiles.map(\.id).last == copy, "redo brings back the same copy")
+        }
+    }
+
+    /// Answers the page's file choosers from the test, so no panel opens, and records what was suggested.
+    @MainActor
+    private final class Choices {
+        var answer: URL?
+        var suggestedNames = [String]()
+
+        var choosers: ProfileSettingsPane.FileChoosers {
+            var choosers = ProfileSettingsPane.FileChoosers()
+            choosers.save = { [self] name in
+                suggestedNames.append(name)
+                return answer
+            }
+            choosers.open = { [self] in answer }
+            return choosers
+        }
+    }
+
+    @Test("Export writes the profile where the chooser says, with a slash made safe, and a cancelled chooser writes nothing")
+    func exportsOneProfile() async throws {
+        let folder = try ProfileTestDirectory.make(seeding: [])
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let target = folder.appendingPathComponent("out.json")
+        let choices = Choices()
+        try await withPage(seeding: ["Work/Home", "Desk"], fileChoosers: choices.choosers) { _, _, page in
+            try page.contextMenu(over: row("Work/Home", in: page)).choose("Export…")
+            #expect(choices.suggestedNames == ["Work-Home.json"], "a slash in the name becomes a dash")
+            #expect(!FileManager.default.fileExists(atPath: target.path), "a cancelled chooser writes nothing")
+
+            choices.answer = target
+            try page.contextMenu(over: row("Work/Home", in: page)).choose("Export…")
+            let file = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: target)) as? [String: Any])
+            let entries = try #require(file["entries"] as? [[String: Any]])
+            let names = entries.compactMap { ($0["profile"] as? [String: Any])?["name"] as? String }
+            #expect(names == ["Work/Home"], "the file holds the chosen profile and only that one")
+        }
+    }
+
+    @Test("Export Profiles writes every profile, and Import brings a profile back in")
+    func exportsAllAndImports() async throws {
+        let folder = try ProfileTestDirectory.make(seeding: [])
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let everything = folder.appendingPathComponent("all.json")
+        let single = folder.appendingPathComponent("single.json")
+        let choices = Choices()
+        try await withPage(seeding: ["Work", "Desk"], fileChoosers: choices.choosers) { manager, _, page in
+            try page.press("Export Profiles…")
+            #expect(choices.suggestedNames == ["\(Constants.displayName) Profiles.json"])
+            #expect(!FileManager.default.fileExists(atPath: everything.path), "a cancelled chooser writes nothing")
+
+            choices.answer = everything
+            try page.press("Export Profiles…")
+            let written = try String(contentsOf: everything, encoding: .utf8)
+            #expect(written.contains("Work") && written.contains("Desk"), "every profile is in the file")
+
+            try page.contextMenu(over: row("Desk", in: page)).choose("Export…")
+            choices.answer = single
+            try page.contextMenu(over: row("Desk", in: page)).choose("Export…")
+            #expect(FileManager.default.fileExists(atPath: single.path))
+
+            choices.answer = nil
+            try page.press("Import Profiles…")
+            #expect(manager.profiles.count == 2, "a cancelled chooser imports nothing")
+
+            choices.answer = single
+            try page.press("Import Profiles…")
+            #expect(manager.profiles.count == 3, "the chosen file adds its profile")
         }
     }
 

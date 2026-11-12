@@ -15,6 +15,9 @@ struct ProfileSettingsPane: View {
     @Environment(\.undoManager) private var undoManager
     let profileManager: ProfileManager
 
+    /// Where the page asks for a file to export to or import from. Tests replace these so no panel opens.
+    var fileChoosers = FileChoosers()
+
     @State private var newProfileName = ""
     @State private var isApplying = false
     @State private var editingProfileID: UUID?
@@ -400,12 +403,7 @@ struct ProfileSettingsPane: View {
 
     private func exportProfile(id: UUID, name: String) {
         let safeName = name.replacingOccurrences(of: "/", with: "-")
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.json]
-        panel.nameFieldStringValue = "\(safeName).json"
-        panel.canCreateDirectories = true
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let url = fileChoosers.save("\(safeName).json") else { return }
         do {
             try profileManager.exportProfile(id: id, to: url)
         } catch {
@@ -419,12 +417,7 @@ struct ProfileSettingsPane: View {
             errorMessage = String(localized: "Failed to encode profiles for export.")
             return
         }
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.json]
-        panel.nameFieldStringValue = "\(Constants.displayName) Profiles.json"
-        panel.canCreateDirectories = true
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let url = fileChoosers.save("\(Constants.displayName) Profiles.json") else { return }
         do {
             try json.write(to: url, atomically: true, encoding: .utf8)
             if !unreadable.isEmpty {
@@ -436,12 +429,7 @@ struct ProfileSettingsPane: View {
     }
 
     private func importProfile() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.json]
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let url = fileChoosers.open() else { return }
         do {
             try profileManager.importProfile(from: url)
         } catch {
