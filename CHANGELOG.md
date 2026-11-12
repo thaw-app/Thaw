@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- Importing profiles no longer assigns the same shortcut twice when its saved JSON uses different formatting.
+
 ## [3.0.0-alpha.14] - 2026-11-12
 
 **macOS 27 only · Build 125**
