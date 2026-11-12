@@ -50,4 +50,33 @@ struct BentoTileChoiceTests {
         #expect(outcomes.first?.0.simpleMode == true)
         #expect(outcomes.first?.1 == nil)
     }
+
+    @Test("A card click follows the picker: after choosing All Settings it turns Simple Mode off and opens the card's pane")
+    func clickFollowsThePickerOnScreen() async throws {
+        var outcomes: [(OnboardingOutcome, SettingsNavigationIdentifier?)] = []
+        let size = CGSize(width: 1000, height: 720)
+        let render = OffscreenRender(
+            AnyView(OnboardingBentoView(finishesFlow: true) { outcomes.append(($0, $1)) }.frame(width: size.width, height: size.height)),
+            size: size
+        )
+        let zenCard = { render.elements().filter { OffscreenAccessibility.label(of: $0)?.hasPrefix("Zen Mode") == true } }
+        await render.settle { !zenCard().isEmpty }
+
+        // Under the preselected Simple Mode the card keeps it and opens nothing.
+        try OffscreenAccessibility.press(#require(zenCard().first))
+        #expect(outcomes.count == 1)
+        #expect(outcomes.last?.0.simpleMode == true)
+        #expect(outcomes.last?.1 == nil)
+
+        // The picker is switched to All Settings; the same card now names its pane, and a click opens it.
+        let allSettings = render.elements().filter { OffscreenAccessibility.label(of: $0) == "All Settings" }
+        try OffscreenAccessibility.press(#require(allSettings.first))
+        let opensPane = { zenCard().contains { OffscreenAccessibility.label(of: $0)?.contains("opens") == true } }
+        await render.settle { opensPane() }
+        #expect(opensPane())
+        try OffscreenAccessibility.press(#require(zenCard().first))
+        #expect(outcomes.count == 2)
+        #expect(outcomes.last?.0.simpleMode == false)
+        #expect(outcomes.last?.1 == BentoDemo.zen.pane)
+    }
 }

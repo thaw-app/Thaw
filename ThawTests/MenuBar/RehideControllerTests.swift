@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import MenuBarModel
 import Testing
 @testable import Thaw
 
@@ -282,7 +283,7 @@ struct LiveRehideEnvironmentTests {
         #expect(environment.settings() == expected)
         _ = await environment.isAnyMenuOpen()
         _ = environment.isPointerAwayFromBars()
-        #expect(environment.activeSpaceID() == environment.activeSpaceID())
+        #expect(environment.activeSpaceID() == Bridging.getActiveSpaceID(), "it answers with the system's active Space")
         _ = environment.isPointerOverFrontmostApp()
         environment.hideHiddenSection()
         environment.hideEverySection()
@@ -330,10 +331,17 @@ struct LiveRehideEnvironmentTests {
             pressure: 1
         ))
         input.handleSmartRehide(with: event, appState: appState, screen: screen)
-        input.cancelSmartRehide()
         await world.settle()
-        // Before setup no section is showing, so the click arms nothing.
+        // Before setup no section is showing, so the click arms nothing. The click is not cancelled
+        // here: a cancelled rehide would also leave no sleep, whatever the click said.
         #expect(world.sleeps.isEmpty)
+
+        // The same controller does arm for a click that qualifies, so the empty list above is the
+        // click's own answer and not a controller that never listens.
+        world.controller.note(.outsideClick { true })
+        await world.settle()
+        #expect(world.sleeps == [.seconds(2)])
+        await world.finishWaits()
     }
 }
 
