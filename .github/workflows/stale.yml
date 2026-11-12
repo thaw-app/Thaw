@@ -17,8 +17,8 @@ jobs:
     steps:
       - uses: thaw-app/org-ci/actions/close-stale-issues@369e3b50e278dc7799513209c6ddc8ec758d884b
         with:
-          # Stale after 10 days without activity, closed on the first run 4 days later.
-          days-before-stale: "10"
-          days-before-close: "4"
+          # Stale after 14 days without activity, closed on the first run 7 days later.
+          days-before-stale: "14"
+          days-before-close: "7"
           # Issues waiting on someone else, or kept open on purpose.
           exempt-issue-labels: help wanted,keep open,blocked,parked
