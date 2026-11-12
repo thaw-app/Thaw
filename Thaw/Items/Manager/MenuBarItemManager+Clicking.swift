@@ -110,7 +110,7 @@ extension MenuBarItemManager {
         // reflowed, and clicking a stale rectangle hits a neighbour. On
         // macOS 27 the refreshed frame is stated in one display's space, so it
         // is rebased onto the bar under the cursor before the warp below.
-        let resolvedBounds = try await getCurrentBounds(for: item)
+        let resolvedBounds = try await ClickBoundsRead.current(for: item)
         // The re-read can still land on a parked or phantom frame mid-reflow.
         let displays = BarAxis.liveDisplayBounds()
         if let rejection = ClickTargetCheck.rejection(
@@ -121,11 +121,17 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.warning("postClickEvents: \(item.logString) frame \(resolvedBounds) is \(rejection.rawValue); not clicking")
             throw EventError.missingItemBounds(item)
         }
+        // A revealed item's frame can be a seat another app's item is drawn in: aim where it is drawn.
+        guard let aimedBounds = await DrawnItemFrame.clickFrame(for: resolvedBounds, ownerPID: item.ownerPID, sourcePID: item.sourcePID, in: MenuBarItemAXProvider.drawnBarConcurrent(), displays: displays) else {
+            MenuBarItemManager.diagLog.warning("postClickEvents: \(item.logString) frame \(resolvedBounds) sits on another app's item and it is not drawn; not clicking")
+            throw EventError.missingItemBounds(item)
+        }
+        MenuBarItemManager.diagLog.debug("postClickEvents: \(item.logString) frame \(resolvedBounds), aiming at \(aimedBounds)")
         guard SyntheticClickBudgetStore.shared.take() else {
             MenuBarItemManager.diagLog.error("postClickEvents: synthetic click budget spent; not clicking \(item.logString)")
             throw EventError.cannotComplete
         }
-        let clickPoint = Self.clickPoint(for: resolvedBounds)
+        let clickPoint = Self.clickPoint(for: aimedBounds)
         let restoreLocation = try getMouseLocation()
         let source = try getEventSource()
 
@@ -279,7 +285,8 @@ extension MenuBarItemManager {
         with mouseButton: CGMouseButton,
         skipInputPause: Bool = false,
         maxAttempts: Int = 3,
-        requireObservedReaction: Bool = false
+        requireObservedReaction: Bool = false,
+        pressFirst: Bool = true
     ) async throws -> ClickReactionVerifier.Reaction {
         guard let appState else {
             throw EventError.cannotComplete
@@ -299,7 +306,7 @@ extension MenuBarItemManager {
         // An owner marked unresponsive is deliberately not skipped here: the
         // mark records that it drops synthetic events, which is the case this
         // path is most likely to succeed at.
-        if mouseButton == .left, let reaction = await MenuBarItemDirectPresser.press(item: item) {
+        if pressFirst, mouseButton == .left, let reaction = await MenuBarItemDirectPresser.press(item: item) {
             if reaction.didReact {
                 MenuBarItemManager.diagLog.debug(
                     "Opened \(item.logString) without synthesizing events"
@@ -381,51 +388,63 @@ extension MenuBarItemManager {
         throw EventError.cannotComplete
     }
 
-    /// Reveals item at its own menu bar position, clicks it, then schedules
-    /// the re-conceal. Returns whether the owner was seen reacting.
+    /// Reveals item at its own menu bar position, tries the methods of one attempt there in turn,
+    /// then schedules the re-conceal. Returns the method the owner was seen reacting to.
     ///
-    /// No move, so it works for items the move path cannot seat. It is also
-    /// the only way to right-click: AXPress opens the default action, not the
+    /// Reveal and press presses the element drawn at the item's spot; reveal and click clicks it
+    /// for real, without that press first. No move, so it works for items the move path cannot
+    /// seat. It is also the only way to right-click: AXPress opens the default action, not the
     /// secondary menu.
     func revealInPlaceAndClick(
         item: MenuBarItem,
         with mouseButton: CGMouseButton,
-        on displayID: CGDirectDisplayID,
+        on _: CGDirectDisplayID,
+        trying methods: [ConcealedItemOpenMethod],
         controller: any MenuBarSectionControlling
-    ) async -> Bool {
+    ) async -> ConcealedItemOpenMethod? {
         let identifier = item.uniqueIdentifier
         controller.revealItemTemporarily(identifier)
+        // The runtime drops a reveal that undoes a recent conceal as a flap; this one answers a click.
+        controller.refresh(forceRestrictionPulse: false, forceReapply: true)
 
         // Same settle the prewarm uses so the AX bounds are valid. Not gated on
         // isWindowOnScreen: macOS 27 status items carry synthetic window IDs.
         await eventSleep(for: Constants.MenuBarTuning.thawBarRevealSettle)
 
-        // Re-fetch live bounds; a transient "Item-N" title can change between
-        // enumerations, so fall back to same-owner, then the cached item.
-        let liveItems = await MenuBarItem.getMenuBarItems(on: displayID, option: .onScreen)
-        let liveItem = liveItems.first { $0.hasSameIdentity(as: item) }
-            ?? liveItems.first { $0.hasSameOwner(as: item) }
-            ?? item
-
-        let reacted: Bool
-        do {
-            reacted = try await click(item: liveItem, with: mouseButton, requireObservedReaction: true).didReact
-        } catch {
-            MenuBarItemManager.diagLog.error(
-                "revealInPlaceAndClick: click failed for \(item.logString): \(error)"
-            )
-            reacted = false
+        // Only the drawn-element press needs the frame now; the real click re-reads it. Without a fresh
+        // item that is surely this one (ClickBoundsRead.pressTarget), nothing is pressed.
+        var pressTarget: MenuBarItem?
+        if methods.contains(.revealAndPress), let fresh = await ClickBoundsRead.ownApp(of: item) {
+            pressTarget = ClickBoundsRead.pressTarget(for: item, among: fresh)
         }
-        guard reacted else {
+
+        var opened: ConcealedItemOpenMethod?
+        if methods.contains(.revealAndPress), mouseButton == .left, let pressTarget,
+           await MenuBarItemDirectPresser.press(item: pressTarget)?.didReact == true
+        {
+            MenuBarItemManager.diagLog.debug("Opened \(item.logString) without synthesizing events")
+            failureLedger.recordSuccess(for: pressTarget)
+            opened = .revealAndPress
+        } else if methods.contains(.revealAndClick) {
+            do {
+                let reaction = try await click(item: pressTarget ?? item, with: mouseButton, requireObservedReaction: true, pressFirst: false)
+                opened = reaction.didReact ? .revealAndClick : nil
+            } catch {
+                MenuBarItemManager.diagLog.error(
+                    "revealInPlaceAndClick: click failed for \(item.logString): \(error)"
+                )
+            }
+        }
+        guard opened != nil else {
             // Nothing opened, so nothing to wait for; the next method starts
             // from a concealed item.
             controller.concealTemporarilyRevealedItemUnlessHeld(identifier)
-            return false
+            return nil
         }
 
         // Let the opened menu settle before scheduling the re-conceal.
         await eventSleep(for: Constants.MenuBarTuning.thawBarPostClickSettle)
         controller.scheduleTemporaryItemConcealUnlessHeld(identifier)
-        return true
+        return opened
     }
 }

@@ -89,9 +89,10 @@ nonisolated enum ClickReactionVerifier {
     /// Captures the state a reaction will be measured against.
     ///
     /// Must be called before the click is posted.
-    static func snapshot(for item: MenuBarItem) -> Snapshot {
+    /// alsoWatching adds the process a press found the item's element in, which can be newer than the cached ones.
+    static func snapshot(for item: MenuBarItem, alsoWatching elementPID: pid_t = 0) -> Snapshot {
         Snapshot(
-            pids: item.reactionPIDs,
+            pids: elementPID > 0 ? item.reactionPIDs.union([elementPID]) : item.reactionPIDs,
             itemWindowID: item.windowID,
             itemBounds: item.bounds,
             itemWindowWasOnScreen: Bridging.isWindowOnScreen(item.windowID),

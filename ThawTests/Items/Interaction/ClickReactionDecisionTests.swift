@@ -74,4 +74,20 @@ struct ClickReactionDecisionTests {
         #expect(!snapshot.itemWindowWasOnScreen)
         #expect(!snapshot.onScreenWindowIDs.contains(item.windowID))
     }
+
+    @Test("A snapshot also watches the process a press found the element in, when there is one")
+    func snapshotAlsoWatchesThePressedProcess() {
+        let item = MenuBarItem(
+            tag: MenuBarItemTag(namespace: .string("com.example.react"), title: "B", instanceIndex: 0),
+            windowID: CGWindowID(UInt32.max - 11),
+            ownerPID: 999_975,
+            sourcePID: 999_976,
+            bounds: before,
+            title: "B",
+            isOnScreen: true
+        )
+
+        #expect(ClickReactionVerifier.snapshot(for: item, alsoWatching: 999_977).pids == [999_975, 999_976, 999_977])
+        #expect(ClickReactionVerifier.snapshot(for: item, alsoWatching: 0).pids == [999_975, 999_976])
+    }
 }

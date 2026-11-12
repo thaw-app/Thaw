@@ -31,18 +31,32 @@ nonisolated enum MenuBarItemDirectPresser {
             return nil
         }
 
+        guard let point = await pressPoint(for: item) else {
+            return nil
+        }
         // Logged at info because debug messages are not persisted. Can drop to
         // debug once the rungs below have established behavior.
-        let point = item.bounds.center
         guard let element = element(at: point) else {
             diagLog.info(
                 "press: no element at (\(Int(point.x)), \(Int(point.y))) for \(item.logString)"
             )
             return nil
         }
+        // A revealed item's reported position can lag where MenuBarAgent draws it, and the element
+        // there then belongs to a neighbour; pressing it would open the wrong app.
+        var elementPID: pid_t = 0
+        AXUIElementGetPid(element, &elementPID)
+        guard isPressable(
+            elementPID: elementPID,
+            for: item.reactionPIDs,
+            sameApp: isSameApp(elementPID: elementPID, as: item)
+        ) else {
+            diagLog.info("press: the element at (\(Int(point.x)), \(Int(point.y))) belongs to pid \(elementPID), not \(item.logString)")
+            return nil
+        }
 
         let target = MenuBarItemPressTarget(element: element, ownerPID: item.ownerPID)
-        let snapshot = ClickReactionVerifier.snapshot(for: item)
+        let snapshot = ClickReactionVerifier.snapshot(for: item, alsoWatching: elementPID)
         let outcome = await MenuBarItemPresserProvider.current.press(
             target,
             at: processTargetedFallbackPoint(for: item, at: point)
@@ -56,6 +70,31 @@ nonisolated enum MenuBarItemDirectPresser {
         return await ClickReactionVerifier.verify(against: snapshot)
     }
 
+    /// Where to hit-test for item: where it is drawn, as the real click aims. Nil for a parked or
+    /// off-bar frame, where an open window of the same app would pass the process check.
+    private static func pressPoint(for item: MenuBarItem) async -> CGPoint? {
+        let displays = BarAxis.liveDisplayBounds()
+        if let rejection = ClickTargetCheck.rejection(
+            for: item.bounds,
+            barWidth: ClickTargetCheck.barWidth(for: item.bounds, displays: displays),
+            displays: displays
+        ) {
+            diagLog.info("press: \(item.logString) frame \(item.bounds) is \(rejection.rawValue); not pressing")
+            return nil
+        }
+        guard let aimed = await DrawnItemFrame.clickFrame(
+            for: item.bounds,
+            ownerPID: item.ownerPID,
+            sourcePID: item.sourcePID,
+            in: MenuBarItemAXProvider.drawnBarConcurrent(),
+            displays: displays
+        ) else {
+            diagLog.info("press: \(item.logString) frame \(item.bounds) sits on another app's item and it is not drawn; not pressing")
+            return nil
+        }
+        return aimed.center
+    }
+
     /// Where the process-targeted record may be aimed, or nil to withhold
     /// that rung entirely.
     ///
@@ -67,6 +106,22 @@ nonisolated enum MenuBarItemDirectPresser {
         at point: CGPoint
     ) -> CGPoint? {
         item.owningApplication?.bundleIdentifier == SharedConstants.menuBarHostingBundleID ? point : nil
+    }
+
+    /// Whether an element of elementPID may be pressed for an item whose reaction can come from
+    /// reactionPIDs, or whose app elementPID runs: a relaunched menu-bar-only app keeps stale PIDs.
+    static func isPressable(elementPID: pid_t, for reactionPIDs: Set<pid_t>, sameApp: Bool = false) -> Bool {
+        guard elementPID > 0 else { return false }
+        return sameApp || reactionPIDs.contains { $0 > 0 && $0 == elementPID }
+    }
+
+    /// Whether elementPID runs the app the item is named for. MenuBarAgent hosts other apps'
+    /// items, so its elements never count as the item's own app.
+    private static func isSameApp(elementPID: pid_t, as item: MenuBarItem) -> Bool {
+        guard let bundleID = NSRunningApplication(processIdentifier: elementPID)?.bundleIdentifier,
+              bundleID != SharedConstants.menuBarHostingBundleID
+        else { return false }
+        return bundleID == item.tag.namespace.description
     }
 
     /// The accessibility element at a screen point.

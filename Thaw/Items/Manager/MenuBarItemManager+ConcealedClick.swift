@@ -24,6 +24,7 @@ extension MenuBarItemManager {
         with mouseButton: CGMouseButton,
         on displayID: CGDirectDisplayID
     ) async -> MenuBarItemActivationOutcome {
+        let item = ItemOwnerLookup.resolving(item)
         repairs.interruptAutomaticWork(by: .userClickedItem)
         guard let controller = appState?.menuBarManager.sectionController else { return .activationFailed }
 
@@ -74,23 +75,23 @@ extension MenuBarItemManager {
         let identity = openMethodIdentity(for: item)
         let learned = LearnedOpenMethods.standard.method(for: identity)
         let showInMenuBar = appState?.settings.thawBar.openHiddenItemsInMenuBar ?? false
-        for method in ConcealedItemOpenMethod.openMethodOrder(for: mouseButton, learned: learned, showInMenuBar: showInMenuBar) {
-            let opened = switch method {
+        for attempt in ConcealedItemOpenMethod.openAttempts(for: mouseButton, learned: learned, showInMenuBar: showInMenuBar) {
+            let opened: ConcealedItemOpenMethod? = switch attempt[0] {
             case .pressInPlace, .showMenuInPlace:
-                await revealAndPressConcealedItem(item, method: method, controller: controller)
-            case .revealInPlace:
-                await revealInPlaceAndClick(item: item, with: mouseButton, on: displayID, controller: controller)
+                await revealAndPressConcealedItem(item, method: attempt[0], controller: controller) ? attempt[0] : nil
+            case .revealAndPress, .revealAndClick:
+                await revealInPlaceAndClick(item: item, with: mouseButton, on: displayID, trying: attempt, controller: controller)
             }
-            if opened {
+            if let opened {
                 MenuBarItemManager.diagLog.info(
-                    "clickConcealedItem: opened \(item.logString) via \(method.rawValue)"
+                    "clickConcealedItem: opened \(item.logString) via \(opened.rawValue)"
                 )
                 menusOpenedByClick[key] = ownerMenuWindowIDs(item).subtracting(menusBefore)
-                LearnedOpenMethods.standard.record(method, for: identity, clickedWith: mouseButton)
+                LearnedOpenMethods.standard.record(opened, for: identity, clickedWith: mouseButton)
                 return .completed(reactionObserved: true)
             }
             MenuBarItemManager.diagLog.debug(
-                "clickConcealedItem: \(method.rawValue) did not open \(item.logString); trying the next method"
+                "clickConcealedItem: \(attempt.map(\.rawValue)) did not open \(item.logString); trying the next method"
             )
         }
 

@@ -5,16 +5,32 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-/// Which Visible members MenuBarAgent did not republish in time, and when each was last missing.
+/// Which Visible members MenuBarAgent did not republish in time, when each was last missing, and
+/// which of them a pass has yet to place.
 ///
 /// The ordering pass waits up to three seconds for every authored member to be live. Without
 /// this, each following pass spends the same deadline on the same absentee. Entries expire so
 /// a member that returns is waited for again.
+///
+/// A member the pass gave up on is left out of its write. That is kept for longer, until a pass
+/// sees the member live, so LeftOutMemberWatch can have it placed when it shows up.
 nonisolated struct RepublishAbsenceMemo {
     /// How long a failed republish is remembered.
     static let memory: Duration = .seconds(10)
 
+    /// How long a member left out of a pass is watched for, from the last pass that left it out.
+    static let leftOutMemory: Duration = .seconds(120)
+
     private var missingSince: [String: ContinuousClock.Instant] = [:]
+    private var leftOutSince: [String: ContinuousClock.Instant] = [:]
+    /// How many restores the watches asked for each left-out member. A restore's own pass can
+    /// leave the member out again and start a new watch, so the count outlives the watch.
+    private var restoresAsked: [String: Int] = [:]
+    /// When each member was first left out; later passes that leave it out again don't move it.
+    private var firstLeftOut: [String: ContinuousClock.Instant] = [:]
+
+    /// Counts the watches started for left-out members, so an older watch can tell it was replaced.
+    private(set) var watchGeneration = 0
 
     var count: Int {
         missingSince.count
@@ -29,23 +45,96 @@ nonisolated struct RepublishAbsenceMemo {
         missingSince[identifier] != nil
     }
 
-    /// Drops every entry older than the memory window.
+    /// Drops every entry older than its memory window.
     mutating func expire(now: ContinuousClock.Instant = .now) {
         missingSince = missingSince.filter { $0.value.duration(to: now) < Self.memory }
+        leftOutSince = leftOutSince.filter { $0.value.duration(to: now) < Self.leftOutMemory }
+        restoresAsked = restoresAsked.filter { leftOutSince[$0.key] != nil }
+        firstLeftOut = firstLeftOut.filter { leftOutSince[$0.key] != nil }
     }
 
-    /// Forgets members that are live again.
-    mutating func noteArrived(_ identifiers: some Sequence<String>) {
+    /// When the latest pass that saw any of its members live took its order, so a pass that took
+    /// it before a profile was applied can't end that profile's hold. A read that returned nothing
+    /// names no one missing, so it can't say the members are back.
+    private(set) var lastSawMembers: ContinuousClock.Instant?
+
+    /// Forgets members that are live again. The pass that sees them live places them. `now` is
+    /// when that pass took its order; a pass that finishes late can't move lastSawMembers back,
+    /// and one that took its order before a member was left out can't forget it.
+    mutating func noteArrived(_ identifiers: some Sequence<String>, at now: ContinuousClock.Instant = .now) {
         for identifier in identifiers {
+            if let since = leftOutSince[identifier], since > now { continue }
             missingSince.removeValue(forKey: identifier)
+            leftOutSince.removeValue(forKey: identifier)
+            restoresAsked.removeValue(forKey: identifier)
+            firstLeftOut.removeValue(forKey: identifier)
+            lastSawMembers = max(lastSawMembers ?? now, now)
         }
     }
 
-    /// Stamps members that never republished, restarting the window for any already held.
+    /// Stamps members that never republished, which the pass then leaves out, restarting the
+    /// windows for any already held.
     mutating func noteMissing(_ identifiers: some Sequence<String>, at now: ContinuousClock.Instant = .now) {
         for identifier in identifiers {
             missingSince[identifier] = now
+            leftOutSince[identifier] = now
+            if firstLeftOut[identifier].map({ $0.duration(to: now) >= Self.leftOutMemory }) ?? true {
+                firstLeftOut[identifier] = now
+            }
         }
+    }
+
+    /// Whether a member left out within the left-out window still waits for a pass to place it.
+    /// With visibleMembers, only members still in Visible count.
+    func hasLeftOutMembers(among visibleMembers: Set<String>? = nil, now: ContinuousClock.Instant = .now) -> Bool {
+        leftOutSince.contains { identifier, since in
+            since.duration(to: now) < Self.leftOutMemory && visibleMembers?.contains(identifier) != false
+        }
+    }
+
+    /// The members left out within the left-out window that are among the live identifiers, less
+    /// those that already had restoreLimit restores asked for them.
+    func leftOutMembers(
+        amongLive live: Set<String>,
+        restoreLimit: Int = .max,
+        now: ContinuousClock.Instant = .now
+    ) -> Set<String> {
+        Set(leftOutSince.filter {
+            live.contains($0.key) && $0.value.duration(to: now) < Self.leftOutMemory
+                && restoresAsked[$0.key, default: 0] < restoreLimit
+        }.keys)
+    }
+
+    /// The waiting members first left out within the last `window`: a member waited for longer has
+    /// already had its re-reads.
+    func recentlyLeftOut(within window: Duration, now: ContinuousClock.Instant = .now) -> Set<String> {
+        Set(firstLeftOut.filter { identifier, first in
+            first.duration(to: now) < window
+                && leftOutSince[identifier].map { $0.duration(to: now) < Self.leftOutMemory } == true
+        }.keys)
+    }
+
+    /// The members left out within the left-out window, by every watch so far.
+    func leftOutIdentifiers(now: ContinuousClock.Instant = .now) -> Set<String> {
+        Set(leftOutSince.filter { $0.value.duration(to: now) < Self.leftOutMemory }.keys)
+    }
+
+    /// Counts a restore asked for these members. Placing a member clears its count.
+    mutating func noteRestoreAsked(for identifiers: some Sequence<String>) {
+        for identifier in identifiers {
+            restoresAsked[identifier, default: 0] += 1
+        }
+    }
+
+    /// How many restores were asked for the member since it was last placed.
+    func restoresAsked(for identifier: String) -> Int {
+        restoresAsked[identifier, default: 0]
+    }
+
+    /// Starts a new watch generation. A watch from an earlier one stops at its next look.
+    mutating func startWatch() -> Int {
+        watchGeneration += 1
+        return watchGeneration
     }
 
     /// The wanted members a read shows as gone. An empty read saw nothing, as a cancelled one
@@ -69,7 +158,8 @@ nonisolated struct RepublishAbsenceMemo {
         missing.subtracting(unreachable(wanted: missing, liveNamespaces: liveNamespaces, runningBundleIDs: runningBundleIDs))
     }
 
-    /// Empties the memo so the next pass waits for every member again.
+    /// Forgets the absences so the next pass waits for every member again. Left-out members stay
+    /// watched; that pass places them or leaves them out again.
     mutating func forget() {
         missingSince.removeAll()
     }

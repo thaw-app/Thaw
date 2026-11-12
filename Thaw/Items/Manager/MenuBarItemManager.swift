@@ -522,6 +522,9 @@ final class MenuBarItemManager {
     /// after a reveal ordering pass runs with the authored order.
     var authoredVisibleOrderPendingPhysicalApply = false
 
+    /// Keeps the applied profile's Visible order as the saved one until the bar can show it.
+    var profileOrderHold: ProfileOrderHold?
+
     /// The Visible items that were live when the order was last mirrored, so
     /// the next mirror can tell an arrival from a ⌘-drag.
     var lastMirroredLiveVisibleIdentifiers: Set<String>?
@@ -725,8 +728,7 @@ final class MenuBarItemManager {
         guard !arrangementIsManual,
               let controller = appState?.menuBarManager.sectionController
         else { return }
-        let identifiers = savedSectionOrder[sectionKey(for: .visible)] ?? []
-        guard identifiers.count > 1 else { return }
+        guard (savedSectionOrder[sectionKey(for: .visible)]?.count ?? 0) > 1 else { return }
         repairs.request(.arrivalOrderRestore, cause: .arrivalDisturbedOrder)
         authoredVisibleOrderPendingPhysicalApply = true
         authoredVisibleOrderApplyTask?.cancel()
@@ -742,6 +744,7 @@ final class MenuBarItemManager {
                 }
             }
             guard let hold = await repairs.enter(.arrivalOrderRestore) else { return }
+            guard let identifiers = ProfileOrderHold.arrivalRestoreOrder(saved: savedSectionOrder[sectionKey(for: .visible)], isApplyingLayout: isApplyingProfileLayout || isResettingLayout) else { return repairs.leave(hold) }
             MenuBarItemManager.diagLog.info(
                 "macOS 27: restoring recorded visible order after an arrival (\(identifiers.count) item(s))"
             )

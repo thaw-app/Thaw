@@ -28,6 +28,27 @@ nonisolated enum ItemOwnerLookup {
         return running.count == 1 ? running[0] : pid
     }
 
+    /// item with the process pid(for:) finds filled in when it was listed without one. Every check
+    /// after a press looks for the item's process: its menu, its drawn entry and the element at its
+    /// spot. With PID 0 none of them found anything, so an item that opened counted as a miss.
+    static func resolving(
+        _ item: MenuBarItem,
+        runningPIDs: (String) -> [pid_t] = runningPIDs(forBundleID:)
+    ) -> MenuBarItem {
+        guard (item.sourcePID ?? item.ownerPID) <= 0 else { return item }
+        let pid = pid(for: item, runningPIDs: runningPIDs)
+        guard pid > 0 else { return item }
+        return MenuBarItem(
+            tag: item.tag,
+            windowID: item.windowID,
+            ownerPID: item.ownerPID > 0 ? item.ownerPID : pid,
+            sourcePID: pid,
+            bounds: item.bounds,
+            title: item.title,
+            isOnScreen: item.isOnScreen
+        )
+    }
+
     static func runningPIDs(forBundleID bundleID: String) -> [pid_t] {
         NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).map(\.processIdentifier)
     }
