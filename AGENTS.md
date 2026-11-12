@@ -60,7 +60,7 @@ Before you choose or change a version (an Xcode or Swift version, a macOS deploy
 
 Run commands from the repository root unless the command says otherwise.
 
-- **Swift code, `Package.swift`, `Package.resolved`, the Xcode project, `scripts/` or `ci.yml`:** run `swiftformat .`, `sh scripts/lint.sh --strict` and the tests in [Development](docs/DEVELOPMENT.md). Run affected package tests too; the app test scheme is not a substitute for package test targets. A green Xcode build is not proof that lint passed.
+- **Swift code, `Package.swift`, `Package.resolved`, the Xcode project, `scripts/` or `ci.yml`:** run `sh scripts/format.sh`, `sh scripts/lint.sh --strict` and the tests in [Development](docs/DEVELOPMENT.md). Run affected package tests too; the app test scheme is not a substitute for package test targets. A green Xcode build is not proof that lint passed.
 - **Any workflow under `.github/workflows/`:** run `actionlint` on the file.
 - **Text the app shows:** change the source strings in English only. Crowdin handles the other languages. Check the affected UI and run the applicable code checks.
 - **Documentation only:** no build or tests are needed. Check relative paths, heading anchors and external links. Verify commands and architecture claims against the source, and follow [Writing](docs/CODING_STANDARDS.md#writing).

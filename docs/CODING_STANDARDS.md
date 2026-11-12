@@ -94,7 +94,7 @@ This covers documentation, the changelog, pull request descriptions and the text
 Configuration lives in [`.swiftformat`](../.swiftformat) and [`.swiftlint.yml`](../.swiftlint.yml).
 
 ```sh
-swiftformat .
+sh scripts/format.sh
 sh scripts/lint.sh --strict
 ```
 
