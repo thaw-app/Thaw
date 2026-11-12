@@ -197,7 +197,7 @@ In addition to the Issue type and Priority field, apply any of the following mod
 
 - **`upstream`**: the issue is caused by a third-party app that provides the menu bar icon, not by Thaw itself.
 - **`macos-14`**, **`macos-15`**, **`macos-26`**, **`macos-27`**: apply the macOS version label that matches the reporter’s stated macOS version, including the "macOS: Version …" line in pasted version info. Never guess one.
-  - With no stated macOS version, infer the label only when the Thaw version pins it: Thaw 3.x (including alphas and betas) → `macos-27`; Thaw 2.0.x–2.1.x → `macos-26`. For Thaw 2.2 or later (macOS 15 or 26) or an unknown Thaw version, apply no `macos-*` label.
+  - With no stated macOS version, infer the label only when the Thaw version pins it: Thaw 3.x (including alphas and betas) → `macos-27`; Thaw 2.0.x–2.1.x → `macos-26`. For Thaw 2.2 or a later 2.x version (macOS 15 or 26) or an unknown Thaw version, apply no `macos-*` label.
   - If the stated macOS version and the Thaw version disagree, trust the stated macOS version.
 
 ### 5. Apply Area Label (if clear)
