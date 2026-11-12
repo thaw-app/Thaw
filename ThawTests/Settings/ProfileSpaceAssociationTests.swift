@@ -18,6 +18,23 @@ import Testing
 @MainActor
 @Suite("Profile Space association", .serialized)
 struct ProfileSpaceAssociationTests {
+    /// A stale settings action must not take an association away from its current owner.
+    @Test("An association aimed at a missing profile leaves existing assignments alone", arguments: [false, true])
+    func missingTargetPreservesOwner(display: Bool) {
+        var profiles = [ProfileMetadata(
+            id: UUID(), name: "Owner", createdAt: .now, modifiedAt: .now,
+            associatedDisplayUUID: "display", associatedDisplayName: "Display",
+            associatedSpaceKey: "space", associatedSpaceName: "Space"
+        )]
+        let before = profiles
+        if display {
+            ProfileAssociations.assignDisplay("display", name: "Display", to: UUID(), in: &profiles)
+        } else {
+            ProfileAssociations.assignSpace("space", name: "Space", to: UUID(), in: &profiles)
+        }
+        #expect(profiles == before)
+    }
+
     // MARK: Persistence
 
     @Test("A Space association persists in the manifest with its label")

@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- A profile action that arrives after that profile was removed no longer clears another profile’s display or Space association.
+
 ## [3.0.0-alpha.14] - 2026-11-12
 
 **macOS 27 only · Build 125**
