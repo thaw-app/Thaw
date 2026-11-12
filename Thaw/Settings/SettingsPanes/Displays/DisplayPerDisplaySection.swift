@@ -158,16 +158,7 @@ extension DisplaySettingsPane {
         } else if display.id == displaySettings.activeMenuBarDisplayUUID,
                   displaySettings.spacingApplyMode == .relaunchApps
         {
-            LabeledContent {
-                Button(displaySettings.isReapplyingSpacing ? "Reapplying…" : "Reapply Spacing") {
-                    displaySettings.reapplySpacing(forDisplayUUID: display.id)
-                }
-                .buttonStyle(.settingsGlass)
-                .disabled(displaySettings.isReapplyingSpacing)
-            } label: {
-                Text("Spacing hasn’t updated?")
-            }
-            .annotation("Restarts menu bar apps so they load the saved spacing.")
+            reapplySpacingRow(for: display)
         }
         if let failure = displaySettings.lastSpacingApplyFailure {
             SettingsWarningPill(
@@ -176,6 +167,19 @@ extension DisplaySettingsPane {
                 tint: .orange
             )
         }
+    }
+
+    private func reapplySpacingRow(for display: DisplaySettingsManager.DisplayInfo) -> some View {
+        LabeledContent {
+            Button(displaySettings.isReapplyingSpacing ? "Reapplying…" : "Reapply Spacing") {
+                displaySettings.reapplySpacing(forDisplayUUID: display.id)
+            }
+            .buttonStyle(.settingsGlass)
+            .disabled(displaySettings.isReapplyingSpacing)
+        } label: {
+            Text("Spacing hasn’t updated?")
+        }
+        .annotation("Restarts menu bar apps so they load the saved spacing.")
     }
 
     /// Write-only mode restarts nothing, so the copy must not promise a relaunch.

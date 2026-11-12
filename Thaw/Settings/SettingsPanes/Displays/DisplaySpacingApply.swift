@@ -147,20 +147,22 @@ extension DisplaySettingsPane {
                 }
             }
             Button(String(localized: "Cancel"), role: .cancel) {
-                draftSpacing[pending.displayID] = CGFloat(
-                    displaySettings.configuration(forUUID: pending.displayID).itemSpacingOffset
-                )
+                discardSpacingDraft(for: pending)
             }
         } else {
             Button(String(localized: "Apply"), role: .destructive) {
                 commitSpacing(displayID: pending.displayID, offset: pending.offset)
             }
             Button(String(localized: "Cancel"), role: .cancel) {
-                draftSpacing[pending.displayID] = CGFloat(
-                    displaySettings.configuration(forUUID: pending.displayID).itemSpacingOffset
-                )
+                discardSpacingDraft(for: pending)
             }
         }
+    }
+
+    private func discardSpacingDraft(for pending: PendingSpacingApply) {
+        draftSpacing[pending.displayID] = CGFloat(
+            displaySettings.configuration(forUUID: pending.displayID).itemSpacingOffset
+        )
     }
 
     /// Only the active display's spacing relaunches apps, so other displays get

@@ -191,15 +191,7 @@ enum LayoutBarItemMenu {
             return
         }
 
-        // Groups require two members, so creation must offer another loose item.
-        let groupedTags = Set(groups.flatMap { group in
-            group.memberIndices.filter { orderedItems.indices.contains($0) }.map { orderedItems[$0].tag }
-        })
-        let partners = orderedItems.filter { candidate in
-            candidate.tag != item.tag
-                && MenuBarItemGrouping.isGroupable(candidate.tag)
-                && !groupedTags.contains(candidate.tag)
-        }
+        let partners = groupingPartners(for: item, groups: groups, orderedItems: orderedItems)
         if !partners.isEmpty {
             let submenu = NSMenu()
             for partner in partners {
@@ -295,5 +287,23 @@ enum LayoutBarItemMenu {
                 UngroupUndo.ungroup(group.origin, name: name, manager: manager, folders: folders, undoManager: undoManager)
             }
         )
+    }
+}
+
+extension LayoutBarItemMenu {
+    /// Groups require two members, so creation must offer another loose item.
+    static func groupingPartners(
+        for item: MenuBarItem,
+        groups: [ResolvedGroup],
+        orderedItems: [MenuBarItem]
+    ) -> [MenuBarItem] {
+        let groupedTags = Set(groups.flatMap { group in
+            group.memberIndices.filter { orderedItems.indices.contains($0) }.map { orderedItems[$0].tag }
+        })
+        return orderedItems.filter { candidate in
+            candidate.tag != item.tag
+                && MenuBarItemGrouping.isGroupable(candidate.tag)
+                && !groupedTags.contains(candidate.tag)
+        }
     }
 }

@@ -56,6 +56,17 @@ struct LayoutBarItemMenuTests {
         #expect(renamed)
     }
 
+    @Test("Grouping partners skip the item itself, grouped members and out-of-range indices")
+    func groupingPartners() {
+        let alpha = World.item("Alpha")
+        let beta = World.item("Beta")
+        let gamma = World.item("Gamma")
+        let delta = World.item("Delta")
+        let group = ResolvedGroup(origin: .automatic(.string("com.example")), displayName: nil, isCollapsed: false, memberIndices: [1, 2, 9])
+        let partners = LayoutBarItemMenu.groupingPartners(for: alpha, groups: [group], orderedItems: [alpha, beta, gamma, delta])
+        #expect(partners.map(\.tag) == [delta.tag])
+    }
+
     @Test("The reveal switch shows its stored state")
     func revealSwitchState() throws {
         let world = World()

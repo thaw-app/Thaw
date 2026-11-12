@@ -1965,21 +1965,6 @@
   }
  },
  {
-  "text": "    private static func addNonMemberEntries(",
-  "violation": {
-   "location": {
-    "character": 20,
-    "file": "Thaw/Panels/LayoutBar/LayoutBarItemMenu.swift",
-    "line": 175
-   },
-   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 51 lines",
-   "ruleDescription": "Function bodies should not span too many lines",
-   "ruleIdentifier": "function_body_length",
-   "ruleName": "Function Body Length",
-   "severity": "warning"
-  }
- },
- {
   "text": "final class LayoutBarItemView: LayoutBarArrangedView {",
   "violation": {
    "location": {
@@ -2505,36 +2490,6 @@
   }
  },
  {
-  "text": "    private func spacingRow(for display: DisplaySettingsManager.DisplayInfo) -> some View {",
-  "violation": {
-   "location": {
-    "character": 13,
-    "file": "Thaw/Settings/SettingsPanes/Displays/DisplayPerDisplaySection.swift",
-    "line": 122
-   },
-   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 51 lines",
-   "ruleDescription": "Function bodies should not span too many lines",
-   "ruleIdentifier": "function_body_length",
-   "ruleName": "Function Body Length",
-   "severity": "warning"
-  }
- },
- {
-  "text": "    func spacingConfirmationButtons(for pending: PendingSpacingApply) -> some View {",
-  "violation": {
-   "location": {
-    "character": 5,
-    "file": "Thaw/Settings/SettingsPanes/Displays/DisplaySpacingApply.swift",
-    "line": 110
-   },
-   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 51 lines",
-   "ruleDescription": "Function bodies should not span too many lines",
-   "ruleIdentifier": "function_body_length",
-   "ruleName": "Function Body Length",
-   "severity": "warning"
-  }
- },
- {
   "text": "    private func hotkeyRecorder(forAction action: HotkeyAction) -> some View {",
   "violation": {
    "location": {
@@ -2546,21 +2501,6 @@
    "ruleDescription": "Complexity of function bodies should be limited.",
    "ruleIdentifier": "cyclomatic_complexity",
    "ruleName": "Cyclomatic Complexity",
-   "severity": "warning"
-  }
- },
- {
-  "text": "    private func folderStyleRow(_ group: MenuBarItemGroup) -> some View {",
-  "violation": {
-   "location": {
-    "character": 13,
-    "file": "Thaw/Settings/SettingsPanes/Layout/MenuBarLayoutGroupsSection.swift",
-    "line": 78
-   },
-   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 53 lines",
-   "ruleDescription": "Function bodies should not span too many lines",
-   "ruleIdentifier": "function_body_length",
-   "ruleName": "Function Body Length",
    "severity": "warning"
   }
  },

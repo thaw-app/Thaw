@@ -82,27 +82,7 @@ struct MenuBarLayoutGroupsSection: View {
             Text("Folder icon")
                 .font(ThawType.detail)
                 .foregroundStyle(.secondary)
-            Picker("Folder icon", selection: Binding(
-                get: { style.symbol },
-                set: { symbol in
-                    var updated = style
-                    updated.symbol = symbol
-                    folders.setStyle(updated, for: group.id)
-                }
-            )) {
-                ForEach(GroupFolders.Style.symbols, id: \.self) { symbol in
-                    Label {
-                        Text(verbatim: symbol)
-                    } icon: {
-                        Image(systemName: symbol)
-                    }
-                    .labelStyle(.iconOnly)
-                    .tag(symbol)
-                }
-            }
-            .pickerStyle(.menu)
-            .labelsHidden()
-            .fixedSize()
+            folderSymbolPicker(style, for: group)
             Toggle("Color", isOn: Binding(
                 get: { style.color != nil },
                 set: { isOn in
@@ -129,6 +109,30 @@ struct MenuBarLayoutGroupsSection: View {
             Spacer()
         }
         .padding(.leading, ThawSpacing.inset)
+    }
+
+    private func folderSymbolPicker(_ style: GroupFolders.Style, for group: MenuBarItemGroup) -> some View {
+        Picker("Folder icon", selection: Binding(
+            get: { style.symbol },
+            set: { symbol in
+                var updated = style
+                updated.symbol = symbol
+                appState.groupFolders.setStyle(updated, for: group.id)
+            }
+        )) {
+            ForEach(GroupFolders.Style.symbols, id: \.self) { symbol in
+                Label {
+                    Text(verbatim: symbol)
+                } icon: {
+                    Image(systemName: symbol)
+                }
+                .labelStyle(.iconOnly)
+                .tag(symbol)
+            }
+        }
+        .pickerStyle(.menu)
+        .labelsHidden()
+        .fixedSize()
     }
 
     private func toggleFolder(_ group: MenuBarItemGroup) {
