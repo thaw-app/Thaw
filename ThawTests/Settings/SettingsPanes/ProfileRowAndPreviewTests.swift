@@ -59,9 +59,9 @@ struct ProfileRowAndPreviewTests {
         )
     }
 
-    /// A solid icon as tall as a menu bar glyph and as wide as asked.
-    private static func solidIcon(width: CGFloat) -> NSImage {
-        NSImage(size: NSSize(width: width, height: 18), flipped: false) { rect in
+    /// A solid icon as wide as asked and, unless told otherwise, as tall as a menu bar glyph.
+    private static func solidIcon(width: CGFloat, height: CGFloat = 18) -> NSImage {
+        NSImage(size: NSSize(width: width, height: height), flipped: false) { rect in
             NSColor.black.setFill()
             rect.fill()
             return true
@@ -84,9 +84,12 @@ struct ProfileRowAndPreviewTests {
         let none = try await drawn(preview())
         let wide = try await drawn(preview(liveImages: [key: .icon(Self.solidIcon(width: 300))]))
         let narrow = try await drawn(preview(liveImages: [key: .icon(Self.solidIcon(width: 16))]))
+        // A 300 by 18 picture is held to 40 points wide, which scales its height to 2.4.
+        let atTheLimit = try await drawn(preview(liveImages: [key: .icon(Self.solidIcon(width: 40, height: 2.4))]))
         #expect(wide != none, "a live picture replaces the placeholder")
         #expect(narrow != none)
-        #expect(wide != narrow, "the wide picture is scaled down to the limit, the narrow one is not")
+        #expect(wide == atTheLimit, "the wide picture is drawn at the width limit, no wider")
+        #expect(narrow != atTheLimit, "a narrow picture keeps its own size")
     }
 
     @Test("A diff that reorders sections says which ones")
