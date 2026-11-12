@@ -521,6 +521,19 @@ extension MenuBarItemManager {
         }
     }
 
+    /// Runs the continuation and invalidates its event taps afterwards. Cancelling it cancels the inner task.
+    private nonisolated func awaitCancellableEventContinuation(context: EventContinuationContext, state: EventContinuationState) async throws {
+        var eventTaps = [EventTap]()
+        defer { eventTaps.forEach { $0.invalidate() } }
+        try await withTaskCancellationHandler {
+            try await awaitEventContinuation(context: context, state: state, eventTaps: &eventTaps)
+        } onCancel: {
+            state.innerTaskHolder.withLock { $0 }?.cancel()
+            // Settle here too: cancelling an inner task that already finished wakes nobody.
+            state.outcome.settle(.failure(CancellationError()))
+        }
+    }
+
     // MARK: Barrier Operation
 
     /// Assembles everything a barrier run needs before any tap exists: the two
@@ -585,21 +598,7 @@ extension MenuBarItemManager {
         // Every repetition gets the full timeout: a run of count events must
         // not be cut short by the budget meant for a single one.
         let timeoutTask = Task {
-            try await Task<Void, any Error>.withTimeout(timeout * count) {
-                var eventTaps = [EventTap]()
-                defer { eventTaps.forEach { $0.invalidate() } }
-                try await withTaskCancellationHandler {
-                    try await self.awaitEventContinuation(
-                        context: context,
-                        state: state,
-                        eventTaps: &eventTaps
-                    )
-                } onCancel: {
-                    state.innerTaskHolder.withLock { $0 }?.cancel()
-                    // Settle here too: cancelling an inner task that already finished wakes nobody.
-                    state.outcome.settle(.failure(CancellationError()))
-                }
-            }
+            try await Task<Void, any Error>.withTimeout(timeout * count) { try await self.awaitCancellableEventContinuation(context: context, state: state) }
         }
 
         do {

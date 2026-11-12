@@ -169,13 +169,23 @@ final class LayoutSelectionModel {
         return MenuBarSectionName.allCases.flatMap { section -> [LayoutBatchMove] in
             let sectionUnits = units[section] ?? []
             return sectionUnits.indices.compactMap { index -> LayoutBatchMove? in
-                let unit = sectionUnits[index]
-                guard unit.memberIDs.contains(where: selected.contains) else { return nil }
-                let anchor = sectionUnits[..<index].reversed().first(where: { !$0.memberIDs.isEmpty })?.memberIDs.last
-                let placement = anchor.map(LayoutBatchMove.Placement.after) ?? .start
-                return LayoutBatchMove(itemIDs: unit.memberIDs, section: section, placement: placement)
+                restoringMove(at: index, in: sectionUnits, of: section, selected: selected)
             }
         }
+    }
+
+    /// The move that puts the unit at index back after its old left neighbour, or nil when none of it is selected.
+    private func restoringMove(
+        at index: Int,
+        in sectionUnits: [Unit],
+        of section: MenuBarSectionName,
+        selected: Set<String>
+    ) -> LayoutBatchMove? {
+        let unit = sectionUnits[index]
+        guard unit.memberIDs.contains(where: selected.contains) else { return nil }
+        let anchor = sectionUnits[..<index].reversed().first(where: { !$0.memberIDs.isEmpty })?.memberIDs.last
+        let placement = anchor.map(LayoutBatchMove.Placement.after) ?? .start
+        return LayoutBatchMove(itemIDs: unit.memberIDs, section: section, placement: placement)
     }
 
     /// Whether section would take the whole selection.

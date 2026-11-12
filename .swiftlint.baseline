@@ -845,9 +845,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Items/Manager/MenuBarItemManager+EventHelpers.swift",
-    "line": 639
+    "line": 638
    },
-   "reason": "File should contain 400 lines or less: currently contains 639",
+   "reason": "File should contain 400 lines or less: currently contains 638",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",

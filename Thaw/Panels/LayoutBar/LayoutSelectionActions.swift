@@ -139,13 +139,15 @@ struct LayoutSelectionActions {
                 }
                 onMoved(forward.itemIDs)
             }
-            guard let outcome, let refusal = LayoutSelectionModel.refusal(for: outcome, section: target, selectionRestored: result?.restored == true, itemName: { id in
-                appState.itemManager.managedItems.first { $0.uniqueIdentifier == id }?.displayName
-            })
+            guard let outcome, let refusal = LayoutSelectionModel.refusal(for: outcome, section: target, selectionRestored: result?.restored == true, itemName: { Self.displayName(ofItem: $0, in: appState) })
             else {
                 return
             }
             appState.layoutFeedback.post(refusal)
         }
+    }
+
+    private static func displayName(ofItem id: String, in appState: AppState) -> String? {
+        appState.itemManager.managedItems.first { $0.uniqueIdentifier == id }?.displayName
     }
 }
