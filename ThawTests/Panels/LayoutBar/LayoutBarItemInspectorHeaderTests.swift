@@ -66,8 +66,8 @@ struct LayoutBarItemInspectorHeaderTests {
 
     @Test("A picked image is drawn 18 points tall at its own aspect ratio, and an empty one as a square")
     func pickedImageSize() {
-        #expect(ItemIconPickerView.menuBarSize(for: CGSize(width: 512, height: 256)) == CGSize(width: 36, height: 18))
-        #expect(ItemIconPickerView.menuBarSize(for: CGSize(width: 9, height: 9)) == CGSize(width: 18, height: 18))
-        #expect(ItemIconPickerView.menuBarSize(for: CGSize(width: 40, height: 0)) == CGSize(width: 18, height: 18))
+        #expect(ItemIconPickerView.menuBarSize(for: CGSize(width: 512, height: 256)) == CGSize(width: 32, height: 16))
+        #expect(ItemIconPickerView.menuBarSize(for: CGSize(width: 9, height: 9)) == CGSize(width: 16, height: 16))
+        #expect(ItemIconPickerView.menuBarSize(for: CGSize(width: 40, height: 0)) == CGSize(width: 16, height: 16))
     }
 }

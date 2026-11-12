@@ -39,5 +39,9 @@ struct StandInPreviewSizeTests {
         #expect(symbol.midX == bounds.midX && symbol.midY == bounds.midY)
         let appIcon = LayoutBarItemView.overflowFallbackDrawRect(for: item("com.example.app"), imageSize: CGSize(width: 16, height: 15), bounds: bounds)
         #expect(appIcon.size == CGSize(width: 24, height: 24))
+        let chosen = LayoutBarItemView.overflowFallbackDrawRect(
+            for: item("com.example.app"), imageSize: CGSize(width: 16, height: 16), bounds: bounds, isChosenIcon: true
+        )
+        #expect(chosen.size == CGSize(width: 16, height: 16), "an icon the user chose keeps its glyph size")
     }
 }

@@ -9,6 +9,30 @@ import CoreGraphics
 import MenuBarModel
 
 extension LayoutBarItemView {
+    /// App icons fill the available square, but Thaw's own control-item image, its
+    /// stand-ins' symbols and an icon the user chose keep their glyph size.
+    static func overflowFallbackDrawRect(
+        for item: MenuBarItem,
+        imageSize: CGSize,
+        bounds: CGRect,
+        isChosenIcon: Bool = false
+    ) -> CGRect {
+        guard bounds.width > 0, bounds.height > 0 else { return .zero }
+
+        let keepsGlyphSize = isChosenIcon || item.tag.matchesVisibleControlItem || ThawExtraGlyph.isStandIn(item.tag)
+        if keepsGlyphSize, imageSize.width > 0, imageSize.height > 0 {
+            return bounds.centeredRect(forNaturalSize: imageSize)
+        }
+
+        let side = min(bounds.width, bounds.height)
+        return (drawsBareModuleGlyph(for: item) ? bareGlyphRect(for: imageSize, in: bounds) : nil) ?? CGRect(
+            x: bounds.midX - (side / 2),
+            y: bounds.midY - (side / 2),
+            width: side,
+            height: side
+        )
+    }
+
     /// A system module Thaw switched off is never drawn, so its symbol stands in for the picture, without the box.
     static func drawsBareModuleGlyph(for item: MenuBarItem) -> Bool {
         item.tag.namespace == .menuBarAgent && SystemModuleGlyph.symbolName(forItemTitle: item.tag.title) != nil

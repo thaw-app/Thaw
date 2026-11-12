@@ -142,8 +142,6 @@ struct ItemIconPickerView: View {
 
     /// A picked file is drawn at menu bar height whatever its pixel size.
     static func menuBarSize(for size: CGSize) -> CGSize {
-        guard size.height > 0 else { return CGSize(width: 18, height: 18) }
-        let height: CGFloat = 18
-        return CGSize(width: size.width * height / size.height, height: height)
+        MenuBarItemIconChoices.glyphSize(for: size)
     }
 }
