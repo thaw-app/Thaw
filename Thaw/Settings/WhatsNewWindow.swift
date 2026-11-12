@@ -19,7 +19,7 @@ struct WhatsNewWindow: Scene {
             WhatsNewPage(appState: appState)
                 .environment(appState)
                 // The update's notes are shown once; opened again later, the
-                // window starts on the newest release like any other time.
+                // window starts on the installed release like any other time.
                 .onDisappear { appState.pendingUpdateVersion = nil }
         }
         .windowResizability(.contentMinSize)

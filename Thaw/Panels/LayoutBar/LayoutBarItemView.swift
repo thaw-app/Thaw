@@ -715,7 +715,8 @@ final class LayoutBarItemView: LayoutBarArrangedView {
         let iconRect = Self.overflowFallbackDrawRect(
             for: item,
             imageSize: icon.size,
-            bounds: bounds
+            bounds: bounds,
+            isChosenIcon: MenuBarItemIconChoices.shared.hasChoice(for: item)
         )
         guard !iconRect.isEmpty else { return }
         draw(
@@ -723,28 +724,6 @@ final class LayoutBarItemView: LayoutBarArrangedView {
             in: iconRect,
             fraction: isEnabled ? 1.0 : 0.5,
             templateTint: menuBarForegroundColor
-        )
-    }
-
-    /// App icons fill the available square, but Thaw's own control-item image and its
-    /// stand-ins' symbols must match the native size their real status items draw at.
-    static func overflowFallbackDrawRect(
-        for item: MenuBarItem,
-        imageSize: CGSize,
-        bounds: CGRect
-    ) -> CGRect {
-        guard bounds.width > 0, bounds.height > 0 else { return .zero }
-
-        if item.tag.matchesVisibleControlItem || ThawExtraGlyph.isStandIn(item.tag), imageSize.width > 0, imageSize.height > 0 {
-            return bounds.centeredRect(forNaturalSize: imageSize)
-        }
-
-        let side = min(bounds.width, bounds.height)
-        return (drawsBareModuleGlyph(for: item) ? bareGlyphRect(for: imageSize, in: bounds) : nil) ?? CGRect(
-            x: bounds.midX - (side / 2),
-            y: bounds.midY - (side / 2),
-            width: side,
-            height: side
         )
     }
 
@@ -805,7 +784,7 @@ final class LayoutBarItemView: LayoutBarArrangedView {
                     fraction: 1
                 )
             } else if let fallbackIcon {
-                let rect = overflowFallbackDrawRect(for: item, imageSize: fallbackIcon.size, bounds: bounds)
+                let rect = overflowFallbackDrawRect(for: item, imageSize: fallbackIcon.size, bounds: bounds, isChosenIcon: MenuBarItemIconChoices.shared.hasChoice(for: item))
                 let drawn = fallbackIcon.isTemplate
                     ? fallbackIcon.tinted(with: menuBarForegroundColor(appState: appState))
                     : fallbackIcon

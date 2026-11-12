@@ -188,9 +188,14 @@ enum OverflowFallbackIcon {
         for item: MenuBarItem,
         in section: MenuBarSection.Name?,
         appState: AppState,
-        hasUsableCapture: Bool
+        hasUsableCapture: Bool,
+        iconChoices: MenuBarItemIconChoices = .shared
     ) -> Bool {
         guard supportsMissingCaptureFallback(for: section) else { return false }
+        // An icon the user chose replaces the picture, or picking one would show nothing.
+        if iconChoices.hasChoice(for: item) {
+            return true
+        }
         // Apple hosts contain distinct modules, including Siri; their process icon cannot replace each glyph.
         guard !usesCapturedSystemPreview(item) else { return false }
         // Native overflow needs no case: captures that meet its chevron are refused, and concealed

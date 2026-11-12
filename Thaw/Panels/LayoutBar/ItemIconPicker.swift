@@ -65,7 +65,7 @@ struct ItemIconPickerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.inset) {
-            Text("Shown when \(Constants.displayName) has no picture of the item, which is always the case for a Thaw Bar Only item.")
+            Text("Shown in place of \(Constants.displayName)'s picture of the item.")
                 .font(ThawType.detail)
                 .foregroundStyle(ThawInk.supporting)
                 .fixedSize(horizontal: false, vertical: true)
@@ -142,8 +142,6 @@ struct ItemIconPickerView: View {
 
     /// A picked file is drawn at menu bar height whatever its pixel size.
     static func menuBarSize(for size: CGSize) -> CGSize {
-        guard size.height > 0 else { return CGSize(width: 18, height: 18) }
-        let height: CGFloat = 18
-        return CGSize(width: size.width * height / size.height, height: height)
+        MenuBarItemIconChoices.glyphSize(for: size)
     }
 }

@@ -93,7 +93,6 @@ struct MenuBarItemIconChoicesTests {
             bitmapDataPlanes: nil, pixelsWide: 2000, pixelsHigh: 2000, bitsPerSample: 8, samplesPerPixel: 4,
             hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
         ))
-        // The picker sizes a picked picture to the menu bar's 18 pt before storing it.
         rep.size = NSSize(width: 18, height: 18)
         let picture = NSImage(size: rep.size)
         picture.addRepresentation(rep)
@@ -102,8 +101,43 @@ struct MenuBarItemIconChoicesTests {
         choices.setImage(picture, for: item)
 
         let stored = try #require(choices.image(for: item))
-        #expect(stored.representations.map(\.pixelsHigh).max() == 54)
-        #expect(stored.size == NSSize(width: 18, height: 18))
+        #expect(stored.representations.map(\.pixelsHigh).max() == 48)
+        #expect(stored.size == NSSize(width: 16, height: 16))
+    }
+
+    @Test("An app's image that reports its pixels as points is drawn at glyph height, sharp at 2x")
+    func pixelSizedAssetIsGlyphSized() throws {
+        // BetterDisplay's status image: 32 pixels that load as 32 pt.
+        let rep = try #require(NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: 32, pixelsHigh: 32, bitsPerSample: 8, samplesPerPixel: 4,
+            hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+        ))
+        rep.size = NSSize(width: 32, height: 32)
+        let asset = NSImage(size: rep.size)
+        asset.addRepresentation(rep)
+        let choices = try MenuBarItemIconChoices(defaults: #require(suites.make()))
+
+        choices.setImage(asset, for: item)
+
+        let stored = try #require(choices.image(for: item))
+        #expect(stored.size == NSSize(width: 16, height: 16))
+        #expect(stored.representations.map(\.pixelsHigh).max() == 32)
+    }
+
+    @Test("A choice saved at its source size and 1x is read back at glyph height")
+    func oldChoiceIsGlyphSized() throws {
+        let defaults = try #require(suites.make())
+        let rep = try #require(NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: 28, pixelsHigh: 28, bitsPerSample: 8, samplesPerPixel: 4,
+            hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+        ))
+        rep.size = NSSize(width: 28, height: 28)
+        let png = try #require(rep.representation(using: .png, properties: [:]))
+        let stored = ["\(item.canonicalIdentifier)": ["png": png.base64EncodedString(), "isTemplate": true] as [String: Any]]
+        defaults.set(try JSONSerialization.data(withJSONObject: stored), forKey: "MenuBarItemManager.iconChoices")
+
+        let image = try #require(MenuBarItemIconChoices(defaults: defaults).image(for: item))
+        #expect(image.size == NSSize(width: 16, height: 16))
     }
 
     @Test("Clearing a choice removes it and bumps the revision")

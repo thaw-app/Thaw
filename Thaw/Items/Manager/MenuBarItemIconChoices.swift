@@ -18,6 +18,15 @@ final class MenuBarItemIconChoices {
 
     private static let defaultsKey = "MenuBarItemManager.iconChoices"
 
+    /// About a menu bar glyph's height. An app's own image often reports its 2x pixel size
+    /// as points, so every choice is drawn at this height whatever size it ships at.
+    static let glyphHeight: CGFloat = 16
+
+    static func glyphSize(for size: CGSize) -> CGSize {
+        guard size.height > 0 else { return CGSize(width: glyphHeight, height: glyphHeight) }
+        return CGSize(width: size.width * glyphHeight / size.height, height: glyphHeight)
+    }
+
     private struct Stored: Codable {
         let png: Data
         let isTemplate: Bool
@@ -47,6 +56,8 @@ final class MenuBarItemIconChoices {
             return image
         }
         guard let image = NSImage(data: entry.png) else { return nil }
+        // Choices saved before glyphHeight kept their source size.
+        image.size = Self.glyphSize(for: image.size)
         image.isTemplate = entry.isTemplate
         images[key] = image
         return image
@@ -71,15 +82,16 @@ final class MenuBarItemIconChoices {
         revision += 1
     }
 
-    /// PNG at the image's largest representation's scale, so a 2x asset stays sharp, but drawn
-    /// at no more than 3x: a picked file can be any size, and the PNG is kept in the defaults.
-    private static func pngData(for image: NSImage) -> Data? {
+    /// PNG at glyph size, at least 2x so it is sharp on a Retina display, and at most 3x:
+    /// a picked file can be any size, and the PNG is kept in the defaults.
+    static func pngData(for image: NSImage) -> Data? {
+        let size = glyphSize(for: image.size)
         let pixelHeight = image.representations.map(\.pixelsHigh).max() ?? 0
-        let scale = (CGFloat(pixelHeight) / max(image.size.height, 1)).clamped(to: 1 ... 3)
+        let scale = (CGFloat(pixelHeight) / size.height).clamped(to: 2 ... 3)
         guard let rep = NSBitmapImageRep(
             bitmapDataPlanes: nil,
-            pixelsWide: max(Int((image.size.width * scale).rounded()), 1),
-            pixelsHigh: max(Int((image.size.height * scale).rounded()), 1),
+            pixelsWide: max(Int((size.width * scale).rounded()), 1),
+            pixelsHigh: max(Int((size.height * scale).rounded()), 1),
             bitsPerSample: 8,
             samplesPerPixel: 4,
             hasAlpha: true,
@@ -88,10 +100,10 @@ final class MenuBarItemIconChoices {
             bytesPerRow: 0,
             bitsPerPixel: 0
         ) else { return nil }
-        rep.size = image.size
+        rep.size = size
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-        image.draw(in: CGRect(origin: .zero, size: image.size))
+        image.draw(in: CGRect(origin: .zero, size: size))
         NSGraphicsContext.restoreGraphicsState()
         return rep.representation(using: .png, properties: [:])
     }
