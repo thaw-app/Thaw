@@ -17,7 +17,7 @@ import MenuBarModel
 final class CharacterViewerRelay {
     static let shared = CharacterViewerRelay()
 
-    /// ⌃⌘Space, the shortcut every app's Edit › Emoji & Symbols answers to.
+    /// ⌃⌘Space, the shortcut for Edit › Emoji & Symbols.
     nonisolated static let keyCode: CGKeyCode = 49
     nonisolated static let flags: CGEventFlags = [.maskControl, .maskCommand]
 
@@ -32,7 +32,6 @@ final class CharacterViewerRelay {
         Notification.Name("\(parent).extra.characterViewer")
     }
 
-    /// The key down and up for the shortcut.
     nonisolated static func shortcutEvents() -> [CGEvent] {
         guard let down = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true),
               let up = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: false)

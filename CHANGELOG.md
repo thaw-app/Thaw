@@ -26,19 +26,19 @@ the items under New and Fixed.
 
 ### Changed
 
-- **What's New has its Stable, Beta and Alpha tabs beside the title,** instead of between the title and the notes.
+- **What's New shows its Stable, Beta and Alpha tabs beside the title.**
 
 ### Fixed
 
-- **An icon you choose for an item now shows.** Choose Icon saved your pick, but whenever Thaw had a picture of the item it kept showing that picture instead. A chosen icon now takes its place, and Automatic goes back to the picture.
+- **A chosen icon now shows.** Choose Icon saved your pick but kept showing Thaw's picture of the item. Automatic goes back to the picture.
 - **Items that appear late after a restart go back to their place.** When an app's menu bar item showed up after Thaw had arranged the bar at login, it stayed next to Thaw's icon until you relaunched Thaw.
 - **A profile applied as Thaw starts keeps its order when some items show up late.** When macOS was slow to report some apps' items after Thaw started, the profile was applied without them and the rest were arranged around them, and once they showed up Thaw kept that arrangement. Thaw now keeps the profile's order until those items are back, then puts them in their place.
 - **Opening a hidden item no longer opens the item next to it.** When macOS showed the item somewhere other than where it said, Thaw could open or click the neighboring item first and then the one you clicked. Thaw now clicks where the item is shown, and clicks nothing when it can't tell.
 - **Opening a hidden item works the first time.** The first time you opened a hidden item after Thaw started, Thaw could miss that its menu had opened. It then hid the item again, opened the menu a second time or refused to click it. Thaw now finds the item's app before opening it.
 - **Opening a hidden item moves the pointer only when it has to.** Thaw remembers how each hidden item opens, and one slow menu, or one you closed right away, could make it click that item for real from then on, moving the pointer every time. Thaw now tries a press that leaves the pointer alone first, and clicks for real straight away only for items that needed it twice in a row.
 - **Clicking a menu bar item for real is faster.** Before each real click, Thaw asked every running app where its menu bar items were, and it did that twice for a hidden item. It now asks only the item's own app, and every app only when that app doesn't answer.
-- **Show Emoji & Symbols in Thaw's Input menu opens the viewer again.** It did nothing, because macOS opens no viewer for the background app behind that menu. Thaw now presses ⌃⌘Space for it in the app you're typing in. Reported by @Macador in [#1518](https://github.com/thaw-app/Thaw/issues/1518).
-- **What's New opens on the version you have installed.** It opened on the newest release, so after a newer version came out you read notes for an update you didn't have yet. Newer releases are still in the list.
+- **Show Emoji & Symbols in Thaw's Input menu opens the viewer.** It did nothing. Reported by @Macador in [#1518](https://github.com/thaw-app/Thaw/issues/1518).
+- **What's New opens on the version you have installed,** not the newest release.
 
 ### Thanks
 
