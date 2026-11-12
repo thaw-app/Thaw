@@ -21,8 +21,14 @@ final class CharacterViewerRelay {
     nonisolated static let keyCode: CGKeyCode = 49
     nonisolated static let flags: CGEventFlags = [.maskControl, .maskCommand]
 
+    /// The request is a public name any app can post, so Thaw answers only right after a real
+    /// click or key press, which is how a menu item is chosen, and at most once a second.
+    nonisolated static let inputWindow: TimeInterval = 1
+    nonisolated static let minimumInterval: Duration = .seconds(1)
+
     private let log = DiagLog(category: "CharacterViewerRelay")
     private var observer: NSObjectProtocol?
+    private var lastOpen: ContinuousClock.Instant?
 
     static var notification: Notification.Name {
         notification(parent: ThawMenuBarIdentity.bundleIdentifier)
@@ -54,13 +60,46 @@ final class CharacterViewerRelay {
         }
     }
 
+    func stop() {
+        guard let observer else { return }
+        DistributedNotificationCenter.default().removeObserver(observer)
+        self.observer = nil
+    }
+
+    /// Whether a request should be answered, from what the relay can check.
+    nonisolated static func answers(
+        standInIsRunning: Bool,
+        secondsSinceInput: TimeInterval,
+        sinceLastOpen: Duration?
+    ) -> Bool {
+        guard standInIsRunning, secondsSinceInput <= inputWindow else { return false }
+        return sinceLastOpen.map { $0 >= minimumInterval } ?? true
+    }
+
     private func open() {
-        guard AXIsProcessTrusted() else {
-            log.notice("no Accessibility permission; cannot open the Character Viewer")
+        let now = ContinuousClock.now
+        let answers = Self.answers(
+            standInIsRunning: !NSRunningApplication.runningApplications(
+                withBundleIdentifier: SystemExtraStandIn.textInput.bundleIdentifier
+            ).isEmpty,
+            secondsSinceInput: Self.secondsSinceInput(),
+            sinceLastOpen: lastOpen.map { $0.duration(to: now) }
+        )
+        guard answers, AXIsProcessTrusted() else {
+            log.notice("ignored a Character Viewer request")
             return
         }
+        lastOpen = now
         for event in Self.shortcutEvents() {
             event.post(tap: .cghidEventTap)
         }
+    }
+
+    /// Seconds since the last click or key release anywhere in the session.
+    private static func secondsSinceInput() -> TimeInterval {
+        let state = CGEventSourceStateID.combinedSessionState
+        return [CGEventType.leftMouseUp, .keyUp]
+            .map { CGEventSource.secondsSinceLastEventType(state, eventType: $0) }
+            .min() ?? .infinity
     }
 }

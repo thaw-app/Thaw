@@ -37,4 +37,13 @@ struct CharacterViewerRelayTests {
             #expect(!event.flags.contains(.maskShift) && !event.flags.contains(.maskAlternate))
         }
     }
+
+    @Test("A request is answered only while the stand-in runs, right after real input, and once a second")
+    func answersOnlyRealRequests() {
+        #expect(CharacterViewerRelay.answers(standInIsRunning: true, secondsSinceInput: 0.1, sinceLastOpen: nil))
+        #expect(CharacterViewerRelay.answers(standInIsRunning: true, secondsSinceInput: 0.1, sinceLastOpen: .seconds(2)))
+        #expect(!CharacterViewerRelay.answers(standInIsRunning: false, secondsSinceInput: 0.1, sinceLastOpen: nil), "no stand-in asked")
+        #expect(!CharacterViewerRelay.answers(standInIsRunning: true, secondsSinceInput: 5, sinceLastOpen: nil), "nobody clicked or typed")
+        #expect(!CharacterViewerRelay.answers(standInIsRunning: true, secondsSinceInput: 0.1, sinceLastOpen: .milliseconds(200)), "too soon after the last")
+    }
 }

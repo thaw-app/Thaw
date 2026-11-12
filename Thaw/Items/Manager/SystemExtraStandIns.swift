@@ -265,6 +265,9 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     }
 
     func stop(_ standIn: SystemExtraStandIn) {
+        if standIn == .textInput {
+            CharacterViewerRelay.shared.stop()
+        }
         wanted.remove(standIn)
         placed.remove(standIn)
         watched[standIn]?.stopWatching()
