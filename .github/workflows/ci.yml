@@ -229,6 +229,27 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+  # The app's xcodebuild test run does not run a package's own test targets, so
+  # this runs them. One job loops over the packages: each takes under half a
+  # minute to test, so a job per package would spend more on runner start-up.
+  packages:
+    if: github.repository == 'thaw-app/Thaw'
+    runs-on: xcode-27
+    needs: [changes, static_analysis]
+    timeout-minutes: 30
+    steps:
+      - name: Skip package tests (no code changes)
+        if: needs.changes.outputs.code != 'true'
+        run: echo "No code-related paths changed; skipping the package tests."
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: needs.changes.outputs.code == 'true'
+        with:
+          persist-credentials: false
+
+      - name: Test packages
+        if: needs.changes.outputs.code == 'true'
+        run: sh scripts/test-packages.sh
 
   # Always runs so Scorecard sees a Sonar check on nearly every PR; forks and
   # Dependabot no-op without secrets under the same job name.
