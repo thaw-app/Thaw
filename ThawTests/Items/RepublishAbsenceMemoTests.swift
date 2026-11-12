@@ -281,6 +281,16 @@ struct RepublishAbsenceMemoTests {
         #expect(memo.hasLeftOutMembers(among: ["a", "moved"], now: start))
     }
 
+    @Test("Every member left out within the window is still waiting, whichever pass left it out")
+    func leftOutIdentifiersSpanPasses() {
+        var memo = RepublishAbsenceMemo()
+        memo.noteMissing(["older"], at: start)
+        memo.noteMissing(["newer"], at: start + .seconds(5))
+
+        #expect(memo.leftOutIdentifiers(now: start + .seconds(6)) == ["older", "newer"])
+        #expect(memo.leftOutIdentifiers(now: start + RepublishAbsenceMemo.leftOutMemory + .seconds(1)) == ["newer"])
+    }
+
     @Test("Restore counts lapse with the left-out window")
     func restoreCountsExpire() {
         var memo = RepublishAbsenceMemo()

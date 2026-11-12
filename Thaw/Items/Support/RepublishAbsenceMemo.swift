@@ -98,6 +98,11 @@ nonisolated struct RepublishAbsenceMemo {
         }.keys)
     }
 
+    /// The members left out within the left-out window, by every watch so far.
+    func leftOutIdentifiers(now: ContinuousClock.Instant = .now) -> Set<String> {
+        Set(leftOutSince.filter { $0.value.duration(to: now) < Self.leftOutMemory }.keys)
+    }
+
     /// Counts a restore asked for these members. Placing a member clears its count.
     mutating func noteRestoreAsked(for identifiers: some Sequence<String>) {
         for identifier in identifiers {

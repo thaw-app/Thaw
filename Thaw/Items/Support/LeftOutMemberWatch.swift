@@ -71,9 +71,11 @@ enum LeftOutMemberWatch {
         private var running: Set<String>
         private var readsLeft = 0
 
-        /// Starts from the owners running when the members were left out.
-        init(running: Set<String>) {
+        /// Starts from the owners running when the members were left out. With readingAtStart, the
+        /// first looks re-read the bar too: a running app can publish its item late.
+        init(running: Set<String>, readingAtStart: Bool = false) {
             self.running = running
+            readsLeft = readingAtStart ? LeftOutMemberWatch.readsAfterOwnerLaunch : 0
         }
 
         /// Notes the owners running now. True while the bar should be re-read: for
@@ -158,15 +160,20 @@ enum LeftOutMemberWatch {
         manager.missingRepublishMemo.noteMissing(members, at: .now)
         let generation = manager.missingRepublishMemo.startWatch()
         let startedAt = ContinuousClock.now
-        let ownersAtStart = runningOwners(of: members, runningBundleIDs: RunningApplicationSnapshot.readSystem().bundleIdentifiers)
+        // A new watch replaces the older ones, so it tracks every member still waiting, not only this pass's.
+        let ownersAtStart = runningOwners(
+            of: manager.missingRepublishMemo.leftOutIdentifiers(),
+            runningBundleIDs: RunningApplicationSnapshot.readSystem().bundleIdentifiers
+        )
         return Task { @MainActor [weak manager] in
-            var owners = OwnerLaunches(running: ownersAtStart)
+            var owners = OwnerLaunches(running: ownersAtStart, readingAtStart: !ownersAtStart.isEmpty)
             await run(
                 look: {
                     let running = await RunningApplicationSnapshot.current().bundleIdentifiers
                     guard let manager else { return nil }
                     var current = situation(of: manager, generation: generation, startedAt: startedAt)
-                    current.ownerRecentlyLaunched = owners.update(running: runningOwners(of: members, runningBundleIDs: running))
+                    let waiting = manager.missingRepublishMemo.leftOutIdentifiers()
+                    current.ownerRecentlyLaunched = owners.update(running: runningOwners(of: waiting, runningBundleIDs: running))
                     return current
                 },
                 readBar: {

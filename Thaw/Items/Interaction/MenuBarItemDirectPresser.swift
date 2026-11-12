@@ -56,7 +56,7 @@ nonisolated enum MenuBarItemDirectPresser {
         }
 
         let target = MenuBarItemPressTarget(element: element, ownerPID: item.ownerPID)
-        let snapshot = ClickReactionVerifier.snapshot(for: item)
+        let snapshot = ClickReactionVerifier.snapshot(for: item, alsoWatching: elementPID)
         let outcome = await MenuBarItemPresserProvider.current.press(
             target,
             at: processTargetedFallbackPoint(for: item, at: point)

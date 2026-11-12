@@ -147,6 +147,16 @@ struct LeftOutMemberWatchTests {
         #expect(another, "Another start asks again")
     }
 
+    /// iStat Menus was running when the pass gave up on it; its item showed up later with no launch to notice.
+    @Test("A watch started while an owner already runs re-reads the bar for its first few looks")
+    func readsAtStartForARunningOwner() {
+        var owners = LeftOutMemberWatch.OwnerLaunches(running: ["com.example.slow"], readingAtStart: true)
+
+        let reads = (0 ..< 4).map { _ in owners.update(running: ["com.example.slow"]) }
+
+        #expect(reads == [true, true, true, false])
+    }
+
     @Test("Only members named by a running app's bundle identifier have an owner to watch for")
     func runningOwnersNeedABundleIdentifier() {
         let members: Set = ["com.example.late:Item-0", "com.example.quit:Item-0", "Floe:Floe"]
