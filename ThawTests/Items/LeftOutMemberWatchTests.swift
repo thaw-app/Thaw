@@ -133,17 +133,16 @@ struct LeftOutMemberWatchTests {
         #expect(LeftOutMemberWatch.step(Situation(hasLeftOutMembers: false, ownerRecentlyLaunched: true)) == .stop)
     }
 
-    @Test("A started owner asks for a few re-reads, and an owner already running asks for none")
-    func ownerLaunchesAskForBoundedReads() {
+    @Test("A started owner asks for three spaced re-reads, and an owner already running asks for none")
+    func ownerLaunchesAskForSpacedReads() {
         var owners = LeftOutMemberWatch.OwnerLaunches(running: ["com.example.running"])
 
         let unchanged = owners.update(running: ["com.example.running"])
-        let reads = (0 ..< 5).map { _ in owners.update(running: ["com.example.running", "com.example.late"]) }
+        let reads = (0 ..< 9).map { _ in owners.update(running: ["com.example.running", "com.example.late"]) }
         let another = owners.update(running: ["com.example.running", "com.example.late", "com.example.later"])
 
         #expect(!unchanged)
-        #expect(reads == [true, true, true, false, false])
-        #expect(LeftOutMemberWatch.readsAfterOwnerLaunch == 3)
+        #expect(reads == [true, false, true, false, false, false, true, false, false], "about 2, 6 and 14 s after the start")
         #expect(another, "Another start asks again")
     }
 
@@ -152,9 +151,9 @@ struct LeftOutMemberWatchTests {
     func readsAtStartForARunningOwner() {
         var owners = LeftOutMemberWatch.OwnerLaunches(running: ["com.example.slow"], readingAtStart: true)
 
-        let reads = (0 ..< 4).map { _ in owners.update(running: ["com.example.slow"]) }
+        let reads = (0 ..< 8).map { _ in owners.update(running: ["com.example.slow"]) }
 
-        #expect(reads == [true, true, true, false])
+        #expect(reads == [true, false, true, false, false, false, true, false])
     }
 
     @Test("Only members named by a running app's bundle identifier have an owner to watch for")

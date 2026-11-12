@@ -29,9 +29,12 @@ enum LeftOutMemberWatch {
     /// restore's own pass can start a new one. A retry follows only a restore that didn't place it.
     static nonisolated let maximumRestores = 3
 
-    /// How many looks re-read the bar after the app of a left-out member starts. An app publishes
-    /// its item a few seconds after it launches.
-    static nonisolated let readsAfterOwnerLaunch = 3
+    /// The looks after an owner app starts that re-read the bar, about 2, 6 and 14 s later: an app
+    /// can publish its item well after it launches.
+    static nonisolated let readLooks = [1, 3, 7]
+
+    /// How long after a member is first left out the watch still re-reads the bar for it at its start.
+    static nonisolated let readWindow: Duration = pollInterval * 7
 
     /// What the manager looks like to the watch at one look.
     nonisolated struct Situation: Equatable {
@@ -53,7 +56,7 @@ enum LeftOutMemberWatch {
         var isOrderApplyPending = false
         /// The arrival restore does not run this soon after a restriction change.
         var isWithinRestrictionSettleWindow = false
-        /// Whether the app of a left-out member started within the last few looks.
+        /// Whether this look re-reads the bar for a left-out member's item.
         var ownerRecentlyLaunched = false
     }
 
@@ -66,28 +69,27 @@ enum LeftOutMemberWatch {
         case restore(Set<String>)
     }
 
-    /// Which apps of the left-out members run, and how many more looks re-read the bar after one started.
+    /// Which apps of the left-out members run, and the looks since one started.
     nonisolated struct OwnerLaunches: Equatable {
         private var running: Set<String>
-        private var readsLeft = 0
+        private var looksSinceLaunch: Int?
 
         /// Starts from the owners running when the members were left out. With readingAtStart, the
-        /// first looks re-read the bar too: a running app can publish its item late.
+        /// watch re-reads as if one had just started: a running app can publish its item late.
         init(running: Set<String>, readingAtStart: Bool = false) {
             self.running = running
-            readsLeft = readingAtStart ? LeftOutMemberWatch.readsAfterOwnerLaunch : 0
+            looksSinceLaunch = readingAtStart ? 0 : nil
         }
 
-        /// Notes the owners running now. True while the bar should be re-read: for
-        /// readsAfterOwnerLaunch looks after any owner started.
+        /// Notes the owners running now. True on the readLooks looks after any owner started.
         mutating func update(running now: Set<String>) -> Bool {
             if !now.subtracting(running).isEmpty {
-                readsLeft = LeftOutMemberWatch.readsAfterOwnerLaunch
+                looksSinceLaunch = 0
             }
             running = now
-            guard readsLeft > 0 else { return false }
-            readsLeft -= 1
-            return true
+            guard let looks = looksSinceLaunch.map({ $0 + 1 }) else { return false }
+            looksSinceLaunch = looks < (LeftOutMemberWatch.readLooks.last ?? 0) ? looks : nil
+            return LeftOutMemberWatch.readLooks.contains(looks)
         }
     }
 
@@ -161,12 +163,12 @@ enum LeftOutMemberWatch {
         let generation = manager.missingRepublishMemo.startWatch()
         let startedAt = ContinuousClock.now
         // A new watch replaces the older ones, so it tracks every member still waiting, not only this pass's.
-        let ownersAtStart = runningOwners(
-            of: manager.missingRepublishMemo.leftOutIdentifiers(),
-            runningBundleIDs: RunningApplicationSnapshot.readSystem().bundleIdentifiers
-        )
+        let memo = manager.missingRepublishMemo
+        let running = RunningApplicationSnapshot.readSystem().bundleIdentifiers
+        let ownersAtStart = runningOwners(of: memo.leftOutIdentifiers(), runningBundleIDs: running)
+        let readingAtStart = !runningOwners(of: memo.recentlyLeftOut(within: readWindow), runningBundleIDs: running).isEmpty
         return Task { @MainActor [weak manager] in
-            var owners = OwnerLaunches(running: ownersAtStart, readingAtStart: !ownersAtStart.isEmpty)
+            var owners = OwnerLaunches(running: ownersAtStart, readingAtStart: readingAtStart)
             await run(
                 look: {
                     let running = await RunningApplicationSnapshot.current().bundleIdentifiers
@@ -177,7 +179,7 @@ enum LeftOutMemberWatch {
                     return current
                 },
                 readBar: {
-                    diagLog.debug("the app of a left-out member started; reading the bar for its item")
+                    diagLog.debug("reading the bar for a left-out member's item")
                     await manager?.cacheItemsRegardless()
                 },
                 restore: { members in

@@ -291,6 +291,20 @@ struct RepublishAbsenceMemoTests {
         #expect(memo.leftOutIdentifiers(now: start + RepublishAbsenceMemo.leftOutMemory + .seconds(1)) == ["newer"])
     }
 
+    /// Eight items on a test bar never appear, so every pass left them out again and each new watch re-read the bar.
+    @Test("A member left out again keeps its first time, so only a newly left-out member counts as recent")
+    func recentlyLeftOutKeepsTheFirstTime() {
+        var memo = RepublishAbsenceMemo()
+        memo.noteMissing(["never"], at: start)
+        memo.noteMissing(["never"], at: start + .seconds(20))
+        memo.noteMissing(["late"], at: start + .seconds(20))
+
+        #expect(memo.recentlyLeftOut(within: .seconds(14), now: start + .seconds(21)) == ["late"])
+
+        memo.noteArrived(["late"], at: start + .seconds(22))
+        #expect(memo.recentlyLeftOut(within: .seconds(14), now: start + .seconds(23)).isEmpty)
+    }
+
     @Test("Restore counts lapse with the left-out window")
     func restoreCountsExpire() {
         var memo = RepublishAbsenceMemo()

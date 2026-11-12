@@ -26,6 +26,8 @@ nonisolated struct RepublishAbsenceMemo {
     /// How many restores the watches asked for each left-out member. A restore's own pass can
     /// leave the member out again and start a new watch, so the count outlives the watch.
     private var restoresAsked: [String: Int] = [:]
+    /// When each member was first left out; later passes that leave it out again don't move it.
+    private var firstLeftOut: [String: ContinuousClock.Instant] = [:]
 
     /// Counts the watches started for left-out members, so an older watch can tell it was replaced.
     private(set) var watchGeneration = 0
@@ -48,6 +50,7 @@ nonisolated struct RepublishAbsenceMemo {
         missingSince = missingSince.filter { $0.value.duration(to: now) < Self.memory }
         leftOutSince = leftOutSince.filter { $0.value.duration(to: now) < Self.leftOutMemory }
         restoresAsked = restoresAsked.filter { leftOutSince[$0.key] != nil }
+        firstLeftOut = firstLeftOut.filter { leftOutSince[$0.key] != nil }
     }
 
     /// When the latest pass that saw any of its members live took its order, so a pass that took
@@ -64,6 +67,7 @@ nonisolated struct RepublishAbsenceMemo {
             missingSince.removeValue(forKey: identifier)
             leftOutSince.removeValue(forKey: identifier)
             restoresAsked.removeValue(forKey: identifier)
+            firstLeftOut.removeValue(forKey: identifier)
             lastSawMembers = max(lastSawMembers ?? now, now)
         }
     }
@@ -74,6 +78,9 @@ nonisolated struct RepublishAbsenceMemo {
         for identifier in identifiers {
             missingSince[identifier] = now
             leftOutSince[identifier] = now
+            if firstLeftOut[identifier].map({ $0.duration(to: now) >= Self.leftOutMemory }) ?? true {
+                firstLeftOut[identifier] = now
+            }
         }
     }
 
@@ -95,6 +102,15 @@ nonisolated struct RepublishAbsenceMemo {
         Set(leftOutSince.filter {
             live.contains($0.key) && $0.value.duration(to: now) < Self.leftOutMemory
                 && restoresAsked[$0.key, default: 0] < restoreLimit
+        }.keys)
+    }
+
+    /// The waiting members first left out within the last `window`: a member waited for longer has
+    /// already had its re-reads.
+    func recentlyLeftOut(within window: Duration, now: ContinuousClock.Instant = .now) -> Set<String> {
+        Set(firstLeftOut.filter { identifier, first in
+            first.duration(to: now) < window
+                && leftOutSince[identifier].map { $0.duration(to: now) < Self.leftOutMemory } == true
         }.keys)
     }
 
