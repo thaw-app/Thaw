@@ -196,16 +196,25 @@ struct LayoutUndoCoverageTests {
         world.seat(items)
         let reordered = [items[2], items[0], items[1]]
         let undoManager = history(world)
+        // The order the section is handed each time, which the test world's own controller would drop.
+        let controller = RecordingSectionController()
+        world.appState.menuBarManager.sectionController = controller
 
         record(undoManager) {
             LayoutReorderUndo.register(reordered, previous: items, of: items[2], section: .visible, appState: world.appState)
         }
-        // The test world's controller stores no order, so this checks the history itself.
         #expect(undoManager.undoActionName == String(localized: "Move \(items[2].displayName)"))
         undoManager.undo()
+        #expect(controller.sectionOrderCalls.count == 1)
+        #expect(controller.sectionOrderCalls.last?.0 == .visible)
+        #expect(controller.sectionOrderCalls.last?.1 == items.map(\.uniqueIdentifier), "undo hands back the order before the drag")
         #expect(undoManager.canRedo, "undo goes through the keyboard's order commit, which registers the redo")
         undoManager.redo()
+        #expect(controller.sectionOrderCalls.count == 2)
+        #expect(controller.sectionOrderCalls.last?.1 == reordered.map(\.uniqueIdentifier), "redo puts the dragged order back")
         #expect(undoManager.canUndo)
+        undoManager.undo()
+        #expect(controller.sectionOrderCalls.last?.1 == items.map(\.uniqueIdentifier), "and it can be undone again")
     }
 
     @Test("Only a batch move that happened records an undo step")
@@ -225,11 +234,14 @@ struct LayoutUndoCoverageTests {
         let restoring = [LayoutBatchMove(itemIDs: ["a"], section: .visible, placement: .start)]
 
         record(undoManager) { LayoutBatchMoveUndo.register(forward: forward, restoring: restoring, appState: world.appState) }
-        #expect(undoManager.undoActionName == LayoutBatchMoveUndo.actionName(count: 1))
+        let name = LayoutBatchMoveUndo.actionName(count: 1)
+        #expect(undoManager.undoActionName == name)
         undoManager.undo()
         #expect(undoManager.canRedo)
+        #expect(undoManager.redoActionName == name, "the redo is the same step, named the same")
         undoManager.redo()
         #expect(undoManager.canUndo)
+        #expect(undoManager.undoActionName == name, "after the redo the step can be undone again")
     }
 
     @Test("An undo step whose anchor has gone puts the item at the end of its old section")

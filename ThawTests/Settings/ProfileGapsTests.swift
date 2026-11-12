@@ -6,8 +6,10 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import MenuBarModel
 import Testing
 @testable import Thaw
+import ThawUI
 
 @Suite("Profile shortcuts merge")
 struct ProfileHotkeyMergeTests {
@@ -166,10 +168,14 @@ struct ProfileExportTests {
         #expect(shortcuts.shortcut(for: second) == nil)
     }
 
-    @Test("Importing a file restores its apply shortcut")
+    @Test("Importing a file restores its apply shortcut and puts it on the profile's live hotkey")
     func importRestoresShortcut() throws {
         try ProfileTestDirectory.withManager(seeding: []) { manager, tmp in
-            let shortcut = Data("⌃⌥2".utf8)
+            let combination = KeyCombination(key: KeyCode(rawValue: 0x6A), modifiers: [.command, .option, .control, .shift])
+            let shortcut = try JSONEncoder().encode(combination)
+            // With an AppState the import's publish runs the hotkey rebuild, as it does in the app.
+            let appState = AppState() // the manager holds it weakly
+            manager.appState = appState
             let bundle = try ProfileExportBundle(entries: [ProfileExportEntry(profile: Self.profile(named: "Imported"), applyShortcut: shortcut)])
             let file = tmp.appendingPathComponent("bundle.json")
             let encoder = JSONEncoder()
@@ -180,6 +186,10 @@ struct ProfileExportTests {
 
             let imported = try #require(manager.profiles.first { $0.name == "Imported" })
             #expect(ProfileApplyShortcuts().shortcut(for: imported.id) == shortcut)
+            let hotkey = try #require(manager.profileHotkeys[imported.id], "the rebuild made a hotkey for the imported profile")
+            defer { hotkey.keyCombination = nil }
+            #expect(hotkey.keyCombination == combination, "and loaded the restored shortcut into it")
+            #expect(manager.hotkeyProfileMap[ObjectIdentifier(hotkey)] == imported.id)
         }
     }
 
@@ -192,5 +202,19 @@ struct ProfileExportTests {
             .init(key: "area.names", label: "Item names", current: nil, profile: same),
         ])
         #expect(changes.map(\.label) == ["Appearance", "Item names"])
+    }
+
+    @Test("The preview builds its list from the app's state: a part that differs from the profile is listed, one that matches is not")
+    func settingChangesFollowTheApp() throws {
+        let appState = AppState()
+        let profile = try Self.profile(named: "P")
+        let labels = { ProfilePreviewChanges.settingChanges(of: profile, appState: appState).map(\.label) }
+        let itemNames = String(localized: "Item names")
+
+        Defaults.set([String: String](), forKey: .menuBarItemCustomNames)
+        #expect(!labels().contains(itemNames), "the profile and the app both have no custom names")
+
+        Defaults.set(["com.example.App": "Renamed"], forKey: .menuBarItemCustomNames)
+        #expect(labels().contains(itemNames), "the app has a name the profile does not")
     }
 }

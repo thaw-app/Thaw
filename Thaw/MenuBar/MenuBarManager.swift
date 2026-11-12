@@ -102,8 +102,8 @@ final class MenuBarManager {
 
     let layoutEditorPanel = MenuBarLayoutEditorPanel()
 
-    /// Non-optional platform controller behind an interface so app callers need no platform type.
-    private(set) var sectionController: any MenuBarSectionControlling = InertSectionController()
+    /// Non-optional platform controller behind an interface so app callers need no platform type; settable for tests.
+    var sectionController: any MenuBarSectionControlling = InertSectionController()
 
     /// Concrete access for platform-typed operations, exposed to callers only through this manager.
     private(set) var runtimeSectionController: RuntimeSectionController?

@@ -18,7 +18,7 @@ enum RequiredPermissionsNotice {
     }
 
     @MainActor
-    static func text(for permissions: AppPermissions) -> String {
-        text(missing: permissions.requiredPermissions.filter { !$0.hasPermission }.map(\.title))
+    static func text(for permissions: some PermissionsManaging) -> String {
+        text(missing: permissions.allPermissions.filter { $0.isRequired && !$0.hasPermission }.map(\.title))
     }
 }

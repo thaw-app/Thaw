@@ -363,12 +363,14 @@ struct StrandRepairPassTests {
     func managerEnvironmentReads() {
         let environment = ItemManagerStrandRepairEnvironment(manager: MenuBarItemManager())
         #expect(!environment.arrangementIsManual)
-        _ = environment.isBarBusy
+        #expect(!environment.isBarBusy, "an idle manager is neither settling nor being arranged")
         _ = environment.agentIgnoresPreferredPositions
         _ = environment.displayWhereApplicationMenuWrapsPastNotch()
-        _ = environment.currentPositions()
-        #expect(environment.displayBounds == BarAxis.liveDisplayBounds())
+        // One rectangle per active display, each the size CoreGraphics gives that display.
+        #expect(environment.displayBounds == Bridging.activeDisplayIDs().map { CGDisplayBounds($0) })
         #expect(!environment.isHiddenBySystemPreferences(stranded))
+        // The live position table belongs to the Mac running the tests, so it is not read here.
         environment.commitPreferredPositionWrite(controller: controller)
+        #expect(controller.preferredPositionSelfWrites == 1, "the commit tells the section controller the write was Thaw's own")
     }
 }

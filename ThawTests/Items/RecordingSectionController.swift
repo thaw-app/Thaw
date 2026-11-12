@@ -192,7 +192,13 @@ final class RecordingSectionController: MenuBarSectionControlling, ObservedOrder
         false
     }
 
-    func notePreferredPositionsSelfWrite() {}
+    /// How many times Thaw said it wrote the preferred positions itself.
+    private(set) var preferredPositionSelfWrites = 0
+
+    func notePreferredPositionsSelfWrite() {
+        preferredPositionSelfWrites += 1
+    }
+
     func refreshHidingAvailability() -> Bool {
         false
     }
