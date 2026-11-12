@@ -258,7 +258,8 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
         wanted.insert(standIn)
         place(standIn, after: original, in: section)
         try await open(standIn)
-        if standIn == .textInput {
+        // Turned off while it started: open quit it, so nothing should listen for it.
+        if standIn == .textInput, wanted.contains(standIn) {
             CharacterViewerRelay.shared.start()
         }
         log.info("launched \(standIn.rawValue) stand-in in \(section.rawValue)")
