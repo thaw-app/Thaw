@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Changed
+
+- **What's New has its Stable, Beta and Alpha tabs beside the title,** instead of between the title and the notes.
+
 ### Fixed
 
 - **An icon you choose for an item now shows.** Choose Icon saved your pick, but whenever Thaw had a picture of the item it kept showing that picture instead. A chosen icon now takes its place, and Automatic goes back to the picture.
