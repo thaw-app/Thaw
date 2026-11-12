@@ -26,6 +26,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- **An icon you choose for an item now shows.** Choose Icon saved your pick, but whenever Thaw had a picture of the item it kept showing that picture instead. A chosen icon now takes its place, and Automatic goes back to the picture.
 - **Items that appear late after a restart go back to their place.** When an app's menu bar item showed up after Thaw had arranged the bar at login, it stayed next to Thaw's icon until you relaunched Thaw.
 - **A profile applied as Thaw starts keeps its order when some items show up late.** When macOS was slow to report some apps' items after Thaw started, the profile was applied without them and the rest were arranged around them, and once they showed up Thaw kept that arrangement. Thaw now keeps the profile's order until those items are back, then puts them in their place.
 - **Opening a hidden item no longer opens the item next to it.** When macOS showed the item somewhere other than where it said, Thaw could open or click the neighboring item first and then the one you clicked. Thaw now clicks where the item is shown, and clicks nothing when it can't tell.

@@ -162,6 +162,25 @@ struct OverflowFallbackIconTests {
         #expect(gone.isTemplate, "an app that isn't installed still gets the generic glyph")
     }
 
+    /// Picking an icon for a hidden item with a live picture showed nothing: the picture won.
+    @Test("An icon the user chose replaces a good capture")
+    func chosenIconBeatsCapture() throws {
+        let appState = AppState()
+        let suite = "OverflowFallbackIconTests.chosenIcon"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let choices = MenuBarItemIconChoices(defaults: defaults)
+        let item = Self.item(.string("com.example.chosen"))
+        let hidden = MenuBarSection.Name.hidden
+        #expect(!OverflowFallbackIcon.shouldPreferAppIcon(for: item, in: hidden, appState: appState, hasUsableCapture: true, iconChoices: choices))
+
+        let icon = try #require(NSImage(systemSymbolName: "star", accessibilityDescription: nil))
+        choices.setImage(icon, for: item)
+
+        #expect(OverflowFallbackIcon.shouldPreferAppIcon(for: item, in: hidden, appState: appState, hasUsableCapture: true, iconChoices: choices))
+        #expect(!OverflowFallbackIcon.shouldPreferAppIcon(for: item, in: nil, appState: appState, hasUsableCapture: true, iconChoices: choices), "outside a section the capture rules stand")
+    }
+
     @Test("The always-use-app-icon setting prefers the app icon over a good capture")
     func alwaysUseAppIcon() throws {
         let appState = AppState()

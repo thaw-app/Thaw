@@ -65,7 +65,7 @@ struct ItemIconPickerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.inset) {
-            Text("Shown when \(Constants.displayName) has no picture of the item, which is always the case for a Thaw Bar Only item.")
+            Text("Shown in place of \(Constants.displayName)'s picture of the item.")
                 .font(ThawType.detail)
                 .foregroundStyle(ThawInk.supporting)
                 .fixedSize(horizontal: false, vertical: true)
