@@ -33,6 +33,12 @@ the items under New and Fixed.
 - **Opening a hidden item works the first time.** The first time you opened a hidden item after Thaw started, Thaw could miss that its menu had opened. It then hid the item again, opened the menu a second time or refused to click it. Thaw now finds the item's app before opening it.
 - **Opening a hidden item moves the pointer only when it has to.** Thaw remembers how each hidden item opens, and one slow menu, or one you closed right away, could make it click that item for real from then on, moving the pointer every time. Thaw now tries a press that leaves the pointer alone first, and clicks for real straight away only for items that needed it twice in a row.
 - **Clicking a menu bar item for real is faster.** Before each real click, Thaw asked every running app where its menu bar items were, and it did that twice for a hidden item. It now asks only the item's own app, and every app only when that app doesn't answer.
+- **What's New opens on the version you have installed.** It opened on the newest release, so after a newer version came out you read notes for an update you didn't have yet. Newer releases are still in the list.
+
+### Thanks
+
+- @Omoeba fixed items that show up late, profiles applied at launch and opening hidden items ([#1531](https://github.com/thaw-app/Thaw/pull/1531)). They also stopped the test suite from resetting your Mac's menu bar spacing ([#1533](https://github.com/thaw-app/Thaw/pull/1533)).
+- @elior-esh took on the November review in [#1529](https://github.com/thaw-app/Thaw/issues/1529). They documented every `thaw://` action and setting ([#1532](https://github.com/thaw-app/Thaw/pull/1532)), added tests for the Profiles pages, tips and widgets ([#1538](https://github.com/thaw-app/Thaw/pull/1538), [#1539](https://github.com/thaw-app/Thaw/pull/1539), [#1541](https://github.com/thaw-app/Thaw/pull/1541), [#1542](https://github.com/thaw-app/Thaw/pull/1542), [#1546](https://github.com/thaw-app/Thaw/pull/1546), [#1548](https://github.com/thaw-app/Thaw/pull/1548)) and tidied the code behind them ([#1544](https://github.com/thaw-app/Thaw/pull/1544), [#1545](https://github.com/thaw-app/Thaw/pull/1545)).
 
 ## [3.0.0-alpha.14] - 2026-11-11
 
