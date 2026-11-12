@@ -24,27 +24,6 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
-### Changed
-
-- **What's New shows its Stable, Beta and Alpha tabs beside the title.**
-
-### Fixed
-
-- **A chosen icon now shows.** Choose Icon saved your pick but kept showing Thaw's picture of the item. Automatic goes back to the picture.
-- **Items that appear late after a restart go back to their place.** When an app's menu bar item showed up after Thaw had arranged the bar at login, it stayed next to Thaw's icon until you relaunched Thaw.
-- **A profile applied as Thaw starts keeps its order when some items show up late.** When macOS was slow to report some apps' items after Thaw started, the profile was applied without them and the rest were arranged around them, and once they showed up Thaw kept that arrangement. Thaw now keeps the profile's order until those items are back, then puts them in their place.
-- **Opening a hidden item no longer opens the item next to it.** When macOS showed the item somewhere other than where it said, Thaw could open or click the neighboring item first and then the one you clicked. Thaw now clicks where the item is shown, and clicks nothing when it can't tell.
-- **Opening a hidden item works the first time.** The first time you opened a hidden item after Thaw started, Thaw could miss that its menu had opened. It then hid the item again, opened the menu a second time or refused to click it. Thaw now finds the item's app before opening it.
-- **Opening a hidden item moves the pointer only when it has to.** Thaw remembers how each hidden item opens, and one slow menu, or one you closed right away, could make it click that item for real from then on, moving the pointer every time. Thaw now tries a press that leaves the pointer alone first, and clicks for real straight away only for items that needed it twice in a row.
-- **Clicking a menu bar item for real is faster.** Before each real click, Thaw asked every running app where its menu bar items were, and it did that twice for a hidden item. It now asks only the item's own app, and every app only when that app doesn't answer.
-- **Show Emoji & Symbols in Thaw's Input menu opens the viewer.** It did nothing. Reported by @Macador in [#1518](https://github.com/thaw-app/Thaw/issues/1518).
-- **What's New opens on the version you have installed,** not the newest release.
-
-### Thanks
-
-- @Omoeba fixed items that show up late, profiles applied at launch and opening hidden items ([#1531](https://github.com/thaw-app/Thaw/pull/1531)). They also stopped the test suite from resetting your Mac's menu bar spacing ([#1533](https://github.com/thaw-app/Thaw/pull/1533)).
-- @elior-esh took on the November review in [#1529](https://github.com/thaw-app/Thaw/issues/1529). They documented every `thaw://` action and setting ([#1532](https://github.com/thaw-app/Thaw/pull/1532)), added tests for the Profiles pages, tips and widgets ([#1538](https://github.com/thaw-app/Thaw/pull/1538), [#1539](https://github.com/thaw-app/Thaw/pull/1539), [#1541](https://github.com/thaw-app/Thaw/pull/1541), [#1542](https://github.com/thaw-app/Thaw/pull/1542), [#1546](https://github.com/thaw-app/Thaw/pull/1546), [#1548](https://github.com/thaw-app/Thaw/pull/1548)) and tidied the code behind them ([#1544](https://github.com/thaw-app/Thaw/pull/1544), [#1545](https://github.com/thaw-app/Thaw/pull/1545)).
-
 ## [3.0.0-alpha.14] - 2026-11-12
 
 **macOS 27 only · Build 125**
@@ -87,6 +66,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Switch to Reduced mode from Troubleshooting,** where Thaw runs as one icon that hides whole apps.
 - **The experimental reorder editor is gone.**
 - **Zoom is off for now.** ⌘+, ⌘− and the Zoom menu are gone until a zoomed Settings window stops ignoring clicks. Reported in [#1244](https://github.com/thaw-app/Thaw/issues/1244) and [#1265](https://github.com/thaw-app/Thaw/issues/1265).
+- **What's New shows its Stable, Beta and Alpha tabs beside the title.**
 
 ### Fixed
 
@@ -118,6 +98,10 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Capture Hidden Items retakes a picture that is cut off at its left edge,** and a cut-off picture can no longer replace a complete one.
 - **Pictures of hidden items survive a restart.** Restarting Thaw could lose all of them. Reported by katla on Discord.
 - **Layout keeps your selection when a move is refused or changes nothing.**
+- **A chosen icon now shows.** Choose Icon kept showing Thaw's picture of the item. Automatic goes back to the picture.
+- **Items that show up late after a restart go back to their place** instead of staying next to Thaw's icon. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
+- **Opening a hidden item no longer opens the item next to it,** and works the first time after Thaw starts. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
+- **Opening a hidden item moves the pointer only when it has to,** and clicking an item is faster. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
 
 #### Thaw Bar
 
@@ -145,6 +129,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Spacing set with a thaw:// link is saved to your profile,** so applying it no longer puts the old spacing back.
 - **thaw:// reports every per-display setting.** A disconnected display now lists its item size, spacing and Always Hidden only choice, and the Thaw Bar location lists all five places.
 - **Use Template copies the Always Hidden only choice too.**
+- **A profile applied as Thaw starts keeps its order** when some items show up late. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
 
 #### Search
 
@@ -182,6 +167,13 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Setup's checkmark bounces when you grant a permission,** not each time the page opens.
 - **Turning diagnostic logging off no longer leaves a new log file open.**
 - **Restarting Thaw keeps saved item pictures** it hadn't loaded yet.
+- **Show Emoji & Symbols in Thaw's Input menu opens the viewer.** Reported by @Macador in [#1518](https://github.com/thaw-app/Thaw/issues/1518).
+- **What's New opens on the version you have installed,** not the newest release.
+
+### Thanks
+
+- @Omoeba stopped the test suite from resetting your Mac's menu bar spacing ([#1533](https://github.com/thaw-app/Thaw/pull/1533)).
+- @elior-esh took on the November review in [#1529](https://github.com/thaw-app/Thaw/issues/1529). They documented every `thaw://` action and setting ([#1532](https://github.com/thaw-app/Thaw/pull/1532)), added tests for the Profiles pages, tips and widgets ([#1538](https://github.com/thaw-app/Thaw/pull/1538), [#1539](https://github.com/thaw-app/Thaw/pull/1539), [#1541](https://github.com/thaw-app/Thaw/pull/1541), [#1542](https://github.com/thaw-app/Thaw/pull/1542), [#1546](https://github.com/thaw-app/Thaw/pull/1546), [#1548](https://github.com/thaw-app/Thaw/pull/1548)) and tidied the code behind them ([#1544](https://github.com/thaw-app/Thaw/pull/1544), [#1545](https://github.com/thaw-app/Thaw/pull/1545)).
 
 ## [3.0.0-alpha.13] - 2026-11-05
 
