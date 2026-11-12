@@ -100,6 +100,15 @@ jobs:
             ghcr.io/realm/swiftlint:0.65.1@sha256:f47e083201e47a136cda5ae847595bfe00226c444ca226fa74fa5dc648a9b057 \
             /bin/sh scripts/lint.sh --strict
 
+      - name: Check the SwiftLint baseline only shrinks
+        if: needs.changes.outputs.code == 'true' && github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          bash scripts/tests/test-swiftlint-baseline.sh
+          git show "origin/$BASE_REF:.swiftlint.baseline" > "$RUNNER_TEMP/base.swiftlint.baseline"
+          python3 scripts/swiftlint-baseline.py check "$RUNNER_TEMP/base.swiftlint.baseline" .swiftlint.baseline
+
       - name: Check formatting
         if: needs.changes.outputs.code == 'true'
         run: |

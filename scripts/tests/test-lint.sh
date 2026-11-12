@@ -45,7 +45,8 @@ grep -q "found 0.0.0" "$TEMP_DIR/output"
 
 export FAKE_SWIFTLINT_VERSION="$VERSION"
 run_lint 0 --strict --reporter json --config 'config with spaces.yml'
-printf '%s\n' "$CHECKOUT" lint --strict --reporter json --config 'config with spaces.yml' > "$TEMP_DIR/expected"
+# lint.sh runs from the real path; macOS keeps temporary folders behind a symlink.
+printf '%s\n' "$(cd "$CHECKOUT" && pwd -P)" lint --strict --reporter json --config 'config with spaces.yml' > "$TEMP_DIR/expected"
 cmp "$TEMP_DIR/expected" "$FAKE_SWIFTLINT_LOG"
 
 export FAKE_SWIFTLINT_STATUS=2

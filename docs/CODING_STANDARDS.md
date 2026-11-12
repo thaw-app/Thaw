@@ -99,3 +99,5 @@ sh scripts/lint.sh --strict
 ```
 
 The file, function, type, complexity and nesting limits are on. Violations that were already there are kept in `.swiftlint.baseline`, so only new ones report. Don't add entries to the baseline to make room for new code, and don't disable rules or add suppressions to get a change through.
+
+The baseline records each violation's size, so making a listed file or function smaller fails lint too. Run `sh scripts/update-swiftlint-baseline.sh` to record the smaller size. It refuses new entries and larger sizes, and CI fails a pull request whose baseline grows.

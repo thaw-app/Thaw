@@ -42,8 +42,8 @@ disabled_rules:
 # The file, function, type, complexity and nesting limits are on, but the
 # violations that predate them are grandfathered in .swiftlint.baseline, so
 # only new ones warn. That file holds these five rules only; every other rule
-# still reports. Regenerate by enabling the five in a scratch config, running
-# `swiftlint lint --write-baseline`, then keeping just these rule ids.
+# still reports. After shrinking a listed file or function, run
+# `sh scripts/update-swiftlint-baseline.sh`; it refuses new or larger entries.
 baseline: .swiftlint.baseline
 
 opt_in_rules:
