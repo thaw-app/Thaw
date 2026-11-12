@@ -25,6 +25,12 @@ struct StrandRepairPass {
         case aborted
     }
 
+    /// The window IDs of the Hidden and Always Hidden dividers, when they are known.
+    struct ControlItemWindowIDs {
+        let hidden: CGWindowID?
+        let alwaysHidden: CGWindowID?
+    }
+
     /// What the loop does after one strand's attempt.
     private enum Step {
         case nextStrand
@@ -36,8 +42,7 @@ struct StrandRepairPass {
     private let controller: any MenuBarSectionControlling
     private let memory: BoundaryRepairMemory
     private let experimentalSystemItemHiding: Bool
-    private let hiddenControlItemWindowID: CGWindowID?
-    private let alwaysHiddenControlItemWindowID: CGWindowID?
+    private let controlItemWindowIDs: ControlItemWindowIDs
     private let revealedSection: MenuBarSectionName?
     private var selection: StrandSelection
     private var pass = BoundaryRepairPass()
@@ -51,8 +56,7 @@ struct StrandRepairPass {
         controller: any MenuBarSectionControlling,
         memory: BoundaryRepairMemory,
         experimentalSystemItemHiding: Bool,
-        hiddenControlItemWindowID: CGWindowID?,
-        alwaysHiddenControlItemWindowID: CGWindowID?,
+        controlItemWindowIDs: ControlItemWindowIDs,
         whileRevealing revealedSection: MenuBarSectionName?,
         readWeights: @escaping () -> StoredWeights.Table = { .read() }
     ) {
@@ -60,8 +64,7 @@ struct StrandRepairPass {
         self.controller = controller
         self.memory = memory
         self.experimentalSystemItemHiding = experimentalSystemItemHiding
-        self.hiddenControlItemWindowID = hiddenControlItemWindowID
-        self.alwaysHiddenControlItemWindowID = alwaysHiddenControlItemWindowID
+        self.controlItemWindowIDs = controlItemWindowIDs
         self.revealedSection = revealedSection
         selection = StrandSelection(
             memory: memory,
@@ -84,8 +87,8 @@ struct StrandRepairPass {
         var itemsForControlDiscovery = liveItems
         guard let controlItems = ControlItemPair(
             items: &itemsForControlDiscovery,
-            hiddenControlItemWindowID: hiddenControlItemWindowID,
-            alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID
+            hiddenControlItemWindowID: controlItemWindowIDs.hidden,
+            alwaysHiddenControlItemWindowID: controlItemWindowIDs.alwaysHidden
         ) else {
             return (liveItems, false, false)
         }
@@ -142,8 +145,8 @@ struct StrandRepairPass {
         guard !pass.attempted.isEmpty else { return controlItems }
         return StrandSelection.refreshedDividers(
             in: liveItems,
-            hiddenControlItemWindowID: hiddenControlItemWindowID,
-            alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID,
+            hiddenControlItemWindowID: controlItemWindowIDs.hidden,
+            alwaysHiddenControlItemWindowID: controlItemWindowIDs.alwaysHidden,
             displays: environment.displayBounds
         )
     }
@@ -204,8 +207,8 @@ struct StrandRepairPass {
         var itemsForNormalize = liveItems
         if !mustDrag, let controlItemsForNormalize = ControlItemPair(
             items: &itemsForNormalize,
-            hiddenControlItemWindowID: hiddenControlItemWindowID,
-            alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID
+            hiddenControlItemWindowID: controlItemWindowIDs.hidden,
+            alwaysHiddenControlItemWindowID: controlItemWindowIDs.alwaysHidden
         ), environment.restoreStructuralControlOrder(
             controlItems: controlItemsForNormalize,
             items: itemsForNormalize,

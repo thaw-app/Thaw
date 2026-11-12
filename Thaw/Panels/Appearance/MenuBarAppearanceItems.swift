@@ -124,15 +124,21 @@ enum MenuBarAppearanceItems {
         }
     }
 
+    /// What the app already knows about the bar's items before a read.
+    struct PriorItems {
+        let knownItems: [MenuBarItem]
+        let onScreenSnapshot: OnScreenItemSnapshot?
+        let minimumReadTime: ContinuousClock.Instant?
+    }
+
     /// - Parameters:
+    ///   - prior: The managed items, the recent on-screen snapshot, and the earliest read time it may answer for.
     ///   - drawnBar: The bar as MenuBarAgent draws it now, or nil when that cannot be told. One read
     ///     of one process, where asking the owners is one read per app.
     ///   - memo: Where the last owner read is kept. With a bar that has not moved since, and the same
     ///     owners to ask, that read is still true and the owners are not asked again.
     static func read(
-        knownItems: [MenuBarItem],
-        onScreenSnapshot: OnScreenItemSnapshot?,
-        notBefore minimumReadTime: ContinuousClock.Instant?,
+        prior: PriorItems,
         drawnBar: () async -> [MenuBarAgentWindow.Entry]? = { nil },
         memo: Memo? = nil,
         displayBounds: [CGRect] = NSScreen.allDisplayBoundsCG,
@@ -140,17 +146,17 @@ enum MenuBarAppearanceItems {
         discover: () async -> [MenuBarItem]
     ) async -> Snapshot? {
         let readAt = ContinuousClock.now
-        let recentItems = onScreenSnapshot?.items ?? []
+        let recentItems = prior.onScreenSnapshot?.items ?? []
         let recentOwners = Set(recentItems.map { $0.sourcePID ?? $0.ownerPID })
-        let owners = recentOwners.union(knownItems.map { $0.sourcePID ?? $0.ownerPID })
+        let owners = recentOwners.union(prior.knownItems.map { $0.sourcePID ?? $0.ownerPID })
         // Read before the owners are asked: a bar that moves in between leaves the memo describing
         // the older bar, so the next read sees a difference and asks again.
         let bar = await drawnBar()
         // Recent truncated or concealed snapshots can omit owners whose icons are about to appear.
         if owners.isSubset(of: recentOwners),
-           let recentAt = onScreenSnapshot?.timestamp,
+           let recentAt = prior.onScreenSnapshot?.timestamp,
            recentAt.duration(to: readAt) < .milliseconds(200),
-           minimumReadTime.map({ recentAt >= $0 }) ?? true
+           prior.minimumReadTime.map({ recentAt >= $0 }) ?? true
         {
             return Snapshot(items: recentItems, readAt: recentAt, drawnBar: bar)
         }

@@ -26,10 +26,8 @@ struct LayoutBarVisibilityLimitTests {
             section: section,
             ownerHasRegisteredBundle: registered,
             ownerBundleID: bundleID,
-            nativeAppHidingActive: native,
+            nativeHiding: .init(isActive: native, untrackedBundleIDs: untracked, leftAloneBundleIDs: leftAlone),
             hidesOtherIcons: hidesOthers,
-            untrackedBundleIDs: untracked,
-            leftAloneBundleIDs: leftAlone,
             isPinnedControlCenterModule: pinned
         )
     }

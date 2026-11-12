@@ -35,6 +35,16 @@ enum LayoutBarVisibilityLimit: Equatable {
         }
     }
 
+    /// What native app hiding has found, which decides the limits on hiding an app.
+    struct NativeHiding {
+        /// Whether native app hiding is on.
+        let isActive: Bool
+        /// Apps it found no Control Center switch for.
+        let untrackedBundleIDs: Set<String>
+        /// Apps it switched off and later found on again.
+        let leftAloneBundleIDs: Set<String>
+    }
+
     /// - Parameters:
     ///   - ownerHasRegisteredBundle: Whether the running owner has a registered
     ///     bundle identifier; nil when the owner is not running.
@@ -45,23 +55,21 @@ enum LayoutBarVisibilityLimit: Equatable {
         section: MenuBarSectionName,
         ownerHasRegisteredBundle: Bool?,
         ownerBundleID: String,
-        nativeAppHidingActive: Bool,
+        nativeHiding: NativeHiding,
         hidesOtherIcons: Bool,
-        untrackedBundleIDs: Set<String>,
-        leftAloneBundleIDs: Set<String> = [],
         isPinnedControlCenterModule: Bool = false
     ) -> Self? {
         if section == .visible {
             if isPinnedControlCenterModule {
-                return !nativeAppHidingActive && hidesOtherIcons ? .pinnedModuleCannotShow : nil
+                return !nativeHiding.isActive && hidesOtherIcons ? .pinnedModuleCannotShow : nil
             }
-            return !nativeAppHidingActive && hidesOtherIcons && ownerHasRegisteredBundle == false ? .cannotShow : nil
+            return !nativeHiding.isActive && hidesOtherIcons && ownerHasRegisteredBundle == false ? .cannotShow : nil
         }
-        guard nativeAppHidingActive else { return nil }
-        if untrackedBundleIDs.contains(ownerBundleID) {
+        guard nativeHiding.isActive else { return nil }
+        if nativeHiding.untrackedBundleIDs.contains(ownerBundleID) {
             return .cannotHide
         }
-        return leftAloneBundleIDs.contains(ownerBundleID) ? .leftAlone : nil
+        return nativeHiding.leftAloneBundleIDs.contains(ownerBundleID) ? .leftAlone : nil
     }
 
     @MainActor
@@ -72,10 +80,12 @@ enum LayoutBarVisibilityLimit: Equatable {
             section: section,
             ownerHasRegisteredBundle: owner.map { $0.bundleIdentifier != nil },
             ownerBundleID: owner?.bundleIdentifier ?? item.tag.namespace.description,
-            nativeAppHidingActive: menuBarManager.nativeAppHidingExperiment.isActive,
+            nativeHiding: NativeHiding(
+                isActive: menuBarManager.nativeAppHidingExperiment.isActive,
+                untrackedBundleIDs: menuBarManager.nativeUntrackedBundleIDs,
+                leftAloneBundleIDs: menuBarManager.nativeLeftAloneBundleIDs
+            ),
             hidesOtherIcons: menuBarManager.sectionController.sectionAssignment.values.contains { $0 != .visible },
-            untrackedBundleIDs: menuBarManager.nativeUntrackedBundleIDs,
-            leftAloneBundleIDs: menuBarManager.nativeLeftAloneBundleIDs,
             isPinnedControlCenterModule: item.tag.namespace.isMenuBarHostingNamespace
                 && SystemMenuBarModuleCatalog.pinnedModuleName(inTitle: item.tag.title) != nil
         )

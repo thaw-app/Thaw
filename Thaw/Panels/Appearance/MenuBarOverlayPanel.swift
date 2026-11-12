@@ -897,9 +897,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         let displayBounds = CGDisplayBounds(displayID)
         let itemManager = overlayPanel?.appState?.itemManager
         guard let snapshot = await MenuBarAppearanceItems.read(
-            knownItems: itemManager?.managedItems ?? [],
-            onScreenSnapshot: itemManager?.onScreenItemSnapshot,
-            notBefore: minimumReadTime,
+            prior: .init(knownItems: itemManager?.managedItems ?? [], onScreenSnapshot: itemManager?.onScreenItemSnapshot, minimumReadTime: minimumReadTime),
             drawnBar: { await MenuBarItemAXProvider.drawnBarConcurrent() },
             memo: .shared,
             readOwners: { await MenuBarItemAXProvider.menuBarItemsForAppearanceConcurrent(knownOwners: $0) },
