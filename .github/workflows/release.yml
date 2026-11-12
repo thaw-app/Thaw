@@ -137,7 +137,7 @@ jobs:
       contents: read
       id-token: write
       attestations: write
-    uses: thaw-app/org-ci/.github/workflows/build-macos-app.yml@369e3b50e278dc7799513209c6ddc8ec758d884b
+    uses: thaw-app/org-ci/.github/workflows/build-macos-app.yml@d57f5f99c6641bbe12e87a54898356000d94f904
     with:
       ref: refs/tags/${{ needs.meta.outputs.tag }}
       version: ${{ needs.meta.outputs.tag }}
@@ -168,7 +168,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
-    uses: thaw-app/org-ci/.github/workflows/release-macos-app.yml@369e3b50e278dc7799513209c6ddc8ec758d884b
+    uses: thaw-app/org-ci/.github/workflows/release-macos-app.yml@d57f5f99c6641bbe12e87a54898356000d94f904
     with:
       tag: ${{ needs.meta.outputs.tag }}
       channel: ${{ needs.meta.outputs.channel }}
