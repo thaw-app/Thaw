@@ -29,4 +29,13 @@ struct MenuBarItemDirectPresserTests {
         #expect(!MenuBarItemDirectPresser.isPressable(elementPID: 964, for: []))
         #expect(!MenuBarItemDirectPresser.isPressable(elementPID: 0, for: [0]))
     }
+
+    /// A menu-bar-only app relaunched gets new process IDs, and macOS posts no launch for it, so the
+    /// cached item can still carry the old ones when it is clicked.
+    @Test("The item's own app is pressed under a new process ID, and a neighbour still isn't")
+    func relaunchedAppIsPressable() {
+        #expect(MenuBarItemDirectPresser.isPressable(elementPID: 2001, for: [990], sameApp: true))
+        #expect(!MenuBarItemDirectPresser.isPressable(elementPID: 964, for: [990], sameApp: false))
+        #expect(!MenuBarItemDirectPresser.isPressable(elementPID: 0, for: [990], sameApp: true), "an element of no process is never pressed")
+    }
 }
