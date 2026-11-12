@@ -1424,8 +1424,7 @@ extension MenuBarItemManager {
             controller: controller,
             memory: boundaryRepair,
             experimentalSystemItemHiding: experimentalSystemItemHiding,
-            hiddenControlItemWindowID: hiddenControlItemWindowID,
-            alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWindowID,
+            controlItemWindowIDs: .init(hidden: hiddenControlItemWindowID, alwaysHidden: alwaysHiddenControlItemWindowID),
             whileRevealing: revealedSection
         )
         return await repair.run(liveItems: liveItems, permit: permit)

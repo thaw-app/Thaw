@@ -144,8 +144,7 @@ struct StrandRepairPassTests {
             controller: controller,
             memory: memory,
             experimentalSystemItemHiding: false,
-            hiddenControlItemWindowID: nil,
-            alwaysHiddenControlItemWindowID: nil,
+            controlItemWindowIDs: .init(hidden: nil, alwaysHidden: nil),
             whileRevealing: reveal,
             readWeights: { StoredWeights.Table(isAvailable: false, positions: [:]) }
         )

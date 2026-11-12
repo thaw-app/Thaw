@@ -26,9 +26,7 @@ struct MenuBarAppearanceItemsTests {
         if snapshotAfterReveal { onScreen.update(visible) }
         var requestedOwners = Set<pid_t>()
         let result = try #require(await MenuBarAppearanceItems.read(
-            knownItems: visible + concealed,
-            onScreenSnapshot: onScreen,
-            notBefore: revealAt,
+            prior: .init(knownItems: visible + concealed, onScreenSnapshot: onScreen, minimumReadTime: revealAt),
             readOwners: { owners in
                 requestedOwners = owners
                 return physical.filter { owners.contains($0.sourcePID ?? $0.ownerPID) }
@@ -49,7 +47,7 @@ struct MenuBarAppearanceItemsTests {
         let known = item(3, x: -1, onScreen: false)
         var requestedOwners = Set<pid_t>()
         let result = try #require(await MenuBarAppearanceItems.read(
-            knownItems: [known], onScreenSnapshot: nil, notBefore: nil,
+            prior: .init(knownItems: [known], onScreenSnapshot: nil, minimumReadTime: nil),
             readOwners: { owners in requestedOwners = owners; return [item(3, x: 100)] },
             discover: { Issue.record("Known owners do not require discovery"); return [] }
         ))
@@ -64,7 +62,7 @@ struct MenuBarAppearanceItemsTests {
         let onScreen = OnScreenItemSnapshot()
         onScreen.update(items)
         let result = try #require(await MenuBarAppearanceItems.read(
-            knownItems: items, onScreenSnapshot: onScreen, notBefore: revealAt,
+            prior: .init(knownItems: items, onScreenSnapshot: onScreen, minimumReadTime: revealAt),
             readOwners: { _ in Issue.record("The complete snapshot is already fresh"); return nil },
             discover: { Issue.record("Unexpected discovery"); return [] }
         ))
@@ -80,7 +78,7 @@ struct MenuBarAppearanceItemsTests {
         var ownerReads = 0
         func read(bar: [MenuBarAgentWindow.Entry]?, known: [MenuBarItem]) async -> MenuBarAppearanceItems.Snapshot? {
             await MenuBarAppearanceItems.read(
-                knownItems: known, onScreenSnapshot: nil, notBefore: nil,
+                prior: .init(knownItems: known, onScreenSnapshot: nil, minimumReadTime: nil),
                 drawnBar: { bar }, memo: memo,
                 readOwners: { _ in ownerReads += 1; return known },
                 discover: { Issue.record("Known owners do not require discovery"); return [] }
@@ -114,7 +112,7 @@ struct MenuBarAppearanceItemsTests {
         var ownerReads = 0
         for answer in [nil, known] as [[MenuBarItem]?] {
             _ = await MenuBarAppearanceItems.read(
-                knownItems: known, onScreenSnapshot: nil, notBefore: nil,
+                prior: .init(knownItems: known, onScreenSnapshot: nil, minimumReadTime: nil),
                 drawnBar: { bar }, memo: memo,
                 readOwners: { _ in ownerReads += 1; return answer },
                 discover: { [] }
@@ -136,7 +134,7 @@ struct MenuBarAppearanceItemsTests {
         var ownerReads = 0
         func read() async -> MenuBarAppearanceItems.Snapshot? {
             await MenuBarAppearanceItems.read(
-                knownItems: awake, onScreenSnapshot: nil, notBefore: nil,
+                prior: .init(knownItems: awake, onScreenSnapshot: nil, minimumReadTime: nil),
                 drawnBar: { bar }, memo: memo, displayBounds: screens,
                 readOwners: { _ in ownerReads += 1; return answers.removeFirst() },
                 discover: { [] }
@@ -177,7 +175,7 @@ struct MenuBarAppearanceItemsTests {
         var ownerReads = 0
         func read() async {
             _ = await MenuBarAppearanceItems.read(
-                knownItems: known, onScreenSnapshot: nil, notBefore: nil,
+                prior: .init(knownItems: known, onScreenSnapshot: nil, minimumReadTime: nil),
                 drawnBar: { bar }, memo: memo, displayBounds: [CGRect(x: 0, y: 0, width: 1512, height: 982)],
                 readOwners: { _ in ownerReads += 1; return known },
                 discover: { [] }
@@ -207,7 +205,7 @@ struct MenuBarAppearanceItemsTests {
         for forget in [false, true] {
             if forget { memo.forget() }
             _ = await MenuBarAppearanceItems.read(
-                knownItems: known, onScreenSnapshot: nil, notBefore: nil,
+                prior: .init(knownItems: known, onScreenSnapshot: nil, minimumReadTime: nil),
                 drawnBar: { bar }, memo: memo, displayBounds: [CGRect(x: 0, y: 0, width: 1512, height: 982)],
                 readOwners: { _ in ownerReads += 1; return known },
                 discover: { [] }
@@ -220,7 +218,7 @@ struct MenuBarAppearanceItemsTests {
     func incompleteReadDoesNotPublishPartialGeometry() async {
         let known = item(3, x: -1, onScreen: false)
         let result = await MenuBarAppearanceItems.read(
-            knownItems: [known], onScreenSnapshot: nil, notBefore: nil,
+            prior: .init(knownItems: [known], onScreenSnapshot: nil, minimumReadTime: nil),
             readOwners: { _ in nil },
             discover: { Issue.record("Do not turn a failed read into discovery"); return [] }
         )
