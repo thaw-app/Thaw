@@ -172,22 +172,18 @@ struct LayoutItemListPane: View {
     }
 
     private func sweepChanged(from rowID: String, to y: CGFloat, rows: [LayoutItemListRow]) {
-        let sweepRows = sweepRows(rows)
-        if motion.sweep == nil {
-            motion.sweep = LayoutCheckboxSweep(startingAt: rowID, rows: sweepRows)
-            guard motion.sweep != nil else { return }
+        let step = LayoutCheckboxSweep.step(current: motion.sweep, startingAt: rowID, to: y, rows: sweepRows(rows))
+        guard let sweep = step.sweep else { return }
+        if step.didChange {
+            motion.sweep = sweep
+        }
+        if step.didStart {
             motion.startAutoscroll(pointer: { contentY in
                 // The rows' spans start inside the list's padding.
                 sweepChanged(from: rowID, to: contentY - ThawSpacing.base, rows: rows)
             })
         }
-        guard var sweep = motion.sweep else { return }
-        let before = sweep.covered.count
-        sweep.extend(to: y, rows: sweepRows)
-        // Only a change redraws the rows, not every mouse move.
-        guard sweep != motion.sweep else { return }
-        motion.sweep = sweep
-        if sweep.covered.count > before {
+        if step.didGrow {
             ThawHaptics.snap()
         }
     }
@@ -195,13 +191,11 @@ struct LayoutItemListPane: View {
     /// Selects the rows the sweep changes and moves them in one batch, so one undo puts them back.
     private func sweepEnded(rows: [LayoutItemListRow]) {
         defer { motion.sweep = nil }
-        guard let sweep = motion.sweep else { return }
-        let changes = sweep.changes(in: sweepRows(rows))
-        guard !changes.isEmpty else { return }
+        guard let release = motion.sweep?.release(in: sweepRows(rows)) else { return }
         motion.noteBatchSweepEnded()
-        selection.select(changes)
+        selection.select(release.ids)
         LayoutItemVisibility.moveSelection(
-            to: sweep.target ? .visible : .hidden,
+            to: release.target ? .visible : .hidden,
             selection: selection,
             appState: appState,
             onMoved: { motion.noteMoved($0) }

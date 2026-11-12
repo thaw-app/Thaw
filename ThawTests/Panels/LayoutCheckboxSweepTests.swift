@@ -83,4 +83,98 @@ struct LayoutCheckboxSweepTests {
         sweep.extend(to: 0, rows: unlaid)
         #expect(sweep.covered == ["b", "c", "d", "e"])
     }
+
+    // MARK: Step
+
+    @Test("The first move starts the sweep, which counts as a change even on its first row")
+    func stepStarts() throws {
+        let step = LayoutCheckboxSweep.step(current: nil, startingAt: "a", to: 10, rows: rows)
+        #expect(step.didStart)
+        #expect(step.didChange)
+        #expect(!step.didGrow)
+        #expect(try #require(step.sweep).covered == ["a"])
+    }
+
+    @Test("A move on a locked first row starts nothing")
+    func stepRefusesLockedStart() {
+        let step = LayoutCheckboxSweep.step(current: nil, startingAt: "e", to: 200, rows: rows)
+        #expect(step.sweep == nil)
+        #expect(!step.didStart)
+        #expect(!step.didChange)
+        #expect(!step.didGrow)
+    }
+
+    @Test("A first move already past the first row starts the sweep and grows it")
+    func stepStartsAndGrows() throws {
+        let step = LayoutCheckboxSweep.step(current: nil, startingAt: "a", to: 100, rows: rows)
+        #expect(step.didStart)
+        #expect(step.didChange)
+        #expect(step.didGrow)
+        #expect(try #require(step.sweep).covered == ["a", "b", "c"])
+    }
+
+    @Test("Extending down grows the sweep, and a move that covers the same rows changes nothing")
+    func stepExtendsDown() throws {
+        let start = try #require(LayoutCheckboxSweep(startingAt: "a", rows: rows))
+        let grown = LayoutCheckboxSweep.step(current: start, startingAt: "a", to: 100, rows: rows)
+        #expect(!grown.didStart)
+        #expect(grown.didChange)
+        #expect(grown.didGrow)
+        #expect(try #require(grown.sweep).covered == ["a", "b", "c"])
+
+        let same = LayoutCheckboxSweep.step(current: grown.sweep, startingAt: "a", to: 95, rows: rows)
+        #expect(same.sweep == grown.sweep)
+        #expect(!same.didChange)
+        #expect(!same.didGrow)
+    }
+
+    @Test("Extending up grows the sweep the same way")
+    func stepExtendsUp() throws {
+        let start = try #require(LayoutCheckboxSweep(startingAt: "d", rows: rows))
+        let step = LayoutCheckboxSweep.step(current: start, startingAt: "d", to: 50, rows: rows)
+        #expect(step.didChange)
+        #expect(step.didGrow)
+        #expect(try #require(step.sweep).covered == ["b", "c", "d"])
+    }
+
+    @Test("Reversing shrinks the sweep: it changes and redraws but doesn't grow")
+    func stepReverses() throws {
+        let down = LayoutCheckboxSweep.step(current: nil, startingAt: "b", to: 150, rows: rows)
+        let back = LayoutCheckboxSweep.step(current: down.sweep, startingAt: "b", to: 60, rows: rows)
+        #expect(back.didChange)
+        #expect(!back.didGrow)
+        #expect(try #require(back.sweep).covered == ["b"])
+
+        // Crossing over the first row swaps the side the sweep covers; two rows are fewer than three.
+        let up = LayoutCheckboxSweep.step(current: down.sweep, startingAt: "b", to: 10, rows: rows)
+        #expect(!up.didGrow)
+        #expect(try #require(up.sweep).covered == ["a", "b"])
+    }
+
+    // MARK: Release
+
+    @Test("Releasing a sweep over several rows moves the ones that change, to the target state")
+    func releaseMoves() throws {
+        let step = LayoutCheckboxSweep.step(current: nil, startingAt: "a", to: 150, rows: rows)
+        let release = try #require(step.sweep?.release(in: rows))
+        #expect(release == LayoutCheckboxSweep.Release(ids: ["a", "b", "d"], target: true))
+    }
+
+    @Test("A sweep that targets hidden releases the shown rows it covers")
+    func releaseHides() throws {
+        var sweep = try #require(LayoutCheckboxSweep(startingAt: "c", rows: rows))
+        sweep.extend(to: 150, rows: rows)
+        #expect(sweep.release(in: rows) == LayoutCheckboxSweep.Release(ids: ["c"], target: false))
+    }
+
+    @Test("Releasing a drag that stayed on its first row, or covered rows already in the target state, moves nothing")
+    func releaseNothing() throws {
+        let first = try #require(LayoutCheckboxSweep(startingAt: "a", rows: rows))
+        #expect(first.release(in: rows) == nil)
+
+        var covered = try #require(LayoutCheckboxSweep(startingAt: "c", rows: rows))
+        covered.extend(to: 150, rows: rows)
+        let allHidden = rows.map { LayoutCheckboxSweep.Row(id: $0.id, span: $0.span, isShown: false, isLocked: $0.isLocked) }
+        #expect(covered.release(in: allHidden) == nil)
+    }
 }
