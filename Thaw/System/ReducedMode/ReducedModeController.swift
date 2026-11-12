@@ -16,7 +16,6 @@ import OSLog
 /// are in ReducedModeController+Live.swift.
 @MainActor
 final class ReducedModeController: NSObject, NSMenuDelegate {
-
     /// What the controller needs from outside, so a test can drive the menu without touching
     /// the menu bar or the app's saved settings.
     struct Environment {

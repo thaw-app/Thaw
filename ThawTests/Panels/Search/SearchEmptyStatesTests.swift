@@ -8,8 +8,8 @@
 import AppKit
 import SwiftUI
 import Testing
-import ThawUI
 @testable import Thaw
+import ThawUI
 
 /// A search that matched nothing left no way back but deleting the query by hand.
 @MainActor

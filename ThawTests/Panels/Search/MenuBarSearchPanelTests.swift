@@ -249,7 +249,6 @@ struct MenuBarSearchPanelTests {
         #expect(try panel.handleKeyDown(tab()) != nil)
         #expect(panel.model.selection == MenuBarSearchModel.ItemID(beta))
 
-
         // The key monitor hands on the handler's answer: a taken Tab stays taken.
         panel.model.results[0] = MenuBarSearchResult(item: alpha, ownerName: nil, section: "Hidden")
         #expect(try MenuBarSearchPanel.monitoredKey(tab(), panel: panel) == nil)

@@ -5,8 +5,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Testing
 @testable import MenuBarModel
+import Testing
 
 /// 2026-10-22 reports: ⌘-dragging the screen sharing indicator broke the
 /// whole bar. macOS places it wherever the user drops it, so it is left out

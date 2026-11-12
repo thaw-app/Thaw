@@ -50,7 +50,7 @@ public enum ThawItemList {
     public static func reply(fromCallback url: URL) -> Reply? {
         guard url.host == "list-items",
               let json = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-              .queryItems?.first(where: { $0.name == "data" })?.value,
+                  .queryItems?.first(where: { $0.name == "data" })?.value,
               let envelope = try? JSONDecoder().decode(Envelope.self, from: Data(json.utf8)),
               envelope.operation == "list-items"
         else {

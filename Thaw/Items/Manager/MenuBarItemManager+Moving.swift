@@ -998,21 +998,21 @@ extension MenuBarItemManager {
 
             var itemsForControlDiscovery = liveItems
             guard let controlItems = ControlItemPair(
-                items: &itemsForControlDiscovery,
-                hiddenControlItemWindowID: controlItemWindowIDs.hidden,
-                alwaysHiddenControlItemWindowID: controlItemWindowIDs.alwaysHidden
-            ),
-                revealRepairMoves(liveItem, isMisplaced: !MenuBarLayoutPlannerProvider.current.liveOrderSatisfiesSectionBoundary(
-                    items: liveItems,
-                    item: liveItem,
-                    section: section,
-                    controlItems: ControlOrderRules.boundaryControls(controlItems, revealedSection: revealedSection),
-                    experimentalSystemItemHiding: experimentalSystemItemHiding
-                )),
-                let destination = MenuBarLayoutPlannerProvider.current.sectionBoundaryDestination(
-                    for: section,
-                    controlItems: controlItems
-                )
+                      items: &itemsForControlDiscovery,
+                      hiddenControlItemWindowID: controlItemWindowIDs.hidden,
+                      alwaysHiddenControlItemWindowID: controlItemWindowIDs.alwaysHidden
+                  ),
+                  revealRepairMoves(liveItem, isMisplaced: !MenuBarLayoutPlannerProvider.current.liveOrderSatisfiesSectionBoundary(
+                      items: liveItems,
+                      item: liveItem,
+                      section: section,
+                      controlItems: ControlOrderRules.boundaryControls(controlItems, revealedSection: revealedSection),
+                      experimentalSystemItemHiding: experimentalSystemItemHiding
+                  )),
+                  let destination = MenuBarLayoutPlannerProvider.current.sectionBoundaryDestination(
+                      for: section,
+                      controlItems: controlItems
+                  )
             else {
                 continue
             }
@@ -2351,15 +2351,15 @@ extension MenuBarItemManager {
         }
 
         if let refreshedItem = updated.first(where: {
-            $0.tag.matchesIgnoringWindowID(item.tag)
-        }),
-            MenuBarPositionStoreProvider.forLayoutEdit.move(
-                item: refreshedItem,
-                to: destination,
-                liveItems: drawnPeers(updated),
-                experimentalSystemItemHiding: experimentalSystemItemHiding,
-                permit: permit
-            )
+               $0.tag.matchesIgnoringWindowID(item.tag)
+           }),
+           MenuBarPositionStoreProvider.forLayoutEdit.move(
+               item: refreshedItem,
+               to: destination,
+               liveItems: drawnPeers(updated),
+               experimentalSystemItemHiding: experimentalSystemItemHiding,
+               permit: permit
+           )
         {
             commitPreferredPositionWrite(controller: appState?.menuBarManager.sectionController)
             // Same issue-time stamp as the first write above.

@@ -20,7 +20,8 @@ extension PositionStoreItemSource.Environment {
             readHostingSurface: { items, displayID in
                 guard !ScreenLock.isLocked,
                       let capture = await ScreenCapture.captureMenuBarHostingWindowAsync(displayID: displayID),
-                      !ScreenLock.isLocked else {
+                      !ScreenLock.isLocked
+                else {
                     return nil
                 }
                 // The hosting surface draws items on a transparent background,
