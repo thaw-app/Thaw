@@ -29,7 +29,7 @@ jobs:
       contents: read
       id-token: write
       attestations: write
-    uses: thaw-app/org-ci/.github/workflows/build-macos-app.yml@369e3b50e278dc7799513209c6ddc8ec758d884b
+    uses: thaw-app/org-ci/.github/workflows/build-macos-app.yml@d57f5f99c6641bbe12e87a54898356000d94f904
     with:
       ref: ${{ inputs.ref }}
       project-name: Thaw.xcodeproj

@@ -15,7 +15,7 @@ jobs:
     permissions:
       issues: write
     steps:
-      - uses: thaw-app/org-ci/actions/close-stale-issues@369e3b50e278dc7799513209c6ddc8ec758d884b
+      - uses: thaw-app/org-ci/actions/close-stale-issues@d57f5f99c6641bbe12e87a54898356000d94f904
         with:
           # Stale after 14 days without activity, closed on the first run 7 days later.
           days-before-stale: "14"
