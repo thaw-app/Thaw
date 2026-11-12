@@ -334,30 +334,30 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             AnyCancellable { itemCacheTask.cancel() }
                 .store(in: &installed)
             ImageRecaptureTriggers.changes(itemCacheChanges: itemCacheChangeSubject)
-            .debounce(
-                for: .milliseconds(Constants.MenuBarTuning.imageCaptureObserverDebounceMilliseconds),
-                scheduler: DispatchQueue.main
-            )
-            .sink { [weak self] _ in
-                guard let self else {
-                    return
+                .debounce(
+                    for: .milliseconds(Constants.MenuBarTuning.imageCaptureObserverDebounceMilliseconds),
+                    scheduler: DispatchQueue.main
+                )
+                .sink { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    // Capture only if something will read the result; a closed
+                    // layout pane refills its own cache when it opens.
+                    let nav = self.makeNavigationStateSnapshot()
+                    let hasVisible = self.hasVisibleCaptureConsumer(nav: nav)
+                    let hasBackgroundDemand = self.hasBackgroundCaptureDemand()
+                    guard hasVisible || hasBackgroundDemand else {
+                        return
+                    }
+                    self.currentUpdateTask?.cancel()
+                    self.currentUpdateTask = Task { [weak self, hasBackgroundDemand] in
+                        await self?.refreshVisibleConsumersOrPrewarmLayoutCache(
+                            allowBackgroundCapture: hasBackgroundDemand
+                        )
+                    }
                 }
-                // Capture only if something will read the result; a closed
-                // layout pane refills its own cache when it opens.
-                let nav = self.makeNavigationStateSnapshot()
-                let hasVisible = self.hasVisibleCaptureConsumer(nav: nav)
-                let hasBackgroundDemand = self.hasBackgroundCaptureDemand()
-                guard hasVisible || hasBackgroundDemand else {
-                    return
-                }
-                self.currentUpdateTask?.cancel()
-                self.currentUpdateTask = Task { [weak self, hasBackgroundDemand] in
-                    await self?.refreshVisibleConsumersOrPrewarmLayoutCache(
-                        allowBackgroundCapture: hasBackgroundDemand
-                    )
-                }
-            }
-            .store(in: &installed)
+                .store(in: &installed)
 
             // No debounce needed: startLiveRefreshIfNeeded() is idempotent.
             navigationStateObservationTask?.cancel()

@@ -282,7 +282,7 @@ final class LayoutBarPaddingView: NSView {
 
         guard item.isPhysicallyOrderable(experimentalSystemItemHiding: physicalOrderExperimentalSystemItemHiding) else {
             guard MenuBarBackendProvider.current.canAssign(item, to: container.section, experimentalSystemItemHiding: experimentalSystemItemHiding),
-                sourceSection != container.section || container.section != .visible
+                  sourceSection != container.section || container.section != .visible
             else {
                 Self.diagLog.warning("Ignoring drag for anchored system item \(item.logString)")
                 postAssignmentRefusal(for: item, experimentalSystemItemHiding: experimentalSystemItemHiding)

@@ -73,7 +73,7 @@ PR Type says what changed (CI/CD, Documentation, Other for chores). Tick ops for
 ## PR Checklist
 
 - [ ] I've built and run the app locally and verified that it works as expected.
-- [ ] I've run `swiftformat .` and the strict lint for my branch (see [AGENTS.md](https://github.com/thaw-app/Thaw/blob/development/AGENTS.md#checks-to-run)).
+- [ ] I've run `sh scripts/format.sh` and the strict lint for my branch (see [AGENTS.md](https://github.com/thaw-app/Thaw/blob/development/AGENTS.md#checks-to-run)).
 - [ ] I've run the smallest relevant test commands and listed them below.
 - [ ] I've added tests for new behavior (if applicable).
 - [ ] I've noted which macOS versions I tested on (15, 26 or 27).

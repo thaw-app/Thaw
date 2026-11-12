@@ -5,8 +5,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Testing
 @testable import MenuBarModel
+import Testing
 
 @Suite("The Game Mode indicator can be arranged like any other item")
 struct GameModeItemPolicyTests {

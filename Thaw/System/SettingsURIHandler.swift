@@ -87,8 +87,6 @@ enum SettingsURIHandler {
         "enableRecordingWatch": SettingURIEntry(defaultsKey: .enableRecordingWatch, kind: .boolean, isWritable: true),
         "zenModeWhileRecording": SettingURIEntry(defaultsKey: .zenModeWhileRecording, kind: .boolean, isWritable: true),
         "enableDesktopMenuHiding": SettingURIEntry(defaultsKey: .enableDesktopMenuHiding, kind: .boolean, isWritable: true),
-
-        // MARK: - Search
     ]) { general, _ in general }
 
     /// Derived from keyTable so the allow-lists can never disagree with it.

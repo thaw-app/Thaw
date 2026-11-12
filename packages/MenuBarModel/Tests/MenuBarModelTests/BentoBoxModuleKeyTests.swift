@@ -5,8 +5,8 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
-import Testing
 @testable import MenuBarModel
+import Testing
 
 @Suite("Control Center modules pinned to the menu bar resolve to their module row")
 struct BentoBoxModuleKeyTests {

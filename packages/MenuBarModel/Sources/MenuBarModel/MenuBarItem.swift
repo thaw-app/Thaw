@@ -298,8 +298,8 @@ public struct MenuBarItem: CustomStringConvertible, Sendable, Codable {
             }
             if
                 let running = NSRunningApplication
-                .runningApplications(withBundleIdentifier: bundleIdentifier)
-                .first,
+                    .runningApplications(withBundleIdentifier: bundleIdentifier)
+                    .first,
                 let localizedName = running.localizedName
             {
                 return localizedName

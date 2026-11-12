@@ -5,10 +5,10 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+@testable import AutomationCore
 import Foundation
 import Testing
 import ThawModuleKit
-@testable import AutomationCore
 
 /// Which hooks run and through what, with scripts that only write inside their own temporary folder.
 @MainActor

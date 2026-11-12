@@ -12,11 +12,12 @@ This branch is Thaw 3, for macOS 27. Thaw 2, for macOS 15 and 26, is on `legacy/
 ## Setup
 
 ```sh
-brew install swiftformat actionlint
-sh scripts/install-swiftlint.sh  # pinned version, in ~/.local/bin
+brew install actionlint
+sh scripts/install-swiftlint.sh    # pinned versions, in ~/.local/bin
+sh scripts/install-swiftformat.sh
 ```
 
-The Xcode build runs SwiftLint, so its version must match `.swiftlint-version`.
+The Xcode build runs SwiftLint, so its version must match `.swiftlint-version`. CI checks formatting with the SwiftFormat version in `.swiftformat-version`; other versions format differently, so `scripts/format.sh` refuses to run them.
 
 Outside the Thaw team, `devrun.sh` retries with a local signature when team signing fails. We've confirmed that build compiles, but not how the running app behaves, including its permissions.
 
@@ -35,7 +36,7 @@ Thaw Debug has its own bundle identifier (`com.stonerl.Thaw.debug`), so it runs 
 [Coding standards](CODING_STANDARDS.md) covers how code is written here. Configuration lives in [`.swiftlint.yml`](../.swiftlint.yml) and [`.swiftformat`](../.swiftformat).
 
 ```sh
-swiftformat .
+sh scripts/format.sh
 sh scripts/lint.sh --strict
 ```
 
