@@ -54,7 +54,7 @@ struct ProfileSwitchesSection: View {
         }
     }
 
-    private var displayBinding: Binding<String> {
+    var displayBinding: Binding<String> {
         Binding {
             profileManager.profiles.first { $0.id == profile.id }?.associatedDisplayUUID ?? ""
         } set: { uuid in
@@ -125,7 +125,7 @@ struct ProfileSwitchesSection: View {
         .onAppear { appState.spaceDirectory.refresh() }
     }
 
-    private func spaceBinding(groups: [SpaceDisplayGroup]) -> Binding<String> {
+    func spaceBinding(groups: [SpaceDisplayGroup]) -> Binding<String> {
         Binding {
             profileManager.profiles.first { $0.id == profile.id }?.associatedSpaceKey ?? ""
         } set: { key in
