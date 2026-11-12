@@ -12,7 +12,7 @@ enum ProfileUndoStep {
     /// Puts back a profile the user deleted, at its old manifest position.
     case restore(profile: Profile, metadata: ProfileMetadata, at: Int, wasActive: Bool, shortcut: Data? = nil)
     /// Removes a profile the user created or duplicated.
-    case delete(id: UUID)
+    case delete(id: UUID, shortcut: Data? = nil)
     case rename(id: UUID, to: String)
     /// Writes saved profile values back after a save or overwrite.
     case replace([Profile])
@@ -25,13 +25,13 @@ enum ProfileUndoStep {
             if ProfileApplyShortcuts().adopt(shortcut, for: metadata.id) {
                 manager.rebuildProfileHotkeys()
             }
-            return .delete(id: metadata.id)
-        case let .delete(id):
+            return .delete(id: metadata.id, shortcut: shortcut)
+        case let .delete(id, savedShortcut):
             let profile = try manager.loadProfile(id: id)
             guard let index = manager.profiles.firstIndex(where: { $0.id == id }) else { throw CocoaError(.fileNoSuchFile) }
             let metadata = manager.profiles[index]
             let wasActive = manager.activeProfileID == id
-            let shortcut = ProfileApplyShortcuts().shortcut(for: id)
+            let shortcut = ProfileApplyShortcuts().shortcut(for: id) ?? savedShortcut
             try manager.deleteProfile(id: id)
             if wasActive {
                 manager.activeProfileID = nil

@@ -10,6 +10,7 @@ import MenuBarModel
 import Testing
 @testable import Thaw
 import ThawModuleKit
+import ThawUI
 
 /// Saving, editing and exporting profiles on disk. Profiles live in a throwaway
 /// directory and settings in a throwaway suite, and nothing here applies a profile.
@@ -242,7 +243,8 @@ struct ProfileManagerStorageTests {
         try ProfileTestDirectory.withManager(seeding: ["Deleted", "Other"]) { manager, _ in
             let deleted = manager.profiles[0].id
             let other = manager.profiles[1].id
-            let shortcut = Data("saved shortcut".utf8)
+            let combination = KeyCombination(key: .a, modifiers: [.command, .option])
+            let shortcut = try JSONEncoder().encode(combination)
             let store = HotkeyBindingStore.profiles
             store.setRawBindings([deleted.uuidString: shortcut])
             let restore = try ProfileUndoStep.delete(id: deleted).apply(to: manager)
@@ -254,12 +256,33 @@ struct ProfileManagerStorageTests {
             #expect(ProfileApplyShortcuts().shortcut(for: deleted) == (claimed ? nil : shortcut))
             #expect(ProfileApplyShortcuts().shortcut(for: other) == (claimed ? shortcut : nil))
             #expect(manager.profiles.contains { $0.id == deleted })
-            if !claimed {
-                let restoreAgain = try redo.apply(to: manager)
-                store.setRawBindings([:])
-                _ = try restoreAgain.apply(to: manager)
-                #expect(ProfileApplyShortcuts().shortcut(for: deleted) == shortcut)
-            }
+            let restoreAgain = try redo.apply(to: manager)
+            store.setRawBindings([:])
+            _ = try restoreAgain.apply(to: manager)
+            #expect(ProfileApplyShortcuts().shortcut(for: deleted) == shortcut)
+            #expect(try HotkeyBindingStore.combination(from: shortcut) == combination)
+        }
+    }
+
+    /// Redo captures a newly assigned shortcut rather than reverting to the original snapshot.
+    @Test("Profile deletion redo prefers the current apply shortcut")
+    func redoPreservesUpdatedApplyShortcut() throws {
+        try ProfileTestDirectory.withManager(seeding: ["Deleted"]) { manager, _ in
+            let id = manager.profiles[0].id
+            let original = try JSONEncoder().encode(KeyCombination(key: .a, modifiers: [.command, .option]))
+            let updated = try JSONEncoder().encode(KeyCombination(key: .b, modifiers: [.command, .option]))
+            let store = HotkeyBindingStore.profiles
+            store.setRawBindings([id.uuidString: original])
+            let restore = try ProfileUndoStep.delete(id: id).apply(to: manager)
+            store.setRawBindings([:])
+            let redo = try restore.apply(to: manager)
+            store.setRawBindings([id.uuidString: updated])
+
+            let restoreAgain = try redo.apply(to: manager)
+            store.setRawBindings([:])
+            _ = try restoreAgain.apply(to: manager)
+
+            #expect(ProfileApplyShortcuts().shortcut(for: id) == updated)
         }
     }
 
