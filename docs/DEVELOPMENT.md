@@ -55,6 +55,8 @@ The app tests don't run a package's own test targets. To test a package you chan
 swift test --package-path packages/ThawConcurrency
 ```
 
+To run every package's tests, as CI does, use `sh scripts/test-packages.sh`. Name packages to run only those: `sh scripts/test-packages.sh ThawLayout ThawCapture`.
+
 ## Project documentation
 
 - [Architecture](ARCHITECTURE.md).
