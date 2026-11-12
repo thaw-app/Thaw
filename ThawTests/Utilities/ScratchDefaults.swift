@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import os
 import Testing
 @testable import Thaw
 
@@ -33,20 +34,36 @@ enum ScratchDefaults {
     /// The stores installStore(named:) replaced, most recent last.
     private static var replacedStores: [UserDefaults] = []
 
-    /// Points Defaults at the suite name. On the main actor, since pointing
-    /// it somewhere new registers defaults, which the app observes there.
+    /// The spacing stores installStore(named:) replaced, with their values, most recent last.
+    private static var replacedSpacing: [(store: SystemSpacingStore, values: ScratchSpacingValues?)] = []
+
+    /// The menu bar spacing of the innermost scratch store, or nil outside one. Starts unset,
+    /// as on a Mac whose spacing was never changed.
+    private(set) static var spacingValues: ScratchSpacingValues?
+
+    /// Points Defaults at the suite name, and the menu bar spacing at new scratch values, so a
+    /// test never changes the user's spacing. On the main actor, since pointing Defaults
+    /// somewhere new registers defaults, which the app observes there.
     static func installStore(named name: String) throws {
         guard let store = UserDefaults(suiteName: name) else {
             throw CocoaError(.featureUnsupported)
         }
         replacedStores.append(Defaults.store)
         Defaults.store = store
+        let values = ScratchSpacingValues()
+        replacedSpacing.append((SystemSpacingStore.current, spacingValues))
+        spacingValues = values
+        SystemSpacingStore.current = values.store
     }
 
-    /// Puts back the store installStore(named:) replaced and deletes the suite.
+    /// Puts back the stores installStore(named:) replaced and deletes the suite.
     static func restoreStore(removing name: String) {
         if let previous = replacedStores.popLast() {
             Defaults.store = previous
+        }
+        if let previous = replacedSpacing.popLast() {
+            SystemSpacingStore.current = previous.store
+            spacingValues = previous.values
         }
         remove(name)
     }
@@ -58,6 +75,21 @@ enum ScratchDefaults {
         try installStore(named: name)
         defer { restoreStore(removing: name) }
         try body(Defaults.store)
+    }
+}
+
+/// Menu bar spacing for one test, in memory: what SystemSpacingStore.current reads and writes
+/// while a scratch store is installed, and what each spacing manager made then keeps.
+final nonisolated class ScratchSpacingValues: Sendable {
+    private let values = OSAllocatedUnfairLock<[String: Int]>(initialState: [:])
+
+    subscript(key: String) -> Int? {
+        get { values.withLock { $0[key] } }
+        set { values.withLock { $0[key] = newValue } }
+    }
+
+    var store: SystemSpacingStore {
+        SystemSpacingStore(read: { self[$0] }, write: { key, value in self[key] = value })
     }
 }
 
@@ -90,7 +122,8 @@ private actor ScratchDefaultsGate {
 /// Points Defaults at a throwaway suite for each test it covers, then puts the
 /// previous store back and deletes the suite. Defaults.store is one global, so
 /// tests using this trait run one at a time, across suites too. Profile managers
-/// made during the test, including an AppState's, keep profiles in a throwaway folder.
+/// made during the test, including an AppState's, keep profiles in a throwaway folder,
+/// and spacing managers made then read and write scratch values (ScratchDefaults.spacingValues).
 nonisolated struct ScratchDefaultsTrait: TestTrait, SuiteTrait, TestScoping {
     var isRecursive: Bool {
         true
