@@ -164,8 +164,8 @@ final class MenuBarLeadingEdgeWatcher {
         let edge = anchor.isOwnProcess
             ? Self.position(of: anchor.element, within: anchor.screen, timeout: 0.25)
             : await Self.read(anchor)
-        // A read that outlived the last follower would leave a stale edge for the next one.
-        guard followers.isFollowed, let current = self.anchor,
+        // A read that outlived its poll task or the last follower would overwrite a newer edge for the next one.
+        guard !Task.isCancelled, followers.isFollowed, let current = self.anchor,
               current.screen == anchor.screen, CFEqual(current.element, anchor.element)
         else { return }
         if edge == nil {
