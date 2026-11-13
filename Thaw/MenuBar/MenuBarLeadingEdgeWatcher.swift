@@ -31,6 +31,8 @@ final class MenuBarLeadingEdgeWatcher {
     @ObservationIgnored private var walkObservation: Task<Void, Never>?
     @ObservationIgnored private var anchorTask: Task<Void, Never>?
     @ObservationIgnored private var followers = LeadingEdgeFollowers()
+    /// Bumped to hand followers the current reading again; see expectChange(resending:).
+    private var resends = 0
     @ObservationIgnored private let diagLog = DiagLog(category: "MenuBarLeadingEdgeWatcher")
 
     /// Short enough that a follower is at most half a second behind the bar,
@@ -90,7 +92,7 @@ final class MenuBarLeadingEdgeWatcher {
         }
         let task = Task { @MainActor [weak self] in
             guard let self else { return }
-            for await edge in Observations({ self.leadingEdge }) {
+            for await (edge, _) in Observations({ (self.leadingEdge, self.resends) }) {
                 guard let edge else { continue }
                 onEdge(edge)
             }
@@ -126,7 +128,14 @@ final class MenuBarLeadingEdgeWatcher {
     /// Polls fast for a short while because the bar is about to change, such as on a reveal or hide.
     /// Restarts the loop so the first fast read does not wait out an idle sleep.
     /// With no follower it only notes the window and does not start polling.
-    func expectChange() {
+    ///
+    /// resending also hands followers the current reading again. A follower holds a reading back
+    /// while a reveal or hide is in flight, and the edge has often stopped moving by the time the
+    /// transition ends, so without this the reading it held back is never repeated.
+    func expectChange(resending: Bool = false) {
+        if resending {
+            resends &+= 1
+        }
         let wasFast = fastPollUntil.map { ContinuousClock.now < $0 } ?? false
         fastPollUntil = .now + Self.fastPollWindow
         if !wasFast, pollTask != nil {

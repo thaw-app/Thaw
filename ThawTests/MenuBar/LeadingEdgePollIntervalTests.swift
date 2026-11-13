@@ -99,6 +99,8 @@ struct LeadingEdgeFollowersTests {
         watcher.expectChange()
         #expect(!watcher.isPolling)
         #expect(watcher.fastPollUntil != nil, "The window is still noted for a follower that arrives inside it")
+        watcher.expectChange(resending: true)
+        #expect(!watcher.isPolling, "Handing the reading again to nobody starts nothing")
     }
 
     @MainActor

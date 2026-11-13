@@ -28,6 +28,10 @@ the items under New and Fixed.
 
 - **Thaw does less work while the menu bar sits idle.** Unless the menu bar's shape is drawn around the icons, Thaw no longer checks the position of its first visible icon twice a second.
 
+### Fixed
+
+- **The Split shape shrinks back sooner after hiding.** Once the hidden icons were gone, the shape around the icons could stay stretched for a second or two with nothing in it. It now shrinks as soon as the menu bar has settled.
+
 ## [3.0.0-alpha.14] - 2026-11-12
 
 **macOS 27 only · Build 125**
