@@ -26,6 +26,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- Pressing ⌘E again while renaming a search result no longer discards the name being typed.
 - Importing profiles no longer assigns the same shortcut twice when its saved JSON uses different formatting.
 
 ## [3.0.0-alpha.14] - 2026-11-12
