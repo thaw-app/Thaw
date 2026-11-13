@@ -153,6 +153,9 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **The Swap Bar stays off** after an upgrade from a version that called it the Transport Bar.
 - **Simple Mode mentions double-clicking Thaw's icon only while that shortcut is on.**
 - **Show Samples turns on as soon as a capture sample is saved.**
+- **Buttons in Settings are all one height.** The button groups on About and Tools and the filled buttons were taller, and the buttons on Displays and the Thaw Bar page were smaller.
+- **The Logs and Item list buttons in Tools no longer look turned off.**
+- **About's update rows have the same separators as the other pages.**
 
 #### Other
 
@@ -172,6 +175,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Restarting Thaw keeps saved item pictures** it hadn't loaded yet.
 - **Show Emoji & Symbols in Thaw's Input menu opens the viewer.** Reported by @Macador in [#1518](https://github.com/thaw-app/Thaw/issues/1518).
 - **What's New opens on the version you have installed,** not the newest release.
+- **Closing What's New or a Settings page no longer leaks a little memory each time.**
 
 ### Thanks
 

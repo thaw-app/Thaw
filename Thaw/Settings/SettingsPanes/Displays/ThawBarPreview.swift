@@ -139,7 +139,6 @@ struct ThawBarPreview: View {
                         )
                     }
                     .buttonStyle(.settingsGlass)
-                    .controlSize(.small)
                 }
                 .padding(.vertical, ThawSpacing.inset)
                 .frame(maxWidth: 320)
