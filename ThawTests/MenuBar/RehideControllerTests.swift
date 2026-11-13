@@ -480,16 +480,38 @@ struct SectionRehideTests {
         }
     }
 
-    @Test("Each section keeps its own timer; hiding one stops only its own and a second reveal replaces it")
-    func oneTimerPerSection() async {
-        let world = world(.timed)
+    /// Hiding either section closes the presentation of both, so neither countdown may survive.
+    @Test("Hiding a section stops every revealed section's countdown", arguments: [RehideStrategy.timed, .smart])
+    func hidingStopsEverySection(strategy: RehideStrategy) async {
+        let world = world(strategy, atOnce: false)
         world.controller.revealed(.hidden)
         world.controller.revealed(.alwaysHidden)
         world.controller.revealed(.alwaysHidden)
+        await world.settle()
+        #expect(world.sleeps.count == 2, "the repeated reveal replaces its old countdown")
+
         world.controller.hidden(.hidden)
-        #expect(Set(world.moveHandlers.keys) == [.alwaysHidden])
-        await world.controller.waitUntilIdle()
-        #expect(world.sectionHides == [.alwaysHidden])
-        #expect(world.sleeps.count == 8)
+        #expect(world.moveHandlers.isEmpty)
+        world.now += .seconds(2)
+        world.sleepsReturnAtOnce = true
+        await world.finishWaits()
+
+        #expect(world.sectionHides.isEmpty, "no countdown may hide a section after it closed")
+        #expect(world.sleeps.count == 2)
+    }
+
+    /// A timed reveal under the pointer still owns a monitor even before it has a countdown.
+    @Test("Hiding a section stops the other section's idle pointer monitor")
+    func hidingStopsIdlePointerMonitors() {
+        let world = world(.timed)
+        world.pointerInArea = true
+        world.controller.revealed(.hidden)
+        world.controller.revealed(.alwaysHidden)
+        #expect(Set(world.moveHandlers.keys) == [.hidden, .alwaysHidden])
+
+        world.controller.hidden(.hidden)
+
+        #expect(world.moveHandlers.isEmpty)
+        #expect(world.sleeps.isEmpty)
     }
 }

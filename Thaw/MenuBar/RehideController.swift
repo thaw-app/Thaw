@@ -75,11 +75,13 @@ final class RehideController {
         startSectionRehide(section)
     }
 
-    /// Stops only this section's rehide, even though hiding it puts the other sections away too.
-    func hidden(_ section: MenuBarSection.Name) {
-        sectionRehides[section]?.cancel()
-        environment.stopPointerMonitor(section)
-        sectionRehides[section] = nil
+    /// Hiding any section closes every revealed section, so none may keep a countdown or pointer monitor.
+    func hidden(_: MenuBarSection.Name) {
+        for section in MenuBarSection.Name.allCases {
+            sectionRehides[section]?.cancel()
+            environment.stopPointerMonitor(section)
+        }
+        sectionRehides.removeAll()
     }
 
     func note(_ event: Event) {

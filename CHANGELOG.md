@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- Closing hidden items now stops every section’s hide timer, so an older countdown cannot close items you reveal afterward.
+
 ## [3.0.0-alpha.14] - 2026-11-13
 
 **macOS 27 only · Build 125**
