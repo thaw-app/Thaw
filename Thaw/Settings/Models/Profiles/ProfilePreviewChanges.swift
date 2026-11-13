@@ -35,8 +35,12 @@ enum ProfilePreviewChanges {
         areas.filter { $0.current != $0.profile }.map { ProfileLayoutDiff.SettingChange(key: $0.key, label: $0.label) }
     }
 
+    /// The areas a profile replaces, resolving display entries through each side's own template.
     private static func areas(of profile: Profile, appState: AppState) -> [Area] {
         let display = appState.settings.displaySettings
+        let displayIDs = Set(display.configurations.keys).union(profile.displayConfigurations.keys)
+        let currentDisplays = Dictionary(uniqueKeysWithValues: displayIDs.map { ($0, display.configuration(forUUID: $0)) })
+        let profileDisplays = Dictionary(uniqueKeysWithValues: displayIDs.map { ($0, profile.displayConfigurations[$0] ?? profile.globalDisplayConfiguration) })
         let shortcuts = HotkeyBindingStore.actions.rawBindings()
         let mergedShortcuts = ProfileHotkeyMerge.merged(current: shortcuts, profile: profile.hotkeys, knownActions: profile.hotkeyActions)
         let names = Defaults.dictionary(forKey: .menuBarItemCustomNames) as? [String: String] ?? [:]
@@ -44,7 +48,7 @@ enum ProfilePreviewChanges {
         return [
             area("appearance", String(localized: "Appearance"), appState.appearanceManager.configuration, profile.appearanceConfiguration),
             area("shortcuts", String(localized: "Shortcuts"), shortcuts, mergedShortcuts),
-            area("thawBarDisplays", String(localized: "Thaw Bar on each display"), display.configurations, profile.displayConfigurations),
+            area("thawBarDisplays", String(localized: "Thaw Bar on each display"), currentDisplays, profileDisplays),
             area("thawBarTemplate", String(localized: "Thaw Bar for new displays"), display.globalConfiguration, profile.globalDisplayConfiguration),
             area("groups", String(localized: "Item groups"), appState.itemGroupManager.snapshot(), profile.menuBarLayout.itemGroups ?? .empty),
             area("names", String(localized: "Item names"), names, profile.menuBarLayout.customNames),

@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- Profile previews no longer report display changes when a saved configuration matches the display’s inherited template.
+
 ## [3.0.0-alpha.14] - 2026-11-13
 
 **macOS 27 only · Build 125**
