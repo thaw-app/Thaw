@@ -24,10 +24,6 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
-### Fixed
-
-- A profile action that arrives after that profile was removed no longer clears another profile’s display or Space association.
-
 ## [3.0.0-alpha.14] - 2026-11-12
 
 **macOS 27 only · Build 125**
@@ -134,6 +130,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **thaw:// reports every per-display setting.** A disconnected display now lists its item size, spacing and Always Hidden only choice, and the Thaw Bar location lists all five places.
 - **Use Template copies the Always Hidden only choice too.**
 - **A profile applied as Thaw starts keeps its order** when some items show up late. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
+- **A profile action that arrives after that profile was removed no longer clears another profile’s display or Space association.** By @Belligerently in [#1555](https://github.com/thaw-app/Thaw/pull/1555).
 
 #### Search
 
