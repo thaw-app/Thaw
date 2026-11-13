@@ -155,6 +155,23 @@ struct ProfileExportTests {
         #expect(entry.applyShortcut == shortcut)
     }
 
+    /// JSON whitespace and key ordering do not turn one shortcut into two distinct bindings.
+    @Test("An imported shortcut conflicts with an equivalent differently encoded binding")
+    func equivalentShortcutEncoding() throws {
+        let combination = KeyCombination(key: .a, modifiers: [.command, .option])
+        let original = try JSONEncoder().encode(combination)
+        let json = try JSONSerialization.jsonObject(with: original)
+        let reformatted = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
+        #expect(original != reformatted)
+        #expect(try HotkeyBindingStore.combination(from: original) == HotkeyBindingStore.combination(from: reformatted))
+        let shortcuts = ProfileApplyShortcuts()
+        let first = UUID()
+        let second = UUID()
+        #expect(shortcuts.adopt(original, for: first))
+        #expect(!shortcuts.adopt(reformatted, for: second))
+        #expect(shortcuts.shortcut(for: second) == nil)
+    }
+
     @Test("An imported shortcut is kept unless another profile already uses it")
     func adoptingShortcuts() {
         let shortcuts = ProfileApplyShortcuts()

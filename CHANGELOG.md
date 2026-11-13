@@ -134,6 +134,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Use Template copies the Always Hidden only choice too.**
 - **A profile applied as Thaw starts keeps its order** when some items show up late. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
 - **A profile action that arrives after that profile was removed no longer clears another profile’s display or Space association.** By @Belligerently in [#1555](https://github.com/thaw-app/Thaw/pull/1555).
+- Importing profiles no longer assigns the same shortcut twice when its saved JSON uses different formatting.
 
 #### Search
 
