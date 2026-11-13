@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- Search shortcuts no longer act on the selected menu bar item when a key belongs to another window or app.
+
 ## [3.0.0-alpha.14] - 2026-11-13
 
 **macOS 27 only · Build 125**

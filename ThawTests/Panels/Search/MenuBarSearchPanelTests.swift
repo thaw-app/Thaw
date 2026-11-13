@@ -150,6 +150,35 @@ struct MenuBarSearchPanelTests {
         #expect(world.appState.layoutFeedback.refusal == nil)
     }
 
+    /// Global events and another window's keys must not act on the search selection.
+    @Test("Search command shortcuts only handle their own window", arguments: [false, true])
+    func commandShortcutsStayInTheirWindow(otherWindow: Bool) throws {
+        let world = World()
+        let alpha = World.item("Alpha")
+        world.seat([alpha])
+        let panel = panel(world)
+        panel.model.selection = MenuBarSearchModel.ItemID(alpha)
+        let other = NSWindow(contentRect: .zero, styleMask: .borderless, backing: .buffered, defer: false)
+        other.isReleasedWhenClosed = false
+        defer { other.close() }
+
+        func renameKey(windowNumber: Int) throws -> NSEvent {
+            try #require(NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: windowNumber,
+                context: nil, characters: "e", charactersIgnoringModifiers: "e", isARepeat: false, keyCode: UInt16(KeyCode.e.rawValue)
+            ))
+        }
+
+        let unrelated = try renameKey(windowNumber: otherWindow ? other.windowNumber : 0)
+        #expect(unrelated.window !== panel)
+        #expect(MenuBarSearchPanel.monitoredKey(unrelated, panel: panel) === unrelated)
+        #expect(panel.model.renameSession == nil)
+
+        let own = try renameKey(windowNumber: panel.windowNumber)
+        #expect(MenuBarSearchPanel.monitoredKey(own, panel: panel) == nil)
+        #expect(panel.model.renameSession?.targets(alpha) == true)
+    }
+
     @Test("Collapsed to the field alone, Return and the item shortcuts pass through")
     func collapsedFacesDontActOnTheHiddenSelection() throws {
         let world = World()
