@@ -154,6 +154,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **The Swap Bar stays off** after an upgrade from a version that called it the Transport Bar.
 - **Simple Mode mentions double-clicking Thaw's icon only while that shortcut is on.**
 - **Show Samples turns on as soon as a capture sample is saved.**
+- **Buttons on Displays and the Thaw Bar page are the same size as the rest of Settings.** Open Layout, Turn On & Open, Use Template, Forget Display, Discard and Apply were smaller.
 
 #### Other
 
