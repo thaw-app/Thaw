@@ -191,6 +191,47 @@ struct RehideControllerTests {
         #expect(world.hiddenSectionHides == 0)
     }
 
+    /// Disabling the preference while a focus or outside-click delay waits must prevent its hide.
+    @Test("Disabling rehide stops a pending focus or outside-click hide", arguments: [false, true])
+    func disablingStopsPendingHide(outside: Bool) async {
+        let world = RehideWorld()
+        if outside {
+            world.controller.note(.outsideClick { true })
+        } else {
+            world.controller.note(.focusChanged)
+        }
+        await world.settle()
+        world.settings.autoRehide = false
+
+        await world.finishWaits()
+
+        #expect(world.hiddenSectionHides == 0)
+        #expect(world.everySectionHides == 0)
+    }
+
+    /// A menu answer can arrive after the user disabled automatic rehiding.
+    @Test("Disabling rehide during a menu probe prevents the pending hide", arguments: [false, true])
+    func disablingDuringMenuProbe(outside: Bool) async {
+        let world = RehideWorld()
+        world.sleepsReturnAtOnce = true
+        world.heldMenuCheck = 1
+        if outside {
+            world.controller.note(.outsideClick { true })
+        } else {
+            world.controller.note(.focusChanged)
+        }
+        while world.menuChecks < 1 {
+            await world.settle()
+        }
+        world.settings.autoRehide = false
+
+        await world.finishWaits()
+        await world.settle()
+
+        #expect(world.hiddenSectionHides == 0)
+        #expect(world.everySectionHides == 0)
+    }
+
     @Test("Outside clicks are not checked unless smart rehide is on", arguments: [RehideStrategy.timed, .focusedApp])
     func outsideClickNeedsSmart(strategy: RehideStrategy) async {
         let world = RehideWorld()
@@ -478,6 +519,58 @@ struct SectionRehideTests {
             #expect(world.moveHandlers.isEmpty)
             #expect(world.sleeps.isEmpty)
         }
+    }
+
+    /// A countdown already in progress must respect a disabled automatic-rehide preference.
+    @Test("Disabling rehide stops a section countdown", arguments: [RehideStrategy.timed, .smart])
+    func disablingStopsSectionCountdown(strategy: RehideStrategy) async {
+        let world = world(strategy, atOnce: false)
+        world.controller.revealed(.hidden)
+        await world.settle()
+        world.settings.autoRehide = false
+        world.now += .seconds(2)
+        world.sleepsReturnAtOnce = true
+
+        await world.finishWaits()
+        await world.settle()
+        #expect(world.sectionHides.isEmpty)
+        world.movePointer(over: .hidden, inArea: false)
+        await world.settle()
+        #expect(world.moveHandlers.isEmpty)
+    }
+
+    /// Eligibility and the final menu check both suspend, so each must honor a later disabled preference.
+    @Test("Disabling rehide during a section menu check prevents hiding", arguments: [8, 9])
+    func disablingDuringSectionMenuProbe(check: Int) async {
+        let world = world(.timed)
+        world.heldMenuCheck = check
+        world.controller.revealed(.hidden)
+        while world.menuChecks < check {
+            await world.settle()
+        }
+        world.settings.autoRehide = false
+
+        await world.finishWaits()
+        await world.settle()
+
+        #expect(world.sectionHides.isEmpty)
+        world.movePointer(over: .hidden, inArea: false)
+        #expect(world.moveHandlers.isEmpty)
+    }
+
+    /// An idle timed monitor must not start a new countdown after automatic rehiding is disabled.
+    @Test("Disabling rehide releases an idle monitor on the next pointer move")
+    func disablingStopsIdleMonitor() async {
+        let world = world(.timed)
+        world.pointerInArea = true
+        world.controller.revealed(.hidden)
+        world.settings.autoRehide = false
+
+        world.movePointer(over: .hidden, inArea: false)
+        await world.controller.waitUntilIdle()
+
+        #expect(world.sectionHides.isEmpty)
+        #expect(world.moveHandlers.isEmpty)
     }
 
     @Test("Each section keeps its own timer; hiding one stops only its own and a second reveal replaces it")

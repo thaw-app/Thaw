@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- Turning off automatic rehide now prevents waiting timers, focus changes and outside clicks from hiding items afterward.
+
 ## [3.0.0-alpha.14] - 2026-11-13
 
 **macOS 27 only · Build 125**
