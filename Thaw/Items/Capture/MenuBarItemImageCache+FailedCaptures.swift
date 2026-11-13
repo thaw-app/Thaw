@@ -135,8 +135,8 @@ extension MenuBarItemImageCache {
             let itemWidths = listedItemWidths()
             for pair in revealed {
                 guard let image = captureResult.captured[pair.live.tag] else { continue }
-                let kept = capturesByTag[pair.requested.tag].map {
-                    Self.preferredRevealedImage(existing: $0, candidate: image, revealing: pair.requested, listedWidths: itemWidths)
+                let kept = Self.cachedCapture(for: pair.requested.tag, in: capturesByTag).map {
+                    Self.preferredRevealedImage(existing: $0.capture, candidate: image, revealing: pair.requested, listedWidths: itemWidths)
                 }
                 if kept == nil || kept == image {
                     tally.tags.insert(pair.requested.tag)

@@ -335,9 +335,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Items/Capture/MenuBarItemImageCache+Recapture.swift",
-    "line": 972
+    "line": 965
    },
-   "reason": "File should contain 400 lines or less: currently contains 972",
+   "reason": "File should contain 400 lines or less: currently contains 965",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
