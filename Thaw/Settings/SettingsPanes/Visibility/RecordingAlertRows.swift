@@ -50,3 +50,11 @@ struct RecordingAlertRows: View {
         return choices
     }
 }
+
+#if DEBUG
+    #Preview("Recording alerts") {
+        VisibilitySettingsPreview { settings in
+            RecordingAlertRows(settings: settings)
+        }
+    }
+#endif
