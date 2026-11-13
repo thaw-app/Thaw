@@ -26,6 +26,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- The Thaw Bar settings stay available when only Always Hidden uses the bar, and its preview shows and opens that section.
 - Importing profiles no longer assigns the same shortcut twice when its saved JSON uses different formatting.
 
 ## [3.0.0-alpha.14] - 2026-11-12
