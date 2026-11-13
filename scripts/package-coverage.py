@@ -37,7 +37,8 @@ def line_counts(segments: list[list]) -> dict[int, int]:
     line is instrumented if that segment has a count, or if a counted region
     starts on it, and its count is the highest of the base and those regions.
     Gap regions never start a region. A line that begins a skipped region is not
-    instrumented.
+    instrumented, unless a counted region also starts on it: llvm maps any line
+    where a counted region entry starts.
     """
     counts: dict[int, int] = {}
     wrapped: list | None = None  # last segment before the current line
@@ -60,7 +61,8 @@ def line_counts(segments: list[list]) -> dict[int, int]:
         ]
         skipped = not group[0][HAS_COUNT] and group[0][IS_ENTRY]
         wrapped_counted = wrapped is not None and wrapped[HAS_COUNT]
-        if not skipped and (wrapped_counted or starting):
+        counted_entry = any(segment[HAS_COUNT] and segment[IS_ENTRY] for segment in group)
+        if (not skipped and (wrapped_counted or starting)) or counted_entry:
             base = wrapped[COUNT] if wrapped is not None else 0
             counts[line] = max([base, *starting])
         wrapped = group[-1]
