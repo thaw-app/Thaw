@@ -1747,7 +1747,7 @@
     "file": "Thaw/Panels/Appearance/MenuBarOverlayPanel.swift",
     "line": 559
    },
-   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 813 lines",
+   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 810 lines",
    "ruleDescription": "Type bodies should not span too many lines",
    "ruleIdentifier": "type_body_length",
    "ruleName": "Type Body Length",
@@ -1760,13 +1760,13 @@
    "location": {
     "character": 13,
     "file": "Thaw/Panels/Appearance/MenuBarOverlayPanel.swift",
-    "line": 716
+    "line": 722
    },
-   "reason": "Function should have complexity 10 or less; currently complexity is 21",
+   "reason": "Function should have complexity 10 or less; currently complexity is 19",
    "ruleDescription": "Complexity of function bodies should be limited.",
    "ruleIdentifier": "cyclomatic_complexity",
    "ruleName": "Cyclomatic Complexity",
-   "severity": "error"
+   "severity": "warning"
   }
  },
  {
@@ -1775,9 +1775,9 @@
    "location": {
     "character": 13,
     "file": "Thaw/Panels/Appearance/MenuBarOverlayPanel.swift",
-    "line": 716
+    "line": 722
    },
-   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 116 lines",
+   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 109 lines",
    "ruleDescription": "Function bodies should not span too many lines",
    "ruleIdentifier": "function_body_length",
    "ruleName": "Function Body Length",
@@ -1790,7 +1790,7 @@
    "location": {
     "character": 13,
     "file": "Thaw/Panels/Appearance/MenuBarOverlayPanel.swift",
-    "line": 1006
+    "line": 1003
    },
    "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 65 lines",
    "ruleDescription": "Function bodies should not span too many lines",
@@ -1805,7 +1805,7 @@
    "location": {
     "character": 13,
     "file": "Thaw/Panels/Appearance/MenuBarOverlayPanel.swift",
-    "line": 1285
+    "line": 1282
    },
    "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 62 lines",
    "ruleDescription": "Function bodies should not span too many lines",
@@ -1820,7 +1820,7 @@
    "location": {
     "character": 14,
     "file": "Thaw/Panels/Appearance/MenuBarOverlayPanel.swift",
-    "line": 1416
+    "line": 1413
    },
    "reason": "Function should have complexity 10 or less; currently complexity is 11",
    "ruleDescription": "Complexity of function bodies should be limited.",
@@ -1835,7 +1835,7 @@
    "location": {
     "character": 14,
     "file": "Thaw/Panels/Appearance/MenuBarOverlayPanel.swift",
-    "line": 1416
+    "line": 1413
    },
    "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 89 lines",
    "ruleDescription": "Function bodies should not span too many lines",
@@ -1850,9 +1850,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Panels/Appearance/MenuBarOverlayPanel.swift",
-    "line": 1524
+    "line": 1521
    },
-   "reason": "File should contain 1000 lines or less: currently contains 1524",
+   "reason": "File should contain 1000 lines or less: currently contains 1521",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
