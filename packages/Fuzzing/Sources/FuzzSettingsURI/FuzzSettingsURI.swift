@@ -37,7 +37,7 @@ public func LLVMFuzzerTestOneInput(_ start: UnsafeRawPointer, _ count: Int) -> C
 /// Every route that changes settings, acts on items or exports data is gated, and only the version read skips the sender check.
 private func checkAuthorization(_ request: SettingsURIRequest, text: String) {
     switch request.route {
-    case .set, .toggle, .get, .authorize, .revealItem, .launcher, .proxyPress, .toggleThawBar, .dumpItems, .malformed:
+    case .set, .toggle, .get, .authorize, .revealItem, .releaseItem, .launcher, .proxyPress, .toggleThawBar, .dumpItems, .malformed:
         precondition(request.requiresAuthorization, "Gated route must require authorization: \(text)")
     case .action, .unrecognized:
         precondition(!request.requiresAuthorization, "Ungated route must not require authorization: \(text)")
@@ -61,7 +61,7 @@ private func checkHost(_ route: SettingsURIRoute, host: String, text: String) {
     case let .malformed(malformedHost):
         precondition(malformedHost == host, "Malformed host differs from the URL's for \(text)")
         precondition(
-            ["set", "toggle", "get", "reveal-item", "proxy-press"].contains(host),
+            ["set", "toggle", "get", "reveal-item", "release-item", "proxy-press"].contains(host),
             "Only hosts with required parameters can be malformed: \(text)"
         )
     case let .unrecognized(unrecognizedHost):
@@ -70,7 +70,7 @@ private func checkHost(_ route: SettingsURIRoute, host: String, text: String) {
             SettingsURIAction(rawValue: host) == nil && LauncherURIOperation(rawValue: host) == nil,
             "A known host was reported as unrecognized: \(text)"
         )
-    case .set, .toggle, .get, .authorize, .revealItem, .proxyPress, .toggleThawBar, .dumpItems:
+    case .set, .toggle, .get, .authorize, .revealItem, .releaseItem, .proxyPress, .toggleThawBar, .dumpItems:
         precondition(builtInHost(of: route) == host, "Route came from the wrong host for \(text)")
     }
 }
@@ -83,6 +83,7 @@ private func builtInHost(of route: SettingsURIRoute) -> String? {
     case .get: "get"
     case .authorize: "authorize"
     case .revealItem: "reveal-item"
+    case .releaseItem: "release-item"
     case .proxyPress: "proxy-press"
     case .toggleThawBar: "toggle-thawbar"
     case .dumpItems: "dump-items"

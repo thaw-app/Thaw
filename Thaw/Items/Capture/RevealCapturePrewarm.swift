@@ -89,6 +89,8 @@ struct RevealCapturePrewarm {
     /// alone unless retakingAll, since each reveal risks a worse one. Nil when no capture can run.
     func captureHiddenItems(retakingAll: Bool) async -> HiddenItemCaptureResult? {
         guard mayReveal() else { return nil }
+        // The section loop would skip every section; say why instead of listing each item as missing.
+        guard !isNativeOverflowActive(displayID()) else { return .fullBar }
 
         let sections: [MenuBarSection.Name] = [.hidden, .alwaysHidden]
         let alreadyGood = retakingAll ? [] : Set(sections.flatMap { sectionItems($0) ?? [] }

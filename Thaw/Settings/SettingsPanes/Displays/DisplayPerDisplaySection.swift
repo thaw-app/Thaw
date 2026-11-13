@@ -66,7 +66,6 @@ extension DisplaySettingsPane {
                     applyTemplate(to: display)
                 }
                 .buttonStyle(.settingsGlass)
-                .controlSize(.small)
                 .help(Text("Copy the template’s settings onto this display"))
             }
             if !display.isConnected {
@@ -74,7 +73,6 @@ extension DisplaySettingsPane {
                     displayToForget = display
                 }
                 .buttonStyle(.settingsGlass)
-                .controlSize(.small)
                 .help(Text("Remove this display’s saved settings"))
             }
         }
@@ -235,14 +233,12 @@ extension DisplaySettingsPane {
                 draftSpacing[display.id] = CGFloat(savedOffset)
             }
             .buttonStyle(.settingsGlass)
-            .controlSize(.small)
             .help(Text("Discard the pending spacing change"))
 
             Button("Apply") {
                 requestSpacingApply(for: display, offset: Double(draft))
             }
             .buttonStyle(.thawProminent)
-            .controlSize(.small)
             .help(Text("Apply the spacing for this display"))
         }
         .padding(.horizontal, ThawSpacing.inset)

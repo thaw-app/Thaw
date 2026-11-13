@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import MenuBarModel
 import Testing
 @testable import Thaw
 
@@ -282,7 +283,7 @@ struct LiveRehideEnvironmentTests {
         #expect(environment.settings() == expected)
         _ = await environment.isAnyMenuOpen()
         _ = environment.isPointerAwayFromBars()
-        #expect(environment.activeSpaceID() == environment.activeSpaceID())
+        #expect(environment.activeSpaceID() == Bridging.getActiveSpaceID(), "it answers with the system's active Space")
         _ = environment.isPointerOverFrontmostApp()
         environment.hideHiddenSection()
         environment.hideEverySection()
@@ -318,22 +319,35 @@ struct LiveRehideEnvironmentTests {
         let input = appState.hidEventManager
         input.rehideController = world.controller
         let screen = try #require(NSScreen.screens.first)
+        // The click lands in a window of its own, which is never shown. A click with no window would
+        // match the control item, which has none before setup, and be turned away as a click on that
+        // item before the sections are asked.
+        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 10, height: 10), styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
         let event = try #require(NSEvent.mouseEvent(
             with: .leftMouseDown,
             location: .zero,
             modifierFlags: [],
             timestamp: 0,
-            windowNumber: 0,
+            windowNumber: window.windowNumber,
             context: nil,
             eventNumber: 0,
             clickCount: 1,
             pressure: 1
         ))
+        try #require(event.window === window)
         input.handleSmartRehide(with: event, appState: appState, screen: screen)
-        input.cancelSmartRehide()
         await world.settle()
-        // Before setup no section is showing, so the click arms nothing.
+        // Before setup no section is showing, so the click arms nothing. The click is not cancelled
+        // here: a cancelled rehide would also leave no sleep, whatever the click said.
         #expect(world.sleeps.isEmpty)
+
+        // The same controller does arm for a click that qualifies, so the empty list above is the
+        // click's own answer and not a controller that never listens.
+        world.controller.note(.outsideClick { true })
+        await world.settle()
+        #expect(world.sleeps == [.seconds(2)])
+        await world.finishWaits()
     }
 }
 

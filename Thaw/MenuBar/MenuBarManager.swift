@@ -102,8 +102,8 @@ final class MenuBarManager {
 
     let layoutEditorPanel = MenuBarLayoutEditorPanel()
 
-    /// Non-optional platform controller behind an interface so app callers need no platform type.
-    private(set) var sectionController: any MenuBarSectionControlling = InertSectionController()
+    /// Non-optional platform controller behind an interface so app callers need no platform type; settable for tests.
+    var sectionController: any MenuBarSectionControlling = InertSectionController()
 
     /// Concrete access for platform-typed operations, exposed to callers only through this manager.
     private(set) var runtimeSectionController: RuntimeSectionController?
@@ -805,8 +805,8 @@ final class MenuBarManager {
     /// It clears this before position-restoring writes; the reveal reflow window guards new transitions during suspended restores.
     func setRevealHideTransitionActive(_ active: Bool) {
         barSettling.note(.revealTransition(active: active))
-        // Either edge of the transition moves the items, so the pill should follow closely.
-        leadingEdgeWatcher.expectChange()
+        // Either edge moves the items, so the pill follows closely; at the end it gets the reading it held back.
+        leadingEdgeWatcher.expectChange(resending: !active)
     }
 
     /// Cursor-free invalidation after position writes; suppress during reflow to avoid missed rehide clicks, but allow settled reveals.

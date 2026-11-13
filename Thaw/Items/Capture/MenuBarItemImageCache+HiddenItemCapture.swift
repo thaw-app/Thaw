@@ -15,13 +15,18 @@ nonisolated struct HiddenItemCaptureResult: Equatable {
     let missing: [String]
     /// The items left alone because their picture was already good.
     let kept: Int
+    /// macOS had no room on the bar, so nothing was revealed: a revealed item would stay behind its overflow arrow.
+    let barIsFull: Bool
 
-    init(captured: Int, total: Int, missing: [String], kept: Int = 0) {
+    init(captured: Int, total: Int, missing: [String], kept: Int = 0, barIsFull: Bool = false) {
         self.captured = captured
         self.total = total
         self.missing = missing
         self.kept = kept
+        self.barIsFull = barIsFull
     }
+
+    static let fullBar = HiddenItemCaptureResult(captured: 0, total: 0, missing: [], barIsFull: true)
 
     /// Tallies items as (name, got a new picture), with kept items counted apart. The same
     /// name lists once, since an app's items can share one.

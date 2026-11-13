@@ -66,4 +66,47 @@ nonisolated struct LayoutCheckboxSweep: Equatable {
         let covered = Set(covered)
         return rows.filter { covered.contains($0.id) && !$0.isLocked && $0.isShown != target }.map(\.id)
     }
+
+    /// What one pointer move does to the sweep under way, or to none yet.
+    struct Step: Equatable {
+        /// The sweep after the move: nil when no sweep is under way and none could start.
+        let sweep: LayoutCheckboxSweep?
+        /// The move began the sweep, so the caller starts scrolling with it.
+        let didStart: Bool
+        /// The sweep differs from before, so the rows redraw. A mouse move that changes nothing doesn't.
+        let didChange: Bool
+        /// The move covered more rows than before, which the caller marks with a tap of haptics.
+        let didGrow: Bool
+    }
+
+    /// Applies the pointer at y to current, starting a sweep on startID first when none is under way.
+    static func step(current: LayoutCheckboxSweep?, startingAt startID: String, to y: CGFloat, rows: [Row]) -> Step {
+        let started = current == nil ? LayoutCheckboxSweep(startingAt: startID, rows: rows) : nil
+        guard let before = current ?? started else {
+            return Step(sweep: nil, didStart: false, didChange: false, didGrow: false)
+        }
+        var sweep = before
+        sweep.extend(to: y, rows: rows)
+        let moved = sweep != before
+        // A sweep that has just started counts as changed even when the pointer hasn't left its first row.
+        return Step(
+            sweep: sweep,
+            didStart: started != nil,
+            didChange: moved || started != nil,
+            didGrow: moved && sweep.covered.count > before.covered.count
+        )
+    }
+
+    /// The batch a release moves.
+    struct Release: Equatable {
+        let ids: [String]
+        /// Whether the rows end up checked.
+        let target: Bool
+    }
+
+    /// What the release moves, or nil when nothing changes.
+    func release(in rows: [Row]) -> Release? {
+        let ids = changes(in: rows)
+        return ids.isEmpty ? nil : Release(ids: ids, target: target)
+    }
 }

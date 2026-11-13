@@ -55,3 +55,14 @@ struct SwapOnIconClickToggle: View {
             .annotation("A click on the icon swaps your shown and hidden items instead of showing the hidden ones.")
     }
 }
+
+#if DEBUG
+    #Preview("Visibility timing") {
+        VisibilitySettingsPreview { settings in
+            HoverDelayRow(settings: settings)
+            TooltipDelayRow(settings: settings)
+            RehideDelayRow(settings: settings)
+            SwapOnIconClickToggle(settings: settings)
+        }
+    }
+#endif

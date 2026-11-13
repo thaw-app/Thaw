@@ -111,13 +111,11 @@ struct ThawBarPreviewFooter: View {
                     openThawBar(on: displayID)
                 }
                 .buttonStyle(.settingsGlass)
-                .controlSize(.small)
             } else {
                 Button("Turn On & Open") {
                     enableAndOpen(on: displayID)
                 }
                 .buttonStyle(.settingsGlass)
-                .controlSize(.small)
             }
         } else if displayID != nil {
             // Disconnected display: explain rather than claim to open.
