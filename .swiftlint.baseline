@@ -2510,22 +2510,7 @@
    "location": {
     "character": 13,
     "file": "Thaw/Settings/SettingsPanes/Displays/DisplayPerDisplaySection.swift",
-    "line": 122
-   },
-   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 51 lines",
-   "ruleDescription": "Function bodies should not span too many lines",
-   "ruleIdentifier": "function_body_length",
-   "ruleName": "Function Body Length",
-   "severity": "warning"
-  }
- },
- {
-  "text": "    func spacingConfirmationButtons(for pending: PendingSpacingApply) -> some View {",
-  "violation": {
-   "location": {
-    "character": 5,
-    "file": "Thaw/Settings/SettingsPanes/Displays/DisplaySpacingApply.swift",
-    "line": 110
+    "line": 120
    },
    "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 51 lines",
    "ruleDescription": "Function bodies should not span too many lines",
