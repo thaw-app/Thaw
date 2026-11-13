@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Combine
 import MenuBarModel
 import Observation
 import ThawAXCore
@@ -16,6 +17,7 @@ import ThawAXCore
 /// Menu bar items post no AX notifications when they move, so one element's
 /// position is polled off the main actor. The visible run is right-anchored,
 /// so any change moves this edge; a failed read counts as a change too.
+/// Polling runs only while something follows the edge; see follow().
 @MainActor
 @Observable
 final class MenuBarLeadingEdgeWatcher {
@@ -28,6 +30,7 @@ final class MenuBarLeadingEdgeWatcher {
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var walkObservation: Task<Void, Never>?
     @ObservationIgnored private var anchorTask: Task<Void, Never>?
+    @ObservationIgnored private var followers = LeadingEdgeFollowers()
     @ObservationIgnored private let diagLog = DiagLog(category: "MenuBarLeadingEdgeWatcher")
 
     /// Short enough that a follower is at most half a second behind the bar,
@@ -67,12 +70,50 @@ final class MenuBarLeadingEdgeWatcher {
                 self?.expectChange()
             }
         }
-        startPolling()
     }
 
-    private func startPolling() {
+    /// Whether the edge is being polled, which it is only while followed.
+    var isPolling: Bool {
+        pollTask != nil
+    }
+
+    /// Calls onEdge with each reading of leadingEdge until the returned token
+    /// is cancelled or released. The first follower starts polling with a read
+    /// at once and a fast window; the last one to leave stops it and clears
+    /// leadingEdge, so the next follower never sees a reading from before
+    /// polling stopped.
+    func follow(_ onEdge: @escaping @MainActor (MenuBarLeadingEdgeSample) -> Void) -> AnyCancellable {
+        let id = UUID()
+        if followers.add(id) == .start {
+            fastPollUntil = .now + Self.fastPollWindow
+            startPolling(readingFirst: true)
+        }
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            for await edge in Observations({ self.leadingEdge }) {
+                guard let edge else { continue }
+                onEdge(edge)
+            }
+        }
+        return AnyCancellable { [weak self] in
+            task.cancel()
+            self?.unfollow(id)
+        }
+    }
+
+    private func unfollow(_ id: UUID) {
+        guard followers.remove(id) == .stop else { return }
+        pollTask?.cancel()
+        pollTask = nil
+        leadingEdge = nil
+    }
+
+    private func startPolling(readingFirst: Bool = false) {
         pollTask?.cancel()
         pollTask = Task { @MainActor [weak self] in
+            if readingFirst {
+                await self?.poll()
+            }
             while !Task.isCancelled {
                 let interval = Self.pollInterval(now: .now, fastUntil: self?.fastPollUntil)
                 try? await Task.sleep(for: interval, tolerance: interval / 5)
@@ -84,6 +125,7 @@ final class MenuBarLeadingEdgeWatcher {
 
     /// Polls fast for a short while because the bar is about to change, such as on a reveal or hide.
     /// Restarts the loop so the first fast read does not wait out an idle sleep.
+    /// With no follower it only notes the window and does not start polling.
     func expectChange() {
         let wasFast = fastPollUntil.map { ContinuousClock.now < $0 } ?? false
         fastPollUntil = .now + Self.fastPollWindow
@@ -94,9 +136,15 @@ final class MenuBarLeadingEdgeWatcher {
 
     /// Reads the edge now, on the calling thread. For callers that cannot
     /// wait for the next poll, such as an event tap about to change the bar.
+    /// While nothing follows the edge, a missing anchor or a failed read looks
+    /// for the anchor again in the background, as a poll would, so the next
+    /// call has one.
     func readNow() -> CGFloat? {
-        guard let anchor else { return nil }
-        return Self.position(of: anchor.element, within: anchor.screen, timeout: 0.05)
+        let edge = anchor.flatMap { Self.position(of: $0.element, within: $0.screen, timeout: 0.05) }
+        if edge == nil, !followers.isFollowed {
+            refindAnchor()
+        }
+        return edge
     }
 
     private func poll() async {
@@ -107,7 +155,8 @@ final class MenuBarLeadingEdgeWatcher {
         let edge = anchor.isOwnProcess
             ? Self.position(of: anchor.element, within: anchor.screen, timeout: 0.25)
             : await Self.read(anchor)
-        guard let current = self.anchor,
+        // A read that outlived the last follower would leave a stale edge for the next one.
+        guard followers.isFollowed, let current = self.anchor,
               current.screen == anchor.screen, CFEqual(current.element, anchor.element)
         else { return }
         if edge == nil {
@@ -244,5 +293,28 @@ extension NSScreen {
     static func cocoaRect(fromCG cgRect: CGRect) -> CGRect? {
         guard let primaryMaxY = screens.first?.frame.maxY else { return nil }
         return CGRect(x: cgRect.minX, y: primaryMaxY - cgRect.maxY, width: cgRect.width, height: cgRect.height)
+    }
+}
+
+/// One follower's token, held only while the follower wants readings, so a
+/// panel can stop following without tearing down its other subscriptions.
+@MainActor
+final class LeadingEdgeFollow {
+    private var token: AnyCancellable?
+    private let onEdge: @MainActor (MenuBarLeadingEdgeSample) -> Void
+
+    init(onEdge: @escaping @MainActor (MenuBarLeadingEdgeSample) -> Void) {
+        self.onEdge = onEdge
+    }
+
+    /// Follows watcher while wanted. With no watcher, or when not wanted, the token is released.
+    func update(_ watcher: MenuBarLeadingEdgeWatcher?, wanted: Bool) {
+        guard let watcher, wanted else {
+            token = nil
+            return
+        }
+        if token == nil {
+            token = watcher.follow(onEdge)
+        }
     }
 }

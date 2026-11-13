@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Changed
+
+- **Thaw does less work while the menu bar sits idle.** Unless the menu bar's shape is drawn around the icons, Thaw no longer checks the position of its first visible icon twice a second.
+
 ## [3.0.0-alpha.14] - 2026-11-12
 
 **macOS 27 only · Build 125**
