@@ -68,7 +68,7 @@ jobs:
     if: github.repository == 'thaw-app/Thaw'
     runs-on: ubuntu-latest
     # SwiftLint, SwiftFormat and Python at Thaw's pinned versions, built in thaw-app/org-ci.
-    container: ghcr.io/thaw-app/ci-tools@sha256:a51cb8945ace2165211342c7dd1e6d2476bbe9c1bf39a208d2d9025bbf05feea
+    container: ghcr.io/thaw-app/ci-tools@sha256:07c1c43ba437572bb8326e1a84be4a5046d62e65d635ada2279c6eeffd9d3142
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: needs.changes.outputs.code == 'true'
