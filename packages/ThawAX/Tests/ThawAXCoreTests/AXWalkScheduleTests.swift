@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Dispatch
 import Foundation
 import Synchronization
 import Testing
@@ -35,15 +36,32 @@ struct AXWalkScheduleTests {
         #expect(state.withLock { $0.peak } > 1)
     }
 
-    /// The helper read 117 apps one after another, about two seconds on a busy Mac.
-    @Test("A hundred reads of 10 ms each finish in a fraction of the time one after another would take")
-    func parallelWalkIsFaster() {
-        let start = Date()
-        _ = AXWalkSchedule.map(100, limit: AXWalkSchedule.concurrency) { _ in
-            Thread.sleep(forTimeInterval: 0.01)
+    /// The first batch must overlap; a busy runner must not fail for taking longer to schedule it.
+    @Test("The default walk starts a full batch before any of its reads finish")
+    func defaultWalkStartsAFullBatch() {
+        let width = AXWalkSchedule.concurrency
+        let entered = Mutex(0)
+        let timedOut = Mutex(false)
+        let release = DispatchSemaphore(value: 0)
+        let results = AXWalkSchedule.map(100, limit: width) { index in
+            if index < width {
+                let allEntered = entered.withLock { count in
+                    count += 1
+                    return count == width
+                }
+                if allEntered {
+                    for _ in 0 ..< width { release.signal() }
+                }
+                // A safety bound releases the other reads even if the scheduler regresses to serial.
+                if release.wait(timeout: .now() + .seconds(60)) == .timedOut {
+                    timedOut.withLock { $0 = true }
+                    for _ in 0 ..< width { release.signal() }
+                }
+            }
+            return index
         }
-        let elapsed = Date().timeIntervalSince(start)
-        #expect(elapsed < 0.9, "one after another this can't take less than 1 s; took \(elapsed) s")
+        #expect(!timedOut.withLock { $0 }, "the whole first batch must enter before any read can return")
+        #expect(results == Array(0 ..< 100))
     }
 
     @Test("Nothing to read returns nothing")
