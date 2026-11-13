@@ -255,4 +255,19 @@ struct RevealCapturePrewarmTests {
         #expect(await world.prewarm().captureHiddenItems(retakingAll: false) == nil)
         #expect(world.captured.isEmpty)
     }
+
+    @Test("Capture Hidden Items on a full menu bar reveals nothing and says the bar is full", arguments: [false, true])
+    func captureHiddenItemsOnFullBar(retakingAll: Bool) async {
+        let world = World()
+        let weak = Self.item("Weak")
+        world.sections[.hidden] = [weak]
+        world.newPictures = [weak.tag]
+        world.nativeOverflow = true
+
+        let result = await world.prewarm().captureHiddenItems(retakingAll: retakingAll)
+
+        #expect(result == .fullBar)
+        #expect(world.captured.isEmpty)
+        #expect(world.forgotten.isEmpty, "a capture that never ran leaves earlier failures counted")
+    }
 }

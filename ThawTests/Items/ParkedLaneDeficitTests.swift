@@ -30,6 +30,31 @@ struct ParkedLaneDeficitTests {
         #expect(deficit.width == expected)
     }
 
+    /// Field fixture: macOS left five Visible items off a notched bar the model already saw as 228 pt over.
+    @Test("When the model already sees the bar as too full, parked items withhold only their width past that")
+    func countsNegativeHeadroom() throws {
+        let parked: [CGFloat] = [32, 38, 38, 41, 25]
+        let parkedWidth: CGFloat = 174 + 5 * 8
+        let deficit = try #require(OverflowDeficits.parkedLaneDeficit(
+            previous: nil,
+            parkedWidths: parked,
+            isNativeOverflowActive: true,
+            modeledHeadroom: -150,
+            visibleUIDs: visible,
+            overflowUIDs: []
+        ))
+        #expect(deficit.width == parkedWidth - 150)
+
+        #expect(OverflowDeficits.parkedLaneDeficit(
+            previous: nil,
+            parkedWidths: parked,
+            isNativeOverflowActive: true,
+            modeledHeadroom: -228,
+            visibleUIDs: visible,
+            overflowUIDs: []
+        ) == nil, "the model already conceals more than macOS left off")
+    }
+
     @Test("Once the parked items are concealed the deficit carries, so they stay out")
     func carriesAfterConcealing() throws {
         let previous = (width: CGFloat(781), visibleUIDs: visible)

@@ -27,6 +27,8 @@ the items under New and Fixed.
 ### Fixed
 
 - A profile action that arrives after that profile was removed no longer clears another profile’s display or Space association.
+- **"Move items that don’t fit into Hidden" moves only the items that don't fit.** On a full menu bar it could move most of your Visible items to Hidden.
+- **Capture Hidden Items says when the menu bar is full,** instead of listing every hidden item as missing a picture.
 
 ## [3.0.0-alpha.14] - 2026-11-12
 

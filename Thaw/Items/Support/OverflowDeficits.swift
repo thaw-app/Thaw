@@ -86,10 +86,13 @@ nonisolated struct OverflowDeficits {
     /// On a full bar, a notched one in particular, macOS parks the items that
     /// do not fit at x == -1 while the modeled budget can still show hundreds
     /// of points of headroom. Parked items are proof the lane holds exactly
-    /// what it seats, so the pass that finds them withholds the whole modeled
+    /// what it seats, so the pass that finds them withholds the modeled
     /// headroom plus their width and gaps: the planner then conceals that much
     /// from the left of Visible. A fixed per-item allowance was not enough,
     /// since the model's error can be larger than any number of items.
+    ///
+    /// Negative headroom counts too: the planner already places the parked items' width,
+    /// so only the part beyond the modeled shortfall is withheld.
     ///
     /// The deficit holds while the same items compete for the bar and is
     /// dropped once an item arrives or leaves.
@@ -111,7 +114,7 @@ nonisolated struct OverflowDeficits {
             return carried > 0 ? (carried, membership) : nil
         }
         let parked = parkedWidths.reduce(CGFloat.zero) { $0 + budgetWidth(forMeasuredWidth: $1) + 8 }
-        let width = max(carried, max(0, modeledHeadroom) + parked)
+        let width = max(carried, max(0, modeledHeadroom + parked))
         return width > 0 ? (width, membership) : nil
     }
 

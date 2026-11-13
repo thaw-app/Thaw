@@ -27,6 +27,14 @@ struct HiddenItemCaptureTests {
         #expect(result.missing == ["OneDrive", "Tailscale"])
     }
 
+    @Test("A full menu bar gets its own message instead of a list of missing pictures")
+    func fullBarMessage() {
+        let message = HiddenItemCaptureButton.message(for: .fullBar)
+        #expect(message.contains("full"))
+        #expect(!message.contains("Captured"))
+        #expect(HiddenItemCaptureResult.tally([(name: "Tailscale", hasImage: false)]).barIsFull == false)
+    }
+
     @Test("Items left alone for already having a good picture are counted apart, not as missing")
     func keptPicturesAreCountedApart() {
         let result = HiddenItemCaptureResult.tally([(name: "Tailscale", hasImage: true)], kept: 3)
