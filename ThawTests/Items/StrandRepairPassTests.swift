@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
 import CoreGraphics
 import MenuBarModel
 import Testing
@@ -368,6 +369,11 @@ struct StrandRepairPassTests {
         _ = environment.displayWhereApplicationMenuWrapsPastNotch()
         // One rectangle per active display, each the size CoreGraphics gives that display.
         #expect(environment.displayBounds == Bridging.activeDisplayIDs().map { CGDisplayBounds($0) })
+        // The line above asks CoreGraphics the way the environment does, so AppKit is asked as well:
+        // its first screen is the one at the origin, whatever else is connected.
+        if let primary = NSScreen.screens.first {
+            #expect(environment.displayBounds.contains(CGRect(origin: .zero, size: primary.frame.size)))
+        }
         #expect(!environment.isHiddenBySystemPreferences(stranded))
         // The live position table belongs to the Mac running the tests, so it is not read here.
         environment.commitPreferredPositionWrite(controller: controller)
