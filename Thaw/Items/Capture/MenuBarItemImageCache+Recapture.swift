@@ -707,16 +707,9 @@ extension MenuBarItemImageCache {
                 }
                 continue
             }
-            if let cachedImage = capturesByTag[tag] {
-                let preferred = Self.preferredRevealedImage(existing: cachedImage, candidate: image, revealing: pair.requested, listedWidths: itemWidths)
-                if MenuBarItemGlyphCapture.isVisuallyEqual(preferred, cachedImage) {
-                    continue
-                }
-                setCapture(preferred, for: tag)
-            } else {
-                setCapture(image, for: tag)
+            if storeRevealedPicture(image, of: pair.requested, listedWidths: itemWidths) {
+                updateAccessOrder(for: tag)
             }
-            updateAccessOrder(for: tag)
         }
         return true
     }

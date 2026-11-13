@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import MenuBarModel
 
 extension MenuBarItemImageCache {
     /// How much shorter, in points, a revealed item's new glyph may be before it is taken
@@ -37,6 +38,30 @@ extension MenuBarItemImageCache {
         let existingHeight = inkPointHeight(of: existing)
         guard existingHeight > 0 else { return preferred }
         return inkPointHeight(of: candidate) < existingHeight * revealedInkHeightTolerance ? existing : candidate
+    }
+
+    /// Stores a revealed item's new picture unless preferredRevealedImage keeps the one cached for it.
+    /// The cached one is found whatever window ID it is filed under, since a picture loaded from disk
+    /// has none; a lookup by the revealed item's own tag missed it, and every new picture won,
+    /// including one cut off mid-slide. The picture kept is filed under the revealed item's tag.
+    /// - Returns: Whether the cache changed.
+    @discardableResult
+    func storeRevealedPicture(
+        _ picture: MenuBarItemGlyphCapture,
+        of item: MenuBarItem,
+        listedWidths: [MenuBarItemTag: CGFloat]
+    ) -> Bool {
+        guard let cached = Self.cachedCapture(for: item.tag, in: capturesByTag) else {
+            setCapture(picture, for: item.tag)
+            return true
+        }
+        let preferred = Self.preferredRevealedImage(existing: cached.capture, candidate: picture, revealing: item, listedWidths: listedWidths)
+        guard !MenuBarItemGlyphCapture.isVisuallyEqual(preferred, cached.capture) else { return false }
+        if cached.tag != item.tag {
+            removeCapture(for: cached.tag)
+        }
+        setCapture(preferred, for: item.tag)
+        return true
     }
 
     /// Whether candidate has the existing picture's crop width but, unlike it, ink running into the left
