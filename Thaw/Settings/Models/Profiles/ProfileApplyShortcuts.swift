@@ -24,9 +24,11 @@ nonisolated struct ProfileApplyShortcuts {
     /// uses it: one shortcut can only apply one profile. Returns whether it was set.
     @discardableResult
     func adopt(_ shortcut: Data?, for profileID: UUID) -> Bool {
-        guard let shortcut, !stored.values.contains(shortcut) else {
-            return false
-        }
+        guard let shortcut else { return false }
+        let combination = try? HotkeyBindingStore.combination(from: shortcut)
+        guard !stored.values.contains(where: {
+            $0 == shortcut || (combination != nil && (try? HotkeyBindingStore.combination(from: $0)) == combination)
+        }) else { return false }
         var updated = stored
         updated[profileID.uuidString] = shortcut
         defaults.set(updated, forKey: Defaults.Key.profileHotkeys.rawValue)
