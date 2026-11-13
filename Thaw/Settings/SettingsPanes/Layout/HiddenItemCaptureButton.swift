@@ -80,6 +80,9 @@ struct HiddenItemCaptureButton: View {
         guard let result else {
             return String(localized: "\(Constants.displayName) needs Screen Recording permission to capture items.")
         }
+        guard !result.barIsFull else {
+            return String(localized: "The menu bar is full on this display, so \(Constants.displayName) can't show your hidden items to take their pictures. Move some Visible items to Hidden, then try again.")
+        }
         let kept = result.kept > 0
             ? " " + String(localized: "Left \(result.kept) good pictures as they were. Option-click to retake them too.")
             : ""
