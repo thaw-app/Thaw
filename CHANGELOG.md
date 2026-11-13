@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- Search now uses updated item names on its next refresh after a rename or profile change, without waiting for the menu bar inventory to change.
+
 ## [3.0.0-alpha.14] - 2026-11-13
 
 **macOS 27 only · Build 125**

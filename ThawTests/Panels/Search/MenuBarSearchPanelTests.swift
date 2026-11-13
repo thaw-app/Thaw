@@ -83,6 +83,29 @@ struct MenuBarSearchPanelTests {
         #expect(alpha.customName == nil)
     }
 
+    /// Layout renames and profile changes update defaults without necessarily replacing the item cache.
+    @Test("Search refresh sees custom names changed elsewhere", arguments: [false, true])
+    func refreshSeesExternalNameChange(cleared: Bool) throws {
+        let world = World()
+        var alpha = World.item("Alpha")
+        alpha.customName = "Work meetings"
+        world.seat([alpha])
+        let panel = panel(world)
+        let inventory = world.appState.itemManager.itemCache
+        panel.model.refresh(from: inventory)
+        #expect(panel.model.candidates.first?.displayName == "Work meetings")
+
+        alpha.customName = cleared ? nil : "Music controls"
+        let expectedName = MenuBarItemDisplayName.displayName(for: alpha)
+        panel.model.searchText = expectedName
+        panel.model.refresh(from: inventory)
+
+        #expect(panel.model.candidates.first?.displayName == expectedName)
+        let result = try #require(panel.model.results.first)
+        #expect(result.id == MenuBarSearchModel.ItemID(alpha))
+        #expect(result.ownerName == MenuBarItemDisplayName.subtitle(for: alpha))
+    }
+
     @Test("Committing with no rename, or for an item that is gone, saves nothing")
     func commitRenameWithoutTarget() {
         let world = World()
