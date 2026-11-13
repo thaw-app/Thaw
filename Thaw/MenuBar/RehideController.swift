@@ -75,13 +75,14 @@ final class RehideController {
         startSectionRehide(section)
     }
 
-    /// Hiding any section closes every revealed section, so none may keep a countdown or pointer monitor.
-    func hidden(_: MenuBarSection.Name) {
-        for section in MenuBarSection.Name.allCases {
+    /// A closed presentation releases every section; an already-hidden section only releases itself.
+    func hidden(_ section: MenuBarSection.Name, closingPresentation: Bool = true) {
+        let sections = closingPresentation ? MenuBarSection.Name.allCases : [section]
+        for section in sections {
             sectionRehides[section]?.cancel()
             environment.stopPointerMonitor(section)
+            sectionRehides[section] = nil
         }
-        sectionRehides.removeAll()
     }
 
     func note(_ event: Event) {
@@ -168,7 +169,7 @@ final class RehideController {
         onOpenMenu: @escaping @MainActor () -> Void
     ) -> Task<Void, Never> {
         Task { [weak self] in
-            guard let self, await waitForContinuousEligibility(interval: interval) else { return }
+            guard let self, await waitForContinuousEligibility(interval: interval), !Task.isCancelled else { return }
             if environment.isPointerInActiveArea() {
                 startSectionRehide(section)
                 return
