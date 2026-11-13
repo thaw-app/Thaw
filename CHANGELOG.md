@@ -24,15 +24,7 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
-### Changed
-
-- **Thaw does less work while the menu bar sits idle.** Unless the menu bar's shape is drawn around the icons, Thaw no longer checks the position of its first visible icon twice a second.
-
-### Fixed
-
-- **The Split shape shrinks back sooner after hiding.** Once the hidden icons were gone, the shape around the icons could stay stretched for a second or two with nothing in it. It now shrinks as soon as the menu bar has settled.
-
-## [3.0.0-alpha.14] - 2026-11-12
+## [3.0.0-alpha.14] - 2026-11-13
 
 **macOS 27 only · Build 125**
 
@@ -75,6 +67,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **The experimental reorder editor is gone.**
 - **Zoom is off for now.** ⌘+, ⌘− and the Zoom menu are gone until a zoomed Settings window stops ignoring clicks. Reported in [#1244](https://github.com/thaw-app/Thaw/issues/1244) and [#1265](https://github.com/thaw-app/Thaw/issues/1265).
 - **What's New shows its Stable, Beta and Alpha tabs beside the title.**
+- **Thaw does less work while the menu bar sits idle.** Unless the menu bar's shape is drawn around the icons, Thaw no longer checks the position of its first visible icon twice a second.
 
 ### Fixed
 
@@ -184,6 +177,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Show Emoji & Symbols in Thaw's Input menu opens the viewer.** Reported by @Macador in [#1518](https://github.com/thaw-app/Thaw/issues/1518).
 - **What's New opens on the version you have installed,** not the newest release.
 - **Closing What's New or a Settings page no longer leaks a little memory each time.**
+- **The Split shape shrinks back sooner after hiding.** Once the hidden icons were gone, the shape around the icons could stay stretched for a second or two with nothing in it. It now shrinks as soon as the menu bar has settled.
 
 ### Thanks
 
