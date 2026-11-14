@@ -83,7 +83,6 @@ struct MenuBarSearchPanelTests {
         #expect(try #require(panel.model.renameSession).draft == savedName)
 
         panel.model.renameSession?.draft = "New name in progress"
-        // Consumed, or the field editor beeps at a ⌘E it has no command for.
         #expect(panel.handleKeyDown(event) == nil)
         let session = try #require(panel.model.renameSession)
         #expect(session.draft == "New name in progress")

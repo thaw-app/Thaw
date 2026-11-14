@@ -105,13 +105,13 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Opening a hidden item moves the pointer only when it has to,** and clicking an item is faster. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
 - **"Move items that don’t fit into Hidden" moves only the items that don't fit.** On a full menu bar it could move most of your Visible items to Hidden.
 - **Capture Hidden Items says when the menu bar is full,** instead of listing every hidden item as missing a picture.
-- **Turning off Automatically rehide stops hides that were already pending.** By @Belligerently in [#1575](https://github.com/thaw-app/Thaw/pull/1575).
+- **Turning off Automatically rehide also stops hides already on their way.** By @Belligerently in [#1575](https://github.com/thaw-app/Thaw/pull/1575).
 - **Closing hidden items stops every section's hide timer,** so an old countdown can't close items you reveal later. By @Belligerently in [#1571](https://github.com/thaw-app/Thaw/pull/1571).
-- **A click-away hide no longer closes items you reopen with a shortcut.**
+- **Items you reopen with a shortcut no longer close because of an earlier click elsewhere.**
 - **A cancelled click no longer opens the item or leaves the pointer on it.** By @Belligerently in [#1578](https://github.com/thaw-app/Thaw/pull/1578).
-- **Far fewer clicks on menu bar items are dropped while an app is frozen.** By @Belligerently in [#1580](https://github.com/thaw-app/Thaw/pull/1580).
+- **Thaw drops far fewer clicks on menu bar items while an app is frozen.** By @Belligerently in [#1580](https://github.com/thaw-app/Thaw/pull/1580).
 - **Thaw no longer crashes when two Apple items swap places while one is briefly unnamed.** By @Belligerently in [#1576](https://github.com/thaw-app/Thaw/pull/1576).
-- **Native hiding no longer moves visible items in among hidden ones after an app launches.** By @camguillory.
+- **Native hiding no longer mixes visible items in with hidden ones after an app launches.** By @camguillory.
 
 #### Thaw Bar
 
@@ -121,7 +121,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **The preview shows what the bar shows,** and each display uses its own hover and scroll setting.
 - **The Thaw Bar no longer resizes and repositions itself many times a second** while the pointer moves over it.
 - **The Thaw Bar settings stay available when only Always Hidden uses the bar,** and the preview shows that section. By @doublezz10 in [#1566](https://github.com/thaw-app/Thaw/pull/1566).
-- **The template has the switch for opening Always Hidden in the Thaw Bar,** like each display, and the preview names Always Hidden on a display that isn't connected.
+- **The template has the Open Always Hidden in the Thaw Bar switch,** as each display does.
 
 #### Spaces and profiles
 
@@ -160,7 +160,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Tab reaches the search buttons** after the last section, and Shift-Tab before the first.
 - **⌘E during a rename keeps the name you're typing,** without a beep. By @doublezz10 in [#1565](https://github.com/thaw-app/Thaw/pull/1565).
 - **Search shortcuts no longer act on an item when the key is meant for another window.** By @Belligerently in [#1570](https://github.com/thaw-app/Thaw/pull/1570).
-- **Search picks up renamed items at its next refresh.** By @Belligerently in [#1573](https://github.com/thaw-app/Thaw/pull/1573).
+- **Search shows an item's new name at its next refresh.** By @Belligerently in [#1573](https://github.com/thaw-app/Thaw/pull/1573).
 
 #### Settings
 

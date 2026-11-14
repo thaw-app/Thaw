@@ -191,7 +191,6 @@ struct RehideControllerTests {
         #expect(world.hiddenSectionHides == 0)
     }
 
-    /// A hotkey reveal doesn't cancel an outside-click hide, so closing must.
     @Test("Closing the presentation drops a pending outside-click hide")
     func closingDropsOutsideClickRehide() async {
         let world = RehideWorld()
