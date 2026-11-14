@@ -38,6 +38,7 @@ the items under New and Fixed.
 - Thaw no longer crashes when two Apple menu bar items swap places while one of them is briefly unnamed.
 - Turning Zen Mode off while sharing your screen or recording now keeps it off until that session ends, instead of turning it back on within seconds.
 - Reset all settings now also removes menu bar looks saved for individual Spaces.
+- Cancelling a click on a menu bar item, for example by closing the Thaw Bar at that moment, no longer opens the item or leaves the pointer on it.
 
 ## [3.0.0-alpha.14] - 2026-11-13
 

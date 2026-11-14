@@ -149,52 +149,44 @@ extension MenuBarItemManager {
             source: source
         )
 
-        // Warp the cursor to the click point so the Window Server's hit-test
-        // matches the event coordinates rather than the cursor's current position.
-        MouseHelpers.warpCursor(to: clickPoint)
-        // Small delay to let the Window Server process the warp before posting
-        // the event. Without this, the event can be routed using the cursor's
-        // old position (e.g. the Apple menu) instead of the warped target.
-        try await Task.sleep(for: .milliseconds(10))
-        MouseHelpers.hideCursor()
-        defer {
-            MouseHelpers.warpCursor(to: restoreLocation)
-            MouseHelpers.showCursor()
-        }
-
-        let eventStartTime = ContinuousClock.now
-        do {
-            try await postEventWithBarrier(
-                clickEvents.down,
-                to: item,
-                timeout: timeout
-            )
-            try await postEventWithBarrier(
-                clickEvents.up,
-                to: item,
-                timeout: timeout,
-                repeating: Self.clickMouseUpCount
-            )
-
-            let successDuration = eventStartTime.duration(to: .now)
-            updateClickOperationTimeout(successDuration, for: item)
-        } catch {
-            // However this failed, the owner may be sitting on a press that was
-            // never released, so send the release once more on the way out.
+        // Park the cursor on the click point and let the Window Server take the
+        // warp, or the event routes by the old position (e.g. the Apple menu).
+        let pointer = ClickPointer.live { await self.eventSleep(for: .milliseconds(10)) }
+        try await Self.withPointerParked(at: clickPoint, restoringTo: restoreLocation, pointer: pointer) {
+            let eventStartTime = ContinuousClock.now
             do {
-                MenuBarItemManager.diagLog.warning("Click events failed, posting fallback")
+                try await postEventWithBarrier(
+                    clickEvents.down,
+                    to: item,
+                    timeout: timeout
+                )
                 try await postEventWithBarrier(
                     clickEvents.up,
                     to: item,
                     timeout: timeout,
                     repeating: Self.clickMouseUpCount
                 )
+
+                let successDuration = eventStartTime.duration(to: .now)
+                updateClickOperationTimeout(successDuration, for: item)
             } catch {
-                // Logged and dropped on purpose: the caller needs to see what
-                // actually went wrong, not how the cleanup went.
-                MenuBarItemManager.diagLog.error("Fallback failed with error: \(error)")
+                // However this failed, the owner may be sitting on a press that was
+                // never released, so send the release once more on the way out.
+                do {
+                    MenuBarItemManager.diagLog.warning("Click events failed, posting fallback")
+                    try await postEventWithBarrier(
+                        clickEvents.up,
+                        to: item,
+                        timeout: timeout,
+                        repeating: Self.clickMouseUpCount
+                    )
+                } catch {
+                    // Logged and dropped on purpose: the caller needs to see what
+                    // actually went wrong, not how the cleanup went.
+                    MenuBarItemManager.diagLog.error("Fallback failed with error: \(error)")
+                }
+                throw error
             }
-            throw error
         }
     }
 
