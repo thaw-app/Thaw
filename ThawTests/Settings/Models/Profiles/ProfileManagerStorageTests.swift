@@ -286,6 +286,25 @@ struct ProfileManagerStorageTests {
         }
     }
 
+    @Test("A shortcut cleared after undoing a deletion stays cleared through redo and undo")
+    func clearedApplyShortcutStaysCleared() throws {
+        try ProfileTestDirectory.withManager(seeding: ["Deleted"]) { manager, _ in
+            let id = manager.profiles[0].id
+            let shortcut = try JSONEncoder().encode(KeyCombination(key: .a, modifiers: [.command, .option]))
+            let store = HotkeyBindingStore.profiles
+            store.setRawBindings([id.uuidString: shortcut])
+            let restore = try ProfileUndoStep.delete(id: id).apply(to: manager)
+            store.setRawBindings([:])
+            let redo = try restore.apply(to: manager)
+            store.setRawBindings([:])
+
+            let restoreAgain = try redo.apply(to: manager)
+            _ = try restoreAgain.apply(to: manager)
+
+            #expect(ProfileApplyShortcuts().shortcut(for: id) == nil)
+        }
+    }
+
     /// Rename and saved-content undo preserve their inverse operations across repeated edits.
     @Test("Profile undo round-trips renaming and replacing saved content")
     func undoRenameAndReplace() throws {

@@ -109,7 +109,9 @@ struct ThawBarPreviewFooter: View {
                 ? "Preview uses the current hidden section. Open the real \(Constants.displayName) Bar to use it."
                 : "Preview uses the current hidden section. The \(Constants.displayName) Bar is off on this display."
         }
-        return "Preview uses the current hidden section. The real \(Constants.displayName) Bar opens on a connected display."
+        return alwaysHiddenOnly
+            ? "Preview uses the current Always Hidden section. The real \(Constants.displayName) Bar opens on a connected display."
+            : "Preview uses the current hidden section. The real \(Constants.displayName) Bar opens on a connected display."
     }
 
     @ViewBuilder

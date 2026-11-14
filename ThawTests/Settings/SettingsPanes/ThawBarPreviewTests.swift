@@ -158,6 +158,15 @@ struct ThawBarPreviewTests {
         _ = try await drawn(gone)
         #expect(gone.texts().contains("Reconnect this display to open the \(Constants.displayName) Bar."))
         #expect(gone.elements().allSatisfy { OffscreenAccessibility.role(of: $0) != .button })
+
+        let alwaysOnly = render(
+            ThawBarPreviewFooter(useThawBar: false, displayID: Self.missingDisplay, alwaysHiddenOnly: true),
+            appState: world.appState
+        )
+        _ = try await drawn(alwaysOnly)
+        #expect(alwaysOnly.texts().contains(
+            "Preview uses the current Always Hidden section. The real \(Constants.displayName) Bar opens on a connected display."
+        ))
     }
 
     @Test("On a connected display the strip offers to open the bar, or to turn it on first")

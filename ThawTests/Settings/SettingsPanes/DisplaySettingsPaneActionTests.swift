@@ -553,4 +553,19 @@ struct DisplaySettingsPaneActionTests {
             #expect(!relaunch.contains("“"), "with no profile active there is no profile to choose")
         }
     }
+
+    @Test("The template offers the Always Hidden switch its Thaw Bar controls depend on")
+    func templateAlwaysHiddenSwitch() async throws {
+        try await withWorld { world in
+            let label = "Open Always Hidden in the \(Constants.displayName) Bar"
+            world.appState.settings.layout.enableAlwaysHiddenSection = true
+            world.settings.globalConfiguration = world.settings.globalConfiguration
+                .withUseThawBar(false)
+                .withUseThawBarForAlwaysHidden(true)
+            await showTab("Template for new displays", in: world)
+            await world.page.settle { has("Apply template to all displays", in: world.page) }
+
+            #expect(world.page.texts().contains(label))
+        }
+    }
 }

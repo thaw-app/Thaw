@@ -90,8 +90,11 @@ extension MenuBarSearchPanel {
         guard showsAResultRow else {
             return event
         }
-        if keyCode == .e, model.renameSession == nil {
-            beginRenamingSelection()
+        // Consumed during a rename too, or the field editor beeps at it.
+        if keyCode == .e {
+            if model.renameSession == nil {
+                beginRenamingSelection()
+            }
             return nil
         }
         // With no highlighted row these keys pass through.
