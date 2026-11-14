@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- Smart rehide no longer skips a click outside the menu bar while the Thaw icon has no window yet, so the revealed items go away after the click as set.
+
 ## [3.0.0-alpha.14] - 2026-11-14
 
 **macOS 27 only · Build 125**
