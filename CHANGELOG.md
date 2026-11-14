@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- A `thaw://apply-profile` link no longer applies a profile while Profiles is turned off.
+
 ## [3.0.0-alpha.14] - 2026-11-14
 
 **macOS 27 only · Build 125**

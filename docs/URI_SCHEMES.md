@@ -446,7 +446,7 @@ Responses use the `thaw://get` envelope plus an `operation` field. `data` always
 }
 ```
 
-`outcome` is `applied`, `appliedWithoutLayout` (settings applied, but the layout could not run), `profileUnavailable`, or `applyFailed`. The last two have `status` `error`.
+`outcome` is `applied`, `appliedWithoutLayout` (settings applied, but the layout could not run), `profileUnavailable`, `applyFailed`, or `profilesOff` (Profiles is turned off, so nothing is applied). The last three have `status` `error`.
 
 An error response puts a stable code in `error` and a readable explanation in `details`. Failed actions also keep `data`, so the outcome is in one place either way. Besides the outcomes above, the codes are `invalidRequest` (a missing `item-id` or `profile-id`) and `permissionMissing` (for `list-items`, in place of an empty list):
 
