@@ -37,6 +37,7 @@ the items under New and Fixed.
 - Undoing deletion of a profile now restores its apply shortcut, unless another profile has since claimed it.
 - Thaw no longer crashes when two Apple menu bar items swap places while one of them is briefly unnamed.
 - Turning Zen Mode off while sharing your screen or recording now keeps it off until that session ends, instead of turning it back on within seconds.
+- The CPU widget no longer crashes on a Mac that has been awake for about 248 days without a restart.
 
 ## [3.0.0-alpha.14] - 2026-11-13
 
