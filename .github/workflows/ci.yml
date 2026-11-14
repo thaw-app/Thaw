@@ -12,9 +12,7 @@ on:
     branches:
       - development
   # Weekly on development, where path detection reports everything as changed.
-  # A push runs the package tests only when it touches packages/, and the next
-  # merge usually cancels that run, so this is the run that is sure to finish:
-  # it tests the packages, and saves a compilation cache after a new Xcode image.
+  # Merges cancel most push runs, so this one tests the packages and saves the cache.
   schedule:
     # Offset from the hour and from the other scheduled workflows.
     - cron: "43 2 * * 3"
@@ -35,11 +33,8 @@ jobs:
       # The macOS build runs for a path that matches CODE_PATTERNS and neither of the
       # two lists below, so a path nobody has listed still builds.
       #
-      # Lint and format settings, and the scripts that only the lint job runs. Not
-      # here, because the build uses them: .swiftlint-version, scripts/lint.sh (the
-      # SwiftLint build phase) and scripts/install-swiftlint.sh. Not here either:
-      # sonar-project.properties, since Sonar scans a pull request only with the
-      # coverage of a build in the same run.
+      # Lint and format settings, and the scripts only the lint job runs. The build
+      # reads .swiftlint-version, lint.sh and install-swiftlint.sh, so they stay out.
       LINT_ONLY_PATTERNS: '(^\.swiftlint\.yml$|^\.swiftlint\.baseline$|^\.swiftformat|^scripts/(format|install-swiftformat|update-swiftlint-baseline)\.sh$|^scripts/swiftlint-baseline\.py$|^scripts/tests/test-(format|lint|swiftlint-baseline)\.sh$)'
       # String catalogs. The lint job checks that they are valid JSON, and nothing
       # compiles them before the merge. To build for them again, change this to '(^$)'.
@@ -68,9 +63,7 @@ jobs:
         with:
           patterns: ${{ env.PACKAGE_PATTERNS }}
       # The shared action matches one pattern and cannot leave paths out, so this
-      # compares the same range itself. Like the action, it answers "true" whenever
-      # it cannot tell: a manual or scheduled run, a push with no previous commit,
-      # a range that cannot be compared, or a pattern grep rejects.
+      # compares the same range itself, and answers true whenever it cannot tell.
       - name: Detect paths the build uses
         id: build-filter
         env:
@@ -105,10 +98,8 @@ jobs:
       # fixes the changelog would build and test again. When the files changed since
       # the previous push are not code, and CI passed on that push, nothing new needs
       # testing. The macOS build and the package tests are judged the same way, each
-      # against its own patterns, so a push that only updates the lint baseline or
-      # the translations lints again and does not rebuild. Anything it cannot
-      # confirm (a force push, a cancelled or failed run, an API error) keeps the
-      # full run.
+      # against its own patterns. Anything it cannot confirm (a force push, a
+      # cancelled or failed run, an API error) keeps the full run.
       - name: Skip what the last passing run already tested
         id: since-last-run
         if: github.event_name == 'pull_request' && github.event.action == 'synchronize' && (steps.filter.outputs.code == 'true' || steps.packages-filter.outputs.code == 'true')
@@ -128,7 +119,7 @@ jobs:
             packages_untouched=false
             grep -Eq "$CODE_PATTERNS" <<<"$changed" || code_untouched=true
             grep -Eq "$PACKAGE_PATTERNS" <<<"$changed" || packages_untouched=true
-            # Only a definite "no path matched" counts; a pattern grep rejects keeps the build.
+            # Only a definite no-match counts; a pattern that grep rejects keeps the build.
             status=0
             rest=$(grep -Ev -e "$LINT_ONLY_PATTERNS" -e "$CATALOG_PATTERNS" <<<"$changed") || status=$?
             if (( status <= 1 )); then
@@ -247,9 +238,8 @@ jobs:
           restore-keys: |
             spm-${{ runner.os }}-
 
-      # A new Xcode makes every cached entry miss, so its version and build number
-      # are part of the cache's name: "Xcode 27.1" and "Build version 18B5052e"
-      # become 27.1-18B5052e.
+      # A new Xcode makes every cached entry miss, so the cache's name carries its
+      # version and build number, as in 27.1-27A9275.
       - name: Identify Xcode
         id: xcode
         if: needs.changes.outputs.build == 'true'
@@ -263,21 +253,18 @@ jobs:
           echo "id=$id" >> "$GITHUB_OUTPUT"
 
       # Xcode's compilation cache. Only the package targets hit it; the app and its
-      # tests miss on every commit. So it's keyed on Xcode, the dependencies and the
-      # packages, and development saves a new one only when one of them changes.
-      # The lock file is named by its path: a pattern would also match the lock
-      # files in the SwiftPM checkouts restored above, which differ from run to run.
-      #
-      # A pull request falls back to the newest cache for this Xcode. Development
-      # restores only an exact match, so the cache it saves holds this build's
-      # entries and none carried over from older caches.
+      # tests miss on every commit. So its key is Xcode, the dependencies and packages.
       - name: Restore Swift compilation cache
         id: compilation-cache
         if: needs.changes.outputs.build == 'true'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: Build/CompilationCache.noindex
+          # The lock file is named by its path: a pattern would also match the lock
+          # files in the SwiftPM checkouts restored above.
           key: compilation-cache-${{ runner.os }}-xcode${{ steps.xcode.outputs.id }}-${{ hashFiles('Thaw.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'packages/**') }}
+          # Development restores only an exact match, so the cache it saves carries
+          # nothing over from older ones. A pull request falls back to the newest.
           restore-keys: ${{ github.ref != 'refs/heads/development' && format('compilation-cache-{0}-xcode{1}-', runner.os, steps.xcode.outputs.id) || '' }}
 
       # The Thaw target's lint build phase requires the pinned SwiftLint on PATH.
@@ -287,11 +274,8 @@ jobs:
           sh scripts/install-swiftlint.sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      # This step takes about 12 minutes with a warm cache and has taken 16; a cold
-      # build on development adds the packages. Hung tests have run it past 30,
-      # holding a macOS runner, and printed the names of the failed tests only at
-      # the end. The limit is on the step, not only the job, so the upload below
-      # still runs.
+      # About 12 minutes, 16 at most so far; hung tests have run it past 30. The limit
+      # is on the step, not only the job, so the upload below still runs.
       - name: Build and Test
         if: needs.changes.outputs.build == 'true'
         timeout-minutes: 22
@@ -306,8 +290,7 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      # The result bundle of a failed or timed-out run: what there is to tell which
-      # tests failed or never finished.
+      # A failed or timed-out run's logs name the tests that failed or never finished.
       - name: Upload test results
         if: failure() && needs.changes.outputs.build == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -317,9 +300,8 @@ jobs:
           retention-days: 3
           if-no-files-found: ignore
 
-      # Only development saves, and only when no cache has this key yet. Pull
-      # requests don't save: at about 1.4 GB each they would push development's
-      # caches out of the repository's limit.
+      # Only development saves, and only when no cache has this key yet. At about 1.4 GB
+      # each, pull request saves would push its caches out of the repository's limit.
       - name: Save Swift compilation cache
         if: needs.changes.outputs.build == 'true' && github.ref == 'refs/heads/development' && steps.compilation-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -327,10 +309,8 @@ jobs:
           path: Build/CompilationCache.noindex
           key: ${{ steps.compilation-cache.outputs.cache-primary-key }}
 
-      # Keeps the two newest for this Xcode, so the saves don't fill the cache
-      # limit. Caches for another Xcode are left alone, since a new image reaches
-      # the runners gradually; nothing restores them, so GitHub removes them after
-      # a week.
+      # Keeps the two newest for this Xcode, so the saves don't fill the cache limit.
+      # Another Xcode's caches are left alone; unused, GitHub removes them after a week.
       - name: Drop older compilation caches
         if: needs.changes.outputs.build == 'true' && github.ref == 'refs/heads/development' && steps.compilation-cache.outputs.cache-hit != 'true'
         env:
@@ -417,11 +397,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # code-changed tells the action whether this run built and uploaded coverage.
-      # With a build, it scans with this run's coverage. Without one, a push to
-      # development scans with the last cached report, or leaves the last analysis
-      # alone when there is none, and a pull request is not scanned: its last
-      # analysis stands, because no cached report is sure to match its code.
+      # Uses this run's coverage. With the build skipped, development scans the cached
+      # report and a pull request is not scanned, so sonar-project.properties still builds.
       - name: Scan with coverage
         if: env.SONAR_ENABLED == 'true'
         uses: thaw-app/org-ci/actions/sonar-scan@d57f5f99c6641bbe12e87a54898356000d94f904
