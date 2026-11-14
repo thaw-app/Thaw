@@ -44,6 +44,8 @@ extension DisplaySettingsPane {
             layout: displaySettings.binding(for: .template, \.thawBarLayout) { $0.withThawBarLayout($1) },
             gridColumns: displaySettings.binding(for: .template, \.gridColumns) { $0.withGridColumns($1) },
             itemScale: displaySettings.binding(for: .template, \.thawBarItemScale) { $0.withThawBarItemScale($1) },
+            useThawBarForAlwaysHidden: displaySettings.globalConfiguration.useThawBarForAlwaysHidden
+                && appState.settings.layout.isAlwaysHiddenSectionEnabled,
             context: .globalTemplate
         )
     }
