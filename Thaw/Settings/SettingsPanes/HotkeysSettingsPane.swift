@@ -18,8 +18,10 @@ struct HotkeysSettingsPane: View {
         let persistenceError = settings.lastPersistenceError
 
         // One tab per area, so a shortcut sits near its setting.
-        // Profiles has a tab only once a profile is saved.
-        let tabs = ShortcutsTab.allCases.filter { $0 != .profiles || !appState.profileManager.profiles.isEmpty }
+        let tabs = ShortcutsTab.offered(
+            hasProfiles: !appState.profileManager.profiles.isEmpty,
+            profilesOn: appState.profilesFeature.isOn
+        )
         ThawForm {
             SettingsPaneTabs(
                 selection: $tab,
@@ -312,6 +314,12 @@ enum ShortcutsTab: CaseIterable, @MainActor ThawTab {
     case layout
     case thawBar
     case profiles
+
+    /// The tabs the page shows. Profiles has one only while Profiles is on, since
+    /// its shortcuts aren't listened for while it is off, and once a profile is saved.
+    static func offered(hasProfiles: Bool, profilesOn: Bool) -> [ShortcutsTab] {
+        allCases.filter { $0 != .profiles || (hasProfiles && profilesOn) }
+    }
 
     /// The tab holding a search result's section.
     init?(section: String) {
