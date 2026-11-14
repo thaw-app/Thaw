@@ -26,6 +26,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- Turning off automatic rehide now prevents waiting timers, focus changes and outside clicks from hiding items afterward.
 - Closing hidden items now stops every section’s hide timer, so an older countdown cannot close items you reveal afterward.
 - Search now uses updated item names on its next refresh after a rename or profile change, without waiting for the menu bar inventory to change.
 - Search shortcuts no longer act on the selected menu bar item when a key belongs to another window or app.
