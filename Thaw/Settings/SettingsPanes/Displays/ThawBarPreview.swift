@@ -27,6 +27,8 @@ struct ThawBarPreview: View {
     let itemSpacingOffset: Double
     /// The Thaw Bar item size saved for the display being edited.
     let itemScale: Double
+    /// The per-display choice; it only takes effect while Always Hidden is enabled.
+    var useThawBarForAlwaysHidden = false
 
     private let maxBarHeight: CGFloat = 180
 
@@ -88,7 +90,7 @@ struct ThawBarPreview: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.base) {
-            if isAlwaysHiddenOn {
+            if isAlwaysHiddenOn, !alwaysHiddenOnly {
                 ThawPillPicker(
                     "Preview",
                     selection: $previewSection,
@@ -99,7 +101,7 @@ struct ThawBarPreview: View {
                 previewBar
             }
 
-            ThawBarPreviewFooter(useThawBar: useThawBar, displayID: displayID)
+            ThawBarPreviewFooter(useThawBar: useThawBar, displayID: displayID, alwaysHiddenOnly: alwaysHiddenOnly)
         }
         .task(id: previewScreen?.displayID) {
             guard let screen = previewScreen else { return }
@@ -260,9 +262,13 @@ struct ThawBarPreview: View {
         appState.settings.layout.isAlwaysHiddenSectionEnabled
     }
 
+    private var alwaysHiddenOnly: Bool {
+        !useThawBar && useThawBarForAlwaysHidden && isAlwaysHiddenOn
+    }
+
     /// The section shown, falling back to Hidden once Always Hidden is turned off.
     private var shownSection: MenuBarSection.Name {
-        isAlwaysHiddenOn ? previewSection : .hidden
+        alwaysHiddenOnly ? .alwaysHidden : (isAlwaysHiddenOn ? previewSection : .hidden)
     }
 
     private var previewItems: [MenuBarItem] {

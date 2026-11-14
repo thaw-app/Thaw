@@ -330,6 +330,7 @@ final class MenuBarSection {
             return
         }
 
+        menuBarManager.rehideController?.hidden(name, closingPresentation: !isHidden)
         if !isHidden {
             if menuBarManager.shouldAlwaysShowHiddenItems {
                 menuBarManager.synchronizeAlwaysShowHiddenItems(closingSections: true)
@@ -339,7 +340,6 @@ final class MenuBarSection {
             menuBarManager.thawBarPanel.close()
         }
         resetClosedPresentationState(using: menuBarManager)
-        menuBarManager.rehideController?.hidden(name)
     }
 
     private func resetClosedPresentationState(using menuBarManager: MenuBarManager) {

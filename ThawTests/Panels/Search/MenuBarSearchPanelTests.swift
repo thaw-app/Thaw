@@ -66,6 +66,33 @@ struct MenuBarSearchPanelTests {
         #expect(!session.targets(World.item("Beta")))
     }
 
+    @Test("Pressing Command-E again preserves the rename draft", arguments: ["", "My Alpha"])
+    func repeatedRenameShortcutPreservesDraft(savedName: String) throws {
+        let world = World()
+        var alpha = World.item("Alpha")
+        alpha.customName = savedName.isEmpty ? nil : savedName
+        world.seat([alpha])
+        let panel = panel(world)
+        panel.model.selection = MenuBarSearchModel.ItemID(alpha)
+
+        let event = try #require(NSEvent.keyEvent(
+            with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: panel.windowNumber,
+            context: nil, characters: "e", charactersIgnoringModifiers: "e", isARepeat: false, keyCode: UInt16(KeyCode.e.rawValue)
+        ))
+        #expect(panel.handleKeyDown(event) == nil)
+        #expect(try #require(panel.model.renameSession).draft == savedName)
+
+        panel.model.renameSession?.draft = "New name in progress"
+        _ = panel.handleKeyDown(event)
+        let session = try #require(panel.model.renameSession)
+        #expect(session.draft == "New name in progress")
+        #expect(session.targets(alpha))
+        #expect((alpha.customName ?? "") == savedName)
+
+        panel.commitRename()
+        #expect(alpha.customName == "New name in progress")
+    }
+
     @Test("Committing a rename saves the trimmed name, and an empty one removes it")
     func commitRenameSavesAndClears() {
         let world = World()
@@ -81,6 +108,29 @@ struct MenuBarSearchPanelTests {
         panel.model.renameSession = .init(tag: alpha.tag, windowID: alpha.windowID, draft: "   ")
         panel.commitRename()
         #expect(alpha.customName == nil)
+    }
+
+    /// Layout renames and profile changes update defaults without necessarily replacing the item cache.
+    @Test("Search refresh sees custom names changed elsewhere", arguments: [false, true])
+    func refreshSeesExternalNameChange(cleared: Bool) throws {
+        let world = World()
+        var alpha = World.item("Alpha")
+        alpha.customName = "Work meetings"
+        world.seat([alpha])
+        let panel = panel(world)
+        let inventory = world.appState.itemManager.itemCache
+        panel.model.refresh(from: inventory)
+        #expect(panel.model.candidates.first?.displayName == "Work meetings")
+
+        alpha.customName = cleared ? nil : "Music controls"
+        let expectedName = MenuBarItemDisplayName.displayName(for: alpha)
+        panel.model.searchText = expectedName
+        panel.model.refresh(from: inventory)
+
+        #expect(panel.model.candidates.first?.displayName == expectedName)
+        let result = try #require(panel.model.results.first)
+        #expect(result.id == MenuBarSearchModel.ItemID(alpha))
+        #expect(result.ownerName == MenuBarItemDisplayName.subtitle(for: alpha))
     }
 
     @Test("Committing with no rename, or for an item that is gone, saves nothing")
@@ -148,6 +198,35 @@ struct MenuBarSearchPanelTests {
         panel.moveSelection(toDestinationAt: 7)
         panel.presentItemActions()
         #expect(world.appState.layoutFeedback.refusal == nil)
+    }
+
+    /// Global events and another window's keys must not act on the search selection.
+    @Test("Search command shortcuts only handle their own window", arguments: [false, true])
+    func commandShortcutsStayInTheirWindow(otherWindow: Bool) throws {
+        let world = World()
+        let alpha = World.item("Alpha")
+        world.seat([alpha])
+        let panel = panel(world)
+        panel.model.selection = MenuBarSearchModel.ItemID(alpha)
+        let other = NSWindow(contentRect: .zero, styleMask: .borderless, backing: .buffered, defer: false)
+        other.isReleasedWhenClosed = false
+        defer { other.close() }
+
+        func renameKey(windowNumber: Int) throws -> NSEvent {
+            try #require(NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: windowNumber,
+                context: nil, characters: "e", charactersIgnoringModifiers: "e", isARepeat: false, keyCode: UInt16(KeyCode.e.rawValue)
+            ))
+        }
+
+        let unrelated = try renameKey(windowNumber: otherWindow ? other.windowNumber : 0)
+        #expect(unrelated.window !== panel)
+        #expect(MenuBarSearchPanel.monitoredKey(unrelated, panel: panel) === unrelated)
+        #expect(panel.model.renameSession == nil)
+
+        let own = try renameKey(windowNumber: panel.windowNumber)
+        #expect(MenuBarSearchPanel.monitoredKey(own, panel: panel) == nil)
+        #expect(panel.model.renameSession?.targets(alpha) == true)
     }
 
     @Test("Collapsed to the field alone, Return and the item shortcuts pass through")
