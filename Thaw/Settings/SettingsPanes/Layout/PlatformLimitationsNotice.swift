@@ -33,7 +33,7 @@ struct PlatformLimitationsNotice: View {
 }
 
 /// The list the info button opens.
-private struct PlatformLimitationsList: View {
+struct PlatformLimitationsList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.row) {
             VStack(alignment: .leading, spacing: ThawSpacing.tight) {
