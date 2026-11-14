@@ -299,19 +299,17 @@ extension MenuBarItemManager {
         // mark records that it drops synthetic events, which is the case this
         // path is most likely to succeed at.
         if pressFirst, mouseButton == .left, let reaction = await MenuBarItemDirectPresser.press(item: item) {
-            if reaction.didReact {
-                MenuBarItemManager.diagLog.debug(
-                    "Opened \(item.logString) without synthesizing events"
-                )
-                failureLedger.recordSuccess(for: item)
-                return reaction
-            }
             // Some owners accept the press and open nothing. Callers that
             // need a reaction post a real click; a second activation would re-toggle the rest.
-            guard requireObservedReaction else {
-                MenuBarItemManager.diagLog.debug(
-                    "Pressed \(item.logString) without synthesizing events; no reaction seen"
-                )
+            let outcome = ClickAttemptPolicy.pressOutcome(
+                didReact: reaction.didReact,
+                requireObservedReaction: requireObservedReaction
+            )
+            if outcome != .postRealClick {
+                MenuBarItemManager.diagLog.debug("Pressed \(item.logString) without synthesizing events: \(outcome)")
+                if outcome == .opened {
+                    failureLedger.recordSuccess(for: item)
+                }
                 return reaction
             }
             MenuBarItemManager.diagLog.debug(
@@ -324,11 +322,10 @@ extension MenuBarItemManager {
             appState.hidEventManager.startAll()
         }
 
-        // An owner already known to ignore synthetic events gets one attempt
-        // instead of three. Retrying it only repeats the cursor warp that the
-        // user sees as the item jittering, and the extra attempts have never
-        // been what makes such an owner answer.
-        let attemptBudget = failureLedger.isUnresponsive(item) ? 1 : max(1, maxAttempts)
+        let attemptBudget = ClickAttemptPolicy.attemptBudget(
+            ownerUnresponsive: failureLedger.isUnresponsive(item),
+            maxAttempts: maxAttempts
+        )
         let attemptStartTime = ContinuousClock.now
 
         for attempt in 1 ... attemptBudget {
@@ -361,17 +358,19 @@ extension MenuBarItemManager {
                 let attemptDuration = attemptStartTime.duration(to: .now)
                 MenuBarItemManager.diagLog.debug("Attempt \(attempt) failed after \(Int(attemptDuration.milliseconds))ms: \(error)")
 
-                guard attempt == attemptBudget else {
+                let next = ClickAttemptPolicy.afterFailure(
+                    attempt: attempt,
+                    budget: attemptBudget,
+                    failure: (error as? EventError)?.attemptFailure ?? .other
+                )
+                guard !next.retries else {
                     await eventSleep()
                     continue
                 }
-                guard let error = error as? EventError else {
-                    throw EventError.cannotComplete
-                }
-                if error.indicatesUnresponsiveOwner {
+                if next.recordsUnresponsiveOwner {
                     failureLedger.recordFailure(for: item, kind: .unresponsiveOwner)
                 }
-                throw error
+                throw next.reportsCannotComplete ? EventError.cannotComplete : error
             }
         }
 
