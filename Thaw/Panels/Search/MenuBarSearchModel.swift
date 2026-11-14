@@ -93,6 +93,10 @@ final class MenuBarSearchModel {
     @ObservationIgnored
     var candidates = [PaletteCandidate]()
 
+    /// The custom names the cached candidates were built with, independent of inventory turnover.
+    @ObservationIgnored
+    private var candidateCustomNames = [String: String]()
+
     /// Recently opened items, listed on top while nothing is typed.
     @ObservationIgnored
     let recents: MenuBarSearchRecents
@@ -110,8 +114,10 @@ final class MenuBarSearchModel {
     /// With nothing typed: recents, then each section's items in menu bar order.
     /// With a query: the ranked matches. The highlight stays while its row is listed.
     func refresh(from inventory: MenuBarItemCache, sections: [MenuBarSection.Name] = MenuBarSection.Name.allCases) {
-        if candidates.isEmpty {
+        let customNames = MenuBarItemDisplayName.customNames()
+        if candidates.isEmpty || customNames != candidateCustomNames {
             candidates = PaletteCandidate.inventory(from: inventory)
+            candidateCustomNames = customNames
         }
         let query = searchText.trimmingCharacters(in: .whitespaces)
         let fresh = if query.isEmpty {
