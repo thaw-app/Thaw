@@ -221,6 +221,58 @@ struct ProfileExportTests {
         #expect(changes.map(\.label) == ["Appearance", "Item names"])
     }
 
+    /// A stored display entry and the same inherited template produce the same live settings.
+    @Test("Profile preview ignores equivalent explicit and inherited display settings", arguments: [false, true])
+    func equivalentDisplaySettings(storedInProfile: Bool) throws {
+        let appState = AppState()
+        var profile = try Self.profile(named: "P")
+        let template = DisplayThawBarConfiguration.defaultConfiguration.withUseThawBar(true)
+        let display = appState.settings.displaySettings
+        display.globalConfiguration = template
+        profile.globalDisplayConfiguration = template
+        display.configurations = storedInProfile ? [:] : ["DISPLAY": template]
+        profile.displayConfigurations = storedInProfile ? ["DISPLAY": template] : [:]
+
+        let keys = ProfilePreviewChanges.settingChanges(of: profile, appState: appState).map(\.key)
+
+        #expect(!keys.contains("area.thawBarDisplays"))
+    }
+
+    /// Different templates need no display warning when the explicit entry keeps that display unchanged.
+    @Test("Profile preview compares each display using its own template")
+    func differentTemplatesKeepAnEquivalentDisplay() throws {
+        let appState = AppState()
+        var profile = try Self.profile(named: "P")
+        let current = DisplayThawBarConfiguration.defaultConfiguration.withUseThawBar(true)
+        appState.settings.displaySettings.globalConfiguration = current
+        appState.settings.displaySettings.configurations = [:]
+        profile.globalDisplayConfiguration = current.withUseThawBar(false)
+        profile.displayConfigurations = ["DISPLAY": current]
+
+        let keys = ProfilePreviewChanges.settingChanges(of: profile, appState: appState).map(\.key)
+
+        #expect(!keys.contains("area.thawBarDisplays"))
+        #expect(keys.contains("area.thawBarTemplate"))
+    }
+
+    /// Adding an override or removing one still warns when the display's effective value changes.
+    @Test("Profile preview reports changed display settings", arguments: [false, true])
+    func changedDisplaySettings(storedInProfile: Bool) throws {
+        let appState = AppState()
+        var profile = try Self.profile(named: "P")
+        let template = DisplayThawBarConfiguration.defaultConfiguration
+        let override = template.withItemSpacingOffset(4)
+        let display = appState.settings.displaySettings
+        display.globalConfiguration = template
+        profile.globalDisplayConfiguration = template
+        display.configurations = storedInProfile ? [:] : ["DISPLAY": override]
+        profile.displayConfigurations = storedInProfile ? ["DISPLAY": override] : [:]
+
+        let keys = ProfilePreviewChanges.settingChanges(of: profile, appState: appState).map(\.key)
+
+        #expect(keys.contains("area.thawBarDisplays"))
+    }
+
     @Test("The preview builds its list from the app's state: a part that differs from the profile is listed, one that matches is not")
     func settingChangesFollowTheApp() throws {
         let appState = AppState()

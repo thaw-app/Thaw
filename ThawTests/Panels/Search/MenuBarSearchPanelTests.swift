@@ -66,6 +66,33 @@ struct MenuBarSearchPanelTests {
         #expect(!session.targets(World.item("Beta")))
     }
 
+    @Test("Pressing Command-E again preserves the rename draft", arguments: ["", "My Alpha"])
+    func repeatedRenameShortcutPreservesDraft(savedName: String) throws {
+        let world = World()
+        var alpha = World.item("Alpha")
+        alpha.customName = savedName.isEmpty ? nil : savedName
+        world.seat([alpha])
+        let panel = panel(world)
+        panel.model.selection = MenuBarSearchModel.ItemID(alpha)
+
+        let event = try #require(NSEvent.keyEvent(
+            with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: panel.windowNumber,
+            context: nil, characters: "e", charactersIgnoringModifiers: "e", isARepeat: false, keyCode: UInt16(KeyCode.e.rawValue)
+        ))
+        #expect(panel.handleKeyDown(event) == nil)
+        #expect(try #require(panel.model.renameSession).draft == savedName)
+
+        panel.model.renameSession?.draft = "New name in progress"
+        _ = panel.handleKeyDown(event)
+        let session = try #require(panel.model.renameSession)
+        #expect(session.draft == "New name in progress")
+        #expect(session.targets(alpha))
+        #expect((alpha.customName ?? "") == savedName)
+
+        panel.commitRename()
+        #expect(alpha.customName == "New name in progress")
+    }
+
     @Test("Committing a rename saves the trimmed name, and an empty one removes it")
     func commitRenameSavesAndClears() {
         let world = World()

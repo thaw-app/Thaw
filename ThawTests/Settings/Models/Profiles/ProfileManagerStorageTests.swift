@@ -10,6 +10,7 @@ import MenuBarModel
 import Testing
 @testable import Thaw
 import ThawModuleKit
+import ThawUI
 
 /// Saving, editing and exporting profiles on disk. Profiles live in a throwaway
 /// directory and settings in a throwaway suite, and nothing here applies a profile.
@@ -233,6 +234,74 @@ struct ProfileManagerStorageTests {
             #expect(imported.associatedDisplayUUID == "DISPLAY-2", "the import takes the display")
             #expect(manager.profiles.first?.associatedDisplayUUID == nil, "the original gives it up")
             #expect(try Self.manifest(in: tmp).count == 2)
+        }
+    }
+
+    /// Undo restores the shortcut saved before deletion, unless another profile has claimed it.
+    @Test("Restoring a deleted profile preserves its shortcut without stealing one", arguments: [false, true])
+    func undoRestoresApplyShortcut(claimed: Bool) throws {
+        try ProfileTestDirectory.withManager(seeding: ["Deleted", "Other"]) { manager, _ in
+            let deleted = manager.profiles[0].id
+            let other = manager.profiles[1].id
+            let combination = KeyCombination(key: .a, modifiers: [.command, .option])
+            let shortcut = try JSONEncoder().encode(combination)
+            let store = HotkeyBindingStore.profiles
+            store.setRawBindings([deleted.uuidString: shortcut])
+            let restore = try ProfileUndoStep.delete(id: deleted).apply(to: manager)
+            // Live hotkey rebuilding drops deleted IDs. Model that cleanup without registering global shortcuts.
+            store.setRawBindings(claimed ? [other.uuidString: shortcut] : [:])
+
+            let redo = try restore.apply(to: manager)
+
+            #expect(ProfileApplyShortcuts().shortcut(for: deleted) == (claimed ? nil : shortcut))
+            #expect(ProfileApplyShortcuts().shortcut(for: other) == (claimed ? shortcut : nil))
+            #expect(manager.profiles.contains { $0.id == deleted })
+            let restoreAgain = try redo.apply(to: manager)
+            store.setRawBindings([:])
+            _ = try restoreAgain.apply(to: manager)
+            #expect(ProfileApplyShortcuts().shortcut(for: deleted) == shortcut)
+            #expect(try HotkeyBindingStore.combination(from: shortcut) == combination)
+        }
+    }
+
+    /// Redo captures a newly assigned shortcut rather than reverting to the original snapshot.
+    @Test("Profile deletion redo prefers the current apply shortcut")
+    func redoPreservesUpdatedApplyShortcut() throws {
+        try ProfileTestDirectory.withManager(seeding: ["Deleted"]) { manager, _ in
+            let id = manager.profiles[0].id
+            let original = try JSONEncoder().encode(KeyCombination(key: .a, modifiers: [.command, .option]))
+            let updated = try JSONEncoder().encode(KeyCombination(key: .b, modifiers: [.command, .option]))
+            let store = HotkeyBindingStore.profiles
+            store.setRawBindings([id.uuidString: original])
+            let restore = try ProfileUndoStep.delete(id: id).apply(to: manager)
+            store.setRawBindings([:])
+            let redo = try restore.apply(to: manager)
+            store.setRawBindings([id.uuidString: updated])
+
+            let restoreAgain = try redo.apply(to: manager)
+            store.setRawBindings([:])
+            _ = try restoreAgain.apply(to: manager)
+
+            #expect(ProfileApplyShortcuts().shortcut(for: id) == updated)
+        }
+    }
+
+    /// Rename and saved-content undo preserve their inverse operations across repeated edits.
+    @Test("Profile undo round-trips renaming and replacing saved content")
+    func undoRenameAndReplace() throws {
+        try ProfileTestDirectory.withManager(seeding: ["Original"]) { manager, _ in
+            let id = manager.profiles[0].id
+            let undoRename = try ProfileUndoStep.rename(id: id, to: "Renamed").apply(to: manager)
+            #expect(manager.profiles[0].name == "Renamed")
+            _ = try undoRename.apply(to: manager)
+            #expect(manager.profiles[0].name == "Original")
+            let original = try manager.loadProfile(id: id)
+            var updated = original
+            updated.generalSettings.showOnHover.toggle()
+            let undoReplace = try ProfileUndoStep.replace([updated]).apply(to: manager)
+            #expect(try manager.loadProfile(id: id).generalSettings.showOnHover == updated.generalSettings.showOnHover)
+            _ = try undoReplace.apply(to: manager)
+            #expect(try manager.loadProfile(id: id).generalSettings.showOnHover == original.generalSettings.showOnHover)
         }
     }
 

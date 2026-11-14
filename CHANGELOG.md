@@ -27,6 +27,11 @@ the items under New and Fixed.
 ### Fixed
 
 - Search shortcuts no longer act on the selected menu bar item when a key belongs to another window or app.
+- Profile previews no longer report display changes when a saved configuration matches the display’s inherited template.
+- Pressing ⌘E again while renaming a search result no longer discards the name being typed.
+- The Thaw Bar settings stay available when only Always Hidden uses the bar, and its preview shows and opens that section.
+- Importing profiles no longer assigns the same shortcut twice when its saved JSON uses different formatting.
+- Undoing deletion of a profile now restores its apply shortcut, unless another profile has since claimed it.
 
 ## [3.0.0-alpha.14] - 2026-11-13
 
