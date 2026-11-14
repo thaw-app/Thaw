@@ -671,6 +671,12 @@ private final class MenuBarOverlayPanelContentView: NSView {
     /// The last live edge reported by the edge watcher, and when.
     private var leadingEdgeSeen: (sample: MenuBarLeadingEdgeSample, at: ContinuousClock.Instant)?
 
+    /// Follows the live edge only while the shape is drawn around the items, the one use of the reading.
+    private lazy var edgeFollow = LeadingEdgeFollow { [weak self] edge in
+        self?.leadingEdgeSeen = (edge, .now)
+        self?.followLeadingEdge(to: edge)
+    }
+
     private lazy var geometryRefresh = MenuBarGeometryRefresh(
         read: { [weak self] minimumReadTime in
             await self?.readAXItemBounds(notBefore: minimumReadTime)
@@ -724,7 +730,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         if let overlayPanel {
             if let appState = overlayPanel.appState {
                 // Observe effective and preview configuration together; effectiveConfiguration also covers Space overrides.
-                let task = Task { @MainActor [weak self, appearanceManager = appState.appearanceManager] in
+                let task = Task { @MainActor [weak self, appearanceManager = appState.appearanceManager, edgeWatcher = appState.menuBarManager.leadingEdgeWatcher] in
                     let changes = Observations {
                         (appearanceManager.effectiveConfiguration, appearanceManager.previewConfiguration)
                     }
@@ -735,6 +741,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                             fullConfiguration = full
                             // Start, or stop, reading the items when the shape starts or stops needing them.
                             if full.shapeKind.followsItems != followedItems {
+                                edgeFollow.update(edgeWatcher, wanted: full.shapeKind.followsItems)
                                 scheduleAXItemBoundsRefresh(.immediate)
                             }
                         }
@@ -808,17 +815,6 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 AnyCancellable { cacheTask.cancel() }
                     .store(in: &subscriptions)
 
-                // The direct edge watcher avoids cache-walk delays after external changes.
-                let edgeTask = Task { @MainActor [weak self, watcher = appState.menuBarManager.leadingEdgeWatcher] in
-                    for await edge in Observations({ watcher.leadingEdge }) {
-                        guard let self, let edge else { continue }
-                        leadingEdgeSeen = (edge, .now)
-                        followLeadingEdge(to: edge)
-                    }
-                }
-                AnyCancellable { edgeTask.cancel() }
-                    .store(in: &subscriptions)
-
                 appState.menuBarManager.revealedSectionChanges
                     .receive(on: DispatchQueue.main)
                     .sink { [weak self] revealed in
@@ -854,6 +850,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
             .store(in: &subscriptions)
 
         cancellables = subscriptions
+        edgeFollow.update(overlayPanel?.appState?.menuBarManager.leadingEdgeWatcher, wanted: fullConfiguration.shapeKind.followsItems)
 
         // Populate before the first draw.
         scheduleAXItemBoundsRefresh(.immediate)

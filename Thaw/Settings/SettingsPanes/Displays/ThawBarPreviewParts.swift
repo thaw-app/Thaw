@@ -78,6 +78,12 @@ struct ThawBarPreviewFooter: View {
     @Environment(AppState.self) private var appState
     let useThawBar: Bool
     let displayID: CGDirectDisplayID?
+    var alwaysHiddenOnly = false
+
+    /// The preview button opens the section that uses the bar without enabling Hidden.
+    var sectionToOpen: MenuBarSection.Name {
+        alwaysHiddenOnly ? .alwaysHidden : .hidden
+    }
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: ThawSpacing.inset) {
@@ -96,6 +102,9 @@ struct ThawBarPreviewFooter: View {
 
     private var captionText: LocalizedStringKey {
         if let displayID, displayIsConnected(displayID) {
+            if alwaysHiddenOnly {
+                return "Preview uses the current Always Hidden section. Open the real \(Constants.displayName) Bar to use it."
+            }
             return useThawBar
                 ? "Preview uses the current hidden section. Open the real \(Constants.displayName) Bar to use it."
                 : "Preview uses the current hidden section. The \(Constants.displayName) Bar is off on this display."
@@ -106,7 +115,7 @@ struct ThawBarPreviewFooter: View {
     @ViewBuilder
     private var openControl: some View {
         if let displayID, displayIsConnected(displayID) {
-            if useThawBar {
+            if useThawBar || alwaysHiddenOnly {
                 Button("Open \(Constants.displayName) Bar") {
                     openThawBar(on: displayID)
                 }
@@ -134,7 +143,7 @@ struct ThawBarPreviewFooter: View {
         guard let screen = NSScreen.screen(for: displayID) else {
             return
         }
-        appState.menuBarManager.thawBarPanel.show(section: .hidden, on: screen)
+        appState.menuBarManager.thawBarPanel.show(section: sectionToOpen, on: screen)
     }
 
     /// Enables the Thaw Bar on the display, then opens it. Mirrors what the

@@ -87,6 +87,7 @@ struct DisplaySpatialSelectorTests {
     func noPickerWithoutSavedDisplays() async throws {
         let page = render([], selection: Selection())
         await drawn(page)
+        #expect(!page.elements(role: .button, label: "Identify").isEmpty, "the selector is drawn")
         #expect(page.elements(role: .popUpButton, label: "Not connected").isEmpty)
     }
 
@@ -96,24 +97,63 @@ struct DisplaySpatialSelectorTests {
         let settings = DisplaySettingsManager()
         let connected = settings.connectedDisplays()
         try #require(!connected.isEmpty)
-        let selection = Selection(connected[0].id)
+        // Nothing is selected to begin with, so a press that did nothing cannot pass on a Mac with one display.
+        let selection = Selection()
         let numbers = DisplayIdentifyOverlay.displayNumbers()
         let page = render(connected + [Self.studio], selection: selection)
         await drawn(page)
-
-        for display in connected {
-            let button = try #require(page.elements(role: .button, label: display.name).first)
-            let value = OffscreenAccessibility.string("accessibilityValue", of: button) ?? ""
-            let number = try #require(display.displayID.flatMap { numbers[$0] })
-            #expect(value.contains("Display \(number)"), "\(display.name) says its number")
-            #expect(value.contains("Notch") == display.hasNotch)
-        }
         let identify = try #require(page.elements(role: .button, label: "Identify").first)
         #expect(isEnabled(identify))
 
-        let last = try #require(connected.last)
-        try page.press(last.name)
-        #expect(selection.id == last.id, "pressing a thumbnail selects that display")
+        for display in connected {
+            // Two displays can share a name, so the thumbnail is found by its number too.
+            let number = try #require(display.displayID.flatMap { numbers[$0] })
+            let button = try #require(page.elements(role: .button, label: display.name).first {
+                OffscreenAccessibility.string("accessibilityValue", of: $0)?.hasSuffix("Display \(number)") == true
+            }, "\(display.name) says its number")
+            let value = OffscreenAccessibility.string("accessibilityValue", of: button) ?? ""
+            #expect(value.contains("Notch") == display.hasNotch)
+
+            OffscreenAccessibility.press(button)
+            #expect(selection.id == display.id, "pressing a thumbnail selects that display")
+        }
+    }
+}
+
+/// The arrangement's geometry on made-up desks, so it is checked on a Mac with one display or none.
+@Suite("Display thumbnail layout")
+struct DisplayThumbnailLayoutTests {
+    private typealias Placement = DisplayThumbnailLayout.Placement
+
+    /// A wide display with its lower left corner at the origin, and a square one to its right that sits higher.
+    private static let desk = [
+        (id: "wide", frame: CGRect(x: 0, y: 0, width: 2000, height: 1000)),
+        (id: "square", frame: CGRect(x: 2000, y: 500, width: 1000, height: 1000)),
+    ]
+
+    @Test("Displays keep their places and relative sizes, with the higher one drawn nearer the top")
+    func fitsTheHeight() {
+        let layout = DisplayThumbnailLayout.placements(for: Self.desk, canvasHeight: 60, maxWidth: 1000)
+        #expect(layout.size == CGSize(width: 120, height: 60))
+        #expect(layout.placements == [
+            Placement(id: "wide", rect: CGRect(x: 0, y: 20, width: 80, height: 40)),
+            Placement(id: "square", rect: CGRect(x: 80, y: 0, width: 40, height: 40)),
+        ])
+    }
+
+    @Test("A desk too wide for the pane shrinks to its width, and a display left of the main one starts at the edge")
+    func fitsTheWidth() {
+        let desk = Self.desk.map { (id: $0.id, frame: $0.frame.offsetBy(dx: -2000, dy: 0)) }
+        let layout = DisplayThumbnailLayout.placements(for: desk, canvasHeight: 60, maxWidth: 60)
+        #expect(layout.size == CGSize(width: 60, height: 30))
+        #expect(layout.placements.map(\.rect.minX) == [0, 40])
+    }
+
+    @Test("No displays, or displays with no area, draw nothing")
+    func emptyDesk() {
+        #expect(DisplayThumbnailLayout.placements(for: [], canvasHeight: 60, maxWidth: 60).size == .zero)
+        let flat = DisplayThumbnailLayout.placements(for: [(id: "flat", frame: .zero)], canvasHeight: 60, maxWidth: 60)
+        #expect(flat.placements.isEmpty && flat.size == .zero)
     }
 }
 

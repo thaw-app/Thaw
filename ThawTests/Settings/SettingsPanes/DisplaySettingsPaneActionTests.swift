@@ -14,8 +14,8 @@ import ThawUI
 /// The Displays page drawn off screen and worked through its own controls, against an AppState
 /// that is never started, profiles in a throwaway folder and one saved display that is not
 /// connected. Nothing here opens an alert, a panel or a menu: the pages' own alerts only show in
-/// a visible window, so what they would ask is checked through the page's confirmation messages
-/// and through the write-only path, which saves without asking.
+/// a visible window, so the tests that reach a confirmation answer it through the page's
+/// Confirmations, which runs what the alert's button would.
 @MainActor
 @Suite("Displays page actions", .serialized, .scratchDefaults)
 struct DisplaySettingsPaneActionTests {
@@ -34,11 +34,33 @@ struct DisplaySettingsPaneActionTests {
         let page: Page
     }
 
+    /// What the page asked, and the answer the test gives next.
+    @MainActor
+    private final class Answers {
+        var choice = DisplaySettingsPane.ConfirmationChoice.cancel
+        var spacing: [DisplaySettingsPane.PendingSpacingApply] = []
+        var template: [DisplaySettingsPane.PendingGlobalApply] = []
+
+        var confirmations: DisplaySettingsPane.Confirmations {
+            .init(
+                spacing: {
+                    self.spacing.append($0)
+                    return self.choice
+                },
+                template: {
+                    self.template.append($0)
+                    return self.choice
+                }
+            )
+        }
+    }
+
     /// Draws the page over a folder seeded with the named profiles, the first of them active, and
     /// waits for it to show. Spacing is only ever written, so nothing a test does can restart an app.
     private func withWorld(
         profiles names: [String] = [],
         studioOffset: Double = 4,
+        confirmations: DisplaySettingsPane.Confirmations = .init(),
         _ body: (World) async throws -> Void
     ) async throws {
         let directory = try ProfileTestDirectory.make(seeding: names)
@@ -54,7 +76,7 @@ struct DisplaySettingsPaneActionTests {
             .withItemSpacingOffset(studioOffset)
         let page = OffscreenRender(
             AnyView(
-                DisplaySettingsPane(displaySettings: settings, selectedDisplayID: Self.studio)
+                DisplaySettingsPane(displaySettings: settings, confirmations: confirmations, selectedDisplayID: Self.studio)
                     .environment(appState)
                     .environment(\.settingsPaneTitle, nil)
                     .frame(width: Self.size.width, height: Self.size.height)
@@ -95,9 +117,32 @@ struct DisplaySettingsPaneActionTests {
         world.settings.configuration(forUUID: Self.studio).itemSpacingOffset
     }
 
-    private func profileOffset(_ name: String, in world: World) throws -> Double? {
+    private func profile(_ name: String, in world: World) throws -> Profile {
         let meta = try #require(world.manager.profiles.first { $0.name == name })
-        return try world.manager.loadProfile(id: meta.id).displayConfigurations[Self.studio]?.itemSpacingOffset
+        return try world.manager.loadProfile(id: meta.id)
+    }
+
+    private func profileOffset(_ name: String, in world: World) throws -> Double? {
+        try profile(name, in: world).displayConfigurations[Self.studio]?.itemSpacingOffset
+    }
+
+    /// Makes a spacing change ask first, as the app does until told otherwise. The app state was
+    /// never started, so the spacing still reaches no other app.
+    private func askFirst(_ world: World) {
+        world.settings.spacingApplyMode = .relaunchApps
+        world.settings.confirmSpacingRelaunch = true
+    }
+
+    /// Moves the spacing slider one step and presses Apply.
+    private func applyOneStep(_ page: Page) async throws {
+        increment(try #require(sliders(in: page).first))
+        await page.settle { has("Apply", in: page) }
+        try page.press("Apply")
+    }
+
+    private func removeActiveProfileFile(_ world: World) throws {
+        let id = try #require(world.manager.activeProfileID)
+        try FileManager.default.removeItem(at: world.directory.appendingPathComponent("\(id.uuidString).json"))
     }
 
     @Test("A saved display that is not connected shows its name, badges and the buttons for it")
@@ -228,15 +273,139 @@ struct DisplaySettingsPaneActionTests {
     @Test("A spacing that cannot be saved to the profile goes back to the value it had")
     func spacingRollsBack() async throws {
         try await withWorld(profiles: ["Work"]) { world in
-            let id = try #require(world.manager.activeProfileID)
-            try FileManager.default.removeItem(at: world.directory.appendingPathComponent("\(id.uuidString).json"))
+            try removeActiveProfileFile(world)
             let page = world.page
-            increment(try #require(sliders(in: page).first))
-            await page.settle { has("Apply", in: page) }
-            try page.press("Apply")
+            try await applyOneStep(page)
             await page.settle { OffscreenAccessibility.label(of: sliders(in: page)[0]) == "4" && !has("Apply", in: page) }
             #expect(savedOffset(world) == 4, "the unsaved spacing is rolled back")
             #expect(OffscreenAccessibility.label(of: try #require(sliders(in: page).first)) == "4")
+        }
+    }
+
+    @Test("Asked about a spacing change, Cancel drops the draft and each answer saves where it says")
+    func spacingAnswers() async throws {
+        let answers = Answers()
+        try await withWorld(profiles: ["Work", "Home"], confirmations: answers.confirmations) { world in
+            let page = world.page
+            askFirst(world)
+            try await applyOneStep(page)
+            let work = try #require(world.manager.profiles.first { $0.name == "Work" })
+            let asked = DisplaySettingsPane.PendingSpacingApply(
+                displayID: Self.studio, displayName: "Studio", offset: 6, isActiveDisplay: false,
+                activeProfileID: work.id, activeProfileName: "Work"
+            )
+            #expect(answers.spacing == [asked], "the page asks once, about this display, spacing and profile")
+            await page.settle { !has("Apply", in: page) }
+            #expect(OffscreenAccessibility.label(of: try #require(sliders(in: page).first)) == "4", "Cancel puts the slider back")
+            #expect(savedOffset(world) == 4)
+            #expect(try profileOffset("Work", in: world) == nil, "and saves nothing")
+
+            answers.choice = .updateActiveProfile
+            try await applyOneStep(page)
+            #expect(savedOffset(world) == 6)
+            #expect(try profileOffset("Work", in: world) == 6, "the active profile keeps the spacing")
+            #expect(try profileOffset("Home", in: world) == nil, "the other profile is left alone")
+
+            answers.choice = .updateAllProfiles
+            try await applyOneStep(page)
+            #expect(savedOffset(world) == 8)
+            #expect(try profileOffset("Work", in: world) == 8)
+            #expect(try profileOffset("Home", in: world) == 8, "every profile keeps it")
+            #expect(answers.spacing.count == 3)
+        }
+    }
+
+    @Test(
+        "An answered spacing change that cannot be saved to the profile goes back to the value it had",
+        arguments: [DisplaySettingsPane.ConfirmationChoice.updateActiveProfile, .updateAllProfiles]
+    )
+    func answeredSpacingRollsBack(choice: DisplaySettingsPane.ConfirmationChoice) async throws {
+        let answers = Answers()
+        answers.choice = choice
+        try await withWorld(profiles: ["Work"], confirmations: answers.confirmations) { world in
+            askFirst(world)
+            try removeActiveProfileFile(world)
+            try await applyOneStep(world.page)
+            #expect(answers.spacing.count == 1)
+            #expect(savedOffset(world) == 4, "the unsaved spacing is rolled back")
+            await world.page.settle { !has("Apply", in: world.page) }
+            #expect(OffscreenAccessibility.label(of: try #require(sliders(in: world.page).first)) == "4")
+        }
+    }
+
+    @Test("Apply to all displays asks first: Cancel changes nothing, and Apply copies the template onto every display")
+    func templateApplyWithoutProfile() async throws {
+        let answers = Answers()
+        try await withWorld(confirmations: answers.confirmations) { world in
+            let page = world.page
+            let apply = "Apply template to all displays"
+            let before = world.settings.configurations
+            await showTab("Template for new displays", in: world)
+            await page.settle { has(apply, in: page) }
+
+            try page.press(apply)
+            let asked = DisplaySettingsPane.PendingGlobalApply(
+                displayCount: world.settings.displays.count, activeProfileID: nil, activeProfileName: nil
+            )
+            #expect(answers.template == [asked], "it asks even in write-only mode, with no profile to choose")
+            #expect(world.settings.configurations == before, "Cancel leaves every display as it was")
+
+            answers.choice = .apply
+            try page.press(apply)
+            let template = world.settings.globalConfiguration
+            #expect(world.settings.configuration(forUUID: Self.studio) == template)
+            #expect(world.settings.displays.allSatisfy { world.settings.configurations[$0.id] == template })
+            await page.settle { !isEnabled(page.elements(role: .button, label: apply)[0]) }
+            #expect(!isEnabled(try #require(page.elements(role: .button, label: apply).first)), "nothing is left to copy")
+        }
+    }
+
+    @Test("With a profile active, an applied template is saved to that profile only, or to every profile")
+    func templateApplySavesToProfiles() async throws {
+        let answers = Answers()
+        try await withWorld(profiles: ["Work", "Home"], confirmations: answers.confirmations) { world in
+            let page = world.page
+            let apply = "Apply template to all displays"
+            let first = DisplayThawBarConfiguration.defaultConfiguration.withItemSpacingOffset(2).withGridColumns(5)
+            world.settings.globalConfiguration = first
+            await showTab("Template for new displays", in: world)
+            await page.settle { has(apply, in: page) }
+
+            answers.choice = .updateActiveProfile
+            try page.press(apply)
+            #expect(answers.template.last?.activeProfileName == "Work")
+            #expect(world.settings.configuration(forUUID: Self.studio) == first)
+            #expect(try profile("Work", in: world).displayConfigurations[Self.studio] == first, "the active profile keeps the copy")
+            #expect(try profile("Home", in: world).globalDisplayConfiguration != first, "the other profile is left alone")
+
+            let second = first.withItemSpacingOffset(-2)
+            world.settings.globalConfiguration = second
+            await page.settle { isEnabled(page.elements(role: .button, label: apply)[0]) }
+            answers.choice = .updateAllProfiles
+            try page.press(apply)
+            #expect(world.settings.configuration(forUUID: Self.studio) == second)
+            #expect(try profile("Work", in: world).displayConfigurations[Self.studio] == second)
+            #expect(try profile("Home", in: world).globalDisplayConfiguration == second, "every profile takes the template")
+        }
+    }
+
+    @Test(
+        "An applied template that cannot be saved to the profile leaves every display as it was",
+        arguments: [DisplaySettingsPane.ConfirmationChoice.updateActiveProfile, .updateAllProfiles]
+    )
+    func templateApplyRollsBack(choice: DisplaySettingsPane.ConfirmationChoice) async throws {
+        let answers = Answers()
+        answers.choice = choice
+        try await withWorld(profiles: ["Work"], confirmations: answers.confirmations) { world in
+            let apply = "Apply template to all displays"
+            let before = world.settings.configurations
+            try removeActiveProfileFile(world)
+            await showTab("Template for new displays", in: world)
+            await world.page.settle { has(apply, in: world.page) }
+            try world.page.press(apply)
+            #expect(answers.template.count == 1)
+            #expect(world.settings.configurations == before, "the copy is rolled back")
+            #expect(world.settings.configuration(forUUID: Self.studio).itemSpacingOffset == 4)
         }
     }
 
