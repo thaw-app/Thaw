@@ -37,6 +37,7 @@ the items under New and Fixed.
 - Undoing deletion of a profile now restores its apply shortcut, unless another profile has since claimed it.
 - Thaw no longer crashes when two Apple menu bar items swap places while one of them is briefly unnamed.
 - Turning Zen Mode off while sharing your screen or recording now keeps it off until that session ends, instead of turning it back on within seconds.
+- Thaw no longer restarts its accessibility helper over and over after an app stops responding, which could drop clicks on menu bar items.
 
 ## [3.0.0-alpha.14] - 2026-11-13
 
