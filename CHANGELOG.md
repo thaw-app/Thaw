@@ -24,25 +24,7 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
-### Fixed
-
-- Turning off automatic rehide now prevents waiting timers, focus changes and outside clicks from hiding items afterward.
-- Closing hidden items now stops every section’s hide timer, so an older countdown cannot close items you reveal afterward.
-- Search now uses updated item names on its next refresh after a rename or profile change, without waiting for the menu bar inventory to change.
-- Search shortcuts no longer act on the selected menu bar item when a key belongs to another window or app.
-- Profile previews no longer report display changes when a saved configuration matches the display’s inherited template.
-- Pressing ⌘E again while renaming a search result no longer discards the name being typed.
-- The Thaw Bar settings stay available when only Always Hidden uses the bar, and its preview shows and opens that section.
-- Importing profiles no longer assigns the same shortcut twice when its saved JSON uses different formatting.
-- Undoing deletion of a profile now restores its apply shortcut, unless another profile has since claimed it.
-- Thaw no longer crashes when two Apple menu bar items swap places while one of them is briefly unnamed.
-- Turning Zen Mode off while sharing your screen or recording now keeps it off until that session ends, instead of turning it back on within seconds.
-- The CPU widget no longer crashes on a Mac that has been awake for about 248 days without a restart.
-- Thaw no longer restarts its accessibility helper over and over after an app stops responding, which could drop clicks on menu bar items.
-- Reset all settings now also removes menu bar looks saved for individual Spaces.
-- Cancelling a click on a menu bar item, for example by closing the Thaw Bar at that moment, no longer opens the item or leaves the pointer on it.
-
-## [3.0.0-alpha.14] - 2026-11-13
+## [3.0.0-alpha.14] - 2026-11-14
 
 **macOS 27 only · Build 125**
 
@@ -123,6 +105,13 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Opening a hidden item moves the pointer only when it has to,** and clicking an item is faster. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
 - **"Move items that don’t fit into Hidden" moves only the items that don't fit.** On a full menu bar it could move most of your Visible items to Hidden.
 - **Capture Hidden Items says when the menu bar is full,** instead of listing every hidden item as missing a picture.
+- **Turning off Automatically rehide also stops hides already on their way.** By @Belligerently in [#1575](https://github.com/thaw-app/Thaw/pull/1575).
+- **Closing hidden items stops every section's hide timer,** so an old countdown can't close items you reveal later. By @Belligerently in [#1571](https://github.com/thaw-app/Thaw/pull/1571).
+- **Items you reopen with a shortcut no longer close because of an earlier click elsewhere.**
+- **A cancelled click no longer opens the item or leaves the pointer on it.** By @Belligerently in [#1578](https://github.com/thaw-app/Thaw/pull/1578).
+- **Thaw drops far fewer clicks on menu bar items while an app is frozen.** By @Belligerently in [#1580](https://github.com/thaw-app/Thaw/pull/1580).
+- **Thaw no longer crashes when two Apple items swap places while one is briefly unnamed.** By @Belligerently in [#1576](https://github.com/thaw-app/Thaw/pull/1576).
+- **Native hiding no longer mixes visible items in with hidden ones after an app launches.** By @camguillory.
 
 #### Thaw Bar
 
@@ -131,6 +120,8 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **A long click on a Thaw Bar item opens it,** and the arrow keys move the highlight at once.
 - **The preview shows what the bar shows,** and each display uses its own hover and scroll setting.
 - **The Thaw Bar no longer resizes and repositions itself many times a second** while the pointer moves over it.
+- **The Thaw Bar settings stay available when only Always Hidden uses the bar,** and the preview shows that section. By @doublezz10 in [#1566](https://github.com/thaw-app/Thaw/pull/1566).
+- **The template has the Open Always Hidden in the Thaw Bar switch,** as each display does.
 
 #### Spaces and profiles
 
@@ -152,7 +143,11 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Use Template copies the Always Hidden only choice too.**
 - **A profile applied as Thaw starts keeps its order** when some items show up late. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
 - **A profile action that arrives after that profile was removed no longer clears another profile’s display or Space association.** By @Belligerently in [#1555](https://github.com/thaw-app/Thaw/pull/1555).
-- Importing profiles no longer assigns the same shortcut twice when its saved JSON uses different formatting.
+- **Importing profiles no longer assigns one shortcut twice.** By @Belligerently in [#1556](https://github.com/thaw-app/Thaw/pull/1556).
+- **Undoing a profile's deletion restores its apply shortcut,** unless another profile took it. By @Belligerently in [#1557](https://github.com/thaw-app/Thaw/pull/1557).
+- **An apply shortcut you clear stays cleared through undo and redo.**
+- **Profile previews no longer list display changes that won't happen.** By @Belligerently in [#1572](https://github.com/thaw-app/Thaw/pull/1572).
+- **Reset all settings also clears menu bar looks saved for single Spaces.** By @Belligerently in [#1579](https://github.com/thaw-app/Thaw/pull/1579).
 
 #### Search
 
@@ -162,7 +157,10 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **A row is listed once while its item is mid-move,** so the arrow keys don't stall on it.
 - **Return and the arrow keys are left to a Japanese or Chinese input method** while it is composing text.
 - **A rename ends when its item leaves the search results,** instead of blocking keys until Escape.
-- **Tab reaches the search buttons** when there is no other section to jump to.
+- **Tab reaches the search buttons** after the last section, and Shift-Tab before the first.
+- **⌘E during a rename keeps the name you're typing,** without a beep. By @doublezz10 in [#1565](https://github.com/thaw-app/Thaw/pull/1565).
+- **Search shortcuts no longer act on an item when the key is meant for another window.** By @Belligerently in [#1570](https://github.com/thaw-app/Thaw/pull/1570).
+- **Search shows an item's new name at its next refresh.** By @Belligerently in [#1573](https://github.com/thaw-app/Thaw/pull/1573).
 
 #### Settings
 
@@ -197,11 +195,15 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **What's New opens on the version you have installed,** not the newest release.
 - **Closing What's New or a Settings page no longer leaks a little memory each time.**
 - **The Split shape shrinks back sooner after hiding.** Once the hidden icons were gone, the shape around the icons could stay stretched for a second or two with nothing in it. It now shrinks as soon as the menu bar has settled.
+- **Zen Mode stays off when you turn it off during a screen share or call,** until the share or call ends. By @Belligerently in [#1577](https://github.com/thaw-app/Thaw/pull/1577).
+- **The CPU widget no longer crashes after about 248 days of uptime.** By @Belligerently in [#1581](https://github.com/thaw-app/Thaw/pull/1581).
 
 ### Thanks
 
 - @Omoeba stopped the test suite from resetting your Mac's menu bar spacing ([#1533](https://github.com/thaw-app/Thaw/pull/1533)).
-- @elior-esh took on the November review in [#1529](https://github.com/thaw-app/Thaw/issues/1529). They documented every `thaw://` action and setting ([#1532](https://github.com/thaw-app/Thaw/pull/1532)), added tests for the Profiles pages, tips and widgets ([#1538](https://github.com/thaw-app/Thaw/pull/1538), [#1539](https://github.com/thaw-app/Thaw/pull/1539), [#1541](https://github.com/thaw-app/Thaw/pull/1541), [#1542](https://github.com/thaw-app/Thaw/pull/1542), [#1546](https://github.com/thaw-app/Thaw/pull/1546), [#1548](https://github.com/thaw-app/Thaw/pull/1548)) and tidied the code behind them ([#1544](https://github.com/thaw-app/Thaw/pull/1544), [#1545](https://github.com/thaw-app/Thaw/pull/1545)).
+- @elior-esh took on the November review in [#1529](https://github.com/thaw-app/Thaw/issues/1529). They documented every `thaw://` action and setting ([#1532](https://github.com/thaw-app/Thaw/pull/1532)), added tests for the Profiles pages, tips and widgets ([#1538](https://github.com/thaw-app/Thaw/pull/1538), [#1539](https://github.com/thaw-app/Thaw/pull/1539), [#1541](https://github.com/thaw-app/Thaw/pull/1541), [#1542](https://github.com/thaw-app/Thaw/pull/1542), [#1546](https://github.com/thaw-app/Thaw/pull/1546), [#1548](https://github.com/thaw-app/Thaw/pull/1548)) and tidied the code behind them ([#1544](https://github.com/thaw-app/Thaw/pull/1544), [#1545](https://github.com/thaw-app/Thaw/pull/1545)). They also fixed six weak tests ([#1550](https://github.com/thaw-app/Thaw/pull/1550)), moved the Layout list's checkbox sweep out of its page ([#1551](https://github.com/thaw-app/Thaw/pull/1551)), fuzzed a missing `thaw://` route ([#1552](https://github.com/thaw-app/Thaw/pull/1552)), ran each package's tests in CI ([#1553](https://github.com/thaw-app/Thaw/pull/1553)) and tested the Displays pages ([#1561](https://github.com/thaw-app/Thaw/pull/1561), [#1564](https://github.com/thaw-app/Thaw/pull/1564)).
+- @doublezz10 added isolated previews for the Visibility settings and documented them ([#1567](https://github.com/thaw-app/Thaw/pull/1567), [#1568](https://github.com/thaw-app/Thaw/pull/1568)).
+- @Belligerently made the accessibility read test independent of timing ([#1574](https://github.com/thaw-app/Thaw/pull/1574)) and tested the Settings pages ([#1582](https://github.com/thaw-app/Thaw/pull/1582), [#1584](https://github.com/thaw-app/Thaw/pull/1584), [#1586](https://github.com/thaw-app/Thaw/pull/1586), [#1587](https://github.com/thaw-app/Thaw/pull/1587)).
 
 ## [3.0.0-alpha.13] - 2026-11-05
 

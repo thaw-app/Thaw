@@ -180,12 +180,15 @@ struct MenuBarWalkConcurrencyTests {
     )
     func slowAppTruncatesTheWalk() async throws {
         let slow = try #require(Self.slowOwner).processIdentifier
+        // Held until the walk returns, so only its deadline can end it however busy the machine is.
+        let release = DispatchSemaphore(value: 0)
         let reader = Provider.WalkReader(runningApps: { Self.otherApps }, isTrusted: { true }, read: { app, _, _, _ in
             if app.processIdentifier == slow {
-                Thread.sleep(forTimeInterval: 0.6)
+                _ = release.wait(timeout: .now() + 10)
             }
             return []
         })
+        defer { release.signal() }
 
         let (snapshot, _) = await Provider.enumerateMenuBarItemsResilient(
             state: MenuBarScanState(),

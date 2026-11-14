@@ -22,10 +22,12 @@ enum ProfileUndoStep {
         switch self {
         case let .restore(profile, metadata, index, wasActive, shortcut):
             try manager.restoreProfile(profile, metadata: metadata, at: index, wasActive: wasActive)
-            if ProfileApplyShortcuts().adopt(shortcut, for: metadata.id) {
+            let adopted = ProfileApplyShortcuts().adopt(shortcut, for: metadata.id)
+            if adopted {
                 manager.rebuildProfileHotkeys()
             }
-            return .delete(id: metadata.id, shortcut: shortcut)
+            // Once adopted, redo reads the live shortcut, so one cleared since stays cleared.
+            return .delete(id: metadata.id, shortcut: adopted ? nil : shortcut)
         case let .delete(id, savedShortcut):
             let profile = try manager.loadProfile(id: id)
             guard let index = manager.profiles.firstIndex(where: { $0.id == id }) else { throw CocoaError(.fileNoSuchFile) }

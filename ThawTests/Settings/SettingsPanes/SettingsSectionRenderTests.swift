@@ -65,12 +65,19 @@ struct SettingsSectionRenderTests {
         visibility.autoRehide = false
         await page.settle { page.elements(role: .popUpButton, label: "Hide items again").count == 1 }
         #expect(page.elements(role: .popUpButton, label: "Hide items again").count == 1)
+        func shown() -> String? {
+            page.elements(role: .popUpButton, label: "Hide items again").first
+                .flatMap { OffscreenAccessibility.string("accessibilityValue", of: $0) }
+        }
+        var choices: [String] = []
         for strategy in [RehideStrategy.smart, .timed, .focusedApp] {
+            let before = shown()
             visibility.autoRehide = true
             visibility.rehideStrategy = strategy
-            await page.settle { page.elements(role: .popUpButton, label: "Hide items again").count == 1 }
-            #expect(page.elements(role: .popUpButton, label: "Hide items again").count == 1)
+            await page.settle { shown() != before }
+            choices.append(shown() ?? "")
         }
+        #expect(Set(choices).count == 3, "each strategy shows its own choice: \(choices)")
     }
 
     @Test("A custom icon shows its appearance switch, and a built-in one hides it")

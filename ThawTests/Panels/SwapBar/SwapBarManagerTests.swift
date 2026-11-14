@@ -80,7 +80,7 @@ struct SwapBarManagerTests {
         await waitUntil { recorder.presented.count == 1 }
 
         appState.settings.visibility.enableSwapBar = false
-        await Task.yield()
+        await waitUntil { manager.panel == nil }
         appState.settings.visibility.enableSwapBar = true
         await waitUntil { recorder.presented.count == 2 }
 

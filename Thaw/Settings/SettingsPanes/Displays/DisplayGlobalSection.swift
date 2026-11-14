@@ -47,7 +47,16 @@ extension DisplaySettingsPane {
             useThawBarForAlwaysHidden: displaySettings.globalConfiguration.useThawBarForAlwaysHidden
                 && appState.settings.layout.isAlwaysHiddenSectionEnabled,
             context: .globalTemplate
-        )
+        ) {
+            // The same switch as each display's, so the controls it shows can be turned off here too.
+            if !displaySettings.globalConfiguration.useThawBar, appState.settings.layout.isAlwaysHiddenSectionEnabled {
+                Toggle(
+                    "Open Always Hidden in the \(Constants.displayName) Bar",
+                    isOn: displaySettings.binding(for: .template, \.useThawBarForAlwaysHidden) { $0.withUseThawBarForAlwaysHidden($1) }
+                )
+                .annotation("Hidden items still show in the menu bar. Showing Always Hidden there would open Hidden too.")
+            }
+        }
     }
 
     /// The template's spacing and the Apply-to-All button. Edits stage on

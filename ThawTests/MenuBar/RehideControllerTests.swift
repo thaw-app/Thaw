@@ -191,6 +191,17 @@ struct RehideControllerTests {
         #expect(world.hiddenSectionHides == 0)
     }
 
+    @Test("Closing the presentation drops a pending outside-click hide")
+    func closingDropsOutsideClickRehide() async {
+        let world = RehideWorld()
+        world.controller.note(.outsideClick { true })
+        await world.settle()
+        world.controller.hidden(.hidden)
+        world.controller.revealed()
+        await world.finishWaits()
+        #expect(world.everySectionHides == 0)
+    }
+
     /// Disabling the preference while a focus or outside-click delay waits must prevent its hide.
     @Test("Disabling rehide stops a pending focus or outside-click hide", arguments: [false, true])
     func disablingStopsPendingHide(outside: Bool) async {
