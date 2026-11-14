@@ -378,7 +378,7 @@ struct ProfileSettingsPane: View {
 
     private func deleteProfile(id: UUID) {
         do {
-            let profile = try ProfileDeletion.snapshotForUndo { try profileManager.loadProfile(id: id) }
+            let (profile, shortcut) = (try ProfileDeletion.snapshotForUndo { try profileManager.loadProfile(id: id) }, ProfileApplyShortcuts().shortcut(for: id))
             let index = profileManager.profiles.firstIndex { $0.id == id }
             let metadata = index.map { profileManager.profiles[$0] }
             let wasActive = profileManager.activeProfileID == id
@@ -389,7 +389,7 @@ struct ProfileSettingsPane: View {
             }
             if let profile, let index, let metadata {
                 registerProfileUndo(
-                    .restore(profile: profile, metadata: metadata, at: index, wasActive: wasActive),
+                    .restore(profile: profile, metadata: metadata, at: index, wasActive: wasActive, shortcut: shortcut),
                     actionName: String(localized: "Delete Profile"),
                     manager: profileManager,
                     undoManager: undoManager,
@@ -439,47 +439,6 @@ struct ProfileSettingsPane: View {
 }
 
 // MARK: - Undo
-
-/// Value-based edits retain only the manager and profile data, allowing undo after pane teardown.
-enum ProfileUndoStep {
-    /// Puts back a profile the user deleted, at its old manifest position.
-    case restore(profile: Profile, metadata: ProfileMetadata, at: Int, wasActive: Bool)
-    /// Removes a profile the user created or duplicated.
-    case delete(id: UUID)
-    case rename(id: UUID, to: String)
-    /// Writes saved profile values back after a save or overwrite.
-    case replace([Profile])
-
-    /// Returns the inverse step for redo registration.
-    func apply(to manager: ProfileManager) throws -> ProfileUndoStep {
-        switch self {
-        case let .restore(profile, metadata, index, wasActive):
-            try manager.restoreProfile(profile, metadata: metadata, at: index, wasActive: wasActive)
-            return .delete(id: metadata.id)
-        case let .delete(id):
-            let profile = try manager.loadProfile(id: id)
-            guard let index = manager.profiles.firstIndex(where: { $0.id == id }) else { throw CocoaError(.fileNoSuchFile) }
-            let metadata = manager.profiles[index]
-            let wasActive = manager.activeProfileID == id
-            try manager.deleteProfile(id: id)
-            if wasActive {
-                manager.activeProfileID = nil
-                manager.appState?.itemManager.clearActiveProfileLayout()
-            }
-            return .restore(profile: profile, metadata: metadata, at: index, wasActive: wasActive)
-        case let .rename(id, to):
-            let previousName = manager.profiles.first { $0.id == id }?.name ?? ""
-            try manager.renameProfile(id: id, to: to)
-            return .rename(id: id, to: previousName)
-        case let .replace(profiles):
-            let previous = try profiles.map { try manager.loadProfile(id: $0.id) }
-            for profile in profiles {
-                try manager.replaceProfile(profile)
-            }
-            return .replace(previous)
-        }
-    }
-}
 
 /// Register completed edits against the manager so undo survives pane teardown.
 private func registerProfileUndo(

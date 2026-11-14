@@ -76,7 +76,7 @@ extension MenuBarSearchPanel {
     /// ⌘, opens Settings, ⌘E renames, ⌘K opens the actions menu, ⌘1 to ⌘3
     /// move the item between sections, ⌘L opens its layout pane.
     private func handleCommandShortcut(_ event: NSEvent) -> NSEvent? {
-        guard Modifiers(nsEventFlags: event.modifierFlags) == .command else {
+        guard event.window === self, Modifiers(nsEventFlags: event.modifierFlags) == .command else {
             return event
         }
         let keyCode = KeyCode(rawValue: Int(event.keyCode))
@@ -90,7 +90,7 @@ extension MenuBarSearchPanel {
         guard showsAResultRow else {
             return event
         }
-        if keyCode == .e {
+        if keyCode == .e, model.renameSession == nil {
             beginRenamingSelection()
             return nil
         }
