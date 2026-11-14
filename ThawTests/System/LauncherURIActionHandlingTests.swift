@@ -116,6 +116,19 @@ extension SettingsURIResponseSuites {
             #expect(response["error"] as? String == "applyFailed")
         }
 
+        @Test("With Profiles off, apply-profile applies nothing and says why")
+        func applyProfileWhileProfilesOff() async throws {
+            let fake = FakeLauncherEnvironment()
+            let profile = fake.addProfile(named: "Work")
+            fake.profilesOn = false
+            let capture = try await fake.send("thaw://apply-profile?profile-id=\(profile.uuidString)&\(callback)")
+
+            #expect(fake.appliedProfileIDs.isEmpty)
+            let response = try capture.callbackResponse()
+            #expect(response["status"] as? String == "error")
+            #expect(response["error"] as? String == "profilesOff")
+        }
+
         @Test("An identifier that names no saved profile applies nothing", arguments: [
             "not-a-uuid", "7E0B0E2B-4E57-4B43-9C7E-3D2D6A1B5C10",
         ])

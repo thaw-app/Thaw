@@ -65,6 +65,14 @@ final class SearchModel {
 
     var displayedGroups = [SearchGroup]()
 
+    /// Pages whose module is off. The sidebar leaves them out, so search does too.
+    var turnedOffPanes: Set<SettingsNavigationIdentifier> = [] {
+        didSet {
+            guard oldValue != turnedOffPanes else { return }
+            updateDisplayedItems()
+        }
+    }
+
     @ObservationIgnored
     let fuse = Fuse(threshold: 0.5)
 
@@ -89,6 +97,7 @@ final class SearchModel {
         let scored = fuseResults.compactMap { result -> (item: SearchItem, diffScore: Double)? in
             let item = searchItems[result.index]
             guard showsLogSettings || !item.entry.needsDiagnosticLogging else { return nil }
+            guard !turnedOffPanes.contains(item.entry.pane) else { return nil }
             return (item: item, diffScore: result.diffScore)
         }
 

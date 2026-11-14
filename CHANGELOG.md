@@ -24,6 +24,14 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- A `thaw://apply-profile` link no longer applies a profile while Profiles is turned off.
+- Settings search no longer offers pages for modules you turned off, such as Profiles, Scripts, Triggers or Widgets.
+- The Shortcuts page no longer shows an empty Profiles tab while Profiles is turned off.
+- Showing a section in the menu bar while the Thaw Bar is open no longer hides it early, when the Thaw Bar's own hide timer runs out.
+- `thaw://release-item?bundle=` now lets go of every item of that app the sender holds, instead of failing when it holds more than one.
+
 ## [3.0.0-alpha.14] - 2026-11-14
 
 **macOS 27 only · Build 125**

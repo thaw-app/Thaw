@@ -95,4 +95,13 @@ struct SettingsPaneTabsTests {
         #expect(Set(DisplaysTab.allCases.map(\.systemImage)).count == DisplaysTab.allCases.count)
         #expect(Set(ThawBarTab.allCases.map(\.systemImage)).count == ThawBarTab.allCases.count)
     }
+
+    @Test("Shortcuts has a Profiles tab only while Profiles is on and a profile is saved")
+    func shortcutsProfilesTab() {
+        let withoutProfiles = ShortcutsTab.allCases.filter { $0 != .profiles }
+        #expect(ShortcutsTab.offered(hasProfiles: true, profilesOn: true) == ShortcutsTab.allCases)
+        #expect(ShortcutsTab.offered(hasProfiles: false, profilesOn: true) == withoutProfiles)
+        #expect(ShortcutsTab.offered(hasProfiles: true, profilesOn: false) == withoutProfiles, "with Profiles off its shortcuts aren't listened for")
+        #expect(ShortcutsTab.offered(hasProfiles: false, profilesOn: false) == withoutProfiles)
+    }
 }

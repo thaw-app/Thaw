@@ -481,16 +481,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// thaw://release-item?bundle=X or ?item-id=Y lets go of a hold; the item hides once nobody holds it.
     /// A bundle matches every held item of that app, since its items may have changed since the hold.
     private func handleReleaseItemRequest(bundle: String?, itemID: String?, sender: String) {
-        guard let identifier = SettingsURIHandler.resolveRevealItemIdentifier(
-            bundle: bundle,
-            itemID: itemID,
-            candidates: heldItemReveals.heldIdentifiers
-        ) else {
-            appState.diagLog.warning("Settings URI release-item: missing, ambiguous or not held bundle/item-id")
+        let released = heldItemReveals.release(bundle: bundle, itemID: itemID, for: sender)
+        guard !released.isEmpty else {
+            appState.diagLog.warning("Settings URI release-item: missing or not held bundle/item-id")
             return
         }
-        heldItemReveals.release(identifier, for: sender)
-        appState.diagLog.info("Settings URI release-item: released \(identifier) for sender \(sender)")
+        appState.diagLog.info("Settings URI release-item: released \(released.joined(separator: ", ")) for sender \(sender)")
     }
 
     /// Handles the launcher operations, including get-appearance.
