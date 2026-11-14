@@ -401,7 +401,7 @@ extension HIDEventManager {
             // Clicking the visible control item or the Thaw Bar drives the sections, so it never rehides them.
             if
                 let controlItem = appState.menuBarManager.controlItem(withName: .visible),
-                event.window === controlItem.window
+                Self.isClick(in: event.window, onControlItemWindow: controlItem.window)
             {
                 return false
             }
