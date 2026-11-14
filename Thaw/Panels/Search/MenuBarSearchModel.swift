@@ -207,15 +207,21 @@ final class MenuBarSearchModel {
 
     /// Tab's jump to the next or previous section's first row, wrapping.
     /// Ranked matches have no sections, so it does nothing then.
-    func moveSelection(toSectionFromCurrentBy step: Int) {
+    /// Without wraps, a step past either end leaves the highlight alone and returns false.
+    @discardableResult
+    func moveSelection(toSectionFromCurrentBy step: Int, wraps: Bool = true) -> Bool {
         let starts = sectionStarts
         guard canJumpBetweenSections else {
-            return
+            return false
         }
         let index = selectedIndex ?? 0
         let current = starts.lastIndex { $0 <= index } ?? 0
+        guard wraps || starts.indices.contains(current + step) else {
+            return false
+        }
         let target = (current + step % starts.count + starts.count) % starts.count
         selection = results[starts[target]].id
+        return true
     }
 
     /// Each section's first row, in order: headings start where the section changes.

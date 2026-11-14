@@ -13,8 +13,10 @@
     /// No settings setup or menu bar managers are started.
     @MainActor
     enum VisibilityPreviewSettings {
-        static func make() -> VisibilitySettings {
-            let domain = "com.stonerl.Thaw.visibility-previews"
+        static let defaultSuiteName = "com.stonerl.Thaw.visibility-previews"
+
+        /// Tests pass a scratch suite so no preferences file is left behind.
+        static func make(suiteName domain: String = defaultSuiteName) -> VisibilitySettings {
             guard let store = UserDefaults(suiteName: domain) else {
                 preconditionFailure("Could not create the Visibility preview preferences")
             }
@@ -32,10 +34,14 @@
 
     /// Gives the Visibility rows interactive state and the same form layout they use in Settings.
     struct VisibilitySettingsPreview<Content: View>: View {
-        @State private var settings = VisibilityPreviewSettings.make()
+        @State private var settings: VisibilitySettings
         private let content: (VisibilitySettings) -> Content
 
-        init(@ViewBuilder content: @escaping (VisibilitySettings) -> Content) {
+        init(
+            suiteName: String = VisibilityPreviewSettings.defaultSuiteName,
+            @ViewBuilder content: @escaping (VisibilitySettings) -> Content
+        ) {
+            _settings = State(initialValue: VisibilityPreviewSettings.make(suiteName: suiteName))
             self.content = content
         }
 

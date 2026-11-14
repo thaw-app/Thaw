@@ -83,7 +83,7 @@ struct MenuBarSearchPanelTests {
         #expect(try #require(panel.model.renameSession).draft == savedName)
 
         panel.model.renameSession?.draft = "New name in progress"
-        _ = panel.handleKeyDown(event)
+        #expect(panel.handleKeyDown(event) == nil)
         let session = try #require(panel.model.renameSession)
         #expect(session.draft == "New name in progress")
         #expect(session.targets(alpha))
@@ -329,10 +329,66 @@ struct MenuBarSearchPanelTests {
         #expect(panel.model.selection == MenuBarSearchModel.ItemID(beta))
 
         // The key monitor hands on the handler's answer: a taken Tab stays taken.
-        panel.model.results[0] = MenuBarSearchResult(item: alpha, ownerName: nil, section: "Hidden")
+        panel.model.results[1] = MenuBarSearchResult(item: beta, ownerName: nil, section: "Hidden")
+        panel.model.selectFirstRow()
         #expect(try MenuBarSearchPanel.monitoredKey(tab(), panel: panel) == nil)
         let event = try tab()
         #expect(MenuBarSearchPanel.monitoredKey(event, panel: nil) === event)
+    }
+
+    @Test("Tab past the last section and Shift-Tab before the first move focus to the panel's controls")
+    func tabLeavesTheSectionsAtTheEnds() throws {
+        let world = World()
+        let alpha = World.item("Alpha"), beta = World.item("Beta")
+        world.seat([alpha, beta])
+        let panel = panel(world)
+        func key(_ flags: NSEvent.ModifierFlags) throws -> NSEvent {
+            try #require(NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: flags, timestamp: 0, windowNumber: panel.windowNumber,
+                context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: UInt16(KeyCode.tab.rawValue)
+            ))
+        }
+        panel.model.results = [
+            MenuBarSearchResult(item: alpha, ownerName: nil, section: "Visible"),
+            MenuBarSearchResult(item: beta, ownerName: nil, section: "Hidden"),
+        ]
+        panel.model.selectFirstRow()
+
+        #expect(try panel.handleKeyDown(key(.shift)) != nil, "nothing before the first section")
+        #expect(panel.model.selection == MenuBarSearchModel.ItemID(alpha))
+        #expect(try panel.handleKeyDown(key([])) == nil)
+        #expect(panel.model.selection == MenuBarSearchModel.ItemID(beta))
+        #expect(try panel.handleKeyDown(key([])) != nil, "nothing after the last section")
+        #expect(panel.model.selection == MenuBarSearchModel.ItemID(beta))
+        #expect(try panel.handleKeyDown(key(.shift)) == nil)
+        #expect(panel.model.selection == MenuBarSearchModel.ItemID(alpha))
+    }
+
+    @Test("Tab and Shift-Tab move focus on from a footer button instead of jumping sections")
+    func tabFromAButtonMovesFocus() throws {
+        let world = World()
+        let alpha = World.item("Alpha"), beta = World.item("Beta")
+        world.seat([alpha, beta])
+        let panel = panel(world)
+        func key(_ flags: NSEvent.ModifierFlags) throws -> NSEvent {
+            try #require(NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: flags, timestamp: 0, windowNumber: panel.windowNumber,
+                context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: UInt16(KeyCode.tab.rawValue)
+            ))
+        }
+        panel.model.results = [
+            MenuBarSearchResult(item: alpha, ownerName: nil, section: "Visible"),
+            MenuBarSearchResult(item: beta, ownerName: nil, section: "Hidden"),
+        ]
+        panel.model.selection = MenuBarSearchModel.ItemID(beta)
+        let button = NSButton(title: "Footer", target: nil, action: nil)
+        panel.contentView?.addSubview(button)
+        try #require(panel.makeFirstResponder(button))
+
+        #expect(try panel.handleKeyDown(key(.shift)) != nil)
+        panel.model.selection = MenuBarSearchModel.ItemID(alpha)
+        #expect(try panel.handleKeyDown(key([])) != nil)
+        #expect(panel.model.selection == MenuBarSearchModel.ItemID(alpha))
     }
 
     @Test("A rename ends when its row leaves the list")

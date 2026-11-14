@@ -78,6 +78,10 @@ final class RehideController {
     /// A closed presentation releases every section; an already-hidden section only releases itself.
     func hidden(_ section: MenuBarSection.Name, closingPresentation: Bool = true) {
         let sections = closingPresentation ? MenuBarSection.Name.allCases : [section]
+        if closingPresentation {
+            // Nothing is left for it to close, and a hotkey reveal doesn't cancel it.
+            outsideClickRehide.cancel()
+        }
         for section in sections {
             sectionRehides[section]?.cancel()
             environment.stopPointerMonitor(section)

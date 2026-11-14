@@ -16,10 +16,12 @@
     struct VisibilitySettingsPreviewTests {
         @Test("Preview interactions write to their own preferences, and a new preview starts fresh")
         func preferencesAreIsolated() {
+            let suite = ScratchDefaults.name("visibility-previews")
+            defer { ScratchDefaults.remove(suite) }
             let original = Defaults.store
             let key = Defaults.Key.showOnHover.rawValue
             original.set(false, forKey: key)
-            let settings = VisibilityPreviewSettings.make()
+            let settings = VisibilityPreviewSettings.make(suiteName: suite)
             #expect(Defaults.store !== original)
             #expect(settings.showOnHover)
             settings.showOnHover = false
@@ -28,19 +30,21 @@
             #expect(Defaults.bool(forKey: .showOnHover))
             #expect(!original.bool(forKey: key), "preview edits leave the original domain alone")
             Defaults.set("old preview", forKey: .lastSettingsPane)
-            _ = VisibilityPreviewSettings.make()
+            _ = VisibilityPreviewSettings.make(suiteName: suite)
             #expect(Defaults.string(forKey: .lastSettingsPane) == nil, "preview leftovers are discarded")
         }
 
         @Test("Timing and recording previews show their controls in light and dark mode", arguments: [ColorScheme.light, .dark])
         func rowsDraw(scheme: ColorScheme) async throws {
-            let timing = VisibilitySettingsPreview { settings in
+            let suite = ScratchDefaults.name("visibility-previews")
+            defer { ScratchDefaults.remove(suite) }
+            let timing = VisibilitySettingsPreview(suiteName: suite) { settings in
                 HoverDelayRow(settings: settings)
                 TooltipDelayRow(settings: settings)
                 RehideDelayRow(settings: settings)
                 SwapOnIconClickToggle(settings: settings)
             }
-            let alerts = VisibilitySettingsPreview { settings in
+            let alerts = VisibilitySettingsPreview(suiteName: suite) { settings in
                 RecordingAlertRows(settings: settings)
             }
             for (name, view, labels) in [
