@@ -1,6 +1,8 @@
 name: CI
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  # The weekly run has a group of its own, so a merge doesn't cancel it and it
+  # doesn't cancel a merge's run.
+  group: ${{ github.workflow }}-${{ github.event_name == 'schedule' && 'schedule' || github.head_ref || github.ref }}
   cancel-in-progress: true
 # Runs on every PR and push to development so Scorecard sees checks; the
 # macOS work stays gated on path detection below.
@@ -9,6 +11,13 @@ on:
   push:
     branches:
       - development
+  # Weekly on development, where path detection reports everything as changed.
+  # A push runs the package tests only when it touches packages/, and the next
+  # merge usually cancels that run, so this is the run that is sure to finish:
+  # it tests the packages, and saves a compilation cache after a new Xcode image.
+  schedule:
+    # Offset from the hour and from the other scheduled workflows.
+    - cron: "43 2 * * 3"
   workflow_dispatch:
 
 permissions:
@@ -26,8 +35,10 @@ jobs:
       # The package tests build only packages/, so the app's own code can't change them.
       PACKAGE_PATTERNS: '(^packages/|^scripts/test-packages\.sh$|^\.github/workflows/ci\.yml$)'
     outputs:
-      code: ${{ steps.since-last-run.outputs.code || steps.filter.outputs.code }}
-      packages: ${{ steps.since-last-run.outputs.code == 'false' && 'false' || steps.packages-filter.outputs.code }}
+      # The skip step below can only turn a "true" into "false"; skipped, or unable
+      # to confirm, it leaves the filter's answer.
+      code: ${{ steps.since-last-run.outputs.code == 'false' && 'false' || steps.filter.outputs.code }}
+      packages: ${{ steps.since-last-run.outputs.packages == 'false' && 'false' || steps.packages-filter.outputs.code }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -43,14 +54,16 @@ jobs:
         uses: thaw-app/org-ci/actions/detect-code-changes@d57f5f99c6641bbe12e87a54898356000d94f904
         with:
           patterns: ${{ env.PACKAGE_PATTERNS }}
-      # The filter compares the whole pull request with its base, so a push that only
+      # The filters compare the whole pull request with its base, so a push that only
       # fixes the changelog would build and test again. When the files changed since
       # the previous push are not code, and CI passed on that push, nothing new needs
-      # testing. Anything it cannot confirm (a force push, a cancelled or failed run,
-      # an API error) keeps the full run.
+      # testing. The package tests are judged the same way against their own
+      # patterns, which also cover files under packages/ that are not code. Anything
+      # it cannot confirm (a force push, a cancelled or failed run, an API error)
+      # keeps the full run.
       - name: Skip what the last passing run already tested
         id: since-last-run
-        if: github.event_name == 'pull_request' && github.event.action == 'synchronize' && steps.filter.outputs.code == 'true'
+        if: github.event_name == 'pull_request' && github.event.action == 'synchronize' && (steps.filter.outputs.code == 'true' || steps.packages-filter.outputs.code == 'true')
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -59,17 +72,32 @@ jobs:
         run: |
           set -uo pipefail
           code=true
-          if changed=$(git -c core.quotePath=false diff --name-only --no-renames "$BEFORE" "$AFTER" 2>/dev/null) \
-            && ! grep -Eq "$CODE_PATTERNS" <<<"$changed"; then
-            runs=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$BEFORE&event=pull_request&status=success&per_page=1" \
-              | grep -oE '"total_count": *[0-9]+' | grep -oE '[0-9]+$' || echo 0)
-            if [ "${runs:-0}" -gt 0 ]; then
-              code=false
-              echo "Only non-code files changed since $BEFORE, which passed CI; skipping the build and tests."
+          packages=true
+          if changed=$(git -c core.quotePath=false diff --name-only --no-renames "$BEFORE" "$AFTER" 2>/dev/null); then
+            code_untouched=false
+            packages_untouched=false
+            grep -Eq "$CODE_PATTERNS" <<<"$changed" || code_untouched=true
+            grep -Eq "$PACKAGE_PATTERNS" <<<"$changed" || packages_untouched=true
+            if [ "$code_untouched" = true ] || [ "$packages_untouched" = true ]; then
+              runs=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$BEFORE&event=pull_request&status=success&per_page=1" \
+                | grep -oE '"total_count": *[0-9]+' | grep -oE '[0-9]+$' || echo 0)
+              if [ "${runs:-0}" -gt 0 ]; then
+                if [ "$code_untouched" = true ]; then
+                  code=false
+                  echo "Only non-code files changed since $BEFORE, which passed CI; skipping the build and tests."
+                fi
+                if [ "$packages_untouched" = true ]; then
+                  packages=false
+                  echo "Nothing under packages/ changed since $BEFORE, which passed CI; skipping the package tests."
+                fi
+              fi
             fi
           fi
-          echo "code=$code" >> "$GITHUB_OUTPUT"
+          {
+            echo "code=$code"
+            echo "packages=$packages"
+          } >> "$GITHUB_OUTPUT"
 
   static_analysis:
     needs: changes
@@ -128,8 +156,9 @@ jobs:
     # A skip runs on Linux so it doesn't wait for, or hold, a macOS runner.
     runs-on: ${{ needs.changes.outputs.code == 'true' && 'xcode-27' || 'ubuntu-slim' }}
     needs: [changes, static_analysis]
-    # A normal run takes about 14 minutes. Hung tests have run to 34, holding a macOS runner.
-    timeout-minutes: 25
+    # A backstop. The limit that normally ends a hung run is on the Build and Test
+    # step, which leaves time to upload what the tests wrote.
+    timeout-minutes: 30
     permissions:
       contents: read
       # Deleting older compilation caches; a pull request from a fork gets a read-only token regardless.
@@ -155,18 +184,38 @@ jobs:
           restore-keys: |
             spm-${{ runner.os }}-
 
+      # A new Xcode makes every cached entry miss, so its version and build number
+      # are part of the cache's name: "Xcode 27.1" and "Build version 18B5052e"
+      # become 27.1-18B5052e.
+      - name: Identify Xcode
+        id: xcode
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          set -euo pipefail
+          id=$(xcodebuild -version | awk 'NR == 1 { version = $2 } NR == 2 { build = $3 } END { print version "-" build }')
+          if [[ ! "$id" =~ ^[0-9][0-9A-Za-z.]*-[0-9A-Za-z]+$ ]]; then
+            echo "::error::Could not read the Xcode version and build number: $(xcodebuild -version | tr '\n' ' ')"
+            exit 1
+          fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
       # Xcode's compilation cache. Only the package targets hit it; the app and its
-      # tests miss on every commit. So it's keyed on the dependencies and packages,
-      # and development saves a new one only when they change.
+      # tests miss on every commit. So it's keyed on Xcode, the dependencies and the
+      # packages, and development saves a new one only when one of them changes.
+      # The lock file is named by its path: a pattern would also match the lock
+      # files in the SwiftPM checkouts restored above, which differ from run to run.
+      #
+      # A pull request falls back to the newest cache for this Xcode. Development
+      # restores only an exact match, so the cache it saves holds this build's
+      # entries and none carried over from older caches.
       - name: Restore Swift compilation cache
         id: compilation-cache
         if: needs.changes.outputs.code == 'true'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: Build/CompilationCache.noindex
-          key: compilation-cache-${{ runner.os }}-${{ hashFiles('**/Package.resolved', 'packages/**') }}
-          restore-keys: |
-            compilation-cache-${{ runner.os }}-
+          key: compilation-cache-${{ runner.os }}-xcode${{ steps.xcode.outputs.id }}-${{ hashFiles('Thaw.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'packages/**') }}
+          restore-keys: ${{ github.ref != 'refs/heads/development' && format('compilation-cache-{0}-xcode{1}-', runner.os, steps.xcode.outputs.id) || '' }}
 
       # The Thaw target's lint build phase requires the pinned SwiftLint on PATH.
       - name: Install pinned SwiftLint
@@ -175,8 +224,14 @@ jobs:
           sh scripts/install-swiftlint.sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
+      # This step takes about 12 minutes with a warm cache and has taken 16; a cold
+      # build on development adds the packages. Hung tests have run it past 30,
+      # holding a macOS runner, and printed the names of the failed tests only at
+      # the end. The limit is on the step, not only the job, so the upload below
+      # still runs.
       - name: Build and Test
         if: needs.changes.outputs.code == 'true'
+        timeout-minutes: 22
         run: |
           xcodebuild test \
             -project Thaw.xcodeproj \
@@ -188,6 +243,17 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
+      # The result bundle of a failed or timed-out run: what there is to tell which
+      # tests failed or never finished.
+      - name: Upload test results
+        if: failure() && needs.changes.outputs.code == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-results
+          path: Build/Logs/Test
+          retention-days: 3
+          if-no-files-found: ignore
+
       # Only development saves, and only when no cache has this key yet. Pull
       # requests don't save: at about 1.4 GB each they would push development's
       # caches out of the repository's limit.
@@ -198,12 +264,15 @@ jobs:
           path: Build/CompilationCache.noindex
           key: ${{ steps.compilation-cache.outputs.cache-primary-key }}
 
-      # Keeps the two newest, so the saves don't fill the cache limit.
+      # Keeps the two newest for this Xcode, so the saves don't fill the cache
+      # limit. Caches for another Xcode are left alone, since a new image reaches
+      # the runners gradually; nothing restores them, so GitHub removes them after
+      # a week.
       - name: Drop older compilation caches
         if: needs.changes.outputs.code == 'true' && github.ref == 'refs/heads/development' && steps.compilation-cache.outputs.cache-hit != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          PREFIX: compilation-cache-${{ runner.os }}-
+          PREFIX: compilation-cache-${{ runner.os }}-xcode${{ steps.xcode.outputs.id }}-
         run: |
           gh cache list --repo "$GITHUB_REPOSITORY" --ref refs/heads/development --key "$PREFIX" \
             --sort created_at --order desc --limit 100 --json id --jq '.[2:][].id' |
@@ -242,8 +311,8 @@ jobs:
   # The app's xcodebuild test run does not run a package's own test targets, so
   # this runs them. One job loops over the packages: each takes under half a
   # minute to test, so a job per package would spend more on runner start-up.
-  # It runs only when something under packages/ changes, since nearly all of its
-  # time goes to building the packages from scratch.
+  # It runs when something under packages/ changes and in the weekly run, since
+  # nearly all of its time goes to building the packages from scratch.
   packages:
     if: github.repository == 'thaw-app/Thaw'
     runs-on: ${{ needs.changes.outputs.packages == 'true' && 'xcode-27' || 'ubuntu-slim' }}
