@@ -89,4 +89,21 @@ struct ClickSafetyTests {
         let afterWindow = budget.take(now: start + SyntheticClickBudget.window + .milliseconds(1))
         #expect(afterWindow)
     }
+
+    /// The click warps the pointer and waits before it can restore it, so that
+    /// wait must not end early when the click is cancelled.
+    @MainActor
+    @Test("The event wait runs to its end when the click is cancelled")
+    func eventSleepOutlastsCancellation() async {
+        let manager = AppState().itemManager
+        let wait = Duration.milliseconds(50)
+        let task = Task { @MainActor in
+            let start = ContinuousClock.now
+            await manager.eventSleep(for: wait)
+            return start.duration(to: .now)
+        }
+        task.cancel()
+        let elapsed = await task.value
+        #expect(elapsed >= wait)
+    }
 }
