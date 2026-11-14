@@ -26,6 +26,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- Closing hidden items now stops every section’s hide timer, so an older countdown cannot close items you reveal afterward.
 - Search now uses updated item names on its next refresh after a rename or profile change, without waiting for the menu bar inventory to change.
 - Search shortcuts no longer act on the selected menu bar item when a key belongs to another window or app.
 - Profile previews no longer report display changes when a saved configuration matches the display’s inherited template.

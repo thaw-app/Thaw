@@ -480,16 +480,74 @@ struct SectionRehideTests {
         }
     }
 
-    @Test("Each section keeps its own timer; hiding one stops only its own and a second reveal replaces it")
-    func oneTimerPerSection() async {
-        let world = world(.timed)
+    /// Hiding either section closes the presentation of both, so neither countdown may survive.
+    @Test("Hiding a section stops every revealed section's countdown", arguments: [RehideStrategy.timed, .smart])
+    func hidingStopsEverySection(strategy: RehideStrategy) async {
+        let world = world(strategy, atOnce: false)
         world.controller.revealed(.hidden)
         world.controller.revealed(.alwaysHidden)
         world.controller.revealed(.alwaysHidden)
+        await world.settle()
+        #expect(world.sleeps.count == 2, "the repeated reveal replaces its old countdown")
+
         world.controller.hidden(.hidden)
-        #expect(Set(world.moveHandlers.keys) == [.alwaysHidden])
-        await world.controller.waitUntilIdle()
-        #expect(world.sectionHides == [.alwaysHidden])
-        #expect(world.sleeps.count == 8)
+        #expect(world.moveHandlers.isEmpty)
+        world.now += .seconds(2)
+        world.sleepsReturnAtOnce = true
+        await world.finishWaits()
+        await world.settle()
+
+        #expect(world.sectionHides.isEmpty, "no countdown may hide a section after it closed")
+        #expect(world.sleeps.count == 2)
+    }
+
+    /// A menu probe can return after closing cancelled the countdown; it must not restart anything.
+    @Test("Closing during an eligibility menu probe cannot restart a section")
+    func closingDuringEligibilityCannotRestart() async {
+        let world = world(.timed)
+        world.heldMenuCheck = 8
+        world.controller.revealed(.hidden)
+        while world.menuChecks < 8 {
+            await world.settle()
+        }
+        let starts = world.monitorStarts.count
+        world.controller.hidden(.hidden)
+        world.pointerInArea = true
+
+        await world.finishWaits()
+        await world.settle()
+
+        #expect(world.monitorStarts.count == starts)
+        #expect(world.moveHandlers.isEmpty)
+    }
+
+    /// Hiding an already-hidden section closes nothing and must leave the other section's rehide alone.
+    @Test("An already-hidden section preserves the open section's pointer monitor")
+    func noOpHidePreservesOtherSection() {
+        let world = world(.timed)
+        world.pointerInArea = true
+        world.controller.revealed(.hidden)
+        world.controller.revealed(.alwaysHidden)
+
+        world.controller.hidden(.alwaysHidden, closingPresentation: false)
+
+        #expect(Set(world.moveHandlers.keys) == [.hidden])
+        world.controller.hidden(.hidden)
+        #expect(world.moveHandlers.isEmpty)
+    }
+
+    /// A timed reveal under the pointer still owns a monitor even before it has a countdown.
+    @Test("Hiding a section stops the other section's idle pointer monitor")
+    func hidingStopsIdlePointerMonitors() {
+        let world = world(.timed)
+        world.pointerInArea = true
+        world.controller.revealed(.hidden)
+        world.controller.revealed(.alwaysHidden)
+        #expect(Set(world.moveHandlers.keys) == [.hidden, .alwaysHidden])
+
+        world.controller.hidden(.hidden)
+
+        #expect(world.moveHandlers.isEmpty)
+        #expect(world.sleeps.isEmpty)
     }
 }
