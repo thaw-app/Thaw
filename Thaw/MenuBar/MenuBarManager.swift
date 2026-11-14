@@ -525,9 +525,7 @@ final class MenuBarManager {
     /// - Returns: Whether the toggle applied.
     @discardableResult
     func toggleZenMode() -> Bool {
-        // Manual ownership outlives automatic presentation or recording requests.
-        isZenModeEngagedAutomatically = false
-        automaticZenReasons.removeAll()
+        automaticZenRequests.takeManualOwnership()
         if isZenModeActive {
             deactivateZenMode()
         } else {
@@ -536,34 +534,16 @@ final class MenuBarManager {
         return true
     }
 
-    /// Zen stays engaged until the last automatic source clears, so presenting and recording cannot cancel each other.
-    enum AutomaticZenReason: Sendable, Hashable {
-        /// PresentationMonitor sees mirroring or screen sharing.
-        case screenSharing
-        /// RecordingWatchManager sees the camera or microphone in use.
-        case recording
-    }
+    typealias AutomaticZenReason = AutomaticZenRequests.Reason
 
-    /// Only automatic engagements withdraw automatically; ending a recording or presentation cannot cancel manual zen.
-    private var isZenModeEngagedAutomatically = false
-
-    /// Withdraw automatic zen only when the last requesting source clears.
-    private var automaticZenReasons: Set<AutomaticZenReason> = []
+    private var automaticZenRequests = AutomaticZenRequests()
 
     /// Idempotent because sources reevaluate signals rather than track edges.
-    /// Record reasons during manual zen too, but never withdraw a manual engagement.
     func setAutomaticZenMode(_ isActive: Bool, reason: AutomaticZenReason) {
-        if isActive {
-            automaticZenReasons.insert(reason)
-            guard !isZenModeActive else { return }
-            activateZenMode()
-            isZenModeEngagedAutomatically = true
-        } else {
-            automaticZenReasons.remove(reason)
-            guard isZenModeActive, isZenModeEngagedAutomatically,
-                  automaticZenReasons.isEmpty else { return }
-            deactivateZenMode()
-            isZenModeEngagedAutomatically = false
+        switch automaticZenRequests.set(isActive, reason: reason, isZenModeActive: isZenModeActive) {
+        case .engage: activateZenMode()
+        case .withdraw: deactivateZenMode()
+        case .none: break
         }
     }
 

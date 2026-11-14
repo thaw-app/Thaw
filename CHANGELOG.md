@@ -36,6 +36,7 @@ the items under New and Fixed.
 - Importing profiles no longer assigns the same shortcut twice when its saved JSON uses different formatting.
 - Undoing deletion of a profile now restores its apply shortcut, unless another profile has since claimed it.
 - Thaw no longer crashes when two Apple menu bar items swap places while one of them is briefly unnamed.
+- Turning Zen Mode off while sharing your screen or recording now keeps it off until that session ends, instead of turning it back on within seconds.
 
 ## [3.0.0-alpha.14] - 2026-11-13
 
