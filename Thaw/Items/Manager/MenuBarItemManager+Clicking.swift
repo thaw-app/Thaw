@@ -152,10 +152,10 @@ extension MenuBarItemManager {
         // Warp the cursor to the click point so the Window Server's hit-test
         // matches the event coordinates rather than the cursor's current position.
         MouseHelpers.warpCursor(to: clickPoint)
-        // Small delay to let the Window Server process the warp before posting
-        // the event. Without this, the event can be routed using the cursor's
-        // old position (e.g. the Apple menu) instead of the warped target.
-        try await Task.sleep(for: .milliseconds(10))
+        // Let the Window Server take the warp, or the event routes by the old
+        // position (e.g. the Apple menu). Not cancellable: an early exit here
+        // precedes the restoring defer and strands the pointer on the item.
+        await eventSleep(for: .milliseconds(10))
         MouseHelpers.hideCursor()
         defer {
             MouseHelpers.warpCursor(to: restoreLocation)
