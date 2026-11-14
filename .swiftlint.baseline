@@ -1155,27 +1155,12 @@
   }
  },
  {
-  "text": "        enum Reason {",
-  "violation": {
-   "location": {
-    "character": 9,
-    "file": "Thaw/Items/Manager/MenuBarItemManager+Moving.swift",
-    "line": 1955
-   },
-   "reason": "Types should be nested at most 1 level deep",
-   "ruleDescription": "Types should be nested at most 1 level deep, and functions should be nested at most 2 levels deep.",
-   "ruleIdentifier": "nesting",
-   "ruleName": "Nesting",
-   "severity": "warning"
-  }
- },
- {
   "text": "    private func moveItemViaPreferredPositions(",
   "violation": {
    "location": {
     "character": 13,
     "file": "Thaw/Items/Manager/MenuBarItemManager+Moving.swift",
-    "line": 2170
+    "line": 2091
    },
    "reason": "Function should have complexity 10 or less; currently complexity is 16",
    "ruleDescription": "Complexity of function bodies should be limited.",
@@ -1190,7 +1175,7 @@
    "location": {
     "character": 13,
     "file": "Thaw/Items/Manager/MenuBarItemManager+Moving.swift",
-    "line": 2170
+    "line": 2091
    },
    "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 176 lines",
    "ruleDescription": "Function bodies should not span too many lines",
@@ -1205,9 +1190,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Items/Manager/MenuBarItemManager+Moving.swift",
-    "line": 2427
+    "line": 2347
    },
-   "reason": "File should contain 1000 lines or less: currently contains 2427",
+   "reason": "File should contain 1000 lines or less: currently contains 2347",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",

@@ -1949,24 +1949,9 @@ extension MenuBarItemManager {
         return (liveItems, didReorder)
     }
 
-    /// Why a planned section-order drag is skipped, and whether the skip ends
-    /// the whole move loop rather than just this move.
-    private struct SectionDragSkip {
-        enum Reason {
-            case parked
-            case circuitBreaker
-            case hidingUnsupported
-            case agentOwned
-            case recentlyFailed
-        }
-
-        let reason: Reason
-        let endsMoveLoop: Bool
-    }
-
-    /// The drag-skip checks for one planned section-order move, in order. Side
-    /// effects, including the failure-key writes, stay here so every skip is
-    /// recorded exactly once.
+    /// The drag-skip checks for one planned section-order move; the order lives
+    /// in SectionDragSkip. Side effects, including the failure-key writes, stay
+    /// here so every skip is recorded exactly once.
     private func sectionDragSkipReason(
         plannedMove: (item: MenuBarItem, destination: MoveDestination, isBoundary: Bool),
         isUserInitiated: Bool,
@@ -1975,81 +1960,60 @@ extension MenuBarItemManager {
         liveItems: [MenuBarItem],
         desiredOrder: [String]
     ) -> SectionDragSkip? {
-        if !repairAfterRestriction,
-           plannedMove.item.isParkedOffMenuBarBand(among: liveItems)
-        {
-            MenuBarItemManager.diagLog.debug(
-                "Deferring macOS 27 section order for parked \(plannedMove.item.logString)"
-            )
-            return SectionDragSkip(reason: .parked, endsMoveLoop: true)
-        }
-
         // Item-scoped breaker, keyed on item, side and target, since an
         // overflowing bar changes the order-keyed backoff's key every pass.
-        // User passes are exempt.
         let rememberedMove = MoveFailureMemory.Move(
             item: plannedMove.item,
             destination: plannedMove.destination
         )
-        if !isUserInitiated, moveFailures.isBreakerTripped(for: rememberedMove) {
+        let skip = SectionDragSkip.firstReason(for: SectionDragSkip.Inputs(
+            isParked: !repairAfterRestriction && plannedMove.item.isParkedOffMenuBarBand(among: liveItems),
+            isUserInitiated: isUserInitiated,
+            breakerTripped: moveFailures.isBreakerTripped(for: rememberedMove),
+            hidingUnsupported: plannedMove.item.tag.isHidingUnsupported ||
+                plannedMove.destination.targetItem.tag.isHidingUnsupported,
+            agentOwned: plannedMove.item.tag.namespace == .menuBarAgent,
+            backingOff: moveFailures.isBackingOff(from: rememberedMove, desiredOrder: desiredOrder),
+            usesPlan: usesPlan
+        ))
+        switch skip?.reason {
+        case .parked:
+            MenuBarItemManager.diagLog.debug(
+                "Deferring macOS 27 section order for parked \(plannedMove.item.logString)"
+            )
+        case .circuitBreaker:
             MenuBarItemManager.diagLog.info(
                 "Circuit breaker: suppressing automatic macOS 27 drag for " +
                     "\(plannedMove.item.logString) \(plannedMove.destination.logString) " +
                     "(\(moveFailures.failureCount(for: rememberedMove)) recent verify-failures)"
             )
-            return SectionDragSkip(reason: .circuitBreaker, endsMoveLoop: !usesPlan)
-        }
-
-        // Hiding-unsupported items rewrite their AX title too often for a move
-        // to be verified, so back off.
-        if plannedMove.item.tag.isHidingUnsupported ||
-            plannedMove.destination.targetItem.tag.isHidingUnsupported
-        {
+        case .hidingUnsupported:
+            // These items rewrite their AX title too often for a move to be
+            // verified, so back off.
             moveFailures.backOff(from: rememberedMove, desiredOrder: desiredOrder)
             MenuBarItemManager.diagLog.debug(
                 "Skipping move for denylisted hiding-unsupported item in macOS 27 section order: " +
                     "\(plannedMove.item.logString) → \(plannedMove.destination.logString)"
             )
-            return SectionDragSkip(reason: .hidingUnsupported, endsMoveLoop: !usesPlan)
-        }
-
-        // Agent-composited extras (such as the Live Activity pill) stay where
-        // macOS puts them.
-        if plannedMove.item.tag.namespace == .menuBarAgent {
+        case .agentOwned:
+            // Agent-composited extras (such as the Live Activity pill) stay
+            // where macOS puts them.
             MenuBarItemManager.diagLog.debug(
                 "Skipping move for agent-owned item in macOS 27 section order: \(plannedMove.item.logString)"
             )
-            return SectionDragSkip(reason: .agentOwned, endsMoveLoop: !usesPlan)
-        }
-
-        // Some system extras (such as Sound) always reject the drag; without
-        // backoff it replans every cycle in a cursor-warp loop. Repair passes
-        // included: two failures already covered the retry.
-        if moveFailures.isBackingOff(from: rememberedMove, desiredOrder: desiredOrder) {
+        case .recentlyFailed:
+            // Some system extras (such as Sound) always reject the drag; without
+            // backoff it replans every cycle in a cursor-warp loop.
             MenuBarItemManager.diagLog.debug(
                 "Skipping recently-failed macOS 27 section order move for \(plannedMove.item.logString) \(plannedMove.destination.logString)"
             )
-            return SectionDragSkip(reason: .recentlyFailed, endsMoveLoop: !usesPlan)
+        case nil:
+            break
         }
-        return nil
+        return skip
     }
 
-    /// The outcome of one waitForMenuBarAgentLayout(deadline:interval:enumerate:isSatisfied:)
-    /// poll loop.
-    struct MenuBarAgentLayoutWaitResult {
-        /// The most recent enumeration.
-        let items: [MenuBarItem]
-        /// Whether any item's origin shifted while polling. false means
-        /// MenuBarAgent never acted on the write at all.
-        let barMoved: Bool
-        /// A cancelled wait proves nothing about the agent, so it is not a refusal.
-        let cancelled: Bool
-        let observationUnavailable: Bool
-    }
-
-    /// Waits for the agent to re-sort after a write, until isSatisfied or the
-    /// deadline. A wall-clock deadline, since each poll costs an AX walk, and
-    /// waits in one move can share it. barMoved says whether the bar reacted.
+    /// Waits for the agent to re-sort after a write; see MenuBarAgentLayoutWait.
     private func waitForMenuBarAgentLayout(
         deadline: ContinuousClock.Instant? = nil,
         interval: Duration = Constants.MenuBarTuning.menuBarAgentResortPollInterval,
@@ -2059,66 +2023,18 @@ extension MenuBarItemManager {
             await DragGeometrySource.items { await MenuBarItem.getMenuBarItems(option: .activeSpace, freshOnly: true) }
         },
         isSatisfied: ([MenuBarItem]) -> Bool
-    ) async -> MenuBarAgentLayoutWaitResult {
-        guard var liveItems = await enumerate() else {
-            return MenuBarAgentLayoutWaitResult(
-                items: [], barMoved: false, cancelled: Task.isCancelled, observationUnavailable: true
-            )
-        }
-        let deadline = deadline ?? LayoutWaitGeometry.menuBarAgentResortDeadline(
-            timeout: configuration.menuBarOrderFulfillmentTimeout
-        )
-        let originalGeometry = LayoutWaitGeometry.layoutGeometrySignature(liveItems)
-        var barMoved = false
-        // If nothing moved by earlyBailProbe the agent dropped the write.
-        // Once anything moves, barMoved latches and the wait runs its course.
-        let earlyBailDeadline = earlyBailProbe.map { ContinuousClock.now + $0 }
-
-        // Check the existing walk first, so an instantly honored write costs
-        // no sleep and no second walk.
-        if isSatisfied(liveItems) {
-            return MenuBarAgentLayoutWaitResult(
-                items: liveItems, barMoved: false, cancelled: false, observationUnavailable: false
-            )
-        }
-
-        while ContinuousClock.now < deadline {
-            do {
-                try await Task.sleep(for: interval)
-            } catch {
-                // try? here would spin AX walks and escalate a healthy write
-                // to a drag.
-                return MenuBarAgentLayoutWaitResult(
-                    items: liveItems,
-                    barMoved: barMoved,
-                    cancelled: true,
-                    observationUnavailable: false
+    ) async -> MenuBarAgentLayoutWait.Result {
+        await MenuBarAgentLayoutWait.run(
+            deadline: deadline,
+            fallbackDeadline: {
+                LayoutWaitGeometry.menuBarAgentResortDeadline(
+                    timeout: configuration.menuBarOrderFulfillmentTimeout
                 )
-            }
-            guard let observedItems = await enumerate() else {
-                return MenuBarAgentLayoutWaitResult(
-                    items: [], barMoved: barMoved, cancelled: Task.isCancelled, observationUnavailable: true
-                )
-            }
-            liveItems = observedItems
-            if !barMoved, LayoutWaitGeometry.layoutGeometryChanged(
-                from: originalGeometry,
-                to: LayoutWaitGeometry.layoutGeometrySignature(liveItems)
-            ) {
-                barMoved = true
-            }
-            if isSatisfied(liveItems) {
-                break
-            }
-            // Nothing has shifted by the probe window: the agent dropped the
-            // write. Stop here rather than watching a frozen bar for the rest
-            // of the deadline.
-            if !barMoved, let earlyBailDeadline, ContinuousClock.now >= earlyBailDeadline {
-                break
-            }
-        }
-        return MenuBarAgentLayoutWaitResult(
-            items: liveItems, barMoved: barMoved, cancelled: false, observationUnavailable: false
+            },
+            interval: interval,
+            earlyBailProbe: earlyBailProbe,
+            enumerate: enumerate,
+            isSatisfied: isSatisfied
         )
     }
 
@@ -2144,22 +2060,27 @@ extension MenuBarItemManager {
         }
         let waitResult = await waitForMenuBarAgentLayout(isSatisfied: orderSatisfied)
         let liveItems = waitResult.items
-        if orderSatisfied(liveItems) {
+        // The agent dropping the write is only evidence if the nudge ran.
+        switch MenuBarAgentLayoutWait.resortVerdict(
+            of: waitResult,
+            satisfied: orderSatisfied(liveItems),
+            nudgeRan: nudgeRan
+        ) {
+        case .satisfied:
             MenuBarItemManager.diagLog.info(
                 "Batch preferred-position order satisfied for \(section.logString)"
             )
-        } else if !waitResult.barMoved, !waitResult.cancelled {
-            // The agent dropped the write. Only evidence if the nudge ran.
-            if nudgeRan {
-                MenuBarItemManager.diagLog.warning(
-                    "Batch preferred-position write ignored by MenuBarAgent for \(section.logString)"
-                )
-                noteMenuBarAgentIgnoredPreferredPositions()
-            } else {
-                MenuBarItemManager.diagLog.debug(
-                    "Batch preferred-position write unverified (nudge skipped) for \(section.logString)"
-                )
-            }
+        case .agentIgnored:
+            MenuBarItemManager.diagLog.warning(
+                "Batch preferred-position write ignored by MenuBarAgent for \(section.logString)"
+            )
+            noteMenuBarAgentIgnoredPreferredPositions()
+        case .unverified:
+            MenuBarItemManager.diagLog.debug(
+                "Batch preferred-position write unverified (nudge skipped) for \(section.logString)"
+            )
+        case .inconclusive:
+            break
         }
         return liveItems
     }
@@ -2276,8 +2197,6 @@ extension MenuBarItemManager {
         // captures mid-animation cache garbled slices. Verification re-stamps.
         moveActivity.noteMoveOperation()
 
-        var observationUnavailable = false
-
         // Poll the live order until MenuBarAgent observes the synchronized write.
         let destinationSatisfied: ([MenuBarItem]) -> Bool = { items in
             MenuBarLayoutPlannerProvider.current.liveOrderSatisfiesDestination(
@@ -2306,13 +2225,13 @@ extension MenuBarItemManager {
             },
             isSatisfied: destinationSatisfied
         )
-        observationUnavailable = firstWait.observationUnavailable
-        guard !observationUnavailable else {
+        let updated = firstWait.items
+        let firstVerdict = MenuBarAgentLayoutWait.moveVerdict(of: firstWait) { destinationSatisfied(updated) }
+        if firstVerdict == .observationUnavailable {
             try Task.checkCancellation()
             return false
         }
-        let updated = firstWait.items
-        if destinationSatisfied(updated) {
+        if firstVerdict == .verified {
             moveActivity.noteMoveOperation()
             MenuBarItemManager.diagLog.info(
                 "Preferred-position move verified for \(item.logString) \(destination.logString)"
@@ -2331,7 +2250,7 @@ extension MenuBarItemManager {
         // An icon can have a stale title key and the key the agent sorts by;
         // the first write lets positional resolution find the real one, so
         // retry once. Skip if nothing moved: the agent dropped the write.
-        if !firstWait.barMoved {
+        if firstVerdict == .agentIgnored {
             MenuBarItemManager.diagLog.warning(
                 "Preferred-position write ignored by MenuBarAgent (bar never moved) for \(item.logString)"
             )
@@ -2369,9 +2288,10 @@ extension MenuBarItemManager {
             // Share the phase budget, but never leave the retry with zero polls:
             // if the first wait consumed the window the second write would be
             // issued and then never observed, which is worse than not retrying.
-            let retryDeadline = max(
-                deadline,
-                ContinuousClock.now + Constants.MenuBarTuning.menuBarAgentResortPollInterval * 3
+            let retryDeadline = MenuBarAgentLayoutWait.retryDeadline(
+                phaseDeadline: deadline,
+                now: ContinuousClock.now,
+                pollInterval: Constants.MenuBarTuning.menuBarAgentResortPollInterval
             )
             let retried = await waitForMenuBarAgentLayout(
                 deadline: retryDeadline,
@@ -2383,12 +2303,12 @@ extension MenuBarItemManager {
                 },
                 isSatisfied: destinationSatisfied
             )
-            observationUnavailable = retried.observationUnavailable
-            guard !observationUnavailable else {
+            let retryVerdict = MenuBarAgentLayoutWait.moveVerdict(of: retried) { destinationSatisfied(retried.items) }
+            if retryVerdict == .observationUnavailable {
                 try Task.checkCancellation()
                 return false
             }
-            if destinationSatisfied(retried.items) {
+            if retryVerdict == .verified {
                 moveActivity.noteMoveOperation()
                 MenuBarItemManager.diagLog.info(
                     "Preferred-position move verified after key-resolution retry for \(item.logString) \(destination.logString)"
