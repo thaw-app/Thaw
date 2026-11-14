@@ -90,7 +90,7 @@ extension MenuBarSearchPanel {
         guard showsAResultRow else {
             return event
         }
-        if keyCode == .e {
+        if keyCode == .e, model.renameSession == nil {
             beginRenamingSelection()
             return nil
         }
