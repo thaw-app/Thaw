@@ -319,17 +319,23 @@ struct LiveRehideEnvironmentTests {
         let input = appState.hidEventManager
         input.rehideController = world.controller
         let screen = try #require(NSScreen.screens.first)
+        // The click lands in a window of its own, which is never shown. A click with no window would
+        // match the control item, which has none before setup, and be turned away as a click on that
+        // item before the sections are asked.
+        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 10, height: 10), styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
         let event = try #require(NSEvent.mouseEvent(
             with: .leftMouseDown,
             location: .zero,
             modifierFlags: [],
             timestamp: 0,
-            windowNumber: 0,
+            windowNumber: window.windowNumber,
             context: nil,
             eventNumber: 0,
             clickCount: 1,
             pressure: 1
         ))
+        try #require(event.window === window)
         input.handleSmartRehide(with: event, appState: appState, screen: screen)
         await world.settle()
         // Before setup no section is showing, so the click arms nothing. The click is not cancelled

@@ -13,6 +13,8 @@ import ThawUI
 struct DisplaySettingsPane: View {
     @Environment(AppState.self) var appState
     @Bindable var displaySettings: DisplaySettingsManager
+    /// Nil answers show the alerts below; see Confirmations.
+    var confirmations = Confirmations()
 
     /// Slider edits remain drafts until Apply, without saving configuration or relaunching apps.
     @State var draftSpacing: [String: CGFloat] = [:]

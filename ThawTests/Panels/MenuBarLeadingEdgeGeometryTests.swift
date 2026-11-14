@@ -47,6 +47,24 @@ struct MenuBarLeadingEdgeGeometryTests {
         #expect(updated.stableTrailingBounds == stable)
     }
 
+    @Test("A reading held back by a conceal transition trims the pill once it is repeated after the transition")
+    func heldBackReadingTrimsWhenRepeated() {
+        let edge = MenuBarLeadingEdgeSample(x: 210, screenFrame: screen)
+        let held = MenuBarSplitPillGeometry.followingVisibleEdge(
+            edge, itemBounds: items,
+            stableTrailingBounds: stable, screenFrame: screen, revealedSection: nil,
+            isTransitioning: true
+        )
+        #expect(held.itemBounds == items, "The pill keeps the fading items while the transition runs")
+
+        let repeated = MenuBarSplitPillGeometry.followingVisibleEdge(
+            edge, itemBounds: held.itemBounds,
+            stableTrailingBounds: held.stableTrailingBounds, screenFrame: screen, revealedSection: nil
+        )
+        #expect(repeated.itemBounds == [CGRect(x: 210, y: 3, width: 90, height: 24)], "The item left of the edge is gone")
+        #expect(repeated.stableTrailingBounds.minX == 200)
+    }
+
     @Test("A known mirrored source still cannot trim revealed or transitioning geometry", arguments: [false, true])
     func mirroredEdgeRespectsTransitions(transitioning: Bool) {
         let source = CGRect(x: 1000, y: 0, width: 1000, height: 800)

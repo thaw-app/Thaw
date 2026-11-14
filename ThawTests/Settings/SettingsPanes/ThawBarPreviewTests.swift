@@ -187,5 +187,18 @@ struct ThawBarPreviewTests {
         )
         _ = try await drawn(page)
         #expect(page.texts().contains("Inside"))
+        // The words show with or without a backdrop, so a point of the stage beside them is read too.
+        await page.settle { (try? alpha(of: page, x: 0.1, y: 0.5)) ?? 0 > 0 }
+        #expect(try alpha(of: page, x: 0.1, y: 0.5) > 0, "the backdrop fills the stage beside its content")
+        #expect(try alpha(of: page, x: 0.1, y: 0.05) == 0, "and stops where the stage does")
+    }
+
+    /// How opaque the drawing is at a point, given as fractions of the page's width and height.
+    private func alpha(of page: Page, x: Double, y: Double) throws -> CGFloat {
+        page.host.layoutSubtreeIfNeeded()
+        let bitmap = try #require(page.host.bitmapImageRepForCachingDisplay(in: page.host.bounds))
+        page.host.cacheDisplay(in: page.host.bounds, to: bitmap)
+        let point = (x: Int(Double(bitmap.pixelsWide) * x), y: Int(Double(bitmap.pixelsHigh) * y))
+        return try #require(bitmap.colorAt(x: point.x, y: point.y)).alphaComponent
     }
 }
