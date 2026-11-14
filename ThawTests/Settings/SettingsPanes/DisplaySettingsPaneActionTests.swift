@@ -486,6 +486,44 @@ struct DisplaySettingsPaneActionTests {
         #expect(DisplaysTab(section: "Something else") == nil)
     }
 
+    /// The alerts only show in a visible window, so their buttons are drawn here on their own.
+    /// Nothing is pressed: an answer goes through Confirmations, as the other tests do.
+    @Test("The confirmation buttons offer a profile choice only while a profile is active")
+    func confirmationButtons() async throws {
+        try await withWorld { world in
+            let pane = DisplaySettingsPane(displaySettings: world.settings)
+            @MainActor func buttons(_ view: some View) async -> [String] {
+                let page = OffscreenRender(
+                    AnyView(VStack { view }.environment(world.appState).frame(width: 400, height: 300)),
+                    size: CGSize(width: 400, height: 300)
+                )
+                await page.settle { page.elements().contains { OffscreenAccessibility.role(of: $0) == .button } }
+                return page.elements()
+                    .filter { OffscreenAccessibility.role(of: $0) == .button }
+                    .compactMap { OffscreenAccessibility.label(of: $0) }
+            }
+
+            let withProfile = ["Update Active Profile", "Update All Profiles", "Cancel"]
+            let withoutProfile = ["Apply", "Cancel"]
+
+            let spacing = DisplaySettingsPane.PendingSpacingApply(
+                displayID: Self.studio, displayName: "Studio", offset: 6, isActiveDisplay: true,
+                activeProfileID: UUID(), activeProfileName: "Work"
+            )
+            #expect(await buttons(pane.spacingConfirmationButtons(for: spacing)) == withProfile)
+            let spacingWithout = DisplaySettingsPane.PendingSpacingApply(
+                displayID: Self.studio, displayName: "Studio", offset: 6, isActiveDisplay: true,
+                activeProfileID: nil, activeProfileName: nil
+            )
+            #expect(await buttons(pane.spacingConfirmationButtons(for: spacingWithout)) == withoutProfile)
+
+            let global = DisplaySettingsPane.PendingGlobalApply(displayCount: 2, activeProfileID: UUID(), activeProfileName: "Work")
+            #expect(await buttons(pane.globalConfirmationButtons(for: global)) == withProfile)
+            let globalWithout = DisplaySettingsPane.PendingGlobalApply(displayCount: 2, activeProfileID: nil, activeProfileName: nil)
+            #expect(await buttons(pane.globalConfirmationButtons(for: globalWithout)) == withoutProfile)
+        }
+    }
+
     @Test("The confirmation messages say who is restarted and where the spacing is saved")
     func confirmationMessages() async throws {
         try await withWorld { world in
