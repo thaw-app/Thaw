@@ -9,10 +9,15 @@ import SwiftUI
 import ThawUI
 
 struct NativeVisibilityRecoveryView: View {
-    @State private var model = NativeVisibilityRecoveryModel.live()
+    @State private var model: NativeVisibilityRecoveryModel
     @State private var confirmsRestore = false
     @State private var confirmsSetAside = false
     @State private var confirmsBypass = false
+
+    /// Tests pass a model over their own records; the app reads the live ones.
+    init(model: NativeVisibilityRecoveryModel = .live()) {
+        _model = State(initialValue: model)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.gutter) {

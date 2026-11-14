@@ -15,6 +15,8 @@ import UniformTypeIdentifiers
 /// The files to attach to a bug report, as two rows like Repair's: the logs,
 /// and the item list with its capture samples.
 struct DiagnosticFilesSection: View {
+    var actions = Actions()
+
     @State private var isExporting = false
     @State private var errorMessage: String?
     /// Read when the section appears and set again when a sample is written.
@@ -29,7 +31,7 @@ struct DiagnosticFilesSection: View {
                     }
                     ThawActionGroup {
                         Button("Show in Finder") {
-                            NSWorkspace.shared.open(DiagnosticLogger.shared.logDirectory)
+                            actions.open(DiagnosticLogger.shared.logDirectory)
                         }
                         .accessibilityLabel("Show Log Files in Finder")
                         Button("Export…", action: exportLogs)
@@ -48,7 +50,7 @@ struct DiagnosticFilesSection: View {
                     Button("Save…", action: saveItemList)
                         .accessibilityLabel("Save Item List")
                     Button("Show Samples") {
-                        NSWorkspace.shared.open(CaptureDiagnostics.sampleDirectory)
+                        actions.open(CaptureDiagnostics.sampleDirectory)
                     }
                     .disabled(!hasCaptureSamples)
                     .accessibilityLabel("Show Capture Samples")
@@ -83,19 +85,15 @@ struct DiagnosticFilesSection: View {
     }
 
     private func exportLogs() {
-        guard let destination = Self.chooseDestination(name: "\(Constants.displayName) Diagnostics.zip", type: .zip) else {
+        guard let destination = actions.chooseDestination("\(Constants.displayName) Diagnostics.zip", .zip) else {
             return
         }
         isExporting = true
         Task {
             defer { isExporting = false }
             do {
-                try await MaintenanceTools.exportDiagnostics(
-                    logs: DiagnosticLogger.shared.logDirectory,
-                    samples: CaptureDiagnostics.sampleDirectory,
-                    to: destination
-                )
-                NSWorkspace.shared.activateFileViewerSelecting([destination])
+                try await actions.exportDiagnostics(destination)
+                actions.reveal(destination)
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -103,23 +101,14 @@ struct DiagnosticFilesSection: View {
     }
 
     private func saveItemList() {
-        guard let destination = Self.chooseDestination(name: "\(Constants.displayName) Items.json", type: .json) else {
+        guard let destination = actions.chooseDestination("\(Constants.displayName) Items.json", .json) else {
             return
         }
         do {
-            try MaintenanceTools.saveItemList(to: destination)
-            NSWorkspace.shared.activateFileViewerSelecting([destination])
+            try actions.saveItemList(destination)
+            actions.reveal(destination)
         } catch {
             errorMessage = error.localizedDescription
         }
-    }
-
-    private static func chooseDestination(name: String, type: UTType) -> URL? {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [type]
-        panel.nameFieldStringValue = name
-        panel.canCreateDirectories = true
-        guard panel.runModal() == .OK else { return nil }
-        return panel.url
     }
 }
