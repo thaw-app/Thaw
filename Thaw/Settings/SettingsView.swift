@@ -350,16 +350,17 @@ private struct SettingsSidebar: View {
     let generalSettings: GeneralSettings
 
     var body: some View {
-        SettingsSidebarPaneList(
-            navigationState: navigationState,
-            turnedOff: SettingsSidebarPanes.panesTurnedOff(
-                isEnabled: appState.moduleHost.isEnabled,
-                profilesOn: appState.profilesFeature.isOn
-            )
+        let turnedOff = SettingsSidebarPanes.panesTurnedOff(
+            isEnabled: appState.moduleHost.isEnabled,
+            profilesOn: appState.profilesFeature.isOn
         )
-        .onChange(of: generalSettings.simpleMode) { _, _ in
-            searchModel.updateDisplayedItems()
-        }
+        SettingsSidebarPaneList(navigationState: navigationState, turnedOff: turnedOff)
+            .onChange(of: generalSettings.simpleMode) { _, _ in
+                searchModel.updateDisplayedItems()
+            }
+            .onChange(of: turnedOff, initial: true) { _, turnedOff in
+                searchModel.turnedOffPanes = turnedOff
+            }
     }
 }
 

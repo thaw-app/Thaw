@@ -52,6 +52,20 @@ struct SettingsSidebarPaneListTests {
         #expect(searchModel.searchText.isEmpty)
     }
 
+    @Test("Search leaves out the pages whose module is off, and brings them back when it turns on")
+    func searchSkipsTurnedOffPages() {
+        let searchModel = SearchModel()
+        searchModel.searchText = "profile"
+        #expect(searchModel.displayedGroups.contains { $0.pane == .profiles }, "the query finds the Profiles page")
+
+        searchModel.turnedOffPanes = SettingsSidebarPanes.panesTurnedOff(isEnabled: { _ in true }, profilesOn: false)
+        #expect(!searchModel.displayedGroups.contains { $0.pane == .profiles })
+        #expect(searchModel.displayedGroups.contains { $0.pane == .modules }, "Modules, where it turns back on, still shows")
+
+        searchModel.turnedOffPanes = []
+        #expect(searchModel.displayedGroups.contains { $0.pane == .profiles })
+    }
+
     @Test("A section a search left unused is dropped when another page opens")
     func leftoverSectionIsDroppedOnAnotherPage() throws {
         let navigation = AppNavigationState()

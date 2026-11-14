@@ -27,6 +27,7 @@ the items under New and Fixed.
 ### Fixed
 
 - A `thaw://apply-profile` link no longer applies a profile while Profiles is turned off.
+- Settings search no longer offers pages for modules you turned off, such as Profiles, Scripts, Triggers or Widgets.
 
 ## [3.0.0-alpha.14] - 2026-11-14
 
