@@ -322,10 +322,7 @@ extension MenuBarItemManager {
             appState.hidEventManager.startAll()
         }
 
-        let attemptBudget = ClickAttemptPolicy.attemptBudget(
-            ownerUnresponsive: failureLedger.isUnresponsive(item),
-            maxAttempts: maxAttempts
-        )
+        let attemptBudget = ClickAttemptPolicy.attemptBudget(ownerUnresponsive: failureLedger.isUnresponsive(item), maxAttempts: maxAttempts)
         let attemptStartTime = ContinuousClock.now
 
         for attempt in 1 ... attemptBudget {
