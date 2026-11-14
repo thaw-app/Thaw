@@ -60,12 +60,19 @@ struct CPUSource: Sendable {
         let cores = (0 ..< Int(processorCount)).map { coreIndex in
             let base = coreIndex * stateCount
             return CPUCoreTicks(
-                user: UInt64(values[base + Int(CPU_STATE_USER)]),
-                system: UInt64(values[base + Int(CPU_STATE_SYSTEM)]),
-                idle: UInt64(values[base + Int(CPU_STATE_IDLE)])
+                user: Self.ticks(values[base + Int(CPU_STATE_USER)]),
+                system: Self.ticks(values[base + Int(CPU_STATE_SYSTEM)]),
+                idle: Self.ticks(values[base + Int(CPU_STATE_IDLE)])
             )
         }
         return CPUTickSnapshot(cores: cores)
+    }
+
+    /// Mach keeps each counter as an unsigned 32-bit value but returns it as
+    /// integer_t, so one past 2^31 arrives negative. Converting that straight to
+    /// UInt64 traps; reading the bits as unsigned gives the real count.
+    static func ticks(_ value: integer_t) -> UInt64 {
+        UInt64(UInt32(bitPattern: value))
     }
 }
 
