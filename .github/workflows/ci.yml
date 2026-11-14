@@ -115,6 +115,10 @@ jobs:
           bash scripts/tests/test-format.sh
           sh scripts/format.sh --lint
 
+      - name: Test the package coverage script
+        if: needs.changes.outputs.code == 'true'
+        run: bash scripts/tests/test-package-coverage.sh
+
   build:
     if: github.repository == 'thaw-app/Thaw'
     runs-on: xcode-27
@@ -246,14 +250,32 @@ jobs:
         with:
           persist-credentials: false
 
+      # Pull requests from forks skip coverage, as the app job does: their scan
+      # has no SONAR_TOKEN to use it.
       - name: Test packages
         if: needs.changes.outputs.code == 'true'
-        run: sh scripts/test-packages.sh
+        env:
+          WITH_COVERAGE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          if [ "$WITH_COVERAGE" = "true" ]; then
+            sh scripts/test-packages.sh --coverage package-coverage
+          else
+            sh scripts/test-packages.sh
+          fi
+
+      - name: Upload package coverage
+        if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package-coverage
+          path: package-coverage
+          retention-days: 1
+          if-no-files-found: error
 
   # Always runs so Scorecard sees a Sonar check on nearly every PR; forks and
   # Dependabot no-op without secrets under the same job name.
   sonarqube:
-    needs: [changes, build]
+    needs: [changes, build, packages]
     if: github.repository == 'thaw-app/Thaw'
     runs-on: ubuntu-latest
     env:
@@ -272,6 +294,27 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # The scan takes one report file, so the app's coverage and each package's
+      # are merged into coverage.xml first. The scan action downloads the app's
+      # artifact again, into a folder of its own so it cannot overwrite the merge.
+      - name: Download app coverage
+        if: env.SONAR_ENABLED == 'true' && needs.changes.outputs.code == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: coverage-data
+          path: app-coverage
+
+      - name: Download package coverage
+        if: env.SONAR_ENABLED == 'true' && needs.changes.outputs.code == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package-coverage
+          path: package-coverage
+
+      - name: Merge coverage
+        if: env.SONAR_ENABLED == 'true' && needs.changes.outputs.code == 'true'
+        run: python3 scripts/package-coverage.py merge coverage.xml app-coverage/coverage.xml package-coverage/*.xml
+
       # Uses this run's coverage, or the last cached report when the build was
       # skipped. With neither, it leaves the last analysis alone.
       - name: Scan with coverage
@@ -280,6 +323,7 @@ jobs:
         with:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
           code-changed: ${{ needs.changes.outputs.code }}
+          artifact-path: app-coverage
           cache-path: coverage.xml
           reports: |
             sonar.coverageReportPaths=coverage.xml
