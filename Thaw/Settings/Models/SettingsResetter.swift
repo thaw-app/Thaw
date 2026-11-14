@@ -44,6 +44,8 @@ extension AppSettings {
     func resetAppearance() {
         // appearanceManager lives on AppState, so the reset goes through it.
         appState?.appearanceManager.configuration = Defaults.DefaultValue.menuBarAppearanceConfigurationV2
+        // A Space's own look wins over the base one, so it has to go as well.
+        appState?.appearanceManager.removeAllSpaceOverrides()
     }
 
     func resetGeneral(zoomDefaults: UserDefaults = .standard) {
