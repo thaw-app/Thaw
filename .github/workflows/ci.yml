@@ -1,6 +1,8 @@
 name: CI
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  # The weekly run has a group of its own, so a merge doesn't cancel it and it
+  # doesn't cancel a merge's run.
+  group: ${{ github.workflow }}-${{ github.event_name == 'schedule' && 'schedule' || github.head_ref || github.ref }}
   cancel-in-progress: true
 # Runs on every PR and push to development so Scorecard sees checks; the
 # macOS work stays gated on path detection below.
@@ -9,6 +11,11 @@ on:
   push:
     branches:
       - development
+  # Weekly on development, where path detection reports everything as changed.
+  # Merges cancel most push runs, so this one tests the packages and saves the cache.
+  schedule:
+    # Offset from the hour and from the other scheduled workflows.
+    - cron: "43 2 * * 3"
   workflow_dispatch:
 
 permissions:
@@ -23,8 +30,23 @@ jobs:
       actions: read
     env:
       CODE_PATTERNS: '(\.swift$|(^|/)Package\.swift$|(^|/)Package\.resolved$|^sonar-project\.properties$|^\.swiftlint|^\.swiftformat|^Thaw\.xcodeproj/|^scripts/|\.xcstrings$|^\.github/workflows/ci\.yml$)'
+      # The macOS build runs for a path that matches CODE_PATTERNS and neither of the
+      # two lists below, so a path nobody has listed still builds.
+      #
+      # Lint and format settings, and the scripts only the lint job runs. The build
+      # reads .swiftlint-version, lint.sh and install-swiftlint.sh, so they stay out.
+      LINT_ONLY_PATTERNS: '(^\.swiftlint\.yml$|^\.swiftlint\.baseline$|^\.swiftformat|^scripts/(format|install-swiftformat|update-swiftlint-baseline)\.sh$|^scripts/swiftlint-baseline\.py$|^scripts/tests/test-(format|lint|swiftlint-baseline)\.sh$)'
+      # String catalogs. The lint job checks that they are valid JSON, and nothing
+      # compiles them before the merge. To build for them again, change this to '(^$)'.
+      CATALOG_PATTERNS: '(\.xcstrings$)'
+      # The package tests build only packages/, so the app's own code can't change them.
+      PACKAGE_PATTERNS: '(^packages/|^scripts/test-packages\.sh$|^\.github/workflows/ci\.yml$)'
     outputs:
-      code: ${{ steps.since-last-run.outputs.code || steps.filter.outputs.code }}
+      # The skip step below can only turn a "true" into "false"; skipped, or unable
+      # to confirm, it leaves the filter's answer.
+      code: ${{ steps.since-last-run.outputs.code == 'false' && 'false' || steps.filter.outputs.code }}
+      build: ${{ steps.since-last-run.outputs.build == 'false' && 'false' || steps.build-filter.outputs.build }}
+      packages: ${{ steps.since-last-run.outputs.packages == 'false' && 'false' || steps.packages-filter.outputs.code }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -35,14 +57,52 @@ jobs:
         uses: thaw-app/org-ci/actions/detect-code-changes@d57f5f99c6641bbe12e87a54898356000d94f904
         with:
           patterns: ${{ env.CODE_PATTERNS }}
-      # The filter compares the whole pull request with its base, so a push that only
+      - name: Detect package paths
+        id: packages-filter
+        uses: thaw-app/org-ci/actions/detect-code-changes@d57f5f99c6641bbe12e87a54898356000d94f904
+        with:
+          patterns: ${{ env.PACKAGE_PATTERNS }}
+      # The shared action matches one pattern and cannot leave paths out, so this
+      # compares the same range itself, and answers true whenever it cannot tell.
+      - name: Detect paths the build uses
+        id: build-filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -uo pipefail
+          build=true
+          range=""
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            range="origin/${BASE_REF}...HEAD"
+          elif [[ "$EVENT_NAME" == "push" && -n "$BEFORE" && ! "$BEFORE" =~ ^0+$ ]]; then
+            range="${BEFORE}..${SHA}"
+          fi
+          if [[ -n "$range" ]] && changed=$(git -c core.quotePath=false diff --name-only --no-renames "$range" 2>/dev/null) \
+            && [[ "$(git diff --name-only --no-renames -z "$range" | tr -cd '\n' | wc -c)" -eq 0 ]]; then
+            status=0
+            rest=$(grep -Ev -e "$LINT_ONLY_PATTERNS" -e "$CATALOG_PATTERNS" <<<"$changed") || status=$?
+            if (( status <= 1 )); then
+              status=0
+              grep -Eq -e "$CODE_PATTERNS" <<<"$rest" || status=$?
+              if (( status == 1 )); then
+                build=false
+                echo "Nothing the build or its tests use changed; the macOS build will no-op."
+              fi
+            fi
+          fi
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+      # The filters compare the whole pull request with its base, so a push that only
       # fixes the changelog would build and test again. When the files changed since
       # the previous push are not code, and CI passed on that push, nothing new needs
-      # testing. Anything it cannot confirm (a force push, a cancelled or failed run,
-      # an API error) keeps the full run.
+      # testing. The macOS build and the package tests are judged the same way, each
+      # against its own patterns. Anything it cannot confirm (a force push, a
+      # cancelled or failed run, an API error) keeps the full run.
       - name: Skip what the last passing run already tested
         id: since-last-run
-        if: github.event_name == 'pull_request' && github.event.action == 'synchronize' && steps.filter.outputs.code == 'true'
+        if: github.event_name == 'pull_request' && github.event.action == 'synchronize' && (steps.filter.outputs.code == 'true' || steps.packages-filter.outputs.code == 'true')
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -51,17 +111,47 @@ jobs:
         run: |
           set -uo pipefail
           code=true
-          if changed=$(git -c core.quotePath=false diff --name-only --no-renames "$BEFORE" "$AFTER" 2>/dev/null) \
-            && ! grep -Eq "$CODE_PATTERNS" <<<"$changed"; then
-            runs=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$BEFORE&event=pull_request&status=success&per_page=1" \
-              | grep -oE '"total_count": *[0-9]+' | grep -oE '[0-9]+$' || echo 0)
-            if [ "${runs:-0}" -gt 0 ]; then
-              code=false
-              echo "Only non-code files changed since $BEFORE, which passed CI; skipping the build and tests."
+          build=true
+          packages=true
+          if changed=$(git -c core.quotePath=false diff --name-only --no-renames "$BEFORE" "$AFTER" 2>/dev/null); then
+            code_untouched=false
+            build_untouched=false
+            packages_untouched=false
+            grep -Eq "$CODE_PATTERNS" <<<"$changed" || code_untouched=true
+            grep -Eq "$PACKAGE_PATTERNS" <<<"$changed" || packages_untouched=true
+            # Only a definite no-match counts; a pattern that grep rejects keeps the build.
+            status=0
+            rest=$(grep -Ev -e "$LINT_ONLY_PATTERNS" -e "$CATALOG_PATTERNS" <<<"$changed") || status=$?
+            if (( status <= 1 )); then
+              status=0
+              grep -Eq -e "$CODE_PATTERNS" <<<"$rest" || status=$?
+              (( status == 1 )) && build_untouched=true
+            fi
+            if [ "$code_untouched" = true ] || [ "$build_untouched" = true ] || [ "$packages_untouched" = true ]; then
+              runs=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$BEFORE&event=pull_request&status=success&per_page=1" \
+                | grep -oE '"total_count": *[0-9]+' | grep -oE '[0-9]+$' || echo 0)
+              if [ "${runs:-0}" -gt 0 ]; then
+                if [ "$code_untouched" = true ]; then
+                  code=false
+                  echo "Only non-code files changed since $BEFORE, which passed CI; skipping lint."
+                fi
+                if [ "$build_untouched" = true ]; then
+                  build=false
+                  echo "Nothing the build or its tests use changed since $BEFORE, which passed CI; skipping the build and tests."
+                fi
+                if [ "$packages_untouched" = true ]; then
+                  packages=false
+                  echo "Nothing under packages/ changed since $BEFORE, which passed CI; skipping the package tests."
+                fi
+              fi
             fi
           fi
-          echo "code=$code" >> "$GITHUB_OUTPUT"
+          {
+            echo "code=$code"
+            echo "build=$build"
+            echo "packages=$packages"
+          } >> "$GITHUB_OUTPUT"
 
   static_analysis:
     needs: changes
@@ -117,8 +207,12 @@ jobs:
 
   build:
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: xcode-27
+    # A skip runs on Linux so it doesn't wait for, or hold, a macOS runner.
+    runs-on: ${{ needs.changes.outputs.build == 'true' && 'xcode-27' || 'ubuntu-slim' }}
     needs: [changes, static_analysis]
+    # A backstop. The limit that normally ends a hung run is on the Build and Test
+    # step, which leaves time to upload what the tests wrote.
+    timeout-minutes: 30
     permissions:
       contents: read
       # Deleting older compilation caches; a pull request from a fork gets a read-only token regardless.
@@ -126,15 +220,15 @@ jobs:
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
-      - name: Skip macOS build (no code changes)
-        if: needs.changes.outputs.code != 'true'
-        run: echo "No code-related paths changed; skipping xcodebuild test."
+      - name: Skip macOS build (nothing it uses changed)
+        if: needs.changes.outputs.build != 'true'
+        run: echo "No Swift code, project file, dependency or build script changed; skipping xcodebuild test. Lint settings, lint-only scripts and string catalogs don't need the build."
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.build == 'true'
 
       - name: Cache SwiftPM
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.build == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -144,27 +238,47 @@ jobs:
           restore-keys: |
             spm-${{ runner.os }}-
 
-      # Xcode's compilation cache, so the build recompiles only what changed since
-      # the cache was saved. Every run restores the newest one development saved.
-      # The key names this commit, which only a rerun matches.
+      # A new Xcode makes every cached entry miss, so the cache's name carries its
+      # version and build number, as in 27.1-27A9275.
+      - name: Identify Xcode
+        id: xcode
+        if: needs.changes.outputs.build == 'true'
+        run: |
+          set -euo pipefail
+          id=$(xcodebuild -version | awk 'NR == 1 { version = $2 } NR == 2 { build = $3 } END { print version "-" build }')
+          if [[ ! "$id" =~ ^[0-9][0-9A-Za-z.]*-[0-9A-Za-z]+$ ]]; then
+            echo "::error::Could not read the Xcode version and build number: $(xcodebuild -version | tr '\n' ' ')"
+            exit 1
+          fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+      # Xcode's compilation cache. Only the package targets hit it; the app and its
+      # tests miss on every commit. So its key is Xcode, the dependencies and packages.
       - name: Restore Swift compilation cache
-        if: needs.changes.outputs.code == 'true'
+        id: compilation-cache
+        if: needs.changes.outputs.build == 'true'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: Build/CompilationCache.noindex
-          key: compilation-cache-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            compilation-cache-${{ runner.os }}-
+          # The lock file is named by its path: a pattern would also match the lock
+          # files in the SwiftPM checkouts restored above.
+          key: compilation-cache-${{ runner.os }}-xcode${{ steps.xcode.outputs.id }}-${{ hashFiles('Thaw.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', 'packages/**') }}
+          # Development restores only an exact match, so the cache it saves carries
+          # nothing over from older ones. A pull request falls back to the newest.
+          restore-keys: ${{ github.ref != 'refs/heads/development' && format('compilation-cache-{0}-xcode{1}-', runner.os, steps.xcode.outputs.id) || '' }}
 
       # The Thaw target's lint build phase requires the pinned SwiftLint on PATH.
       - name: Install pinned SwiftLint
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.build == 'true'
         run: |
           sh scripts/install-swiftlint.sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
+      # About 12 minutes, 16 at most so far; hung tests have run it past 30. The limit
+      # is on the step, not only the job, so the upload below still runs.
       - name: Build and Test
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.build == 'true'
+        timeout-minutes: 22
         run: |
           xcodebuild test \
             -project Thaw.xcodeproj \
@@ -176,23 +290,32 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      # Only development saves, once per commit. A weekly key was written once and
-      # then never updated, so by the end of a week every run recompiled the week's
-      # changes. Pull requests don't save: at about 600 MB each they would push
-      # development's caches out of the repository's limit.
+      # A failed or timed-out run's logs name the tests that failed or never finished.
+      - name: Upload test results
+        if: failure() && needs.changes.outputs.build == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-results
+          path: Build/Logs/Test
+          retention-days: 3
+          if-no-files-found: ignore
+
+      # Only development saves, and only when no cache has this key yet. At about 1.4 GB
+      # each, pull request saves would push its caches out of the repository's limit.
       - name: Save Swift compilation cache
-        if: needs.changes.outputs.code == 'true' && github.ref == 'refs/heads/development'
+        if: needs.changes.outputs.build == 'true' && github.ref == 'refs/heads/development' && steps.compilation-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: Build/CompilationCache.noindex
-          key: compilation-cache-${{ runner.os }}-${{ github.sha }}
+          key: ${{ steps.compilation-cache.outputs.cache-primary-key }}
 
-      # Keeps the two newest, so a save per commit doesn't fill the cache limit.
+      # Keeps the two newest for this Xcode, so the saves don't fill the cache limit.
+      # Another Xcode's caches are left alone; unused, GitHub removes them after a week.
       - name: Drop older compilation caches
-        if: needs.changes.outputs.code == 'true' && github.ref == 'refs/heads/development'
+        if: needs.changes.outputs.build == 'true' && github.ref == 'refs/heads/development' && steps.compilation-cache.outputs.cache-hit != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          PREFIX: compilation-cache-${{ runner.os }}-
+          PREFIX: compilation-cache-${{ runner.os }}-xcode${{ steps.xcode.outputs.id }}-
         run: |
           gh cache list --repo "$GITHUB_REPOSITORY" --ref refs/heads/development --key "$PREFIX" \
             --sort created_at --order desc --limit 100 --json id --jq '.[2:][].id' |
@@ -201,11 +324,11 @@ jobs:
             done
 
       - name: Check memory budget
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.build == 'true'
         run: ./scripts/check-memory-budget.sh Build/Build/Products/Debug/Thaw.app/Contents/MacOS/Thaw
 
       - name: Convert coverage to XML
-        if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        if: needs.changes.outputs.build == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         env:
           XCRESULTPARSER_VERSION: "2.0.1"
         run: |
@@ -220,7 +343,7 @@ jobs:
           python3 scripts/normalize-coverage.py coverage.xml
 
       - name: Upload Coverage XML
-        if: needs.changes.outputs.code == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        if: needs.changes.outputs.build == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-data
@@ -231,23 +354,25 @@ jobs:
   # The app's xcodebuild test run does not run a package's own test targets, so
   # this runs them. One job loops over the packages: each takes under half a
   # minute to test, so a job per package would spend more on runner start-up.
+  # It runs when something under packages/ changes and in the weekly run, since
+  # nearly all of its time goes to building the packages from scratch.
   packages:
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: xcode-27
+    runs-on: ${{ needs.changes.outputs.packages == 'true' && 'xcode-27' || 'ubuntu-slim' }}
     needs: [changes, static_analysis]
     timeout-minutes: 30
     steps:
-      - name: Skip package tests (no code changes)
-        if: needs.changes.outputs.code != 'true'
-        run: echo "No code-related paths changed; skipping the package tests."
+      - name: Skip package tests (no package changes)
+        if: needs.changes.outputs.packages != 'true'
+        run: echo "Nothing under packages/ changed; skipping the package tests."
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.packages == 'true'
         with:
           persist-credentials: false
 
       - name: Test packages
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.packages == 'true'
         run: sh scripts/test-packages.sh
 
   # Always runs so Scorecard sees a Sonar check on nearly every PR; forks and
@@ -272,14 +397,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # Uses this run's coverage, or the last cached report when the build was
-      # skipped. With neither, it leaves the last analysis alone.
+      # Uses this run's coverage. With the build skipped, development scans the cached
+      # report and a pull request is not scanned, so sonar-project.properties still builds.
       - name: Scan with coverage
         if: env.SONAR_ENABLED == 'true'
         uses: thaw-app/org-ci/actions/sonar-scan@d57f5f99c6641bbe12e87a54898356000d94f904
         with:
           sonar-token: ${{ secrets.SONAR_TOKEN }}
-          code-changed: ${{ needs.changes.outputs.code }}
+          code-changed: ${{ needs.changes.outputs.build }}
           cache-path: coverage.xml
           reports: |
             sonar.coverageReportPaths=coverage.xml
