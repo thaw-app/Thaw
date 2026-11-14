@@ -483,7 +483,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func handleReleaseItemRequest(bundle: String?, itemID: String?, sender: String) {
         let released = heldItemReveals.release(bundle: bundle, itemID: itemID, for: sender)
         guard !released.isEmpty else {
-            appState.diagLog.warning("Settings URI release-item: missing or not held bundle/item-id")
+            appState.diagLog.warning("Settings URI release-item: missing, ambiguous or not held bundle/item-id")
             return
         }
         appState.diagLog.info("Settings URI release-item: released \(released.joined(separator: ", ")) for sender \(sender)")

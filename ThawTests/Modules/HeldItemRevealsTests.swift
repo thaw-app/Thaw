@@ -45,6 +45,20 @@ struct HeldItemRevealsTests {
         #expect(holds.release(bundle: nil, itemID: nil, for: "triggers").isEmpty)
     }
 
+    @Test("A release naming both a bundle and an item, or neither, lets go of nothing")
+    func releaseNeedsExactlyOneName() {
+        let (holds, recorder) = make()
+        holds.hold("com.x:a", for: "launcher")
+        holds.hold("com.y:b", for: "launcher")
+
+        #expect(holds.release(bundle: "com.y", itemID: "com.x:a", for: "launcher").isEmpty, "a URL with both is ambiguous")
+        #expect(holds.release(bundle: "", itemID: "", for: "launcher").isEmpty)
+        #expect(recorder.hidden.isEmpty)
+        #expect(holds.isHeld("com.x:a") && holds.isHeld("com.y:b"))
+
+        #expect(holds.release(bundle: "", itemID: "com.x:a", for: "launcher") == ["com.x:a"], "an empty field counts as absent")
+    }
+
     @Test("Every hold shows the item and only the last release hides it")
     func showsOnEveryHoldAndHidesOnce() {
         let (holds, recorder) = make()
