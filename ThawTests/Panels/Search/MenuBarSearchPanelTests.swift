@@ -364,6 +364,33 @@ struct MenuBarSearchPanelTests {
         #expect(panel.model.selection == MenuBarSearchModel.ItemID(alpha))
     }
 
+    @Test("Tab and Shift-Tab move focus on from a footer button instead of jumping sections")
+    func tabFromAButtonMovesFocus() throws {
+        let world = World()
+        let alpha = World.item("Alpha"), beta = World.item("Beta")
+        world.seat([alpha, beta])
+        let panel = panel(world)
+        func key(_ flags: NSEvent.ModifierFlags) throws -> NSEvent {
+            try #require(NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: flags, timestamp: 0, windowNumber: panel.windowNumber,
+                context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: UInt16(KeyCode.tab.rawValue)
+            ))
+        }
+        panel.model.results = [
+            MenuBarSearchResult(item: alpha, ownerName: nil, section: "Visible"),
+            MenuBarSearchResult(item: beta, ownerName: nil, section: "Hidden"),
+        ]
+        panel.model.selection = MenuBarSearchModel.ItemID(beta)
+        let button = NSButton(title: "Footer", target: nil, action: nil)
+        panel.contentView?.addSubview(button)
+        try #require(panel.makeFirstResponder(button))
+
+        #expect(try panel.handleKeyDown(key(.shift)) != nil)
+        panel.model.selection = MenuBarSearchModel.ItemID(alpha)
+        #expect(try panel.handleKeyDown(key([])) != nil)
+        #expect(panel.model.selection == MenuBarSearchModel.ItemID(alpha))
+    }
+
     @Test("A rename ends when its row leaves the list")
     func renameEndsWithItsRow() {
         let world = World()

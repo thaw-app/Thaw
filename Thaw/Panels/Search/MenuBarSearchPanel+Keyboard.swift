@@ -21,6 +21,12 @@ extension MenuBarSearchPanel {
         (firstResponder as? NSTextView)?.hasMarkedText() ?? false
     }
 
+    /// Whether the keys drive the list: the list never takes focus, so the query field holds it
+    /// while a row is highlighted.
+    private var keyboardIsOnTheList: Bool {
+        firstResponder === self || (firstResponder as? NSTextView)?.isFieldEditor == true
+    }
+
     /// The one place the panel's keys are read, as in Floe: a second handler
     /// wrote a stale highlight back on held-arrow repeats. Nil when handled.
     func handleKeyDown(_ event: NSEvent) -> NSEvent? {
@@ -47,10 +53,11 @@ extension MenuBarSearchPanel {
     /// Tab moves the highlight to the next section, Shift-Tab to the previous
     /// one. Past the last section, before the first, or with only one, the key
     /// passes through and moves the keyboard focus, so the buttons stay reachable.
+    /// From a focused button it always passes through.
     private func handleSectionJump(_ event: NSEvent) -> Bool {
         let modifiers = Modifiers(nsEventFlags: event.modifierFlags)
         guard
-            event.window === self, model.renameSession == nil, KeyCode(rawValue: Int(event.keyCode)) == .tab, modifiers.isEmpty || modifiers == .shift, showsAResultRow,
+            event.window === self, model.renameSession == nil, KeyCode(rawValue: Int(event.keyCode)) == .tab, modifiers.isEmpty || modifiers == .shift, showsAResultRow, keyboardIsOnTheList,
             model.moveSelection(toSectionFromCurrentBy: modifiers == .shift ? -1 : 1, wraps: false)
         else {
             return false
