@@ -109,7 +109,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Closing hidden items stops every section's hide timer,** so an old countdown can't close items you reveal later. By @Belligerently in [#1571](https://github.com/thaw-app/Thaw/pull/1571).
 - **A click-away hide no longer closes items you reopen with a shortcut.**
 - **A cancelled click no longer opens the item or leaves the pointer on it.** By @Belligerently in [#1578](https://github.com/thaw-app/Thaw/pull/1578).
-- **Clicks on menu bar items are no longer dropped while an app is frozen.** By @Belligerently in [#1580](https://github.com/thaw-app/Thaw/pull/1580).
+- **Far fewer clicks on menu bar items are dropped while an app is frozen.** By @Belligerently in [#1580](https://github.com/thaw-app/Thaw/pull/1580).
 - **Thaw no longer crashes when two Apple items swap places while one is briefly unnamed.** By @Belligerently in [#1576](https://github.com/thaw-app/Thaw/pull/1576).
 - **Native hiding no longer moves visible items in among hidden ones after an app launches.** By @camguillory.
 

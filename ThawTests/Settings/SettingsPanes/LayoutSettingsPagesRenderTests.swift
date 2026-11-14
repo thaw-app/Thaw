@@ -162,7 +162,7 @@ struct LayoutSettingsPagesRenderTests {
         layout.controlCenterReplacements.isOn = true
         await page.settle { page.elements().count { OffscreenAccessibility.role(of: $0) == .checkBox } > ControlCenterReplacements.listed.count }
         let boxes = page.elements().filter { OffscreenAccessibility.role(of: $0) == .checkBox }
-        #expect(boxes.count == ControlCenterReplacements.listed.count + 1, "the switch and one box per item")
+        try #require(boxes.count == ControlCenterReplacements.listed.count + 1, "the switch and one box per item")
 
         // The first box after the switch is Focus.
         OffscreenAccessibility.press(boxes[1])
