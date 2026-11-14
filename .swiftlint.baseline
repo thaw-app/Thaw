@@ -697,7 +697,7 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager+Clicking.swift",
     "line": 87
    },
-   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 80 lines",
+   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 76 lines",
    "ruleDescription": "Function bodies should not span too many lines",
    "ruleIdentifier": "function_body_length",
    "ruleName": "Function Body Length",
@@ -710,7 +710,7 @@
    "location": {
     "character": 5,
     "file": "Thaw/Items/Manager/MenuBarItemManager+Clicking.swift",
-    "line": 283
+    "line": 275
    },
    "reason": "Function should have complexity 10 or less; currently complexity is 12",
    "ruleDescription": "Complexity of function bodies should be limited.",
@@ -725,7 +725,7 @@
    "location": {
     "character": 5,
     "file": "Thaw/Items/Manager/MenuBarItemManager+Clicking.swift",
-    "line": 283
+    "line": 275
    },
    "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 72 lines",
    "ruleDescription": "Function bodies should not span too many lines",
@@ -740,9 +740,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Items/Manager/MenuBarItemManager+Clicking.swift",
-    "line": 450
+    "line": 442
    },
-   "reason": "File should contain 400 lines or less: currently contains 450",
+   "reason": "File should contain 400 lines or less: currently contains 442",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
