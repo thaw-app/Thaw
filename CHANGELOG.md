@@ -157,7 +157,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **A row is listed once while its item is mid-move,** so the arrow keys don't stall on it.
 - **Return and the arrow keys are left to a Japanese or Chinese input method** while it is composing text.
 - **A rename ends when its item leaves the search results,** instead of blocking keys until Escape.
-- **Tab reaches the search buttons** when there is no other section to jump to.
+- **Tab reaches the search buttons** after the last section, and Shift-Tab before the first.
 - **⌘E during a rename keeps the name you're typing,** without a beep. By @doublezz10 in [#1565](https://github.com/thaw-app/Thaw/pull/1565).
 - **Search shortcuts no longer act on an item when the key is meant for another window.** By @Belligerently in [#1570](https://github.com/thaw-app/Thaw/pull/1570).
 - **Search picks up renamed items at its next refresh.** By @Belligerently in [#1573](https://github.com/thaw-app/Thaw/pull/1573).
