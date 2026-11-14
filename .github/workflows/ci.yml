@@ -23,8 +23,11 @@ jobs:
       actions: read
     env:
       CODE_PATTERNS: '(\.swift$|(^|/)Package\.swift$|(^|/)Package\.resolved$|^sonar-project\.properties$|^\.swiftlint|^\.swiftformat|^Thaw\.xcodeproj/|^scripts/|\.xcstrings$|^\.github/workflows/ci\.yml$)'
+      # The package tests build only packages/, so the app's own code can't change them.
+      PACKAGE_PATTERNS: '(^packages/|^scripts/test-packages\.sh$|^\.github/workflows/ci\.yml$)'
     outputs:
       code: ${{ steps.since-last-run.outputs.code || steps.filter.outputs.code }}
+      packages: ${{ steps.since-last-run.outputs.code == 'false' && 'false' || steps.packages-filter.outputs.code }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -35,6 +38,11 @@ jobs:
         uses: thaw-app/org-ci/actions/detect-code-changes@d57f5f99c6641bbe12e87a54898356000d94f904
         with:
           patterns: ${{ env.CODE_PATTERNS }}
+      - name: Detect package paths
+        id: packages-filter
+        uses: thaw-app/org-ci/actions/detect-code-changes@d57f5f99c6641bbe12e87a54898356000d94f904
+        with:
+          patterns: ${{ env.PACKAGE_PATTERNS }}
       # The filter compares the whole pull request with its base, so a push that only
       # fixes the changelog would build and test again. When the files changed since
       # the previous push are not code, and CI passed on that push, nothing new needs
@@ -117,8 +125,11 @@ jobs:
 
   build:
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: xcode-27
+    # A skip runs on Linux so it doesn't wait for, or hold, a macOS runner.
+    runs-on: ${{ needs.changes.outputs.code == 'true' && 'xcode-27' || 'ubuntu-slim' }}
     needs: [changes, static_analysis]
+    # A normal run takes about 14 minutes. Hung tests have run to 34, holding a macOS runner.
+    timeout-minutes: 25
     permissions:
       contents: read
       # Deleting older compilation caches; a pull request from a fork gets a read-only token regardless.
@@ -144,15 +155,16 @@ jobs:
           restore-keys: |
             spm-${{ runner.os }}-
 
-      # Xcode's compilation cache, so the build recompiles only what changed since
-      # the cache was saved. Every run restores the newest one development saved.
-      # The key names this commit, which only a rerun matches.
+      # Xcode's compilation cache. Only the package targets hit it; the app and its
+      # tests miss on every commit. So it's keyed on the dependencies and packages,
+      # and development saves a new one only when they change.
       - name: Restore Swift compilation cache
+        id: compilation-cache
         if: needs.changes.outputs.code == 'true'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: Build/CompilationCache.noindex
-          key: compilation-cache-${{ runner.os }}-${{ github.sha }}
+          key: compilation-cache-${{ runner.os }}-${{ hashFiles('**/Package.resolved', 'packages/**') }}
           restore-keys: |
             compilation-cache-${{ runner.os }}-
 
@@ -176,20 +188,19 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      # Only development saves, once per commit. A weekly key was written once and
-      # then never updated, so by the end of a week every run recompiled the week's
-      # changes. Pull requests don't save: at about 600 MB each they would push
-      # development's caches out of the repository's limit.
+      # Only development saves, and only when no cache has this key yet. Pull
+      # requests don't save: at about 1.4 GB each they would push development's
+      # caches out of the repository's limit.
       - name: Save Swift compilation cache
-        if: needs.changes.outputs.code == 'true' && github.ref == 'refs/heads/development'
+        if: needs.changes.outputs.code == 'true' && github.ref == 'refs/heads/development' && steps.compilation-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: Build/CompilationCache.noindex
-          key: compilation-cache-${{ runner.os }}-${{ github.sha }}
+          key: ${{ steps.compilation-cache.outputs.cache-primary-key }}
 
-      # Keeps the two newest, so a save per commit doesn't fill the cache limit.
+      # Keeps the two newest, so the saves don't fill the cache limit.
       - name: Drop older compilation caches
-        if: needs.changes.outputs.code == 'true' && github.ref == 'refs/heads/development'
+        if: needs.changes.outputs.code == 'true' && github.ref == 'refs/heads/development' && steps.compilation-cache.outputs.cache-hit != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           PREFIX: compilation-cache-${{ runner.os }}-
@@ -231,23 +242,25 @@ jobs:
   # The app's xcodebuild test run does not run a package's own test targets, so
   # this runs them. One job loops over the packages: each takes under half a
   # minute to test, so a job per package would spend more on runner start-up.
+  # It runs only when something under packages/ changes, since nearly all of its
+  # time goes to building the packages from scratch.
   packages:
     if: github.repository == 'thaw-app/Thaw'
-    runs-on: xcode-27
+    runs-on: ${{ needs.changes.outputs.packages == 'true' && 'xcode-27' || 'ubuntu-slim' }}
     needs: [changes, static_analysis]
     timeout-minutes: 30
     steps:
-      - name: Skip package tests (no code changes)
-        if: needs.changes.outputs.code != 'true'
-        run: echo "No code-related paths changed; skipping the package tests."
+      - name: Skip package tests (no package changes)
+        if: needs.changes.outputs.packages != 'true'
+        run: echo "Nothing under packages/ changed; skipping the package tests."
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.packages == 'true'
         with:
           persist-credentials: false
 
       - name: Test packages
-        if: needs.changes.outputs.code == 'true'
+        if: needs.changes.outputs.packages == 'true'
         run: sh scripts/test-packages.sh
 
   # Always runs so Scorecard sees a Sonar check on nearly every PR; forks and
