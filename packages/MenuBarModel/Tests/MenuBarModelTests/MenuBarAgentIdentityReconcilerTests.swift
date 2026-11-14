@@ -111,6 +111,22 @@ struct MenuBarAgentIdentityReconcilerTests {
         #expect(result.items[1].tag.title == "Item-1")
     }
 
+    @Test("An unnamed extra never takes a name the fresh walk already carries")
+    func namedFreshItemKeepsItsIdentityUnique() {
+        // Bluetooth and Wi-Fi swapped seats. The fresh walk still names Wi-Fi
+        // at Bluetooth's old slot, while Bluetooth arrived unnamed at Wi-Fi's
+        // old slot. Taking Wi-Fi's name would publish two Wi-Fi items.
+        let fresh = [
+            Self.extra("com.apple.menuextra.wifi", x: 2006, width: 16),
+            Self.unnamed(index: 1, x: 2038, width: 22),
+        ]
+        let result = MenuBarAgentIdentityReconciler.reconcile(fresh: fresh, previous: Self.identifiedBar)
+        #expect(result.restoredCount == 0)
+        #expect(result.items[0].tag.title == "com.apple.menuextra.wifi")
+        #expect(result.items[1].tag.title == "Item-1")
+        #expect(Set(result.items.map(\.tag)).count == result.items.count)
+    }
+
     @Test("A positional previous item is never a source identity")
     func positionalPreviousNeverSubstitutes() {
         // The previous walk was itself degraded; carrying its names forward

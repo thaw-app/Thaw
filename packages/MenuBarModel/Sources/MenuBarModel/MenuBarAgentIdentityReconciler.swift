@@ -38,11 +38,15 @@ public enum MenuBarAgentIdentityReconciler {
     ///   - previous: The last walk whose MenuBarAgent extras were identified.
     public static func reconcile(fresh: [MenuBarItem], previous: [MenuBarItem]) -> Result {
         // Only extras the host identifies can degrade to a positional name,
-        // so only they have a previous identity worth carrying forward.
+        // so only they have a previous identity worth carrying forward. A name
+        // the fresh walk already carries is taken: reusing it would publish
+        // two items with one identity.
+        let freshTags = Set(fresh.map(\.tag))
         var candidates = previous
             .filter { $0.tag.namespace == .menuBarAgent }
             .filter { !$0.tag.isControlCenterGenericItem }
             .filter { !$0.isControlItem && !$0.isNativeOverflowControl }
+            .filter { !freshTags.contains($0.tag) }
         guard !candidates.isEmpty else {
             return Result(items: fresh, restoredCount: 0)
         }
