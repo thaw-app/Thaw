@@ -69,17 +69,19 @@ public extension AXPrimitives {
     static func menuBarAgentWindowEntries(
         messagingTimeout: Float = defaultMessagingTimeout
     ) -> [MenuBarAgentWindow.Entry]? {
-        guard let agentPID = menuBarAgentPID() else { return nil }
-        let agent = AXUIElementCreateApplication(agentPID)
-        AXUIElementSetMessagingTimeout(agent, messagingTimeout)
-        guard let window = (copyAttribute(agent, kAXWindowsAttribute) as? [AXUIElement])?.first else {
-            return nil
-        }
-        return children(of: window).map { child in
-            MenuBarAgentWindow.Entry(
-                ownerPID: MenuBarAgentWindow.ownerPID(of: child, agentPID: agentPID, pid: pid(of:), children: children(of:)),
-                frame: frame(of: child) ?? .zero
-            )
+        autoreleasepool {
+            guard let agentPID = menuBarAgentPID() else { return nil }
+            let agent = AXUIElementCreateApplication(agentPID)
+            AXUIElementSetMessagingTimeout(agent, messagingTimeout)
+            guard let window = (copyAttribute(agent, kAXWindowsAttribute) as? [AXUIElement])?.first else {
+                return nil
+            }
+            return children(of: window).map { child in
+                MenuBarAgentWindow.Entry(
+                    ownerPID: MenuBarAgentWindow.ownerPID(of: child, agentPID: agentPID, pid: pid(of:), children: children(of:)),
+                    frame: frame(of: child) ?? .zero
+                )
+            }
         }
     }
 

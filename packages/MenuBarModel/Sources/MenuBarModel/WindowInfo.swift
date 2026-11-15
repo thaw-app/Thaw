@@ -160,31 +160,33 @@ public extension WindowInfo {
     /// - Returns: Descriptions the window server still recognises, in its
     ///   order. Closed windows and unreadable descriptions are dropped.
     static func createWindows(from windowIDs: [CGWindowID]) -> [WindowInfo] {
-        guard let array = Bridging.createCGWindowArray(with: windowIDs) else {
-            diagLog.warning("createWindows: createCGWindowArray returned nil for \(windowIDs.count) window IDs")
-            return []
-        }
-        guard let raw = CGWindowListCreateDescriptionFromArray(array) else {
-            // The window server answers nil for a whole process (the capture
-            // service, for one), so the first refusal is the diagnostic.
-            let firstRefusal = !nilDescriptionLogged.exchange(true, ordering: .relaxed)
-            if firstRefusal {
-                diagLog.warning("createWindows: CGWindowListCreateDescriptionFromArray returned nil for \(windowIDs.count) window IDs; further refusals log at debug")
-            } else {
-                diagLog.debug("createWindows: CGWindowListCreateDescriptionFromArray returned nil for \(windowIDs.count) window IDs")
+        autoreleasepool {
+            guard let array = Bridging.createCGWindowArray(with: windowIDs) else {
+                diagLog.warning("createWindows: createCGWindowArray returned nil for \(windowIDs.count) window IDs")
+                return []
             }
-            return []
+            guard let raw = CGWindowListCreateDescriptionFromArray(array) else {
+                // The window server answers nil for a whole process (the capture
+                // service, for one), so the first refusal is the diagnostic.
+                let firstRefusal = !nilDescriptionLogged.exchange(true, ordering: .relaxed)
+                if firstRefusal {
+                    diagLog.warning("createWindows: CGWindowListCreateDescriptionFromArray returned nil for \(windowIDs.count) window IDs; further refusals log at debug")
+                } else {
+                    diagLog.debug("createWindows: CGWindowListCreateDescriptionFromArray returned nil for \(windowIDs.count) window IDs")
+                }
+                return []
+            }
+            guard let list = Bridging.arrayValue(of: raw) else {
+                let typeName = CFCopyTypeIDDescription(CFGetTypeID(raw)) as String? ?? "unknown"
+                diagLog.warning("createWindows: CGWindowListCreateDescriptionFromArray returned a \(typeName), not an array, for \(windowIDs.count) window IDs")
+                return []
+            }
+            let windows = list.compactMap { WindowInfo(element: $0) }
+            if windows.count != windowIDs.count {
+                diagLog.debug("createWindows: \(windowIDs.count) IDs -> \(list.count) descriptions -> \(windows.count) WindowInfo objects (some may have failed init)")
+            }
+            return windows
         }
-        guard let list = Bridging.arrayValue(of: raw) else {
-            let typeName = CFCopyTypeIDDescription(CFGetTypeID(raw)) as String? ?? "unknown"
-            diagLog.warning("createWindows: CGWindowListCreateDescriptionFromArray returned a \(typeName), not an array, for \(windowIDs.count) window IDs")
-            return []
-        }
-        let windows = list.compactMap { WindowInfo(element: $0) }
-        if windows.count != windowIDs.count {
-            diagLog.debug("createWindows: \(windowIDs.count) IDs -> \(list.count) descriptions -> \(windows.count) WindowInfo objects (some may have failed init)")
-        }
-        return windows
     }
 
     /// Describes every window, narrowed by option.

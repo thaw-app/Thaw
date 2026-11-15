@@ -58,21 +58,23 @@ public extension Bridging {
 
     /// Returns every space the window server currently knows about.
     static func getManagedSpaces() -> [ManagedSpace] {
-        guard let raw = cgsCopyManagedDisplaySpaces(cgsMainConnectionID()) else {
-            managedSpacesLog.error("cgsCopyManagedDisplaySpaces returned nil")
-            return []
+        autoreleasepool {
+            guard let raw = cgsCopyManagedDisplaySpaces(cgsMainConnectionID()) else {
+                managedSpacesLog.error("cgsCopyManagedDisplaySpaces returned nil")
+                return []
+            }
+            guard let elements = arrayValue(of: raw.takeRetainedValue()) else {
+                managedSpacesLog.error("cgsCopyManagedDisplaySpaces returned a value that is not an array")
+                return []
+            }
+            let displays = elements.compactMap { element -> [String: Any]? in
+                dictionaryValue(of: element as CFTypeRef)
+            }
+            if displays.count != elements.count {
+                managedSpacesLog.error("cgsCopyManagedDisplaySpaces returned an array of unexpected type")
+            }
+            return managedSpaces(fromDisplays: displays)
         }
-        guard let elements = arrayValue(of: raw.takeRetainedValue()) else {
-            managedSpacesLog.error("cgsCopyManagedDisplaySpaces returned a value that is not an array")
-            return []
-        }
-        let displays = elements.compactMap { element -> [String: Any]? in
-            dictionaryValue(of: element as CFTypeRef)
-        }
-        if displays.count != elements.count {
-            managedSpacesLog.error("cgsCopyManagedDisplaySpaces returned an array of unexpected type")
-        }
-        return managedSpaces(fromDisplays: displays)
     }
 
     /// The Spaces in entries shaped like CGSCopyManagedDisplaySpaces output, keyed by uuid.
