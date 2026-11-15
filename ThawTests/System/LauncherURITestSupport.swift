@@ -69,6 +69,7 @@ final class FakeLauncherEnvironment {
     var items = [LauncherURIPayload.Item]()
     var profiles = [ProfileMetadata]()
     var activeProfileID: UUID?
+    var profilesOn = true
     var activationOutcome = MenuBarItemActivationOutcome.completed(reactionObserved: true)
     /// Whether the layout half ran; nil makes the apply throw.
     var applyLayoutRan: Bool? = true
@@ -104,6 +105,7 @@ final class FakeLauncherEnvironment {
                 return self.profiles
             },
             activeProfileID: { self.activeProfileID },
+            profilesOn: { self.profilesOn },
             activateItem: { identifier in
                 self.activatedIdentifiers.append(identifier)
                 return self.activationOutcome

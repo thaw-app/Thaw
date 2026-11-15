@@ -7,7 +7,7 @@
     "file": "Thaw/App/AppDelegate.swift",
     "line": 15
    },
-   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 401 lines",
+   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 397 lines",
    "ruleDescription": "Type bodies should not span too many lines",
    "ruleIdentifier": "type_body_length",
    "ruleName": "Type Body Length",
@@ -20,9 +20,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/App/AppDelegate.swift",
-    "line": 539
+    "line": 535
    },
-   "reason": "File should contain 400 lines or less: currently contains 539",
+   "reason": "File should contain 400 lines or less: currently contains 535",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
@@ -2257,7 +2257,7 @@
     "file": "Thaw/Panels/ThawBar/ThawBar.swift",
     "line": 12
    },
-   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 435 lines",
+   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 434 lines",
    "ruleDescription": "Type bodies should not span too many lines",
    "ruleIdentifier": "type_body_length",
    "ruleName": "Type Body Length",
@@ -2315,9 +2315,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Panels/ThawBar/ThawBar.swift",
-    "line": 570
+    "line": 569
    },
-   "reason": "File should contain 400 lines or less: currently contains 570",
+   "reason": "File should contain 400 lines or less: currently contains 569",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
@@ -2525,7 +2525,7 @@
    "location": {
     "character": 13,
     "file": "Thaw/Settings/SettingsPanes/HotkeysSettingsPane.swift",
-    "line": 80
+    "line": 82
    },
    "reason": "Function should have complexity 10 or less; currently complexity is 14",
    "ruleDescription": "Complexity of function bodies should be limited.",
@@ -2615,9 +2615,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Settings/SettingsView.swift",
-    "line": 428
+    "line": 424
    },
-   "reason": "File should contain 400 lines or less: currently contains 428",
+   "reason": "File should contain 400 lines or less: currently contains 424",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",

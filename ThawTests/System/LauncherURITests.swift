@@ -214,6 +214,7 @@ struct LauncherURITests {
             (LauncherProfileApplyOutcome.appliedWithoutLayout, "success"),
             (LauncherProfileApplyOutcome.profileUnavailable, "error"),
             (LauncherProfileApplyOutcome.applyFailed, "error"),
+            (LauncherProfileApplyOutcome.profilesOff, "error"),
         ]
     )
     func profileApplication(outcome: LauncherProfileApplyOutcome, status: String) throws {

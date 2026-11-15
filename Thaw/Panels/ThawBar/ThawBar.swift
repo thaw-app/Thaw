@@ -544,11 +544,10 @@ final class ThawBarPanel: NSPanel {
         MemoryReclaimer.scheduleRelief(reason: "Thaw Bar closed")
     }
 
+    /// Stops the closed section's countdown too, or it outlives the bar and hides a section revealed inline later.
     private func resetSectionStateAfterClose(_ closingSection: MenuBarSection.Name?) {
-        guard closingSection != nil, let menuBarManager = appState?.menuBarManager else {
-            return
-        }
-
+        guard let closingSection, let menuBarManager = appState?.menuBarManager else { return }
+        menuBarManager.rehideController?.hidden(closingSection, closingPresentation: false)
         menuBarManager.showOnHoverAllowed = true
         for section in menuBarManager.sections {
             section.desiredState = .hideSection
