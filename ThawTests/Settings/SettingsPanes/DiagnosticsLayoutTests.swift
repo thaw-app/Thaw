@@ -55,11 +55,11 @@ struct DiagnosticsLayoutTests {
                 .frame(width: size.width, height: size.height),
             size: size
         )
-        await render.settle { (try? render.pixels())?.contains { $0 != 0 } == true }
-        let off = try render.pixels()
+        let drawn = await render.pixels(until: { $0.contains { $0 != 0 } })
+        let off = try drawn ?? render.pixels()
         appState.settings.tools.enableDiagnosticLogging = true
-        await render.settle { (try? render.pixels()) != off }
-        #expect(try render.pixels() != off)
+        let on = await render.pixels { $0 != off }
+        #expect(on != nil)
     }
 
     @Test("A search result in the bug-report files opens Diagnostics")

@@ -209,8 +209,9 @@ jobs:
     if: github.repository == 'thaw-app/Thaw'
     # A skip runs on Linux so it doesn't wait for, or hold, a macOS runner.
     runs-on: ${{ needs.changes.outputs.build == 'true' && 'xcode-27' || 'ubuntu-slim' }}
-    needs: [changes, static_analysis]
-    # A backstop. The limit that normally ends a hung run is on the Build and Test
+    # Starts alongside static_analysis, so a change that fails lint still uses macOS time.
+    needs: [changes]
+    # A backstop. The limit that normally ends a hung run is on the Test
     # step, which leaves time to upload what the tests wrote.
     timeout-minutes: 30
     permissions:
@@ -267,20 +268,33 @@ jobs:
           # nothing over from older ones. A pull request falls back to the newest.
           restore-keys: ${{ github.ref != 'refs/heads/development' && format('compilation-cache-{0}-xcode{1}-', runner.os, steps.xcode.outputs.id) || '' }}
 
-      # The Thaw target's lint build phase requires the pinned SwiftLint on PATH.
-      - name: Install pinned SwiftLint
+      # Separate from Test so each step's time shows, and so the timing summary prints.
+      # No editor index or package updates; static_analysis already lints with --strict.
+      - name: Build
         if: needs.changes.outputs.build == 'true'
+        timeout-minutes: 12
         run: |
-          sh scripts/install-swiftlint.sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          xcodebuild build-for-testing \
+            -project Thaw.xcodeproj \
+            -scheme Thaw \
+            -derivedDataPath Build/ \
+            -destination 'platform=macOS' \
+            -enableCodeCoverage YES \
+            -onlyUsePackageVersionsFromResolvedFile \
+            -skipPackageUpdates \
+            -showBuildTimingSummary \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            THAW_SKIP_XCODE_LINT=1 \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
 
-      # About 12 minutes, 16 at most so far; hung tests have run it past 30. The limit
-      # is on the step, not only the job, so the upload below still runs.
-      - name: Build and Test
+      # The limit is on the step, not only the job, so the upload below still runs after a hang.
+      - name: Test
         if: needs.changes.outputs.build == 'true'
-        timeout-minutes: 22
+        timeout-minutes: 12
         run: |
-          xcodebuild test \
+          xcodebuild test-without-building \
             -project Thaw.xcodeproj \
             -scheme Thaw \
             -derivedDataPath Build/ \
@@ -290,9 +304,10 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      # A failed or timed-out run's logs name the tests that failed or never finished.
+      # A failed or timed-out run's results name the tests that failed or never finished.
+      # A passing run's results give each test's real duration; the console log doesn't.
       - name: Upload test results
-        if: failure() && needs.changes.outputs.build == 'true'
+        if: ${{ !cancelled() && needs.changes.outputs.build == 'true' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: test-results
@@ -359,7 +374,8 @@ jobs:
   packages:
     if: github.repository == 'thaw-app/Thaw'
     runs-on: ${{ needs.changes.outputs.packages == 'true' && 'xcode-27' || 'ubuntu-slim' }}
-    needs: [changes, static_analysis]
+    # Starts alongside static_analysis, like build.
+    needs: [changes]
     timeout-minutes: 30
     steps:
       - name: Skip package tests (no package changes)

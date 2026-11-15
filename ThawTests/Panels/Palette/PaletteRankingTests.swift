@@ -12,7 +12,7 @@ import Testing
 @testable import Thaw
 
 /// How the palette lists and orders items: inventory from the item cache, then prefix matches first.
-@Suite("Palette inventory and ranking", .serialized, .scratchDefaults)
+@Suite("Palette inventory and ranking", .serialized)
 @MainActor
 struct PaletteRankingTests {
     private static func candidate(_ name: String, owner: String = "", key: String = "") -> PaletteCandidate {
@@ -57,7 +57,7 @@ struct PaletteRankingTests {
         #expect(weather < sublime, "an owner prefix counts as a prefix match")
     }
 
-    @Test("Inventory lists actionable cached items left to right")
+    @Test("Inventory lists actionable cached items left to right", .scratchDefaults)
     func inventory() {
         let world = LayoutEditorWorld()
         let right = LayoutEditorWorld.item("Right")
@@ -71,7 +71,7 @@ struct PaletteRankingTests {
         #expect(candidates.allSatisfy { $0.identityKey == $0.item.uniqueIdentifier })
     }
 
-    @Test("Inventory from a cache lists that cache's actionable items")
+    @Test("Inventory from a cache lists that cache's actionable items", .scratchDefaults)
     func inventoryFromACache() {
         let kept = LayoutEditorWorld.item("Kept")
         var cache = MenuBarItemCache(displayID: nil)

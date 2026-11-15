@@ -605,6 +605,12 @@
 			name = SwiftLint;
 			shellPath = /bin/sh;
 			shellScript = (
+				"# CI lints every file with --strict in its own job, so it skips this phase.",
+				"if [ \"${THAW_SKIP_XCODE_LINT:-}\" = 1 ]; then",
+				"    echo \"SwiftLint: skipped, CI lints in static_analysis\"",
+				"    exit 0",
+				"fi",
+				"",
 				"if [ \"$(uname -m)\" = arm64 ]; then",
 				"    export PATH=\"$PATH:/opt/homebrew/bin\"",
 				"fi",

@@ -21,9 +21,10 @@ struct ProfileRowAndPreviewTests {
 
     /// Draws the view and returns its pixels once it has put something on screen.
     private func drawn(_ render: OffscreenRender<some View>) async throws -> Data {
-        await render.settle { (try? render.pixels())?.contains { $0 != 0 } == true }
-        let pixels = try render.pixels()
-        #expect(pixels.contains { $0 != 0 }, "the view draws something")
+        guard let pixels = await render.pixels(until: { $0.contains { $0 != 0 } }) else {
+            Issue.record("the view draws something")
+            return try render.pixels()
+        }
         return pixels
     }
 

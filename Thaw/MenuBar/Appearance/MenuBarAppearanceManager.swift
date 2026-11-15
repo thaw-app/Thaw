@@ -225,13 +225,14 @@ final class MenuBarAppearanceManager {
     }
 
     /// Looks 100 ms after a burst, since an overlay left on the old geometry until the settle shows, and
-    /// again at each settle in case the early look caught the screens mid-change.
+    /// again at each settle in case the early look caught the screens mid-change. Tests pass a scheduler they move by hand.
     static func overlayRebuildSignal(
         invalidations: some Publisher<Void, Never>,
-        settlements: some Publisher<EnvironmentChange, Never>
+        settlements: some Publisher<EnvironmentChange, Never>,
+        scheduler: some Scheduler = DispatchQueue.main
     ) -> AnyPublisher<Void, Never> {
         invalidations
-            .debounce(for: .milliseconds(100), scheduler: DispatchQueue.main)
+            .debounce(for: .milliseconds(100), scheduler: scheduler)
             .merge(with: settlements.map { _ in () })
             .eraseToAnyPublisher()
     }

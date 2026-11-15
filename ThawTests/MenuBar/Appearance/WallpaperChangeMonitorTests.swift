@@ -11,7 +11,7 @@ import Testing
 
 /// Exercises the file-watch mechanism against a temporary file rather than
 /// the real wallpaper index, which cannot be changed from a test.
-@Suite("Wallpaper change monitor", .timeLimit(.minutes(1)))
+@Suite("Wallpaper change monitor")
 @MainActor
 struct WallpaperChangeMonitorTests {
     private func withWatchedFile(

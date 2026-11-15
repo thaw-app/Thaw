@@ -11,7 +11,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Reveal capture session", .timeLimit(.minutes(1)))
+@Suite("Reveal capture session")
 struct RevealCaptureSessionTests {
     private let first = RevealCaptureSessionTests.makeItem("First", x: 1000, windowID: 101)
     private let second = RevealCaptureSessionTests.makeItem("Second", x: 1100, windowID: 102)

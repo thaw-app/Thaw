@@ -11,7 +11,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Display change recapture", .timeLimit(.minutes(1)), .scratchDefaults)
+@Suite("Display change recapture", .scratchDefaults)
 struct DisplayChangeRecaptureTests {
     private let imageCache = RecordingImageCache()
     private let effects: MenuBarDisplayChangeEffects

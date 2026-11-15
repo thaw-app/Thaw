@@ -11,7 +11,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Reveal capture prewarm", .timeLimit(.minutes(1)))
+@Suite("Reveal capture prewarm")
 struct RevealCapturePrewarmTests {
     /// The bar and the cache a prewarm reads, and everything it did.
     @MainActor

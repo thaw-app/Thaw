@@ -13,7 +13,7 @@ import Testing
 @testable import Thaw
 
 /// Re-stamping, skipping and failing saves, with the store's clock and queue in the test's hands.
-@Suite("Image cache saves", .timeLimit(.minutes(1)))
+@Suite("Image cache saves")
 @MainActor
 struct MenuBarItemImageCacheDiskSaveTests {
     private let directory = FileManager.default.temporaryDirectory

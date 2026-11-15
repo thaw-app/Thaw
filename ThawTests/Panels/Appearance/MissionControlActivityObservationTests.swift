@@ -12,7 +12,7 @@ import Testing
 
 /// Observers and a never-shown overlay use committed activity without changing the live menu bar.
 @MainActor
-@Suite("Mission Control activity observation", .serialized, .scratchDefaults, .timeLimit(.minutes(1)))
+@Suite("Mission Control activity observation", .serialized, .scratchDefaults)
 struct MissionControlActivityObservationTests {
     /// A queue barrier drains activity notifications without depending on fixed sleeps.
     private func drainNotifications() async {

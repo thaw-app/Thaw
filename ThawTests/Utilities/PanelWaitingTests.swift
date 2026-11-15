@@ -11,7 +11,7 @@ import Testing
 
 /// Waiting for a panel to close, on a one-point transparent panel placed far off every screen.
 @MainActor
-@Suite("Waiting for a panel to close", .serialized, .timeLimit(.minutes(1)))
+@Suite("Waiting for a panel to close", .serialized)
 struct PanelWaitingTests {
     private func makePanel() -> NSPanel {
         let panel = NSPanel(

@@ -59,7 +59,9 @@ struct ThawBarPreviewTests {
     }
 
     private func drawn(_ page: Page) async throws -> Data {
-        await page.settle { (try? page.pixels())?.contains { $0 != 0 } == true }
+        if let pixels = await page.pixels(until: { $0.contains { $0 != 0 } }) {
+            return pixels
+        }
         return try page.pixels()
     }
 
@@ -141,8 +143,8 @@ struct ThawBarPreviewTests {
 
         configuration.thawBarAppearance.hasBorder = true
         world.appState.appearanceManager.configuration = configuration
-        await page.settle { (try? page.pixels()) != plain }
-        #expect(try page.pixels() != plain, "the border stroke changes the drawing")
+        let bordered = await page.pixels { $0 != plain }
+        #expect(bordered != nil, "the border stroke changes the drawing")
     }
 
     @Test("Under the preview, the strip says where the real bar opens")

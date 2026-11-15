@@ -225,12 +225,12 @@ struct RootSettingsPagesRenderTests {
 
         let before = try page.pixels()
         NotificationCenter.default.post(name: .layoutBarDragTargetChanged, object: nil, userInfo: ["section": MenuBarSection.Name.hidden.rawValue, "active": true])
-        await page.settle { (try? page.pixels()) != before }
-        #expect(try page.pixels() != before, "the hovered section's name gets its wash")
+        let washed = await page.pixels { $0 != before }
+        #expect(washed != nil, "the hovered section's name gets its wash")
         NotificationCenter.default.post(name: .layoutBarDragTargetChanged, object: nil, userInfo: ["section": "unknown"])
         NotificationCenter.default.post(name: .layoutBarDragTargetChanged, object: nil, userInfo: ["section": MenuBarSection.Name.hidden.rawValue, "active": false])
-        await page.settle { (try? page.pixels()) == before }
-        #expect(try page.pixels() == before, "the wash goes when the drag leaves")
+        let cleared = await page.pixels { $0 == before }
+        #expect(cleared != nil, "the wash goes when the drag leaves")
     }
 
     @Test("Simple Mode's preview draws the sections it shows")

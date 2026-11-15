@@ -91,12 +91,12 @@ struct ProfileSwitchesSectionTests {
     private func section(
         _ manager: ProfileManager,
         profile: ProfileMetadata,
-        appState: AppState,
+        displaySettings: DisplaySettingsManager,
         error: ErrorBox
     ) -> ProfileSwitchesSection {
         ProfileSwitchesSection(
             profileManager: manager,
-            displaySettings: appState.settings.displaySettings,
+            displaySettings: displaySettings,
             profile: profile,
             errorMessage: Binding { error.message } set: { error.message = $0 }
         )
@@ -109,10 +109,10 @@ struct ProfileSwitchesSectionTests {
     @Test("Choosing a display saves it for the profile and takes it from another, and None clears it")
     func displayChoiceSaves() throws {
         try ProfileTestDirectory.withManager(seeding: ["Work", "Home"]) { manager, tmp in
-            let appState = AppState()
+            let displaySettings = DisplaySettingsManager()
             let error = ErrorBox()
-            let work = section(manager, profile: manager.profiles[0], appState: appState, error: error)
-            let home = section(manager, profile: manager.profiles[1], appState: appState, error: error)
+            let work = section(manager, profile: manager.profiles[0], displaySettings: displaySettings, error: error)
+            let home = section(manager, profile: manager.profiles[1], displaySettings: displaySettings, error: error)
 
             work.displayBinding.wrappedValue = "DISPLAY"
             #expect(work.displayBinding.wrappedValue == "DISPLAY")
@@ -131,10 +131,10 @@ struct ProfileSwitchesSectionTests {
     @Test("Choosing a Space saves its key and name, keeps the name of a Space that is gone, and None clears it")
     func spaceChoiceSaves() throws {
         try ProfileTestDirectory.withManager(seeding: ["Work", "Home"]) { manager, tmp in
-            let appState = AppState()
+            let displaySettings = DisplaySettingsManager()
             let error = ErrorBox()
-            let work = section(manager, profile: manager.profiles[0], appState: appState, error: error)
-            let home = section(manager, profile: manager.profiles[1], appState: appState, error: error)
+            let work = section(manager, profile: manager.profiles[0], displaySettings: displaySettings, error: error)
+            let home = section(manager, profile: manager.profiles[1], displaySettings: displaySettings, error: error)
             let desktop = SpaceChoice(id: "SPACE-1", label: "Desktop 1", kind: .desktop, ownerPID: nil, isMissing: false)
             let groups = [SpaceDisplayGroup(id: "DISPLAY", displayName: "Studio", hasMenuBar: true, spaces: [desktop])]
 
@@ -157,9 +157,9 @@ struct ProfileSwitchesSectionTests {
     @Test("A choice that cannot be saved is reported to the page")
     func failedSaveIsReported() throws {
         try ProfileTestDirectory.withManager(seeding: ["Work"]) { manager, tmp in
-            let appState = AppState()
+            let displaySettings = DisplaySettingsManager()
             let error = ErrorBox()
-            let work = section(manager, profile: manager.profiles[0], appState: appState, error: error)
+            let work = section(manager, profile: manager.profiles[0], displaySettings: displaySettings, error: error)
             try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: tmp.path)
             defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: tmp.path) }
 

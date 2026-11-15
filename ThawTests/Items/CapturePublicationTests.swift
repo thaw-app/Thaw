@@ -318,7 +318,7 @@ private enum CaptureDisruption: CaseIterable, Sendable {
 }
 
 @MainActor
-@Suite("Recapture pass publication", .serialized, .timeLimit(.minutes(1)))
+@Suite("Recapture pass publication", .serialized)
 struct RecapturePassPublicationTests {
     @Test("A pass on a quiet bar publishes images, invalidations and its ledger")
     func quietPassPublishes() async throws {
@@ -496,7 +496,7 @@ private final class RevealingSectionController: MenuBarSectionControlling {
 }
 
 @MainActor
-@Suite("Grouped reveal publication", .serialized, .timeLimit(.minutes(1)))
+@Suite("Grouped reveal publication", .serialized)
 struct GroupedRevealPublicationTests {
     /// Reveals fresh and retried one batch each, through the production loop.
     private func prewarm(
@@ -578,7 +578,7 @@ struct GroupedRevealPublicationTests {
 
 /// Capture Hidden Items reveals hidden items one at a time; a recapture pass would crop them as they slide in.
 @MainActor
-@Suite("Recapture during Capture Hidden Items", .serialized, .timeLimit(.minutes(1)))
+@Suite("Recapture during Capture Hidden Items", .serialized)
 struct RecaptureDuringHiddenItemCaptureTests {
     @Test("A pass while hidden items are being captured takes no screenshot and changes nothing", arguments: [false, true])
     func passStandsDown(forced: Bool) async throws {

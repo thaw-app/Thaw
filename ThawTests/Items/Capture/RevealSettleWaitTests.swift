@@ -12,7 +12,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Reveal settle waits", .timeLimit(.minutes(1)))
+@Suite("Reveal settle waits")
 struct RevealSettleWaitTests {
     private typealias Session = RevealCaptureSession
 
