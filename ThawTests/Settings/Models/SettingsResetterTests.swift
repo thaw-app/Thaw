@@ -11,7 +11,7 @@ import Testing
 import ThawUI
 
 @MainActor
-@Suite("Resetting every setting", .serialized, .scratchDefaults)
+@Suite("Resetting every setting", .serialized)
 struct SettingsResetterTests {
     private let suites = ScratchSuites(prefix: "SettingsResetterTests")
 
@@ -34,7 +34,7 @@ struct SettingsResetterTests {
         #expect(defaults.bool(forKey: Defaults.Key.hasSeenUpdateConsent.rawValue), "update consent is not asked again")
     }
 
-    @Test("Reset turns thaw:// off and forgets every allowed app")
+    @Test("Reset turns thaw:// off and forgets every allowed app", .scratchDefaults)
     func resetAllowedApps() {
         Defaults.set(["com.example.app"], forKey: .settingsURIWhitelist)
         Defaults.set(["com.example.app": "TEAM"], forKey: .settingsURISigningIdentities)
@@ -53,7 +53,7 @@ struct SettingsResetterTests {
         #expect(settings.privacy.whitelistedApps.isEmpty)
     }
 
-    @Test("Resetting the appearance also forgets every per-Space look")
+    @Test("Resetting the appearance also forgets every per-Space look", .scratchDefaults)
     func resetAppearanceClearsSpaceOverrides() {
         let appState = AppState()
         let settings = appState.settings
@@ -78,7 +78,7 @@ struct SettingsResetterTests {
         #expect(stored.isEmpty)
     }
 
-    @Test("Resetting General puts back every default and forgets the UI zoom")
+    @Test("Resetting General puts back every default and forgets the UI zoom", .scratchDefaults)
     func resetGeneral() throws {
         let zoom = try #require(suites.make())
         zoom.set(150, forKey: AppUIZoom.defaultsKey)
@@ -101,7 +101,7 @@ struct SettingsResetterTests {
         #expect(general.lastCustomThawIcon == nil)
     }
 
-    @Test("Resetting Visibility, Thaw Bar and screen corners puts back their defaults")
+    @Test("Resetting Visibility, Thaw Bar and screen corners puts back their defaults", .scratchDefaults)
     func resetVisibilityThawBarAndCorners() {
         let settings = AppSettings()
         settings.thawBar.lockThawBarPosition = !Defaults.DefaultValue.lockThawBarPosition
@@ -126,7 +126,7 @@ struct SettingsResetterTests {
         #expect(!Defaults.bool(forKey: .rememberSearchQuery))
     }
 
-    @Test("Resetting Widgets puts the control item panel switch back")
+    @Test("Resetting Widgets puts the control item panel switch back", .scratchDefaults)
     func resetWidgets() {
         let settings = AppSettings()
         settings.widgets.enableControlItemPanel = !Defaults.DefaultValue.enableControlItemPanel
@@ -136,7 +136,7 @@ struct SettingsResetterTests {
         #expect(settings.widgets.enableControlItemPanel == Defaults.DefaultValue.enableControlItemPanel)
     }
 
-    @Test("Resetting everything reaches every page, Hotkeys and Display together")
+    @Test("Resetting everything reaches every page, Hotkeys and Display together", .scratchDefaults)
     func resetAll() throws {
         let zoom = try #require(suites.make())
         zoom.set(80, forKey: AppUIZoom.defaultsKey)

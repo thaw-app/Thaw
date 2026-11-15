@@ -54,4 +54,16 @@ final class OffscreenRender<Content: View> {
         }
         return condition()
     }
+
+    /// Draws the view between run-loop turns until its pixels satisfy condition.
+    /// Returns those pixels, so the caller needn't draw again, or nil at timeout.
+    func pixels(within timeout: Duration = .seconds(120), until condition: (Data) -> Bool) async -> Data? {
+        var matched: Data?
+        await settle(within: timeout) {
+            guard let drawn = try? self.pixels(), condition(drawn) else { return false }
+            matched = drawn
+            return true
+        }
+        return matched
+    }
 }

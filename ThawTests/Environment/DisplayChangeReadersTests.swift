@@ -44,12 +44,17 @@ struct DisplayChangeReadersTests {
     }
 
     @Test("The overlay rebuilds at each settle, and once after a burst of postings")
-    func overlayRebuildSignal() async throws {
+    func overlayRebuildSignal() {
         var rebuilds = 0
         let invalidations = PassthroughSubject<Void, Never>()
         let settlements = PassthroughSubject<EnvironmentChange, Never>()
-        let signal = MenuBarAppearanceManager.overlayRebuildSignal(invalidations: invalidations, settlements: settlements)
-            .sink { rebuilds += 1 }
+        let scheduler = ManualScheduler()
+        let signal = MenuBarAppearanceManager.overlayRebuildSignal(
+            invalidations: invalidations,
+            settlements: settlements,
+            scheduler: scheduler
+        )
+        .sink { rebuilds += 1 }
         defer { signal.cancel() }
 
         settlements.send(.none)
@@ -59,7 +64,7 @@ struct DisplayChangeReadersTests {
             invalidations.send()
         }
         #expect(rebuilds == 1, "Postings wait out their burst")
-        try await Task.sleep(for: .milliseconds(300))
+        scheduler.advance(by: .milliseconds(100))
         #expect(rebuilds == 2, "A burst of postings rebuilds once, before the settle")
     }
 
@@ -149,6 +154,72 @@ private final class SettleGate {
         waiters.removeAll()
         for waiter in released {
             waiter.resume()
+        }
+    }
+}
+
+/// A Combine scheduler whose clock only the test advances, so a debounce fires exactly when told.
+/// The test drives it from the main actor only.
+private nonisolated final class ManualScheduler: Scheduler {
+    typealias SchedulerTimeType = DispatchQueue.SchedulerTimeType
+    typealias SchedulerOptions = Never
+
+    private nonisolated struct Action {
+        let date: SchedulerTimeType
+        let run: () -> Void
+    }
+
+    private(set) var now = SchedulerTimeType(DispatchTime(uptimeNanoseconds: 1))
+    private var pending: [Action] = []
+
+    var minimumTolerance: SchedulerTimeType.Stride {
+        .zero
+    }
+
+    func schedule(options _: Never?, _ action: @escaping () -> Void) {
+        action()
+    }
+
+    func schedule(after date: SchedulerTimeType, tolerance _: SchedulerTimeType.Stride, options _: Never?, _ action: @escaping () -> Void) {
+        pending.append(Action(date: date, run: action))
+    }
+
+    func schedule(
+        after date: SchedulerTimeType,
+        interval: SchedulerTimeType.Stride,
+        tolerance _: SchedulerTimeType.Stride,
+        options _: Never?,
+        _ action: @escaping () -> Void
+    ) -> Cancellable {
+        let cancellable = Repeat()
+        repeatAction(cancellable, at: date, every: interval, action)
+        return cancellable
+    }
+
+    /// Runs every action due by then, earliest first, with the clock at each one's time.
+    func advance(by stride: SchedulerTimeType.Stride) {
+        let target = now.advanced(by: stride)
+        while let index = pending.indices.filter({ pending[$0].date <= target }).min(by: { pending[$0].date < pending[$1].date }) {
+            let action = pending.remove(at: index)
+            now = action.date
+            action.run()
+        }
+        now = target
+    }
+
+    private func repeatAction(_ cancellable: Repeat, at date: SchedulerTimeType, every interval: SchedulerTimeType.Stride, _ action: @escaping () -> Void) {
+        pending.append(Action(date: date) { [weak self] in
+            guard !cancellable.isCancelled else { return }
+            action()
+            self?.repeatAction(cancellable, at: date.advanced(by: interval), every: interval, action)
+        })
+    }
+
+    private nonisolated final class Repeat: Cancellable {
+        private(set) var isCancelled = false
+
+        func cancel() {
+            isCancelled = true
         }
     }
 }

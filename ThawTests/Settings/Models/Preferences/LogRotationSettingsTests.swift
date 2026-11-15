@@ -11,7 +11,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Log rotation settings", .serialized, .scratchDefaults)
+@Suite("Log rotation settings", .serialized)
 struct LogRotationSettingsTests {
     private let suites = ScratchSuites(prefix: "LogRotationSettingsTests")
 
@@ -50,7 +50,7 @@ struct LogRotationSettingsTests {
         #expect(policy.maxFileSizeBytes == 1_000_000 * 1024 * 1024)
     }
 
-    @Test("Loading the stored settings hands the logger one policy, never one that is half defaults")
+    @Test("Loading the stored settings hands the logger one policy, never one that is half defaults", .scratchDefaults)
     func loadSendsOnePolicy() {
         Defaults.store.set(25, forKey: "DiagnosticLogMaxSizeMB")
         Defaults.store.set(30, forKey: "DiagnosticLogRetentionDays")
@@ -64,7 +64,7 @@ struct LogRotationSettingsTests {
         #expect(sent.first?.maxFileSizeBytes == 25 * 1024 * 1024)
     }
 
-    @Test("Changing a setting stores it under Thaw 2's key and hands the logger the new policy")
+    @Test("Changing a setting stores it under Thaw 2's key and hands the logger the new policy", .scratchDefaults)
     func changesReachTheLogger() {
         let settings = ToolsSettings()
         settings.diagnosticLogRetentionDays = 9

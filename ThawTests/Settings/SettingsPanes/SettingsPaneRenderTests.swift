@@ -30,10 +30,22 @@ struct SettingsPaneRenderTests {
 
     /// Draws the page, waits for it to put something on screen, and returns its pixels.
     private func drawnPixels(_ render: OffscreenRender<some View>) async throws -> Data {
-        await render.settle { (try? render.pixels())?.contains { $0 != 0 } == true }
-        let pixels = try render.pixels()
-        #expect(pixels.contains { $0 != 0 }, "the page draws something")
+        guard let pixels = await render.pixels(until: { $0.contains { $0 != 0 } }) else {
+            Issue.record("the page draws something")
+            return try render.pixels()
+        }
         return pixels
+    }
+
+    /// Waits for the page to draw differently from before and records an issue if it never does.
+    private func expectRedraw(
+        _ render: OffscreenRender<some View>,
+        from before: Data,
+        _ comment: Comment? = nil,
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) async {
+        let after = await render.pixels { $0 != before }
+        #expect(after != nil, comment, sourceLocation: sourceLocation)
     }
 
     /// Asks the page for the tab holding each section in turn and checks that
@@ -48,8 +60,7 @@ struct SettingsPaneRenderTests {
             appState.navigationState.requestedSettingsSection = section
             await render.settle { appState.navigationState.requestedSettingsSection == nil }
             #expect(appState.navigationState.requestedSettingsSection == nil, "the page takes \(section)")
-            await render.settle { (try? render.pixels()) != first }
-            #expect(try render.pixels() != first, "\(section) draws its own tab")
+            await expectRedraw(render, from: first, "\(section) draws its own tab")
         }
     }
 
@@ -61,8 +72,7 @@ struct SettingsPaneRenderTests {
         let before = try await drawnPixels(render)
         settings.general.enableSecondaryContextMenu.toggle()
         settings.general.simpleMode.toggle()
-        await render.settle { (try? render.pixels()) != before }
-        #expect(try render.pixels() != before)
+        await expectRedraw(render, from: before)
     }
 
     @Test("Visibility draws, and a different rehide strategy redraws it")
@@ -76,8 +86,7 @@ struct SettingsPaneRenderTests {
         settings.visibility.showOnClick.toggle()
         settings.visibility.showOnHover.toggle()
         settings.visibility.rehideStrategy = .timed
-        await render.settle { (try? render.pixels()) != before }
-        #expect(try render.pixels() != before)
+        await expectRedraw(render, from: before)
     }
 
     @Test("Visibility draws the double-click switch with Always Hidden on, and turning it off redraws it")
@@ -88,8 +97,7 @@ struct SettingsPaneRenderTests {
         let render = render(MenuBarAccessPane(settings: settings.visibility), appState: appState)
         let before = try await drawnPixels(render)
         settings.visibility.showAlwaysHiddenOnIconDoubleClick.toggle()
-        await render.settle { (try? render.pixels()) != before }
-        #expect(try render.pixels() != before)
+        await expectRedraw(render, from: before)
     }
 
     @Test("Tools draws each of its tabs")
@@ -163,8 +171,7 @@ struct SettingsPaneRenderTests {
         let general = try await drawnPixels(render)
 
         navigation.settingsNavigationIdentifier = .about
-        await render.settle { (try? render.pixels()) != general }
-        #expect(try render.pixels() != general, "another page draws differently")
+        await expectRedraw(render, from: general, "another page draws differently")
     }
 }
 
@@ -174,7 +181,7 @@ struct SettingsPaneRenderTests {
 struct SettingsPaneHistoryTests {
     @Test("Going back and forward walks the visited pages and moving on clears forward")
     func history() {
-        let navigation = AppState().navigationState
+        let navigation = AppNavigationState()
         let history = SettingsPaneHistory()
         navigation.settingsNavigationIdentifier = .general
 
@@ -200,7 +207,7 @@ struct SettingsPaneHistoryTests {
 
     @Test("History keeps the last fifty pages and ignores moves with nowhere to go")
     func historyBounds() {
-        let navigation = AppState().navigationState
+        let navigation = AppNavigationState()
         let history = SettingsPaneHistory()
         history.goBack(from: .general, navigationState: navigation)
         history.goForward(from: .general, navigationState: navigation)

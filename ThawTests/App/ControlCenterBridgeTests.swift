@@ -13,7 +13,7 @@ import Testing
 /// Both ends of the Control Center bridge, against a scratch suite in place of the app group
 /// and a recorder in place of Control Center. The app state is never set up.
 @MainActor
-@Suite("Control Center bridge", .serialized, .scratchDefaults)
+@Suite("Control Center bridge", .serialized)
 struct ControlCenterBridgeTests {
     private final class Reloads {
         var kinds: [String] = []
@@ -46,7 +46,7 @@ struct ControlCenterBridgeTests {
         #expect(ControlStatePublisher.snapshot(for: nil) == .init(isHiddenSectionRevealed: false, isZenModeActive: false))
     }
 
-    @Test("Setup publishes the current state once and reloads both controls")
+    @Test("Setup publishes the current state once and reloads both controls", .scratchDefaults)
     func setupPublishes() throws {
         try withPublisher { publisher, suite, reloads in
             let appState = AppState()
@@ -59,7 +59,7 @@ struct ControlCenterBridgeTests {
         }
     }
 
-    @Test("A clean quit erases the snapshot and reloads the controls")
+    @Test("A clean quit erases the snapshot and reloads the controls", .scratchDefaults)
     func terminationErases() throws {
         try withPublisher { publisher, suite, reloads in
             let appState = AppState()
@@ -74,7 +74,7 @@ struct ControlCenterBridgeTests {
         }
     }
 
-    @Test("The app's quit notification erases the snapshot")
+    @Test("The app's quit notification erases the snapshot", .scratchDefaults)
     func quitNotificationErases() async throws {
         let name = ScratchDefaults.name("ControlState")
         defer { ScratchDefaults.remove(name) }
@@ -94,7 +94,7 @@ struct ControlCenterBridgeTests {
         #expect(try stored(in: suite) == nil)
     }
 
-    @Test("Without the app group nothing is written or reloaded")
+    @Test("Without the app group nothing is written or reloaded", .scratchDefaults)
     func missingGroup() {
         var reloads = 0
         let publisher = ControlStatePublisher(defaults: nil) { _ in reloads += 1 }
@@ -113,7 +113,7 @@ struct ControlCenterBridgeTests {
         ])
     }
 
-    @Test("Only the hidden-section toggle confirms, and only once there is a section")
+    @Test("Only the hidden-section toggle confirms, and only once there is a section", .scratchDefaults)
     func commandConfirmations() {
         let appState = AppState()
         #expect(ControlCommandObserver.Command.toggleZen.confirmation(appState: appState) == nil)
