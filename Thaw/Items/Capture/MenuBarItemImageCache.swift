@@ -564,7 +564,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             }
 
             let sections = nav.liveCaptureScope.sections(
-                thawBarSection: appState.menuBarManager.thawBarPanel.currentSection
+                thawBarSection: appState.menuBarManager.thawBarPanelIfCreated?.currentSection
             )
             guard !sections.isEmpty else {
                 // Keep looping rather than break: ThawBar close() nils

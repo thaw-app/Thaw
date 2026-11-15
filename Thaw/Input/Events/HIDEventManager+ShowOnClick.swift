@@ -139,7 +139,7 @@ extension HIDEventManager {
 
         // With always-hidden showing in the Thaw Bar, a plain click closes it
         // rather than switching the bar to the hidden section.
-        if appState.menuBarManager.thawBarPanel.currentSection == .alwaysHidden,
+        if appState.menuBarManager.thawBarPanelIfCreated?.currentSection == .alwaysHidden,
            let alwaysHiddenSection = appState.menuBarManager.section(withName: .alwaysHidden)
         {
             cancelPendingMenuBarClick()
@@ -405,7 +405,7 @@ extension HIDEventManager {
             {
                 return false
             }
-            if event.window === appState.menuBarManager.thawBarPanel {
+            if let thawBarPanel = appState.menuBarManager.thawBarPanelIfCreated, event.window === thawBarPanel {
                 return false
             }
 

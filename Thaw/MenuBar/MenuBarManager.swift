@@ -69,7 +69,7 @@ final class MenuBarManager {
 
     /// Weak because AppState owns this manager.
     @ObservationIgnored
-    private weak var appState: AppState?
+    private(set) weak var appState: AppState?
 
     /// Engine-facing settings, assigned at setup with shared defaults beforehand; see MenuBarEngineConfiguration.
     private var configuration: any MenuBarEngineConfiguration = AppSettings.engineDefaults
@@ -93,14 +93,11 @@ final class MenuBarManager {
     @ObservationIgnored
     private var itemHotkeyCancellables = [String: AnyCancellable]()
 
-    let thawBarPanel = ThawBarPanel()
-
-    let searchPanel = MenuBarSearchPanel()
-
+    @ObservationIgnored var thawBarPanelIfCreated: ThawBarPanel?
+    @ObservationIgnored var searchPanelIfCreated: MenuBarSearchPanel?
     /// Standalone appearance editor for changes without opening Settings.
-    let appearanceEditorPanel = MenuBarAppearanceEditorPanel()
-
-    let layoutEditorPanel = MenuBarLayoutEditorPanel()
+    @ObservationIgnored var appearanceEditorPanelIfCreated: MenuBarAppearanceEditorPanel?
+    @ObservationIgnored var layoutEditorPanelIfCreated: MenuBarLayoutEditorPanel?
 
     /// Non-optional platform controller behind an interface so app callers need no platform type; settable for tests.
     var sectionController: any MenuBarSectionControlling = InertSectionController()
@@ -215,10 +212,10 @@ final class MenuBarManager {
         configuration = appState.settings
         rehideController = RehideController(environment: .live(appState: appState))
         installObservers()
-        thawBarPanel.performSetup(with: appState, displayInvalidations: displays.invalidations, displaySettlements: displays.settlements)
-        searchPanel.performSetup(with: appState, displayInvalidations: displays.invalidations)
-        appearanceEditorPanel.performSetup(with: appState)
-        layoutEditorPanel.performSetup(with: appState, displayInvalidations: displays.invalidations)
+        thawBarPanelIfCreated?.performSetup(with: appState, displayInvalidations: displays.invalidations, displaySettlements: displays.settlements)
+        searchPanelIfCreated?.performSetup(with: appState, displayInvalidations: displays.invalidations)
+        appearanceEditorPanelIfCreated?.performSetup(with: appState)
+        layoutEditorPanelIfCreated?.performSetup(with: appState, displayInvalidations: displays.invalidations)
         for section in sections {
             section.performSetup(with: appState, displays: displays)
         }
@@ -728,7 +725,7 @@ final class MenuBarManager {
     }
 
     func dismissLayoutEditorPanel() {
-        layoutEditorPanel.close()
+        layoutEditorPanelIfCreated?.close()
     }
 
     @objc private func showAppearanceEditorPanel() {
@@ -741,7 +738,7 @@ final class MenuBarManager {
     }
 
     func dismissAppearanceEditorPanel() {
-        appearanceEditorPanel.close()
+        appearanceEditorPanelIfCreated?.close()
     }
 
     // MARK: - Sections

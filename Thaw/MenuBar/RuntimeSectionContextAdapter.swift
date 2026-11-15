@@ -129,7 +129,7 @@ final class RuntimeSectionContextAdapter: RuntimeSectionContext {
     }
 
     func isThawBarShowing() -> Bool {
-        appState?.menuBarManager.thawBarPanel.currentSection != nil
+        appState?.menuBarManager.thawBarPanelIfCreated?.currentSection != nil
     }
 
     func isMenuBarHiddenBySystem() -> Bool {
