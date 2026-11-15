@@ -185,7 +185,7 @@
    "location": {
     "character": 5,
     "file": "Thaw/Input/Events/HIDEventManager+PointerGeometry.swift",
-    "line": 298
+    "line": 297
    },
    "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 55 lines",
    "ruleDescription": "Function bodies should not span too many lines",

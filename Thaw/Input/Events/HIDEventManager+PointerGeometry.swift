@@ -231,7 +231,6 @@ extension HIDEventManager {
     func isMouseInsideThawBar(appState: AppState) -> Bool {
         guard
             let thawBarPanel = appState.menuBarManager.thawBarPanelIfCreated,
-            thawBarPanel.isVisible,
             let mouseLocation = MouseHelpers.locationAppKit
         else {
             return false

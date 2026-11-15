@@ -93,11 +93,11 @@ final class MenuBarManager {
     @ObservationIgnored
     private var itemHotkeyCancellables = [String: AnyCancellable]()
 
-    var thawBarPanelIfCreated: ThawBarPanel?
-    var searchPanelIfCreated: MenuBarSearchPanel?
+    @ObservationIgnored var thawBarPanelIfCreated: ThawBarPanel?
+    @ObservationIgnored var searchPanelIfCreated: MenuBarSearchPanel?
     /// Standalone appearance editor for changes without opening Settings.
-    var appearanceEditorPanelIfCreated: MenuBarAppearanceEditorPanel?
-    var layoutEditorPanelIfCreated: MenuBarLayoutEditorPanel?
+    @ObservationIgnored var appearanceEditorPanelIfCreated: MenuBarAppearanceEditorPanel?
+    @ObservationIgnored var layoutEditorPanelIfCreated: MenuBarLayoutEditorPanel?
 
     /// Non-optional platform controller behind an interface so app callers need no platform type; settable for tests.
     var sectionController: any MenuBarSectionControlling = InertSectionController()
