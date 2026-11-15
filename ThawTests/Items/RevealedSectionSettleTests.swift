@@ -27,7 +27,7 @@ struct RevealedSectionSettleTests {
     @Test("The wait reads the bar until the icons hold still, on the frames read now, and skips items not on the bar")
     func settleReadsLiveFrames() async throws {
         let clock = TestClock()
-        let settleClock = RevealCaptureSession.SettleClock(now: { clock.now }, sleep: { try? await clock.sleep(for: $0) })
+        let settleClock = RevealCaptureSession.SettleClock.driven(by: clock)
         let parked = Self.item(windowID: 7, x: -2000)
         let live = Self.item(windowID: 9, x: 1000)
         let reader = try CaptureFixture(hosting: CaptureFixture.barCapture(opaque: false, glyphXs: [1008]), strip: nil, items: [live])

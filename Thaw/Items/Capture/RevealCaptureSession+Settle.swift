@@ -15,6 +15,8 @@ extension RevealCaptureSession {
     struct SettleClock {
         var now: @MainActor () -> ContinuousClock.Instant = { .now }
         var sleep: @MainActor (Duration) async -> Void = { try? await Task.sleep(for: $0) }
+        /// The timer that ends a read at the deadline; it must return early when cancelled.
+        var sleepUntil: @MainActor (ContinuousClock.Instant) async -> Void = { try? await Task.sleep(until: $0) }
     }
 
     /// Polls a revealed batch, one enumeration per poll, until every member's AX bounds are stable.
@@ -131,7 +133,6 @@ extension RevealCaptureSession {
     }
 
     /// Runs read against the deadline. A result that arrives at or after it doesn't count.
-    /// The timer that ends a read still runs on real time.
     static func readBefore(
         _ deadline: ContinuousClock.Instant,
         clock: SettleClock,
@@ -140,7 +141,7 @@ extension RevealCaptureSession {
         guard clock.now() < deadline else { return .pastDeadline }
         let (outcomes, sink) = AsyncStream.makeStream(of: BoundedRead.self)
         let timer = Task {
-            try? await Task.sleep(until: deadline)
+            await clock.sleepUntil(deadline)
             sink.yield(.pastDeadline)
         }
         Task { @MainActor in await sink.yield(.read(read())) }
