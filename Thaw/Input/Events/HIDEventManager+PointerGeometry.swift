@@ -229,10 +229,14 @@ extension HIDEventManager {
 
     /// The frame is grown first, so drifting slightly off the edge does not count as leaving.
     func isMouseInsideThawBar(appState: AppState) -> Bool {
-        guard let mouseLocation = MouseHelpers.locationAppKit else {
+        guard
+            let thawBarPanel = appState.menuBarManager.thawBarPanelIfCreated,
+            thawBarPanel.isVisible,
+            let mouseLocation = MouseHelpers.locationAppKit
+        else {
             return false
         }
-        let forgivingFrame = appState.menuBarManager.thawBarPanel.frame
+        let forgivingFrame = thawBarPanel.frame
             .insetBy(dx: -15, dy: -15)
         return forgivingFrame.contains(mouseLocation)
     }
@@ -326,7 +330,7 @@ extension HIDEventManager {
             return true
         }
 
-        appState.menuBarManager.thawBarPanel.close()
+        appState.menuBarManager.thawBarPanelIfCreated?.close()
         for section in appState.menuBarManager.sections {
             section.hide()
         }

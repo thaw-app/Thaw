@@ -882,7 +882,7 @@ extension MenuBarItemImageCache {
         }
 
         let thawBarSection: MenuBarSection.Name? = navSnapshot.isThawBarPresented
-            ? appState.menuBarManager.thawBarPanel.currentSection
+            ? appState.menuBarManager.thawBarPanelIfCreated?.currentSection
             : nil
 
         await recaptureIfWarranted(
@@ -910,7 +910,7 @@ extension MenuBarItemImageCache {
         let navSnapshot = makeNavigationStateSnapshot()
 
         let thawBarSection: MenuBarSection.Name? = navSnapshot.isThawBarPresented
-            ? appState.menuBarManager.thawBarPanel.currentSection
+            ? appState.menuBarManager.thawBarPanelIfCreated?.currentSection
             : nil
         let sectionsNeedingDisplay = navSnapshot.liveCaptureScope.sections(thawBarSection: thawBarSection)
 
