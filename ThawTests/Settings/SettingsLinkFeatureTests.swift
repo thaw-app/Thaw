@@ -17,6 +17,18 @@ private final class LiveState {
     var count = 0
 }
 
+/// A payload with enough keys that an encoder free to order them would not repeat itself.
+private struct ManyKeys: Encodable {
+    var alpha = 1
+    var bravo = "two"
+    var charlie = [3]
+    var delta = true
+    var echo = 5.0
+    var foxtrot = ["six": 6]
+    var golf = 7
+    var hotel = "eight"
+}
+
 /// What a page's features were asked to do, on either side of the link.
 @MainActor
 private final class FeatureCalls {
@@ -190,5 +202,13 @@ final class SettingsLinkFeatureTests {
         let data = try #require(SettingsLinkPayload.encode(["a": 1]))
         #expect(SettingsLinkPayload.decode([String: Int].self, from: data) == ["a": 1])
         #expect(SettingsLinkPayload.decode(Int.self, from: data) == nil)
+    }
+
+    @Test("The same value always encodes to the same bytes")
+    func payloadsAreStable() {
+        let value = ManyKeys()
+        let first = SettingsLinkPayload.encode(value)
+        #expect(first != nil)
+        #expect((0 ..< 50).allSatisfy { _ in SettingsLinkPayload.encode(value) == first })
     }
 }

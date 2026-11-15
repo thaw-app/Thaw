@@ -45,8 +45,12 @@ struct SettingsChildFeature {
 
 /// The JSON a status or a command carries.
 nonisolated enum SettingsLinkPayload {
+    /// Keys are sorted, so the same value always encodes to the same bytes and the host can
+    /// tell a status it has already sent.
     static func encode(_ value: some Encodable) -> Data? {
-        try? JSONEncoder().encode(value)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return try? encoder.encode(value)
     }
 
     static func decode<Value: Decodable>(_: Value.Type = Value.self, from data: Data) -> Value? {
