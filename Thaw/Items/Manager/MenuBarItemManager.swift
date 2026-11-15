@@ -1166,26 +1166,13 @@ final class MenuBarItemManager {
             }
         }
 
-        switch targetSection {
-        case .visible:
-            return .rightOfItem(controlItems.hidden)
-        case .hidden:
-            if configuration.isAlwaysHiddenSectionEnabled == true {
-                if let alwaysHidden = controlItems.alwaysHidden {
-                    return .rightOfItem(alwaysHidden)
-                } else {
-                    return .leftOfItem(controlItems.hidden)
-                }
-            } else {
-                return .leftOfItem(controlItems.hidden)
-            }
-        case .alwaysHidden:
-            if let alwaysHidden = controlItems.alwaysHidden {
-                return .leftOfItem(alwaysHidden)
-            } else {
-                return .leftOfItem(controlItems.hidden)
-            }
-        }
+        return SectionTransitionDestination.destination(
+            for: targetSection,
+            after: nil,
+            hiddenDivider: controlItems.hidden,
+            alwaysHiddenDivider: controlItems.alwaysHidden,
+            alwaysHiddenEnabled: configuration.isAlwaysHiddenSectionEnabled == true
+        )
     }
 
     private func persistedNewItemsAnchorIdentifier(for item: MenuBarItem) -> String {

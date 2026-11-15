@@ -1266,22 +1266,19 @@ extension MenuBarItemManager {
         }
     }
 
-    /// Where an item joining section goes: behind predecessor when one was
-    /// just seated (so a group keeps its arrangement), else at the section's
-    /// band boundary beside the relevant divider.
+    /// Reads the live dividers and the setting for ``SectionTransitionDestination``.
     @MainActor
     private func sectionTransitionDestination(
         for section: MenuBarSection.Name,
         after predecessor: MenuBarItem?
     ) -> MoveDestination {
         let controlItems = cacheDividers()
-        // The setting is only ever read for the hidden section, as before.
         return SectionTransitionDestination.destination(
             for: section,
             after: predecessor,
             hiddenDivider: controlItems.hidden,
             alwaysHiddenDivider: controlItems.alwaysHidden,
-            alwaysHiddenEnabled: section == .hidden && configuration.isAlwaysHiddenSectionEnabled == true
+            alwaysHiddenEnabled: configuration.isAlwaysHiddenSectionEnabled == true
         )
     }
 

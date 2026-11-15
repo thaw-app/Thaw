@@ -13,7 +13,7 @@ import MenuBarModel
 /// arrangement. Otherwise at the section's band boundary, beside the divider
 /// that bounds it. The caller reads the live dividers and the setting and
 /// passes plain values in.
-enum SectionTransitionDestination {
+nonisolated enum SectionTransitionDestination {
     static func destination(
         for section: MenuBarSection.Name,
         after predecessor: MenuBarItem?,

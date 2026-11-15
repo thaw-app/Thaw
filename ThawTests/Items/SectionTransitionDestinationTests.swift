@@ -10,7 +10,6 @@ import MenuBarModel
 import Testing
 @testable import Thaw
 
-@MainActor
 @Suite("Section transition destination")
 struct SectionTransitionDestinationTests {
     private static func item(_ title: String, x: CGFloat) -> MenuBarItem {
