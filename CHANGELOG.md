@@ -33,7 +33,7 @@ the items under New and Fixed.
 - `thaw://release-item?bundle=` now lets go of every item of that app the sender holds, instead of failing when it holds more than one.
 - Smart rehide no longer skips a click outside the menu bar while the Thaw icon has no window yet, so the revealed items go away after the click as set.
 - Thaw does less work in the background: a mouse click in any app no longer makes it redraw the menu bar appearance and read every item's position again, and it no longer asks the system about every running app every three seconds.
-- An item that shows live text, such as a clock, is recognized as one item within about two minutes, instead of whenever something else in the menu bar next changed. Until then each new text could put it under New Items or lose its place.
+- An item that shows live text, such as a clock, is recognized as one item within about two minutes, instead of whenever something else in the menu bar next changed. Until then each new text could put it under New Items or lose its place. Text that changes the item's width, such as a song title, is recognized too, the second time it changes.
 
 ## [3.0.0-alpha.14] - 2026-11-14
 

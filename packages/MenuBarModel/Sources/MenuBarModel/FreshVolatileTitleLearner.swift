@@ -15,9 +15,12 @@ import Foundation
 public struct FreshVolatileTitleLearner: Sendable {
     private struct Observation: Sendable {
         let title: String
-        let slotX: CGFloat
+        let minX: CGFloat
+        let maxX: CGFloat
         let sourcePID: pid_t
         let read: UInt64
+        /// The title this one replaced, when that change resized the item. One resize is not learned from.
+        var resizedFrom: String?
 
         /// The observation for an item with a title and a frame on the bar, or nil.
         static func make(for item: MenuBarItem, sourcePID: pid_t, read: UInt64) -> Self? {
@@ -27,15 +30,52 @@ public struct FreshVolatileTitleLearner: Sendable {
             }
             return Self(
                 title: item.tag.title,
-                slotX: item.bounds.midX,
+                minX: item.bounds.minX,
+                maxX: item.bounds.maxX,
                 sourcePID: sourcePID,
                 read: read
             )
+        }
+
+        /// Whether this title, read after old, shows the same process renaming its item where it sits.
+        /// Also notes a resize that has to be seen once more before it counts.
+        ///
+        /// A new title around the same centre counts at once. A new title that changed the item's width
+        /// moves the centre and leaves one edge where it was, and so would a different item of the app
+        /// put in the same slot. That counts only the second time in a row, with three different
+        /// titles, so swapping two items and swapping them back is not learned. A change to or from a
+        /// placeholder such as Item-0 is the app finishing its launch, so it never counts.
+        mutating func showsRename(after old: Observation) -> Bool {
+            guard old.sourcePID == sourcePID, !MenuBarItemTag.isGenericItemTitle(old.title), !MenuBarItemTag.isGenericItemTitle(title)
+            else {
+                return false
+            }
+            guard old.title != title else {
+                resizedFrom = old.resizedFrom
+                return false
+            }
+            let drift = FreshVolatileTitleLearner.maxDrift
+            if abs(old.midX - midX) <= drift {
+                return true
+            }
+            guard abs(old.minX - minX) <= drift || abs(old.maxX - maxX) <= drift else { return false }
+            if let first = old.resizedFrom, first != title {
+                return true
+            }
+            resizedFrom = old.title
+            return false
+        }
+
+        private var midX: CGFloat {
+            (minX + maxX) / 2
         }
     }
 
     /// A kept title older than this many reads is too old to compare, since the app may have replaced its item.
     static let maxReadsBetweenTitles: UInt64 = 4
+
+    /// How far, in points, a renamed item's centre or edge may sit from where it was.
+    static let maxDrift: CGFloat = 4
 
     private var lastObservationByOwner = [String: Observation]()
     /// Bundles seen from two live processes, with those processes. A read can skip one of them, so they
@@ -48,6 +88,7 @@ public struct FreshVolatileTitleLearner: Sendable {
 
     /// Returns owners whose title changed while their single menu bar slot stayed in place and the
     /// same process kept publishing it. An app a read skipped keeps its last title for a few reads.
+    /// A title that changed the item's width is returned the second time in a row.
     /// - Parameter isAlive: Whether a process still runs, to tell a relaunch from a second process.
     public mutating func observe(
         _ freshItems: [MenuBarItem],
@@ -75,7 +116,7 @@ public struct FreshVolatileTitleLearner: Sendable {
                 sharedBundles[bundleID] = sourcePIDs
                 continue
             }
-            guard items.count == 1, let item = items.first, let sourcePID = item.sourcePID, let observation = Observation.make(for: item, sourcePID: sourcePID, read: reads)
+            guard items.count == 1, let item = items.first, let sourcePID = item.sourcePID, var observation = Observation.make(for: item, sourcePID: sourcePID, read: reads)
             else {
                 continue
             }
@@ -83,7 +124,7 @@ public struct FreshVolatileTitleLearner: Sendable {
                 sharedBundles[bundleID] = [previous.sourcePID, sourcePID]
                 continue
             }
-            if let previous, reads - previous.read <= Self.maxReadsBetweenTitles, Self.isRename(from: previous, to: observation) {
+            if let previous, reads - previous.read <= Self.maxReadsBetweenTitles, observation.showsRename(after: previous) {
                 // A reported app is dropped, so it is not offered for another read.
                 learned.insert(bundleID)
                 continue
@@ -100,12 +141,5 @@ public struct FreshVolatileTitleLearner: Sendable {
             reads - last.read < Self.maxReadsBetweenTitles && !MenuBarItemTag.isGenericItemTitle(last.title)
         }
         return Set(comparable.keys)
-    }
-
-    /// Whether the same process renamed its item in place. A change to or from a placeholder
-    /// such as Item-0 is the app finishing its launch, so it doesn't count.
-    private static func isRename(from old: Observation, to new: Observation) -> Bool {
-        old.sourcePID == new.sourcePID && old.title != new.title && abs(old.slotX - new.slotX) <= 4
-            && !MenuBarItemTag.isGenericItemTitle(old.title) && !MenuBarItemTag.isGenericItemTitle(new.title)
     }
 }
