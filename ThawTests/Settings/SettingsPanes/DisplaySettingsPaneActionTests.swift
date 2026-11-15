@@ -282,6 +282,20 @@ struct DisplaySettingsPaneActionTests {
         }
     }
 
+    @Test("A save the app reports as failed puts the slider back on the spacing the display kept")
+    func reportedFailureDropsTheDraft() async throws {
+        try await withWorld { world in
+            let page = world.page
+            increment(try #require(sliders(in: page).first))
+            await page.settle { has("Apply", in: page) }
+            DisplayCommitReports.shared.failure = DisplayCommitFailure(message: "The profile is gone.", displayID: Self.studio)
+            await page.settle { !has("Apply", in: page) && DisplayCommitReports.shared.failure == nil }
+            #expect(OffscreenAccessibility.label(of: try #require(sliders(in: page).first)) == "4")
+            #expect(DisplayCommitReports.shared.failure == nil, "the page shows a failure once")
+            #expect(savedOffset(world) == 4)
+        }
+    }
+
     @Test("Asked about a spacing change, Cancel drops the draft and each answer saves where it says")
     func spacingAnswers() async throws {
         let answers = Answers()

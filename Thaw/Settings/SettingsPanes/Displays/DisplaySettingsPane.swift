@@ -111,6 +111,12 @@ struct DisplaySettingsPane: View {
             }
         )
         .errorAlert("Couldn’t save display settings", message: $errorMessage)
+        // In the settings process the app saves to the profiles, and says here when it couldn't.
+        .onChange(of: DisplayCommitReports.shared.failure, initial: true) {
+            if let failure = DisplayCommitReports.shared.take() {
+                show(failure)
+            }
+        }
     }
 
     @ViewBuilder

@@ -168,44 +168,24 @@ extension DisplaySettingsPane {
         }
     }
 
-    /// Pushes the global template to every known display via the manager's
-    /// broadcast helper. The Combine sink in DisplaySettingsManager picks
-    /// the resulting configurations change up and drives the relaunch wave
-    /// for the active display on the next main-queue dispatch.
+    /// Pushes the global template to every known display and saves it to the
+    /// profiles the scope names. The configurations change drives the relaunch
+    /// wave for the active display on the next main-queue dispatch.
     ///
     /// A save that fails rolls the live state back rather than leaving the
     /// broadcast applied without a matching profile entry, which the next
     /// reapply would revert.
-    private func commitGlobalApply(saving save: () throws -> Void = { /* No profile to save to. */ }) {
-        let previousConfigurations = displaySettings.configurations
-        displaySettings.applyGlobalToAllKnownDisplays()
-        do {
-            try save()
-        } catch {
-            displaySettings.configurations = previousConfigurations
-            errorMessage = error.localizedDescription
-        }
+    private func commitGlobalApply(savingTo scope: SpacingProfileSaveScope? = nil, activeProfileID: UUID? = nil) {
+        commit(DisplayProfileCommit(change: .template(displaySettings.globalConfiguration), scope: scope, activeProfileID: activeProfileID))
     }
 
     /// What each button of the template alert does.
     func answerGlobalApply(_ pending: PendingGlobalApply, with choice: ConfirmationChoice) {
         switch choice {
         case .updateActiveProfile:
-            commitGlobalApply {
-                guard let id = pending.activeProfileID else { return }
-                try appState.profileManager.updateProfile(
-                    id: id,
-                    scope: .configurationOnly,
-                    appState: appState
-                )
-            }
+            commitGlobalApply(savingTo: .activeProfile, activeProfileID: pending.activeProfileID)
         case .updateAllProfiles:
-            commitGlobalApply {
-                try appState.profileManager.updateAllProfilesGlobalConfiguration(
-                    displaySettings.globalConfiguration,
-                    propagateToDisplays: true
-                )
-            }
+            commitGlobalApply(savingTo: .allProfiles, activeProfileID: pending.activeProfileID)
         case .apply:
             commitGlobalApply()
         case .cancel:

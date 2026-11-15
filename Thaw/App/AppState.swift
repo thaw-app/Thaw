@@ -160,8 +160,8 @@ final class AppState {
 
     // MARK: - Published state
 
-    /// observeActiveSpace() compensates for under-reported system space changes.
-    private(set) var activeSpace = SpaceInfo.activeSpace()
+    /// observeActiveSpace() compensates for under-reported system space changes. The settings process sets it to the app's.
+    var activeSpace = SpaceInfo.activeSpace()
 
     /// Mirror of the event layer's drag flag, so views can watch a drag
     /// without subscribing to HIDEventManager themselves.
