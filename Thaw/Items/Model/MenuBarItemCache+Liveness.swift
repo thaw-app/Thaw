@@ -37,6 +37,20 @@ extension MenuBarItemCache {
         return cache
     }
 
+    /// The processes retainingRunningOwners(processIDs:bundleIdentifiers:) checks by PID.
+    var livenessPIDs: Set<pid_t> {
+        var pids = Set<pid_t>()
+        for section in MenuBarSectionName.allCases {
+            for item in self[section] {
+                let pid = item.sourcePID ?? item.ownerPID
+                if pid > 0 {
+                    pids.insert(pid)
+                }
+            }
+        }
+        return pids
+    }
+
     /// Fresh items plus the cached ones a partial AX walk missed whose apps still run. macOS 27.2
     /// can leave out Thaw's own AXExtrasMenuBar while every other app answers.
     static func mergingLiveCachedItems(

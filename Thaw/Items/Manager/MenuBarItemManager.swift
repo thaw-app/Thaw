@@ -381,7 +381,7 @@ final class MenuBarItemManager {
     /// isolation marker is needed.
     private var cacheTickCancellable: AnyCancellable?
 
-    @ObservationIgnored var isPurgingDepartedOwners = false
+    @ObservationIgnored var ownerPurge = OwnerPurgeState()
 
     /// Last menu-bar window-list read by the periodic cacheItemsIfNeeded cheap
     /// gate (macOS 27). While this is unchanged tick-to-tick the bar is stable,
@@ -1483,7 +1483,7 @@ final class MenuBarItemManager {
                     // arrived (macOS 27 does not reliably post it) must still
                     // leave the cache, and the window-list gate below never
                     // sees an AX-only status item withdraw.
-                    await self.purgeDepartedOwners()
+                    await self.purgeDepartedOwnersWhenDue()
                     await self.cacheItemsIfNeeded()
                 }
             }

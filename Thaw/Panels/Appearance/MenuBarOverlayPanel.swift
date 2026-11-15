@@ -828,7 +828,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
             }
 
             // Menu movement can accompany external item additions or removals; refresh item geometry too.
-            overlayPanel.$applicationMenuFrame
+            overlayPanel.$applicationMenuFrame.removeDuplicates()
                 .sink { [weak self] _ in
                     guard let self else { return }
                     self.needsDisplay = true
@@ -841,7 +841,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         $fullConfiguration.replace(with: ())
             .merge(with: $previewConfiguration.replace(with: ()))
             .merge(with: $averageColorInfo.removeDuplicates().replace(with: ()))
-            .merge(with: $wallpaperPalette.replace(with: ()))
+            .merge(with: $wallpaperPalette.removeDuplicates().replace(with: ()))
             .merge(with: $iconShade.replace(with: ()))
             .sink { [weak self] _ in
                 self?.updateBackgroundGlass()
