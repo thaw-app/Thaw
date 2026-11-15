@@ -11,7 +11,7 @@ import Testing
 
 /// The display change's resolveProfile step, which replaced ProfileManager's own screen observer.
 @MainActor
-@Suite("Display profile switch", .serialized)
+@Suite("Display profile switch", .serialized, .scratchDefaults)
 struct DisplayProfileSwitchTests {
     private let suites = ScratchSuites(prefix: "DisplayProfileSwitchTests")
 
@@ -64,7 +64,7 @@ struct DisplayProfileSwitchTests {
         #expect(target.applied.isEmpty)
     }
 
-    @Test("The effect step leaves the profile alone when no profile names a display", .scratchDefaults)
+    @Test("The effect step leaves the profile alone when no profile names a display")
     func effectWithoutProfilesAppliesNothing() async throws {
         let directory = try ProfileTestDirectory.make(seeding: ["Default"])
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -78,7 +78,7 @@ struct DisplayProfileSwitchTests {
         #expect(profiles.layoutTask == nil)
     }
 
-    @Test("A switch started during a settle is the pending apply the settle's tail leaves to finish", .scratchDefaults)
+    @Test("A switch started during a settle is the pending apply the settle's tail leaves to finish")
     func settleTailLeavesTheSwitchToFinish() throws {
         let defaults = try #require(suites.make())
         let settled = ProfileSettleReapply.Record(defaults: defaults)

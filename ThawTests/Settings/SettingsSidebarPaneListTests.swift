@@ -12,7 +12,7 @@ import Testing
 import ThawUI
 
 /// The settings sidebar: its rows, how it opens pages, and how it draws them.
-@Suite("Settings sidebar list", .serialized)
+@Suite("Settings sidebar list", .serialized, .scratchDefaults)
 @MainActor
 struct SettingsSidebarPaneListTests {
     private let size = CGSize(width: ThawSidebar<SettingsNavigationIdentifier, EmptyView>.width, height: 900)
@@ -37,7 +37,7 @@ struct SettingsSidebarPaneListTests {
         #expect(SettingsSidebarRow.page(.tools).page == .tools)
     }
 
-    @Test("Opening a page clears the search, even when the page is already open", .scratchDefaults)
+    @Test("Opening a page clears the search, even when the page is already open")
     func openClearsSearch() {
         let navigation = AppNavigationState()
         let searchModel = SearchModel()
@@ -52,7 +52,7 @@ struct SettingsSidebarPaneListTests {
         #expect(searchModel.searchText.isEmpty)
     }
 
-    @Test("Search leaves out the pages whose module is off, and brings them back when it turns on", .scratchDefaults)
+    @Test("Search leaves out the pages whose module is off, and brings them back when it turns on")
     func searchSkipsTurnedOffPages() {
         let searchModel = SearchModel()
         searchModel.searchText = "profile"
@@ -66,7 +66,7 @@ struct SettingsSidebarPaneListTests {
         #expect(searchModel.displayedGroups.contains { $0.pane == .profiles })
     }
 
-    @Test("A section a search left unused is dropped when another page opens", .scratchDefaults)
+    @Test("A section a search left unused is dropped when another page opens")
     func leftoverSectionIsDroppedOnAnotherPage() throws {
         let navigation = AppNavigationState()
         navigation.settingsNavigationIdentifier = .general
@@ -79,7 +79,7 @@ struct SettingsSidebarPaneListTests {
         #expect(navigation.requestedSettingsSection == nil)
     }
 
-    @Test("An arrow key lands where the rows say, and opening it clears the search; a move that goes nowhere keeps it", .scratchDefaults)
+    @Test("An arrow key lands where the rows say, and opening it clears the search; a move that goes nowhere keeps it")
     func arrowKeys() throws {
         let navigation = AppNavigationState()
         let searchModel = SearchModel()
@@ -93,7 +93,7 @@ struct SettingsSidebarPaneListTests {
         #expect(searchModel.searchText.isEmpty)
     }
 
-    @Test("The selection fill follows the open page, and no row is filled while searching", .scratchDefaults)
+    @Test("The selection fill follows the open page, and no row is filled while searching")
     func drawsTheSelection() async throws {
         let navigation = AppNavigationState()
         let searchModel = SearchModel()

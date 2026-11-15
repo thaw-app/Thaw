@@ -12,7 +12,7 @@ import Testing
 @testable import Thaw
 
 /// Which image a slot shows for an item, from its capture, its app and the user's icon choice.
-@Suite("Overflow fallback icon", .serialized)
+@Suite("Overflow fallback icon", .serialized, .scratchDefaults)
 @MainActor
 struct OverflowFallbackIconTests {
     private static let ownPID = ProcessInfo.processInfo.processIdentifier
@@ -88,7 +88,7 @@ struct OverflowFallbackIconTests {
         #expect(OverflowFallbackIcon.supportsMissingCaptureFallback(for: .hidden))
     }
 
-    @Test("A usable capture is shown as captured", .scratchDefaults)
+    @Test("A usable capture is shown as captured")
     func usableCaptureWins() throws {
         let appState = AppState()
         let capture = try Self.capture(width: 20)
@@ -105,7 +105,7 @@ struct OverflowFallbackIconTests {
         #expect(shown == capture)
     }
 
-    @Test("A missing capture falls back to the owning app's icon", .scratchDefaults)
+    @Test("A missing capture falls back to the owning app's icon")
     func missingCaptureUsesAppIcon() {
         let appState = AppState()
         let image = OverflowFallbackIcon.resolvedImage(
@@ -120,7 +120,7 @@ struct OverflowFallbackIconTests {
         }
     }
 
-    @Test("Control Center items show the Control Center icon, an unresolved app the generic glyph", .scratchDefaults)
+    @Test("Control Center items show the Control Center icon, an unresolved app the generic glyph")
     func iconSources() {
         #expect(OverflowFallbackIcon.image(for: Self.item(.controlCenter)) === ControlCenterIcon.image)
         let generic = OverflowFallbackIcon.image(for: Self.item(.string("com.example.gone"), sourcePID: nil))
@@ -128,7 +128,7 @@ struct OverflowFallbackIconTests {
         #expect(OverflowFallbackIcon.image(for: Self.item(.menuBarAgent)) != nil, "the agent gets the generic glyph")
     }
 
-    @Test("A system host's item with a blank capture shows its host's icon rather than an empty tile", .scratchDefaults)
+    @Test("A system host's item with a blank capture shows its host's icon rather than an empty tile")
     func blankSystemCaptureFallsBackToTheHostIcon() throws {
         let appState = AppState()
         let image = try OverflowFallbackIcon.resolvedImage(
@@ -144,7 +144,7 @@ struct OverflowFallbackIconTests {
         #expect(icon === ControlCenterIcon.image)
     }
 
-    @Test("Thaw's stand-in for a system extra shows its own template glyph, not Thaw's app icon", .scratchDefaults)
+    @Test("Thaw's stand-in for a system extra shows its own template glyph, not Thaw's app icon")
     func standInShowsItsGlyph() throws {
         let standIn = try #require(SystemExtraStandIn.allCases.first)
         let item = Self.item(.string("\(ThawMenuBarIdentity.bundleIdentifier).extra.\(standIn.rawValue)"))
@@ -154,7 +154,7 @@ struct OverflowFallbackIconTests {
     }
 
     // Apps Native hiding switches off are never drawn and expose no process for their items.
-    @Test("An item with no known process shows its app's icon, found by bundle identifier", .scratchDefaults)
+    @Test("An item with no known process shows its app's icon, found by bundle identifier")
     func appIconByBundleIdentifier() throws {
         let finder = try #require(OverflowFallbackIcon.image(for: Self.item(.string("com.apple.finder"), sourcePID: nil)))
         #expect(!finder.isTemplate, "Finder's own icon, not the generic glyph")
@@ -163,7 +163,7 @@ struct OverflowFallbackIconTests {
     }
 
     /// Picking an icon for a hidden item with a live picture showed nothing: the picture won.
-    @Test("An icon the user chose replaces a good capture", .scratchDefaults)
+    @Test("An icon the user chose replaces a good capture")
     func chosenIconBeatsCapture() throws {
         let appState = AppState()
         let suite = "OverflowFallbackIconTests.chosenIcon"
@@ -181,7 +181,7 @@ struct OverflowFallbackIconTests {
         #expect(!OverflowFallbackIcon.shouldPreferAppIcon(for: item, in: nil, appState: appState, hasUsableCapture: true, iconChoices: choices), "outside a section the capture rules stand")
     }
 
-    @Test("The always-use-app-icon setting prefers the app icon over a good capture", .scratchDefaults)
+    @Test("The always-use-app-icon setting prefers the app icon over a good capture")
     func alwaysUseAppIcon() throws {
         let appState = AppState()
         appState.settings.layout.alwaysUseAppIconForMenuBarItems = true
@@ -199,7 +199,7 @@ struct OverflowFallbackIconTests {
         }
     }
 
-    @Test("Thaw's own icon follows the visible section's state", .scratchDefaults)
+    @Test("Thaw's own icon follows the visible section's state")
     func selectedThawIcon() {
         let appState = AppState()
         let control = MenuBarItem(
@@ -229,7 +229,7 @@ struct OverflowFallbackIconTests {
         OverflowFallbackIcon.forgetIcon(forPID: -12345)
     }
 
-    @Test("Resolving many items keys each image by its tag", .scratchDefaults)
+    @Test("Resolving many items keys each image by its tag")
     func resolvedImages() {
         let appState = AppState()
         let items = [Self.item(.string("com.example.a"), title: "A"), Self.item(.string("com.example.b"), title: "B")]

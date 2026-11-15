@@ -11,7 +11,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Layout shows one warning at a time, the most serious first")
+@Suite("Layout shows one warning at a time, the most serious first", .scratchDefaults)
 struct LayoutBannerTests {
     private func banner(
         denied: Bool = false,
@@ -44,7 +44,7 @@ struct LayoutBannerTests {
         #expect(!LayoutBanner.allowsTips(beside: .outOfRoom))
     }
 
-    @Test("The items macOS is not drawing are named in bar order, each name once", .scratchDefaults)
+    @Test("The items macOS is not drawing are named in bar order, each name once")
     func namesNotDrawn() {
         let items = [item("Alpha", windowID: 1), item("Beta", windowID: 2), item("Gamma", windowID: 3), item("Beta", windowID: 4)]
         let tags = Set([items[2].tag, items[1].tag, items[3].tag])
