@@ -73,10 +73,17 @@ final class AppNavigationState {
         }
     }
 
+    /// What the page shown in the settings process needs captured. The app reads the screen for
+    /// it; nothing while no such process runs.
+    var settingsProcessCapture = SettingsProcessCaptureDemand.none {
+        didSet { updateCaptureUIState() }
+    }
+
     var hasVisibleCaptureUI: Bool {
         isThawBarPresented || isSearchPresented || isLayoutEditorPresented
             || (isSettingsPresented && settingsConsumesCapture)
             || isAppearanceShownInSettingsProcess
+            || settingsProcessCapture.consumesCapture
     }
 
     private var settingsPresentationID: UUID?

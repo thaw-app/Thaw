@@ -199,7 +199,7 @@ extension MenuBarItemImageCache {
         let nav = makeNavigationStateSnapshot()
         return CaptureDemand(
             usesAppIcons: configuration.alwaysUseAppIconForMenuBarItems,
-            hasUnfilteredConsumer: nav.isSearchPresented || nav.isItemHotkeyListExpanded,
+            hasUnfilteredConsumer: nav.isSearchPresented || nav.isItemHotkeyListExpanded || nav.settingsProcess.needsEveryPicture,
             alertRevealIdentifiers: MenuBarItemAlertReveals.identifiers()
         )
     }

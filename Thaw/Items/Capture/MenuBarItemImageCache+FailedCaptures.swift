@@ -228,7 +228,8 @@ extension MenuBarItemImageCache {
             isSettingsPresented: nav.isSettingsPresented,
             settingsNavigationIdentifier: nav.settingsNavigationIdentifier,
             isItemHotkeyListExpanded: nav.isItemHotkeyListExpanded,
-            isSimpleModeSettings: nav.isSimpleModeSettings
+            isSimpleModeSettings: nav.isSimpleModeSettings,
+            settingsProcess: nav.settingsProcess.asIfFrontmost
         ))
     }
 

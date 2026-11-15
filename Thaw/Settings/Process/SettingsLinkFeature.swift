@@ -99,6 +99,7 @@ enum SettingsLinkFeatures {
             .modules(host: appState.moduleHost, profiles: appState.profilesFeature),
             DisplaysSettingsLink.app(appState),
             .tools(appState),
+            .items(appState),
         ]
     }
 
@@ -109,6 +110,7 @@ enum SettingsLinkFeatures {
             .modules(host: appState.moduleHost, profiles: appState.profilesFeature),
             DisplaysSettingsLink.child(appState),
             .tools(appState),
+            .items(appState),
         ]
     }
 }

@@ -212,7 +212,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     /// chain re-arms itself, so a second installObservers() would leave two
     /// of them running for the life of the process.
     @ObservationIgnored
-    private var isObservingCapturesForGlyphSlots = false
+    var isObservingCapturesForGlyphSlots = false
 
     /// How long the app must go without a visible capture consumer before
     /// the cache is dropped.
@@ -422,7 +422,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
             settingsNavigationIdentifier: appState.navigationState.settingsNavigationIdentifier,
             isItemHotkeyListExpanded: isItemHotkeyListExpanded,
             isSimpleModeSettings: appState.navigationState.isSimpleModeSettings
-        )
+        ).including(appState.navigationState.settingsProcessCapture)
     }
 
     /// Refreshes the cache for whatever currently needs it, on screen or not.
@@ -703,7 +703,7 @@ extension MenuBarItemImageCache {
     /// Not an Observations task: the task would hold the cache that owns it, a
     /// cycle. onChange fires before the write lands, so the read is deferred.
     @MainActor
-    private func observeCapturesForGlyphSlots() {
+    func observeCapturesForGlyphSlots() {
         withObservationTracking {
             _ = capturesByTag
         } onChange: { [weak self] in

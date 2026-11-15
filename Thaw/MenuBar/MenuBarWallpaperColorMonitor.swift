@@ -333,3 +333,23 @@ final class MenuBarWallpaperColorMonitor {
         paletteRefreshStates[displayID] = capture.state
     }
 }
+
+extension MenuBarWallpaperColorMonitor {
+    /// Takes the samples another process read. For the settings process, where nothing reads the
+    /// screen: its previews draw what the app sampled.
+    func adopt(
+        averageColors: [CGDirectDisplayID: MenuBarAverageColorInfo],
+        active: MenuBarAverageColorInfo?,
+        palettes: [CGDirectDisplayID: WallpaperPalette]
+    ) {
+        if self.averageColors != averageColors {
+            self.averageColors = averageColors
+        }
+        if averageColorInfo != active {
+            averageColorInfo = active
+        }
+        if wallpaperPalettes != palettes {
+            wallpaperPalettes = palettes
+        }
+    }
+}
