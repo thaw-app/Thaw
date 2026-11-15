@@ -93,12 +93,16 @@ final class SettingsRemote {
 @MainActor
 enum SettingsLinkFeatures {
     /// What the app sends, runs and reads again for the pages in the settings process.
-    static func app(_: AppState) -> [SettingsAppFeature] {
-        []
+    static func app(_ appState: AppState) -> [SettingsAppFeature] {
+        [
+            AppearanceSettingsLink.app(appState),
+        ]
     }
 
     /// What the settings process does with what the app sends.
-    static func child(_: AppState) -> [SettingsChildFeature] {
-        []
+    static func child(_ appState: AppState) -> [SettingsChildFeature] {
+        [
+            AppearanceSettingsLink.child(appState),
+        ]
     }
 }

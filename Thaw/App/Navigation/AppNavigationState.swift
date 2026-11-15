@@ -51,6 +51,12 @@ final class AppNavigationState {
         didSet { updateCaptureUIState() }
     }
 
+    /// The settings process is showing Appearance. Its edits show on the menu bar, whose adaptive
+    /// colors are sampled only while something that needs them is up, as the app's own Settings window is there.
+    var isAppearanceShownInSettingsProcess = false {
+        didSet { updateCaptureUIState() }
+    }
+
     /// Keep capture off for panes such as General and About so they do not light the recording indicator.
     /// This includes Appearance's background sampler; item-glyph demand uses
     /// MenuBarItemImageCache.NavigationStateSnapshot.liveCaptureScope instead.
@@ -70,6 +76,7 @@ final class AppNavigationState {
     var hasVisibleCaptureUI: Bool {
         isThawBarPresented || isSearchPresented || isLayoutEditorPresented
             || (isSettingsPresented && settingsConsumesCapture)
+            || isAppearanceShownInSettingsProcess
     }
 
     private var settingsPresentationID: UUID?
