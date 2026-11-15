@@ -84,11 +84,22 @@ public struct FreshVolatileTitleLearner: Sendable {
                 continue
             }
             if let previous, reads - previous.read <= Self.maxReadsBetweenTitles, Self.isRename(from: previous, to: observation) {
+                // A reported app is dropped, so it is not offered for another read.
                 learned.insert(bundleID)
+                continue
             }
             lastObservationByOwner[bundleID] = observation
         }
         return learned
+    }
+
+    /// Apps whose last title is real and recent enough to compare with the next read, so reading
+    /// the bar again could show them renaming their item.
+    public var comparableOwners: Set<String> {
+        let comparable = lastObservationByOwner.filter { _, last in
+            reads - last.read < Self.maxReadsBetweenTitles && !MenuBarItemTag.isGenericItemTitle(last.title)
+        }
+        return Set(comparable.keys)
     }
 
     /// Whether the same process renamed its item in place. A change to or from a placeholder

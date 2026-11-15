@@ -138,4 +138,41 @@ struct FreshVolatileTitleLearnerTests {
         _ = learner.observe([item(title: "3", windowID: 1), item(title: "Status", x: 1120, windowID: 2)])
         #expect(learner.observe([item(title: "5")]).isEmpty)
     }
+
+    // MARK: Apps worth another read
+
+    @Test("Only an app with one item that has a real title is worth comparing with the next read")
+    func titledSingleItemIsComparable() {
+        var learner = FreshVolatileTitleLearner()
+        #expect(learner.comparableOwners.isEmpty)
+        _ = learner.observe([
+            item(title: "9:44"),
+            item(bundle: "com.example.untitled", title: "", x: 900, windowID: 2),
+            item(bundle: "com.example.launching", title: "Item-0", x: 800, windowID: 3),
+            item(bundle: "com.tencent.qq", title: "3", x: 700, windowID: 4),
+            item(bundle: "com.example.pair", title: "One", x: 600, windowID: 5),
+            item(bundle: "com.example.pair", title: "Two", x: 500, windowID: 6),
+        ])
+        #expect(learner.comparableOwners == ["com.example.chat"])
+    }
+
+    @Test("A learned app is no longer worth another read")
+    func learnedOwnerIsNotComparable() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([item(title: "9:44")])
+        #expect(learner.observe([item(title: "9:45")]) == ["com.example.chat"])
+        #expect(learner.comparableOwners.isEmpty)
+    }
+
+    @Test("An app the reads keep skipping stops being worth another read")
+    func skippedOwnerStopsBeingComparable() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([item(title: "9:44")])
+        for _ in 1 ..< FreshVolatileTitleLearner.maxReadsBetweenTitles {
+            _ = learner.observe([])
+            #expect(learner.comparableOwners == ["com.example.chat"])
+        }
+        _ = learner.observe([])
+        #expect(learner.comparableOwners.isEmpty, "the next read could no longer compare its title")
+    }
 }
