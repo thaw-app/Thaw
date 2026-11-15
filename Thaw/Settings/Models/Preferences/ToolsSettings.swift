@@ -61,7 +61,6 @@ final class ToolsSettings: SettingsURIHandling {
     /// Only guards the conversion to bytes against overflow from a stored value.
     private nonisolated static let maxDiagnosticLogSizeMB = 1_000_000
 
-    /// Turns the log on or off.
     @ObservationIgnored
     var setLogEnabled: (Bool) -> Void = ToolsSettings.logChange { DiagnosticLogger.shared.isEnabled = $0 }
 

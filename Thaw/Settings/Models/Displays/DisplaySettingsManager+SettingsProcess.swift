@@ -31,9 +31,8 @@ extension DisplaySettingsManager {
         }
     }
 
-    /// Reads the stored display settings again, after the other process saved them. A value that
-    /// differs is assigned as if the page had set it here, so the app applies new spacing as it
-    /// does for its own window. A key that is missing or unreadable leaves its value alone.
+    /// Reads the stored display settings again after the other process saved them. A value that differs is
+    /// assigned as if the page had set it, so the app applies new spacing; a missing key leaves its value alone.
     func loadStoredValues() {
         let decoder = JSONDecoder()
         func stored<Value: Decodable>(_: Value.Type, _ key: Defaults.Key) -> Value? {

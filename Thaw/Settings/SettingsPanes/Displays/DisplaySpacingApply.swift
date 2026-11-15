@@ -88,9 +88,8 @@ extension DisplaySettingsPane {
         }
     }
 
-    /// Writes the new spacing and, when a profile is active, saves it to the
-    /// profiles the scope names; DisplaySettingsManager starts the relaunch
-    /// wave on the next main-queue turn.
+    /// Writes the new spacing and saves it to the profiles the scope names.
+    /// DisplaySettingsManager starts the relaunch wave on the next main-queue turn.
     private func commitSpacing(
         displayID: String,
         offset: Double,
@@ -101,9 +100,8 @@ extension DisplaySettingsPane {
         commit(DisplayProfileCommit(change: .spacing(displayID: displayID, offset: offset), scope: scope, activeProfileID: activeProfileID))
     }
 
-    /// Makes a change with the profiles that keep it, here or in the app when
-    /// Settings is in its own process. A save that failed here has already
-    /// put the old settings back.
+    /// Makes a change with the profiles that keep it, here or in the app when Settings is in its own process.
+    /// A save that failed here has already put the old settings back.
     func commit(_ commit: DisplayProfileCommit) {
         do {
             try commit.perform(on: appState)

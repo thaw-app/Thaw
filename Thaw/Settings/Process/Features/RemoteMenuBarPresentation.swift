@@ -8,9 +8,8 @@
 import MenuBarModel
 import Observation
 
-/// The Spaces controls' way to the menu bar agent from the settings process. The agent drops a
-/// process's overrides when that process ends, so each request goes to the app, whose session
-/// makes it and answers whether macOS took it.
+/// The Spaces controls' way to the menu bar agent from the settings process.
+/// The agent drops a process's overrides when that process ends, so each request goes to the app's session.
 @MainActor
 @Observable
 final class RemoteMenuBarPresentation: MenuBarPresentationControlling {

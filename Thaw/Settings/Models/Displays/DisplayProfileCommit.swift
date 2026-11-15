@@ -7,9 +7,8 @@
 
 import Foundation
 
-/// A change the Displays page makes together with the profiles that keep it: one display's
-/// spacing, or the template copied onto every display. It is a value so the settings process
-/// can hand it to the app, which owns the profiles and applies the spacing.
+/// A change the Displays page makes with the profiles that keep it: one display's spacing, or the template on every display.
+/// It is a value so the settings process can hand it to the app, which owns the profiles.
 struct DisplayProfileCommit: Codable, Equatable {
     enum Change: Codable, Equatable {
         case spacing(displayID: String, offset: Double)
@@ -35,9 +34,8 @@ struct DisplayProfileCommit: Codable, Equatable {
         remote.perform(DisplaysSettingsLink.commit, DisplaysSettingsLink.CommitRequest(commit: self, settings: settings))
     }
 
-    /// Makes the change, then saves it to the profiles. Saving to the active profile captures the
-    /// live settings, so the change comes first. A save that fails puts the old settings back and
-    /// throws, or the next profile apply would silently revert the change.
+    /// Makes the change first, because saving to the active profile captures the live settings.
+    /// A save that fails puts the old settings back and throws, or the next profile apply would revert the change.
     func run(on appState: AppState) throws {
         let settings = appState.settings.displaySettings
         let undo: () -> Void

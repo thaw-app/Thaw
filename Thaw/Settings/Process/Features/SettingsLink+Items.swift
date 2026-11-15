@@ -10,27 +10,8 @@ import Combine
 import MenuBarModel
 import Observation
 
-/// The menu bar items, mirrored read-only into the settings process, and this mirror's topics and
-/// commands. A page there reads the same objects as in the app and needs no code of its own for it:
-///
-/// - appState.itemManager.itemCache: every item with its section, at most a quarter of a second
-///   behind the app. An item's applications resolve from its process IDs in either process.
-/// - appState.imageCache: the pictures the app holds, under the app's own tags. The app writes
-///   them to its picture file and names them here; this process reads that file and never writes
-///   it. A changed picture shows about half a second after the app has it. image(for:),
-///   capturesByTag and glyphSlot(for:) all work. The app readies pictures from the first pane
-///   that is not in SettingsItemsMirror.panesWithoutPictures.
-/// - appState.menuBarManager.averageColors, averageColorInfo and wallpaperPalettes, as the app
-///   last sampled them. A preview that asks the app's monitor for a new sample calls
-///   sampleColors(for:) instead when SettingsRemote.current is set.
-/// - Capture: the mirror never reads the screen here. It tells the app what the page needs, by the
-///   rules a page in the app follows (AppNavigationState.hasVisibleCaptureUI and
-///   NavigationStateSnapshot.liveCaptureScope, so the pane and imageCache.isItemHotkeyListExpanded
-///   count as they do in the app), and the app captures for it until the page or the process goes.
-///
-/// Not mirrored: anything that acts on an item (moving, clicking, revealing, capturing a hidden
-/// item on request), imageCache.hasNoRenderableItems(in:), which always answers false here, and
-/// the rest of the item manager's state. A page that needs one of those sends its own command.
+/// The menu bar items mirrored read-only into the settings process: the item list, the pictures and the bar colours.
+/// Nothing here acts on an item, and imageCache.hasNoRenderableItems(in:) always answers false in that process.
 nonisolated enum SettingsItemsLink {
     /// Sent as the settings process starts. It answers with listen, and only then does the app send the rest.
     static let hello = "items.hello"

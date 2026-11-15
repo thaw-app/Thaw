@@ -18,7 +18,6 @@ final class SettingsItemsMirror {
     private let imageCache: MenuBarItemImageCache
     private let colors: MenuBarWallpaperColorMonitor
     private let navigationState: AppNavigationState
-    /// The app's picture file.
     private let pictureFile: URL?
     /// Whether this process shows a pane itself. A pane it hands to the app needs nothing from here.
     private let showsPane: (String) -> Bool
@@ -164,9 +163,8 @@ extension MenuBarItemImageCacheDiskStore {
 }
 
 extension MenuBarItemImageCache {
-    /// For a cache that is never activated and is filled with another process's pictures: it keeps
-    /// its glyph slots current, and never reads the picture file by itself, which would apply ages
-    /// the other process has already judged and can delete the file.
+    /// For a cache that is never activated and holds another process's pictures: it keeps its glyph slots current.
+    /// It never reads the picture file by itself, which can delete the file.
     @MainActor
     func prepareToMirror() {
         hasLoadedFromDisk = true

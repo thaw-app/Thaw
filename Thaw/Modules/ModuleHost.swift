@@ -67,9 +67,8 @@ final class ModuleHost {
     /// quit, crashed or was stopped, so Thaw can undo what it asked for.
     @ObservationIgnored var onModuleQuit: ((String) -> Void)?
 
-    /// How the settings process reaches the app, and nil in the app. The app owns the module
-    /// processes, so with a remote this host starts and stops nothing: it asks the app, and
-    /// shows the modules the app sends. See mirror(modules:enabledIdentifiers:).
+    /// How the settings process reaches the app, and nil in the app. With a remote this host starts and
+    /// stops nothing: it asks the app and shows the modules the app sends.
     @ObservationIgnored var remote: () -> SettingsRemote? = { SettingsRemote.current }
     /// Whether the app's modules have arrived, in the settings process.
     private(set) var hasMirrored = false

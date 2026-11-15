@@ -39,9 +39,8 @@ extension DiagnosticFilesSection {
         var saveItemList: @MainActor (URL) async throws -> Void = { try MaintenanceTools.saveItemList(to: $0) }
     }
 
-    /// The section where Settings is shown. In the settings process an export takes the app's capture
-    /// samples, and the app writes the item list, since that reads other apps' menu bar items. This
-    /// process then copies the list to the place the person chose in its own save panel.
+    /// The section where Settings is shown. In the settings process the app writes the item list, since that
+    /// reads other apps' menu bar items, and this process copies it to the place chosen in its save panel.
     @MainActor
     static func current(_ appState: AppState, remote: SettingsRemote? = .current) -> DiagnosticFilesSection {
         guard remote != nil else { return DiagnosticFilesSection() }

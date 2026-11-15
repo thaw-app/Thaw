@@ -51,9 +51,8 @@ nonisolated extension SettingsLinkMessage {
     }
 }
 
-/// Which panes the settings process shows itself: the ones that only read and write stored
-/// preferences, or get what else they need over the link. The rest need the running menu bar
-/// engine, which only the app has.
+/// The panes the settings process shows itself: they only store preferences, or get the rest over the link.
+/// The others need the running menu bar engine, which only the app has.
 nonisolated enum SettingsProcessRoute {
     static let launchArgument = "--settings"
 

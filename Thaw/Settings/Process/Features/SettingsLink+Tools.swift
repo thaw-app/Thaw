@@ -21,7 +21,6 @@ nonisolated enum ToolsLink {
     static let refresh = "tools.refresh"
     /// A task for the app. See ToolsTaskRequest.
     static let perform = "tools.perform"
-    /// Relaunch Thaw.
     static let relaunch = "tools.relaunch"
 }
 
