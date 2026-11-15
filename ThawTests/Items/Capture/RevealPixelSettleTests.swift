@@ -92,21 +92,21 @@ struct RevealPixelSettleTests {
         #expect(!settled)
     }
 
-    /// The read outlasts the time limit, so only a wait bounded by its budget returns at all.
-    /// No wall-clock check: a stalled runner can't fail it.
+    /// The read stays suspended until the test opens the gate, which it does only after the wait
+    /// returns. No wall-clock check: a stalled runner can't fail it.
     @Test("A read slower than the budget doesn't count, and doesn't hold the wait")
     func slowReadEndsAtTheBudget() async {
+        let gate = ReadGate()
         let settled = await RevealCaptureSession.waitForSettledPixels(
             minimumSettle: .zero,
             interval: .zero,
             budget: .milliseconds(20),
             clock: .init(sleep: { _ in await Task.yield() }),
-            read: {
-                try? await Task.sleep(for: .seconds(3600))
-                return [Data([1])]
-            }
+            read: { await gate.read() }
         )
         #expect(!settled)
+        #expect(!gate.finished, "the wait returned while the read was still suspended")
+        gate.open()
     }
 
     @Test("The fingerprint sees a glyph move inside its frame, and ignores the rest of the bar")
@@ -132,6 +132,29 @@ struct RevealPixelSettleTests {
         #expect(MenuBarItemImageCache.isTag(tag, in: [tag]))
         #expect(MenuBarItemImageCache.isTag(rebuilt, in: [tag]))
         #expect(!MenuBarItemImageCache.isTag(rebuilt, in: []))
+    }
+
+    /// A read that suspends until the gate opens. Opening it before the read starts lets the read
+    /// return at once, so no task is left suspended after the test.
+    @MainActor
+    private final class ReadGate {
+        private(set) var finished = false
+        private var isOpen = false
+        private var waiting: CheckedContinuation<Void, Never>?
+
+        func read() async -> [Data]? {
+            if !isOpen {
+                await withCheckedContinuation { waiting = $0 }
+            }
+            finished = true
+            return [Data([1])]
+        }
+
+        func open() {
+            isOpen = true
+            waiting?.resume()
+            waiting = nil
+        }
     }
 
     private func capture(inkAtX x: Int, extraInkAtX extra: Int? = nil) throws -> ScreenCapture.MenuBarHostingCapture {
