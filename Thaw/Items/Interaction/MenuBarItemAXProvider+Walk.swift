@@ -41,14 +41,16 @@ nonisolated extension MenuBarItemAXProvider {
         var read: @Sendable (
             _ app: NSRunningApplication, _ appBundleID: String, _ ourBundleID: String?, _ formerHosts: Set<String>
         ) -> [RawItem] = { app, appBundleID, ourBundleID, formerHosts in
-            MenuBarItemAXProvider.collectApp(
-                runningApp: app,
-                appBundleID: appBundleID,
-                display: nil,
-                displayBounds: nil,
-                ourBundleID: ourBundleID,
-                formerHosts: formerHosts
-            ).raw
+            autoreleasepool {
+                MenuBarItemAXProvider.collectApp(
+                    runningApp: app,
+                    appBundleID: appBundleID,
+                    display: nil,
+                    displayBounds: nil,
+                    ourBundleID: ourBundleID,
+                    formerHosts: formerHosts
+                ).raw
+            }
         }
     }
 

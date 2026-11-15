@@ -22,7 +22,9 @@ struct SpaceInfo: Hashable {
     /// Nil until the window server publishes the space. Each read walks the
     /// full managed-display list.
     var managedSpace: Bridging.ManagedSpace? {
-        Bridging.getManagedSpaces().first { $0.spaceID == spaceID }
+        autoreleasepool {
+            Bridging.getManagedSpaces().first { $0.spaceID == spaceID }
+        }
     }
 
     /// A key that survives logout and reboot, unlike spaceID.

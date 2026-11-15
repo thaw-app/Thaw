@@ -254,23 +254,24 @@ public extension Bridging {
     /// - Returns: The matching space identifiers, or an empty array if the
     ///   window server declined to answer.
     static func getSpaceList(for windowID: CGWindowID, visibleSpacesOnly: Bool = false) -> [CGSSpaceID] {
-        let scope: CGSSpaceMask = visibleSpacesOnly ? .allVisibleSpacesMask : .allSpacesMask
-        // Another Copy call: the array arrives at +1 and is consumed retained
-        // on both the success and the wrong-type path, so a description the
-        // bridge cannot read is still released rather than leaked.
-        guard let copied = cgsCopySpacesForWindows(processConnection, scope.rawValue, [windowID] as CFArray) else {
-            diagLog.error("cgsCopySpacesForWindows returned nil")
-            return []
+        autoreleasepool {
+            let scope: CGSSpaceMask = visibleSpacesOnly ? .allVisibleSpacesMask : .allSpacesMask
+            // Another Copy call: the array arrives at +1 and is consumed retained on both the
+            // success and wrong-type paths, so a description the bridge cannot read is released.
+            guard let copied = cgsCopySpacesForWindows(processConnection, scope.rawValue, [windowID] as CFArray) else {
+                diagLog.error("cgsCopySpacesForWindows returned nil")
+                return []
+            }
+            guard let elements = arrayValue(of: copied.takeRetainedValue()) else {
+                diagLog.error("cgsCopySpacesForWindows returned a value that is not an array")
+                return []
+            }
+            guard let spaceIDs = elements as? [CGSSpaceID] else {
+                diagLog.error("cgsCopySpacesForWindows returned array of unexpected type")
+                return []
+            }
+            return spaceIDs
         }
-        guard let elements = arrayValue(of: copied.takeRetainedValue()) else {
-            diagLog.error("cgsCopySpacesForWindows returned a value that is not an array")
-            return []
-        }
-        guard let spaceIDs = elements as? [CGSSpaceID] else {
-            diagLog.error("cgsCopySpacesForWindows returned array of unexpected type")
-            return []
-        }
-        return spaceIDs
     }
 
     /// Whether a space is a full-screen space rather than a desktop.
@@ -664,33 +665,32 @@ public extension Bridging {
             diagLog.debug("getMenuBarWindowList: onScreen filter active, \(resolved.count) on-screen windows")
             onScreenIDs = resolved
         }
-
         var requiredSpaceID: CGSSpaceID?
         if option.contains(.activeSpace) {
             let resolved = getActiveSpaceID()
             diagLog.debug("getMenuBarWindowList: activeSpace filter active, spaceID = \(resolved)")
             requiredSpaceID = resolved
         }
-
         let excludesTheBarItself = option.contains(.itemsOnly)
-
         let rawList = processMenuBarWindowIDs()
         let filtered = rawList.filter { windowID in
-            if let onScreenIDs, !onScreenIDs.contains(windowID) {
-                return false
+            autoreleasepool {
+                if let onScreenIDs, !onScreenIDs.contains(windowID) {
+                    return false
+                }
+                if let requiredSpaceID, !isWindowOnSpace(windowID, requiredSpaceID) {
+                    return false
+                }
+                // The bar itself sits at the main menu level and the items in it do
+                // not. Checked last because it is the only filter that costs a
+                // round trip per window, so the cheap set and space tests get to
+                // reject first. A window whose level cannot be read is kept: an
+                // unreadable level is not evidence of being the bar.
+                if excludesTheBarItself, getWindowLevel(for: windowID) == kCGMainMenuWindowLevel {
+                    return false
+                }
+                return true
             }
-            if let requiredSpaceID, !isWindowOnSpace(windowID, requiredSpaceID) {
-                return false
-            }
-            // The bar itself sits at the main menu level and the items in it do
-            // not. Checked last because it is the only filter that costs a
-            // round trip per window, so the cheap set and space tests get to
-            // reject first. A window whose level cannot be read is kept: an
-            // unreadable level is not evidence of being the bar.
-            if excludesTheBarItself, getWindowLevel(for: windowID) == kCGMainMenuWindowLevel {
-                return false
-            }
-            return true
         }
         diagLog.debug("getMenuBarWindowList: \(rawList.count) raw -> \(filtered.count) after filtering (options: onScreen=\(option.contains(.onScreen)), activeSpace=\(option.contains(.activeSpace)), itemsOnly=\(option.contains(.itemsOnly)))")
         return filtered

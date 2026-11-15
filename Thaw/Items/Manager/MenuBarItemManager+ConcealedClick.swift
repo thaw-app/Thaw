@@ -110,8 +110,11 @@ extension MenuBarItemManager {
     /// level, which also holds the owner's own icons.
     private func ownerMenuWindowIDs(_ item: MenuBarItem) -> Set<CGWindowID> {
         let pids = item.reactionPIDs
-        let windows = WindowInfo.createWindows(from: Bridging.getWindowList(option: .onScreen)).filter { window in
-            pids.contains(window.ownerPID) && WindowLevelPredicates.isPopUpMenu(layer: window.layer)
+        let windowIDs = Bridging.getWindowList(option: .onScreen)
+        let windows = autoreleasepool {
+            WindowInfo.createWindows(from: windowIDs).filter { window in
+                pids.contains(window.ownerPID) && WindowLevelPredicates.isPopUpMenu(layer: window.layer)
+            }
         }
         return Set(windows.map(\.windowID))
     }
