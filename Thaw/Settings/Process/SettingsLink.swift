@@ -25,6 +25,14 @@ nonisolated enum SettingsLinkMessage: Codable, Equatable, Sendable {
     case checkForUpdates
     /// Quit was chosen in the settings process, and quits the app too.
     case quit
+    /// Live state only the app has, for a page in the settings process to show. The payload is
+    /// that topic's JSON. See SettingsAppFeature.
+    case status(topic: String, payload: Data)
+    /// Something the settings process has the app do, because what it acts on lives there. The
+    /// payload is that command's JSON.
+    case command(name: String, payload: Data)
+    /// The sender saved a store that is kept outside the defaults, so the receiver reads that one again.
+    case storeChanged(store: String)
 }
 
 nonisolated extension SettingsLinkMessage {
@@ -43,12 +51,13 @@ nonisolated extension SettingsLinkMessage {
     }
 }
 
-/// Which panes the settings process shows itself. The rest need the running menu bar
-/// engine or the updater, which only the app has.
+/// Which panes the settings process shows itself: the ones that only read and write stored
+/// preferences, or get what else they need over the link. The rest need the running menu bar
+/// engine, which only the app has.
 nonisolated enum SettingsProcessRoute {
     static let launchArgument = "--settings"
 
-    static let ownProcessPanes: Set<String> = ["General", "About", "Privacy"]
+    static let ownProcessPanes: Set<String> = ["General", "Visibility", "About", "Privacy"]
 
     static func runsInOwnProcess(pane: String, simpleMode: Bool, isEnabled: Bool) -> Bool {
         isEnabled && !simpleMode && ownProcessPanes.contains(pane)

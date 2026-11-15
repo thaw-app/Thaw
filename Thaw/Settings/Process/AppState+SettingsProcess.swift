@@ -38,7 +38,8 @@ extension AppState {
                     canCheck: self?.updatesManager.canCheckForUpdates ?? false,
                     lastCheck: self?.updatesManager.lastUpdateCheckDate
                 )
-            }
+            },
+            features: SettingsLinkFeatures.app(self)
         )
     }
 

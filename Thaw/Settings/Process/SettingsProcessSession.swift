@@ -16,6 +16,8 @@ final class SettingsProcessSession {
         var showSettings: () -> Void
         var updatesStateChanged: (_ canCheck: Bool, _ lastCheck: Date?) -> Void
         var terminate: () -> Void
+        /// What each page does with the app's live state, and what it reads again.
+        var features: [SettingsChildFeature] = []
     }
 
     private let navigationState: AppNavigationState
@@ -74,12 +76,19 @@ final class SettingsProcessSession {
             select(pane)
             side.showSettings()
         case .settingsChanged:
-            link?.reloading(side.reloadSettings)
+            link?.reloading {
+                side.reloadSettings()
+                side.features.forEach { $0.reload() }
+            }
         case let .updatesState(canCheck, lastCheck):
             side.updatesStateChanged(canCheck, lastCheck)
         case .shownInApp:
             closeAfterHandOver()
-        case .openInApp, .pageChanged, .checkForUpdates, .quit:
+        case let .status(topic, payload):
+            side.features.forEach { $0.statuses[topic]?(payload) }
+        case let .storeChanged(store):
+            link?.reloading { side.features.forEach { $0.stores[store]?() } }
+        case .openInApp, .pageChanged, .checkForUpdates, .quit, .command:
             break
         }
     }

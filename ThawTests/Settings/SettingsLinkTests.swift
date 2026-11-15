@@ -22,6 +22,9 @@ struct SettingsLinkTests {
         .checkForUpdates,
         .quit,
         .shownInApp,
+        .status(topic: "modules", payload: Data(#"{"on":true}"#.utf8)),
+        .command(name: "appearance.preview", payload: Data()),
+        .storeChanged(store: "profiles"),
     ])
     func roundTrip(message: SettingsLinkMessage) {
         #expect(message.line.last == 0x0A)
@@ -73,6 +76,12 @@ struct SettingsLinkTests {
         #expect(!SettingsProcessRoute.runsInOwnProcess(pane: "General", simpleMode: false, isEnabled: false))
         #expect(!SettingsProcessRoute.runsInOwnProcess(pane: "General", simpleMode: true, isEnabled: true))
         #expect(!SettingsProcessRoute.runsInOwnProcess(pane: "Menu Bar Layout", simpleMode: false, isEnabled: true))
+        #expect(SettingsProcessRoute.runsInOwnProcess(pane: "Visibility", simpleMode: false, isEnabled: true))
+    }
+
+    @Test("Every pane the settings process keeps is one of the app's panes")
+    func ownProcessPanesExist() {
+        #expect(SettingsProcessRoute.ownProcessPanes.allSatisfy { SettingsNavigationIdentifier(rawValue: $0) != nil })
     }
 
     @Test("The launch pane follows the settings argument")

@@ -21,6 +21,8 @@ final class SettingsProcessHost {
         var quit: () -> Void
         /// The updater state to send, read inside an observation so changes are sent too.
         var updatesState: () -> SettingsLinkMessage
+        /// Each page's live state, commands and reloads.
+        var features: [SettingsAppFeature] = []
     }
 
     /// A started settings process, as the host sees it.
@@ -47,6 +49,7 @@ final class SettingsProcessHost {
     }
 
     private var updatesWatch: Task<Void, Never>?
+    private var statusWatches = [Task<Void, Never>]()
     /// Waits for the app's window to become key; a later window or the process ending cancels it.
     private var shownInAppWait: Task<Void, Never>?
     private let diagLog = DiagLog(category: "SettingsProcessHost")
@@ -131,6 +134,7 @@ final class SettingsProcessHost {
             onClose: { [weak self] in self?.linkClosed(generation: launched) }
         )
         watchUpdates()
+        watchStatuses()
         yieldActivation(to: child.processIdentifier)
         diagLog.info("Started the settings process (pid \(child.processIdentifier)) on \(pane)")
         return true
@@ -172,14 +176,20 @@ final class SettingsProcessHost {
         link = nil
         updatesWatch?.cancel()
         updatesWatch = nil
+        statusWatches.forEach { $0.cancel() }
+        statusWatches = []
         shownInAppWait?.cancel()
         shownInAppWait = nil
+        app.features.forEach { $0.processEnded() }
     }
 
     private func receive(_ message: SettingsLinkMessage) {
         switch message {
         case .settingsChanged:
-            link?.reloading(app.reloadSettings)
+            link?.reloading {
+                app.reloadSettings()
+                app.features.forEach { $0.reload() }
+            }
         case let .openInApp(pane):
             app.openInApp(pane)
         case let .pageChanged(pane):
@@ -188,9 +198,31 @@ final class SettingsProcessHost {
             app.checkForUpdates()
         case .quit:
             app.quit()
-        case .show, .updatesState, .shownInApp:
+        case let .command(name, payload):
+            run(name, payload)
+        case let .storeChanged(store):
+            link?.reloading { app.features.forEach { $0.stores[store]?() } }
+        case .show, .updatesState, .shownInApp, .status:
             break
         }
+    }
+
+    private func run(_ command: String, _ payload: Data) {
+        let handlers = app.features.compactMap { $0.commands[command] }
+        if handlers.isEmpty {
+            diagLog.warning("The settings process asked for \(command), which no page runs")
+        }
+        handlers.forEach { $0(payload) }
+    }
+
+    /// Sends a page's live state to the settings process, for state no observation reads.
+    func send(status topic: String, payload: Data) {
+        link?.send(.status(topic: topic, payload: payload))
+    }
+
+    /// Tells the settings process the app saved a store kept outside the defaults.
+    func saved(store: String) {
+        link?.send(.storeChanged(store: store))
     }
 
     /// Sends the updater state now and whenever it changes, for About and Privacy.
@@ -199,6 +231,20 @@ final class SettingsProcessHost {
         updatesWatch = Task { @MainActor [weak self] in
             for await message in Observations({ updatesState() }) {
                 self?.link?.send(message)
+            }
+        }
+    }
+
+    /// Sends each page's live state now and whenever it changes, leaving out a payload already sent.
+    private func watchStatuses() {
+        statusWatches = app.features.flatMap(\.statuses).map { topic, payload in
+            Task { @MainActor [weak self] in
+                var sent: Data?
+                for await data in Observations({ payload() }) {
+                    guard let data, data != sent else { continue }
+                    sent = data
+                    self?.link?.send(.status(topic: topic, payload: data))
+                }
             }
         }
     }
