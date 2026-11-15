@@ -83,9 +83,11 @@ struct OwnerLivenessTickTests {
         let manager = MenuBarItemManager()
         manager.itemCache[.hidden] = [item(pid: 0)]
 
-        await tick(manager, probe: probe(apps: NSObject()), after: 0, running: [])
-        let afterFirstRead = reads.withLock { $0 }
+        // Both lists stay alive to the end, so the second cannot take the first one's identity.
+        let listedFirst = NSObject()
         let listed = NSObject()
+        await tick(manager, probe: probe(apps: listedFirst), after: 0, running: [])
+        let afterFirstRead = reads.withLock { $0 }
         await tick(manager, probe: probe(apps: listed), after: 3, running: [])
         await tick(manager, probe: probe(apps: listed), after: 6, running: [])
 
