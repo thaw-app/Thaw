@@ -230,12 +230,18 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     private static let restartWindow: Duration = .seconds(30)
     private static let restartQuitTimeout: Duration = .seconds(3)
     private let system: StandInSystem
-    /// The clock the restart window is measured on; tests pass one that only moves when they say.
+    /// The clock the restart window and the quit wait are measured on; tests pass one that only moves when they say.
     private let now: () -> ContinuousClock.Instant
+    private let sleep: (Duration) async -> Void
 
-    init(system: StandInSystem = StandInSystem(), now: @escaping () -> ContinuousClock.Instant = { .now }) {
+    init(
+        system: StandInSystem = StandInSystem(),
+        now: @escaping () -> ContinuousClock.Instant = { .now },
+        sleep: @escaping (Duration) async -> Void = { try? await Task.sleep(for: $0) }
+    ) {
         self.system = system
         self.now = now
+        self.sleep = sleep
     }
 
     func publish(item: SystemExtraItem, canonicalIdentifier: String, section: MenuBarSectionName) async throws {
@@ -285,9 +291,9 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
             entry.stopWatching()
             watched[standIn] = nil
             entry.app.terminate()
-            let deadline = ContinuousClock.now + Self.restartQuitTimeout
-            while !entry.app.isTerminated, ContinuousClock.now < deadline {
-                try? await Task.sleep(for: .milliseconds(50))
+            let deadline = now() + Self.restartQuitTimeout
+            while !entry.app.isTerminated, now() < deadline {
+                await sleep(.milliseconds(50))
             }
             if !entry.app.isTerminated {
                 entry.app.forceTerminate()
