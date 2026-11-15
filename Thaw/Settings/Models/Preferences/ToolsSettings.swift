@@ -20,9 +20,9 @@ final class ToolsSettings: SettingsURIHandling {
             Defaults.set(enableDiagnosticLogging, forKey: .enableDiagnosticLogging)
             #if DEBUG
                 // Keep debug logging enabled despite profile swaps or toggles to retain capture diagnostics.
-                DiagnosticLogger.shared.isEnabled = true
+                setLogEnabled(true)
             #else
-                DiagnosticLogger.shared.isEnabled = enableDiagnosticLogging
+                setLogEnabled(enableDiagnosticLogging)
             #endif
         }
     }
@@ -55,12 +55,28 @@ final class ToolsSettings: SettingsURIHandling {
     @ObservationIgnored
     private var settingsURIChanges: AnyCancellable?
 
+    /// In the settings process, what the running app says for this page. The app leaves it as it is.
+    let appReport = ToolsAppReport()
+
     /// Only guards the conversion to bytes against overflow from a stored value.
     private nonisolated static let maxDiagnosticLogSizeMB = 1_000_000
 
+    /// Turns the log on or off.
+    @ObservationIgnored
+    var setLogEnabled: (Bool) -> Void = ToolsSettings.logChange { DiagnosticLogger.shared.isEnabled = $0 }
+
     /// Where a changed policy goes; the logger prunes old files by it at once.
     @ObservationIgnored
-    var sendRotationPolicy: (DiagnosticLogger.RotationPolicy) -> Void = { DiagnosticLogger.shared.setRotationPolicy($0) }
+    var sendRotationPolicy: (DiagnosticLogger.RotationPolicy) -> Void = ToolsSettings.logChange { DiagnosticLogger.shared.setRotationPolicy($0) }
+
+    /// What a changed setting does to the log. The app opens, rotates and prunes it. Its settings
+    /// process does none of that: it appends to the file the app has open, so there this does nothing.
+    static func logChange<Value>(
+        isSettingsProcess: Bool = SettingsProcessApp.isRequested,
+        _ change: @escaping (Value) -> Void
+    ) -> (Value) -> Void {
+        isSettingsProcess ? { _ in /* The app's own settings follow the stored value and change its log. */ } : change
+    }
 
     /// Set while the stored values load, so the logger never prunes by a policy that is half defaults.
     @ObservationIgnored

@@ -36,6 +36,34 @@ extension DiagnosticFilesSection {
             )
         }
 
-        var saveItemList: @MainActor (URL) throws -> Void = { try MaintenanceTools.saveItemList(to: $0) }
+        var saveItemList: @MainActor (URL) async throws -> Void = { try MaintenanceTools.saveItemList(to: $0) }
+    }
+
+    /// The section where Settings is shown. In the settings process an export takes the app's capture
+    /// samples, and the app writes the item list, since that reads other apps' menu bar items. This
+    /// process then copies the list to the place the person chose in its own save panel.
+    @MainActor
+    static func current(_ appState: AppState, remote: SettingsRemote? = .current) -> DiagnosticFilesSection {
+        guard remote != nil else { return DiagnosticFilesSection() }
+        let report = appState.settings.tools.appReport
+        var actions = Actions()
+        actions.exportDiagnostics = { destination in
+            try await MaintenanceTools.exportDiagnostics(
+                logs: DiagnosticLogger.shared.logDirectory,
+                samples: report.status.sampleDirectory,
+                to: destination
+            )
+        }
+        actions.saveItemList = { destination in
+            var list: URL?
+            try await ToolsTasks.perform(.writeItemList, appState: appState, remote: remote, report: { event in
+                if case let .itemList(written) = event {
+                    list = written
+                }
+            })
+            guard let list else { throw CocoaError(.fileWriteUnknown) }
+            try MaintenanceTools.replaceItem(at: destination, withCopyOf: list)
+        }
+        return DiagnosticFilesSection(actions: actions, appReport: report)
     }
 }

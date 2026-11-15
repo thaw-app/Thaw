@@ -57,7 +57,7 @@ nonisolated extension SettingsLinkMessage {
 nonisolated enum SettingsProcessRoute {
     static let launchArgument = "--settings"
 
-    static let ownProcessPanes: Set<String> = ["General", "Visibility", "About", "Privacy", "Menu Bar Appearance", "Modules", "Widgets", "Scripts", "Displays"]
+    static let ownProcessPanes: Set<String> = ["General", "Visibility", "About", "Privacy", "Menu Bar Appearance", "Modules", "Widgets", "Scripts", "Displays", "Tools"]
 
     static func runsInOwnProcess(pane: String, simpleMode: Bool, isEnabled: Bool) -> Bool {
         isEnabled && !simpleMode && ownProcessPanes.contains(pane)
