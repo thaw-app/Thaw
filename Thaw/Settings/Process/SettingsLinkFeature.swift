@@ -96,6 +96,7 @@ enum SettingsLinkFeatures {
     static func app(_ appState: AppState) -> [SettingsAppFeature] {
         [
             AppearanceSettingsLink.app(appState),
+            .modules(host: appState.moduleHost, profiles: appState.profilesFeature),
         ]
     }
 
@@ -103,6 +104,7 @@ enum SettingsLinkFeatures {
     static func child(_ appState: AppState) -> [SettingsChildFeature] {
         [
             AppearanceSettingsLink.child(appState),
+            .modules(host: appState.moduleHost, profiles: appState.profilesFeature),
         ]
     }
 }
