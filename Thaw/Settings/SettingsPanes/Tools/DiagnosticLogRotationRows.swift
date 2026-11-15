@@ -49,3 +49,11 @@ struct DiagnosticLogRotationRows: View {
         String(AttributedString(localized: "^[\(count) day](inflect: true)").characters)
     }
 }
+
+#if DEBUG
+    #Preview("Log rotation") {
+        ToolsSettingsPreview { settings in
+            DiagnosticLogRotationRows(settings: settings)
+        }
+    }
+#endif

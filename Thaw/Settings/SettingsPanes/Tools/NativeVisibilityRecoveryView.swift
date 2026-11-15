@@ -164,3 +164,14 @@ struct NativeVisibilityRecoveryView: View {
         )
     }
 }
+
+#if DEBUG
+    /// Sample records stand in for the real ones. Quit Recovery still ends the preview process.
+    #Preview("Recovery with apps to restore") {
+        NativeVisibilityRecoveryView(model: .preview())
+    }
+
+    #Preview("Recovery with unreadable record") {
+        NativeVisibilityRecoveryView(model: .preview(unreadableRecord: true))
+    }
+#endif
