@@ -275,7 +275,9 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       # About 12 minutes, 16 at most so far; hung tests have run it past 30. The limit
-      # is on the step, not only the job, so the upload below still runs.
+      # is on the step, not only the job, so the upload below still runs. Nothing in CI
+      # reads the editor index, and Package.resolved is committed, so the build neither
+      # indexes nor looks for newer package versions.
       - name: Build and Test
         if: needs.changes.outputs.build == 'true'
         timeout-minutes: 22
@@ -286,13 +288,17 @@ jobs:
             -derivedDataPath Build/ \
             -destination 'platform=macOS' \
             -enableCodeCoverage YES \
+            -onlyUsePackageVersionsFromResolvedFile \
+            -skipPackageUpdates \
+            COMPILER_INDEX_STORE_ENABLE=NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
 
-      # A failed or timed-out run's logs name the tests that failed or never finished.
+      # A failed or timed-out run's results name the tests that failed or never finished.
+      # A passing run's results give each test's real duration; the console log doesn't.
       - name: Upload test results
-        if: failure() && needs.changes.outputs.build == 'true'
+        if: ${{ !cancelled() && needs.changes.outputs.build == 'true' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: test-results
