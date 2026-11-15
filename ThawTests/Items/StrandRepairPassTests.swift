@@ -370,8 +370,9 @@ struct StrandRepairPassTests {
         // One rectangle per active display, each the size CoreGraphics gives that display.
         #expect(environment.displayBounds == Bridging.activeDisplayIDs().map { CGDisplayBounds($0) })
         // The line above asks CoreGraphics the way the environment does, so AppKit is asked as well:
-        // its first screen is the one at the origin, whatever else is connected.
-        if let primary = NSScreen.screens.first {
+        // its first screen is the one at the origin, whatever else is connected. CoreGraphics reports no
+        // active displays while a display is asleep, so AppKit is only checked when it reports some.
+        if !environment.displayBounds.isEmpty, let primary = NSScreen.screens.first {
             #expect(environment.displayBounds.contains(CGRect(origin: .zero, size: primary.frame.size)))
         }
         #expect(!environment.isHiddenBySystemPreferences(stranded))
