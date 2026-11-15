@@ -12,7 +12,7 @@ import Testing
 
 /// The search panel's recents, stored in a throwaway suite.
 @MainActor
-@Suite("Search recents", .serialized)
+@Suite("Search recents", .serialized, .scratchDefaults)
 struct MenuBarSearchRecentsTests {
     private typealias World = LayoutEditorWorld
 
@@ -24,7 +24,7 @@ struct MenuBarSearchRecentsTests {
         MenuBarItemTag.canonicalPersistentIdentifiers([item.tag.tagIdentifier]).first
     }
 
-    @Test("A fresh store has no recents and resolves to nothing", .scratchDefaults)
+    @Test("A fresh store has no recents and resolves to nothing")
     func emptyStore() throws {
         let suites = ScratchSuites(prefix: "SearchRecents")
         let recents = try recents(suites)
@@ -57,7 +57,7 @@ struct MenuBarSearchRecentsTests {
         #expect(!recents.identifiers.contains { $0 == identifier(items[0]) })
     }
 
-    @Test("Resolving keeps recency order across sections and skips items that are gone", .scratchDefaults)
+    @Test("Resolving keeps recency order across sections and skips items that are gone")
     func resolveAcrossSections() throws {
         let suites = ScratchSuites(prefix: "SearchRecents")
         let recents = try recents(suites)

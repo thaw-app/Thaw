@@ -26,7 +26,11 @@ struct SystemExtraStandInLauncherTests {
     }
 
     private func makeLauncher() -> (SystemExtraStandInLauncher, Box) {
-        let launcher = SystemExtraStandInLauncher(system: fake.system, now: { [clock] in clock.now })
+        let launcher = SystemExtraStandInLauncher(
+            system: fake.system,
+            now: { [clock] in clock.now },
+            sleep: { [clock] in clock.now += $0 }
+        )
         let known = Box()
         launcher.controller = sections
         launcher.markKnown = { known.identifiers.append($0) }

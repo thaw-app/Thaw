@@ -121,6 +121,14 @@ extension HIDEventManager {
         }
     }
 
+    /// Whether a click landed in the control item's window. Pure, so it is testable without a
+    /// live menu bar.
+    static nonisolated func isClick(in eventWindow: NSWindow?, onControlItemWindow controlItemWindow: NSWindow?) -> Bool {
+        // Two nil windows are not the same window: === would call them equal.
+        guard let eventWindow else { return false }
+        return eventWindow === controlItemWindow
+    }
+
     /// Whether the pointer is over any menu bar item.
     ///
     /// Tried cheapest first: the prebuilt bounds table, then the managed item

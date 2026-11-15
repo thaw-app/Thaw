@@ -12,7 +12,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Layout window", .serialized)
+@Suite("Layout window", .serialized, .scratchDefaults)
 struct LayoutDashboardTests {
     private static func target(
         display: String = "D1",
@@ -125,7 +125,7 @@ struct LayoutDashboardTests {
 
     // MARK: Pop Out
 
-    @Test("Pop Out opens the Layout window, and closing it ends the presentation", .scratchDefaults)
+    @Test("Pop Out opens the Layout window, and closing it ends the presentation")
     func popOutOpensWindow() throws {
         let world = LayoutEditorWorld()
         let panel = MenuBarLayoutEditorPanel()

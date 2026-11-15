@@ -29,7 +29,7 @@ struct RevealSettleWaitTests {
     }
 
     private static func settleClock(_ clock: TestClock) -> Session.SettleClock {
-        Session.SettleClock(now: { clock.now }, sleep: { try? await clock.sleep(for: $0) })
+        Session.SettleClock.driven(by: clock)
     }
 
     @Test("Members that hold still for one poll settle, paired with their request in request order")
