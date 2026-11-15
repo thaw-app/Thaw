@@ -1949,24 +1949,9 @@ extension MenuBarItemManager {
         return (liveItems, didReorder)
     }
 
-    /// Why a planned section-order drag is skipped, and whether the skip ends
-    /// the whole move loop rather than just this move.
-    private struct SectionDragSkip {
-        enum Reason {
-            case parked
-            case circuitBreaker
-            case hidingUnsupported
-            case agentOwned
-            case recentlyFailed
-        }
-
-        let reason: Reason
-        let endsMoveLoop: Bool
-    }
-
-    /// The drag-skip checks for one planned section-order move, in order. Side
-    /// effects, including the failure-key writes, stay here so every skip is
-    /// recorded exactly once.
+    /// The drag-skip checks for one planned section-order move; the order lives
+    /// in SectionDragSkip. Side effects, including the failure-key writes, stay
+    /// here so every skip is recorded exactly once.
     private func sectionDragSkipReason(
         plannedMove: (item: MenuBarItem, destination: MoveDestination, isBoundary: Bool),
         isUserInitiated: Bool,
@@ -1975,63 +1960,57 @@ extension MenuBarItemManager {
         liveItems: [MenuBarItem],
         desiredOrder: [String]
     ) -> SectionDragSkip? {
-        if !repairAfterRestriction,
-           plannedMove.item.isParkedOffMenuBarBand(among: liveItems)
-        {
-            MenuBarItemManager.diagLog.debug(
-                "Deferring macOS 27 section order for parked \(plannedMove.item.logString)"
-            )
-            return SectionDragSkip(reason: .parked, endsMoveLoop: true)
-        }
-
         // Item-scoped breaker, keyed on item, side and target, since an
         // overflowing bar changes the order-keyed backoff's key every pass.
-        // User passes are exempt.
         let rememberedMove = MoveFailureMemory.Move(
             item: plannedMove.item,
             destination: plannedMove.destination
         )
-        if !isUserInitiated, moveFailures.isBreakerTripped(for: rememberedMove) {
+        let skip = SectionDragSkip.firstReason(for: SectionDragSkip.Inputs(
+            isParked: !repairAfterRestriction && plannedMove.item.isParkedOffMenuBarBand(among: liveItems),
+            isUserInitiated: isUserInitiated,
+            breakerTripped: moveFailures.isBreakerTripped(for: rememberedMove),
+            hidingUnsupported: plannedMove.item.tag.isHidingUnsupported ||
+                plannedMove.destination.targetItem.tag.isHidingUnsupported,
+            agentOwned: plannedMove.item.tag.namespace == .menuBarAgent,
+            backingOff: moveFailures.isBackingOff(from: rememberedMove, desiredOrder: desiredOrder),
+            usesPlan: usesPlan
+        ))
+        switch skip?.reason {
+        case .parked:
+            MenuBarItemManager.diagLog.debug(
+                "Deferring macOS 27 section order for parked \(plannedMove.item.logString)"
+            )
+        case .circuitBreaker:
             MenuBarItemManager.diagLog.info(
                 "Circuit breaker: suppressing automatic macOS 27 drag for " +
                     "\(plannedMove.item.logString) \(plannedMove.destination.logString) " +
                     "(\(moveFailures.failureCount(for: rememberedMove)) recent verify-failures)"
             )
-            return SectionDragSkip(reason: .circuitBreaker, endsMoveLoop: !usesPlan)
-        }
-
-        // Hiding-unsupported items rewrite their AX title too often for a move
-        // to be verified, so back off.
-        if plannedMove.item.tag.isHidingUnsupported ||
-            plannedMove.destination.targetItem.tag.isHidingUnsupported
-        {
+        case .hidingUnsupported:
+            // These items rewrite their AX title too often for a move to be
+            // verified, so back off.
             moveFailures.backOff(from: rememberedMove, desiredOrder: desiredOrder)
             MenuBarItemManager.diagLog.debug(
                 "Skipping move for denylisted hiding-unsupported item in macOS 27 section order: " +
                     "\(plannedMove.item.logString) → \(plannedMove.destination.logString)"
             )
-            return SectionDragSkip(reason: .hidingUnsupported, endsMoveLoop: !usesPlan)
-        }
-
-        // Agent-composited extras (such as the Live Activity pill) stay where
-        // macOS puts them.
-        if plannedMove.item.tag.namespace == .menuBarAgent {
+        case .agentOwned:
+            // Agent-composited extras (such as the Live Activity pill) stay
+            // where macOS puts them.
             MenuBarItemManager.diagLog.debug(
                 "Skipping move for agent-owned item in macOS 27 section order: \(plannedMove.item.logString)"
             )
-            return SectionDragSkip(reason: .agentOwned, endsMoveLoop: !usesPlan)
-        }
-
-        // Some system extras (such as Sound) always reject the drag; without
-        // backoff it replans every cycle in a cursor-warp loop. Repair passes
-        // included: two failures already covered the retry.
-        if moveFailures.isBackingOff(from: rememberedMove, desiredOrder: desiredOrder) {
+        case .recentlyFailed:
+            // Some system extras (such as Sound) always reject the drag; without
+            // backoff it replans every cycle in a cursor-warp loop.
             MenuBarItemManager.diagLog.debug(
                 "Skipping recently-failed macOS 27 section order move for \(plannedMove.item.logString) \(plannedMove.destination.logString)"
             )
-            return SectionDragSkip(reason: .recentlyFailed, endsMoveLoop: !usesPlan)
+        case nil:
+            break
         }
-        return nil
+        return skip
     }
 
     /// Waits for the agent to re-sort after a write; see MenuBarAgentLayoutWait.
