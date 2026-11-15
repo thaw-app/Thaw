@@ -1275,25 +1275,14 @@ extension MenuBarItemManager {
         after predecessor: MenuBarItem?
     ) -> MoveDestination {
         let controlItems = cacheDividers()
-        let bandBoundary: MoveDestination = switch section {
-        case .visible:
-            .rightOfItem(controlItems.hidden)
-        case .hidden:
-            if configuration.isAlwaysHiddenSectionEnabled == true,
-               let alwaysHidden = controlItems.alwaysHidden
-            {
-                .rightOfItem(alwaysHidden)
-            } else {
-                .leftOfItem(controlItems.hidden)
-            }
-        case .alwaysHidden:
-            if let alwaysHidden = controlItems.alwaysHidden {
-                .leftOfItem(alwaysHidden)
-            } else {
-                .leftOfItem(controlItems.hidden)
-            }
-        }
-        return predecessor.map { .rightOfItem($0) } ?? bandBoundary
+        // The setting is only ever read for the hidden section, as before.
+        return SectionTransitionDestination.destination(
+            for: section,
+            after: predecessor,
+            hiddenDivider: controlItems.hidden,
+            alwaysHiddenDivider: controlItems.alwaysHidden,
+            alwaysHiddenEnabled: section == .hidden && configuration.isAlwaysHiddenSectionEnabled == true
+        )
     }
 
     @discardableResult
