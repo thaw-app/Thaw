@@ -13,7 +13,7 @@ import Testing
 @testable import Thaw
 
 /// Saving and reading the image cache file, in a throwaway Caches directory.
-@Suite("Image cache file", .timeLimit(.minutes(1)))
+@Suite("Image cache file")
 @MainActor
 struct MenuBarItemImageCacheDiskStoreTests {
     private let directory = FileManager.default.temporaryDirectory

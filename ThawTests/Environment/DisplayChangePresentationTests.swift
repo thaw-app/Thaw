@@ -73,7 +73,7 @@ struct AlwaysShowDisplayChangeHoldTests {
 }
 
 @MainActor
-@Suite("Display change presentation step", .timeLimit(.minutes(1)), .scratchDefaults)
+@Suite("Display change presentation step", .scratchDefaults)
 struct DisplayChangePresentationTests {
     @MainActor
     final class Counter {

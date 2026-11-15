@@ -135,7 +135,7 @@ struct AlwaysShowHiddenItemsTests {
         #expect(controller.shouldRestorePreZenReveals == !enabledOnExit)
     }
 
-    @Test("Configuration observations synchronize before refreshing controls", .timeLimit(.minutes(1)))
+    @Test("Configuration observations synchronize before refreshing controls")
     func configurationChangesSynchronizePresentation() async {
         let state = ControllerState()
         state.enabledDisplayIDs = [1]

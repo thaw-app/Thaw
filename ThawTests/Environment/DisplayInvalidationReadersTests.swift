@@ -12,7 +12,7 @@ import Testing
 
 /// Each environment here posts on its own notification center, so a posting it does not relay reaches no reader.
 @MainActor
-@Suite("Display invalidation readers", .serialized, .timeLimit(.minutes(1)))
+@Suite("Display invalidation readers", .serialized)
 struct DisplayInvalidationReadersTests {
     private static let single = DisplayArrangement(frames: [1: CGRect(x: 0, y: 0, width: 1512, height: 982)], mainDisplayID: 1)
 

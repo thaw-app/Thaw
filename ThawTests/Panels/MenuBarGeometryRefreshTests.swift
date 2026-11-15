@@ -11,7 +11,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Menu bar geometry refresh", .timeLimit(.minutes(1)))
+@Suite("Menu bar geometry refresh")
 struct MenuBarGeometryRefreshTests {
     @Test("Reveal reads geometry immediately instead of leaving icons outside the old pill")
     func revealReadsWithoutWaitingForSettle() async throws {

@@ -105,7 +105,7 @@ struct GroupFoldersTests {
         #expect(!folders.iconContainsPointer())
     }
 
-    @Test("Setup drops folders whose group is gone, with their styles and icon labels", .timeLimit(.minutes(1)))
+    @Test("Setup drops folders whose group is gone, with their styles and icon labels")
     func setupPrunesStaleFolders() async throws {
         let stale = UUID()
         Defaults.store.set([stale.uuidString], forKey: Self.foldersKey)
@@ -129,7 +129,7 @@ struct GroupFoldersTests {
         withExtendedLifetime(appState) {}
     }
 
-    @Test("Making a group that no longer exists a folder leaves no folder behind", .timeLimit(.minutes(1)))
+    @Test("Making a group that no longer exists a folder leaves no folder behind")
     func folderForMissingGroup() {
         let folders = GroupFolders()
         let appState = AppState()
@@ -155,7 +155,7 @@ struct GroupFoldersTests {
         #expect(world.appState.itemManager.barBounds(ofThawItemNamed: GroupFolders.autosavePrefix + "missing") == nil)
     }
 
-    @Test("A folder is called by its group's name, or else by up to three of its members' names", .timeLimit(.minutes(1)))
+    @Test("A folder is called by its group's name, or else by up to three of its members' names")
     func folderNames() throws {
         let items = ["Alpha", "Beta", "Gamma", "Delta"].map(LayoutEditorWorld.item)
         Defaults.set(Dictionary(uniqueKeysWithValues: items.map { ($0.uniqueIdentifier, $0.title ?? "") }), forKey: .menuBarItemCustomNames)

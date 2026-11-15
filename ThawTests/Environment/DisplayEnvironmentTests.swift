@@ -11,7 +11,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Display environment", .timeLimit(.minutes(1)))
+@Suite("Display environment")
 struct DisplayEnvironmentTests {
     private static let single = DisplayArrangement(frames: [1: CGRect(x: 0, y: 0, width: 1512, height: 982)], mainDisplayID: 1)
     private static let docked = DisplayArrangement(

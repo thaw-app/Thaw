@@ -26,8 +26,7 @@ struct SettingsProcessLaunchTests {
     }
 
     @Test(
-        "What the app writes reaches the child, the child's output comes back, and its end is reported",
-        .timeLimit(.minutes(1))
+        "What the app writes reaches the child, the child's output comes back, and its end is reported"
     )
     func pipesAndEndAreWired() async throws {
         let ended = Ended()

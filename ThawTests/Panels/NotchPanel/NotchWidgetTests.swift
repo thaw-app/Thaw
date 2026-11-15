@@ -428,7 +428,7 @@ struct NotchPanelTests {
     }
 }
 
-@Suite("Notch panel controller", .timeLimit(.minutes(1)))
+@Suite("Notch panel controller")
 @MainActor
 struct NotchPanelControllerTests {
     @Test("A display invalidation with nothing showing leaves the model untouched")

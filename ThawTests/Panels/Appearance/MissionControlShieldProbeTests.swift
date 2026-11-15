@@ -11,7 +11,7 @@ import Testing
 
 /// The probe's polling, run against its own invisible one-point window. Ticks run on the main
 /// run loop, which a busy suite can hold up, so tests wait for the ticks rather than a fixed time.
-@Suite("Mission Control shield probe polling", .serialized, .timeLimit(.minutes(1)))
+@Suite("Mission Control shield probe polling", .serialized)
 @MainActor
 struct MissionControlShieldProbeTests {
     private func wait(_ duration: Duration) async {

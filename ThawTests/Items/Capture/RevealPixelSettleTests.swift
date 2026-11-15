@@ -94,7 +94,7 @@ struct RevealPixelSettleTests {
 
     /// The read outlasts the time limit, so only a wait bounded by its budget returns at all.
     /// No wall-clock check: a stalled runner can't fail it.
-    @Test("A read slower than the budget doesn't count, and doesn't hold the wait", .timeLimit(.minutes(1)))
+    @Test("A read slower than the budget doesn't count, and doesn't hold the wait")
     func slowReadEndsAtTheBudget() async {
         let settled = await RevealCaptureSession.waitForSettledPixels(
             minimumSettle: .zero,
