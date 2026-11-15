@@ -107,9 +107,13 @@ nonisolated enum MenuBarItemAXProvider {
             return ([], false)
         }
 
-        let ourBundleID = Bundle.main.bundleIdentifier, formerHosts = UnseenMenuBarHosts.formerHosts()
+        let ourBundleID = Bundle.main.bundleIdentifier
+        let formerHosts = UnseenMenuBarHosts.formerHosts()
         var raw: [RawItem] = []
-        var isOutOfTime: Bool { deadline.map { ContinuousClock.now >= $0 } ?? false }
+        var isOutOfTime: Bool {
+            guard let deadline else { return false }
+            return ContinuousClock.now >= deadline
+        }
 
         for runningApp in NSWorkspace.shared.runningApplications {
             if isOutOfTime {
@@ -119,17 +123,15 @@ nonisolated enum MenuBarItemAXProvider {
                 return (restoredIdentities(assemble(raw)), false)
             }
             let appBundleID = runningApp.bundleIdentifier ?? runningApp.localizedName ?? "(pid \(runningApp.processIdentifier))"
-            let collected = autoreleasepool {
-                collectApp(
-                    runningApp: runningApp,
-                    appBundleID: appBundleID,
-                    display: display,
-                    displayBounds: nil,
-                    ourBundleID: ourBundleID,
-                    formerHosts: formerHosts,
-                    isOutOfTime: { isOutOfTime }
-                )
-            }
+            let collected = collectApp(
+                runningApp: runningApp,
+                appBundleID: appBundleID,
+                display: display,
+                displayBounds: nil,
+                ourBundleID: ourBundleID,
+                formerHosts: formerHosts,
+                isOutOfTime: { isOutOfTime }
+            )
             raw += collected.raw
             guard collected.completed else {
                 diagLog.warning("menuBarItems: walk exceeded its budget inside \(appBundleID); returning incomplete")
