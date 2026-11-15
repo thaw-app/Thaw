@@ -33,6 +33,7 @@ the items under New and Fixed.
 - `thaw://release-item?bundle=` now lets go of every item of that app the sender holds, instead of failing when it holds more than one.
 - Smart rehide no longer skips a click outside the menu bar while the Thaw icon has no window yet, so the revealed items go away after the click as set.
 - Thaw's memory no longer jumps by about 50 MB for a few seconds each time you switch apps or show a section while a menu bar shape, tint or shadow is on.
+- After you log in, Thaw no longer stays unable to see other apps' menu bar items when macOS refused its Accessibility reads during startup, which left the menu bar shape covering only part of the items. Thaw now notices and restarts itself once.
 
 ## [3.0.0-alpha.14] - 2026-11-14
 

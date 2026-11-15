@@ -41,6 +41,11 @@ nonisolated enum MenuBarAXSubprocess {
     /// What to do about a helper that answers but is not trusted.
     private static let untrustedPolicy = OSAllocatedUnfairLock(initialState: UntrustedHelperPolicy())
 
+    /// Whether the helper's last answer said it may read. False until it has answered.
+    static var helperIsTrusted: Bool {
+        untrustedPolicy.withLock { $0.lastAnswerWasTrusted }
+    }
+
     /// Returns assembled items, or nil when the helper is off or unusable so
     /// the caller falls back to the in-process walk.
     static func items(displayID _: CGDirectDisplayID?) async -> [MenuBarItem]? {
@@ -115,6 +120,8 @@ nonisolated struct UntrustedHelperPolicy {
     static let rareRetry: Duration = .seconds(600)
 
     private(set) var untrustedCount = 0
+    /// Whether the last answer was a trusted one. False before any answer.
+    private(set) var lastAnswerWasTrusted = false
     private var nextAsk: ContinuousClock.Instant?
 
     func shouldAsk(now: ContinuousClock.Instant) -> Bool {
@@ -123,6 +130,7 @@ nonisolated struct UntrustedHelperPolicy {
 
     mutating func noteUntrusted(now: ContinuousClock.Instant) -> (retryAfter: Duration, isGivingUp: Bool) {
         untrustedCount += 1
+        lastAnswerWasTrusted = false
         let index = untrustedCount - 1
         let isGivingUp = index >= Self.backoffs.count
         let delay = isGivingUp ? Self.rareRetry : Self.backoffs[index]
@@ -136,6 +144,7 @@ nonisolated struct UntrustedHelperPolicy {
         defer {
             untrustedCount = 0
             nextAsk = nil
+            lastAnswerWasTrusted = true
         }
         return untrustedCount > 0
     }
