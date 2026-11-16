@@ -65,7 +65,8 @@ nonisolated struct DrawnSeatCaptureReader: MenuBarCaptureReading {
             for: axFrame,
             ownerPID: item.ownerPID,
             sourcePID: item.sourcePID,
-            in: drawnBar()
+            in: drawnBar(),
+            displays: base.displayBounds()
         )
         return live
     }

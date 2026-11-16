@@ -82,6 +82,7 @@ struct OpenedItemPhotographTests {
                 shownItem: { item, _ in self.shown.map { (item, $0) } },
                 settlePixels: { _, displayID in self.settled.append(displayID) },
                 drawnBar: { self.drawnBar },
+                displayBounds: { [] },
                 admit: { displayID in
                     self.admitted.append(displayID)
                     return CapturePublicationAdmission(layoutGeneration: 0, displayID: displayID)

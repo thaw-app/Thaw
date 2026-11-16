@@ -84,20 +84,21 @@ nonisolated enum DrawnItemFrame {
 
     /// Where to crop the item: axFrame when it is on the seat the item is drawn at, else axFrame
     /// moved onto that seat, so the picture keeps the padding every other picture has. Nil when
-    /// the drawn entry is not the item's size, or there is none and axFrame is a phantom.
+    /// the drawn entry is not the item's size, wherever it sits, or there is none and axFrame is a
+    /// phantom. Only entries on the display holding axFrame count, as for clickFrame.
     static func cropFrame(
         for axFrame: CGRect,
         ownerPID: pid_t,
         sourcePID: pid_t?,
-        in entries: [MenuBarAgentWindow.Entry]?
+        in entries: [MenuBarAgentWindow.Entry]?,
+        displays: [CGRect] = []
     ) -> CGRect? {
-        guard let drawn = drawnFrame(for: axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries) else {
-            return isPhantom(axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries) ? nil : axFrame
+        guard let drawn = drawnFrame(for: axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries, displays: displays) else {
+            return isPhantom(axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries, displays: displays) ? nil : axFrame
         }
-        let offset = drawn.midX - axFrame.midX
-        guard abs(offset) > agreementTolerance else { return axFrame }
         guard abs(drawn.width - axFrame.width) <= widthTolerance else { return nil }
-        return axFrame.offsetBy(dx: offset, dy: 0)
+        let offset = drawn.midX - axFrame.midX
+        return abs(offset) > agreementTolerance ? axFrame.offsetBy(dx: offset, dy: 0) : axFrame
     }
 
     /// The entries on the display holding axFrame, or all when none holds it: MenuBarAgent's first

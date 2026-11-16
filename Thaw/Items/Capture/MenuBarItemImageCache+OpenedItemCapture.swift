@@ -68,6 +68,7 @@ extension MenuBarItemImageCache {
             },
             settlePixels: { await RevealCaptureSession.settleRevealedPixels([$0], displayID: $1, reader: LiveMenuBarCaptureReader()) },
             drawnBar: drawnBar,
+            displayBounds: { BarAxis.liveDisplayBounds() },
             admit: { CapturePublicationPolicy.admit(layout: appState.itemManager.layoutPublication, displayID: $0) },
             crop: { [weak self] shown, frame, displayID in
                 guard let self else { return CapturePass() }

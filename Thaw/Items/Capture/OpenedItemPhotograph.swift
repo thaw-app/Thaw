@@ -38,6 +38,8 @@ struct OpenedItemPhotograph {
     let settlePixels: @MainActor (MenuBarItem, CGDirectDisplayID) async -> Void
     /// MenuBarAgent's drawn entries, or nil when its window can't be read.
     let drawnBar: @MainActor () async -> [MenuBarAgentWindow.Entry]?
+    /// The bounds of each display, so entries drawn on another display's bar are left out.
+    let displayBounds: @MainActor () -> [CGRect]
     /// Admits the picture for publishing against the item cache's display. Asked with nothing awaited before the screenshot.
     let admit: @MainActor (CGDirectDisplayID?) -> CapturePublicationAdmission
     /// Crops the shown item at the frame on the display.
@@ -94,8 +96,9 @@ struct OpenedItemPhotograph {
     /// the crop goes where MenuBarAgent draws the item.
     private func cropSeat(of shown: MenuBarItem) async -> CGRect? {
         let bar = await drawnBar()
-        let drawn = DrawnItemFrame.drawnFrame(for: shown.bounds, ownerPID: shown.ownerPID, sourcePID: shown.sourcePID, in: bar)
-        let cropFrame = DrawnItemFrame.cropFrame(for: shown.bounds, ownerPID: shown.ownerPID, sourcePID: shown.sourcePID, in: bar)
+        let displays = displayBounds()
+        let drawn = DrawnItemFrame.drawnFrame(for: shown.bounds, ownerPID: shown.ownerPID, sourcePID: shown.sourcePID, in: bar, displays: displays)
+        let cropFrame = DrawnItemFrame.cropFrame(for: shown.bounds, ownerPID: shown.ownerPID, sourcePID: shown.sourcePID, in: bar, displays: displays)
         Self.log(
             "\(shown.logString) frame \(shown.bounds), drawn at \(drawn.map { "\($0)" } ?? "unknown"), " +
                 (cropFrame.map { "cropping at \($0)" } ?? "not where it is drawn, so no picture")

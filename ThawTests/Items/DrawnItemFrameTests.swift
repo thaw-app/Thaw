@@ -137,6 +137,14 @@ struct DrawnItemFrameTests {
         #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: bar) == nil)
     }
 
+    @Test("A drawn entry of another size is not cropped, even with its centre on the frame")
+    func cropRefusesOtherSizeOnCentre() {
+        // Centred on 936 like the frame, but twice as wide: a crop at the frame would cut it in half.
+        let bar = [Self.entry(Self.driveDx, x: 916, width: 40)]
+
+        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: bar) == nil)
+    }
+
     @Test("Without a drawn entry, a frame is cropped where it is unless it is a phantom")
     func cropWithoutDrawn() {
         let bar = Self.bar.filter { $0.ownerPID != Self.driveDx }
@@ -170,6 +178,17 @@ struct DrawnItemFrameTests {
         #expect(click == Self.onSecondDisplay)
         #expect(DrawnItemFrame.drawnFrame(for: Self.onSecondDisplay, ownerPID: Self.dockDoor, sourcePID: nil, in: Self.mainBar, displays: Self.displays) == nil)
         #expect(!DrawnItemFrame.isPhantom(Self.onSecondDisplay, ownerPID: Self.dockDoor, sourcePID: nil, in: Self.mainBar, displays: Self.displays))
+    }
+
+    @Test("Another display's bar neither moves the crop there nor refuses it")
+    func anotherDisplaysBarIsIgnoredForTheCrop() {
+        let crop = DrawnItemFrame.cropFrame(
+            for: Self.onSecondDisplay, ownerPID: Self.dockDoor, sourcePID: nil, in: Self.mainBar, displays: Self.displays
+        )
+
+        #expect(crop == Self.onSecondDisplay)
+        #expect(DrawnItemFrame.cropFrame(for: Self.onSecondDisplay, ownerPID: Self.dockDoor, sourcePID: nil, in: Self.mainBar) == nil,
+                "Without displays, the other bar's 38 pt entry is taken for the item and refuses the crop")
     }
 
     @Test("The bar of the item's own display is still used")
