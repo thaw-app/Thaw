@@ -74,6 +74,19 @@ struct AccessRefusalRestartTests {
         #expect(facts.refuserReads == 0)
         #expect(facts.restarts == 0)
     }
+
+    @Test("The live facts read this process, where no app refuses and no helper has answered")
+    func liveFacts() async {
+        let probe = AccessRefusalRestart.Probe.live
+        #expect(await probe.refusers().isEmpty)
+        #expect(probe.formerHosts() >= 0)
+        #expect(!probe.helperTrusted())
+        #expect(!probe.startedByRestart())
+        _ = probe.processTrusted()
+        var restarts = 0
+        #expect(await !AccessRefusalRestart.restartIfRefused { restarts += 1 })
+        #expect(restarts == 0)
+    }
 }
 
 @Suite("Apps the walk found refusing", .serialized)
@@ -114,6 +127,18 @@ struct AccessRefusersTests {
         let later = start + AccessRefusalRecovery.minimumDuration
         #expect(await MenuBarItemAXProvider.persistentAccessRefusers(running: [first], now: later, read: read).isEmpty)
         #expect(await MenuBarItemAXProvider.persistentAccessRefusers(running: [first, second], now: later, read: read).isEmpty)
+    }
+
+    @Test("Reading an app's extras bar the raw way records how it answered")
+    @MainActor
+    func rawReadIsRecorded() async {
+        // The test process has no extras bar, so the read never succeeds; a refusal is recorded as one.
+        let result = MenuBarItemAXProvider.recordedExtrasBarRead(pid: getpid())
+        #expect(result != .success)
+        let later = ContinuousClock.now + AccessRefusalRecovery.minimumDuration
+        let refusers = await MenuBarItemAXProvider.persistentAccessRefusers(running: [getpid()], now: later, read: { _ in result })
+        #expect(refusers.isEmpty, "One app is never enough")
+        #expect(!MenuBarAXSubprocess.helperIsTrusted)
     }
 
     @Test("The helper counts as trusted only after a trusted answer, and not after an untrusted one")
