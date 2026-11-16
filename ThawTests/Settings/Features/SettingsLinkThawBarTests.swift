@@ -8,7 +8,6 @@
 import CoreGraphics
 import Foundation
 import MenuBarModel
-import Observation
 import os
 import Testing
 @testable import Thaw
@@ -28,18 +27,6 @@ private final class SentMessages {
     }
 }
 
-/// Stands in for the app's screen reading: whether a page that reads the screen is shown, and what was sampled.
-@MainActor
-@Observable
-private final class FakeScreen {
-    var isCaptureShown = false
-    @ObservationIgnored var sampled = [CGDirectDisplayID]()
-    @ObservationIgnored private(set) lazy var sampler = ThawBarPreviewSampler(
-        isCaptureShown: { [unowned self] in self.isCaptureShown },
-        sample: { [unowned self] in self.sampled.append($0) }
-    )
-}
-
 /// The Thaw Bar page across the app and its settings process: one set of models stands for each,
 /// both on one throwaway defaults suite, as the two processes share the real one.
 @Suite("Settings process link, Thaw Bar page", .serialized, .scratchDefaults)
@@ -52,7 +39,6 @@ struct SettingsLinkThawBarTests {
     private let appHiding = NativeAppHidingExperiment()
     private let childDisplays = DisplaySettingsManager()
     private let childHiding = NativeAppHidingExperiment()
-    private let screen = FakeScreen()
     private let sent = SentMessages()
 
     private func payload(_ value: some Encodable) throws -> Data {
@@ -60,7 +46,7 @@ struct SettingsLinkThawBarTests {
     }
 
     private func appFeature(show: @escaping Link.Show = { _, _ in }) -> SettingsAppFeature {
-        Link.app(displaySettings: appDisplays, hiding: appHiding, sampler: screen.sampler, show: show)
+        Link.app(displaySettings: appDisplays, hiding: appHiding, show: show)
     }
 
     private func item(_ title: String, app bundleID: String) -> MenuBarItem {
@@ -115,7 +101,7 @@ struct SettingsLinkThawBarTests {
     func lookEditReachesTheApp() throws {
         let appAppearance = MenuBarAppearanceManager()
         let childAppearance = MenuBarAppearanceManager()
-        let app = AppearanceSettingsLink.app(appearance: appAppearance, menuBar: MenuBarManager(), navigation: AppNavigationState())
+        let app = AppearanceSettingsLink.app(appearance: appAppearance, menuBar: MenuBarManager())
         _ = AppearanceSettingsLink.child(appearance: childAppearance, menuBar: MenuBarManager(), remote: { [sent] in sent.remote })
 
         childAppearance.configuration.thawBarAppearance.overridesMenuBar.toggle()
@@ -223,51 +209,7 @@ struct SettingsLinkThawBarTests {
 
         await Link.sampleColors(for: 8, remote: sent.remote) { sampledHere.append($0) }
         #expect(sampledHere == [7], "The settings process reads no screen")
-        #expect(sent.commands(Link.sample) == [CGDirectDisplayID(8)])
-    }
-
-    @Test("A request that arrives before the app knows the page is shown is sampled once it does")
-    func earlyRequestWaits() async throws {
-        let feature = appFeature()
-        try feature.commands[Link.sample]?(payload(CGDirectDisplayID(7)))
-        for _ in 0 ..< 3 {
-            await mainActorQueueDrained()
-        }
-        #expect(screen.sampled.isEmpty, "Nothing is sampled while no page reads the screen")
-
-        screen.isCaptureShown = true
-        #expect(await settingsLinkWait { screen.sampled == [7] })
-
-        try feature.commands[Link.sample]?(payload(CGDirectDisplayID(8)))
-        #expect(await settingsLinkWait { screen.sampled == [7, 8] }, "With the page shown, a request is sampled at once")
-        screen.isCaptureShown = false
-        screen.isCaptureShown = true
-        for _ in 0 ..< 3 {
-            await mainActorQueueDrained()
-        }
-        #expect(screen.sampled == [7, 8], "One request is one sample")
-    }
-
-    @Test("A newer request replaces one still waiting, and none outlives the settings process")
-    func waitingRequestIsReplacedOrDropped() async throws {
-        let feature = appFeature()
-        try feature.commands[Link.sample]?(payload(CGDirectDisplayID(7)))
-        try feature.commands[Link.sample]?(payload(CGDirectDisplayID(8)))
-        feature.commands[Link.sample]?(Data("not a display".utf8))
-        screen.isCaptureShown = true
-        #expect(await settingsLinkWait { screen.sampled == [8] })
-
-        screen.isCaptureShown = false
-        try feature.commands[Link.sample]?(payload(CGDirectDisplayID(9)))
-        feature.processEnded()
-        screen.isCaptureShown = true
-        // The next process's request is the first thing sampled, so the one dropped never was.
-        try feature.commands[Link.sample]?(payload(CGDirectDisplayID(10)))
-        #expect(await settingsLinkWait { screen.sampled.contains(10) })
-        for _ in 0 ..< 3 {
-            await mainActorQueueDrained()
-        }
-        #expect(screen.sampled == [8, 10])
+        #expect(sent.commands(SettingsItemsLink.sampleColors) == [CGDirectDisplayID(8)])
     }
 
     // MARK: Routing
@@ -278,7 +220,7 @@ struct SettingsLinkThawBarTests {
         #expect(SettingsProcessRoute.ownProcessPanes.contains(SettingsNavigationIdentifier.thawBar.rawValue))
         #expect(SettingsProcessRoute.runsInOwnProcess(pane: "Thaw Bar", simpleMode: false, isEnabled: true))
         #expect(SettingsLinkFeatures.app(appState).contains {
-            $0.commands[Link.open] != nil && $0.commands[Link.sample] != nil && $0.statuses[Link.switchedOffApps] != nil
+            $0.commands[Link.open] != nil && $0.statuses[Link.switchedOffApps] != nil
         })
         #expect(SettingsLinkFeatures.child(appState).contains { $0.statuses[Link.switchedOffApps] != nil })
     }

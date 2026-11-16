@@ -42,12 +42,8 @@ nonisolated enum ModulesLink {
             Dictionary(modules.map { ($0.url, $0.module) }, uniquingKeysWith: { first, _ in first })
         }
 
-        /// The state with its keys in order. Left to itself the encoder writes an object's keys
-        /// in an order that changes from one encoding to the next.
         var payload: Data? {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = .sortedKeys
-            return try? encoder.encode(self)
+            SettingsLinkPayload.encode(self)
         }
     }
 

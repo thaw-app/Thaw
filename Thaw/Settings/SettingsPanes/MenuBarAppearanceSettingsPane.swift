@@ -16,7 +16,5 @@ struct MenuBarAppearanceSettingsPane: View {
             location: .settings,
             onDone: nil
         )
-        .onAppear { AppearanceSettingsLink.pageShown(true) }
-        .onDisappear { AppearanceSettingsLink.pageShown(false) }
     }
 }

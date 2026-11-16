@@ -36,7 +36,6 @@ struct AppearanceSettingsLinkTests {
 
     private let appAppearance = MenuBarAppearanceManager()
     private let appMenuBar = MenuBarManager()
-    private let appNavigation = AppNavigationState()
     private let childAppearance = MenuBarAppearanceManager()
     private let childMenuBar = MenuBarManager()
     private let sent = SentMessages()
@@ -51,7 +50,7 @@ struct AppearanceSettingsLinkTests {
     }
 
     private func appFeature() -> SettingsAppFeature {
-        Link.app(appearance: appAppearance, menuBar: appMenuBar, navigation: appNavigation)
+        Link.app(appearance: appAppearance, menuBar: appMenuBar)
     }
 
     private func childFeature() -> SettingsChildFeature {
@@ -169,27 +168,6 @@ struct AppearanceSettingsLinkTests {
         #expect(appAppearance.previewConfiguration == nil)
     }
 
-    @Test("The app samples the menu bar's colors while the page shows in the settings process, and stops when that ends")
-    func appSamplesWhileThePageShows() throws {
-        let feature = appFeature()
-        let command = try #require(feature.commands[Link.shown])
-        #expect(!appNavigation.hasVisibleCaptureUI)
-
-        try command(#require(SettingsLinkPayload.encode(true)))
-        #expect(appNavigation.hasVisibleCaptureUI)
-        try command(#require(SettingsLinkPayload.encode(false)))
-        #expect(!appNavigation.hasVisibleCaptureUI)
-
-        try command(#require(SettingsLinkPayload.encode(true)))
-        command(Data("not an answer".utf8))
-        #expect(!appNavigation.hasVisibleCaptureUI, "A payload that can't be read never keeps the sampling on")
-        try command(#require(SettingsLinkPayload.encode(true)))
-        feature.processEnded()
-        #expect(!appNavigation.hasVisibleCaptureUI)
-    }
-
-    // MARK: Settings process side
-
     @Test("The settings process starts with the saved look, and reads it again after the app wrote the defaults")
     func childReadsSavedLook() {
         appAppearance.configuration = customLook
@@ -275,15 +253,6 @@ struct AppearanceSettingsLinkTests {
         childAppearance.showPreview(nil, remote: sent.remote)
         #expect(childAppearance.previewConfiguration == nil, "The settings process has no menu bar overlay to show it on")
         #expect(sent.commands(Link.preview) == [Link.Preview(configuration: shown), Link.Preview(configuration: nil)])
-    }
-
-    @Test("The page tells the app it is showing from the settings process only")
-    func pageShownLocalOrRemote() {
-        Link.pageShown(true, remote: nil)
-        Link.pageShown(true, remote: sent.remote)
-        Link.pageShown(false, remote: sent.remote)
-        #expect(sent.commands(Link.shown) == [true, false])
-        #expect(sent.messages.count == 2)
     }
 
     @Test("The Appearance pane runs in the settings process, with its share of the link on both sides")

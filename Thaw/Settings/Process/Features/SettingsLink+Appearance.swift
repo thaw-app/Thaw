@@ -19,8 +19,6 @@ enum AppearanceSettingsLink {
     static let look = "appearance.look"
     /// The command that shows a look on the menu bar for now, or stops showing one.
     static let preview = "appearance.preview"
-    /// The command that says the page is showing in the settings process, or no longer is.
-    static let shown = "appearance.shown"
 
     /// What the editor needs to know about the menu bar, which only the app follows.
     nonisolated struct Surroundings: Codable, Equatable {
@@ -42,16 +40,16 @@ enum AppearanceSettingsLink {
     }
 
     static func app(_ appState: AppState) -> SettingsAppFeature {
-        app(appearance: appState.appearanceManager, menuBar: appState.menuBarManager, navigation: appState.navigationState)
+        app(appearance: appState.appearanceManager, menuBar: appState.menuBarManager)
     }
 
     static func child(_ appState: AppState) -> SettingsChildFeature {
         child(appearance: appState.appearanceManager, menuBar: appState.menuBarManager)
     }
 
-    /// What the app does for the page: it says which menu bar is being edited, shows each look the
-    /// settings process saves or previews, and samples the menu bar's colors while the page is up.
-    static func app(appearance: MenuBarAppearanceManager, menuBar: MenuBarManager, navigation: AppNavigationState) -> SettingsAppFeature {
+    /// What the app does for the page: it says which menu bar is being edited, and shows each look the
+    /// settings process saves or previews. The item mirror has it sample the bar's colours while the page is up.
+    static func app(appearance: MenuBarAppearanceManager, menuBar: MenuBarManager) -> SettingsAppFeature {
         SettingsAppFeature(
             statuses: [
                 surroundings: {
@@ -71,19 +69,12 @@ enum AppearanceSettingsLink {
                     guard let preview = SettingsLinkPayload.decode(Preview.self, from: payload) else { return }
                     appearance.previewConfiguration = preview.configuration
                 },
-                shown: { payload in
-                    navigation.isAppearanceShownInSettingsProcess = SettingsLinkPayload.decode(Bool.self, from: payload) ?? false
-                },
             ],
             reload: { readSavedLook(into: appearance) },
             processEnded: {
-                // A preview lasts while its button is held and the sampling while the page is up,
-                // and a process that has gone can end neither.
+                // A preview lasts while its button is held, and a process that has gone can't let go of it.
                 if appearance.previewConfiguration != nil {
                     appearance.previewConfiguration = nil
-                }
-                if navigation.isAppearanceShownInSettingsProcess {
-                    navigation.isAppearanceShownInSettingsProcess = false
                 }
             }
         )
@@ -126,12 +117,6 @@ enum AppearanceSettingsLink {
 
     private static func saved<Value: Decodable>(_ key: Defaults.Key) -> Value? {
         Defaults.data(forKey: key).flatMap { SettingsLinkPayload.decode(Value.self, from: $0) }
-    }
-
-    /// Tells the app the page is showing in the settings process, or has gone. The app's own
-    /// Settings window needs no telling.
-    static func pageShown(_ isShown: Bool, remote: SettingsRemote? = .current) {
-        remote?.perform(shown, isShown)
     }
 }
 

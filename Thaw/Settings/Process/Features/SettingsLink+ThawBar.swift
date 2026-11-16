@@ -7,18 +7,15 @@
 
 import AppKit
 import MenuBarModel
-import Observation
 
 /// The Thaw Bar page's share of the link. Its settings are stored preferences both ends read again, and its
-/// preview draws the mirrored items. The app opens the real bar, samples for the preview and names the apps the bar leaves out.
+/// preview draws the mirrored items. The app opens the real bar and names the apps the bar leaves out.
 @MainActor
 enum ThawBarSettingsLink {
     /// Sent by the app: the apps switched off in System Settings, whose items the bar and its preview leave out.
     static let switchedOffApps = "thawBar.switchedOffApps"
     /// Asked of the app: open the real Thaw Bar.
     static let open = "thawBar.open"
-    /// Asked of the app: sample the colour of the display the preview draws.
-    static let sample = "thawBar.sample"
 
     struct Open: Codable, Equatable {
         var section: MenuBarSection.Name
@@ -34,10 +31,6 @@ enum ThawBarSettingsLink {
         app(
             displaySettings: appState.settings.displaySettings,
             hiding: appState.menuBarManager.nativeAppHidingExperiment,
-            sampler: ThawBarPreviewSampler(
-                isCaptureShown: { [weak appState] in appState?.navigationState.hasVisibleCaptureUI ?? false },
-                sample: { [weak appState] in await appState?.menuBarManager.updateAverageColorInfoAsync(for: $0) }
-            ),
             show: showsBar(of: appState)
         )
     }
@@ -49,7 +42,6 @@ enum ThawBarSettingsLink {
     static func app(
         displaySettings: DisplaySettingsManager,
         hiding: NativeAppHidingExperiment,
-        sampler: ThawBarPreviewSampler,
         show: @escaping Show
     ) -> SettingsAppFeature {
         SettingsAppFeature(
@@ -63,11 +55,7 @@ enum ThawBarSettingsLink {
                     displaySettings.adopt(request.settings)
                     show(request.section, request.displayID)
                 },
-                sample: { payload in
-                    SettingsLinkPayload.decode(CGDirectDisplayID.self, from: payload).map(sampler.request)
-                },
-            ],
-            processEnded: { sampler.stop() }
+            ]
         )
     }
 
@@ -100,45 +88,13 @@ enum ThawBarSettingsLink {
         remote.perform(open, Open(section: section, displayID: displayID, settings: settings.snapshot))
     }
 
-    /// Has the colour of the preview's display sampled again. Only the app reads the screen.
+    /// Has the colour of the preview's display sampled again. Only the app reads the screen, through the item mirror.
     static func sampleColors(
         for displayID: CGDirectDisplayID,
         remote: SettingsRemote? = .current,
         here: @MainActor (CGDirectDisplayID) async -> Void
     ) async {
         guard let remote else { return await here(displayID) }
-        remote.perform(sample, displayID)
-    }
-}
-
-/// Samples a display for the preview once the app knows a page that reads the screen is shown. The request
-/// can arrive before that word does, and the colour monitor samples nothing until then.
-@MainActor
-final class ThawBarPreviewSampler {
-    private let isCaptureShown: @MainActor () -> Bool
-    private let sample: @MainActor (CGDirectDisplayID) async -> Void
-    private var waiting: Task<Void, Never>?
-
-    init(isCaptureShown: @escaping @MainActor () -> Bool, sample: @escaping @MainActor (CGDirectDisplayID) async -> Void) {
-        self.isCaptureShown = isCaptureShown
-        self.sample = sample
-    }
-
-    /// Samples the display now, or as soon as such a page is shown. A newer request replaces one still waiting.
-    func request(_ displayID: CGDirectDisplayID) {
-        waiting?.cancel()
-        waiting = Task { @MainActor [isCaptureShown, sample] in
-            for await isShown in Observations({ isCaptureShown() }) where isShown {
-                guard !Task.isCancelled else { return }
-                await sample(displayID)
-                return
-            }
-        }
-    }
-
-    /// The settings process has ended, so nothing waits for its page any more.
-    func stop() {
-        waiting?.cancel()
-        waiting = nil
+        remote.perform(SettingsItemsLink.sampleColors, displayID)
     }
 }

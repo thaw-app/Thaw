@@ -151,31 +151,30 @@ struct SettingsItemsRelayTests {
         #expect(feature.statuses[SettingsItemsLink.pictures]?() == nil)
     }
 
-    @Test("A sample asked for before the settings process listens is taken once it does, and dropped if it never does")
-    func earlySampleWaitsForListen() throws {
+    @Test("A sample asked for before the page reads the screen is taken once it does, and dropped if the process ends first")
+    func earlySampleWaitsForThePage() throws {
         try feature.commands[SettingsItemsLink.sampleColors]?(Fixture.payload(CGDirectDisplayID(3)))
         try feature.commands[SettingsItemsLink.sampleColors]?(Fixture.payload(CGDirectDisplayID(7)))
-        #expect(fake.samples.isEmpty, "The app samples nothing for a page it has not heard from")
         try listen()
-        #expect(fake.samples == [7], "The last request stands for the earlier one")
-        try listen()
-        #expect(fake.samples == [7], "It is taken once")
+        #expect(fake.samples.isEmpty, "The app samples nothing for a page that reads no screen")
+        try listen(Demand(consumesCapture: true))
+        #expect(fake.samples.first == .some(7), "The last request stands for the earlier one")
+        #expect(!fake.samples.contains(3))
 
         feature.processEnded()
         try feature.commands[SettingsItemsLink.sampleColors]?(Fixture.payload(CGDirectDisplayID(9)))
         feature.processEnded()
-        try listen()
-        #expect(fake.samples == [7], "A request the ended process left behind is not taken for the next one")
+        try listen(Demand(consumesCapture: true))
+        #expect(!fake.samples.contains(9), "A request the ended process left behind is not taken for the next one")
     }
 
     @Test("Colours are sampled when a preview asks, and now and then while the page shown reads the screen")
     func colours() async throws {
-        try listen()
+        try listen(Demand(consumesCapture: true))
         try feature.commands[SettingsItemsLink.sampleColors]?(Fixture.payload(CGDirectDisplayID(7)))
         feature.commands[SettingsItemsLink.sampleColors]?(Data())
-        #expect(fake.samples == [7, nil])
+        #expect(fake.samples.prefix(2) == [7, nil])
 
-        try listen(Demand(consumesCapture: true))
         #expect(await settingsLinkWait { fake.samples.count >= 5 })
         #expect(fake.samples.dropFirst(2).allSatisfy { $0 == nil })
 
