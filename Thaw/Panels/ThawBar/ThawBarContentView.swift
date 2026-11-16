@@ -194,7 +194,7 @@ struct ThawBarContentView: View {
             in: section,
             folderMembers: folderMembers,
             itemManager: itemManager,
-            switchedOff: menuBarManager.nativeAppHidingExperiment.userSwitchedOffBundleIDs
+            menuBarManager: menuBarManager
         )
         ZStack {
             ThawBarChrome(
