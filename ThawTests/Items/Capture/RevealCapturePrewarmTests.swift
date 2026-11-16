@@ -26,6 +26,7 @@ struct RevealCapturePrewarmTests {
         var blacklisted: Set<MenuBarItemTag> = []
         var displayID: CGDirectDisplayID = 42
         var newPictures: Set<MenuBarItemTag> = []
+        var retakeLedger: GlyphRetakeLedger?
 
         var forgotten: [Set<MenuBarItemTag>] = []
         var captured: [(items: [MenuBarItemTag], displayID: CGDirectDisplayID)] = []
@@ -50,7 +51,8 @@ struct RevealCapturePrewarmTests {
                         self.slot.tally?.tags.insert(item.tag)
                     }
                 },
-                save: { self.saves += 1 }
+                save: { self.saves += 1 },
+                retakeLedger: retakeLedger
             )
         }
 
@@ -81,6 +83,73 @@ struct RevealCapturePrewarmTests {
         context.setFillColor(CGColor(gray: 0, alpha: 1))
         context.fill(CGRect(x: inset, y: 0, width: pixelWidth - inset * 2, height: 48))
         return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 2)
+    }
+
+    @Test("An automatic pass retakes a picture that no longer fits its item, once a session")
+    func retakesStaleWidthOnce() async throws {
+        let world = World()
+        world.retakeLedger = GlyphRetakeLedger()
+        // A picture taken at a wider spacing: 22 pt of picture for a 36 pt item, and one that fits.
+        let stale = Self.item("Stale", width: 36), fits = Self.item("Fits")
+        world.sections[.hidden] = [stale, fits]
+        world.images[stale.tag] = try Self.glyph(pixelWidth: 44)
+        world.images[fits.tag] = try Self.glyph(pixelWidth: 48)
+
+        await world.run([.hidden])
+        await world.run([.hidden])
+
+        #expect(world.captured.map(\.items) == [[stale.tag]])
+    }
+
+    @Test("The width-retake limit holds for the whole pass, not for each section")
+    func widthRetakeLimitSpansSections() async throws {
+        let world = World()
+        world.retakeLedger = GlyphRetakeLedger()
+        let hidden = (0 ..< 2).map { Self.item("Hidden\($0)", width: 36) }
+        let always = (0 ..< 2).map { Self.item("Always\($0)", width: 36) }
+        world.sections[.hidden] = hidden
+        world.sections[.alwaysHidden] = always
+        for item in hidden + always {
+            world.images[item.tag] = try Self.glyph(pixelWidth: 44)
+        }
+
+        await world.run([.hidden, .alwaysHidden])
+
+        #expect(world.captured.flatMap(\.items).count == GlyphRetakeLedger.widthRetakesPerPass)
+        #expect(world.captured.map(\.items) == [hidden.map(\.tag), [always[0].tag]])
+    }
+
+    @Test("A screen locked during the capture leaves its width retakes due")
+    func lockedCaptureLeavesRetakesDue() async throws {
+        let world = World()
+        world.retakeLedger = GlyphRetakeLedger()
+        let stale = Self.item("Stale", width: 36)
+        world.sections[.hidden] = [stale]
+        world.images[stale.tag] = try Self.glyph(pixelWidth: 44)
+        world.locked = ["recording width retakes"]
+
+        await world.run([.hidden])
+        world.locked = []
+        await world.run([.hidden])
+
+        #expect(world.captured.map(\.items) == [[stale.tag], [stale.tag]])
+    }
+
+    @Test("Without a ledger, or on a pass that retakes everything, the ledger's once isn't used up")
+    func retakeEverythingLeavesTheLedger() async throws {
+        let world = World()
+        let stale = Self.item("Stale", width: 36)
+        world.sections[.hidden] = [stale]
+        world.images[stale.tag] = try Self.glyph(pixelWidth: 44)
+
+        await world.run([.hidden])
+        #expect(world.captured.isEmpty, "no ledger, no width retake")
+
+        world.retakeLedger = GlyphRetakeLedger()
+        await world.run([.hidden], onlyMissingImages: false)
+        await world.run([.hidden])
+
+        #expect(world.captured.map(\.items) == [[stale.tag], [stale.tag]])
     }
 
     @Test("The visible section and repeats are dropped, in request order")
