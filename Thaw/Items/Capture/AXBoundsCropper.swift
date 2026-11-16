@@ -22,6 +22,8 @@ nonisolated struct AXBoundsCropper: Sendable {
         var concealedIdentifiers: Set<String> = []
         /// Items captured even though they would normally be skipped.
         var forgivenTags: Set<MenuBarItemTag> = []
+        /// See Request.seatsOnDrawnBar.
+        var seatsOnDrawnBar = false
     }
 
     /// Items with the bounds to cut them at, and how far to trust those bounds.
@@ -31,6 +33,9 @@ nonisolated struct AXBoundsCropper: Sendable {
         var validateFreshBounds = false
         var concealedIdentifiers: Set<String> = []
         var forgivenTags: Set<MenuBarItemTag> = []
+        /// Cut each item where MenuBarAgent draws it when that is not the frame it reports. A hidden item put
+        /// back on the bar can report a seat beside its own, and a crop there shows it cut off, or its neighbour.
+        var seatsOnDrawnBar = false
     }
 
     private static let diagLog = MenuBarItemImageCache.diagLog
@@ -83,7 +88,8 @@ nonisolated struct AXBoundsCropper: Sendable {
             displayID: displayID,
             validateFreshBounds: options.freshBounds,
             concealedIdentifiers: options.concealedIdentifiers,
-            forgivenTags: options.forgivenTags
+            forgivenTags: options.forgivenTags,
+            seatsOnDrawnBar: options.seatsOnDrawnBar
         )
         return await crop(request, using: reader, skipping: shouldSkip)
     }
@@ -104,12 +110,15 @@ nonisolated struct AXBoundsCropper: Sendable {
         var pass = CapturePass()
         // Staged, not applied: the ledger is read-only until the pass commits.
         pass.forgivenTags = request.forgivenTags
-        let (candidates, implausible) = AXCropRules.eligibleCandidates(
+        let (reported, implausible) = AXCropRules.eligibleCandidates(
             request.items, band: band, overflowBounds: overflowBounds, screens: reader.displayBounds()
         )
         for item in implausible {
             pass.reject(item, .invalidate)
         }
+        var seating = DrawnSeating(isOn: request.seatsOnDrawnBar, displayID: request.displayID)
+        let candidates = await seating.seat(reported, using: reader, rejectingInto: &pass)
+        guard !screenIsLocked() else { return CapturePass() }
         guard !candidates.isEmpty else {
             // Says which test failed: no app-menu edge refuses every icon, a stale edge refuses those left of it.
             Self.diagLog.debug(
@@ -133,6 +142,7 @@ nonisolated struct AXBoundsCropper: Sendable {
                     candidates.map { ($0.item.uniqueIdentifier, $0.bounds) },
                     uniquingKeysWith: { first, _ in first }
                 ),
+                seating: seating,
                 overflowBounds: overflowBounds
             )
         )
@@ -161,6 +171,7 @@ private nonisolated struct CropContext {
     // Peer frames must come from the same enumeration as the crop rects,
     // not a later read that can mistake one moving item for two neighbors.
     let captureTimeBounds: [String: CGRect]
+    let seating: DrawnSeating
     var postCaptureBounds: [String: CGRect] = [:]
     var overflowBounds: [CGRect]
     var ambiguousIdentifiers: Set<String> = []
@@ -280,9 +291,10 @@ private nonisolated struct CropRun {
 
     /// Reads positions and overflow after a source's pixels. False when the screen locked meanwhile.
     private mutating func readLiveGeometry(of candidates: [(item: MenuBarItem, bounds: CGRect)]) async -> Bool {
-        let live = await reader.liveBounds(for: candidates)
+        // Each app is asked about the frame it reports, not the seat its picture was cut at.
+        let live = await reader.liveBounds(for: context.seating.reported(candidates))
         guard !isLocked else { return false }
-        context.postCaptureBounds = live.bounds
+        context.postCaptureBounds = await context.seating.seated(live.bounds, of: candidates.map(\.item), using: reader)
         context.ambiguousIdentifiers = live.ambiguous
         context.overflowBounds += await reader.overflowBounds(displayID: context.displayID)
         return !isLocked
@@ -295,8 +307,10 @@ private nonisolated struct CropRun {
         if context.validateFreshBounds {
             let items = await reader.menuBarItems(displayID: context.displayID)
             guard !isLocked else { return nil }
-            refreshed.postCaptureBounds = Dictionary(
-                items.map { ($0.uniqueIdentifier, $0.bounds) }, uniquingKeysWith: { first, _ in first }
+            refreshed.postCaptureBounds = await context.seating.seated(
+                Dictionary(items.map { ($0.uniqueIdentifier, $0.bounds) }, uniquingKeysWith: { first, _ in first }),
+                of: items,
+                using: reader
             )
         }
         refreshed.overflowBounds += await reader.overflowBounds(displayID: context.displayID)

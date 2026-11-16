@@ -82,11 +82,12 @@ struct RevealCaptureSession {
             guard let admission = admit() else { return }
 
             // One hosting and one strip screenshot for the batch, on the fixed display, so every crop comes from one
-            // instant of the bar. These items were revealed here, so none is concealed.
+            // instant of the bar. These were revealed here, so none is concealed and each is cut where it is drawn.
             let request = AXBoundsCropper.Request(
                 items: revealed.map { ($0.live, $0.live.bounds) },
                 displayID: displayID,
-                validateFreshBounds: true
+                validateFreshBounds: true,
+                seatsOnDrawnBar: true
             )
             let captureResult = await cropper.crop(request, using: sources.reader, skipping: shouldSkip)
 

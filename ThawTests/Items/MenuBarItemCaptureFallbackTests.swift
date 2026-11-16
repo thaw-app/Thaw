@@ -10,6 +10,7 @@ import MenuBarModel
 import os
 import Testing
 @testable import Thaw
+import ThawAXCore
 import ThawCapture
 
 @MainActor
@@ -461,16 +462,115 @@ struct MenuBarItemCaptureFallbackTests {
         #expect(await reader.captures == [.hosting, .barWindow])
     }
 
+    /// The item reports x=1000 to 1024 while MenuBarAgent draws it 12 points to the left, glyph and all.
+    private static let drawnToTheLeft = [MenuBarAgentWindow.Entry(ownerPID: 999_991, frame: CGRect(x: 981, y: 0, width: 38, height: 33))]
+    private static let drawnInPlace = [MenuBarAgentWindow.Entry(ownerPID: 999_991, frame: CGRect(x: 993, y: 0, width: 38, height: 33))]
+
+    @Test("An item drawn beside the frame it reports is cut where it is drawn, not cut off at the reported frame")
+    func displacedItemIsCutAtItsDrawnSeat() async throws {
+        let item = makeItem()
+        let hosting = try makeCapture(opaque: false, glyphX: 996)
+
+        let atReportedFrame = await capture(item, using: CaptureFixture(hosting: hosting, strip: nil, drawn: Self.drawnToTheLeft))
+        let cutOff = try #require(atReportedFrame.captured[item.tag])
+        #expect(MenuBarItemImageCache.isClippedAtLeadingEdge(cutOff), "The reported frame holds only the glyph's right half")
+
+        let reader = CaptureFixture(hosting: hosting, strip: nil, drawn: Self.drawnToTheLeft)
+        let result = await capture(item, using: reader, seatsOnDrawnBar: true)
+        let glyph = try #require(result.captured[item.tag])
+        let ink = try #require(MenuBarItemImageCache.inkBounds(of: glyph))
+        #expect(glyph.pointSize.width == 24)
+        #expect(ink.minX == 8)
+        #expect(ink.width == 8)
+        #expect(await reader.validatedBounds == [item.bounds], "The app is asked about the frame it reports")
+    }
+
+    @Test("An item drawn where it reports is cut there, and a pass that didn't ask never reads the drawn bar")
+    func agreeingSeatChangesNothing() async throws {
+        let item = makeItem()
+        let reader = try CaptureFixture(hosting: makeCapture(opaque: false), strip: nil, drawn: Self.drawnInPlace)
+        let result = await capture(item, using: reader, seatsOnDrawnBar: true)
+        let ink = try #require(result.captured[item.tag].flatMap(MenuBarItemImageCache.inkBounds(of:)))
+        #expect(ink.minX == 8)
+
+        let unasked = try CaptureFixture(hosting: makeCapture(opaque: false), strip: nil, drawn: Self.drawnToTheLeft)
+        _ = await capture(item, using: unasked)
+        #expect(await unasked.drawnSeatReads == 0)
+    }
+
+    @Test("A seat that changes while the screenshot is taken keeps the prior image", arguments: [false, true])
+    func seatChangedDuringCaptureKeepsPriorImage(drawnBarBecomesUnreadable: Bool) async throws {
+        let item = makeItem()
+        let afterCapture: [MenuBarAgentWindow.Entry]?? = drawnBarBecomesUnreadable ? .some(nil) : .some(Self.drawnInPlace)
+        let reader = try CaptureFixture(
+            hosting: makeCapture(opaque: false, glyphX: 996), strip: nil,
+            drawn: Self.drawnToTheLeft, drawnAfterCapture: afterCapture
+        )
+        let result = await capture(item, using: reader, seatsOnDrawnBar: true)
+
+        #expect(result.captured.isEmpty)
+        #expect(result.unreadable.map(\.tag) == [item.tag])
+        #expect(result.invalidatedTags.isEmpty)
+    }
+
+    @Test("An item whose app lists a second item is not moved onto the one that is drawn")
+    func siblingIsNotMovedOntoTheDrawnItem() async throws {
+        let item = makeItem()
+        let reader = try CaptureFixture(
+            hosting: makeCapture(opaque: false, glyphX: 996), strip: nil, drawn: Self.drawnToTheLeft, listedItems: 2
+        )
+        let result = await capture(item, using: reader, seatsOnDrawnBar: true)
+
+        let glyph = try #require(result.captured[item.tag])
+        #expect(MenuBarItemImageCache.isClippedAtLeadingEdge(glyph), "Cut at the reported frame, as before this change")
+    }
+
+    /// Another app's item is drawn on the seat the item reports, and the item's own app has two items
+    /// drawn, so nothing says which of them it is.
+    private static let neighbourOnTheSeat = [
+        MenuBarAgentWindow.Entry(ownerPID: 555, frame: CGRect(x: 1000, y: 0, width: 24, height: 33)),
+        MenuBarAgentWindow.Entry(ownerPID: 999_991, frame: CGRect(x: 940, y: 0, width: 24, height: 33)),
+        MenuBarAgentWindow.Entry(ownerPID: 999_991, frame: CGRect(x: 970, y: 0, width: 24, height: 33)),
+    ]
+
+    @Test("An item reporting a seat another app's item is drawn in is not cropped, and keeps its picture")
+    func itemOnANeighboursSeatIsNotCropped() async throws {
+        let item = makeItem()
+        let reader = try CaptureFixture(hosting: makeCapture(opaque: false), strip: nil, drawn: Self.neighbourOnTheSeat)
+        let result = await capture(item, using: reader, seatsOnDrawnBar: true)
+
+        #expect(result.captured.isEmpty, "The glyph at x=1008 is the neighbour's")
+        #expect(result.unreadable.map(\.tag) == [item.tag])
+        #expect(result.invalidatedTags.isEmpty)
+        #expect(await reader.captures.isEmpty, "Nothing left to crop, so no screenshot")
+    }
+
+    @Test("A neighbour that takes the seat while the screenshot is taken keeps the prior image")
+    func neighbourArrivingDuringCaptureKeepsPriorImage() async throws {
+        let item = makeItem()
+        let reader = try CaptureFixture(
+            hosting: makeCapture(opaque: false), strip: nil,
+            drawn: Self.drawnInPlace, drawnAfterCapture: .some(Self.neighbourOnTheSeat)
+        )
+        let result = await capture(item, using: reader, seatsOnDrawnBar: true)
+
+        #expect(result.captured.isEmpty)
+        #expect(result.unreadable.map(\.tag) == [item.tag])
+        #expect(result.invalidatedTags.isEmpty)
+    }
+
     private func capture(
         _ item: MenuBarItem,
         using reader: CaptureFixture,
         validateFreshBounds: Bool = false,
-        concealedIdentifiers: Set<String> = []
+        concealedIdentifiers: Set<String> = [],
+        seatsOnDrawnBar: Bool = false
     ) async -> MenuBarItemImageCache.CapturePass {
         let cropper = AXBoundsCropper(screenIsLocked: { false }, captureIsAllowed: { false })
         let request = AXBoundsCropper.Request(
             items: [(item, item.bounds)], displayID: 42,
-            validateFreshBounds: validateFreshBounds, concealedIdentifiers: concealedIdentifiers
+            validateFreshBounds: validateFreshBounds, concealedIdentifiers: concealedIdentifiers,
+            seatsOnDrawnBar: seatsOnDrawnBar
         )
         return await cropper.crop(request, using: reader, skipping: Self.noLedger)
     }
@@ -558,10 +658,18 @@ actor CaptureFixture {
     let itemsAfterOwnerWindow: [pid_t: [MenuBarItem]]
     let gates: [Source: CaptureGate]
     let displays: [CGRect]
+    /// What MenuBarAgent's window says is drawn, or nil when it can't be read.
+    let drawn: [MenuBarAgentWindow.Entry]?
+    /// What it says once a screenshot was taken, when that differs.
+    let drawnAfterCapture: [MenuBarAgentWindow.Entry]??
+    /// How many items each candidate's app lists in its own extras bar.
+    let listedItems: Int
     let onCapture: @Sendable (Source) -> Void
     private(set) var captures: [Source] = []
     private(set) var sourcesAtValidation: [Source] = []
     private(set) var validatedTags: [MenuBarItemTag] = []
+    private(set) var validatedBounds: [CGRect] = []
+    private(set) var drawnSeatReads = 0
     private var inventoryReadCount = 0
     private(set) var sourcesAtInventoryRead: [Source?] = []
     private(set) var inventoryReadsAtCapture: [Int] = []
@@ -577,6 +685,9 @@ actor CaptureFixture {
         itemsAfterOwnerWindow: [pid_t: [MenuBarItem]] = [:],
         gates: [Source: CaptureGate] = [:],
         displays: [CGRect] = [CGRect(x: 0, y: 0, width: 1470, height: 956)],
+        drawn: [MenuBarAgentWindow.Entry]? = nil,
+        drawnAfterCapture: [MenuBarAgentWindow.Entry]?? = nil,
+        listedItems: Int = 1,
         onCapture: @escaping @Sendable (Source) -> Void = { _ in }
     ) {
         self.hosting = hosting
@@ -589,6 +700,9 @@ actor CaptureFixture {
         self.itemsAfterOwnerWindow = itemsAfterOwnerWindow
         self.gates = gates
         self.displays = displays
+        self.drawn = drawn
+        self.drawnAfterCapture = drawnAfterCapture
+        self.listedItems = listedItems
         self.onCapture = onCapture
     }
 
@@ -644,6 +758,7 @@ actor CaptureFixture {
         for candidates: [(item: MenuBarItem, bounds: CGRect)]
     ) async -> (bounds: [String: CGRect], ambiguous: Set<String>) {
         validatedTags = candidates.map(\.item.tag)
+        validatedBounds = candidates.map(\.bounds)
         sourcesAtValidation = captures
         switch geometry {
         case .stable:
@@ -682,6 +797,21 @@ actor CaptureFixture {
 }
 
 extension CaptureFixture {
+    func drawnSeats(
+        for candidates: [(item: MenuBarItem, bounds: CGRect)],
+        displayID _: CGDirectDisplayID
+    ) async -> DrawnSeats {
+        drawnSeatReads += 1
+        let read = captures.isEmpty ? drawn : drawnAfterCapture ?? drawn
+        guard let entries = read else { return DrawnSeats() }
+        let apps = candidates.map { $0.item.sourcePID ?? $0.item.ownerPID }
+        return LiveMenuBarCaptureReader.drawnSeats(
+            for: candidates.map { ($0.item.uniqueIdentifier, $0.bounds, $0.item.ownerPID, $0.item.sourcePID) },
+            in: entries,
+            itemCounts: Dictionary(apps.map { ($0, listedItems) }, uniquingKeysWith: { first, _ in first })
+        )
+    }
+
     /// A 1470×33pt bar at 2x with an 8×10pt glyph drawn at each of glyphXs.
     static func barCapture(
         opaque: Bool,

@@ -64,6 +64,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **Switch to Reduced mode from Troubleshooting,** where Thaw runs as one icon that hides whole apps.
 - **What's New shows its Stable, Beta and Alpha tabs beside the title.**
 - **Thaw does less work while the menu bar sits idle.** It no longer redraws the bar's look on every click or asks about every running app every three seconds.
+- **The item list in Troubleshooting also records where macOS draws each item.**
 
 #### Modules
 
@@ -116,7 +117,8 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **A selection you clear or change right after a move stays that way** instead of jumping back to the moved items.
 - **Two same-width items of one app can no longer show each other's picture.**
 - **An item with a changing title is recognized after its app restarts,** even when the old copy was still quitting.
-- **Capture Hidden Items retakes a picture that is cut off at its left edge,** and a cut-off picture can no longer replace a complete one.
+- **Capture Hidden Items retakes a picture that is cut off at its left or right edge,** and a cut-off picture can no longer replace a complete one.
+- **A hidden item's picture is taken where macOS draws it,** not at the spot its app reports, which could cut it off. ([#1454](https://github.com/thaw-app/Thaw/issues/1454))
 - **Pictures of hidden items survive a restart.** Restarting Thaw could lose all of them, or the saved ones it hadn't loaded yet. Reported by katla on Discord.
 - **Layout keeps your selection when a move is refused or changes nothing.**
 - **A chosen icon now shows.** Choose Icon kept showing Thaw's picture of the item. Automatic goes back to the picture.
