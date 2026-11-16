@@ -13,9 +13,8 @@ import Testing
 @testable import Thaw
 import ThawUI
 
-/// The app and its settings process joined in one process: a command the settings process sends
-/// runs in the app's share of the link at once, and what the app answers reaches the settings
-/// process's share the same way.
+/// The app and its settings process joined in one process: a command runs in the app's share of the link at once,
+/// and the app's answer reaches the settings process's share the same way.
 @MainActor
 @Observable
 private final class Wire {
