@@ -189,8 +189,8 @@ struct ThawBarPreviewTests {
         #expect(off.texts().contains("Preview uses the current hidden section. The \(Constants.displayName) Bar is off on this display."))
     }
 
-    @Test("The stage draws a plain backdrop when the display has no wallpaper to show")
-    func stageWithoutWallpaper() async throws {
+    @Test("The stage draws a plain backdrop when the display has no colour sample")
+    func stageWithoutSample() async throws {
         let world = World()
         let page = render(
             ThawBarPreviewStage(displayID: Self.missingDisplay) { Text(verbatim: "Inside") },

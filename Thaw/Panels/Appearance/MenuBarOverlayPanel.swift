@@ -828,7 +828,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
             }
 
             // Menu movement can accompany external item additions or removals; refresh item geometry too.
-            overlayPanel.$applicationMenuFrame
+            overlayPanel.$applicationMenuFrame.removeDuplicates()
                 .sink { [weak self] _ in
                     guard let self else { return }
                     self.needsDisplay = true
@@ -841,7 +841,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         $fullConfiguration.replace(with: ())
             .merge(with: $previewConfiguration.replace(with: ()))
             .merge(with: $averageColorInfo.removeDuplicates().replace(with: ()))
-            .merge(with: $wallpaperPalette.replace(with: ()))
+            .merge(with: $wallpaperPalette.removeDuplicates().replace(with: ()))
             .merge(with: $iconShade.replace(with: ()))
             .sink { [weak self] _ in
                 self?.updateBackgroundGlass()
@@ -1114,7 +1114,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 rect.fill()
             }
         case .adaptiveGradient:
-            if let gradient = adaptiveGradient(opacity: configuration.tintOpacity) {
+            if let gradient = wallpaperPalette?.gradient(opacity: configuration.tintOpacity) {
                 gradient.draw(in: rect, angle: 0)
             } else if let colorInfo = averageColorInfo,
                       let color = NSColor(cgColor: colorInfo.color)?
@@ -1125,27 +1125,6 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 rect.fill()
             }
         }
-    }
-
-    /// Use the two dominant swatches, or nil before capture; repeated swatches produce a flat tint for single-colour wallpaper.
-    private func adaptiveGradient(opacity: CGFloat) -> NSGradient? {
-        guard
-            let palette = wallpaperPalette,
-            let primary = palette.primary,
-            let secondary = palette.secondary
-        else {
-            return nil
-        }
-        let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpaceCreateDeviceRGB()
-        guard
-            let start = primary.cgColor(in: colorSpace),
-            let end = secondary.cgColor(in: colorSpace),
-            let startColor = NSColor(cgColor: start)?.withAlphaComponent(opacity),
-            let endColor = NSColor(cgColor: end)?.withAlphaComponent(opacity)
-        else {
-            return nil
-        }
-        return NSGradient(starting: startColor, ending: endColor)
     }
 
     private var isBackgroundGlassActive = false
@@ -1408,6 +1387,15 @@ private final class MenuBarOverlayPanelContentView: NSView {
         )
         color.setFill()
         NSBezierPath(rect: borderBounds).fill()
+    }
+
+    /// AppKit asks for a finished picture instead of calling draw(_:); see showBitmapOfOwnDrawing().
+    override var wantsUpdateLayer: Bool {
+        true
+    }
+
+    override func updateLayer() {
+        showBitmapOfOwnDrawing()
     }
 
     override func draw(_: NSRect) {

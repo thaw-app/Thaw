@@ -59,6 +59,10 @@ enum LateLoginArrivals {
                 read: {
                     guard manager != nil else { return nil }
                     let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+                    // The helper has just answered, which is what shows a main process that apps refuse.
+                    if await AccessRefusalRestart.restartIfRefused(restart: { manager?.appState?.restartSelf() }) {
+                        return nil
+                    }
                     guard let manager, let current = MenuBarBackendProvider.current.itemCacheSignature(items) else { return nil }
                     return (manager.cacheCycleState.cachedItemSignature, current)
                 },

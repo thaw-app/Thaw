@@ -611,7 +611,7 @@ nonisolated enum MenuBarItemAXProvider {
     ) {
         guard formerHosts.contains(appBundleID) else { return }
         let pid = runningApp.processIdentifier
-        let result = AXPrimitives.extrasMenuBarReadResult(pid: pid)
+        let result = recordedExtrasBarRead(pid: pid)
         let isNew = loggedEmptyExtrasBarReads.withLock { logged in
             guard logged[pid] != result else { return false }
             logged[pid] = result

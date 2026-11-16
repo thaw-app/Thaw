@@ -17,6 +17,7 @@ struct FreshVolatileTitleLearnerTests {
         bundle: String = "com.example.chat",
         title: String,
         x: CGFloat = 1100,
+        width: CGFloat = 24,
         sourcePID: pid_t? = 42,
         windowID: UInt32 = 1
     ) -> MenuBarItem {
@@ -29,7 +30,7 @@ struct FreshVolatileTitleLearnerTests {
             windowID: windowID,
             ownerPID: sourcePID ?? 0,
             sourcePID: sourcePID,
-            bounds: CGRect(x: x, y: 4, width: 24, height: 24),
+            bounds: CGRect(x: x, y: 4, width: width, height: 24),
             title: title,
             isOnScreen: true
         )
@@ -137,5 +138,109 @@ struct FreshVolatileTitleLearnerTests {
         _ = learner.observe([item(title: "3")])
         _ = learner.observe([item(title: "3", windowID: 1), item(title: "Status", x: 1120, windowID: 2)])
         #expect(learner.observe([item(title: "5")]).isEmpty)
+    }
+
+    // MARK: Apps worth another read
+
+    @Test("Only an app with one item that has a real title is worth comparing with the next read")
+    func titledSingleItemIsComparable() {
+        var learner = FreshVolatileTitleLearner()
+        #expect(learner.comparableOwners.isEmpty)
+        _ = learner.observe([
+            item(title: "9:44"),
+            item(bundle: "com.example.untitled", title: "", x: 900, windowID: 2),
+            item(bundle: "com.example.launching", title: "Item-0", x: 800, windowID: 3),
+            item(bundle: "com.tencent.qq", title: "3", x: 700, windowID: 4),
+            item(bundle: "com.example.pair", title: "One", x: 600, windowID: 5),
+            item(bundle: "com.example.pair", title: "Two", x: 500, windowID: 6),
+        ])
+        #expect(learner.comparableOwners == ["com.example.chat"])
+    }
+
+    @Test("A learned app is no longer worth another read")
+    func learnedOwnerIsNotComparable() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([item(title: "9:44")])
+        #expect(learner.observe([item(title: "9:45")]) == ["com.example.chat"])
+        #expect(learner.comparableOwners.isEmpty)
+    }
+
+    @Test("An app the reads keep skipping stops being worth another read")
+    func skippedOwnerStopsBeingComparable() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([item(title: "9:44")])
+        for _ in 1 ..< FreshVolatileTitleLearner.maxReadsBetweenTitles {
+            _ = learner.observe([])
+            #expect(learner.comparableOwners == ["com.example.chat"])
+        }
+        _ = learner.observe([])
+        #expect(learner.comparableOwners.isEmpty, "the next read could no longer compare its title")
+    }
+
+    // MARK: Titles that change the item's width
+
+    /// A label growing to its left: the bar holds its right edge where the next item starts.
+    private func label(_ title: String, width: CGFloat, rightEdge: CGFloat = 1200) -> MenuBarItem {
+        item(bundle: "com.example.player", title: title, x: rightEdge - width, width: width)
+    }
+
+    @Test("A title that changes the item's width is learned the second time in a row")
+    func learnsAResizingTitleOnItsSecondChange() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([label("Blue in Green", width: 110)])
+        #expect(learner.observe([label("So What", width: 70)]).isEmpty, "one resize could be another item in the slot")
+        #expect(learner.observe([label("Freddie Freeloader", width: 150)]) == ["com.example.player"])
+    }
+
+    @Test("A resize is remembered across reads that find the same title")
+    func keepsAResizeWhileTheTitleStays() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([label("Blue in Green", width: 110)])
+        _ = learner.observe([label("So What", width: 70)])
+        #expect(learner.observe([label("So What", width: 70)]).isEmpty)
+        #expect(learner.observe([label("Freddie Freeloader", width: 150)]) == ["com.example.player"])
+    }
+
+    @Test("A resizing title held by its left edge is learned the same way")
+    func learnsAResizeHeldByTheLeftEdge() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([item(title: "Blue in Green", x: 40, width: 110)])
+        _ = learner.observe([item(title: "So What", x: 40, width: 70)])
+        #expect(learner.observe([item(title: "Freddie Freeloader", x: 40, width: 150)]) == ["com.example.chat"])
+    }
+
+    @Test("Two items swapped in one slot and swapped back are not learned")
+    func refusesASwapAndSwapBack() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([label("Upload", width: 60)])
+        _ = learner.observe([label("Download queue", width: 120)])
+        #expect(learner.observe([label("Upload", width: 60)]).isEmpty)
+        #expect(learner.observe([label("Download queue", width: 120)]).isEmpty)
+    }
+
+    @Test("A resize followed by a title that left both edges is not learned")
+    func refusesAResizeThatAlsoMoved() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([label("Blue in Green", width: 110)])
+        _ = learner.observe([label("So What", width: 70)])
+        #expect(learner.observe([label("Freddie Freeloader", width: 150, rightEdge: 900)]).isEmpty)
+        #expect(learner.observe([label("All Blues", width: 80, rightEdge: 900)]).isEmpty, "the resize before the move is forgotten")
+    }
+
+    @Test("A clock gaining a digit is learned at its next minute, which keeps its width")
+    func learnsAClockAfterItGainsADigit() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([label("9:59", width: 40)])
+        #expect(learner.observe([label("10:00", width: 52)]).isEmpty)
+        #expect(learner.observe([label("10:01", width: 52)]) == ["com.example.player"])
+    }
+
+    @Test("A launch placeholder between two resizes breaks the row")
+    func placeholderBreaksARowOfResizes() {
+        var learner = FreshVolatileTitleLearner()
+        _ = learner.observe([label("Blue in Green", width: 110)])
+        _ = learner.observe([label("So What", width: 70)])
+        _ = learner.observe([label("Item-0", width: 24)])
+        #expect(learner.observe([label("Freddie Freeloader", width: 150)]).isEmpty)
     }
 }

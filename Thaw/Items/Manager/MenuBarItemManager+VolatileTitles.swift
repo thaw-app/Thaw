@@ -12,6 +12,9 @@ extension MenuBarItemManager {
     /// Keeps each app's last fresh scan between refreshes.
     private static var freshVolatileTitleLearner = FreshVolatileTitleLearner()
 
+    /// The one follow-up read waiting to run, and how many each app has left.
+    private static var retitleFollowUps = RetitleFollowUpSchedule()
+
     private static let learnedVolatileTitleOwnersKey = "MenuBarItemManager.learnedVolatileTitleOwners"
 
     /// Restore learned owners before canonicalization so known and saved-order identifiers load collapsed.
@@ -31,12 +34,32 @@ extension MenuBarItemManager {
         return bundleID == thaw || bundleID.hasPrefix(thaw + ".")
     }
 
+    /// Reads the bar once more if it stays quiet, because a new title alone starts no read and the
+    /// learner needs one on each side of the change. RetitleFollowUpSchedule limits these per app.
+    private func scheduleRetitleFollowUp() {
+        let candidates = Self.freshVolatileTitleLearner.comparableOwners.filter { !Self.isThawBundle($0) }
+        guard let delay = Self.retitleFollowUps.claim(candidates: candidates) else { return }
+        Self.retitleFollowUps.arm(Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(for: delay, tolerance: .seconds(5))
+            } catch {
+                return
+            }
+            // A newer read cancels this wait, and the cancel can land just after the sleep returns.
+            guard !Task.isCancelled, let self else { return }
+            Self.retitleFollowUps.fired()
+            MenuBarItemManager.diagLog.debug("Reading the bar again in case \(candidates.sorted()) renamed an item")
+            await cacheItemsRegardless()
+        })
+    }
+
     /// Collapse retitled single-item owners so changing counts or dates do not trigger new-arrival sorting.
     /// Takes fresh answers only: the cache keeps old titles, which look like extra items.
     func learnVolatileTitleOwners(fresh: [MenuBarItem], current: inout [MenuBarItem]) {
         let learned = Self.freshVolatileTitleLearner.observe(fresh)
             .filter { !Self.isThawBundle($0) }
             .filter(MenuBarItemTag.learnVolatileTitleOwner)
+        scheduleRetitleFollowUp()
         guard !learned.isEmpty else { return }
 
         MenuBarItemManager.diagLog.info("Learned retitling owners: \(learned.sorted())")

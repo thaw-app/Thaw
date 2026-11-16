@@ -32,6 +32,11 @@ the items under New and Fixed.
 - Showing a section in the menu bar while the Thaw Bar is open no longer hides it early, when the Thaw Bar's own hide timer runs out.
 - `thaw://release-item?bundle=` now lets go of every item of that app the sender holds, instead of failing when it holds more than one.
 - Smart rehide no longer skips a click outside the menu bar while the Thaw icon has no window yet, so the revealed items go away after the click as set.
+- Thaw does less work in the background: a mouse click in any app no longer makes it redraw the menu bar appearance and read every item's position again, and it no longer asks the system about every running app every three seconds.
+- An item that shows live text, such as a clock, is recognized as one item within about two minutes, instead of whenever something else in the menu bar next changed. Until then each new text could put it under New Items or lose its place. Text that changes the item's width, such as a song title, is recognized too, the second time it changes.
+- Thaw's memory no longer jumps by about 50 MB for a few seconds each time you switch apps or show a section while a menu bar shape, tint or shadow is on.
+- After you log in, Thaw no longer stays unable to see other apps' menu bar items when macOS refused its Accessibility reads during startup, which left the menu bar shape covering only part of the items. Thaw now notices and restarts itself once.
+- The Thaw Bar preview in Settings sits on the menu bar's own colour instead of a picture of your wallpaper, which could hold about 60 MB while the page was open.
 
 ## [3.0.0-alpha.14] - 2026-11-14
 
