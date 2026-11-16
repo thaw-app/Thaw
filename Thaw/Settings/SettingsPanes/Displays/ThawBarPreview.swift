@@ -105,7 +105,9 @@ struct ThawBarPreview: View {
         }
         .task(id: previewScreen?.displayID) {
             guard let screen = previewScreen else { return }
-            await appState.menuBarManager.updateAverageColorInfoAsync(for: screen.displayID)
+            await ThawBarSettingsLink.sampleColors(for: screen.displayID) { [menuBar = appState.menuBarManager] in
+                await menuBar.updateAverageColorInfoAsync(for: $0)
+            }
         }
     }
 

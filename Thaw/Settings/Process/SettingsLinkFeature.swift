@@ -100,6 +100,7 @@ enum SettingsLinkFeatures {
             DisplaysSettingsLink.app(appState),
             .tools(appState),
             .items(appState),
+            ThawBarSettingsLink.app(appState),
         ]
     }
 
@@ -111,6 +112,7 @@ enum SettingsLinkFeatures {
             DisplaysSettingsLink.child(appState),
             .tools(appState),
             .items(appState),
+            ThawBarSettingsLink.child(appState),
         ]
     }
 }

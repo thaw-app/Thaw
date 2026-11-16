@@ -105,10 +105,12 @@ struct ThawBarPreviewFooter: View {
     }
 
     private func openThawBar(on displayID: CGDirectDisplayID) {
-        guard let screen = NSScreen.screen(for: displayID) else {
-            return
-        }
-        appState.menuBarManager.thawBarPanel.show(section: sectionToOpen, on: screen)
+        ThawBarSettingsLink.openBar(
+            sectionToOpen,
+            on: displayID,
+            settings: appState.settings.displaySettings,
+            show: ThawBarSettingsLink.showsBar(of: appState)
+        )
     }
 
     /// Enables the Thaw Bar on the display, then opens it. Mirrors what the
