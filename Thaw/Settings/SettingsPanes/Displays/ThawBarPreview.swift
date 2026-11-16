@@ -11,7 +11,7 @@ import SwiftUI
 import ThawUI
 
 /// Preview the bound layout with the items the real bar shows, in LayoutBarItemView tiles.
-/// Center on wallpaper at real-panel proportions; bound height and scroll overflow instead of widening the page.
+/// Center on the bar's colour at real-panel proportions; bound height and scroll overflow instead of widening the page.
 struct ThawBarPreview: View {
     @Environment(AppState.self) private var appState
     let itemManager: MenuBarItemManager
