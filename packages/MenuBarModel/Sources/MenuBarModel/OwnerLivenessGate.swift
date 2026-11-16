@@ -7,12 +7,8 @@
 
 import Foundation
 
-/// Decides when the periodic liveness check has to read the whole process table.
-///
-/// That read asks the system about every running app, and the check runs every
-/// few seconds. So it reads only when something cheaper says an owner may have
-/// left: a cached owner's process is gone, the list of running apps is not the
-/// one last read, or the last read is older than the backstop.
+/// Decides when the periodic liveness check has to read the whole process table, which asks the system about every running app.
+/// It reads only when a cached owner's process is gone, the list of running apps changed, or the last read is older than the backstop.
 public struct OwnerLivenessGate<Signature: Equatable & Sendable>: Sendable {
     /// How long a read is trusted while nothing cheaper has changed. Covers an
     /// app the system still lists after it has quit.
@@ -22,11 +18,7 @@ public struct OwnerLivenessGate<Signature: Equatable & Sendable>: Sendable {
 
     public init() {}
 
-    /// Whether the process table has to be read now.
-    ///
-    /// - Parameters:
-    ///   - ownersAlive: Whether every cached owner's process still exists.
-    ///   - signature: What identifies the current list of running apps.
+    /// Whether the process table has to be read now: an owner's process is gone, the list of running apps changed, or the backstop passed.
     public func isReadDue(ownersAlive: Bool, signature: Signature, now: ContinuousClock.Instant) -> Bool {
         guard let lastRead, ownersAlive, lastRead.signature == signature else { return true }
         return lastRead.at.duration(to: now) >= Self.backstop

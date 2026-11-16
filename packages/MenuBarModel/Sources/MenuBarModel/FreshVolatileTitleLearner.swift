@@ -38,13 +38,7 @@ public struct FreshVolatileTitleLearner: Sendable {
         }
 
         /// Whether this title, read after old, shows the same process renaming its item where it sits.
-        /// Also notes a resize that has to be seen once more before it counts.
-        ///
-        /// A new title around the same centre counts at once. A new title that changed the item's width
-        /// moves the centre and leaves one edge where it was, and so would a different item of the app
-        /// put in the same slot. That counts only the second time in a row, with three different
-        /// titles, so swapping two items and swapping them back is not learned. A change to or from a
-        /// placeholder such as Item-0 is the app finishing its launch, so it never counts.
+        /// A title that changed the item's width counts only the second time in a row, and a placeholder such as Item-0 never does.
         mutating func showsRename(after old: Observation) -> Bool {
             guard old.sourcePID == sourcePID, !MenuBarItemTag.isGenericItemTitle(old.title), !MenuBarItemTag.isGenericItemTitle(title)
             else {
@@ -86,9 +80,7 @@ public struct FreshVolatileTitleLearner: Sendable {
     /// A learner that has seen no inventory yet.
     public init() {}
 
-    /// Returns owners whose title changed while their single menu bar slot stayed in place and the
-    /// same process kept publishing it. An app a read skipped keeps its last title for a few reads.
-    /// A title that changed the item's width is returned the second time in a row.
+    /// Returns owners whose title changed while their single slot stayed in place and the same process kept publishing it.
     /// - Parameter isAlive: Whether a process still runs, to tell a relaunch from a second process.
     public mutating func observe(
         _ freshItems: [MenuBarItem],

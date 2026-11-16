@@ -7,13 +7,8 @@
 
 import Foundation
 
-/// Decides when the bar is read once more to catch an app renaming its item.
-///
-/// Thaw reads the bar when something on it changes, and a new title alone is not such a change. On a
-/// quiet bar FreshVolatileTitleLearner could wait a long time for the second read it needs. After a
-/// read that leaves an app worth comparing, this asks for another read once the bar has gone a little
-/// over a minute without one. Each app can cause only a few of these, so an app whose title never
-/// changes stops causing reads.
+/// Decides when the bar is read once more to catch an app renaming its item, since a new title alone starts no read.
+/// It asks for one after a little over a minute without a read, and only a few times per app.
 public struct RetitleFollowUpSchedule: Sendable {
     /// Just over a minute, so a clock's change of minute always falls between two reads.
     public static let delay = Duration.seconds(65)
@@ -28,12 +23,9 @@ public struct RetitleFollowUpSchedule: Sendable {
     private var awaited = Set<String>()
     private var task: Task<Void, Never>?
 
-    /// A schedule with nothing waiting and every app's follow-ups unused.
     public init() {}
 
-    /// Notes a fresh read and cancels the follow-up it replaces, so one runs only after the bar has gone
-    /// the whole delay without a read.
-    /// - Parameter candidates: Apps the read left worth comparing with the next one.
+    /// Notes a fresh read and cancels the follow-up it replaces, so one runs only after the whole delay without a read.
     /// - Returns: How long to wait before reading again, or nil when no candidate has a follow-up left.
     public mutating func claim(candidates: Set<String>) -> Duration? {
         task?.cancel()
