@@ -138,6 +138,9 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **Layout picks up new items when macOS leaves out Thaw's own icon,** and QQ and WeChat keep one item each. Reported by @Mujun05 in [#1449](https://github.com/thaw-app/Thaw/issues/1449) and fixed in [#1450](https://github.com/thaw-app/Thaw/pull/1450).
 - **Capture Hidden Items no longer lists a kept picture as missing** when macOS rebuilds the menu bar. Fixed by @Belligerently in [#1448](https://github.com/thaw-app/Thaw/pull/1448).
 - **An Apple item that Thaw replaces, such as AirDrop, no longer shows twice** in Layout and the Thaw Bar.
+- **Pictures of hidden items fit again after you narrow the menu bar spacing.** By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
+- **An icon that got much narrower gets its new picture,** such as one that stops showing text. By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
+- **A cut-off picture no longer replaces a good one** that Thaw loaded from disk. By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
 
 #### Thaw Bar
 

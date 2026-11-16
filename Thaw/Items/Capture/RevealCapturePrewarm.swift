@@ -32,6 +32,9 @@ struct RevealCapturePrewarm {
     /// Reveals and photographs one section's chosen items on the display.
     let captureSection: @MainActor ([MenuBarItem], CGDirectDisplayID) async -> Void
     let save: @MainActor () -> Void
+    /// Picks pictures that no longer fit their item for an automatic pass to retake: the one the
+    /// Thaw Bar's passes share for the session unless a caller passes another, or nil for none.
+    var retakeLedger: GlyphRetakeLedger? = .shared
 
     /// Briefly reveals concealed sections so their live glyphs can be captured before the assertion hides them again.
     func capture(sections requestedSections: [MenuBarSection.Name], onlyMissingImages: Bool, tally: RequestedCaptureTally?) async {
@@ -64,12 +67,18 @@ struct RevealCapturePrewarm {
 
         // Always-hidden items go through the same grouped reveal as hidden ones: closing the Thaw Bar
         // conceals a revealed section again. Inline in the caller's task, so its cancel stops the loop.
+        // The width-retake limit holds for the whole pass, not for each section.
+        var widthRetakesLeft = GlyphRetakeLedger.widthRetakesPerPass
         for section in sections {
             guard let items = sectionItems(section) else { break }
             guard !items.isEmpty else { continue }
 
             let displayID = displayID()
-            let itemsToCapture = itemsToCapture(from: items, onlyMissingImages: onlyMissingImages, retakesClipped: tally != nil, on: displayID)
+            let retakes = onlyMissingImages ? widthRetakes(among: items, on: displayID, limit: widthRetakesLeft) : []
+            widthRetakesLeft -= retakes.count
+            let itemsToCapture = itemsToCapture(
+                from: items, onlyMissingImages: onlyMissingImages, retakes: retakes, retakesClipped: tally != nil, on: displayID
+            )
             guard !itemsToCapture.isEmpty else { continue }
 
             guard !Task.isCancelled else {
@@ -79,6 +88,10 @@ struct RevealCapturePrewarm {
                 break
             }
             await captureSection(itemsToCapture, displayID)
+            // A screen locked during the capture revealed nothing, so its retakes are still due.
+            if !isLocked("recording width retakes") {
+                retakeLedger?.noteRetaken(retakes)
+            }
         }
 
         // One save after the whole pass: every save rewrites the entire cache.
@@ -104,10 +117,10 @@ struct RevealCapturePrewarm {
         return MenuBarItemImageCache.hiddenItemCaptureResult(items: items, alreadyGood: alreadyGood, newlyCaptured: newlyCaptured)
     }
 
-    /// The items of one section a prewarm reveals, in section order. A pass the user asked for
-    /// also retakes pictures clipped at their left or right edge.
+    /// The items of one section a prewarm reveals, in section order: those missing a picture, and
+    /// retakes. A pass the user asked for also retakes pictures clipped at their left or right edge.
     private func itemsToCapture(
-        from items: [MenuBarItem], onlyMissingImages: Bool, retakesClipped: Bool, on displayID: CGDirectDisplayID
+        from items: [MenuBarItem], onlyMissingImages: Bool, retakes: Set<String>, retakesClipped: Bool, on displayID: CGDirectDisplayID
     ) -> [MenuBarItem] {
         // Native notch overflow stays in force when Thaw lifts an item's concealment,
         // so a prewarm then captures only the system chevron.
@@ -115,12 +128,29 @@ struct RevealCapturePrewarm {
         let allowsCaptureReveal = allowsCaptureReveal()
         return items.filter { item in
             guard !Self.skips(item, allowsCaptureReveal: allowsCaptureReveal) else { return false }
-            return !onlyMissingImages || MenuBarItemImageCache.prewarmNeedsCapture(
+            return !onlyMissingImages || retakes.contains(item.tag.tagIdentifier) || MenuBarItemImageCache.prewarmNeedsCapture(
                 cachedImage: cachedImage(item.tag),
                 wouldAttemptCapture: wouldAttemptCapture(item),
                 retakesClipped: retakesClipped
             )
         }
+    }
+
+    /// The items whose picture no longer fits them and the ledger has this pass retake, limit at most.
+    private func widthRetakes(among items: [MenuBarItem], on displayID: CGDirectDisplayID, limit: Int) -> Set<String> {
+        guard let retakeLedger, limit > 0, !isNativeOverflowActive(displayID) else { return [] }
+        let allowsCaptureReveal = allowsCaptureReveal()
+        let candidates = items.compactMap { item -> GlyphRetakeLedger.Candidate? in
+            guard !Self.skips(item, allowsCaptureReveal: allowsCaptureReveal), wouldAttemptCapture(item),
+                  let picture = cachedImage(item.tag)
+            else { return nil }
+            return GlyphRetakeLedger.Candidate(identifier: item.tag.tagIdentifier, pictureWidth: picture.pointSize.width, itemWidth: item.bounds.width)
+        }
+        let retakes = retakeLedger.retakes(among: candidates, limit: limit)
+        if !retakes.isEmpty {
+            MenuBarItemImageCache.diagLog.debug("prewarmConcealedImages: retaking \(retakes.sorted()), whose picture no longer fits the item")
+        }
+        return retakes
     }
 
     /// The requested sections without the visible one or repeats, in request order.
