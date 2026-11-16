@@ -17,19 +17,17 @@ struct ProfileSwitchesSection: View {
     let displaySettings: DisplaySettingsManager
     let profile: ProfileMetadata
     @Binding var errorMessage: String?
+    /// Set in the settings process, where the app saves the choices and holds the shortcut.
+    var remote: SettingsRemote? = .current
+    var report: ProfilesAppReport = .shared
 
     var body: some View {
         ThawSection {
             Text("What switches to this profile")
         } content: {
-            if let hotkey = profileManager.profileHotkeys[profile.id] {
-                HotkeyRecorder(hotkey: hotkey) {
-                    Text("Keyboard shortcut")
-                        .settingsSearchAnchor("profiles.shortcuts")
-                }
+            shortcutRecorder
                 // The recorder keeps its capture in State, so a new profile needs a new recorder.
                 .id(profile.id)
-            }
             displayPicker
             spaceRow
             focusRow
@@ -39,6 +37,46 @@ struct ProfileSwitchesSection: View {
                 .foregroundStyle(ThawInk.supporting)
         }
         .settingsSearchAnchor("profiles.switching")
+    }
+
+    // MARK: Shortcut
+
+    @ViewBuilder
+    private var shortcutRecorder: some View {
+        if let remote {
+            if report.shortcuts.contains(where: { $0.profile == profile.id }) {
+                HotkeyRecorder(
+                    keyCombination: shortcutBinding(remote: remote),
+                    strings: .thaw,
+                    onRecordingChange: { send(.recordingShortcut($0, profile: profile.id), via: remote) },
+                    label: { shortcutLabel }
+                )
+            }
+        } else if let hotkey = profileManager.profileHotkeys[profile.id] {
+            HotkeyRecorder(hotkey: hotkey) { shortcutLabel }
+        }
+    }
+
+    private var shortcutLabel: some View {
+        Text("Keyboard shortcut")
+            .settingsSearchAnchor("profiles.shortcuts")
+    }
+
+    /// The shortcut as the app has it, and a recorded or cleared one sent to the app, which holds the hotkey.
+    func shortcutBinding(remote: SettingsRemote) -> Binding<KeyCombination?> {
+        Binding {
+            report.shortcuts.first { $0.profile == profile.id }?.combination
+        } set: { combination in
+            send(.shortcut(combination, profile: profile.id), via: remote)
+        }
+    }
+
+    private func send(_ action: ProfilePageAction, via remote: SettingsRemote) {
+        ProfilePageRunner.send(action, via: remote, report: report, errorMessage: $errorMessage)
+    }
+
+    private func make(_ edit: ProfileListEdit) {
+        ProfilePageRunner.make(edit, on: profileManager, remote: remote, report: report, errorMessage: $errorMessage)
     }
 
     // MARK: Display
@@ -59,12 +97,7 @@ struct ProfileSwitchesSection: View {
             profileManager.profiles.first { $0.id == profile.id }?.associatedDisplayUUID ?? ""
         } set: { uuid in
             let display = knownDisplays.first { $0.id == uuid }
-            profileManager.setAssociatedDisplay(
-                uuid: uuid.isEmpty ? nil : uuid,
-                displayName: display?.name,
-                forProfileID: profile.id
-            )
-            reportManifestFailure()
+            make(.display(uuid: uuid.isEmpty ? nil : uuid, name: display?.name, profile: profile.id))
         }
     }
 
@@ -132,8 +165,7 @@ struct ProfileSwitchesSection: View {
             // A missing Space keeps the name stored with it.
             let name = groups.lazy.flatMap(\.spaces).first { $0.id == key }?.label
                 ?? profileManager.profiles.first { $0.associatedSpaceKey == key }?.associatedSpaceName
-            profileManager.setAssociatedSpace(key: key.isEmpty ? nil : key, spaceName: name, forProfileID: profile.id)
-            reportManifestFailure()
+            make(.space(key: key.isEmpty ? nil : key, name: name, profile: profile.id))
         }
     }
 
@@ -152,12 +184,6 @@ struct ProfileSwitchesSection: View {
                 "With a Focus",
                 detail: "Add \(Constants.displayName) as a Focus filter in System Settings \(Constants.menuArrow) Focus and pick this profile. When the Focus ends, the display's profile comes back."
             )
-        }
-    }
-
-    private func reportManifestFailure() {
-        if let message = profileManager.takeManifestError() {
-            errorMessage = message
         }
     }
 }

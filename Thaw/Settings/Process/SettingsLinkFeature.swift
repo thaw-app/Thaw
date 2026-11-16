@@ -102,6 +102,7 @@ enum SettingsLinkFeatures {
             .items(appState),
             ThawBarSettingsLink.app(appState),
             .hotkeys(appState),
+            ProfilesLink.app(appState),
         ]
     }
 
@@ -116,6 +117,7 @@ enum SettingsLinkFeatures {
             ThawBarSettingsLink.child(appState),
             .hotkeys(appState),
             .triggers(appState),
+            ProfilesLink.child(profiles: appState.profileManager),
         ]
     }
 }

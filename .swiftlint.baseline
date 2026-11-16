@@ -2542,25 +2542,10 @@
     "file": "Thaw/Settings/SettingsPanes/Profiles/ProfileSettingsPane.swift",
     "line": 13
    },
-   "reason": "Struct body should span 350 lines or less excluding comments and whitespace: currently spans 375 lines",
+   "reason": "Struct body should span 250 lines or less excluding comments and whitespace: currently spans 278 lines",
    "ruleDescription": "Type bodies should not span too many lines",
    "ruleIdentifier": "type_body_length",
    "ruleName": "Type Body Length",
-   "severity": "error"
-  }
- },
- {
-  "text": "}",
-  "violation": {
-   "location": {
-    "character": 1,
-    "file": "Thaw/Settings/SettingsPanes/Profiles/ProfileSettingsPane.swift",
-    "line": 488
-   },
-   "reason": "File should contain 400 lines or less: currently contains 488",
-   "ruleDescription": "Files should not span too many lines.",
-   "ruleIdentifier": "file_length",
-   "ruleName": "File Length",
    "severity": "warning"
   }
  },
