@@ -44,7 +44,9 @@ final class SettingsItemsMirror {
     }
 
     /// The panes that draw no item pictures, so the app readies none for them. Any other pane gets them.
-    static let panesWithoutPictures: Set<SettingsNavigationIdentifier> = [.general, .visibility, .privacy, .about]
+    static let panesWithoutPictures: Set<SettingsNavigationIdentifier> = [
+        .general, .visibility, .privacy, .about, .menuBarAppearance, .modules, .widgets, .scripts, .displays, .tools, .triggers,
+    ]
 
     /// What the page shown here needs captured, by the rules a page in the app follows.
     var demand: SettingsProcessCaptureDemand {

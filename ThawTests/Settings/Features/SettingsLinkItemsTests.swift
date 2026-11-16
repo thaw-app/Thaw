@@ -151,6 +151,23 @@ struct SettingsItemsRelayTests {
         #expect(feature.statuses[SettingsItemsLink.pictures]?() == nil)
     }
 
+    @Test("A sample asked for before the settings process listens is taken once it does, and dropped if it never does")
+    func earlySampleWaitsForListen() throws {
+        try feature.commands[SettingsItemsLink.sampleColors]?(Fixture.payload(CGDirectDisplayID(3)))
+        try feature.commands[SettingsItemsLink.sampleColors]?(Fixture.payload(CGDirectDisplayID(7)))
+        #expect(fake.samples.isEmpty, "The app samples nothing for a page it has not heard from")
+        try listen()
+        #expect(fake.samples == [7], "The last request stands for the earlier one")
+        try listen()
+        #expect(fake.samples == [7], "It is taken once")
+
+        feature.processEnded()
+        try feature.commands[SettingsItemsLink.sampleColors]?(Fixture.payload(CGDirectDisplayID(9)))
+        feature.processEnded()
+        try listen()
+        #expect(fake.samples == [7], "A request the ended process left behind is not taken for the next one")
+    }
+
     @Test("Colours are sampled when a preview asks, and now and then while the page shown reads the screen")
     func colours() async throws {
         try listen()
@@ -327,6 +344,10 @@ final class SettingsItemsMirrorTests {
         #expect(mirror.demand == Demand(isFrontmost: true, showsPictures: true), "Pictures without capture")
         navigation.settingsNavigationIdentifier = .general
         #expect(mirror.demand == Demand(isFrontmost: true))
+        navigation.settingsNavigationIdentifier = .triggers
+        #expect(mirror.demand == Demand(isFrontmost: true), "A page that lists names draws no pictures")
+        navigation.settingsNavigationIdentifier = .menuBarAppearance
+        #expect(mirror.demand == Demand(consumesCapture: true, scope: .none, isFrontmost: true), "Colours are sampled, pictures are not readied")
         navigation.settingsNavigationIdentifier = .menuBarLayout
         #expect(mirror.demand == .none, "A pane handed to the app is the app's to capture for")
     }

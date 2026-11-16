@@ -123,6 +123,8 @@ final class SettingsItemsRelay {
     @ObservationIgnored private var itemWatch: Task<Void, Never>?
     @ObservationIgnored private var pictureWatch: Task<Void, Never>?
     @ObservationIgnored private var colorPoll: Task<Void, Never>?
+    /// A sample asked for before the settings process said what its page needs. The app takes none until then.
+    @ObservationIgnored private var earlySample: CGDirectDisplayID??
 
     init(app: App, pace: Pace = Pace()) {
         self.app = app
@@ -137,6 +139,10 @@ final class SettingsItemsRelay {
             isListening = true
             itemWatch = followItems()
         }
+        if let early = earlySample {
+            earlySample = nil
+            app.sampleColors(early)
+        }
         // Reading and saving pictures costs the app memory and work, so it waits for a page that draws them.
         if demand.showsPictures, pictureWatch == nil {
             app.preparePictures()
@@ -146,6 +152,7 @@ final class SettingsItemsRelay {
 
     /// The settings process has ended: nothing is sent or captured for it any more.
     func stop() {
+        earlySample = nil
         guard isListening else { return }
         itemWatch?.cancel()
         itemWatch = nil
@@ -161,6 +168,10 @@ final class SettingsItemsRelay {
     }
 
     func sampleColors(for displayID: CGDirectDisplayID?) {
+        guard isListening else {
+            earlySample = .some(displayID)
+            return
+        }
         app.sampleColors(displayID)
     }
 
