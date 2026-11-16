@@ -2,7 +2,7 @@
 //  ConcealedOrderGuard.swift
 //  Project: Thaw
 //
-//  Copyright (Thaw) © 2026 René Jiménez
+//  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 /// Keeps a Hidden or Always Hidden order write from moving items of other sections.
