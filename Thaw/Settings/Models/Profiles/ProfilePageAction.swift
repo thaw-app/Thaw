@@ -6,7 +6,6 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
-import ThawUI
 
 /// One thing the Profiles page does with the profiles or the menu bar. The app runs it, for its
 /// own Settings window or for the settings process.
@@ -27,11 +26,6 @@ enum ProfilePageAction: Codable {
     /// Adds the profiles in an export file's contents.
     case importFile(Data)
     case edit(ProfileListEdit)
-    /// Sets or clears the shortcut that applies a profile. Only the settings process asks: the
-    /// app's own page records into the hotkey itself.
-    case shortcut(KeyCombination?, profile: UUID)
-    /// Stands a profile's shortcut down while the settings process records a new one.
-    case recordingShortcut(Bool, profile: UUID)
 }
 
 /// A change to what switches to a profile or how it keeps its layout, saved with the profile list.

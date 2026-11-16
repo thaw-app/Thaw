@@ -50,12 +50,12 @@ struct ProfilePagePerformer {
             return try duplicate(id: id, name: name)
         case let .delete(id):
             return try delete(id: id)
-        case .export, .importFile, .edit, .shortcut, .recordingShortcut:
+        case .export, .importFile, .edit:
             return try Done(outcome: performWithoutUndo(action))
         }
     }
 
-    /// The actions the page has no undo for: files, what switches to a profile, and its shortcut.
+    /// The actions the page has no undo for: files and what switches to a profile.
     private func performWithoutUndo(_ action: ProfilePageAction) throws -> ProfilePageOutcome {
         switch action {
         case let .export(id):
@@ -67,15 +67,6 @@ struct ProfilePagePerformer {
             }
         case let .edit(edit):
             try edit.apply(to: profileManager)
-        case let .shortcut(combination, profile):
-            profileManager.profileHotkeys[profile]?.keyCombination = combination
-        case let .recordingShortcut(isRecording, profile):
-            let hotkey = profileManager.profileHotkeys[profile]
-            if isRecording {
-                hotkey?.disable()
-            } else {
-                hotkey?.enable()
-            }
         default:
             break
         }

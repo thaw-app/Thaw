@@ -17,17 +17,21 @@ struct ProfileSwitchesSection: View {
     let displaySettings: DisplaySettingsManager
     let profile: ProfileMetadata
     @Binding var errorMessage: String?
-    /// Set in the settings process, where the app saves the choices and holds the shortcut.
+    /// Set in the settings process, where the app saves the choices.
     var remote: SettingsRemote? = .current
-    var report: ProfilesAppReport = .shared
 
     var body: some View {
         ThawSection {
             Text("What switches to this profile")
         } content: {
-            shortcutRecorder
+            if let hotkey = profileManager.profileHotkeys[profile.id] {
+                HotkeyRecorder(hotkey: hotkey) {
+                    Text("Keyboard shortcut")
+                        .settingsSearchAnchor("profiles.shortcuts")
+                }
                 // The recorder keeps its capture in State, so a new profile needs a new recorder.
                 .id(profile.id)
+            }
             displayPicker
             spaceRow
             focusRow
@@ -39,44 +43,8 @@ struct ProfileSwitchesSection: View {
         .settingsSearchAnchor("profiles.switching")
     }
 
-    // MARK: Shortcut
-
-    @ViewBuilder
-    private var shortcutRecorder: some View {
-        if let remote {
-            if report.shortcuts.contains(where: { $0.profile == profile.id }) {
-                HotkeyRecorder(
-                    keyCombination: shortcutBinding(remote: remote),
-                    strings: .thaw,
-                    onRecordingChange: { send(.recordingShortcut($0, profile: profile.id), via: remote) },
-                    label: { shortcutLabel }
-                )
-            }
-        } else if let hotkey = profileManager.profileHotkeys[profile.id] {
-            HotkeyRecorder(hotkey: hotkey) { shortcutLabel }
-        }
-    }
-
-    private var shortcutLabel: some View {
-        Text("Keyboard shortcut")
-            .settingsSearchAnchor("profiles.shortcuts")
-    }
-
-    /// The shortcut as the app has it, and a recorded or cleared one sent to the app, which holds the hotkey.
-    func shortcutBinding(remote: SettingsRemote) -> Binding<KeyCombination?> {
-        Binding {
-            report.shortcuts.first { $0.profile == profile.id }?.combination
-        } set: { combination in
-            send(.shortcut(combination, profile: profile.id), via: remote)
-        }
-    }
-
-    private func send(_ action: ProfilePageAction, via remote: SettingsRemote) {
-        ProfilePageRunner.send(action, via: remote, report: report, errorMessage: $errorMessage)
-    }
-
     private func make(_ edit: ProfileListEdit) {
-        ProfilePageRunner.make(edit, on: profileManager, remote: remote, report: report, errorMessage: $errorMessage)
+        ProfilePageRunner.make(edit, on: profileManager, remote: remote, errorMessage: $errorMessage)
     }
 
     // MARK: Display

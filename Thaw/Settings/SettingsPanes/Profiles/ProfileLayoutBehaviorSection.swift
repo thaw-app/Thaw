@@ -16,7 +16,6 @@ struct ProfileLayoutBehaviorSection: View {
     @Binding var errorMessage: String?
     /// Set in the settings process, where the app saves the switches.
     var remote: SettingsRemote? = .current
-    var report: ProfilesAppReport = .shared
 
     var body: some View {
         ThawSection("Layout") {
@@ -47,7 +46,7 @@ struct ProfileLayoutBehaviorSection: View {
         Binding {
             (profileManager.profiles.first { $0.id == profile.id } ?? profile)[keyPath: keyPath]
         } set: { value in
-            ProfilePageRunner.make(edit(value), on: profileManager, remote: remote, report: report, errorMessage: $errorMessage)
+            ProfilePageRunner.make(edit(value), on: profileManager, remote: remote, errorMessage: $errorMessage)
         }
     }
 }

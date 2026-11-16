@@ -14,34 +14,62 @@ import Testing
 import ThawUI
 
 /// The app and its settings process joined in one process: a command runs in the app's share of the link at once,
-/// and the app's answer reaches the settings process's share the same way.
+/// and a request is answered as the host answers it, with the handler's answer or the words of what it threw.
 @MainActor
 @Observable
 private final class Wire {
-    @ObservationIgnored let report = ProfilesAppReport()
-    @ObservationIgnored private(set) var app = SettingsAppFeature()
-    @ObservationIgnored private(set) var child = SettingsChildFeature()
-    /// The names of the commands the settings process sent.
-    private(set) var commands = [String]()
-    @ObservationIgnored private(set) lazy var remote = SettingsRemote { [weak self] message in
-        guard let self, case let .command(name, payload) = message else { return }
-        commands.append(name)
-        app.commands[name]?(payload)
+    @ObservationIgnored private var app = [SettingsAppFeature]()
+    @ObservationIgnored private var child = [SettingsChildFeature]()
+    /// The names of the requests and commands the settings process sent.
+    private(set) var asked = [String]()
+    @ObservationIgnored private(set) lazy var remote = SettingsRemote { [weak self] in self?.deliver($0) }
+
+    /// Joins the Profiles page's share with the Shortcuts page's, which carries each profile's shortcut.
+    init(app appState: AppState, child childState: AppState) {
+        let profiles = ProfilesAppLink(profileManager: appState.profileManager) {
+            ProfilePagePerformer(profileManager: appState.profileManager, appState: appState)
+        }
+        app = [profiles.feature, .hotkeys(appState)]
+        let hotkeys = SettingsHotkeysMirror(models: .live(childState)) { [weak self] in self?.remote }
+        child = [ProfilesLink.child(profiles: childState.profileManager), .hotkeys(mirror: hotkeys)]
     }
 
-    init(app appState: AppState, childProfiles: ProfileManager) {
-        child = ProfilesLink.child(profiles: childProfiles, report: report)
-        app = ProfilesAppLink(
-            profileManager: appState.profileManager,
-            performer: { ProfilePagePerformer(profileManager: appState.profileManager, appState: appState) },
-            send: { [weak self] topic, payload in self?.child.statuses[topic]?(payload) }
-        ).feature
+    private func deliver(_ message: SettingsLinkMessage) {
+        switch message {
+        case let .command(name, payload):
+            asked.append(name)
+            app.forEach { $0.commands[name]?(payload) }
+        case let .request(id, name, payload):
+            asked.append(name)
+            guard let handler = app.lazy.compactMap({ $0.requests[name] }).first else { return }
+            Task {
+                do {
+                    try await remote.answered(id: id, payload: handler(payload), failure: nil)
+                } catch {
+                    remote.answered(id: id, payload: nil, failure: error.localizedDescription)
+                }
+            }
+        default:
+            break
+        }
     }
 
-    /// Sends the app's list as the host does when what it reads has changed.
-    func sendList() throws {
-        let payload = try #require(app.statuses[ProfilesLink.list]?())
-        child.statuses[ProfilesLink.list]?(payload)
+    /// What the app would send under a topic now.
+    func status(_ topic: String) -> Data? {
+        app.lazy.compactMap { $0.statuses[topic]?() }.first
+    }
+
+    func show(_ topic: String, _ payload: Data) {
+        child.forEach { $0.statuses[topic]?(payload) }
+    }
+
+    /// Sends the app's state under a topic as the host does when what it reads has changed.
+    func send(_ topic: String = ProfilesLink.list) throws {
+        try show(topic, #require(status(topic)))
+    }
+
+    func endProcess() {
+        app.forEach { $0.processEnded() }
     }
 }
 
@@ -82,7 +110,6 @@ struct SettingsLinkProfilesTests {
             ProfilePageRunner(
                 performer: ProfilePagePerformer(profileManager: childProfiles, appState: childState),
                 remote: wire.remote,
-                report: wire.report,
                 undoManager: undo,
                 errorMessage: errors.binding
             )
@@ -130,9 +157,10 @@ struct SettingsLinkProfilesTests {
             childState: childState,
             childProfiles: childState.profileManager,
             directory: directory,
-            wire: Wire(app: appState, childProfiles: childState.profileManager)
+            wire: Wire(app: appState, child: childState)
         )
         try await body(world)
+        #expect(childState.profileManager.appState == nil, "the settings process's profiles never get the app state, which would register hotkeys")
         let written = try FileManager.default.contentsOfDirectory(atPath: childDirectory.path)
         #expect(written.isEmpty, "the settings process wrote no profile file")
     }
@@ -161,11 +189,7 @@ struct SettingsLinkProfilesTests {
         var metadata = ProfileMetadata(id: id, name: "Work", createdAt: .now, modifiedAt: .now)
         metadata.associatedDisplayUUID = "DISPLAY"
         metadata.keepsLayoutChangesSetting = false
-        #expect(survives(Link.List(
-            profiles: [metadata],
-            shortcuts: [Link.Shortcut(profile: id, combination: Self.combination), Link.Shortcut(profile: UUID(), combination: nil)]
-        )))
-        #expect(survives(Link.UndoRequest(id: UUID(), edit: id)))
+        #expect(survives([metadata]))
         #expect(survives(ProfileListEdit.display(uuid: nil, name: nil, profile: id)))
         #expect(survives(ProfileListEdit.space(key: "SPACE", name: "Desktop 2", profile: id)))
         #expect(survives(ProfileListEdit.layoutBehavior(keepsChanges: nil, reappliesAtLaunch: true, profile: id)))
@@ -175,11 +199,10 @@ struct SettingsLinkProfilesTests {
             .update(id: id, scope: .layoutOnly), .updateSettingsInEveryProfile, .rename(id: id, name: "Office"),
             .duplicate(id: id, name: "Work Copy"), .delete(id: id), .export(id: nil), .export(id: id),
             .importFile(Data("{}".utf8)), .edit(.display(uuid: "DISPLAY", name: "Studio", profile: id)),
-            .shortcut(Self.combination, profile: id), .shortcut(nil, profile: id), .recordingShortcut(true, profile: id),
         ]
         for action in actions {
-            let sent = try #require(SettingsLinkPayload.encode(Link.Request(id: id, action: action)))
-            let received = try #require(SettingsLinkPayload.decode(Link.Request.self, from: sent))
+            let sent = try #require(SettingsLinkPayload.encode(action))
+            let received = try #require(SettingsLinkPayload.decode(ProfilePageAction.self, from: sent))
             #expect(SettingsLinkPayload.encode(received) == sent, "\(action)")
         }
 
@@ -189,35 +212,27 @@ struct SettingsLinkProfilesTests {
         diff.settingChanges = [.init(key: "area.names", label: "Item names")]
         diff.relaunchingSpacingOffset = 4
         let outcome = ProfilePageOutcome(undoName: "Save Profile", preview: ProfilePreview(profile: profile, diff: diff), exported: Data([1, 2]), notice: "Note")
-        let sent = try #require(SettingsLinkPayload.encode(Link.Answer(request: id, outcome: outcome, failure: "Failed")))
-        let answer = try #require(SettingsLinkPayload.decode(Link.Answer.self, from: sent))
-        #expect(answer.request == id)
-        #expect(answer.failure == "Failed")
-        #expect(answer.outcome?.undoName == "Save Profile")
-        #expect(answer.outcome?.preview?.profile.id == profile.id)
-        #expect(answer.outcome?.preview?.diff == diff)
-        #expect(answer.outcome?.exported == Data([1, 2]))
-        #expect(answer.outcome?.notice == "Note")
+        let sent = try #require(SettingsLinkPayload.encode(Link.Performed(outcome: outcome, undo: id)))
+        let answer = try #require(SettingsLinkPayload.decode(Link.Performed.self, from: sent))
+        #expect(answer.undo == id)
+        #expect(answer.outcome.undoName == "Save Profile")
+        #expect(answer.outcome.preview?.profile.id == profile.id)
+        #expect(answer.outcome.preview?.diff == diff)
+        #expect(answer.outcome.exported == Data([1, 2]))
+        #expect(answer.outcome.notice == "Note")
     }
 
     // MARK: The list
 
-    @Test("The app sends the profile list, and each profile's shortcut once it listens for them")
+    @Test("The app sends the profile list as it is now")
     func appSendsList() async throws {
         try await withWorld(profiles: ["Work", "Home"]) { world in
-            let status = try #require(world.wire.app.statuses[Link.list])
-            @MainActor func list() throws -> Link.List {
-                try #require(status().flatMap { SettingsLinkPayload.decode(Link.List.self, from: $0) })
+            @MainActor func list() throws -> [ProfileMetadata] {
+                try #require(world.wire.status(Link.list).flatMap { SettingsLinkPayload.decode([ProfileMetadata].self, from: $0) })
             }
-            #expect(try list().profiles == world.profiles.profiles)
-            #expect(try list().shortcuts.isEmpty, "an app that was never started has no hotkeys")
-
-            world.profiles.appState = world.appState
-            world.profiles.rebuildProfileHotkeys()
-            #expect(try list().shortcuts == world.profiles.profiles.map { Link.Shortcut(profile: $0.id, combination: nil) })
-
+            #expect(try list() == world.profiles.profiles)
             try world.profiles.renameProfile(id: world.profiles.profiles[0].id, to: "Office")
-            #expect(try list().profiles.map(\.name) == ["Office", "Home"])
+            #expect(try list().map(\.name) == ["Office", "Home"])
         }
     }
 
@@ -225,13 +240,13 @@ struct SettingsLinkProfilesTests {
     func childShowsList() async throws {
         try await withWorld(profiles: ["Work", "Home"]) { world in
             #expect(world.childProfiles.profiles.isEmpty)
-            let shown = try listChanges(in: world.childProfiles) { try world.wire.sendList() }
+            let shown = try listChanges(in: world.childProfiles) { try world.wire.send() }
             #expect(shown)
             #expect(world.childProfiles.profiles == world.profiles.profiles)
-            let shownAgain = try listChanges(in: world.childProfiles) { try world.wire.sendList() }
+            let shownAgain = try listChanges(in: world.childProfiles) { try world.wire.send() }
             #expect(!shownAgain, "the same list again changes nothing")
 
-            world.wire.child.statuses[Link.list]?(Data("not a list".utf8))
+            world.wire.show(Link.list, Data("not a list".utf8))
             #expect(world.childProfiles.profiles == world.profiles.profiles, "a payload that isn't a list changes nothing")
         }
     }
@@ -256,7 +271,7 @@ struct SettingsLinkProfilesTests {
             world.undo.redo()
             await world.waitForNames(["Desk"])
             #expect(world.profiles.profiles.first?.id == id, "redo brings back the same profile")
-            #expect(world.wire.commands == [Link.perform, Link.undo, Link.undo])
+            #expect(world.wire.asked == [Link.perform, Link.undo, Link.undo])
             #expect(world.errors.message == nil)
         }
     }
@@ -309,9 +324,13 @@ struct SettingsLinkProfilesTests {
             let afterAll = try saved()
             #expect(afterAll == [!original, !original])
 
-            let outcome = await world.run(.update(id: UUID(), scope: .all))
-            #expect(outcome == nil)
-            #expect(world.errors.message != nil, "the app's failure shows on the page")
+            let missing = UUID()
+            #expect(await world.run(.update(id: missing, scope: .all)) == nil)
+            let here = Errors()
+            let performer = ProfilePagePerformer(profileManager: world.profiles, appState: world.appState)
+            ProfilePageRunner(performer: performer, remote: nil, undoManager: nil, errorMessage: here.binding).run(.update(id: missing, scope: .all))
+            #expect(here.message != nil)
+            #expect(world.errors.message == here.message, "the app's failure shows on the page in the words its own window shows")
         }
     }
 
@@ -379,21 +398,19 @@ struct SettingsLinkProfilesTests {
     func editsList() async throws {
         try await withWorld(profiles: ["Work", "Home"]) { world in
             let work = world.profiles.profiles[0]
-            try world.wire.sendList()
+            try world.wire.send()
             let layout = ProfileLayoutBehaviorSection(
                 profileManager: world.childProfiles,
                 profile: work,
                 errorMessage: world.errors.binding,
-                remote: world.wire.remote,
-                report: world.wire.report
+                remote: world.wire.remote
             )
             let switches = ProfileSwitchesSection(
                 profileManager: world.childProfiles,
                 displaySettings: world.childState.settings.displaySettings,
                 profile: work,
                 errorMessage: world.errors.binding,
-                remote: world.wire.remote,
-                report: world.wire.report
+                remote: world.wire.remote
             )
 
             layout.keepsChanges.wrappedValue = false
@@ -412,7 +429,7 @@ struct SettingsLinkProfilesTests {
             #expect(saved.associatedDisplayUUID == "DISPLAY")
             #expect(world.childProfiles.profiles[0] == work, "the settings process waits for the app's list")
 
-            try world.wire.sendList()
+            try world.wire.send()
             #expect(!layout.keepsChanges.wrappedValue)
             #expect(switches.displayBinding.wrappedValue == "DISPLAY")
             #expect(switches.spaceBinding(groups: []).wrappedValue == "SPACE")
@@ -430,7 +447,7 @@ struct SettingsLinkProfilesTests {
         }
     }
 
-    @Test("A shortcut recorded in the settings process is set on the app's hotkey, which stands down while it records")
+    @Test("The recorder in the settings process records into the hotkey the Shortcuts page's share mirrors, also for a profile made meanwhile")
     func recordsShortcut() async throws {
         try await withWorld(profiles: ["Work"]) { world in
             let work = world.profiles.profiles[0]
@@ -438,52 +455,46 @@ struct SettingsLinkProfilesTests {
             world.profiles.rebuildProfileHotkeys()
             let hotkey = try #require(world.profiles.profileHotkeys[work.id])
             defer { hotkey.keyCombination = nil }
-            try world.wire.sendList()
+            try world.wire.send()
+            #expect(world.childProfiles.profileHotkeys.isEmpty, "this process builds no hotkey of its own")
+            try world.wire.send(HotkeysSettingsLink.bindings)
+            let mirrored = try #require(world.childProfiles.profileHotkeys[work.id])
+            #expect(mirrored.keyCombination == nil)
+
             let section = ProfileSwitchesSection(
                 profileManager: world.childProfiles,
                 displaySettings: world.childState.settings.displaySettings,
                 profile: work,
                 errorMessage: world.errors.binding,
-                remote: world.wire.remote,
-                report: world.wire.report
+                remote: world.wire.remote
             )
-            let shortcut = section.shortcutBinding(remote: world.wire.remote)
-            #expect(shortcut.wrappedValue == nil)
-
             let size = CGSize(width: 760, height: 600)
             let drawn = OffscreenRender(AnyView(ThawForm { section }.environment(world.childState).frame(width: size.width, height: size.height)), size: size)
             await drawn.settle { !drawn.elements(role: .button, label: "Record Shortcut").isEmpty }
-            #expect(drawn.texts().contains("Keyboard shortcut"), "the recorder shows though this process has no hotkey of its own")
-            #expect(world.childProfiles.profileHotkeys.isEmpty)
+            #expect(drawn.texts().contains("Keyboard shortcut"))
 
-            shortcut.wrappedValue = Self.combination
-            await waitUntil {
-                hotkey.keyCombination == Self.combination
-            } tracking: {
-                _ = hotkey.keyCombination
-            }
+            mirrored.keyCombination = Self.combination
+            #expect(hotkey.keyCombination == Self.combination)
             #expect(hotkey.isEnabled)
-            try world.wire.sendList()
-            #expect(shortcut.wrappedValue == Self.combination)
+            try world.wire.send(HotkeysSettingsLink.bindings)
+            #expect(mirrored.keyCombination == Self.combination && mirrored.isEnabled)
 
-            #expect(await world.run(.recordingShortcut(true, profile: work.id)) != nil)
+            mirrored.setRecording(true)
             #expect(!hotkey.isEnabled, "the old combination can't fire while a new one is recorded")
-            try world.wire.sendList()
-            #expect(shortcut.wrappedValue == nil)
-
-            world.wire.app.processEnded()
+            world.wire.endProcess()
             #expect(hotkey.isEnabled, "a recording the settings process never ended doesn't leave the shortcut off")
-
-            #expect(await world.run(.recordingShortcut(true, profile: work.id)) != nil)
-            #expect(await world.run(.recordingShortcut(false, profile: work.id)) != nil)
+            mirrored.setRecording(true)
+            mirrored.setRecording(false)
             #expect(hotkey.isEnabled)
 
-            shortcut.wrappedValue = nil
-            await waitUntil {
-                hotkey.keyCombination == nil
-            } tracking: {
-                _ = hotkey.keyCombination
-            }
+            mirrored.keyCombination = nil
+            #expect(hotkey.keyCombination == nil)
+
+            #expect(await world.run(.create(name: "Desk")) != nil)
+            let desk = try #require(world.profiles.profiles.last)
+            try world.wire.send(HotkeysSettingsLink.bindings)
+            #expect(world.childProfiles.profileHotkeys[desk.id] != nil, "a profile made while the page is open gets a hotkey to record into")
+            #expect(world.childProfiles.profileHotkeys[work.id] === mirrored, "and the recorder already shown keeps its own")
         }
     }
 
@@ -492,19 +503,25 @@ struct SettingsLinkProfilesTests {
     @Test("Once the settings process has ended, the app has forgotten its undo steps")
     func endForgetsUndoSteps() async throws {
         try await withWorld { world in
-            let (report, remote) = (world.wire.report, world.wire.remote)
-            let kept = UUID()
-            let forgotten = UUID()
-            _ = try await report.perform(.create(name: "Desk"), id: kept, via: remote)
-            try await report.undo(edit: kept, via: remote)
+            let remote = world.wire.remote
+            /// Whether the app still had the step.
+            @MainActor func undo(_ step: UUID) async throws -> Bool {
+                try await remote.request(Link.undo, step)
+            }
+            let kept = try #require(try await Link.run(.create(name: "Desk"), via: remote).undo)
+            #expect(try await undo(kept))
             #expect(world.namesInApp.isEmpty)
-            try await report.undo(edit: kept, via: remote)
-            #expect(world.namesInApp == ["Desk"], "the same request names the undo and then the redo")
+            #expect(try await undo(kept))
+            #expect(world.namesInApp == ["Desk"], "the same name asks for the undo and then the redo")
 
-            _ = try await report.perform(.create(name: "Travel"), id: forgotten, via: remote)
-            world.wire.app.processEnded()
-            try await report.undo(edit: forgotten, via: remote)
+            let forgotten = try #require(try await Link.run(.create(name: "Travel"), via: remote).undo)
+            world.wire.endProcess()
+            #expect(try await !undo(forgotten))
             #expect(world.namesInApp == ["Desk", "Travel"], "an edit the app no longer remembers stays")
+
+            await #expect(throws: SettingsRequestError.failed(SettingsRequestError.unreadable.localizedDescription)) {
+                _ = try await remote.request(Link.perform, "not an action") as Link.Performed
+            }
         }
     }
 
@@ -526,9 +543,9 @@ struct SettingsLinkProfilesTests {
             world.errors.message = nil
             world.undo.redo()
             await waitUntil {
-                world.wire.commands.count == 3
+                world.wire.asked.count == 3
             } tracking: {
-                _ = world.wire.commands
+                _ = world.wire.asked
             }
             #expect(world.errors.message == nil)
         }
@@ -539,9 +556,9 @@ struct SettingsLinkProfilesTests {
     @Test("The page in the settings process shows what the app says and has the app save a new profile")
     func pageInSettingsProcess() async throws {
         try await withWorld(profiles: ["Work"]) { world in
-            try world.wire.sendList()
+            try world.wire.send()
             let size = CGSize(width: 760, height: 2400)
-            let pane = ProfileSettingsPane(profileManager: world.childProfiles, remote: world.wire.remote, report: world.wire.report)
+            let pane = ProfileSettingsPane(profileManager: world.childProfiles, remote: world.wire.remote)
             let page = OffscreenRender(
                 AnyView(pane.environment(world.childState).environment(\.settingsPaneTitle, nil).frame(width: size.width, height: size.height)),
                 size: size
@@ -549,7 +566,7 @@ struct SettingsLinkProfilesTests {
             await page.settle { page.texts().contains("What will change") }
             #expect(page.texts().contains("What will change"), "the app's preview of the selected profile has arrived")
             #expect(!page.texts().contains("This profile couldn't be read."))
-            #expect(world.wire.commands == [Link.perform])
+            #expect(world.wire.asked == [Link.perform])
 
             let field = try #require(page.views(NSTextField.self).filter(\.isEditable).first)
             page.type("Desk", into: field)
@@ -559,7 +576,7 @@ struct SettingsLinkProfilesTests {
             await page.settle { field.stringValue.isEmpty }
             #expect(field.stringValue.isEmpty, "the name field empties once the app has saved the profile")
 
-            try world.wire.sendList()
+            try world.wire.send()
             let listsDesk = { page.elements().contains { OffscreenAccessibility.label(of: $0)?.hasPrefix("Desk,") == true } }
             await page.settle { listsDesk() }
             #expect(listsDesk(), "the new profile has a row once the app's list has come")
@@ -596,7 +613,7 @@ struct SettingsLinkProfilesTests {
             runner.run(.delete(id: UUID())) { outcomes.append($0) }
             #expect(outcomes.count == 2 && outcomes[1] == nil)
             #expect(errors.message != nil)
-            #expect(world.wire.commands.isEmpty, "nothing is asked of another process")
+            #expect(world.wire.asked.isEmpty, "nothing is asked of another process")
         }
     }
 }

@@ -15,7 +15,6 @@ struct ProfilePageRunner {
     let performer: ProfilePagePerformer
     /// Nil in the app.
     var remote: SettingsRemote? = .current
-    var report: ProfilesAppReport = .shared
     let undoManager: UndoManager?
     let errorMessage: Binding<String?>
 
@@ -23,18 +22,17 @@ struct ProfilePageRunner {
     /// In the app everything but an apply has run by the time this returns.
     func run(_ action: ProfilePageAction, then: @escaping (ProfilePageOutcome?) -> Void = { _ in /* Most actions show in the list. */ }) {
         guard let remote else { return runHere(action, then: then) }
-        let request = UUID()
         Task {
             do {
-                let outcome = try await report.perform(action, id: request, via: remote)
-                if let name = outcome.undoName {
-                    // The app keeps the step. Undo and redo both name the request that made the edit.
-                    registerUndo(request, named: name) { [report, errorMessage] edit in
-                        Self.attempt(errorMessage) { try await report.undo(edit: edit, via: remote) }
-                        return edit
+                let performed = try await ProfilesLink.run(action, via: remote)
+                if let step = performed.undo, let name = performed.outcome.undoName {
+                    // The app keeps the step. Undo and redo both name it.
+                    registerUndo(step, named: name) { [errorMessage] step in
+                        Self.attempt(errorMessage) { let _: Bool = try await remote.request(ProfilesLink.undo, step) }
+                        return step
                     }
                 }
-                then(outcome)
+                then(performed.outcome)
             } catch {
                 errorMessage.wrappedValue = error.localizedDescription
                 then(nil)
@@ -57,13 +55,7 @@ struct ProfilePageRunner {
     }
 
     /// Makes a change to the profile list: at once in the app, by the app for the settings process.
-    static func make(
-        _ edit: ProfileListEdit,
-        on profileManager: ProfileManager,
-        remote: SettingsRemote?,
-        report: ProfilesAppReport = .shared,
-        errorMessage: Binding<String?>
-    ) {
+    static func make(_ edit: ProfileListEdit, on profileManager: ProfileManager, remote: SettingsRemote?, errorMessage: Binding<String?>) {
         guard let remote else {
             do {
                 try edit.apply(to: profileManager)
@@ -72,17 +64,8 @@ struct ProfilePageRunner {
             }
             return
         }
-        send(.edit(edit), via: remote, report: report, errorMessage: errorMessage)
-    }
-
-    /// Asks the app for something that shows in what the app sends anyway, so only a failure comes back.
-    static func send(
-        _ action: ProfilePageAction,
-        via remote: SettingsRemote,
-        report: ProfilesAppReport = .shared,
-        errorMessage: Binding<String?>
-    ) {
-        attempt(errorMessage) { _ = try await report.perform(action, via: remote) }
+        // The edit shows in the list the app sends anyway, so only a failure comes back.
+        attempt(errorMessage) { _ = try await ProfilesLink.run(.edit(edit), via: remote) }
     }
 
     /// Waits for the app's answer without holding up the page, and shows a failure when one comes.

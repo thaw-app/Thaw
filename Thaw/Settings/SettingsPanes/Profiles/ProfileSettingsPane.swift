@@ -17,9 +17,8 @@ struct ProfileSettingsPane: View {
 
     /// Where the page asks for a file to export to or import from. Tests replace these so no panel opens.
     var fileChoosers = FileChoosers()
-    /// Set in the settings process, where the app runs the page's actions and report has its answers.
+    /// Set in the settings process, where the app runs the page's actions.
     var remote: SettingsRemote? = .current
-    var report: ProfilesAppReport = .shared
 
     @State private var newProfileName = ""
     @State private var isApplying = false
@@ -66,15 +65,13 @@ struct ProfileSettingsPane: View {
                     displaySettings: appState.settings.displaySettings,
                     profile: selected,
                     errorMessage: $errorMessage,
-                    remote: remote,
-                    report: report
+                    remote: remote
                 )
                 ProfileLayoutBehaviorSection(
                     profileManager: profileManager,
                     profile: selected,
                     errorMessage: $errorMessage,
-                    remote: remote,
-                    report: report
+                    remote: remote
                 )
                 ProfileChangesSection(
                     profile: previewedProfile,
@@ -233,7 +230,6 @@ struct ProfileSettingsPane: View {
         ProfilePageRunner(
             performer: ProfilePagePerformer(profileManager: profileManager, appState: appState),
             remote: remote,
-            report: report,
             undoManager: undoManager,
             errorMessage: $errorMessage
         )
