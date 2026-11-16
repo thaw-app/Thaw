@@ -8,10 +8,7 @@
 import Foundation
 
 /// The apps that keep answering this process's Accessibility reads with "API disabled".
-///
-/// At login the system's permission service can fail while other apps first ask it about Thaw.
-/// Each app that asked then refuses this process for as long as it runs, though the permission
-/// is granted; only a new process is asked about again. See AccessRefusalRecovery.
+/// After the system's permission service fails at login they refuse this process for as long as it runs. See AccessRefusalRecovery.
 public struct AccessRefusalLedger: Sendable {
     private var refusingSince: [pid_t: ContinuousClock.Instant] = [:]
 

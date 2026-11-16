@@ -10,9 +10,7 @@ import MenuBarModel
 import ThawAXCore
 
 /// Starts Thaw again, once, when other apps refuse its Accessibility reads though it has the permission.
-///
-/// This happens when the system's permission service fails during login. Thaw then sees only its
-/// own items for as long as it runs, and a new process is the only thing that is asked about again.
+/// That happens when the system's permission service fails during login, and only a new process is asked about again.
 @MainActor
 enum AccessRefusalRestart {
     private static let diagLog = DiagLog(category: "AccessRefusalRestart")

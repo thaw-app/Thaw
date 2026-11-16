@@ -8,12 +8,8 @@
 import AppKit
 
 extension NSView {
-    /// Runs this view's draw(_:) on the CPU into one bitmap the size of the view.
-    ///
-    /// AppKit's own display path hands a view's drawing to Core Animation's GPU
-    /// renderer inside this process. For a view as wide as the menu bar, that
-    /// renderer holds about 50 MB of buffers for a few seconds after every draw.
-    /// One bitmap costs its own size and nothing more. For views that are not flipped.
+    /// Runs this view's draw(_:) on the CPU into one bitmap the size of the view. For views that are not flipped.
+    /// AppKit's own path draws through Core Animation's GPU renderer, which holds about 50 MB for seconds after each draw of a bar-wide view.
     func bitmapOfOwnDrawing() -> CGImage? {
         guard bounds.width > 0, bounds.height > 0,
               let bitmap = bitmapImageRepForCachingDisplay(in: bounds),

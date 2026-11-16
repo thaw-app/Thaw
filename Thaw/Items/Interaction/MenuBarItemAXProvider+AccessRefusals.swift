@@ -32,10 +32,8 @@ nonisolated extension MenuBarItemAXProvider {
         }
     }
 
-    /// The running apps that have refused for a while and still refuse when asked now.
-    ///
-    /// The walk stops reading an app's raw answer once the app gives items, so what the ledger
-    /// holds can be old. Each candidate is asked once more, off the main thread.
+    /// The running apps that have refused for a while and still refuse when asked again now, off the main thread.
+    /// The ledger alone can be old: the walk stops reading an app's raw answer once the app gives items.
     static func persistentAccessRefusers(
         running: Set<pid_t>,
         now: ContinuousClock.Instant = .now,
