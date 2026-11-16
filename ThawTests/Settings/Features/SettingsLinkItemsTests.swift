@@ -187,11 +187,9 @@ struct SettingsItemsRelayTests {
     @Test("A preview's request for new colours goes to the app, and the app's own feature waits to be asked")
     func previewAsksTheApp() {
         var sent = [SettingsLinkMessage]()
-        let previous = SettingsRemote.current
-        SettingsRemote.current = SettingsRemote { sent.append($0) }
-        defer { SettingsRemote.current = previous }
-        SettingsItemsLink.sampleColors(for: 7)
-        SettingsItemsLink.sampleColors(for: nil)
+        let remote = SettingsRemote { sent.append($0) }
+        SettingsItemsLink.sampleColors(for: 7, remote: remote)
+        SettingsItemsLink.sampleColors(for: nil, remote: remote)
         #expect(sent == [
             .command(name: SettingsItemsLink.sampleColors, payload: Data("7".utf8)),
             .command(name: SettingsItemsLink.sampleColors, payload: Data()),

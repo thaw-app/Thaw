@@ -24,11 +24,11 @@ nonisolated enum SettingsItemsLink {
 
     /// Has the app sample the bar's colours again, for one display or for all it would sample itself.
     @MainActor
-    static func sampleColors(for displayID: CGDirectDisplayID?) {
+    static func sampleColors(for displayID: CGDirectDisplayID?, remote: SettingsRemote? = .current) {
         if let displayID {
-            SettingsRemote.current?.perform(sampleColors, displayID)
+            remote?.perform(sampleColors, displayID)
         } else {
-            SettingsRemote.current?.perform(sampleColors)
+            remote?.perform(sampleColors)
         }
     }
 }

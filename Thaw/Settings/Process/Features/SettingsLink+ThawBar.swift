@@ -95,6 +95,6 @@ enum ThawBarSettingsLink {
         here: @MainActor (CGDirectDisplayID) async -> Void
     ) async {
         guard let remote else { return await here(displayID) }
-        remote.perform(SettingsItemsLink.sampleColors, displayID)
+        SettingsItemsLink.sampleColors(for: displayID, remote: remote)
     }
 }
