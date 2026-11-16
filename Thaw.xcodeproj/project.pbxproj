@@ -1143,7 +1143,7 @@
 			repositoryURL = "https://github.com/apple/swift-collections";
 			requirement = {
 				kind = exactVersion;
-				version = 1.7.5;
+				version = 1.7.6;
 			};
 		};
 		A9E1F0012F70000000000001 /* XCRemoteSwiftPackageReference "ThawUI" */ = {
