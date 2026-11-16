@@ -105,7 +105,7 @@ struct RevealCapturePrewarm {
     }
 
     /// The items of one section a prewarm reveals, in section order. A pass the user asked for
-    /// also retakes pictures clipped at their left edge.
+    /// also retakes pictures clipped at their left or right edge.
     private func itemsToCapture(
         from items: [MenuBarItem], onlyMissingImages: Bool, retakesClipped: Bool, on displayID: CGDirectDisplayID
     ) -> [MenuBarItem] {

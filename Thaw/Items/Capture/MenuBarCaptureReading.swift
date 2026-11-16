@@ -24,6 +24,27 @@ nonisolated protocol MenuBarCaptureReading: Sendable {
     func liveBounds(
         for candidates: [(item: MenuBarItem, bounds: CGRect)]
     ) async -> (bounds: [String: CGRect], ambiguous: Set<String>)
+    /// Where MenuBarAgent's drawn bar disagrees with the candidates' reported frames. A candidate drawn
+    /// where it reports is in neither part, and none is in either when the drawn bar can't be read.
+    func drawnSeats(
+        for candidates: [(item: MenuBarItem, bounds: CGRect)],
+        displayID: CGDirectDisplayID
+    ) async -> DrawnSeats
+}
+
+nonisolated extension MenuBarCaptureReading {
+    func drawnSeats(for _: [(item: MenuBarItem, bounds: CGRect)], displayID _: CGDirectDisplayID) async -> DrawnSeats {
+        DrawnSeats()
+    }
+}
+
+/// The candidates of one crop whose reported frame is not where MenuBarAgent draws them, by identifier.
+nonisolated struct DrawnSeats: Equatable, Sendable {
+    /// Where each candidate drawn away from its reported frame is drawn.
+    var moved: [String: CGRect] = [:]
+    /// The candidates reporting a seat another app's item is drawn in, with no drawn frame of their own
+    /// to say where they are. A crop there would file the neighbour's picture under them.
+    var occupied: Set<String> = []
 }
 
 nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
@@ -32,6 +53,16 @@ nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
 
     /// MenuBarAgent's drawn bar, which places items whose app answers no AX. Tests pass their own.
     var drawnBar: @Sendable () async -> [MenuBarAgentWindow.Entry]? = { await MenuBarItemAXProvider.drawnBarConcurrent() }
+
+    /// The bar MenuBarAgent draws on the display with these bounds, which is the one a crop there is cut from.
+    var drawnBarOnDisplay: @Sendable (CGRect) async -> [MenuBarAgentWindow.Entry]? = { await readDrawnBar(onDisplay: $0) }
+
+    /// Reads one display's bar off the main actor. Nil when unreadable or mid-change. The inventory's read
+    /// is of the agent's first window, which can be another display's bar.
+    @concurrent
+    private static func readDrawnBar(onDisplay display: CGRect) async -> [MenuBarAgentWindow.Entry]? {
+        AXPrimitives.menuBarAgentSettledEntries(onDisplay: display)
+    }
 
     func captureBand(displayID: CGDirectDisplayID) async -> (frame: CGRect, menuMaxX: CGFloat?) {
         await MainActor.run {
@@ -127,6 +158,44 @@ nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
             }
         }
         return (bounds, ambiguous)
+    }
+
+    func drawnSeats(
+        for candidates: [(item: MenuBarItem, bounds: CGRect)],
+        displayID: CGDirectDisplayID
+    ) async -> DrawnSeats {
+        // Apple's items are the agent's own entries, which can't be told apart by owner, and an item
+        // whose app is unknown would take its own entry for another app's.
+        let placed = candidates.compactMap { candidate -> DrawnSeatCandidate? in
+            guard let app = candidate.item.sourceApplication ?? candidate.item.owningApplication,
+                  app.bundleIdentifier != SharedConstants.menuBarHostingBundleID
+            else { return nil }
+            return (candidate.item.uniqueIdentifier, candidate.bounds, candidate.item.ownerPID, candidate.item.sourcePID)
+        }
+        guard !placed.isEmpty, let entries = await drawnBarOnDisplay(CGDisplayBounds(displayID)) else { return DrawnSeats() }
+        return Self.drawnSeats(for: placed, in: entries)
+    }
+
+    /// One candidate of drawnSeats(for:in:). Its frame is the one its app reports.
+    typealias DrawnSeatCandidate = (identifier: String, frame: CGRect, ownerPID: pid_t, sourcePID: pid_t?)
+
+    /// The candidates MenuBarAgent draws away from their reported frame, given the bar of the display they
+    /// are on. Only an app with one item drawn says where that item is. Any other item is only checked for
+    /// reporting another app's seat.
+    static func drawnSeats(for candidates: [DrawnSeatCandidate], in entries: [MenuBarAgentWindow.Entry]) -> DrawnSeats {
+        var seats = DrawnSeats()
+        for candidate in candidates {
+            let (frame, owner, source) = (candidate.frame, candidate.ownerPID, candidate.sourcePID)
+            if DrawnItemFrame.drawnFrame(for: frame, ownerPID: owner, sourcePID: source, in: entries) != nil {
+                let seat = DrawnItemFrame.cropFrame(for: frame, ownerPID: owner, sourcePID: source, in: entries)
+                if seat != frame {
+                    seats.moved[candidate.identifier] = seat
+                }
+            } else if DrawnItemFrame.isPhantom(frame, ownerPID: owner, sourcePID: source, in: entries) {
+                seats.occupied.insert(candidate.identifier)
+            }
+        }
+        return seats
     }
 
     /// The frame MenuBarAgent draws for a candidate whose app gave the catalog no entries at all, as

@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Changed
+
+- The item list you save in Troubleshooting, which `thaw://dump-items` also writes, now records where macOS draws each item on each menu bar, next to the position each app reports, so you can see when the two disagree.
+
 ### Fixed
 
 - A `thaw://apply-profile` link no longer applies a profile while Profiles is turned off.
@@ -32,6 +36,7 @@ the items under New and Fixed.
 - Showing a section in the menu bar while the Thaw Bar is open no longer hides it early, when the Thaw Bar's own hide timer runs out.
 - `thaw://release-item?bundle=` now lets go of every item of that app the sender holds, instead of failing when it holds more than one.
 - Smart rehide no longer skips a click outside the menu bar while the Thaw icon has no window yet, so the revealed items go away after the click as set.
+- Thaw now takes a hidden item's picture where macOS draws the item, instead of where its app reports it. The two can differ, and a picture taken at the reported position shows the item cut off, or the item next to it. When Thaw can't tell where the item is drawn and another app's item is at the reported position, it keeps the picture it had. Capture Hidden Items also retakes a picture cut off at its right edge, as it already did for the left. ([#1454](https://github.com/thaw-app/Thaw/issues/1454))
 
 ## [3.0.0-alpha.14] - 2026-11-14
 

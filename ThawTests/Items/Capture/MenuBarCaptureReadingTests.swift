@@ -7,6 +7,7 @@
 
 import AppKit
 import MenuBarModel
+import os
 import Testing
 @testable import Thaw
 import ThawAXCore
@@ -26,6 +27,78 @@ struct MenuBarCaptureReadingTests {
             title: title,
             isOnScreen: true
         )
+    }
+
+    // MARK: Drawn seats
+
+    private static func entry(_ pid: pid_t, x: CGFloat, width: CGFloat) -> MenuBarAgentWindow.Entry {
+        MenuBarAgentWindow.Entry(ownerPID: pid, frame: CGRect(x: x, y: 0, width: width, height: 33))
+    }
+
+    @Test("Only a candidate drawn away from its reported frame gets a seat")
+    func onlyDisplacedCandidatesAreSeated() {
+        let seats = LiveMenuBarCaptureReader.drawnSeats(
+            for: [
+                ("displaced", CGRect(x: 926, y: 4.5, width: 20, height: 24), 10, nil),
+                ("in place", CGRect(x: 1000, y: 4.5, width: 24, height: 24), 20, nil),
+                ("not drawn", CGRect(x: 1100, y: 4.5, width: 24, height: 24), 30, nil),
+            ],
+            in: [Self.entry(10, x: 908, width: 18), Self.entry(20, x: 993, width: 38)]
+        )
+
+        #expect(seats == DrawnSeats(moved: ["displaced": CGRect(x: 907, y: 4.5, width: 20, height: 24)]))
+    }
+
+    /// Thaw's icon as a user's item dump recorded it: 35 wide at x=1350. Their screenshot showed its picture
+    /// in place of two other items', probably those of iStat Menus and LaunchOS.
+    @Test("An app with several items drawn, or none, is refused a seat another app's item is drawn in")
+    func neighboursSeatIsOccupied() {
+        let thawIcon = Self.entry(77, x: 1350, width: 35)
+        let onThawIcon = CGRect(x: 1354, y: 7.5, width: 26, height: 24)
+
+        let twoItems = LiveMenuBarCaptureReader.drawnSeats(
+            for: [("stats", onThawIcon, 10, nil)],
+            in: [thawIcon, Self.entry(10, x: 1290, width: 26), Self.entry(10, x: 1320, width: 26)]
+        )
+        #expect(twoItems == DrawnSeats(occupied: ["stats"]))
+
+        let notDrawn = LiveMenuBarCaptureReader.drawnSeats(for: [("stats", onThawIcon, 10, nil)], in: [thawIcon])
+        #expect(notDrawn == DrawnSeats(occupied: ["stats"]))
+
+        let oneItem = LiveMenuBarCaptureReader.drawnSeats(for: [("stats", onThawIcon, 10, nil)], in: [thawIcon, Self.entry(10, x: 1320, width: 26)])
+        #expect(oneItem == DrawnSeats(moved: ["stats": CGRect(x: 1320, y: 7.5, width: 26, height: 24)]), "With one item drawn it is moved there instead")
+    }
+
+    @Test("Several items of one app drawn at their own seats are left alone, as is an item MenuBarAgent hosts")
+    func ownSeatsAreNotOccupied() {
+        let bar = [Self.entry(10, x: 1290, width: 26), Self.entry(10, x: 1320, width: 26), Self.entry(77, x: 1350, width: 35)]
+        let seats = LiveMenuBarCaptureReader.drawnSeats(
+            for: [
+                ("left", CGRect(x: 1290, y: 7.5, width: 26, height: 24), 10, nil),
+                ("right", CGRect(x: 1320, y: 7.5, width: 26, height: 24), 10, nil),
+                // The agent draws this one itself, so the entry on its seat is the agent's, its owner.
+                ("hosted", CGRect(x: 1350, y: 7.5, width: 35, height: 24), 77, 88),
+            ],
+            in: bar
+        )
+
+        #expect(seats == DrawnSeats())
+    }
+
+    @Test("The drawn bar is asked for by the bounds of the display being captured")
+    func drawnBarIsReadForTheCapturedDisplay() async {
+        let asked = OSAllocatedUnfairLock<[CGRect]>(initialState: [])
+        var reader = LiveMenuBarCaptureReader()
+        reader.drawnBarOnDisplay = { display in
+            asked.withLock { $0.append(display) }
+            return nil
+        }
+        let own = Self.item("Own", owner: ProcessInfo.processInfo.processIdentifier)
+
+        let seats = await reader.drawnSeats(for: [(own, own.bounds)], displayID: CGMainDisplayID())
+
+        #expect(seats == DrawnSeats(), "A bar that can't be read seats nothing")
+        #expect(asked.withLock { $0 } == [CGDisplayBounds(CGMainDisplayID())])
     }
 
     @Test("No targets means no owners to refresh")

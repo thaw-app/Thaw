@@ -46,6 +46,23 @@ struct MenuBarAgentWindowTests {
     }
 
     @Test
+    func `picks the window on the named display, whatever order the agent lists them in`() {
+        let main = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+        let left = CGRect(x: -2048, y: 0, width: 2048, height: 1152)
+        let bars: [CGRect?] = [CGRect(x: -2048, y: 0, width: 2048, height: 30), CGRect(x: 0, y: 0, width: 1920, height: 30)]
+        #expect(MenuBarAgentWindow.windowIndex(onDisplay: main, among: bars) == 1)
+        #expect(MenuBarAgentWindow.windowIndex(onDisplay: left, among: bars) == 0)
+    }
+
+    @Test
+    func `finds no window for a display without a bar, or among frames that could not be read`() {
+        let main = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+        #expect(MenuBarAgentWindow.windowIndex(onDisplay: main, among: [CGRect(x: -2048, y: 0, width: 2048, height: 30)]) == nil)
+        #expect(MenuBarAgentWindow.windowIndex(onDisplay: main, among: [nil]) == nil)
+        #expect(MenuBarAgentWindow.windowIndex(onDisplay: main, among: []) == nil)
+    }
+
+    @Test
     func `refuses an empty read`() {
         #expect(MenuBarAgentWindow.drawnOwners(in: []) == nil)
     }
