@@ -25,6 +25,9 @@ struct SettingsLinkTests {
         .status(topic: "modules", payload: Data(#"{"on":true}"#.utf8)),
         .command(name: "appearance.preview", payload: Data()),
         .storeChanged(store: "profiles"),
+        .request(id: UUID(uuidString: "0B6C7E0E-5C0E-4F0F-9A51-1D2C3B4A5E6F") ?? UUID(), name: "profiles.perform", payload: Data("{}".utf8)),
+        .reply(id: UUID(uuidString: "0B6C7E0E-5C0E-4F0F-9A51-1D2C3B4A5E6F") ?? UUID(), payload: Data("1".utf8), failure: nil),
+        .reply(id: UUID(uuidString: "0B6C7E0E-5C0E-4F0F-9A51-1D2C3B4A5E6F") ?? UUID(), payload: nil, failure: "No such profile"),
     ])
     func roundTrip(message: SettingsLinkMessage) {
         #expect(message.line.last == 0x0A)

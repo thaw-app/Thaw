@@ -202,8 +202,31 @@ final class SettingsProcessHost {
             run(name, payload)
         case let .storeChanged(store):
             link?.reloading { app.features.forEach { $0.stores[store]?() } }
-        case .show, .updatesState, .shownInApp, .status:
+        case let .request(id, name, payload):
+            answer(id, name, payload)
+        case .show, .updatesState, .shownInApp, .status, .reply:
             break
+        }
+    }
+
+    /// Runs the page's request and sends back its answer, or the words of the error it threw.
+    private func answer(_ id: UUID, _ name: String, _ payload: Data) {
+        guard let handler = app.features.lazy.compactMap({ $0.requests[name] }).first else {
+            diagLog.warning("The settings process asked \(name), which no page answers")
+            link?.send(.reply(id: id, payload: nil, failure: "\(name)"))
+            return
+        }
+        let asked = generation
+        Task { @MainActor [weak self] in
+            let reply: SettingsLinkMessage
+            do {
+                reply = try await .reply(id: id, payload: handler(payload), failure: nil)
+            } catch {
+                reply = .reply(id: id, payload: nil, failure: error.localizedDescription)
+            }
+            // A settings process started since would not know this request.
+            guard let self, asked == generation else { return }
+            link?.send(reply)
         }
     }
 

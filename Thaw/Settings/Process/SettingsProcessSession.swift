@@ -18,6 +18,10 @@ final class SettingsProcessSession {
         var terminate: () -> Void
         /// What each page does with the app's live state, and what it reads again.
         var features: [SettingsChildFeature] = []
+        /// Hands the app's reply to whoever asked.
+        var answered: (_ id: UUID, _ payload: Data?, _ failure: String?) -> Void = {
+            SettingsRemote.current?.answered(id: $0, payload: $1, failure: $2)
+        }
     }
 
     private let navigationState: AppNavigationState
@@ -88,7 +92,9 @@ final class SettingsProcessSession {
             side.features.forEach { $0.statuses[topic]?(payload) }
         case let .storeChanged(store):
             link?.reloading { side.features.forEach { $0.stores[store]?() } }
-        case .openInApp, .pageChanged, .checkForUpdates, .quit, .command:
+        case let .reply(id, payload, failure):
+            side.answered(id, payload, failure)
+        case .openInApp, .pageChanged, .checkForUpdates, .quit, .command, .request:
             break
         }
     }

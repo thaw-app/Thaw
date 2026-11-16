@@ -46,6 +46,8 @@ private final class LinkPipes {
     let fromPeer = Pipe()
     private(set) var received = [SettingsLinkMessage]()
     private(set) var end: SettingsLinkEndpoint?
+    /// Hears every message the stand-in reads, for a test that answers or waits on one.
+    var onMessage: (SettingsLinkMessage) -> Void = { _ in }
 
     /// What reached the stand-in, leaving out the notices any defaults write in the test process sends.
     var messages: [SettingsLinkMessage] {
@@ -57,7 +59,10 @@ private final class LinkPipes {
         end = SettingsLinkEndpoint(
             input: toPeer.fileHandleForReading,
             output: fromPeer.fileHandleForWriting,
-            onMessage: { [weak self] in self?.received.append($0) }
+            onMessage: { [weak self] in
+                self?.received.append($0)
+                self?.onMessage($0)
+            }
         )
     }
 
@@ -87,10 +92,27 @@ final class SettingsLinkFeatureTests {
             commands: ["bump": { payload in
                 calls.commands.append("bump \(SettingsLinkPayload.decode(Int.self, from: payload) ?? -1)")
             }],
+            requests: ["double": { payload in
+                guard let number = SettingsLinkPayload.decode(Int.self, from: payload), number >= 0 else {
+                    throw CocoaError(.featureUnsupported)
+                }
+                return SettingsLinkPayload.encode(number * 2) ?? Data()
+            }],
             reload: { calls.reloads += 1 },
             stores: ["profiles": { calls.storeReads.append("profiles") }],
             processEnded: { calls.ends += 1 }
         )
+    }
+
+    /// A remote whose requests reach the started host through the pipes, and whose replies come back the same way.
+    private func linkedRemote() -> SettingsRemote {
+        let remote = SettingsRemote { [pipes] in pipes.end?.send($0) }
+        pipes.onMessage = { message in
+            if case let .reply(id, payload, failure) = message {
+                remote.answered(id: id, payload: payload, failure: failure)
+            }
+        }
+        return remote
     }
 
     /// A host whose settings process is the pipes' stand-in.
@@ -154,6 +176,39 @@ final class SettingsLinkFeatureTests {
         #expect(await settingsLinkWait { pipes.messages.contains(.storeChanged(store: "profiles")) })
     }
 
+    @Test("A request is answered by the page that owns it, and its error comes back in the app's words")
+    func requestIsAnswered() async throws {
+        let host = startedHost()
+        let remote = linkedRemote()
+        let doubled: Int = try await remote.request("double", 21)
+        #expect(doubled == 42)
+        await #expect(throws: SettingsRequestError.failed(CocoaError(.featureUnsupported).localizedDescription)) {
+            let _: Int = try await remote.request("double", -1)
+        }
+        await #expect(throws: SettingsRequestError.failed("nobody answers this")) {
+            let _: Int = try await remote.request("nobody answers this", 1)
+        }
+        await #expect(throws: SettingsRequestError.unreadable) {
+            let _: String = try await remote.request("double", 2)
+        }
+        #expect(host.isLinked)
+    }
+
+    @Test("A request the app never answers gives up, and an answer that comes later is dropped")
+    func requestGivesUp() async {
+        var sent = [SettingsLinkMessage]()
+        let remote = SettingsRemote { sent.append($0) }
+        await #expect(throws: SettingsRequestError.noAnswer) {
+            let _: Int = try await remote.request("double", 1, patience: .milliseconds(20))
+        }
+        guard case let .request(id, name, _) = sent.first else {
+            Issue.record("The request was not sent")
+            return
+        }
+        #expect(name == "double")
+        remote.answered(id: id, payload: Data("2".utf8), failure: nil)
+    }
+
     @Test("A page is told when the settings process has ended")
     func pageHearsTheProcessEnd() async {
         let host = startedHost()
@@ -166,6 +221,7 @@ final class SettingsLinkFeatureTests {
     @Test("The settings process hands a page the app's state, reads its store again and reloads after a defaults write")
     func settingsProcessTakesWhatTheAppSends() async {
         let calls = calls
+        let reply = UUID()
         let session = SettingsProcessSession(
             navigationState: AppNavigationState(),
             side: SettingsProcessSession.ProcessSide(
@@ -177,7 +233,8 @@ final class SettingsLinkFeatureTests {
                     statuses: ["count": { calls.statuses.append(String(decoding: $0, as: UTF8.self)) }],
                     reload: { calls.reloads += 1 },
                     stores: ["profiles": { calls.storeReads.append("profiles") }]
-                )]
+                )],
+                answered: { id, payload, _ in calls.statuses.append("reply \(id == reply) \(payload.map { String(decoding: $0, as: UTF8.self) } ?? "none")") }
             )
         )
         // Here the pipes' stand-in is the app, so the session reads what it writes.
@@ -192,8 +249,9 @@ final class SettingsLinkFeatureTests {
         app.send(.status(topic: "another page's topic", payload: Data("5".utf8)))
         app.send(.storeChanged(store: "profiles"))
         app.send(.command(name: "bump", payload: Data()))
+        app.send(.reply(id: reply, payload: Data("9".utf8), failure: nil))
         app.send(.settingsChanged)
-        #expect(await settingsLinkWait { calls.statuses == ["4"] && calls.storeReads == ["profiles"] && calls.reloads > 0 })
+        #expect(await settingsLinkWait { calls.statuses == ["4", "reply true 9"] && calls.storeReads == ["profiles"] && calls.reloads > 0 })
         #expect(calls.commands.isEmpty, "Commands are for the app")
     }
 

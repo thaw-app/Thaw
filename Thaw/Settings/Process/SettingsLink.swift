@@ -33,6 +33,10 @@ nonisolated enum SettingsLinkMessage: Codable, Equatable, Sendable {
     case command(name: String, payload: Data)
     /// The sender saved a store that is kept outside the defaults, so the receiver reads that one again.
     case storeChanged(store: String)
+    /// Something the settings process asks the app and waits for. The answer comes back as a reply with the same id.
+    case request(id: UUID, name: String, payload: Data)
+    /// The app's answer to a request: its payload, or the words of the error it failed with.
+    case reply(id: UUID, payload: Data?, failure: String?)
 }
 
 nonisolated extension SettingsLinkMessage {

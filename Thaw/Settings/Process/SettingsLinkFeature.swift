@@ -16,6 +16,8 @@ struct SettingsAppFeature {
     var statuses: [String: () -> Data?] = [:]
     /// What the app does with each command's payload.
     var commands: [String: (Data) -> Void] = [:]
+    /// What the app answers each request with. Throwing sends the error's words back instead.
+    var requests: [String: (Data) async throws -> Data] = [:]
     /// Runs after the settings process wrote the defaults, once AppSettings has been read again.
     var reload: () -> Void = {
         // Most pages keep everything in AppSettings.
@@ -66,6 +68,8 @@ final class SettingsRemote {
     static var current: SettingsRemote?
 
     private let send: (SettingsLinkMessage) -> Void
+    /// The requests the app has not answered yet.
+    private var waiting = [UUID: CheckedContinuation<Data, any Error>]()
 
     init(send: @escaping (SettingsLinkMessage) -> Void) {
         self.send = send
@@ -85,6 +89,56 @@ final class SettingsRemote {
     /// Tells the app this process saved a store kept outside the defaults.
     func saved(store: String) {
         send(.storeChanged(store: store))
+    }
+
+    /// Asks the app and returns its answer. Throws the app's error, or noAnswer once patience runs out.
+    func request<Answer: Decodable>(
+        _ name: String, _ payload: some Encodable, patience: Duration = SettingsRequestError.patience
+    ) async throws -> Answer {
+        guard let data = SettingsLinkPayload.encode(payload) else { throw SettingsRequestError.unreadable }
+        let id = UUID()
+        let giveUp = Task { [weak self] in
+            guard (try? await Task.sleep(for: patience)) != nil else { return }
+            self?.waiting.removeValue(forKey: id)?.resume(throwing: SettingsRequestError.noAnswer)
+        }
+        defer { giveUp.cancel() }
+        let answer = try await withCheckedThrowingContinuation { continuation in
+            waiting[id] = continuation
+            send(.request(id: id, name: name, payload: data))
+        }
+        guard let decoded = SettingsLinkPayload.decode(Answer.self, from: answer) else { throw SettingsRequestError.unreadable }
+        return decoded
+    }
+
+    /// Takes the app's reply. One for a request that is no longer waiting is dropped.
+    func answered(id: UUID, payload: Data?, failure: String?) {
+        guard let continuation = waiting.removeValue(forKey: id) else { return }
+        if let payload, failure == nil {
+            continuation.resume(returning: payload)
+        } else {
+            continuation.resume(throwing: SettingsRequestError.failed(failure ?? ""))
+        }
+    }
+}
+
+/// Why a request to the app gave no answer to use.
+nonisolated enum SettingsRequestError: LocalizedError, Equatable {
+    /// The app ran the request and it failed, with the app's words for why.
+    case failed(String)
+    /// The app did not answer in time.
+    case noAnswer
+    /// The request or its answer could not be encoded or decoded.
+    case unreadable
+
+    /// How long a request waits. The app answers in well under a second unless it is waiting on the menu bar.
+    static let patience = Duration.seconds(30)
+
+    var errorDescription: String? {
+        switch self {
+        case let .failed(words): words
+        case .noAnswer: String(localized: "\(Constants.displayName) didn't answer. Try again.")
+        case .unreadable: String(localized: "\(Constants.displayName) and its Settings window didn't understand each other.")
+        }
     }
 }
 
