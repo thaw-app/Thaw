@@ -12,18 +12,26 @@ import ThawAXCore
 
 /// Which apps keep refusing this process's Accessibility reads. See AccessRefusalLedger.
 nonisolated extension MenuBarItemAXProvider {
-    private static let accessRefusals = OSAllocatedUnfairLock(initialState: AccessRefusalLedger())
+    typealias AccessRefusals = OSAllocatedUnfairLock<AccessRefusalLedger>
+
+    /// The ledger the app uses. A test passes its own, so tests running at once don't read each other's refusals.
+    static let sharedAccessRefusals = AccessRefusals(initialState: AccessRefusalLedger())
 
     /// The raw result of reading an app's extras bar, recorded as a refusal or an answer.
-    static func recordedExtrasBarRead(pid: pid_t) -> AXError {
+    static func recordedExtrasBarRead(pid: pid_t, in refusals: AccessRefusals = sharedAccessRefusals) -> AXError {
         let result = AXPrimitives.extrasMenuBarReadResult(pid: pid)
-        noteAccessAnswer(result, from: pid)
+        noteAccessAnswer(result, from: pid, in: refusals)
         return result
     }
 
     /// Records how an app that had menu bar items before answered the read of its extras bar.
-    static func noteAccessAnswer(_ result: AXError, from pid: pid_t, now: ContinuousClock.Instant = .now) {
-        accessRefusals.withLock { ledger in
+    static func noteAccessAnswer(
+        _ result: AXError,
+        from pid: pid_t,
+        now: ContinuousClock.Instant = .now,
+        in refusals: AccessRefusals = sharedAccessRefusals
+    ) {
+        refusals.withLock { ledger in
             if result == .apiDisabled {
                 ledger.refused(pid, at: now)
             } else {
@@ -37,16 +45,17 @@ nonisolated extension MenuBarItemAXProvider {
     static func persistentAccessRefusers(
         running: Set<pid_t>,
         now: ContinuousClock.Instant = .now,
+        in refusals: AccessRefusals = sharedAccessRefusals,
         read: @escaping @Sendable (pid_t) -> AXError = { AXPrimitives.extrasMenuBarReadResult(pid: $0) }
     ) async -> Set<pid_t> {
-        let candidates = accessRefusals.withLock { ledger in
+        let candidates = refusals.withLock { ledger in
             ledger.retain(running: running)
             return ledger.refusers(lasting: AccessRefusalRecovery.minimumDuration, now: now)
         }
         guard candidates.count >= AccessRefusalRecovery.minimumOwners else { return [] }
         let answers = await onReadQueue { candidates.map { ($0, read($0)) } }
         for (pid, result) in answers {
-            noteAccessAnswer(result, from: pid, now: now)
+            noteAccessAnswer(result, from: pid, now: now, in: refusals)
         }
         return Set(answers.filter { $0.1 == .apiDisabled }.map(\.0))
     }
