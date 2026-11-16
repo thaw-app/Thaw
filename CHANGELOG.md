@@ -142,6 +142,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **Pictures of hidden items fit again after you narrow the menu bar spacing.** By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
 - **An icon that got much narrower gets its new picture,** such as one that stops showing text. By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
 - **A cut-off picture no longer replaces a good one** that Thaw loaded from disk. By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
+- **A hidden item's picture is no longer taken while its icon is still sliding in.** A cut-off one is left out and the item keeps the picture it had.
 
 #### Thaw Bar
 

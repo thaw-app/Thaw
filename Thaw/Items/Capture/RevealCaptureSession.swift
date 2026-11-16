@@ -19,7 +19,8 @@ struct RevealCaptureSession {
         /// request they answer. See waitForRevealedItems(matching:clock:read:).
         let settledItems: @MainActor ([MenuBarItem]) async -> [(requested: MenuBarItem, live: MenuBarItem)]
         /// The wait between stable AX bounds and fully rendered glyphs at those bounds.
-        let renderSettle: @MainActor ([MenuBarItem]) async -> Void
+        /// False when the pixels were still changing at the end of it.
+        let renderSettle: @MainActor ([MenuBarItem]) async -> Bool
         let reader: any MenuBarCaptureReading
         /// Raised before a batch is revealed and lowered after it is concealed,
         /// so the user sees the bar as it was while the capture sees the reveal.
@@ -74,7 +75,7 @@ struct RevealCaptureSession {
             guard !firstRead.isEmpty else { continue }
 
             // AX bounds stabilize before MenuBarAgent finishes drawing the revealed glyphs, so the batch settles once.
-            let revealed = await settleAtFinalFrames(firstRead)
+            let (revealed, pixelsSettled) = await settleAtFinalFrames(firstRead)
             guard !Task.isCancelled, !isLocked("settled capture batch") else { return }
 
             // Admitted now, with nothing awaited before the screenshot. The reveal's own restriction rebuild moves the
@@ -89,7 +90,10 @@ struct RevealCaptureSession {
                 validateFreshBounds: true,
                 seatsOnDrawnBar: true
             )
-            let captureResult = await cropper.crop(request, using: sources.reader, skipping: shouldSkip)
+            var captureResult = await cropper.crop(request, using: sources.reader, skipping: shouldSkip)
+            if !pixelsSettled {
+                Self.dropCutOffPictures(from: &captureResult)
+            }
 
             guard commit(captureResult, revealed, admission) else { return }
         }
@@ -97,15 +101,32 @@ struct RevealCaptureSession {
 
     /// Settles a revealed batch where it ends up. Native hiding rebuilds the bar, so an item can move after its
     /// first read; when one did, the batch settles again at the new frames.
-    private func settleAtFinalFrames(_ firstRead: RevealedPairs) async -> RevealedPairs {
-        await sources.renderSettle(firstRead.map(\.live))
-        guard !Task.isCancelled else { return firstRead }
+    /// The second value is whether the pixels had stopped changing at the frames returned.
+    private func settleAtFinalFrames(_ firstRead: RevealedPairs) async -> (RevealedPairs, pixelsSettled: Bool) {
+        let settled = await sources.renderSettle(firstRead.map(\.live))
+        guard !Task.isCancelled else { return (firstRead, settled) }
         // Only what appeared: an item that never drew would cost another full wait.
         let reread = await sources.settledItems(firstRead.map(\.requested))
-        guard Self.anyRevealMoved(from: firstRead, to: reread) else { return firstRead }
+        guard Self.anyRevealMoved(from: firstRead, to: reread) else { return (firstRead, settled) }
         MenuBarItemImageCache.diagLog.debug("grouped reveal capture: items moved after their first read; settling again where they ended up")
-        await sources.renderSettle(reread.map(\.live))
-        return reread
+        return await (reread, sources.renderSettle(reread.map(\.live)))
+    }
+
+    /// Takes out the pictures whose ink runs into their left or right edge. Called for a batch whose pixels were
+    /// still changing at the screenshot: such a picture is most likely the icon caught while it slides in. Either
+    /// sign alone is not enough. An icon that keeps redrawing never settles, and one can draw to its edge.
+    private static nonisolated func dropCutOffPictures(from pass: inout AXBoundsCropper.CapturePass) {
+        let cutOff = pass.captured.filter {
+            MenuBarItemImageCache.isClippedAtLeadingEdge($0.value) || MenuBarItemImageCache.isClippedAtTrailingEdge($0.value)
+        }.keys
+        guard !cutOff.isEmpty else { return }
+        for tag in cutOff {
+            pass.captured[tag] = nil
+        }
+        pass.recoveredItems.removeAll { cutOff.contains($0.tag) }
+        MenuBarItemImageCache.diagLog.debug(
+            "grouped reveal capture: pixels were still changing and \(cutOff.count) picture(s) are cut off at an edge; not publishing \(cutOff.map(\.description).sorted())"
+        )
     }
 
     /// Whether a second read put any item of the first somewhere else.
