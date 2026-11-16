@@ -141,6 +141,20 @@ struct DrawnItemFrameTests {
         #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: nil) == Self.axFrame)
     }
 
+    @Test("A crop that runs four points or more into another app's drawn item takes in its neighbour")
+    func cropTakingInANeighbour() {
+        // DriveDx drawn at 908 to 926, Window Manager from 926. A 20 wide crop there ends a point into it.
+        let own = DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar)
+        #expect(!DrawnItemFrame.takesInNeighbour(own, ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar))
+
+        // Reported 38 wide, the crop runs from 898 to 936: ten points of Window Manager.
+        let wide = DrawnItemFrame.cropFrame(for: CGRect(x: 920, y: 4.5, width: 38, height: 24), ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar)
+        #expect(wide == CGRect(x: 898, y: 4.5, width: 38, height: 24))
+        #expect(DrawnItemFrame.takesInNeighbour(wide, ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar))
+
+        #expect(!DrawnItemFrame.takesInNeighbour(wide, ownerPID: Self.driveDx, sourcePID: nil, in: nil), "An unreadable bar says nothing")
+    }
+
     // MARK: Displays
 
     /// 2026-11-11, left display's bar active: DockDoor read at x=-191, but the click went to

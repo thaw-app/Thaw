@@ -42,8 +42,8 @@ nonisolated extension MenuBarCaptureReading {
 nonisolated struct DrawnSeats: Equatable, Sendable {
     /// Where each candidate drawn away from its reported frame is drawn.
     var moved: [String: CGRect] = [:]
-    /// The candidates reporting a seat another app's item is drawn in, with no drawn frame of their own
-    /// to say where they are. A crop there would file the neighbour's picture under them.
+    /// The candidates no crop is safe for: they report a seat another app's item is drawn in with nothing
+    /// to say where they are, or a crop at their drawn seat would take in a neighbour.
     var occupied: Set<String> = []
 }
 
@@ -56,6 +56,9 @@ nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
 
     /// The bar MenuBarAgent draws on the display with these bounds, which is the one a crop there is cut from.
     var drawnBarOnDisplay: @Sendable (CGRect) async -> [MenuBarAgentWindow.Entry]? = { await readDrawnBar(onDisplay: $0) }
+
+    /// What these apps list in their own extras bars, which says how many items each has, drawn or not.
+    var itemCatalog: @Sendable ([pid_t]) async -> [AXGeometryCatalog.Entry] = { await AXGeometryCatalog.snapshot(hostProcessIdentifiers: $0) }
 
     /// Reads one display's bar off the main actor. Nil when unreadable or mid-change. The inventory's read
     /// is of the agent's first window, which can be another display's bar.
@@ -173,25 +176,53 @@ nonisolated struct LiveMenuBarCaptureReader: MenuBarCaptureReading {
             return (candidate.item.uniqueIdentifier, candidate.bounds, candidate.item.ownerPID, candidate.item.sourcePID)
         }
         guard !placed.isEmpty, let entries = await drawnBarOnDisplay(CGDisplayBounds(displayID)) else { return DrawnSeats() }
-        return Self.drawnSeats(for: placed, in: entries)
+        // Only an app with a displaced item is asked what it lists.
+        let displaced = Self.displacedApps(among: placed, in: entries)
+        let itemCounts = displaced.isEmpty ? [:] : Self.itemCounts(in: await itemCatalog(displaced.sorted()))
+        return Self.drawnSeats(for: placed, in: entries, itemCounts: itemCounts)
     }
 
-    /// One candidate of drawnSeats(for:in:). Its frame is the one its app reports.
+    /// One candidate of drawnSeats(for:in:itemCounts:). Its frame is the one its app reports.
     typealias DrawnSeatCandidate = (identifier: String, frame: CGRect, ownerPID: pid_t, sourcePID: pid_t?)
 
+    /// The apps whose one drawn entry is away from the frame a candidate of theirs reports.
+    static func displacedApps(among candidates: [DrawnSeatCandidate], in entries: [MenuBarAgentWindow.Entry]) -> Set<pid_t> {
+        Set(candidates.compactMap { candidate in
+            let (frame, owner, source) = (candidate.frame, candidate.ownerPID, candidate.sourcePID)
+            guard DrawnItemFrame.cropFrame(for: frame, ownerPID: owner, sourcePID: source, in: entries) != frame else { return nil }
+            return DrawnItemFrame.appPID(ownerPID: owner, sourcePID: source)
+        })
+    }
+
+    /// How many items each app in a catalog read lists in its extras bar. An app that didn't answer has no count.
+    static func itemCounts(in catalog: [AXGeometryCatalog.Entry]) -> [pid_t: Int] {
+        Dictionary(grouping: catalog, by: \.ownerPID).mapValues { Set($0.map(\.itemIndex)).count }
+    }
+
     /// The candidates MenuBarAgent draws away from their reported frame, given the bar of the display they
-    /// are on. Only an app with one item drawn says where that item is. Any other item is only checked for
-    /// reporting another app's seat.
-    static func drawnSeats(for candidates: [DrawnSeatCandidate], in entries: [MenuBarAgentWindow.Entry]) -> DrawnSeats {
+    /// are on. An app's one drawn entry is a candidate's own only when itemCounts says the app lists a single
+    /// item: a sibling that isn't drawn would otherwise be moved onto it. Any other candidate is only checked
+    /// for reporting another app's seat.
+    static func drawnSeats(
+        for candidates: [DrawnSeatCandidate],
+        in entries: [MenuBarAgentWindow.Entry],
+        itemCounts: [pid_t: Int]
+    ) -> DrawnSeats {
         var seats = DrawnSeats()
         for candidate in candidates {
             let (frame, owner, source) = (candidate.frame, candidate.ownerPID, candidate.sourcePID)
-            if DrawnItemFrame.drawnFrame(for: frame, ownerPID: owner, sourcePID: source, in: entries) != nil {
-                let seat = DrawnItemFrame.cropFrame(for: frame, ownerPID: owner, sourcePID: source, in: entries)
-                if seat != frame {
+            let isOnlyItem = DrawnItemFrame.appPID(ownerPID: owner, sourcePID: source).map { itemCounts[$0] == 1 } ?? false
+            let seat = isOnlyItem ? DrawnItemFrame.cropFrame(for: frame, ownerPID: owner, sourcePID: source, in: entries) : frame
+            if seat != frame {
+                // The crop keeps the reported width, so it is checked against the items drawn beside the seat.
+                if DrawnItemFrame.takesInNeighbour(seat, ownerPID: owner, sourcePID: source, in: entries) {
+                    seats.occupied.insert(candidate.identifier)
+                } else {
                     seats.moved[candidate.identifier] = seat
                 }
-            } else if DrawnItemFrame.isPhantom(frame, ownerPID: owner, sourcePID: source, in: entries) {
+            } else if DrawnItemFrame.drawnFrame(for: frame, ownerPID: owner, sourcePID: source, in: entries) == nil || !isOnlyItem,
+                      DrawnItemFrame.isPhantom(frame, ownerPID: owner, sourcePID: source, in: entries)
+            {
                 seats.occupied.insert(candidate.identifier)
             }
         }

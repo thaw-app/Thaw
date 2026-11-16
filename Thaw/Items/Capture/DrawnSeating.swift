@@ -16,8 +16,8 @@ nonisolated struct DrawnSeating: Sendable {
     /// The reported frame of each item cut at its drawn seat.
     private(set) var reportedBounds: [String: CGRect] = [:]
 
-    /// The candidates at their drawn seats, for those drawn away from the frame they report. One on a
-    /// seat another app's item is drawn in is left out and rejected into pass, keeping its picture.
+    /// The candidates at their drawn seats, for those drawn away from the frame they report. One that no
+    /// crop is safe for (DrawnSeats.occupied) is left out and rejected into pass, keeping its picture.
     mutating func seat(
         _ candidates: [(item: MenuBarItem, bounds: CGRect)],
         using reader: any MenuBarCaptureReading,
@@ -29,7 +29,7 @@ nonisolated struct DrawnSeating: Sendable {
         for (item, bounds) in candidates {
             if seats.occupied.contains(item.uniqueIdentifier) {
                 MenuBarItemImageCache.diagLog.debug(
-                    "axBoundsCapture: \(item.logString) reports \(bounds), a seat another app's item is drawn in; keeping its prior image"
+                    "axBoundsCapture: \(item.logString) at \(bounds) can't be cut clear of another app's drawn item; keeping its prior image"
                 )
                 pass.reject(item, .keepPrior)
             } else if let seat = seats.moved[item.uniqueIdentifier] {

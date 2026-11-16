@@ -43,10 +43,56 @@ struct MenuBarCaptureReadingTests {
                 ("in place", CGRect(x: 1000, y: 4.5, width: 24, height: 24), 20, nil),
                 ("not drawn", CGRect(x: 1100, y: 4.5, width: 24, height: 24), 30, nil),
             ],
-            in: [Self.entry(10, x: 908, width: 18), Self.entry(20, x: 993, width: 38)]
+            in: [Self.entry(10, x: 908, width: 18), Self.entry(20, x: 993, width: 38)],
+            itemCounts: [10: 1, 20: 1, 30: 1]
         )
 
         #expect(seats == DrawnSeats(moved: ["displaced": CGRect(x: 907, y: 4.5, width: 20, height: 24)]))
+    }
+
+    @Test("An app's one drawn item is not taken for a sibling the app also lists", arguments: [2, nil] as [Int?])
+    func oneDrawnEntryIsNotASibling(listed: Int?) {
+        // The app has one item on the bar and lists another that isn't drawn, or didn't say what it lists.
+        let hiddenSibling: LiveMenuBarCaptureReader.DrawnSeatCandidate = ("hidden", CGRect(x: 926, y: 4.5, width: 20, height: 24), 10, nil)
+        let bar = [Self.entry(10, x: 800, width: 24)]
+        let counts = listed.map { [pid_t(10): $0] } ?? [:]
+
+        #expect(LiveMenuBarCaptureReader.drawnSeats(for: [hiddenSibling], in: bar, itemCounts: counts) == DrawnSeats(), "Left at its reported frame")
+
+        let neighbour = bar + [Self.entry(77, x: 926, width: 24)]
+        #expect(LiveMenuBarCaptureReader.drawnSeats(for: [hiddenSibling], in: neighbour, itemCounts: counts) == DrawnSeats(occupied: ["hidden"]))
+    }
+
+    @Test("A moved crop that would take in a neighbour is refused, not moved")
+    func movedCropTakingInANeighbourIsRefused() {
+        // Reported 38 wide, drawn 908 to 926, another app's item from 926: the moved crop holds ten points of it.
+        let seats = LiveMenuBarCaptureReader.drawnSeats(
+            for: [("wide", CGRect(x: 950, y: 4.5, width: 38, height: 24), 10, nil)],
+            in: [Self.entry(10, x: 908, width: 18), Self.entry(77, x: 926, width: 24)],
+            itemCounts: [10: 1]
+        )
+
+        #expect(seats == DrawnSeats(occupied: ["wide"]))
+    }
+
+    @Test("Item counts come from the roots each app lists, and only displaced apps are asked")
+    func itemCountsAndDisplacedApps() {
+        let catalog = [
+            AXGeometryCatalog.Entry(ownerPID: 10, itemIndex: 0, identityTitle: nil, frame: .zero),
+            AXGeometryCatalog.Entry(ownerPID: 10, itemIndex: 0, identityTitle: "A", frame: CGRect(x: 1, y: 0, width: 24, height: 24)),
+            AXGeometryCatalog.Entry(ownerPID: 10, itemIndex: 1, identityTitle: "B", frame: .zero),
+            AXGeometryCatalog.Entry(ownerPID: 20, itemIndex: 0, identityTitle: "C", frame: .zero),
+        ]
+        #expect(LiveMenuBarCaptureReader.itemCounts(in: catalog) == [10: 2, 20: 1])
+
+        let displaced = LiveMenuBarCaptureReader.displacedApps(
+            among: [
+                ("displaced", CGRect(x: 926, y: 4.5, width: 20, height: 24), 10, nil),
+                ("in place", CGRect(x: 1000, y: 4.5, width: 24, height: 24), 20, nil),
+            ],
+            in: [Self.entry(10, x: 908, width: 18), Self.entry(20, x: 993, width: 38)]
+        )
+        #expect(displaced == [10])
     }
 
     /// Thaw's icon as a user's item dump recorded it: 35 wide at x=1350. Their screenshot showed its picture
@@ -58,14 +104,17 @@ struct MenuBarCaptureReadingTests {
 
         let twoItems = LiveMenuBarCaptureReader.drawnSeats(
             for: [("stats", onThawIcon, 10, nil)],
-            in: [thawIcon, Self.entry(10, x: 1290, width: 26), Self.entry(10, x: 1320, width: 26)]
+            in: [thawIcon, Self.entry(10, x: 1290, width: 26), Self.entry(10, x: 1320, width: 26)],
+            itemCounts: [10: 2]
         )
         #expect(twoItems == DrawnSeats(occupied: ["stats"]))
 
-        let notDrawn = LiveMenuBarCaptureReader.drawnSeats(for: [("stats", onThawIcon, 10, nil)], in: [thawIcon])
+        let notDrawn = LiveMenuBarCaptureReader.drawnSeats(for: [("stats", onThawIcon, 10, nil)], in: [thawIcon], itemCounts: [10: 1])
         #expect(notDrawn == DrawnSeats(occupied: ["stats"]))
 
-        let oneItem = LiveMenuBarCaptureReader.drawnSeats(for: [("stats", onThawIcon, 10, nil)], in: [thawIcon, Self.entry(10, x: 1320, width: 26)])
+        let oneItem = LiveMenuBarCaptureReader.drawnSeats(
+            for: [("stats", onThawIcon, 10, nil)], in: [thawIcon, Self.entry(10, x: 1320, width: 26)], itemCounts: [10: 1]
+        )
         #expect(oneItem == DrawnSeats(moved: ["stats": CGRect(x: 1320, y: 7.5, width: 26, height: 24)]), "With one item drawn it is moved there instead")
     }
 
@@ -79,26 +128,40 @@ struct MenuBarCaptureReadingTests {
                 // The agent draws this one itself, so the entry on its seat is the agent's, its owner.
                 ("hosted", CGRect(x: 1350, y: 7.5, width: 35, height: 24), 77, 88),
             ],
-            in: bar
+            in: bar,
+            itemCounts: [10: 2, 88: 1]
         )
 
         #expect(seats == DrawnSeats())
     }
 
-    @Test("The drawn bar is asked for by the bounds of the display being captured")
+    @Test("The drawn bar is asked for by the display being captured, and an app only when its item is displaced")
     func drawnBarIsReadForTheCapturedDisplay() async {
-        let asked = OSAllocatedUnfairLock<[CGRect]>(initialState: [])
+        let askedDisplays = OSAllocatedUnfairLock<[CGRect]>(initialState: [])
+        let askedApps = OSAllocatedUnfairLock<[[pid_t]]>(initialState: [])
+        let pid = ProcessInfo.processInfo.processIdentifier
+        let own = Self.item("Own", owner: pid)
         var reader = LiveMenuBarCaptureReader()
+        reader.itemCatalog = { apps in
+            askedApps.withLock { $0.append(apps) }
+            return [AXGeometryCatalog.Entry(ownerPID: pid, itemIndex: 0, identityTitle: nil, frame: .zero)]
+        }
+
         reader.drawnBarOnDisplay = { display in
-            asked.withLock { $0.append(display) }
+            askedDisplays.withLock { $0.append(display) }
             return nil
         }
-        let own = Self.item("Own", owner: ProcessInfo.processInfo.processIdentifier)
+        #expect(await reader.drawnSeats(for: [(own, own.bounds)], displayID: CGMainDisplayID()) == DrawnSeats(), "A bar that can't be read seats nothing")
+        #expect(askedDisplays.withLock { $0 } == [CGDisplayBounds(CGMainDisplayID())])
 
+        reader.drawnBarOnDisplay = { _ in [Self.entry(pid, x: own.bounds.minX - 3, width: 28)] }
+        #expect(await reader.drawnSeats(for: [(own, own.bounds)], displayID: CGMainDisplayID()) == DrawnSeats())
+        #expect(askedApps.withLock { $0 }.isEmpty, "An item drawn where it reports costs no read of its app")
+
+        reader.drawnBarOnDisplay = { _ in [Self.entry(pid, x: own.bounds.minX - 19, width: 22)] }
         let seats = await reader.drawnSeats(for: [(own, own.bounds)], displayID: CGMainDisplayID())
-
-        #expect(seats == DrawnSeats(), "A bar that can't be read seats nothing")
-        #expect(asked.withLock { $0 } == [CGDisplayBounds(CGMainDisplayID())])
+        #expect(seats == DrawnSeats(moved: [own.uniqueIdentifier: own.bounds.offsetBy(dx: -19, dy: 0)]))
+        #expect(askedApps.withLock { $0 } == [[pid]])
     }
 
     @Test("No targets means no owners to refresh")

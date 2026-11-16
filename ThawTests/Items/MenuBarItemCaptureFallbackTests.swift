@@ -513,6 +513,18 @@ struct MenuBarItemCaptureFallbackTests {
         #expect(result.invalidatedTags.isEmpty)
     }
 
+    @Test("An item whose app lists a second item is not moved onto the one that is drawn")
+    func siblingIsNotMovedOntoTheDrawnItem() async throws {
+        let item = makeItem()
+        let reader = try CaptureFixture(
+            hosting: makeCapture(opaque: false, glyphX: 996), strip: nil, drawn: Self.drawnToTheLeft, listedItems: 2
+        )
+        let result = await capture(item, using: reader, seatsOnDrawnBar: true)
+
+        let glyph = try #require(result.captured[item.tag])
+        #expect(MenuBarItemImageCache.isClippedAtLeadingEdge(glyph), "Cut at the reported frame, as before this change")
+    }
+
     /// Another app's item is drawn on the seat the item reports, and the item's own app has two items
     /// drawn, so nothing says which of them it is.
     private static let neighbourOnTheSeat = [
@@ -650,6 +662,8 @@ actor CaptureFixture {
     let drawn: [MenuBarAgentWindow.Entry]?
     /// What it says once a screenshot was taken, when that differs.
     let drawnAfterCapture: [MenuBarAgentWindow.Entry]??
+    /// How many items each candidate's app lists in its own extras bar.
+    let listedItems: Int
     let onCapture: @Sendable (Source) -> Void
     private(set) var captures: [Source] = []
     private(set) var sourcesAtValidation: [Source] = []
@@ -673,6 +687,7 @@ actor CaptureFixture {
         displays: [CGRect] = [CGRect(x: 0, y: 0, width: 1470, height: 956)],
         drawn: [MenuBarAgentWindow.Entry]? = nil,
         drawnAfterCapture: [MenuBarAgentWindow.Entry]?? = nil,
+        listedItems: Int = 1,
         onCapture: @escaping @Sendable (Source) -> Void = { _ in }
     ) {
         self.hosting = hosting
@@ -687,6 +702,7 @@ actor CaptureFixture {
         self.displays = displays
         self.drawn = drawn
         self.drawnAfterCapture = drawnAfterCapture
+        self.listedItems = listedItems
         self.onCapture = onCapture
     }
 
@@ -788,9 +804,11 @@ extension CaptureFixture {
         drawnSeatReads += 1
         let read = captures.isEmpty ? drawn : drawnAfterCapture ?? drawn
         guard let entries = read else { return DrawnSeats() }
+        let apps = candidates.map { $0.item.sourcePID ?? $0.item.ownerPID }
         return LiveMenuBarCaptureReader.drawnSeats(
             for: candidates.map { ($0.item.uniqueIdentifier, $0.bounds, $0.item.ownerPID, $0.item.sourcePID) },
-            in: entries
+            in: entries,
+            itemCounts: Dictionary(apps.map { ($0, listedItems) }, uniquingKeysWith: { first, _ in first })
         )
     }
 

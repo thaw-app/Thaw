@@ -93,6 +93,28 @@ nonisolated enum DrawnItemFrame {
         return abs(shift) > cropAgreementTolerance ? axFrame.offsetBy(dx: shift, dy: 0) : axFrame
     }
 
+    /// Whether a picture cut at frame would take in another app's drawn item. A moved crop keeps the
+    /// reported width, which can be wider than the seat the item is drawn in.
+    static func takesInNeighbour(
+        _ frame: CGRect,
+        ownerPID: pid_t,
+        sourcePID: pid_t?,
+        in entries: [MenuBarAgentWindow.Entry]?
+    ) -> Bool {
+        guard let entries = entries.flatMap(MenuBarAgentWindow.settled) else { return false }
+        let own = Set(processes(ownerPID: ownerPID, sourcePID: sourcePID))
+        return entries.contains { entry in
+            !own.contains(entry.ownerPID)
+                && entry.frame.width >= MenuBarItemGeometry.phantomFramePeerMinimumWidth
+                && min(frame.maxX, entry.frame.maxX) - max(frame.minX, entry.frame.minX) >= MenuBarItemGeometry.phantomFrameMinimumOverlap
+        }
+    }
+
+    /// The process whose drawn entries are the item's: its source for an item MenuBarAgent hosts.
+    static func appPID(ownerPID: pid_t, sourcePID: pid_t?) -> pid_t? {
+        processes(ownerPID: ownerPID, sourcePID: sourcePID).first
+    }
+
     /// The entries on the display holding axFrame, or all when none holds it: MenuBarAgent's first
     /// window can be another display's bar.
     private static func onDisplay(
