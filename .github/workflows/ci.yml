@@ -229,6 +229,7 @@ jobs:
         if: needs.changes.outputs.build == 'true'
 
       - name: Cache SwiftPM
+        id: spm-cache
         if: needs.changes.outputs.build == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -269,11 +270,19 @@ jobs:
           restore-keys: ${{ github.ref != 'refs/heads/development' && format('compilation-cache-{0}-xcode{1}-', runner.os, steps.xcode.outputs.id) || '' }}
 
       # Separate from Test so each step's time shows, and so the timing summary prints.
-      # No editor index or package updates; static_analysis already lints with --strict.
+      # No editor index; static_analysis already lints with --strict. Package updates are
+      # skipped only on an exact cache hit: a fallback cache holds the clones of another
+      # lock file, and without a fetch a newly pinned revision can't be checked out.
       - name: Build
         if: needs.changes.outputs.build == 'true'
         timeout-minutes: 12
+        env:
+          SPM_CACHE_HIT: ${{ steps.spm-cache.outputs.cache-hit }}
         run: |
+          package_updates=()
+          if [[ "$SPM_CACHE_HIT" == "true" ]]; then
+            package_updates=(-skipPackageUpdates)
+          fi
           xcodebuild build-for-testing \
             -project Thaw.xcodeproj \
             -scheme Thaw \
@@ -281,7 +290,7 @@ jobs:
             -destination 'platform=macOS' \
             -enableCodeCoverage YES \
             -onlyUsePackageVersionsFromResolvedFile \
-            -skipPackageUpdates \
+            ${package_updates[@]+"${package_updates[@]}"} \
             -showBuildTimingSummary \
             COMPILER_INDEX_STORE_ENABLE=NO \
             THAW_SKIP_XCODE_LINT=1 \
