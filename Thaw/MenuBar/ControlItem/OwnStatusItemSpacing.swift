@@ -7,11 +7,8 @@
 
 import AppKit
 
-/// Keeps Thaw's collapsed dividers from leaving a blank in the menu bar.
-///
-/// macOS adds the menu bar's item spacing to every status item, a zero-length one included, so
-/// each hidden divider took that much room. Thaw lays its own items out with no spacing and puts
-/// the room back around the ones it shows.
+/// Keeps Thaw's collapsed dividers from leaving a blank: macOS adds its item spacing to every status item, a zero-length one too.
+/// Thaw lays its own items out with no spacing and puts the room back around the ones it shows.
 @MainActor
 enum OwnStatusItemSpacing {
     static let spacingKey = "NSStatusItemSpacing"
