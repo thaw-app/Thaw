@@ -9,6 +9,25 @@ import Cocoa
 import MenuBarModel
 
 extension MenuBarItemImageCache {
+    /// One item's run of failed captures.
+    nonisolated struct FailedCapture: Hashable {
+        let tag: MenuBarItemTag
+        let failureCount: Int
+        let lastFailureTime: Date
+        /// When failureCount last went up. Strikes are spaced from this, not from lastFailureTime:
+        /// spaced from the last failure, steady failures under the spacing apart never added up.
+        let lastStrikeTime: Date
+
+        init(tag: MenuBarItemTag, failureCount: Int, lastFailureTime: Date, lastStrikeTime: Date? = nil) {
+            self.tag = tag
+            self.failureCount = failureCount
+            self.lastFailureTime = lastFailureTime
+            self.lastStrikeTime = lastStrikeTime ?? lastFailureTime
+        }
+    }
+}
+
+extension MenuBarItemImageCache {
     // MARK: Failed Capture Management
 
     /// Whether a capture of item would currently be attempted, rather than
@@ -19,14 +38,14 @@ extension MenuBarItemImageCache {
         !shouldSkipCapture(for: item)
     }
 
-    nonisolated func shouldSkipCapture(for item: MenuBarItem) -> Bool {
+    nonisolated func shouldSkipCapture(for item: MenuBarItem, at now: Date = Date()) -> Bool {
         failedCapturesLock.withLock { dict in
             guard let failed = dict[item.tag] else {
                 return false
             }
 
             if failed.failureCount >= Self.maxFailuresBeforeBlacklist {
-                let timeSinceFailure = Date().timeIntervalSince(
+                let timeSinceFailure = now.timeIntervalSince(
                     failed.lastFailureTime
                 )
                 if timeSinceFailure < Self.blacklistCooldownSeconds {
@@ -52,22 +71,22 @@ extension MenuBarItemImageCache {
         }
     }
 
-    nonisolated func recordCaptureFailure(for item: MenuBarItem) {
+    nonisolated func recordCaptureFailure(for item: MenuBarItem, at now: Date = Date()) {
         guard !screenIsLocked() else { return }
-        let now = Date()
         failedCapturesLock.withLock { dict in
             let existing = dict[item.tag]
 
             if let existing {
-                let sinceLastFailure = now.timeIntervalSince(existing.lastFailureTime)
-                if sinceLastFailure < Self.minimumFailureSpacingSeconds {
-                    // Same reflow blip as the last recorded failure, refresh
+                let sinceLastStrike = now.timeIntervalSince(existing.lastStrikeTime)
+                if sinceLastStrike < Self.minimumFailureSpacingSeconds {
+                    // Same reflow blip as the last counted strike, refresh
                     // the timestamp so the blacklist cutoff still tracks the
                     // most recent glitch, but don't count it as a new strike.
                     dict[item.tag] = FailedCapture(
                         tag: item.tag,
                         failureCount: existing.failureCount,
-                        lastFailureTime: now
+                        lastFailureTime: now,
+                        lastStrikeTime: existing.lastStrikeTime
                     )
                 } else {
                     let newCount = existing.failureCount + 1
