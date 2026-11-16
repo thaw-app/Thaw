@@ -36,24 +36,24 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 ### New
 
 - **Pop Out Editor (work in progress).** Opens Layout in a window with every item in a list, a filter, an editor for the selected item and full keyboard control.
-- **Every Layout edit can be undone,** with ⌘Z anywhere on the Layout page. That includes reordering or moving a group, Move to, Move All, and a drag within one section of a list with groups or folders.
-- **Drag down the Layout window's checkboxes to show or hide several items at once.** A dragged row opens a gap where it will land, and the list scrolls at its edges.
-- **Trackpad taps for Layout and sliders.** A drag taps as it crosses into another section and when it lands, and the spacing and item size sliders tap at their defaults.
+- **Every Layout edit can be undone** with ⌘Z, including moving a group, Move to and Move All.
+- **Drag down the Layout window's checkboxes** to show or hide several items at once.
+- **Trackpad taps for Layout and sliders,** when a drag crosses a section or lands and when a slider reaches its default.
 - **The current Space in the menu bar,** in Displays › Spaces.
 - **Layout warns when items don't fit or macOS hides Focus,** with a one-click fix for each. Reported by @JosefGvirt in [#1477](https://github.com/thaw-app/Thaw/issues/1477).
 - **The widget icon shows real readings** and Bluetooth audio, in a larger size. Suggested by @joaofrgomes in [#1378](https://github.com/thaw-app/Thaw/issues/1378).
-- **Thaw 2 settings are back:** Always Hidden only and inline notch overflow in the Thaw Bar, Settings without a Dock icon, and log size and retention. Your Thaw 2 choices carry over.
+- **Thaw 2 settings are back:** Always Hidden only, inline notch overflow, Settings without a Dock icon, and log size and retention.
 - **Settings that only worked through links have rows** in Visibility and Layout.
 - **Export Logs** zips logs and capture samples for a bug report, in Troubleshooting.
 - **Privacy shows the Notifications permission.**
 - **Displays lists displays that aren't connected,** and can forget them.
 - **Hold Option on Capture Hidden Items to retake every picture.**
 - **Release notes can stay closed after an update,** in Privacy.
-- **Modules.** Settings › Modules switches optional parts of Thaw on and off. A module that's off doesn't run and leaves the sidebar. Scripts, Triggers and Widgets come first, and each starts on if you already used it.
+- **Modules.** Settings › Modules switches Scripts, Triggers and Widgets on and off, and a module that's off doesn't run.
 
 ### Changed
 
-- **Search is rebuilt as Floe's launcher.** Results are grouped by section, in an Extended or a Compact layout you choose in Visibility, and the panel takes its glass, tint, border and shadow from your menu bar's look. Every item can be renamed and moved from the results.
+- **Search is rebuilt as Floe's launcher,** grouped by section in an Extended or Compact layout, and it takes its look from your menu bar.
 - **Settings search goes to the row** and finds each module's switch.
 - **Segmented choices and the tabs in Settings are the system's own control.** The selection is a glass lens you can press and drag across the choices.
 - **The Thaw Bar has its own switch again,** and so does double-clicking Thaw's icon for Always Hidden. By @malash in [#1339](https://github.com/thaw-app/Thaw/pull/1339).
@@ -63,12 +63,12 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **The Thaw Bar drops in from the menu bar.**
 - **Switch to Reduced mode from Troubleshooting,** where Thaw runs as one icon that hides whole apps.
 - **What's New shows its Stable, Beta and Alpha tabs beside the title.**
-- **Thaw does less work while the menu bar sits idle.** A mouse click in any app no longer makes it redraw the menu bar appearance and read every item's position again, and it no longer asks the system about every running app every three seconds. Unless the menu bar's shape is drawn around the icons, it no longer checks the position of its first visible icon twice a second, and with the Native hiding method it no longer watches every click and drag for a press on the clock.
+- **Thaw does less work while the menu bar sits idle.** It no longer redraws the bar's look on every click or asks about every running app every three seconds.
 
 #### Modules
 
 - **Triggers, Scripts and Widgets run as small apps next to Thaw.** Open each from its page in Settings. The widget icon moved there from Experiments.
-- **Profile switches don't wait for a "before switching" script** to finish before the layout changes. Scripts also run for the profile Thaw applies as it starts, and go with a profile you export or copy.
+- **Profile switches don't wait for a "before switching" script,** and scripts go with a profile you export or copy.
 
 #### Thaw's icon
 
@@ -76,14 +76,14 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 
 #### Settings
 
-- **A new sidebar.** Everyday pages come first, then the modules you switched on, then Modules, Privacy and Tools, with About last. The arrow keys move between pages.
+- **A new sidebar,** with everyday pages first, then your modules, then Modules, Privacy and Tools, and About last.
 - **Modules is a grid of cards,** each with the part's icon, what it does and its switch. Profiles can be turned off there too, and your saved profiles are kept.
-- **Some pages moved.** Displays & Spaces is now Displays. Automation became Triggers and Scripts, with thaw:// app permissions on Privacy and switching profiles by display or Space on Profiles. Experiments is gone, and its features sit on the pages they belong to with an Alpha or Beta badge. Old links to these pages still open.
-- **Theme: System, Light, Dark or Black,** for Settings and onboarding, in General › Language and theme. Black suits OLED displays and replaces "Black background in dark mode".
-- **Fewer glass finishes.** The Effect menu has Glass, with a Tint switch, and a Liquid Glass section with Edge, Sheer, Dim, Invert and Dynamic Glass. Saved looks keep how they looked.
-- **The Thaw Bar's own look has a Corners slider,** from square to round, instead of the Rounded corners switch. Corners sliders show their value, Square, a percentage or Round, and match the other sliders.
+- **Some pages moved:** Displays & Spaces is now Displays, Automation became Triggers and Scripts, and Experiments' features sit on the pages they belong to.
+- **Theme: System, Light, Dark or Black,** in General › Language and theme, replacing "Black background in dark mode".
+- **Fewer glass finishes:** Glass with a Tint switch, and Liquid Glass with Edge, Sheer, Dim, Invert and Dynamic Glass.
+- **The Thaw Bar's own look has a Corners slider,** from square to round, and Corners sliders show their value.
 - **Hide items again is one menu** in Simple Mode and Visibility: Never, When I click elsewhere, When I switch apps or a delay.
-- **One name for each thing.** Settings and menus now agree, the sections are called Visible, Hidden and Always Hidden everywhere, and Alpha and Beta features carry a badge. Reset Positions is now Rebuild Saved Layout, Hide again after is Keep opened items in the menu bar for, and Open hidden items in the menu bar is Show clicked items in the menu bar.
+- **One name for each thing** across Settings and menus, with the sections called Visible, Hidden and Always Hidden and a badge on Alpha and Beta features.
 - **The Thaw Bar's Location choices say where it opens,** and shortcuts have their own choice, When opened by a shortcut.
 - **Displays has a Template tab** with the Thaw Bar and spacing settings for new displays.
 - **Spacing has one warning at the top,** and Layout explains Apple's items in Known macOS 27 limitations.
@@ -93,11 +93,11 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 
 #### Layout and items
 
-- An item that shows live text, such as a clock, is recognized as one item within about two minutes, instead of whenever something else in the menu bar next changed. Until then each new text could put it under New Items or lose its place. Text that changes the item's width, such as a song title, is recognized too, the second time it changes.
+- **An item that shows live text is recognized as one item within about two minutes,** such as a clock or a song title.
 - **The Layout window's green button zooms it instead of going full screen,** where only quitting Thaw got you out.
 - **The widget icon hides again with the Native hiding method.** It stayed on the menu bar in Hidden and Always Hidden.
 - **Native hiding starts again when a hidden app has no entry in System Settings › Menu Bar,** such as one you removed. Reported by @SebastienBn in [#1513](https://github.com/thaw-app/Thaw/issues/1513).
-- **Native hiding hides your apps again when macOS puts its list back right after Thaw changed it.** Thaw used to leave every app on the menu bar with a warning. Reported by @macdaddy1944 in [#1501](https://github.com/thaw-app/Thaw/issues/1501).
+- **Native hiding hides your apps again when macOS puts its list back right after Thaw changed it.** Reported by @macdaddy1944 in [#1501](https://github.com/thaw-app/Thaw/issues/1501).
 - **An app you switched back on in System Settings says so in Layout,** instead of saying macOS won't let Thaw switch it off.
 - **Undo brings a moved group back whole again.** It used to restore only the batch's ungrouped items.
 - **Live item pictures update again when their left part changes,** like right-aligned text getting shorter on an item that keeps its width.
@@ -106,12 +106,12 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **The order you drag the menu bar into is pinned,** even when an app is slow to answer Thaw at that moment.
 - **Hiding an item from Layout no longer sends Visible items to Always Hidden** after Thaw restarts.
 - **Items with a countdown, such as Raycast's calendar, stay put.** Reported by @jasonericsiegel in [#1489](https://github.com/thaw-app/Thaw/issues/1489).
-- **Items no longer move at launch** when Thaw can't read the whole bar in time, and your saved layout comes back once the bar settles. Thaw also waits for the menu bar to settle while you log in and when it moves to another display. Fixed by @camguillory in [#1452](https://github.com/thaw-app/Thaw/pull/1452).
+- **Items no longer move at launch or while you log in,** because Thaw waits for the menu bar to settle. Fixed by @camguillory in [#1452](https://github.com/thaw-app/Thaw/pull/1452).
 - **Hidden items no longer collapse** right after you point at them.
 - **Item pictures are no longer cut off,** including on Macs with a taller menu bar, and f.lux gets its picture.
 - **Capture Hidden Items is faster** and counts items Native hiding parks. By @Belligerently in [#1488](https://github.com/thaw-app/Thaw/pull/1488).
 - **Layout says when a drag didn't land,** and refused moves point to the right setting.
-- **Unresponsive apps show an hourglass,** switched-off system items such as Bluetooth show their own symbol in Layout and Search, and items Thaw can't identify share one grey placeholder.
+- **Unresponsive apps show an hourglass,** and switched-off system items show their own symbol in Layout and Search.
 - **Control-click opens a row's menu in the Layout window's list,** as a right click does.
 - **A selection you clear or change right after a move stays that way** instead of jumping back to the moved items.
 - **Two same-width items of one app can no longer show each other's picture.**
@@ -121,24 +121,24 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **Layout keeps your selection when a move is refused or changes nothing.**
 - **A chosen icon now shows.** Choose Icon kept showing Thaw's picture of the item. Automatic goes back to the picture.
 - **Items that show up late after a restart go back to their place** instead of staying next to Thaw's icon. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
-- **Opening a hidden item no longer opens the item next to it,** works the first time after Thaw starts, and moves the pointer only when it has to. Clicking an item is faster too. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
+- **Opening a hidden item no longer opens the item next to it,** and moves the pointer only when it has to. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
 - **"Move items that don’t fit into Hidden" moves only the items that don't fit.** On a full menu bar it could move most of your Visible items to Hidden.
 - **Capture Hidden Items says when the menu bar is full,** instead of listing every hidden item as missing a picture.
 - **Turning off Automatically rehide also stops hides already on their way.** By @Belligerently in [#1575](https://github.com/thaw-app/Thaw/pull/1575).
 - **Closing hidden items stops every section's hide timer,** so an old countdown can't close items you reveal later. By @Belligerently in [#1571](https://github.com/thaw-app/Thaw/pull/1571).
 - **Items you reopen with a shortcut no longer close because of an earlier click elsewhere.**
-- **A cancelled click no longer opens the item or leaves the pointer on it,** and no longer waits for the pointer to stop. The first part is by @Belligerently in [#1578](https://github.com/thaw-app/Thaw/pull/1578).
+- **A cancelled click no longer opens the item, leaves the pointer on it or waits for the pointer to stop.** Partly by @Belligerently in [#1578](https://github.com/thaw-app/Thaw/pull/1578).
 - **Thaw drops far fewer clicks on menu bar items while an app is frozen.** By @Belligerently in [#1580](https://github.com/thaw-app/Thaw/pull/1580).
 - **Thaw no longer crashes when two Apple items swap places while one is briefly unnamed.** By @Belligerently in [#1576](https://github.com/thaw-app/Thaw/pull/1576).
 - **Native hiding no longer mixes visible items in with hidden ones after an app launches.** By @camguillory.
 - **Notes in the layout editor's right-click menu are dimmed,** so they don't look like commands.
 - **Items with a blank name get their picture taken.**
-- **Layout picks up new items when macOS leaves out Thaw's own icon,** and QQ and WeChat keep one item each as their unread count changes. Reported by @Mujun05 in [#1449](https://github.com/thaw-app/Thaw/issues/1449) and fixed in [#1450](https://github.com/thaw-app/Thaw/pull/1450).
+- **Layout picks up new items when macOS leaves out Thaw's own icon,** and QQ and WeChat keep one item each. Reported by @Mujun05 in [#1449](https://github.com/thaw-app/Thaw/issues/1449) and fixed in [#1450](https://github.com/thaw-app/Thaw/pull/1450).
 - **Capture Hidden Items no longer lists a kept picture as missing** when macOS rebuilds the menu bar. Fixed by @Belligerently in [#1448](https://github.com/thaw-app/Thaw/pull/1448).
 
 #### Thaw Bar
 
-- Showing a section in the menu bar while the Thaw Bar is open no longer hides it early, when the Thaw Bar's own hide timer runs out.
+- **Showing a section while the Thaw Bar is open no longer hides it early.**
 - **App menus keep their place when Always Hidden opens in the Thaw Bar,** and Hidden no longer stays expanded behind the panel.
 - **One click on Thaw's icon works** when double-click opens Always Hidden and macOS's double-click speed is slow. Reported by @bortolatto-creator in [#1492](https://github.com/thaw-app/Thaw/issues/1492).
 - **A long click on a Thaw Bar item opens it,** and the arrow keys move the highlight at once.
@@ -150,8 +150,8 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 
 #### Spaces and profiles
 
-- A `thaw://apply-profile` link no longer applies a profile while Profiles is turned off.
-- **The profile preview shows what your items look like,** with Layout's pictures for items in the menu bar and symbols for Wi-Fi, Clock and other system items, and it follows the pictures after the layout changes.
+- **A `thaw://apply-profile` link no longer applies a profile** while Profiles is turned off.
+- **The profile preview shows what your items look like,** with Layout's pictures and system symbols.
 - **Renaming or duplicating an old profile no longer starts turning Always Hidden off** on the next apply or Space switch.
 - **Undo is cleared when a profile applies,** so ⌘Z can't write one profile's old order into another's layout.
 - **Spaces settings stay after Thaw quits,** and a Space's own look survives a logout.
@@ -162,7 +162,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **Thaw's list of Spaces updates when a display connects or disconnects.**
 - **Switching Spaces on a second display right after the first is no longer missed.**
 - **A Space indicator that could not start is fully turned off,** so turning it on again starts clean.
-- **thaw:// reports every per-display setting.** A disconnected display now lists its item size, spacing and Always Hidden only choice, and the Thaw Bar location lists all five places.
+- **thaw:// reports every per-display setting,** including for a disconnected display.
 - **Use Template copies the Always Hidden only choice too.**
 - **A profile applied as Thaw starts keeps its order** when some items show up late. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
 - **A profile action that arrives after that profile was removed no longer clears another profile’s display or Space association.** By @Belligerently in [#1555](https://github.com/thaw-app/Thaw/pull/1555).
@@ -171,7 +171,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **An apply shortcut you clear stays cleared through undo and redo.**
 - **Profile previews no longer list display changes that won't happen.** By @Belligerently in [#1572](https://github.com/thaw-app/Thaw/pull/1572).
 - **Reset all settings also clears menu bar looks saved for single Spaces.** By @Belligerently in [#1579](https://github.com/thaw-app/Thaw/pull/1579).
-- **Applying a profile keeps your menu bar spacing,** at startup and when you change Space or Focus (fixed by @Omoeba in [#1451](https://github.com/thaw-app/Thaw/pull/1451)). Spacing set with a thaw:// link is saved to your profile too, so applying it no longer puts the old spacing back.
+- **Applying a profile keeps your menu bar spacing,** including spacing set with a thaw:// link. Partly fixed by @Omoeba in [#1451](https://github.com/thaw-app/Thaw/pull/1451).
 
 #### Search
 
@@ -181,8 +181,8 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 
 #### Settings
 
-- Settings search no longer offers pages for modules you turned off, such as Profiles, Scripts, Triggers or Widgets.
-- The Shortcuts page no longer shows an empty Profiles tab while Profiles is turned off.
+- **Settings search no longer offers pages for modules you turned off.**
+- **The Shortcuts page no longer shows an empty Profiles tab** while Profiles is turned off.
 - **A search result that jumps to a row which isn't showing no longer flashes that row later.**
 - **Hide the menu bar opens Displays on its Spaces tab.**
 - **Each permission row has its own search target,** so the jump lands on the one you picked.
@@ -190,7 +190,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **The Swap Bar stays off** after an upgrade from a version that called it the Transport Bar.
 - **Simple Mode mentions double-clicking Thaw's icon only while that shortcut is on.**
 - **Show Samples turns on as soon as a capture sample is saved.**
-- **Buttons in Settings are all one height.** The button groups on About and Tools and the filled buttons were taller, and the buttons on Displays and the Thaw Bar page were smaller.
+- **Buttons in Settings are all one height.**
 - **The Logs and Item list buttons in Tools no longer look turned off.**
 - **About's update rows have the same separators as the other pages.**
 - **App language shows System Default** when you haven't picked a language.
@@ -199,14 +199,14 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 
 #### Other
 
-- `thaw://release-item?bundle=` now lets go of every item of that app the sender holds, instead of failing when it holds more than one.
-- Smart rehide no longer skips a click outside the menu bar while the Thaw icon has no window yet, so the revealed items go away after the click as set.
-- Thaw's memory no longer jumps by about 50 MB for a few seconds each time you switch apps or show a section while a menu bar shape, tint or shadow is on.
-- After you log in, Thaw no longer stays unable to see other apps' menu bar items when macOS refused its Accessibility reads during startup, which left the menu bar shape covering only part of the items. Thaw now notices and restarts itself once.
+- **`thaw://release-item?bundle=` lets go of every item of that app the sender holds.**
+- **Smart rehide no longer skips a click outside the menu bar** while the Thaw icon has no window yet.
+- **Thaw's memory no longer jumps by about 50 MB** each time you switch apps or show a section with a menu bar shape, tint or shadow on.
+- **Thaw restarts itself once when macOS refuses its Accessibility reads at login,** instead of staying unable to see other apps' menu bar items.
 - **The widget icon is redrawn only when what it shows changes,** which cuts the Widgets module's memory and processor use.
 - **Turning "Show release notes after an update" off keeps the window closed** after Thaw updates.
 - **A Mac without a battery draws its widget icon in the menu bar's own ink** instead of as a fixed grey picture.
-- **Reset Thaw also puts back the widgets switch, the recording alert position and Remember last search,** forgets what it checked about your allowed apps, and forgets a Space choice made before macOS listed that Space.
+- **Reset Thaw also puts back the widgets switch, the recording alert position and Remember last search,** and forgets a few remembered choices.
 - **The Widgets and Scripts windows open at full size.**
 - **The capsule border comes back after the Mac wakes.**
 - **Reduce Motion keeps short fades** and no longer pauses the notch panel.
@@ -218,7 +218,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **Show Emoji & Symbols in Thaw's Input menu opens the viewer.** Reported by @Macador in [#1518](https://github.com/thaw-app/Thaw/issues/1518).
 - **What's New opens on the version you have installed,** not the newest release.
 - **Closing What's New or a Settings page no longer leaks a little memory each time.**
-- **The Split shape shrinks back sooner after hiding.** Once the hidden icons were gone, the shape around the icons could stay stretched for a second or two with nothing in it. It now shrinks as soon as the menu bar has settled.
+- **The Split shape shrinks back sooner after hiding.**
 - **Zen Mode stays off when you turn it off during a screen share or call,** until the share or call ends. By @Belligerently in [#1577](https://github.com/thaw-app/Thaw/pull/1577).
 - **The CPU widget no longer crashes after about 248 days of uptime.** By @Belligerently in [#1581](https://github.com/thaw-app/Thaw/pull/1581).
 - **Screenshots no longer show the Finder menus you hid** on the desktop.
