@@ -25,51 +25,28 @@ final class RemoteMenuBarPresentation: MenuBarPresentationControlling {
         case fullScreenAppearance(Bool)
     }
 
-    /// A request with the number its answer comes back under.
-    struct Call: Codable, Equatable {
-        var id: Int
-        var request: Request
-    }
-
-    struct Answer: Codable, Equatable {
-        var id: Int
-        var succeeded: Bool
-    }
-
-    /// The settings process's own, which sends through SettingsRemote.
-    static let shared = RemoteMenuBarPresentation { SettingsRemote.current?.perform(DisplaysSettingsLink.presentation, $0) }
+    /// The settings process's own, which asks through SettingsRemote.
+    static let shared = RemoteMenuBarPresentation { SettingsRemote.current }
 
     /// Whether the app's session can make these requests, as the app last said.
     var isSupported = false
 
-    @ObservationIgnored private let send: (Call) -> Void
+    @ObservationIgnored private let remote: () -> SettingsRemote?
     @ObservationIgnored private let patience: Duration
-    @ObservationIgnored private var waiting: [Int: CheckedContinuation<Bool, Never>] = [:]
-    @ObservationIgnored private var calls = 0
 
-    /// A call the app hasn't answered after patience counts as declined.
-    init(patience: Duration = .seconds(10), send: @escaping (Call) -> Void) {
+    /// A request the app hasn't answered after patience counts as declined.
+    init(patience: Duration = .seconds(10), remote: @escaping () -> SettingsRemote?) {
         self.patience = patience
-        self.send = send
-    }
-
-    /// Takes the app's answer to a call. An answer to a call that is no longer waiting is dropped.
-    func answer(_ answer: Answer) {
-        waiting.removeValue(forKey: answer.id)?.resume(returning: answer.succeeded)
+        self.remote = remote
     }
 
     private func ask(_ request: Request) async -> Bool {
-        calls += 1
-        let id = calls
-        // Without an answer the control would stay as it was set, as if macOS had taken the request.
-        let giveUp = Task { [weak self, patience] in
-            guard (try? await Task.sleep(for: patience)) != nil else { return }
-            self?.answer(Answer(id: id, succeeded: false))
-        }
-        defer { giveUp.cancel() }
-        return await withCheckedContinuation { continuation in
-            waiting[id] = continuation
-            send(Call(id: id, request: request))
+        guard let remote = remote() else { return false }
+        do {
+            return try await remote.request(DisplaysSettingsLink.presentation, request, patience: patience)
+        } catch {
+            // Without an answer the control would stay as it was set, as if macOS had taken the request.
+            return false
         }
     }
 
@@ -126,6 +103,10 @@ extension MenuBarPresentationProvider {
     /// The session the Spaces controls act through: this process's in the app, and the app's,
     /// reached over the link, when Settings runs in its own process.
     static var forSettings: any MenuBarPresentationControlling {
-        SettingsRemote.current == nil ? current : RemoteMenuBarPresentation.shared
+        forSettings(remote: .current)
+    }
+
+    static func forSettings(remote: SettingsRemote?) -> any MenuBarPresentationControlling {
+        remote == nil ? current : RemoteMenuBarPresentation.shared
     }
 }

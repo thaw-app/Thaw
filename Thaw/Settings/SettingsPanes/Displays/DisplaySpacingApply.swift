@@ -101,13 +101,9 @@ extension DisplaySettingsPane {
     }
 
     /// Makes a change with the profiles that keep it, here or in the app when Settings is in its own process.
-    /// A save that failed here has already put the old settings back.
+    /// A save that failed has already put the old settings back.
     func commit(_ commit: DisplayProfileCommit) {
-        do {
-            try commit.perform(on: appState)
-        } catch {
-            show(DisplayCommitFailure(message: error.localizedDescription, displayID: commit.displayID))
-        }
+        commit.perform(on: appState, remote: remote, failed: show)
     }
 
     /// Says a commit wasn't saved, with the display's slider back on the spacing it kept.

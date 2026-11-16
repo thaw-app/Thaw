@@ -15,6 +15,8 @@ struct DisplaySettingsPane: View {
     @Bindable var displaySettings: DisplaySettingsManager
     /// Nil answers show the alerts below; see Confirmations.
     var confirmations = Confirmations()
+    /// The app, which saves to the profiles when Settings is in its own process.
+    var remote = SettingsRemote.current
 
     /// Slider edits remain drafts until Apply, without saving configuration or relaunching apps.
     @State var draftSpacing: [String: CGFloat] = [:]
@@ -111,12 +113,6 @@ struct DisplaySettingsPane: View {
             }
         )
         .errorAlert("Couldn’t save display settings", message: $errorMessage)
-        // In the settings process the app saves to the profiles, and says here when it couldn't.
-        .onChange(of: DisplayCommitReports.shared.failure, initial: true) {
-            if let failure = DisplayCommitReports.shared.take() {
-                show(failure)
-            }
-        }
     }
 
     @ViewBuilder

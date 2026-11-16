@@ -56,29 +56,30 @@ private final class FakePresentation: MenuBarPresentationControlling {
     }
 }
 
-/// What one end sent the other, and what a stand-in for the spacing engine was asked.
+/// What the settings process sent the app, what the page was told failed, and what a stand-in for the spacing engine was asked.
 @MainActor
 private final class Recorder {
-    var replies: [(topic: String, payload: Data)] = []
     var messages: [SettingsLinkMessage] = []
-    var calls: [RemoteMenuBarPresentation.Call] = []
+    var failures: [DisplayCommitFailure] = []
     var applies: [(forceRelaunch: Bool, relaunchApps: Bool)] = []
     var prompts = 0
     var asked = 0
+    /// The remote whose requests are answered, which its own send closure cannot name.
+    weak var remote: SettingsRemote?
 
-    /// The commands sent to the app, each with its payload decoded as text or as a commit.
+    /// The commands sent to the app, each with its payload decoded as text.
     var commands: [String] {
         messages.map { message in
             guard case let .command(name, payload) = message else { return "\(message)" }
-            if let request = SettingsLinkPayload.decode(DisplaysSettingsLink.CommitRequest.self, from: payload) {
-                return "\(name) \(request.commit.change) with \(request.settings.configurations.count) display(s)"
-            }
             return "\(name) \(SettingsLinkPayload.decode(String.self, from: payload) ?? "?")"
         }
     }
 
-    func reply<Value: Decodable>(_ topic: String, as _: Value.Type = Value.self) -> Value? {
-        replies.last { $0.topic == topic }.flatMap { SettingsLinkPayload.decode(Value.self, from: $0.payload) }
+    /// The names of the requests made of the app.
+    var requests: [String] {
+        messages.compactMap { message in
+            if case let .request(_, name, _) = message { name } else { nil }
+        }
     }
 }
 
@@ -113,7 +114,25 @@ struct SettingsLinkDisplaysTests {
     }
 
     private func appFeature(_ world: World, presentation: FakePresentation = FakePresentation()) -> SettingsAppFeature {
-        Link.app(world.appState, presentation: presentation) { [recorder] in recorder.replies.append(($0, $1)) }
+        Link.app(world.appState, presentation: presentation)
+    }
+
+    /// A remote whose requests the feature answers, as the app's host has it answer them.
+    private func linkedRemote(to feature: SettingsAppFeature) -> SettingsRemote {
+        let remote = SettingsRemote { [recorder] message in
+            recorder.messages.append(message)
+            guard case let .request(id, name, payload) = message else { return }
+            Task {
+                do {
+                    let answer = try await feature.requests[name]?(payload)
+                    recorder.remote?.answered(id: id, payload: answer, failure: nil)
+                } catch {
+                    recorder.remote?.answered(id: id, payload: nil, failure: error.localizedDescription)
+                }
+            }
+        }
+        recorder.remote = remote
+        return remote
     }
 
     private func payload(_ value: some Encodable) throws -> Data {
@@ -174,8 +193,7 @@ struct SettingsLinkDisplaysTests {
             .reveal, .hidden(true), .autoShowEnabled(false), .hiddenInSpace(true, spaceID: 9), .autoShowDisabledInSpace(true, spaceID: 9),
             .autohideHeight(12, spaceID: 9), .clearOverrides(spaceID: 9), .fullScreenAppearance(true),
         ]
-        #expect(requests.enumerated().allSatisfy { survives(RemoteMenuBarPresentation.Call(id: $0.offset, request: $0.element)) })
-        #expect(survives(RemoteMenuBarPresentation.Answer(id: 3, succeeded: false)))
+        #expect(requests.allSatisfy(survives))
     }
 
     @Test("The app sends the spacing apply's progress, the Spaces and the active profile as they are now")
@@ -209,35 +227,34 @@ struct SettingsLinkDisplaysTests {
     @Test("The app takes the settings process's display settings, makes its spacing change and saves it to every profile")
     func appRunsSpacingCommit() async throws {
         try await withWorld(profiles: ["Work", "Home"]) { world in
-            let feature = appFeature(world)
+            let remote = linkedRemote(to: appFeature(world))
             // An edit the settings process made a moment ago, which the app has not read yet.
             var edited = world.settings.snapshot
             edited.configurations[Self.studio] = edited.configurations[Self.studio]?.withGridColumns(7)
             let commit = DisplayProfileCommit(
                 change: .spacing(displayID: Self.studio, offset: 6), scope: .allProfiles, activeProfileID: world.profiles.activeProfileID
             )
-            try feature.commands[Link.commit]?(payload(Link.CommitRequest(commit: commit, settings: edited)))
+            let result: Link.CommitResult = try await remote.request(Link.commit, Link.CommitRequest(commit: commit, settings: edited))
 
             #expect(savedOffset(world) == 6)
             #expect(world.settings.configuration(forUUID: Self.studio).gridColumns == 7, "the earlier edit is kept")
             #expect(try profile("Work", in: world).displayConfigurations[Self.studio]?.itemSpacingOffset == 6)
             #expect(try profile("Home", in: world).displayConfigurations[Self.studio]?.itemSpacingOffset == 6)
-            #expect(recorder.reply(Link.commitResult) == Link.CommitResult(settings: world.settings.snapshot, failure: nil))
+            #expect(result == Link.CommitResult(settings: world.settings.snapshot, failure: nil))
         }
     }
 
     @Test("A spacing the app cannot save to the active profile goes back, and the app says so")
     func appRollsSpacingCommitBack() async throws {
         try await withWorld(profiles: ["Work"]) { world in
-            let feature = appFeature(world)
+            let remote = linkedRemote(to: appFeature(world))
             try removeActiveProfileFile(world)
             let commit = DisplayProfileCommit(
                 change: .spacing(displayID: Self.studio, offset: 6), scope: .activeProfile, activeProfileID: world.profiles.activeProfileID
             )
-            try feature.commands[Link.commit]?(payload(Link.CommitRequest(commit: commit, settings: world.settings.snapshot)))
+            let result: Link.CommitResult = try await remote.request(Link.commit, Link.CommitRequest(commit: commit, settings: world.settings.snapshot))
 
             #expect(savedOffset(world) == 4, "the unsaved spacing is rolled back")
-            let result: Link.CommitResult = try #require(recorder.reply(Link.commitResult))
             #expect(result.settings == world.settings.snapshot)
             #expect(result.failure?.displayID == Self.studio)
             #expect(result.failure?.message.isEmpty == false)
@@ -247,26 +264,25 @@ struct SettingsLinkDisplaysTests {
     @Test("The app copies the settings process's template onto every display, and puts the displays back when the profile can't keep it")
     func appRunsTemplateCommit() async throws {
         try await withWorld(profiles: ["Work"]) { world in
-            let feature = appFeature(world)
+            let remote = linkedRemote(to: appFeature(world))
             let template = DisplayThawBarConfiguration.defaultConfiguration.withItemSpacingOffset(2).withGridColumns(5)
             var request = Link.CommitRequest(
                 commit: DisplayProfileCommit(change: .template(template), scope: .allProfiles, activeProfileID: world.profiles.activeProfileID),
                 settings: world.settings.snapshot
             )
-            try feature.commands[Link.commit]?(payload(request))
+            let kept: Link.CommitResult = try await remote.request(Link.commit, request)
             #expect(world.settings.globalConfiguration == template)
             #expect(world.settings.displays.allSatisfy { world.settings.configurations[$0.id] == template })
             #expect(try profile("Work", in: world).globalDisplayConfiguration == template)
-            #expect(recorder.reply(Link.commitResult) == Link.CommitResult(settings: world.settings.snapshot, failure: nil))
+            #expect(kept == Link.CommitResult(settings: world.settings.snapshot, failure: nil))
 
             try removeActiveProfileFile(world)
             let before = world.settings.configurations
             let next = template.withItemSpacingOffset(-2)
             request.commit = DisplayProfileCommit(change: .template(next), scope: .activeProfile, activeProfileID: world.profiles.activeProfileID)
             request.settings = world.settings.snapshot
-            try feature.commands[Link.commit]?(payload(request))
+            let result: Link.CommitResult = try await remote.request(Link.commit, request)
             #expect(world.settings.configurations == before, "the copy is rolled back")
-            let result: Link.CommitResult = try #require(recorder.reply(Link.commitResult))
             #expect(result.failure != nil && result.failure?.displayID == nil)
             #expect(result.settings == world.settings.snapshot)
         }
@@ -326,38 +342,39 @@ struct SettingsLinkDisplaysTests {
         }
     }
 
-    @Test("The app makes each menu bar request with its own session and answers whether macOS took it")
+    @Test("Each Spaces control asks the app, which makes the request with its own session and answers whether macOS took it")
     func appAsksTheMenuBarAgent() async throws {
         try await withWorld { world in
             let presentation = FakePresentation()
-            let feature = appFeature(world, presentation: presentation)
-            let requests: [RemoteMenuBarPresentation.Request] = [
-                .reveal, .hidden(true), .autoShowEnabled(false), .hiddenInSpace(true, spaceID: 9), .autoShowDisabledInSpace(true, spaceID: 9),
-                .autohideHeight(12, spaceID: 9), .clearOverrides(spaceID: 9), .fullScreenAppearance(true),
+            let remote = linkedRemote(to: appFeature(world, presentation: presentation))
+            let controls = RemoteMenuBarPresentation { remote }
+            let taken = [
+                await controls.revealSystemMenuBar(), await controls.setSystemMenuBarHidden(true), await controls.setSystemMenuBarAutoShowEnabled(false),
+                await controls.setSystemMenuBarHidden(true, spaceID: 9), await controls.setSystemMenuBarAutoShowDisabled(true, spaceID: 9),
+                await controls.setSystemMenuBarAutohideHeight(12, spaceID: 9), await controls.clearSystemMenuBarOverrides(forSpace: 9),
+                await controls.setFullScreenAppearanceOnUserSpace(true),
             ]
-            for (id, request) in requests.enumerated() {
-                try feature.commands[Link.presentation]?(payload(RemoteMenuBarPresentation.Call(id: id, request: request)))
-                let answer = RemoteMenuBarPresentation.Answer(id: id, succeeded: true)
-                #expect(await settingsLinkWait { recorder.reply(Link.presentationAnswer) == answer })
-            }
+            #expect(taken == Array(repeating: true, count: 8))
             #expect(presentation.calls == [
                 "reveal", "hidden true", "autoShow false", "hidden true in 9", "autoShowDisabled true in 9",
                 "height 12.0 in 9", "clear 9", "fullScreen true",
             ])
+            #expect(recorder.requests == Array(repeating: Link.presentation, count: 8))
 
             presentation.accepts = false
-            try feature.commands[Link.presentation]?(payload(RemoteMenuBarPresentation.Call(id: 20, request: .hidden(false))))
-            let declined = RemoteMenuBarPresentation.Answer(id: 20, succeeded: false)
-            #expect(await settingsLinkWait { recorder.reply(Link.presentationAnswer) == declined })
+            #expect(await controls.setSystemMenuBarHidden(false) == false, "what macOS declines is declined here")
+            await #expect(throws: SettingsRequestError.failed(SettingsRequestError.unreadable.localizedDescription)) {
+                let _: Bool = try await remote.request(Link.presentation, "not a request")
+            }
+            #expect(presentation.calls.count == 9, "a request the app can't read reaches no session")
         }
     }
 
     @Test("The settings process sets its own objects to what the app sends")
     func settingsProcessMirrorsTheApp() async throws {
         try await withWorld(profiles: ["Work"]) { world in
-            let presentation = RemoteMenuBarPresentation { [recorder] in recorder.calls.append($0) }
-            let reports = DisplayCommitReports()
-            let feature = Link.child(world.appState, presentation: presentation, reports: reports)
+            let presentation = RemoteMenuBarPresentation { nil }
+            let feature = Link.child(world.appState, presentation: presentation)
             let active = world.profiles.activeProfileID
             world.profiles.activeProfileID = nil
 
@@ -372,46 +389,60 @@ struct SettingsLinkDisplaysTests {
             try feature.statuses[Link.activeProfile]?(payload(Link.ActiveProfile(id: active)))
             #expect(world.profiles.activeProfileID == active)
 
-            var snapshot = world.settings.snapshot
-            snapshot.configurations[Self.studio] = snapshot.configurations[Self.studio]?.withItemSpacingOffset(9)
-            try feature.statuses[Link.commitResult]?(payload(Link.CommitResult(settings: snapshot, failure: nil)))
-            #expect(savedOffset(world) == 9)
-            #expect(reports.failure == nil)
-            let failure = DisplayCommitFailure(message: "The profile is gone.", displayID: Self.studio)
-            try feature.statuses[Link.commitResult]?(payload(Link.CommitResult(settings: snapshot, failure: failure)))
-            #expect(reports.take() == failure)
-            #expect(reports.take() == nil, "a failure is shown once")
-
-            async let taken = presentation.setSystemMenuBarHidden(true, spaceID: 9)
-            #expect(await settingsLinkWait { recorder.calls.count == 1 })
-            let call = try #require(recorder.calls.first)
-            #expect(call.request == .hiddenInSpace(true, spaceID: 9))
-            try feature.statuses[Link.presentationAnswer]?(payload(RemoteMenuBarPresentation.Answer(id: call.id, succeeded: true)))
-            #expect(await taken)
-
             try Defaults.set(JSONEncoder().encode([Self.studio: DisplayThawBarConfiguration.defaultConfiguration.withItemSpacingOffset(-4)]), forKey: .displayThawBarConfigurations)
             feature.reload()
             #expect(savedOffset(world) == -4, "what the app saved is read again")
         }
     }
 
-    @Test("A commit runs here in the app, and goes to the app with this process's display settings from the settings process")
-    func commitHereOrInTheApp() async throws {
-        try await withWorld { world in
-            let remote = SettingsRemote { [recorder] in recorder.messages.append($0) }
-            let commit = DisplayProfileCommit(change: .spacing(displayID: Self.studio, offset: 6), scope: nil, activeProfileID: nil)
-            try commit.perform(on: world.appState, remote: remote)
-            #expect(savedOffset(world) == 4, "the app makes the change")
-            guard case let .command(name, data)? = recorder.messages.first else {
-                Issue.record("the commit was not sent as a command")
-                return
-            }
-            #expect(name == Link.commit && recorder.messages.count == 1)
-            #expect(SettingsLinkPayload.decode(Link.CommitRequest.self, from: data) == Link.CommitRequest(commit: commit, settings: world.settings.snapshot))
+    @Test("In the app a commit runs here before the page goes on, and a save that fails is handed back at once")
+    func commitHere() async throws {
+        try await withWorld(profiles: ["Work"]) { world in
+            let failed: (DisplayCommitFailure) -> Void = { [recorder] in recorder.failures.append($0) }
+            let active = world.profiles.activeProfileID
+            DisplayProfileCommit(change: .spacing(displayID: Self.studio, offset: 6), scope: .activeProfile, activeProfileID: active)
+                .perform(on: world.appState, remote: nil, failed: failed)
+            #expect(savedOffset(world) == 6 && recorder.failures.isEmpty)
+            #expect(try profile("Work", in: world).displayConfigurations[Self.studio]?.itemSpacingOffset == 6)
 
-            try commit.perform(on: world.appState, remote: nil)
-            #expect(savedOffset(world) == 6)
-            #expect(recorder.messages.count == 1)
+            try removeActiveProfileFile(world)
+            DisplayProfileCommit(change: .spacing(displayID: Self.studio, offset: 8), scope: .activeProfile, activeProfileID: active)
+                .perform(on: world.appState, remote: nil, failed: failed)
+            #expect(savedOffset(world) == 6, "the unsaved spacing is rolled back")
+            #expect(recorder.failures.map(\.displayID) == [Self.studio] && recorder.failures.first?.message.isEmpty == false)
+        }
+    }
+
+    @Test("From the settings process a commit goes to the app with this process's display settings, and the page takes what the app left")
+    func commitInTheApp() async throws {
+        try await withWorld(profiles: ["Work"]) { app in
+            try await withWorld { page in
+                let remote = linkedRemote(to: appFeature(app))
+                let failed: (DisplayCommitFailure) -> Void = { [recorder] in recorder.failures.append($0) }
+                let active = app.profiles.activeProfileID
+                // An edit the page made a moment ago, which the app has not read yet.
+                page.settings.configurations[Self.studio] = page.settings.configurations[Self.studio]?.withGridColumns(7)
+                DisplayProfileCommit(change: .spacing(displayID: Self.studio, offset: 6), scope: .activeProfile, activeProfileID: active)
+                    .perform(on: page.appState, remote: remote, failed: failed)
+                #expect(recorder.requests == [Link.commit], "the request leaves before the page goes on")
+                #expect(savedOffset(page) == 4, "the app makes the change")
+                #expect(await settingsLinkWait { savedOffset(page) == 6 })
+                #expect(app.settings.configuration(forUUID: Self.studio).gridColumns == 7, "the earlier edit is kept")
+                #expect(page.settings.snapshot == app.settings.snapshot && recorder.failures.isEmpty)
+
+                try removeActiveProfileFile(app)
+                DisplayProfileCommit(change: .spacing(displayID: Self.studio, offset: 8), scope: .activeProfile, activeProfileID: active)
+                    .perform(on: page.appState, remote: remote, failed: failed)
+                #expect(await settingsLinkWait { recorder.failures.count == 1 })
+                #expect(recorder.failures.first?.displayID == Self.studio && recorder.failures.first?.message.isEmpty == false)
+                #expect(savedOffset(page) == 6 && savedOffset(app) == 6, "the app rolled the spacing back")
+
+                // An app that gives no answer to use fails the commit too.
+                DisplayProfileCommit(change: .template(.defaultConfiguration), scope: nil, activeProfileID: nil)
+                    .perform(on: page.appState, remote: linkedRemote(to: SettingsAppFeature()), failed: failed)
+                #expect(await settingsLinkWait { recorder.failures.count == 2 })
+                #expect(recorder.failures.last?.displayID == nil && savedOffset(page) == 6)
+            }
         }
     }
 
@@ -452,36 +483,13 @@ struct SettingsLinkDisplaysTests {
 
     @Test("The Spaces controls use this process's session in the app and the app's from the settings process, where no answer counts as declined")
     func presentationHereOrInTheApp() async {
-        let before = SettingsRemote.current
-        SettingsRemote.current = nil
-        #expect(MenuBarPresentationProvider.forSettings === MenuBarPresentationProvider.current)
-        SettingsRemote.current = SettingsRemote { _ in }
-        #expect(MenuBarPresentationProvider.forSettings === RemoteMenuBarPresentation.shared)
-        SettingsRemote.current = before
+        let silent = SettingsRemote { [recorder] in recorder.messages.append($0) }
+        #expect(MenuBarPresentationProvider.forSettings(remote: nil) === MenuBarPresentationProvider.current)
+        #expect(MenuBarPresentationProvider.forSettings(remote: silent) === RemoteMenuBarPresentation.shared)
 
-        // Each control's request is sent to the app under its own name, and the app's answer is the control's.
-        var answered: RemoteMenuBarPresentation?
-        let remote = RemoteMenuBarPresentation { [recorder] call in
-            recorder.calls.append(call)
-            answered?.answer(RemoteMenuBarPresentation.Answer(id: call.id, succeeded: call.request != .reveal))
-        }
-        answered = remote
-        let answers = [
-            await remote.revealSystemMenuBar(), await remote.setSystemMenuBarHidden(true), await remote.setSystemMenuBarAutoShowEnabled(false),
-            await remote.setSystemMenuBarHidden(true, spaceID: 9), await remote.setSystemMenuBarAutoShowDisabled(true, spaceID: 9),
-            await remote.setSystemMenuBarAutohideHeight(12, spaceID: 9), await remote.clearSystemMenuBarOverrides(forSpace: 9),
-        ]
-        #expect(answers == [false, true, true, true, true, true, true])
-        #expect(recorder.calls.map(\.request) == [
-            .reveal, .hidden(true), .autoShowEnabled(false), .hiddenInSpace(true, spaceID: 9), .autoShowDisabledInSpace(true, spaceID: 9),
-            .autohideHeight(12, spaceID: 9), .clearOverrides(spaceID: 9),
-        ])
-        #expect(Set(recorder.calls.map(\.id)).count == 7, "each call has its own number")
-        recorder.calls = []
-
-        let unanswered = RemoteMenuBarPresentation(patience: .milliseconds(20)) { [recorder] in recorder.calls.append($0) }
+        let unanswered = RemoteMenuBarPresentation(patience: .milliseconds(20)) { silent }
         #expect(await unanswered.setFullScreenAppearanceOnUserSpace(true) == false)
-        #expect(recorder.calls.map(\.request) == [.fullScreenAppearance(true)])
-        unanswered.answer(RemoteMenuBarPresentation.Answer(id: 1, succeeded: true))
+        #expect(recorder.requests == [Link.presentation])
+        #expect(await RemoteMenuBarPresentation { nil }.revealSystemMenuBar() == false, "with no app to ask, nothing is taken")
     }
 }

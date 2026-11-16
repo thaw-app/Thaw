@@ -18,15 +18,11 @@ enum DisplaysSettingsLink {
     static let spaces = "displays.spaces"
     /// Sent by the app: the active profile.
     static let activeProfile = "displays.activeProfile"
-    /// Sent by the app after a commit: the display settings it left, and the failure if the profiles didn't keep it.
-    static let commitResult = "displays.commitResult"
-    /// Sent by the app: the answer to one presentation call.
-    static let presentationAnswer = "displays.presentationAnswer"
-    /// Asked of the app: a DisplayProfileCommit.
+    /// Asked of the app: a CommitRequest, answered with a CommitResult.
     static let commit = "displays.commit"
     /// Asked of the app: restart the menu bar apps so they read the saved spacing.
     static let reapplySpacing = "displays.reapplySpacing"
-    /// Asked of the app: one request of the menu bar agent.
+    /// Asked of the app: one request of the menu bar agent, answered with whether macOS took it.
     static let presentation = "displays.presentation"
 
     struct SpacingApply: Codable, Equatable {
@@ -52,23 +48,18 @@ enum DisplaysSettingsLink {
     }
 
     struct CommitResult: Codable, Equatable {
+        /// The display settings the app left, which the settings process takes.
         var settings: DisplaySettingsManager.Snapshot
+        /// Why the profiles didn't keep the change, when they didn't.
         var failure: DisplayCommitFailure?
     }
 
-    /// What the app sends and does for the Displays page. Answers go back through reply.
+    /// What the app sends, does and answers for the Displays page.
     static func app(
         _ appState: AppState,
-        presentation: any MenuBarPresentationControlling = MenuBarPresentationProvider.current,
-        reply: (@MainActor (_ topic: String, _ payload: Data) -> Void)? = nil
+        presentation: any MenuBarPresentationControlling = MenuBarPresentationProvider.current
     ) -> SettingsAppFeature {
-        let reply = reply ?? { [weak appState] in appState?.settingsProcessHost.send(status: $0, payload: $1) }
-        func answer(_ topic: String, _ value: some Encodable) {
-            if let payload = SettingsLinkPayload.encode(value) {
-                reply(topic, payload)
-            }
-        }
-        return SettingsAppFeature(
+        SettingsAppFeature(
             statuses: [
                 spacingApply: { [weak appState] in
                     guard let settings = appState?.settings.displaySettings else { return nil }
@@ -88,20 +79,23 @@ enum DisplaysSettingsLink {
                 },
             ],
             commands: [
-                commit: { [weak appState] payload in
-                    guard let appState, let request = SettingsLinkPayload.decode(CommitRequest.self, from: payload) else { return }
-                    answer(commitResult, run(request, on: appState))
-                },
                 reapplySpacing: { [weak appState] payload in
                     guard let displayID = SettingsLinkPayload.decode(String.self, from: payload) else { return }
                     appState?.settings.displaySettings.reapplySpacingConfirmedInSettingsProcess(forDisplayUUID: displayID)
                 },
+            ],
+            requests: [
+                commit: { [weak appState] payload in
+                    guard let appState, let request = SettingsLinkPayload.decode(CommitRequest.self, from: payload),
+                          let answer = SettingsLinkPayload.encode(run(request, on: appState))
+                    else { throw SettingsRequestError.unreadable }
+                    return answer
+                },
                 Self.presentation: { payload in
-                    guard let call = SettingsLinkPayload.decode(RemoteMenuBarPresentation.Call.self, from: payload) else { return }
-                    Task {
-                        let succeeded = await call.request.send(to: presentation)
-                        answer(presentationAnswer, RemoteMenuBarPresentation.Answer(id: call.id, succeeded: succeeded))
-                    }
+                    guard let request = SettingsLinkPayload.decode(RemoteMenuBarPresentation.Request.self, from: payload),
+                          let answer = SettingsLinkPayload.encode(await request.send(to: presentation))
+                    else { throw SettingsRequestError.unreadable }
+                    return answer
                 },
             ],
             reload: { [weak appState] in appState?.settings.displaySettings.loadStoredValues() }
@@ -112,22 +106,13 @@ enum DisplaysSettingsLink {
     private static func run(_ request: CommitRequest, on appState: AppState) -> CommitResult {
         let settings = appState.settings.displaySettings
         settings.adopt(request.settings)
-        var failure: DisplayCommitFailure?
-        do {
-            try request.commit.run(on: appState)
-        } catch {
-            failure = DisplayCommitFailure(message: error.localizedDescription, displayID: request.commit.displayID)
-        }
+        let failure = request.commit.failure(runningOn: appState)
         return CommitResult(settings: settings.snapshot, failure: failure)
     }
 
     /// What the settings process does with what the app sends for the Displays page: it sets the
     /// same objects the app's own window reads, so the page reads them as it does there.
-    static func child(
-        _ appState: AppState,
-        presentation: RemoteMenuBarPresentation = .shared,
-        reports: DisplayCommitReports = .shared
-    ) -> SettingsChildFeature {
+    static func child(_ appState: AppState, presentation: RemoteMenuBarPresentation = .shared) -> SettingsChildFeature {
         let settings = appState.settings.displaySettings
         return SettingsChildFeature(
             statuses: [
@@ -147,17 +132,6 @@ enum DisplaysSettingsLink {
                 activeProfile: { payload in
                     guard let state = SettingsLinkPayload.decode(ActiveProfile.self, from: payload) else { return }
                     assign(state.id, to: \.activeProfileID, of: appState.profileManager)
-                },
-                commitResult: { payload in
-                    guard let result = SettingsLinkPayload.decode(CommitResult.self, from: payload) else { return }
-                    settings.adopt(result.settings)
-                    if let failure = result.failure {
-                        reports.failure = failure
-                    }
-                },
-                presentationAnswer: { payload in
-                    guard let answer = SettingsLinkPayload.decode(RemoteMenuBarPresentation.Answer.self, from: payload) else { return }
-                    presentation.answer(answer)
                 },
             ],
             reload: { settings.loadStoredValues() }

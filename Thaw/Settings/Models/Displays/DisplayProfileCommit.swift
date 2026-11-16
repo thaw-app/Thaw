@@ -26,12 +26,39 @@ struct DisplayProfileCommit: Codable, Equatable {
         if case let .spacing(displayID, _) = change { displayID } else { nil }
     }
 
-    /// Runs the commit here, or hands it to the app when Settings is in its own process. The
-    /// app gets this process's display settings with it, so an edit made a moment ago is not lost.
-    func perform(on appState: AppState, remote: SettingsRemote? = .current) throws {
-        guard let remote else { return try run(on: appState) }
-        let settings = appState.settings.displaySettings.snapshot
-        remote.perform(DisplaysSettingsLink.commit, DisplaysSettingsLink.CommitRequest(commit: self, settings: settings))
+    /// Runs the commit here, or has the app run it when Settings is in its own process, and hands a failure to failed.
+    /// The app gets this process's display settings with it, so an edit made a moment ago is not lost.
+    func perform(on appState: AppState, remote: SettingsRemote? = .current, failed: @escaping (DisplayCommitFailure) -> Void) {
+        guard let remote else {
+            if let failure = failure(runningOn: appState) {
+                failed(failure)
+            }
+            return
+        }
+        let settings = appState.settings.displaySettings
+        let request = DisplaysSettingsLink.CommitRequest(commit: self, settings: settings.snapshot)
+        // Immediate, so the request leaves before anything else the page sends.
+        Task.immediate {
+            do {
+                let result: DisplaysSettingsLink.CommitResult = try await remote.request(DisplaysSettingsLink.commit, request)
+                settings.adopt(result.settings)
+                if let failure = result.failure {
+                    failed(failure)
+                }
+            } catch {
+                failed(DisplayCommitFailure(message: error.localizedDescription, displayID: displayID))
+            }
+        }
+    }
+
+    /// Runs the commit and returns why the profiles didn't keep it, when they didn't.
+    func failure(runningOn appState: AppState) -> DisplayCommitFailure? {
+        do {
+            try run(on: appState)
+            return nil
+        } catch {
+            return DisplayCommitFailure(message: error.localizedDescription, displayID: displayID)
+        }
     }
 
     /// Makes the change first, because saving to the active profile captures the live settings.
@@ -85,20 +112,4 @@ struct DisplayCommitFailure: Codable, Equatable {
     var message: String
     /// The display whose spacing went back to what it was, when the commit was one display's spacing.
     var displayID: String?
-}
-
-/// Holds the app's word that a commit failed until the Displays page in the settings process shows it.
-@MainActor
-@Observable
-final class DisplayCommitReports {
-    static let shared = DisplayCommitReports()
-
-    var failure: DisplayCommitFailure?
-
-    /// The failure to show, handed out once.
-    func take() -> DisplayCommitFailure? {
-        guard let failure else { return nil }
-        self.failure = nil
-        return failure
-    }
 }
