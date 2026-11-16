@@ -136,7 +136,8 @@ struct HotkeysSettingsPane: View {
 
     @ViewBuilder
     private func hotkeyRecorder(forSection name: MenuBarSection.Name) -> some View {
-        if appState.menuBarManager.section(withName: name)?.isEnabled == true {
+        // The saved setting, which the settings process has too. A section there never learns it.
+        if name != .alwaysHidden || appState.settings.layout.isAlwaysHiddenSectionEnabled {
             if case .hidden = name {
                 hotkeyRecorder(forAction: .toggleHiddenSection)
             } else if case .alwaysHidden = name {
@@ -209,7 +210,7 @@ private struct MenuBarItemHotkeyList: View {
         .task(id: isExpanded) {
             // Hidden sections are captured only on request, so prewarm them.
             guard isExpanded else { return }
-            await imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
+            await imageCache.captureForItemHotkeyList()
         }
     }
 

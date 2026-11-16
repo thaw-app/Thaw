@@ -35,8 +35,15 @@ final class Hotkey {
 
     let action: HotkeyAction
 
+    /// Set in the settings process, which registers nothing: whether the app could claim the combination.
+    var isEnabledInApp: Bool?
+
+    /// Hears a recorder start or stop listening, so the settings process can have the app stand the hotkey down.
+    @ObservationIgnored
+    var recordingDidChange: ((Bool) -> Void)?
+
     var isEnabled: Bool {
-        listener != nil
+        isEnabledInApp ?? (listener != nil)
     }
 
     init(action: HotkeyAction, keyCombination: KeyCombination? = nil) {
@@ -57,6 +64,16 @@ final class Hotkey {
     func disable() {
         listener?.invalidate()
         listener = nil
+    }
+
+    /// Stands the hotkey down while its recorder listens, so the combination being replaced can't fire.
+    func setRecording(_ isRecording: Bool) {
+        if isRecording {
+            disable()
+        } else {
+            enable()
+        }
+        recordingDidChange?(isRecording)
     }
 }
 

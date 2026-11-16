@@ -83,7 +83,7 @@ final class MenuBarManager {
     private(set) var rehideController: RehideController?
 
     /// Menu-opening hotkeys keyed by uniqueIdentifier, mirroring ProfileManager's per-profile bindings.
-    private(set) var itemHotkeys: [String: Hotkey] = [:]
+    var itemHotkeys: [String: Hotkey] = [:]
 
     /// Reverse map from a hotkey instance to the item identifier it opens.
     /// Read by Hotkey.Listener when an openMenuBarItem hotkey fires.

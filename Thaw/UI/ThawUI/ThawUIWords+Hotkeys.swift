@@ -34,13 +34,7 @@ extension HotkeyRecorder {
                 hotkey.keyCombination = $0
             },
             strings: .thaw,
-            onRecordingChange: { isRecording in
-                if isRecording {
-                    hotkey.disable()
-                } else {
-                    hotkey.enable()
-                }
-            },
+            onRecordingChange: { hotkey.setRecording($0) },
             label: label
         )
     }
