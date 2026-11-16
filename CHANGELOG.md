@@ -203,7 +203,9 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 
 - **`thaw://release-item?bundle=` lets go of every item of that app the sender holds.**
 - **Smart rehide no longer skips a click outside the menu bar** while the Thaw icon has no window yet.
+- **Smart rehide no longer hides items you just revealed** while it checks for an open menu.
 - **Thaw's memory no longer jumps by about 50 MB** each time you switch apps or show a section with a menu bar shape, tint or shadow on.
+- **The Thaw Bar preview in Settings no longer holds about 60 MB** for a picture of your wallpaper.
 - **Thaw restarts itself once when macOS refuses its Accessibility reads at login,** instead of staying unable to see other apps' menu bar items.
 - **The widget icon is redrawn only when what it shows changes,** which cuts the Widgets module's memory and processor use.
 - **Turning "Show release notes after an update" off keeps the window closed** after Thaw updates.
