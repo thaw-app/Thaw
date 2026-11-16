@@ -60,6 +60,14 @@ struct GlyphRetakeLedgerTests {
         #expect(GlyphRetakeLedger().retakes(among: candidates) == ["item0", "item1", "item2"])
     }
 
+    @Test("A pass with fewer retakes left takes only that many")
+    func limitIsWhatThePassHasLeft() {
+        let candidates = (0 ..< 5).map { Self.candidate("item\($0)", picture: 36, item: 22) }
+
+        #expect(GlyphRetakeLedger().retakes(among: candidates, limit: 1) == ["item0"])
+        #expect(GlyphRetakeLedger().retakes(among: candidates, limit: 0).isEmpty)
+    }
+
     @Test("A picture retaken for its width this session isn't retaken again")
     func retakenOncePerSession() {
         let ledger = GlyphRetakeLedger()
