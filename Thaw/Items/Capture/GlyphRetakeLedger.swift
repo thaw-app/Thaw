@@ -48,14 +48,15 @@ final class GlyphRetakeLedger {
             && abs(pictureWidth - itemWidth) > widthTolerance
     }
 
-    /// The candidates to retake this pass: those whose picture's width is stale and wasn't
-    /// retaken this session, the first widthRetakesPerPass of them in order.
-    func retakes(among candidates: [Candidate]) -> Set<String> {
+    /// The candidates to retake: those whose picture's width is stale and wasn't retaken this
+    /// session, the first limit of them in order. A pass over several sections passes what it has
+    /// left of widthRetakesPerPass.
+    func retakes(among candidates: [Candidate], limit: Int = widthRetakesPerPass) -> Set<String> {
         let stale = candidates.filter { candidate in
             !widthRetaken.contains(candidate.identifier)
                 && Self.widthIsStale(pictureWidth: candidate.pictureWidth, itemWidth: candidate.itemWidth)
         }
-        return Set(stale.prefix(Self.widthRetakesPerPass).map(\.identifier))
+        return Set(stale.prefix(max(0, limit)).map(\.identifier))
     }
 
     /// Records a pass's retakes, whether or not they got new pictures, so they aren't made

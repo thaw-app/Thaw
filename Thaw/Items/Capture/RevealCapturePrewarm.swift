@@ -67,12 +67,15 @@ struct RevealCapturePrewarm {
 
         // Always-hidden items go through the same grouped reveal as hidden ones: closing the Thaw Bar
         // conceals a revealed section again. Inline in the caller's task, so its cancel stops the loop.
+        // The width-retake limit holds for the whole pass, not for each section.
+        var widthRetakesLeft = GlyphRetakeLedger.widthRetakesPerPass
         for section in sections {
             guard let items = sectionItems(section) else { break }
             guard !items.isEmpty else { continue }
 
             let displayID = displayID()
-            let retakes = onlyMissingImages ? widthRetakes(among: items, on: displayID) : []
+            let retakes = onlyMissingImages ? widthRetakes(among: items, on: displayID, limit: widthRetakesLeft) : []
+            widthRetakesLeft -= retakes.count
             let itemsToCapture = itemsToCapture(
                 from: items, onlyMissingImages: onlyMissingImages, retakes: retakes, retakesClipped: tally != nil, on: displayID
             )
@@ -85,7 +88,10 @@ struct RevealCapturePrewarm {
                 break
             }
             await captureSection(itemsToCapture, displayID)
-            retakeLedger?.noteRetaken(retakes)
+            // A screen locked during the capture revealed nothing, so its retakes are still due.
+            if !isLocked("recording width retakes") {
+                retakeLedger?.noteRetaken(retakes)
+            }
         }
 
         // One save after the whole pass: every save rewrites the entire cache.
@@ -130,9 +136,9 @@ struct RevealCapturePrewarm {
         }
     }
 
-    /// The items whose picture no longer fits them and the ledger has this pass retake.
-    private func widthRetakes(among items: [MenuBarItem], on displayID: CGDirectDisplayID) -> Set<String> {
-        guard let retakeLedger, !isNativeOverflowActive(displayID) else { return [] }
+    /// The items whose picture no longer fits them and the ledger has this pass retake, limit at most.
+    private func widthRetakes(among items: [MenuBarItem], on displayID: CGDirectDisplayID, limit: Int) -> Set<String> {
+        guard let retakeLedger, limit > 0, !isNativeOverflowActive(displayID) else { return [] }
         let allowsCaptureReveal = allowsCaptureReveal()
         let candidates = items.compactMap { item -> GlyphRetakeLedger.Candidate? in
             guard !Self.skips(item, allowsCaptureReveal: allowsCaptureReveal), wouldAttemptCapture(item),
@@ -140,7 +146,7 @@ struct RevealCapturePrewarm {
             else { return nil }
             return GlyphRetakeLedger.Candidate(identifier: item.tag.tagIdentifier, pictureWidth: picture.pointSize.width, itemWidth: item.bounds.width)
         }
-        let retakes = retakeLedger.retakes(among: candidates)
+        let retakes = retakeLedger.retakes(among: candidates, limit: limit)
         if !retakes.isEmpty {
             MenuBarItemImageCache.diagLog.debug("prewarmConcealedImages: retaking \(retakes.sorted()), whose picture no longer fits the item")
         }

@@ -101,6 +101,40 @@ struct RevealCapturePrewarmTests {
         #expect(world.captured.map(\.items) == [[stale.tag]])
     }
 
+    @Test("The width-retake limit holds for the whole pass, not for each section")
+    func widthRetakeLimitSpansSections() async throws {
+        let world = World()
+        world.retakeLedger = GlyphRetakeLedger()
+        let hidden = (0 ..< 2).map { Self.item("Hidden\($0)", width: 36) }
+        let always = (0 ..< 2).map { Self.item("Always\($0)", width: 36) }
+        world.sections[.hidden] = hidden
+        world.sections[.alwaysHidden] = always
+        for item in hidden + always {
+            world.images[item.tag] = try Self.glyph(pixelWidth: 44)
+        }
+
+        await world.run([.hidden, .alwaysHidden])
+
+        #expect(world.captured.flatMap(\.items).count == GlyphRetakeLedger.widthRetakesPerPass)
+        #expect(world.captured.map(\.items) == [hidden.map(\.tag), [always[0].tag]])
+    }
+
+    @Test("A screen locked during the capture leaves its width retakes due")
+    func lockedCaptureLeavesRetakesDue() async throws {
+        let world = World()
+        world.retakeLedger = GlyphRetakeLedger()
+        let stale = Self.item("Stale", width: 36)
+        world.sections[.hidden] = [stale]
+        world.images[stale.tag] = try Self.glyph(pixelWidth: 44)
+        world.locked = ["recording width retakes"]
+
+        await world.run([.hidden])
+        world.locked = []
+        await world.run([.hidden])
+
+        #expect(world.captured.map(\.items) == [[stale.tag], [stale.tag]])
+    }
+
     @Test("Without a ledger, or on a pass that retakes everything, the ledger's once isn't used up")
     func retakeEverythingLeavesTheLedger() async throws {
         let world = World()
