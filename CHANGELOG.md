@@ -26,6 +26,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- Revealing hidden items while Smart rehide checks for an open menu no longer lets the old focus-change timer hide them again.
 - A `thaw://apply-profile` link no longer applies a profile while Profiles is turned off.
 - Settings search no longer offers pages for modules you turned off, such as Profiles, Scripts, Triggers or Widgets.
 - The Shortcuts page no longer shows an empty Profiles tab while Profiles is turned off.

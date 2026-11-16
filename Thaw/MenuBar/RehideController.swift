@@ -248,7 +248,7 @@ final class RehideController {
         if environment.settings().strategy == .smart, await environment.isAnyMenuOpen() {
             return
         }
-        guard environment.settings().autoRehide else { return }
+        guard !Task.isCancelled, environment.settings().autoRehide else { return }
         environment.hideHiddenSection()
     }
 

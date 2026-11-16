@@ -135,6 +135,25 @@ struct RehideControllerTests {
         #expect(world.hiddenSectionHides == 0)
     }
 
+    /// A late menu answer must not let a cancelled focus action hide a newly revealed section.
+    @Test("A reveal during the focus menu check cancels the pending hide", arguments: [false, true])
+    func revealDuringFocusMenuCheck(menuOpen: Bool) async {
+        let world = RehideWorld()
+        world.sleepsReturnAtOnce = true
+        world.heldMenuCheck = 1
+        world.controller.note(.focusChanged)
+        while world.menuChecks < 1 {
+            await world.settle()
+        }
+        world.controller.revealed()
+        world.menuOpen = menuOpen
+
+        await world.finishWaits()
+        await world.settle()
+
+        #expect(world.hiddenSectionHides == 0)
+    }
+
     @Test("A reveal less than half a second before the wait ends keeps the section, a later one does not")
     func revealGracePeriod() async {
         let world = RehideWorld()
