@@ -255,7 +255,7 @@ final class MenuBarSpacerManager {
         for spacer in spacers {
             if let item = statusItems[spacer.id] {
                 if applied[spacer.id] != spacer {
-                    item.length = spacer.width
+                    item.length = OwnStatusItemSpacing.padded(length: spacer.width)
                     item.button?.image = Self.spacerImage(width: spacer.width, color: spacer.color)
                     applied[spacer.id] = spacer
                 }
@@ -283,7 +283,7 @@ final class MenuBarSpacerManager {
             UserDefaults.standard.set(true, forKey: "NSStatusItem Visible \(name)")
             UserDefaults.standard.set(true, forKey: "NSStatusItem VisibleCC \(name)")
 
-            let item = NSStatusBar.system.statusItem(withLength: spacer.width)
+            let item = NSStatusBar.system.statusItem(withLength: OwnStatusItemSpacing.padded(length: spacer.width))
             item.autosaveName = name
             item.button?.image = Self.spacerImage(width: spacer.width, color: spacer.color)
             item.button?.imageScaling = .scaleNone

@@ -933,7 +933,7 @@ extension ControlItem {
         button.isEnabled = true
         button.alphaValue = 1
         button.appearsDisabled = false
-        button.image = image
+        button.image = OwnStatusItemSpacing.padded(image)
     }
 
     /// The icon image for the current hiding state.
@@ -982,7 +982,7 @@ extension ControlItem {
                 isDragging: appState.isDraggingMenuBarItem,
                 revealedSection: revealed
             )
-            collapseStatusItem(toWidth: keepsSliver ? 3 : 0)
+            collapseStatusItem(toWidth: keepsSliver ? 3 : OwnStatusItemSpacing.collapsedDividerLength)
             button.appearsDisabled = true
             button.isHighlighted = false
 

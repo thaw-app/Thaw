@@ -52,6 +52,7 @@ the items under New and Fixed.
 - **A hidden item you open from the Thaw Bar on another display opens its menu on that display,** instead of on the display with the active menu bar. Reported by @RyuSeongbin in [#1356](https://github.com/thaw-app/Thaw/issues/1356).
 - **An app's icons no longer show in a folder and in the menu bar at once.** macOS hides an app as a whole, so when you put one of an app's items in a folder, its other items now join that folder too. Reported by @AuthorProxy in [#1617](https://github.com/thaw-app/Thaw/issues/1617).
 - **Thaw no longer asks every running app for menu bar items each time it looks.** Apps that have none are checked again every few minutes, so the log no longer fills with failed lookups or a repeated warning about Thaw's own icon. Reported by @wangzi0218 in [#1662](https://github.com/thaw-app/Thaw/issues/1662).
+- **The menu bar no longer has an empty gap where Thaw's section dividers sit while their sections are closed.** macOS gave each hidden divider the full spacing between items, so a gap could appear after a Space switch and stay until Thaw restarted. Reported by @void-AGT in [#1596](https://github.com/thaw-app/Thaw/issues/1596).
 
 ## [3.0.0-beta.7] - 2026-11-17
 
