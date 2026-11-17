@@ -108,6 +108,7 @@ extension MenuBarItemManager {
         let controller = appState.menuBarManager.sectionController
 
         guard configuration.enableMenuBarItemOverflow else {
+            overflowDeficits = OverflowDeficits()
             lastOverflowRebalance = nil
             return controller.setOverflowHiddenIdentifiers([])
         }
@@ -321,8 +322,7 @@ extension MenuBarItemManager {
             parkedWidths: parkedWidths,
             isNativeOverflowActive: isNativeOverflowActive,
             modeledHeadroom: effectiveAvailableWidth - trailingLaneItemWidth,
-            visibleUIDs: Set(visibleLive.map(\.uniqueIdentifier)),
-            overflowUIDs: overflowIdentifiers
+            display: .init(id: screen.displayID, width: capacity.displayBounds.width)
         )
         if parkedDeficit.changed {
             MenuBarItemManager.diagLog.info(

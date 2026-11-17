@@ -406,8 +406,8 @@ extension MenuBarItemImageCache {
             }
         }
 
-        // Merge in the new images, preferring settled glyphs over blank
-        // or much-narrower (chevron-bleed) candidates.
+        // Merge in the new images, preferring settled glyphs over blank or
+        // much-narrower (chevron-bleed) candidates; see mergeNewImages.
         //
         // The merge runs on a local copy. capturesByTag is the one
         // property every glyph consumer observes, and the live refresh
@@ -416,9 +416,7 @@ extension MenuBarItemImageCache {
         // views on every tick, including the common one where the merge
         // kept every glyph it already had.
         var mergedImages = capturesByTag
-        mergedImages.merge(newImages) { existing, new in
-            Self.preferredCachedImage(existing: existing, candidate: new)
-        }
+        mergeNewImages(newImages, into: &mergedImages)
 
         // A pass that only re-proved what the cache already holds is
         // changeless: the merge preferred the existing glyphs, and every
@@ -552,10 +550,10 @@ extension MenuBarItemImageCache {
         controller: any MenuBarSectionControlling,
         displayID: CGDirectDisplayID,
         scale: CGFloat
-    ) async {
+    ) async -> [MenuBarItem] {
         guard !items.isEmpty, !Task.isCancelled,
               !skipCaptureWhileScreenLocked("grouped reveal capture"),
-              let appState else { return }
+              let appState else { return [] }
 
         // Before the first await: the display the caller resolved these items
         // and displayID against. Every batch answers to this one.
@@ -583,7 +581,7 @@ extension MenuBarItemImageCache {
         let batchSize = Self.revealBatchSize(
             hasNotch: NSScreen.screen(for: displayID)?.hasNotch ?? false
         )
-        await captureRevealBatches(
+        return await captureRevealBatches(
             items.chunks(ofCount: batchSize).map(Array.init),
             controller: controller,
             target: RevealCaptureTarget(displayID: displayID, admittedDisplayID: admittedDisplayID, scale: scale),
@@ -617,7 +615,7 @@ extension MenuBarItemImageCache {
         target: RevealCaptureTarget,
         appState: AppState,
         sources: RevealCaptureSession.Sources
-    ) async {
+    ) async -> [MenuBarItem] {
         let session = RevealCaptureSession(
             sources: sources,
             displayID: target.displayID,
@@ -650,7 +648,7 @@ extension MenuBarItemImageCache {
                 )
             }
         )
-        await session.capture(batches)
+        return await session.capture(batches)
     }
 
     /// Publishes one revealed batch, or leaves the cache exactly as it was.
@@ -692,6 +690,7 @@ extension MenuBarItemImageCache {
             }
         }
 
+        let itemWidths = listedItemWidths()
         for pair in revealed {
             // The capture result is keyed by the fresh AX item, while the
             // cache is keyed by the concealed snapshot the caller holds.
@@ -708,16 +707,9 @@ extension MenuBarItemImageCache {
                 }
                 continue
             }
-            if let cachedImage = capturesByTag[tag] {
-                let preferred = Self.preferredRevealedImage(existing: cachedImage, candidate: image)
-                if MenuBarItemGlyphCapture.isVisuallyEqual(preferred, cachedImage) {
-                    continue
-                }
-                setCapture(preferred, for: tag)
-            } else {
-                setCapture(image, for: tag)
+            if storeRevealedPicture(image, of: pair.requested, listedWidths: itemWidths) {
+                updateAccessOrder(for: tag)
             }
-            updateAccessOrder(for: tag)
         }
         return true
     }
@@ -749,11 +741,11 @@ extension MenuBarItemImageCache {
             wouldAttemptCapture: { self.wouldAttemptCapture(of: $0) },
             forgetFailures: { self.clearCaptureFailures(tags: $0) },
             captureSection: { items, displayID in
-                guard let controller = self.appState?.menuBarManager.sectionController else { return }
+                guard let controller = self.appState?.menuBarManager.sectionController else { return [] }
                 let scale = NSScreen.screen(for: displayID)?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
                 // A blank or chevron-width entry the reveal cannot better is dropped, so the
                 // Layout thumbnail falls back to the app icon.
-                await self.captureConcealedItemsByGroupedReveal(
+                return await self.captureConcealedItemsByGroupedReveal(
                     items, controller: controller, displayID: displayID, scale: scale
                 )
             },

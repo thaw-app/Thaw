@@ -275,7 +275,7 @@ struct ThawBarPreview: View {
         ThawBarItems.items(
             in: shownSection,
             itemManager: itemManager,
-            switchedOff: appState.menuBarManager.nativeAppHidingExperiment.userSwitchedOffBundleIDs
+            menuBarManager: appState.menuBarManager
         )
     }
 

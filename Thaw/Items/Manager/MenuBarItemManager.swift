@@ -455,8 +455,8 @@ final class MenuBarItemManager {
     /// Debounce for macOS 27 overflow rebalance (assignment backends skip legacy Phase 4).
     var lastOverflowRebalance: ContinuousClock.Instant?
 
-    /// Width the macOS 27 overflow budget gives up for a notch-covered control
-    /// item and for parked Visible items. See OverflowDeficits.
+    /// Width the macOS 27 overflow budget gives up for a notch-covered control item and for parked
+    /// Visible items. Forgotten while overflow is off, so toggling it clears a wrong one. See OverflowDeficits.
     var overflowDeficits = OverflowDeficits()
 
     /// The pending overflow rebalance: its in-flight task and the strongest

@@ -514,7 +514,7 @@ struct GroupedRevealPublicationTests {
                     whileSettling()
                     return batch.map { (requested: $0, live: $0) }
                 },
-                renderSettle: { _ in },
+                renderSettle: { _ in .settled },
                 reader: world.reader
             )
         )
