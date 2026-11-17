@@ -159,6 +159,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **The Thaw Bar settings stay available when only Always Hidden uses the bar,** and the preview shows that section. By @doublezz10 in [#1566](https://github.com/thaw-app/Thaw/pull/1566).
 - **The template has the Open Always Hidden in the Thaw Bar switch,** as each display does.
 - **App icons in the Thaw Bar match the size** of the item pictures beside them.
+- **Thaw stops using the Thaw Bar once macOS's overflow arrow is gone,** also while Thaw's Settings is open.
 
 #### Spaces and profiles
 

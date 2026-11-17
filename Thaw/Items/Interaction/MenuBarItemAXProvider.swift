@@ -861,9 +861,10 @@ nonisolated enum MenuBarItemAXProvider {
     ///
     /// Returns .unavailable only when a sweep ran out of budget; a partial
     /// sweep must never claim .absent.
-    private static func chevronObservationByHitTest(
+    static func chevronObservationByHitTest(
         on display: CGDirectDisplayID,
-        displayBounds: CGRect
+        displayBounds: CGRect,
+        walkRulesOut: Bool
     ) -> NativeOverflowObservation {
         let memo = chevronProbeMemo.withLock { $0[display] } ?? ChevronProbeMemo()
         let cooldown = chevronAbsenceCooldown(isBuiltIn: CGDisplayIsBuiltin(display) != 0)
@@ -873,13 +874,17 @@ nonisolated enum MenuBarItemAXProvider {
         // The same while Thaw's own menus are in the bar: AppKit answers those
         // hits on this thread and NSMenu asserts off the main one.
         if RevealCoverActivity.isAnyMaskShowing || isThawTheMenuBarOwner(NSWorkspace.shared.menuBarOwningApplication?.processIdentifier) {
-            if memo.hint == nil, memo.lastAbsentAt == nil {
+            if memo.hint == nil, memo.lastAbsentAt == nil, !walkRulesOut {
                 diagLog.debug(
                     "chevron: skipping the strip on display \(display) while it cannot be hit-tested; no absence recorded"
                 )
             }
             return Self.chevronObservationWhileMasked(
-                hint: memo.hint, lastAbsentAt: memo.lastAbsentAt, now: .now, cooldown: cooldown
+                hint: memo.hint,
+                lastAbsentAt: memo.lastAbsentAt,
+                now: .now,
+                cooldown: cooldown,
+                walkRulesOutChevron: walkRulesOut
             )
         }
 
@@ -917,23 +922,6 @@ nonisolated enum MenuBarItemAXProvider {
 
     static nonisolated func isThawTheMenuBarOwner(_ owner: pid_t?) -> Bool {
         owner.map(AXPrimitives.isOwnProcess) ?? false
-    }
-
-    /// A known chevron or an absence inside its cooldown stands; anything else
-    /// is unavailable, so a masked bar cannot start a new absence.
-    static nonisolated func chevronObservationWhileMasked(
-        hint: CGRect?,
-        lastAbsentAt: ContinuousClock.Instant?,
-        now: ContinuousClock.Instant,
-        cooldown: Duration = chevronAbsenceCooldown(isBuiltIn: true)
-    ) -> NativeOverflowObservation {
-        if let hint {
-            return .present([hint])
-        }
-        if let lastAbsentAt, now - lastAbsentAt < cooldown {
-            return .absent
-        }
-        return .unavailable
     }
 
     /// The band to sweep around a previous sighting.
@@ -1100,20 +1088,13 @@ nonisolated enum MenuBarItemAXProvider {
         // The walk finds only AXOverflowButton; the notchless macOS 27
         // indicator is a composited AXImage outside the extras bar. Fall back
         // to the shared strip hit-test so the cover sees the same answer.
-        var mergedFrames = frames
-        var hitTestGaveUp = false
-        if frames.isEmpty {
-            switch chevronObservationByHitTest(on: display, displayBounds: displayBounds) {
-            case let .present(hitTestFrames):
-                for frame in hitTestFrames where seenFrames.insert(frame).inserted {
-                    mergedFrames.append(frame)
-                }
-            case .absent:
-                break
-            case .unavailable:
-                hitTestGaveUp = true
-            }
-        }
+        let (mergedFrames, hitTestGaveUp) = chevronFrames(
+            walkFrames: frames,
+            on: display,
+            displayBounds: displayBounds,
+            attributeReadFailed: attributeReadFailed,
+            unframedControlCount: (attributedControls + labeledControls).count
+        )
 
         if mergedFrames.isEmpty {
             // A partial sweep must not report .absent, or the reducer retires

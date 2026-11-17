@@ -532,7 +532,7 @@
     "file": "Thaw/Items/Interaction/MenuBarItemAXProvider.swift",
     "line": 26
    },
-   "reason": "Enum body should span 350 lines or less excluding comments and whitespace: currently spans 1075 lines",
+   "reason": "Enum body should span 350 lines or less excluding comments and whitespace: currently spans 1059 lines",
    "ruleDescription": "Type bodies should not span too many lines",
    "ruleIdentifier": "type_body_length",
    "ruleName": "Type Body Length",
@@ -573,26 +573,11 @@
   "text": "    private static func nativeOverflowObservationUncached(on display: CGDirectDisplayID) -> NativeOverflowObservation {",
   "violation": {
    "location": {
-    "character": 13,
-    "file": "Thaw/Items/Interaction/MenuBarItemAXProvider.swift",
-    "line": 1040
-   },
-   "reason": "Function should have complexity 10 or less; currently complexity is 14",
-   "ruleDescription": "Complexity of function bodies should be limited.",
-   "ruleIdentifier": "cyclomatic_complexity",
-   "ruleName": "Cyclomatic Complexity",
-   "severity": "warning"
-  }
- },
- {
-  "text": "    private static func nativeOverflowObservationUncached(on display: CGDirectDisplayID) -> NativeOverflowObservation {",
-  "violation": {
-   "location": {
     "character": 20,
     "file": "Thaw/Items/Interaction/MenuBarItemAXProvider.swift",
-    "line": 1040
+    "line": 1028
    },
-   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 79 lines",
+   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 72 lines",
    "ruleDescription": "Function bodies should not span too many lines",
    "ruleIdentifier": "function_body_length",
    "ruleName": "Function Body Length",
@@ -605,9 +590,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Items/Interaction/MenuBarItemAXProvider.swift",
-    "line": 1479
+    "line": 1460
    },
-   "reason": "File should contain 1000 lines or less: currently contains 1479",
+   "reason": "File should contain 1000 lines or less: currently contains 1460",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
