@@ -38,10 +38,18 @@ public final class AXSubprocessClient: @unchecked Sendable {
         public var helperURL: URL
         /// Seconds a request waits for its reply unless it says otherwise.
         public var replyTimeoutSeconds: Double
+        /// Seconds an idle helper stays running before shutting down cleanly.
+        /// Zero disables automatic idle shutdown.
+        public var idleTimeoutSeconds: Double
 
-        public init(helperURL: URL, replyTimeoutSeconds: Double = 10) {
+        public init(
+            helperURL: URL,
+            replyTimeoutSeconds: Double = 10,
+            idleTimeoutSeconds: Double = 10
+        ) {
             self.helperURL = helperURL
             self.replyTimeoutSeconds = replyTimeoutSeconds
+            self.idleTimeoutSeconds = idleTimeoutSeconds
         }
     }
 
@@ -74,6 +82,7 @@ public final class AXSubprocessClient: @unchecked Sendable {
     private var consecutiveExits = 0
     private var isAbandoned = false
     private var lastExit: String?
+    private var idleTask: Task<Void, Never>?
     /// The tail of the running helper's stderr. A helper that dies before it
     /// can reply, in dyld for instance, says why only there.
     private var helperStandardError = Data()
@@ -97,6 +106,11 @@ public final class AXSubprocessClient: @unchecked Sendable {
     /// after it kept exiting. See abandonAfterExits.
     public var hasAbandonedHelper: Bool {
         lock.withLock { isAbandoned }
+    }
+
+    /// Whether the helper process is currently running.
+    public var isHelperRunning: Bool {
+        lock.withLock { process?.isRunning == true }
     }
 
     deinit {
@@ -189,6 +203,9 @@ public final class AXSubprocessClient: @unchecked Sendable {
             if entry == nil, cancelledEarlyIfAbsent {
                 cancelledEarly.insert(id)
             }
+            if pending.isEmpty {
+                scheduleIdleShutdownLocked()
+            }
             return entry
         }
         guard let entry else { return }
@@ -204,11 +221,47 @@ public final class AXSubprocessClient: @unchecked Sendable {
             // The replacement starts its own run; otherwise each timeout it
             // sees counts as the fourth in a row and replaces it again.
             consecutiveTimeouts = 0
+            tearDownLocked()
             return true
         }
         finish(id, with: .failure(AXWire.WireError.timedOut))
         if isWedged {
-            restart()
+            let failed = lock.withLock { () -> [Pending] in
+                let failed = Array(pending.values)
+                pending.removeAll()
+                return failed
+            }
+            for entry in failed {
+                entry.timer?.cancel()
+                entry.continuation.resume(throwing: AXSubprocessError.helperExited)
+            }
+        }
+    }
+
+    /// Call with lock held.
+    private func scheduleIdleShutdownLocked() {
+        idleTask?.cancel()
+        idleTask = nil
+        guard pending.isEmpty, let process, process.isRunning, configuration.idleTimeoutSeconds > 0
+        else { return }
+        let timeout = configuration.idleTimeoutSeconds
+        idleTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .seconds(timeout))
+            } catch {
+                return
+            }
+            self?.stopIdle()
+        }
+    }
+
+    private func stopIdle() {
+        lock.withLock {
+            idleTask = nil
+            guard pending.isEmpty, process != nil else { return }
+            tearDownLocked()
+            consecutiveTimeouts = 0
+            consecutiveExits = 0
         }
     }
 
@@ -264,6 +317,8 @@ public final class AXSubprocessClient: @unchecked Sendable {
     /// Returns the running helper's input, launching it if needed. Call with
     /// lock held.
     private func ensureStartedLocked() throws -> FileHandle {
+        idleTask?.cancel()
+        idleTask = nil
         if let process, process.isRunning, let input {
             return input
         }
@@ -390,12 +445,14 @@ public final class AXSubprocessClient: @unchecked Sendable {
 
     /// Call with lock held.
     private func tearDownLocked() {
+        idleTask?.cancel()
+        idleTask = nil
+        generation &+= 1
         try? input?.close()
         input = nil
         if let process, process.isRunning {
             process.terminate()
         }
         process = nil
-        generation &+= 1
     }
 }
