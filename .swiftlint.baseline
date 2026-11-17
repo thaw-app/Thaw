@@ -352,7 +352,7 @@
     "file": "Thaw/Items/Capture/MenuBarItemImageCache.swift",
     "line": 44
    },
-   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 390 lines",
+   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 385 lines",
    "ruleDescription": "Type bodies should not span too many lines",
    "ruleIdentifier": "type_body_length",
    "ruleName": "Type Body Length",
@@ -425,9 +425,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Items/Capture/MenuBarItemImageCache.swift",
-    "line": 818
+    "line": 812
    },
-   "reason": "File should contain 400 lines or less: currently contains 818",
+   "reason": "File should contain 400 lines or less: currently contains 812",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
