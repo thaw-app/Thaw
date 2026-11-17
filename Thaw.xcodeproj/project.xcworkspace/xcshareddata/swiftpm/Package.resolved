@@ -1,5 +1,5 @@
 {
-  "originHash" : "1f890957d51262a3155a84cf50e7ef4dbb8158879a3ecf907d3ef0133b37bf75",
+  "originHash" : "17b113e39a611cb7604da6ac482c7860296106bdcd0f71d846247c9693dab489",
   "pins" : [
     {
       "identity" : "compactslider",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/thaw-app/prk-bin",
       "state" : {
-        "revision" : "c8a099ea6112e0ed1eca508ba6e19a13283d45c6",
-        "version" : "1.2.16"
+        "revision" : "039e537423767af2a1e0075e15b26876fa4f143d",
+        "version" : "1.2.17"
       }
     },
     {
