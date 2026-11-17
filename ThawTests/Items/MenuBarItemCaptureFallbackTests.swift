@@ -306,6 +306,20 @@ struct MenuBarItemCaptureFallbackTests {
         #expect(result.unconditionallyInvalidatedTags.isEmpty)
     }
 
+    @Test("A concealed item whose reported frame is implausible keeps its picture; a shown one with that frame loses it")
+    func concealedItemWithAnImplausibleFrameKeepsItsPicture() async throws {
+        // Left of the application menus' edge (300 in the fixture), as a stale frame of an app hidden for overflow can be.
+        let item = makeItem(x: 200)
+        let reader = try CaptureFixture(hosting: makeCapture(opaque: false), strip: makeCapture(opaque: true))
+
+        let concealed = await capture(item, using: reader, concealedIdentifiers: [item.uniqueIdentifier])
+        #expect(concealed.captured.isEmpty)
+        #expect(concealed.invalidatedTags.isEmpty, "A stale frame says nothing against the picture a concealed item has")
+
+        let shown = await capture(item, using: reader)
+        #expect(shown.invalidatedTags == [item.tag])
+    }
+
     @Test("Overflow appearing during strip capture rejects it")
     func stripOverflowIsRejected() async throws {
         let item = makeItem()
