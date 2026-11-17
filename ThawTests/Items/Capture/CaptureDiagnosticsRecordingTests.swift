@@ -94,6 +94,17 @@ struct CaptureDiagnosticsRecordingTests {
         #expect(try savedImages(prefix: "stored-").map(\.width).sorted() == [24, 30], "Nothing changes with diagnostics off")
     }
 
+    @Test("A picture kept unchanged is saved for an item that has no file yet, and never replaces one")
+    func unchangedPictureFillsOnlyAMissingFile() throws {
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let item = Self.item(ownerPID: 999_813)
+
+        CaptureDiagnostics.recordStored(Self.image(width: 20, height: 12), item: item, replacing: false, isEnabled: true, directory: directory)
+        CaptureDiagnostics.recordStored(Self.image(width: 24, height: 12), item: item, replacing: false, isEnabled: true, directory: directory)
+
+        #expect(try savedImages(prefix: "stored-").map(\.width) == [20])
+    }
+
     @Test("Nothing is saved with diagnostics off or for an image larger than a menu bar item")
     func skippedCrops() {
         defer { try? FileManager.default.removeItem(at: directory) }

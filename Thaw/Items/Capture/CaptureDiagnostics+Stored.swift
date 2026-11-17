@@ -21,16 +21,18 @@ nonisolated extension CaptureDiagnostics {
     /// Saves the picture the cache keeps for an item, as stored-N.png: one file per item, replaced when the
     /// picture changes. The sampled crops are the first three attempts on an item, which for a hidden item
     /// are often blank ones from before it was shown, so they do not say what ended up in the Thaw Bar.
+    /// With replacing false, an item that already has a file keeps it, for a picture that didn't change.
     static func recordStored(
         _ image: CGImage,
         item: MenuBarItem,
+        replacing: Bool = true,
         isEnabled: Bool = DiagnosticLogger.shared.isEnabled,
         directory: URL = sampleDirectory
     ) {
         guard isEnabled, image.width <= 512, image.height <= 128 else { return }
         let key = "\(item.ownerPID):\(item.uniqueIdentifier)"
         let slot = storedSlots.withLock { slots -> Int? in
-            if let slot = slots[key] { return slot }
+            if let slot = slots[key] { return replacing ? slot : nil }
             guard slots.count < storedLimit else { return nil }
             slots[key] = slots.count + 1
             return slots.count

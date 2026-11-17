@@ -19,6 +19,8 @@ nonisolated enum AXCropRules {
         let validateFreshBounds: Bool
         let absenceMeansMoved: Bool
         let postCaptureBoundsByID: [String: CGRect]
+        /// Items another app's item was drawn over in that read; see DrawnSeating.Seated.
+        var occupiedIdentifiers: Set<String> = []
         let captureTimeBoundsByID: [String: CGRect]
         let overflowBounds: [CGRect]
         let concealedIdentifiers: Set<String>
@@ -133,11 +135,13 @@ nonisolated enum AXCropRules {
         return nil
     }
 
-    /// Only a re-read rect that disagrees costs the capture. Absence is not
+    /// Only a re-read rect that disagrees, or a seat another app's item now covers, costs the capture. Absence is not
     /// movement: some apps vend their AX element intermittently.
     private static func freshnessRejection(_ candidate: Candidate, rules: SourceRules) -> Rejection? {
         guard rules.validateFreshBounds else { return nil }
         let (item, bounds) = (candidate.item, candidate.bounds)
+        // DrawnSeating.seated logs it.
+        if rules.occupiedIdentifiers.contains(item.uniqueIdentifier) { return .keepPrior }
         if let postCaptureBounds = rules.postCaptureBoundsByID[item.uniqueIdentifier] {
             guard hasStableCaptureBounds(before: bounds, after: postCaptureBounds) else {
                 diagLog.debug(

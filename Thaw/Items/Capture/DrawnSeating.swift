@@ -50,16 +50,29 @@ nonisolated struct DrawnSeating: Sendable {
         candidates.map { (item: $0.item, bounds: reportedBounds[$0.item.uniqueIdentifier] ?? $0.bounds) }
     }
 
-    /// Frames read after a source's pixels, moved onto the seats MenuBarAgent draws now. A seat that changed
-    /// meanwhile then reads as movement, as does a frame another app's item is now drawn in, which is left out.
+    /// Frames read after a source's pixels, moved onto the seats MenuBarAgent draws now.
+    struct Seated {
+        /// Each item's frame, at its drawn seat when it is drawn away from it. A seat that changed
+        /// meanwhile reads as movement.
+        var bounds: [String: CGRect]
+        /// Items another app's item is now drawn over, left out of bounds. Their crops are rejected
+        /// even where a missing frame is forgiven.
+        var occupied: Set<String> = []
+    }
+
+    /// See Seated.
     func seated(
         _ bounds: [String: CGRect],
         of items: [MenuBarItem],
         using reader: any MenuBarCaptureReading
-    ) async -> [String: CGRect] {
-        guard isOn else { return bounds }
+    ) async -> Seated {
+        guard isOn else { return Seated(bounds: bounds) }
         let live = items.compactMap { item in bounds[item.uniqueIdentifier].map { (item: item, bounds: $0) } }
         let seats = await reader.drawnSeats(for: live, displayID: displayID)
-        return bounds.merging(seats.moved) { _, seat in seat }.filter { !seats.occupied.contains($0.key) }
+        for identifier in seats.occupied.sorted() {
+            MenuBarItemImageCache.diagLog.debug("axBoundsCapture: another app's item is now drawn where \(identifier) was cut; keeping its prior image")
+        }
+        let seated = bounds.merging(seats.moved) { _, seat in seat }.filter { !seats.occupied.contains($0.key) }
+        return Seated(bounds: seated, occupied: seats.occupied)
     }
 }

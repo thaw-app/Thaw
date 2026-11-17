@@ -19,8 +19,8 @@ struct RevealCaptureSession {
         /// request they answer. See waitForRevealedItems(matching:clock:read:).
         let settledItems: @MainActor ([MenuBarItem]) async -> [(requested: MenuBarItem, live: MenuBarItem)]
         /// The wait between stable AX bounds and fully rendered glyphs at those bounds.
-        /// False when the pixels were still changing at the end of it.
-        let renderSettle: @MainActor ([MenuBarItem]) async -> Bool
+        /// Says which of the items, by position, were still changing at the end of it.
+        let renderSettle: @MainActor ([MenuBarItem]) async -> PixelSettle
         let reader: any MenuBarCaptureReading
         /// Raised before a batch is revealed and lowered after it is concealed,
         /// so the user sees the bar as it was while the capture sees the reveal.
@@ -54,10 +54,14 @@ struct RevealCaptureSession {
     /// Publishes one cropped batch with nothing awaited since the screenshot. False ends the session.
     let commit: @MainActor (AXBoundsCropper.CapturePass, RevealedPairs, CapturePublicationAdmission) -> Bool
 
-    func capture(_ batches: [[MenuBarItem]]) async {
+    /// - Returns: The items of the batches the session got through: published, or never drawn when revealed.
+    ///   A batch it stopped at, or never reached, is left out.
+    @discardableResult
+    func capture(_ batches: [[MenuBarItem]]) async -> [MenuBarItem] {
+        var reached = [MenuBarItem]()
         for batch in batches {
             await waitWhileMoving()
-            guard !Task.isCancelled, !isLocked("revealing capture batch"), sources.mayReveal() else { return }
+            guard !Task.isCancelled, !isLocked("revealing capture batch"), sources.mayReveal() else { return reached }
 
             sources.cover()
             for item in batch {
@@ -71,16 +75,19 @@ struct RevealCaptureSession {
             }
 
             let firstRead = await sources.settledItems(batch)
-            guard !isLocked("capture reveal completed") else { return }
-            guard !firstRead.isEmpty else { continue }
+            guard !isLocked("capture reveal completed") else { return reached }
+            guard !firstRead.isEmpty else {
+                reached += batch
+                continue
+            }
 
             // AX bounds stabilize before MenuBarAgent finishes drawing the revealed glyphs, so the batch settles once.
-            let (revealed, pixelsSettled) = await settleAtFinalFrames(firstRead)
-            guard !Task.isCancelled, !isLocked("settled capture batch") else { return }
+            let (revealed, pixelSettle) = await settleAtFinalFrames(firstRead)
+            guard !Task.isCancelled, !isLocked("settled capture batch") else { return reached }
 
             // Admitted now, with nothing awaited before the screenshot. The reveal's own restriction rebuild moves the
             // layout generation, so an earlier admission would reject every batch.
-            guard let admission = admit() else { return }
+            guard let admission = admit() else { return reached }
 
             // One hosting and one strip screenshot for the batch, on the fixed display, so every crop comes from one
             // instant of the bar. These were revealed here, so none is concealed and each is cut where it is drawn.
@@ -91,18 +98,19 @@ struct RevealCaptureSession {
                 seatsOnDrawnBar: true
             )
             var captureResult = await cropper.crop(request, using: sources.reader, skipping: shouldSkip)
-            if !pixelsSettled {
-                Self.dropCutOffPictures(from: &captureResult)
-            }
+            let changing = Set(revealed.indices.filter { pixelSettle.mayBeChanging(at: $0) }.map { revealed[$0].live.tag })
+            Self.dropCutOffPictures(from: &captureResult, amongChanging: changing)
 
-            guard commit(captureResult, revealed, admission) else { return }
+            guard commit(captureResult, revealed, admission) else { return reached }
+            reached += batch
         }
+        return reached
     }
 
     /// Settles a revealed batch where it ends up. Native hiding rebuilds the bar, so an item can move after its
     /// first read; when one did, the batch settles again at the new frames.
-    /// The second value is whether the pixels had stopped changing at the frames returned.
-    private func settleAtFinalFrames(_ firstRead: RevealedPairs) async -> (RevealedPairs, pixelsSettled: Bool) {
+    /// The second value says which of the pairs returned, by position, were still changing there.
+    private func settleAtFinalFrames(_ firstRead: RevealedPairs) async -> (RevealedPairs, PixelSettle) {
         let settled = await sources.renderSettle(firstRead.map(\.live))
         guard !Task.isCancelled else { return (firstRead, settled) }
         // Only what appeared: an item that never drew would cost another full wait.
@@ -112,12 +120,16 @@ struct RevealCaptureSession {
         return await (reread, sources.renderSettle(reread.map(\.live)))
     }
 
-    /// Takes out the pictures whose ink runs into their left or right edge. Called for a batch whose pixels were
-    /// still changing at the screenshot: such a picture is most likely the icon caught while it slides in. Either
+    /// Takes out the pictures, of the items whose pixels were still changing at the screenshot, whose ink runs
+    /// into their left or right edge: such a picture is most likely the icon caught while it slides in. Either
     /// sign alone is not enough. An icon that keeps redrawing never settles, and one can draw to its edge.
-    private static nonisolated func dropCutOffPictures(from pass: inout AXBoundsCropper.CapturePass) {
+    private static nonisolated func dropCutOffPictures(
+        from pass: inout AXBoundsCropper.CapturePass,
+        amongChanging changing: Set<MenuBarItemTag>
+    ) {
         let cutOff = pass.captured.filter {
-            MenuBarItemImageCache.isClippedAtLeadingEdge($0.value) || MenuBarItemImageCache.isClippedAtTrailingEdge($0.value)
+            changing.contains($0.key)
+                && (MenuBarItemImageCache.isClippedAtLeadingEdge($0.value) || MenuBarItemImageCache.isClippedAtTrailingEdge($0.value))
         }.keys
         guard !cutOff.isEmpty else { return }
         for tag in cutOff {

@@ -573,6 +573,23 @@ struct MenuBarItemCaptureFallbackTests {
         #expect(result.invalidatedTags.isEmpty)
     }
 
+    /// The owner-window source forgives a missing frame, since some apps vend their AX element
+    /// intermittently. A seat another app's item now covers is not such a gap.
+    @Test("A neighbour that takes the seat during an owner-window screenshot keeps the prior image")
+    func neighbourArrivingDuringOwnerWindowCaptureKeepsPriorImage() async throws {
+        let item = makeItem()
+        let reader = try CaptureFixture(
+            hosting: nil, barWindow: makeCapture(opaque: false), strip: nil, items: [item],
+            drawn: Self.drawnInPlace, drawnAfterCapture: .some(Self.neighbourOnTheSeat)
+        )
+        let result = await capture(item, using: reader, validateFreshBounds: true, seatsOnDrawnBar: true)
+
+        #expect(await reader.captures.contains(.barWindow))
+        #expect(result.captured.isEmpty)
+        #expect(result.unreadable.map(\.tag) == [item.tag])
+        #expect(result.invalidatedTags.isEmpty)
+    }
+
     private func capture(
         _ item: MenuBarItem,
         using reader: CaptureFixture,

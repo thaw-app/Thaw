@@ -57,7 +57,11 @@ extension MenuBarItemImageCache {
             return true
         }
         let preferred = Self.preferredRevealedImage(existing: cached.capture, candidate: picture, revealing: item, listedWidths: listedWidths)
-        guard !MenuBarItemGlyphCapture.isVisuallyEqual(preferred, cached.capture) else { return false }
+        guard !MenuBarItemGlyphCapture.isVisuallyEqual(preferred, cached.capture) else {
+            // A picture loaded from disk was never saved this session; the export shows what the Thaw Bar keeps.
+            CaptureDiagnostics.recordStored(preferred.cgImage, item: item, replacing: false)
+            return false
+        }
         if cached.tag != item.tag {
             removeCapture(for: cached.tag)
         }

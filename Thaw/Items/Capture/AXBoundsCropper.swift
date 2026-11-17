@@ -171,6 +171,7 @@ private nonisolated struct CropContext {
     let captureTimeBounds: [String: CGRect]
     let seating: DrawnSeating
     var postCaptureBounds: [String: CGRect] = [:]
+    var occupiedSeats: Set<String> = []
     var overflowBounds: [CGRect]
     var ambiguousIdentifiers: Set<String> = []
     var hasHostingCapture = false
@@ -292,7 +293,9 @@ private nonisolated struct CropRun {
         // Each app is asked about the frame it reports, not the seat its picture was cut at.
         let live = await reader.liveBounds(for: context.seating.reported(candidates))
         guard !isLocked else { return false }
-        context.postCaptureBounds = await context.seating.seated(live.bounds, of: candidates.map(\.item), using: reader)
+        let seated = await context.seating.seated(live.bounds, of: candidates.map(\.item), using: reader)
+        context.postCaptureBounds = seated.bounds
+        context.occupiedSeats = seated.occupied
         context.ambiguousIdentifiers = live.ambiguous
         context.overflowBounds += await reader.overflowBounds(displayID: context.displayID)
         return !isLocked
@@ -305,11 +308,13 @@ private nonisolated struct CropRun {
         if context.validateFreshBounds {
             let items = await reader.menuBarItems(displayID: context.displayID)
             guard !isLocked else { return nil }
-            refreshed.postCaptureBounds = await context.seating.seated(
+            let seated = await context.seating.seated(
                 Dictionary(items.map { ($0.uniqueIdentifier, $0.bounds) }, uniquingKeysWith: { first, _ in first }),
                 of: items,
                 using: reader
             )
+            refreshed.postCaptureBounds = seated.bounds
+            refreshed.occupiedSeats = seated.occupied
         }
         refreshed.overflowBounds += await reader.overflowBounds(displayID: context.displayID)
         guard !isLocked else { return nil }
@@ -350,6 +355,7 @@ private nonisolated struct CropRun {
             validateFreshBounds: readLivePositions || context.validateFreshBounds,
             absenceMeansMoved: readLivePositions || !context.validateFreshBounds,
             postCaptureBoundsByID: context.postCaptureBounds,
+            occupiedIdentifiers: context.occupiedSeats,
             captureTimeBoundsByID: context.captureTimeBounds,
             overflowBounds: context.overflowBounds,
             concealedIdentifiers: context.concealedIdentifiers,

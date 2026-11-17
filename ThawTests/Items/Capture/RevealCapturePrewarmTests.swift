@@ -26,6 +26,8 @@ struct RevealCapturePrewarmTests {
         var blacklisted: Set<MenuBarItemTag> = []
         var displayID: CGDirectDisplayID = 42
         var newPictures: Set<MenuBarItemTag> = []
+        /// Items the capture stops before, as when a display change ends it.
+        var unreached: Set<MenuBarItemTag> = []
         var retakeLedger: GlyphRetakeLedger?
 
         var forgotten: [Set<MenuBarItemTag>] = []
@@ -50,6 +52,7 @@ struct RevealCapturePrewarmTests {
                     for item in items where self.newPictures.contains(item.tag) {
                         self.slot.tally?.tags.insert(item.tag)
                     }
+                    return items.filter { !self.unreached.contains($0.tag) }
                 },
                 save: { self.saves += 1 },
                 retakeLedger: retakeLedger
@@ -133,6 +136,23 @@ struct RevealCapturePrewarmTests {
         await world.run([.hidden])
 
         #expect(world.captured.map(\.items) == [[stale.tag], [stale.tag]])
+    }
+
+    @Test("A width retake the capture stopped before stays due; one it reached is used up")
+    func unreachedRetakeStaysDue() async throws {
+        let world = World()
+        world.retakeLedger = GlyphRetakeLedger()
+        let reached = Self.item("Reached", width: 36), stopped = Self.item("Stopped", width: 36)
+        world.sections[.hidden] = [reached, stopped]
+        world.images[reached.tag] = try Self.glyph(pixelWidth: 44)
+        world.images[stopped.tag] = try Self.glyph(pixelWidth: 44)
+        world.unreached = [stopped.tag]
+
+        await world.run([.hidden])
+        world.unreached = []
+        await world.run([.hidden])
+
+        #expect(world.captured.map(\.items) == [[reached.tag, stopped.tag], [stopped.tag]])
     }
 
     @Test("Without a ledger, or on a pass that retakes everything, the ledger's once isn't used up")
