@@ -73,6 +73,27 @@ struct CaptureDiagnosticsRecordingTests {
         #expect(try savedImages(prefix: "cleaned-").isEmpty)
     }
 
+    @Test("The picture kept for an item is saved once per item and replaced when it changes, whatever earlier crops used up")
+    func storedPictureIsKeptPerItem() throws {
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let first = Self.item(ownerPID: 999_811)
+        let second = Self.item(ownerPID: 999_812)
+        // The three early attempts that fill an item's sample slots, as blank crops of a still-hidden item do.
+        for _ in 0 ..< 3 {
+            CaptureDiagnostics.record(Self.image(width: 18, height: 12), item: first, bounds: .zero, source: "test", isEnabled: true, directory: directory)
+        }
+
+        CaptureDiagnostics.recordStored(Self.image(width: 20, height: 12), item: first, isEnabled: true, directory: directory)
+        CaptureDiagnostics.recordStored(Self.image(width: 24, height: 12), item: first, isEnabled: true, directory: directory)
+        CaptureDiagnostics.recordStored(Self.image(width: 30, height: 12), item: second, isEnabled: true, directory: directory)
+
+        let stored = try savedImages(prefix: "stored-")
+        #expect(stored.map(\.width).sorted() == [24, 30], "One file per item, holding the latest picture")
+
+        CaptureDiagnostics.recordStored(Self.image(width: 40, height: 12), item: second, isEnabled: false, directory: directory)
+        #expect(try savedImages(prefix: "stored-").map(\.width).sorted() == [24, 30], "Nothing changes with diagnostics off")
+    }
+
     @Test("Nothing is saved with diagnostics off or for an image larger than a menu bar item")
     func skippedCrops() {
         defer { try? FileManager.default.removeItem(at: directory) }
