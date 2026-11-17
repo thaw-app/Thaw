@@ -26,6 +26,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- Switching apps no longer hides revealed items if you move the pointer back to the menu bar or Thaw Bar while the hide is pending.
 - Revealing hidden items while Smart rehide checks for an open menu no longer lets the old focus-change timer hide them again.
 - A `thaw://apply-profile` link no longer applies a profile while Profiles is turned off.
 - Settings search no longer offers pages for modules you turned off, such as Profiles, Scripts, Triggers or Widgets.

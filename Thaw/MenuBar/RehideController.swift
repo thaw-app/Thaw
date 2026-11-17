@@ -231,7 +231,7 @@ final class RehideController {
         }
     }
 
-    /// A delayed focus hide must still be enabled after its waits and menu check.
+    /// A delayed focus hide must stay enabled and keep the pointer away from the bars after every wait.
     private func rehideAfterFocusChange(interval: TimeInterval) async {
         do {
             try await environment.sleep(.seconds(interval))
@@ -239,7 +239,10 @@ final class RehideController {
             return
         }
         // A reveal can cancel this task even after the sleep returns.
-        guard !Task.isCancelled, environment.settings().autoRehide else { return }
+        guard !Task.isCancelled,
+              environment.settings().autoRehide,
+              environment.isPointerAwayFromBars()
+        else { return }
 
         if let lastShow, lastShow.duration(to: environment.now()) < Self.revealGrace {
             diagLog.debug("Skipping rehide due to grace period")
@@ -248,7 +251,10 @@ final class RehideController {
         if environment.settings().strategy == .smart, await environment.isAnyMenuOpen() {
             return
         }
-        guard !Task.isCancelled, environment.settings().autoRehide else { return }
+        guard !Task.isCancelled,
+              environment.settings().autoRehide,
+              environment.isPointerAwayFromBars()
+        else { return }
         environment.hideHiddenSection()
     }
 

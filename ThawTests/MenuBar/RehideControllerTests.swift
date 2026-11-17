@@ -111,6 +111,38 @@ struct RehideControllerTests {
         #expect(world.everySectionHides == 0)
     }
 
+    /// Returning to a bar while the focus delay runs must preserve the revealed items.
+    @Test("Returning to a bar during the focus delay prevents hiding", arguments: [RehideStrategy.smart, .focusedApp])
+    func pointerReturnsDuringFocusDelay(strategy: RehideStrategy) async {
+        let world = RehideWorld()
+        world.settings.strategy = strategy
+        world.controller.note(.focusChanged)
+        await world.settle()
+        world.pointerAwayFromBars = false
+
+        await world.finishWaits()
+
+        #expect(world.hiddenSectionHides == 0)
+    }
+
+    /// A menu probe can finish after the pointer has returned to a bar.
+    @Test("Returning to a bar during the focus menu check prevents hiding")
+    func pointerReturnsDuringFocusMenuCheck() async {
+        let world = RehideWorld()
+        world.sleepsReturnAtOnce = true
+        world.heldMenuCheck = 1
+        world.controller.note(.focusChanged)
+        while world.menuChecks < 1 {
+            await world.settle()
+        }
+        world.pointerAwayFromBars = false
+
+        await world.finishWaits()
+        await world.settle()
+
+        #expect(world.hiddenSectionHides == 0)
+    }
+
     @Test("A focus change does nothing under the timed strategy, with rehide off, or with the pointer on a bar")
     func focusChangeIgnored() async {
         for change in [{ (world: RehideWorld) in world.settings.strategy = .timed },
