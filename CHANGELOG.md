@@ -144,6 +144,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **A cut-off picture no longer replaces a good one** that Thaw loaded from disk. By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
 - **A hidden item's picture is no longer taken while its icon is still sliding in.** A cut-off one is left out and the item keeps the picture it had.
 - **Thaw stops retrying a picture that keeps failing.** An item whose picture fails on every refresh is now set aside for 30 seconds.
+- **An app Thaw hides to make room keeps its picture.** It was thrown away on every refresh, so the Thaw Bar showed the app's icon instead.
 
 #### Thaw Bar
 
