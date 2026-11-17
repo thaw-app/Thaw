@@ -15,6 +15,53 @@ nonisolated struct MenuBarContainerTint: Hashable {
     var color: CGColor
     var gradient: IceGradient
     var opacity: Double
+    /// Draws the tint under the content instead of over it, so a strong
+    /// tint colors the background without hiding the items.
+    var isBehindContent = false
+}
+
+@MainActor
+extension MenuBarContainerTint {
+    /// The single color the tint draws, or nil when it draws none.
+    var fillColor: CGColor? {
+        switch kind {
+        case .solid: color
+        case .gradient: gradient.averageColor()
+        case .noTint, .glass, .adaptive, .adaptiveGradient: nil
+        }
+    }
+
+    /// The color that results from drawing the tint at its opacity over base.
+    func composited(over base: CGColor) -> CGColor {
+        guard let top = fillColor?.sRGBComponents, let bottom = base.sRGBComponents else {
+            return base
+        }
+        let alpha = (top[3] * CGFloat(opacity)).clamped(to: 0 ... 1)
+        func mix(_ index: Int) -> CGFloat {
+            bottom[index] + (top[index] - bottom[index]) * alpha
+        }
+        return CGColor(srgbRed: mix(0), green: mix(1), blue: mix(2), alpha: bottom[3])
+    }
+
+    /// The color info of what the content sits on: the sampled color, with
+    /// the tint mixed in when the tint is drawn behind the content.
+    func backgroundColorInfo(over colorInfo: MenuBarAverageColorInfo?) -> MenuBarAverageColorInfo? {
+        guard isBehindContent, let colorInfo else {
+            return colorInfo
+        }
+        return MenuBarAverageColorInfo(color: composited(over: colorInfo.color), source: colorInfo.source)
+    }
+}
+
+private extension CGColor {
+    /// Red, green, blue and alpha in sRGB, or nil when the color can't be converted.
+    var sRGBComponents: [CGFloat]? {
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB) else {
+            return nil
+        }
+        let components = converted(to: space, intent: .defaultIntent, options: nil)?.components
+        return components?.count == 4 ? components : nil
+    }
 }
 
 /// A view that is drawn in the style of the menu bar.
@@ -47,7 +94,7 @@ struct MenuBarItemContainer<Content: View>: View {
     }
 
     private var foreground: Color {
-        colorInfo?.isBright(for: screen) == true ? .black : .white
+        tint.backgroundColorInfo(over: colorInfo)?.isBright(for: screen) == true ? .black : .white
     }
 
     private var configuration: MenuBarAppearancePartialConfiguration {
@@ -88,12 +135,21 @@ struct MenuBarItemContainer<Content: View>: View {
             .foregroundStyle(foreground)
             .background {
                 contentBackground
+                if tint.isBehindContent {
+                    tintLayer
+                }
             }
             .overlay {
-                contentOverlay
-                    .opacity(tint.opacity)
-                    .allowsHitTesting(false)
+                if !tint.isBehindContent {
+                    tintLayer
+                }
             }
+    }
+
+    private var tintLayer: some View {
+        tintFill
+            .opacity(tint.opacity)
+            .allowsHitTesting(false)
     }
 
     @ViewBuilder
@@ -110,18 +166,11 @@ struct MenuBarItemContainer<Content: View>: View {
     }
 
     @ViewBuilder
-    private var contentOverlay: some View {
+    private var tintFill: some View {
         // Show tint when we have sampled color info (window on non-fullscreen space)
         // or when activeSpace is not fullscreen.
-        if colorInfo != nil || !appState.activeSpace.isFullscreen {
-            if case .solid = tint.kind {
-                Color(cgColor: tint.color)
-            } else if
-                case .gradient = tint.kind,
-                let color = tint.gradient.averageColor()
-            {
-                Color(cgColor: color)
-            }
+        if colorInfo != nil || !appState.activeSpace.isFullscreen, let fillColor = tint.fillColor {
+            Color(cgColor: fillColor)
         }
     }
 }
