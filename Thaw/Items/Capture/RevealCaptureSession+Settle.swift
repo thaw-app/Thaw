@@ -83,12 +83,14 @@ extension RevealCaptureSession {
 
     /// Waits for a revealed batch to stop moving before its screenshot. See
     /// waitForSettledPixels(minimumSettle:interval:requiredMatches:budget:clock:read:).
+    /// - Returns: False when the pixels were still changing when the wait ended.
+    @discardableResult
     static func settleRevealedPixels(
         _ revealed: [MenuBarItem],
         displayID: CGDirectDisplayID,
         reader: any MenuBarCaptureReading,
         clock: SettleClock = SettleClock()
-    ) async {
+    ) async -> Bool {
         let frames = revealed.map(\.bounds)
         let settled = await waitForSettledPixels(clock: clock) {
             await reader.hostingCapture(displayID: displayID).map { pixelFingerprint(of: frames, in: $0) }
@@ -96,6 +98,7 @@ extension RevealCaptureSession {
         if !settled {
             MenuBarItemImageCache.diagLog.debug("grouped reveal capture: pixels still changing at the settle budget")
         }
+        return settled
     }
 
     /// Waits for three matching pixel reads in a row, since AX reports the final frame while the glyph still slides.

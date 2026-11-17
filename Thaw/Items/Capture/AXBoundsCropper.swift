@@ -113,9 +113,7 @@ nonisolated struct AXBoundsCropper: Sendable {
         let (reported, implausible) = AXCropRules.eligibleCandidates(
             request.items, band: band, overflowBounds: overflowBounds, screens: reader.displayBounds()
         )
-        for item in implausible {
-            pass.reject(item, .invalidate)
-        }
+        pass.rejectImplausible(implausible, concealedIdentifiers: request.concealedIdentifiers)
         var seating = DrawnSeating(isOn: request.seatsOnDrawnBar, displayID: request.displayID)
         let candidates = await seating.seat(reported, using: reader, rejectingInto: &pass)
         guard !screenIsLocked() else { return CapturePass() }

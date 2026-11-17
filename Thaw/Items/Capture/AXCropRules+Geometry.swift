@@ -186,3 +186,15 @@ nonisolated extension AXCropRules {
         case displayStrip = "display-strip"
     }
 }
+
+extension MenuBarItemImageCache.CapturePass {
+    /// Rejects the items eligibleCandidates found implausible. A shown item loses its picture: its frame proves
+    /// the picture wrong. A concealed one keeps it, since it is not drawn and the frame it reports is stale.
+    /// Without that an app hidden for overflow lost its picture on every pass of the live refresh.
+    mutating nonisolated func rejectImplausible(_ items: [MenuBarItem], concealedIdentifiers: Set<String>) {
+        for item in items {
+            let isConcealed = ItemConcealment.isConcealed(item.uniqueIdentifier, in: concealedIdentifiers)
+            reject(item, isConcealed ? .keepPrior : .invalidate)
+        }
+    }
+}
