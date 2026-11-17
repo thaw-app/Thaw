@@ -65,6 +65,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **What's New shows its Stable, Beta and Alpha tabs beside the title.**
 - **Thaw does less work while the menu bar sits idle.** It no longer redraws the bar's look on every click or asks about every running app every three seconds.
 - **The item list in Troubleshooting also records where macOS draws each item.**
+- **Capture samples also include the picture Thaw kept for each hidden item.**
 
 #### Modules
 

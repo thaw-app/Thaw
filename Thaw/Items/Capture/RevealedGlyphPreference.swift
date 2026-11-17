@@ -53,6 +53,7 @@ extension MenuBarItemImageCache {
     ) -> Bool {
         guard let cached = Self.cachedCapture(for: item.tag, in: capturesByTag) else {
             setCapture(picture, for: item.tag)
+            CaptureDiagnostics.recordStored(picture.cgImage, item: item)
             return true
         }
         let preferred = Self.preferredRevealedImage(existing: cached.capture, candidate: picture, revealing: item, listedWidths: listedWidths)
@@ -61,6 +62,7 @@ extension MenuBarItemImageCache {
             removeCapture(for: cached.tag)
         }
         setCapture(preferred, for: item.tag)
+        CaptureDiagnostics.recordStored(preferred.cgImage, item: item)
         return true
     }
 
