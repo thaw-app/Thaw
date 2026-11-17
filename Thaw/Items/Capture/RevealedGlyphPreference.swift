@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import MenuBarModel
 
 extension MenuBarItemImageCache {
     /// How much shorter, in points, a revealed item's new glyph may be before it is taken
@@ -18,11 +19,18 @@ extension MenuBarItemImageCache {
     /// can also catch the glyph mid-slide, its left part not drawn yet or cut off at the crop's
     /// left edge, so such a candidate loses here too. Live items skip these rules: a graph or a
     /// level really can get shorter or lose its left ink.
+    ///
+    /// recordedItemWidth is the width Thaw had for the item before the reveal, and listedItemWidth the
+    /// width its item list has now, read again since. When the cached picture no longer matches either
+    /// (see oldPictureIsStale), a much narrower picture may replace it.
     static nonisolated func preferredRevealedImage(
         existing: MenuBarItemGlyphCapture,
-        candidate: MenuBarItemGlyphCapture
+        candidate: MenuBarItemGlyphCapture,
+        recordedItemWidth: CGFloat? = nil,
+        listedItemWidth: CGFloat? = nil
     ) -> MenuBarItemGlyphCapture {
-        let preferred = preferredCachedImage(existing: existing, candidate: candidate)
+        let isStale = oldPictureIsStale(existing, itemWidths: [recordedItemWidth, listedItemWidth])
+        let preferred = preferredCachedImage(existing: existing, candidate: candidate, oldPictureIsStale: isStale)
         guard preferred.cgImage === candidate.cgImage, !existing.isEffectivelyBlank else { return preferred }
         if isLeadingCut(candidate, of: existing) || isNewlyClipped(candidate, comparedTo: existing) {
             return existing
@@ -30,6 +38,36 @@ extension MenuBarItemImageCache {
         let existingHeight = inkPointHeight(of: existing)
         guard existingHeight > 0 else { return preferred }
         return inkPointHeight(of: candidate) < existingHeight * revealedInkHeightTolerance ? existing : candidate
+    }
+
+    /// Stores a revealed item's new picture unless preferredRevealedImage keeps the one cached for it.
+    /// The cached one is found whatever window ID it is filed under, since a picture loaded from disk
+    /// has none; a lookup by the revealed item's own tag missed it, and every new picture won,
+    /// including one cut off mid-slide. The picture kept is filed under the revealed item's tag.
+    /// - Returns: Whether the cache changed.
+    @discardableResult
+    func storeRevealedPicture(
+        _ picture: MenuBarItemGlyphCapture,
+        of item: MenuBarItem,
+        listedWidths: [MenuBarItemTag: CGFloat]
+    ) -> Bool {
+        guard let cached = Self.cachedCapture(for: item.tag, in: capturesByTag) else {
+            setCapture(picture, for: item.tag)
+            CaptureDiagnostics.recordStored(picture.cgImage, item: item)
+            return true
+        }
+        let preferred = Self.preferredRevealedImage(existing: cached.capture, candidate: picture, revealing: item, listedWidths: listedWidths)
+        guard !MenuBarItemGlyphCapture.isVisuallyEqual(preferred, cached.capture) else {
+            // A picture loaded from disk was never saved this session; the export shows what the Thaw Bar keeps.
+            CaptureDiagnostics.recordStored(preferred.cgImage, item: item, replacing: false)
+            return false
+        }
+        if cached.tag != item.tag {
+            removeCapture(for: cached.tag)
+        }
+        setCapture(preferred, for: item.tag)
+        CaptureDiagnostics.recordStored(preferred.cgImage, item: item)
+        return true
     }
 
     /// Whether candidate has the existing picture's crop width but, unlike it, ink running into the left

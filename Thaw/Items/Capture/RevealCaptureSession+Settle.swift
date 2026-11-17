@@ -81,54 +81,83 @@ extension RevealCaptureSession {
         }
     }
 
+    /// Which frames of a settle wait were still changing when it ended.
+    nonisolated enum PixelSettle: Equatable, Sendable {
+        /// Every frame held still.
+        case settled
+        /// The frames at these positions were still changing at the budget.
+        case changing(IndexSet)
+        /// The bar couldn't be read, so nothing shows that any frame held still.
+        case unread
+
+        func mayBeChanging(at index: Int) -> Bool {
+            switch self {
+            case .settled: false
+            case let .changing(indices): indices.contains(index)
+            case .unread: true
+            }
+        }
+    }
+
     /// Waits for a revealed batch to stop moving before its screenshot. See
     /// waitForSettledPixels(minimumSettle:interval:requiredMatches:budget:clock:read:).
+    /// - Returns: The members, by position in revealed, whose pixels may still have been changing.
+    @discardableResult
     static func settleRevealedPixels(
         _ revealed: [MenuBarItem],
         displayID: CGDirectDisplayID,
         reader: any MenuBarCaptureReading,
         clock: SettleClock = SettleClock()
-    ) async {
+    ) async -> PixelSettle {
         let frames = revealed.map(\.bounds)
-        let settled = await waitForSettledPixels(clock: clock) {
+        let settle = await waitForSettledPixels(clock: clock) {
             await reader.hostingCapture(displayID: displayID).map { pixelFingerprint(of: frames, in: $0) }
         }
-        if !settled {
-            MenuBarItemImageCache.diagLog.debug("grouped reveal capture: pixels still changing at the settle budget")
+        switch settle {
+        case .settled: break
+        case let .changing(indices):
+            MenuBarItemImageCache.diagLog.debug(
+                "grouped reveal capture: pixels still changing at the settle budget for \(indices.map { revealed[$0].logString })"
+            )
+        case .unread:
+            MenuBarItemImageCache.diagLog.debug("grouped reveal capture: bar unreadable while settling; treating every item as still changing")
         }
+        return settle
     }
 
-    /// Waits for three matching pixel reads in a row, since AX reports the final frame while the glyph still slides.
-    /// - Returns: False when the budget ran out first.
-    @discardableResult
+    /// Waits for three matching reads of each frame, since AX reports the final frame while the glyph still slides.
+    /// Frames are judged separately, so one icon that keeps redrawing doesn't mark its neighbours.
     static func waitForSettledPixels(
         minimumSettle: Duration = Constants.MenuBarTuning.layoutPrewarmRenderSettle,
         interval: Duration = .milliseconds(100),
         requiredMatches: Int = 2,
         budget: Duration = Constants.MenuBarTuning.revealCapturePixelSettleBudget,
         clock: SettleClock = SettleClock(),
-        read: @escaping @MainActor () async -> [Data]?
-    ) async -> Bool {
+        read: @escaping @MainActor () async -> [Data?]?
+    ) async -> PixelSettle {
         await clock.sleep(minimumSettle)
         let deadline = clock.now() + budget
-        guard case let .read(first) = await readBefore(deadline, clock: clock, read) else { return false }
-        guard var previous = first else { return true }
-        var matches = 0
+        guard case let .read(first) = await readBefore(deadline, clock: clock, read), var previous = first else { return .unread }
+        var matches = [Int](repeating: 0, count: previous.count)
         while !Task.isCancelled, clock.now() < deadline {
             await clock.sleep(interval)
-            guard case let .read(next) = await readBefore(deadline, clock: clock, read) else { return false }
-            guard let current = next else { return true }
-            matches = current == previous ? matches + 1 : 0
-            if matches >= requiredMatches {
-                return true
+            guard case let .read(next) = await readBefore(deadline, clock: clock, read) else { break }
+            guard let current = next, current.count == previous.count else { return .unread }
+            for index in matches.indices {
+                matches[index] = current[index] == previous[index] ? matches[index] + 1 : 0
+            }
+            if matches.allSatisfy({ $0 >= requiredMatches }) {
+                return .settled
             }
             previous = current
         }
-        return Task.isCancelled
+        // The caller checks for cancellation.
+        guard !Task.isCancelled else { return .settled }
+        return .changing(IndexSet(matches.indices.filter { matches[$0] < requiredMatches }))
     }
 
     nonisolated enum BoundedRead: Sendable {
-        case read([Data]?)
+        case read([Data?]?)
         case pastDeadline
     }
 
@@ -136,7 +165,7 @@ extension RevealCaptureSession {
     static func readBefore(
         _ deadline: ContinuousClock.Instant,
         clock: SettleClock,
-        _ read: @escaping @MainActor () async -> [Data]?
+        _ read: @escaping @MainActor () async -> [Data?]?
     ) async -> BoundedRead {
         guard clock.now() < deadline else { return .pastDeadline }
         let (outcomes, sink) = AsyncStream.makeStream(of: BoundedRead.self)
@@ -158,12 +187,12 @@ extension RevealCaptureSession {
         return outcome
     }
 
-    /// The pixels each frame covers in a capture, for comparing two reads.
+    /// The pixels each frame covers in a capture, for comparing two reads; nil for a frame that can't be cut.
     static nonisolated func pixelFingerprint(
         of frames: [CGRect],
         in capture: ScreenCapture.MenuBarHostingCapture
-    ) -> [Data] {
-        frames.compactMap { frame in
+    ) -> [Data?] {
+        frames.map { frame in
             guard let mapping = capture.cropMapping(forItemBounds: frame),
                   let crop = capture.image.cropping(to: mapping.clamped),
                   let pixels = crop.detachedCopy().dataProvider?.data

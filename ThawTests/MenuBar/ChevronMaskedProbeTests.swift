@@ -10,7 +10,8 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Masked probes do not read the strip; retain a known chevron or unexpired absence, otherwise report unavailable.
+/// Masked probes do not read the strip. A walk that sees the chevron on this display answers;
+/// otherwise retain a known chevron or unexpired absence, else report unavailable.
 @Suite("Chevron masked probe")
 struct ChevronMaskedProbeTests {
     @Test("A known chevron stands")
@@ -72,6 +73,44 @@ struct ChevronMaskedProbeTests {
             now: .now
         )
         #expect(observation == .unavailable)
+    }
+
+    @Test("A walk that rules the chevron out overrides a held sighting")
+    func walkOverridesHeldSighting() {
+        let observation = MenuBarItemAXProvider.chevronObservationWhileMasked(
+            hint: CGRect(x: 1007.5, y: 1, width: 18, height: 30),
+            lastAbsentAt: nil,
+            now: .now,
+            walkRulesOutChevron: true
+        )
+        #expect(observation == .absent)
+    }
+
+    @Test("A walk that rules the chevron out answers when nothing is held")
+    func walkAnswersWithNothingHeld() {
+        let observation = MenuBarItemAXProvider.chevronObservationWhileMasked(
+            hint: nil,
+            lastAbsentAt: nil,
+            now: .now,
+            walkRulesOutChevron: true
+        )
+        #expect(observation == .absent)
+    }
+
+    @Test("The walk rules the chevron out only where it has seen one, and only from a complete read")
+    func walkRulesOutOnlyFromACompleteRead() {
+        #expect(MenuBarItemAXProvider.walkRulesOutChevron(
+            walkHasSeenChevron: true, attributeReadFailed: false, unframedControlCount: 0
+        ))
+        #expect(!MenuBarItemAXProvider.walkRulesOutChevron(
+            walkHasSeenChevron: false, attributeReadFailed: false, unframedControlCount: 0
+        ), "a notchless display draws its chevron outside the extras bar")
+        #expect(!MenuBarItemAXProvider.walkRulesOutChevron(
+            walkHasSeenChevron: true, attributeReadFailed: true, unframedControlCount: 0
+        ))
+        #expect(!MenuBarItemAXProvider.walkRulesOutChevron(
+            walkHasSeenChevron: true, attributeReadFailed: false, unframedControlCount: 1
+        ), "a control without a usable frame is not proof it is gone")
     }
 
     @Test("Thaw's own menus in the bar hold the probe; another app's or none do not")

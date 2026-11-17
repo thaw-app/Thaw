@@ -102,9 +102,22 @@ struct RevealSettleWaitTests {
             value &+= 1
             return [Data([value])]
         }
-        #expect(!settled)
+        #expect(settled == .changing([0]))
         #expect(value == 10)
         #expect(clock.now - start == .seconds(1))
+    }
+
+    @Test("Only the frame that keeps changing is reported; the one that held still is settled")
+    func pixelSettleIsPerFrame() async {
+        let clock = TestClock()
+        var value: UInt8 = 0
+        let settled = await Session.waitForSettledPixels(minimumSettle: .zero, budget: .seconds(1), clock: Self.settleClock(clock)) {
+            value &+= 1
+            return [Data([0]), Data([value])]
+        }
+        #expect(settled == .changing([1]))
+        #expect(!settled.mayBeChanging(at: 0))
+        #expect(settled.mayBeChanging(at: 1))
     }
 
     @Test("A revealed batch whose pixels hold still settles after three matching screenshots")

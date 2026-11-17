@@ -317,6 +317,25 @@ struct ModuleStandInCoordinatorTests {
         #expect(rig.sections.writes.suffix(2) == [.section(.hidden, original), .order([original], .hidden)])
     }
 
+    @Test("A running module stand-in names its original as replaced, and a stopped one does not")
+    func runningStandInReplacesItsOriginal() async throws {
+        let rig = rig()
+        let original = TakeoverRig.moduleID(TakeoverRig.airDrop)
+        rig.sections.sectionAssignment[original] = .hidden
+        #expect(rig.coordinator.replacedOriginalIdentifiers.isEmpty, "Nothing is replaced before a stand-in runs")
+
+        rig.start()
+        await settle { rig.fake.startedProcesses.count == 1 }
+        await rig.drain()
+        #expect(rig.coordinator.replacedOriginalIdentifiers == [original])
+
+        let process = try #require(rig.fake.startedProcesses.only)
+        rig.settings.enableModuleStandIns = false
+        await settle { process.terminateCalls > 0 }
+        await rig.drain()
+        #expect(rig.coordinator.replacedOriginalIdentifiers.isEmpty)
+    }
+
     @Test("Turning off a stand-in that never joined a saved order returns its original to Visible")
     func disablingUnorderedStandInReturnsOriginal() async throws {
         let rig = rig()

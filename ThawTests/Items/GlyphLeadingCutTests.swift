@@ -86,6 +86,23 @@ struct GlyphLeadingCutTests {
         #expect(try !Cache.isClippedAtLeadingEdge(Self.crop(width: 24, inkFrom: 0, inkTo: 20, alpha: 0.3)), "Faint residue of the bar is not ink")
     }
 
+    @Test("Ink that runs into the right edge marks a picture as clipped there, and only there")
+    func clippedAtTrailingEdge() throws {
+        let pushedRight = try Self.crop(width: 24, inkFrom: 15, inkTo: 24)
+        #expect(Cache.isClippedAtTrailingEdge(pushedRight))
+        #expect(!Cache.isClippedAtLeadingEdge(pushedRight))
+        #expect(try !Cache.isClippedAtTrailingEdge(Self.crop(width: 24, inkFrom: 0, inkTo: 9)))
+        #expect(try !Cache.isClippedAtTrailingEdge(Self.crop(width: 24, inkFrom: 4, inkTo: 20)))
+        #expect(try !Cache.isClippedAtTrailingEdge(Self.crop(width: 24, inkFrom: 4, inkTo: 24, alpha: 0.3)), "Faint residue of the bar is not ink")
+    }
+
+    @Test("A capture the user asked for retakes a picture clipped at its right edge too")
+    func rightClippedPictureIsRetakenOnRequest() throws {
+        let pushedRight = try Self.crop(width: 24, inkFrom: 15, inkTo: 24)
+        #expect(Cache.prewarmNeedsCapture(cachedImage: pushedRight, wouldAttemptCapture: true, retakesClipped: true))
+        #expect(!Cache.prewarmNeedsCapture(cachedImage: pushedRight, wouldAttemptCapture: true))
+    }
+
     @Test("A reveal catch pushed against the left edge loses to the padded picture, and a padded one replaces it")
     func clippedCatchLosesOnReveal() throws {
         let complete = try Self.crop(width: 24, inkFrom: 4, inkTo: 20)

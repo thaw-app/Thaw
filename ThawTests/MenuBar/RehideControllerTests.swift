@@ -127,14 +127,15 @@ struct RehideControllerTests {
 
     /// A menu probe can finish after the pointer has returned to a bar.
     @Test("Returning to a bar during the focus menu check prevents hiding")
-    func pointerReturnsDuringFocusMenuCheck() async {
+    func pointerReturnsDuringFocusMenuCheck() async throws {
         let world = RehideWorld()
         world.sleepsReturnAtOnce = true
         world.heldMenuCheck = 1
         world.controller.note(.focusChanged)
-        while world.menuChecks < 1 {
+        for _ in 0 ..< 100 where world.menuChecks < 1 {
             await world.settle()
         }
+        try #require(world.menuChecks >= 1, "The focus action must reach its menu probe")
         world.pointerAwayFromBars = false
 
         await world.finishWaits()

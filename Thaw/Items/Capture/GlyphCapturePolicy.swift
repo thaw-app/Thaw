@@ -24,10 +24,15 @@ extension MenuBarItemImageCache {
     /// Chooses between an existing cache entry and a newly captured candidate.
     ///
     /// Keeps a settled glyph over a blank or much narrower (chevron bleed) one, and takes the candidate when
-    /// it's at least as wide. A live glyph can really lose its left ink, so only the reveal path rejects that.
+    /// it's at least as wide, or narrower only because the spacing around the same icon shrank (see
+    /// GlyphMarginChange). A live glyph can really lose its left ink, so only the reveal path rejects that.
+    ///
+    /// oldPictureIsStale says existing no longer matches its item's width, as when an icon stops showing
+    /// text. The width rule then has nothing left to protect, so any trusted glyph replaces it.
     static nonisolated func preferredCachedImage(
         existing: MenuBarItemGlyphCapture,
-        candidate: MenuBarItemGlyphCapture
+        candidate: MenuBarItemGlyphCapture,
+        oldPictureIsStale: Bool = false
     ) -> MenuBarItemGlyphCapture {
         if existing.isEffectivelyBlank {
             return candidate
@@ -35,7 +40,9 @@ extension MenuBarItemImageCache {
         if candidate.isEffectivelyBlank {
             return existing
         }
-        if candidate.pointSize.width < existing.pointSize.width * 0.75 {
+        if candidate.pointSize.width < existing.pointSize.width * 0.75,
+           !(isTrustedGlyph(candidate) && (oldPictureIsStale || GlyphMarginChange.onlyMarginsShrank(from: existing, to: candidate)))
+        {
             return existing
         }
         return candidate
@@ -48,8 +55,8 @@ extension MenuBarItemImageCache {
     /// glyph meant that one missing item made the Thaw Bar reveal and capture
     /// the whole section, one batch after another.
     ///
-    /// retakesClipped also retakes a picture whose ink runs into its left edge. Only a capture the user asked
-    /// for passes it, or an icon that really draws to its edge would be revealed by every automatic pass.
+    /// retakesClipped also retakes a picture whose ink runs into its left or right edge. Only a capture the user
+    /// asked for passes it, or an icon that really draws to its edge would be revealed by every automatic pass.
     static nonisolated func prewarmNeedsCapture(
         cachedImage: MenuBarItemGlyphCapture?,
         wouldAttemptCapture: Bool,
@@ -61,7 +68,7 @@ extension MenuBarItemImageCache {
         if cachedImage.pointSize.width < Self.minimumTrustedGlyphWidth {
             return true
         }
-        return retakesClipped && isClippedAtLeadingEdge(cachedImage)
+        return retakesClipped && (isClippedAtLeadingEdge(cachedImage) || isClippedAtTrailingEdge(cachedImage))
     }
 
     /// Whether an item is too narrow for a glyph, such as a status item whose

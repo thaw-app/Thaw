@@ -22,7 +22,18 @@ enum LayoutDisplayedItems {
 
     /// The same, from an inventory already read, so several sections share one projection.
     static func items(in section: MenuBarSection.Name, from inventory: MenuBarItemCache, appState: AppState) -> [MenuBarItem] {
-        inventory.managedItems(for: section)
+        let replaced = appState.menuBarManager.systemExtraTakeover.replacedOriginalIdentifiers
+        return items(in: section, from: inventory, appState: appState, replacedOriginals: replaced)
+    }
+
+    /// The same, without Apple's items in replacedOriginals, which a stand-in is shown for.
+    static func items(
+        in section: MenuBarSection.Name,
+        from inventory: MenuBarItemCache,
+        appState: AppState,
+        replacedOriginals: Set<String>
+    ) -> [MenuBarItem] {
+        ReplacedOriginals.excluding(inventory.managedItems(for: section), replaced: replacedOriginals)
             // A switched-off Thaw icon stays registered at zero width so it can
             // return in place, but it is not on the bar, so it gets no slot.
             .filter { appState.settings.general.showThawIcon || !$0.tag.matchesVisibleControlItem }
