@@ -8,57 +8,58 @@
 import Testing
 @testable import Thaw
 
-/// Static-bar refresh honors the slider through grace ticks, then slows toward 1 Hz without exceeding the chosen rate.
+/// Live refresh ticks every 2.5 s, slows to 4 s once the bar stops changing, and never speeds up a slower setting.
 @Suite("Live refresh back-off ladder")
 struct MenuBarItemImageCacheBackoffTests {
-    @Test("grace ticks hold the slider's rate exactly")
-    func graceHoldsBaseRate() {
+    @Test("A changing bar refreshes every 2.5 s")
+    func changingBarRefreshesEveryTwoAndAHalfSeconds() {
         #expect(
-            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 33, changelessStreak: 0) == 33
+            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 250, changelessStreak: 0) == 2500
         )
         #expect(
-            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 33, changelessStreak: 4) == 33
-        )
-        #expect(
-            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 1000, changelessStreak: 4) == 1000
+            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 250, changelessStreak: 4) == 2500
         )
     }
 
-    @Test("mid tier slows to a third, clamped to 100–333 ms")
-    func midTierBacksOff() {
+    @Test("An unchanged bar slows to 4 s")
+    func unchangedBarSlowsToFourSeconds() {
         #expect(
-            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 33, changelessStreak: 5) == 99
+            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 250, changelessStreak: 5) == 4000
         )
         #expect(
-            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 50, changelessStreak: 10) == 150
-        )
-        // 200 ms × 3 exceeds the 333 ms clamp.
-        #expect(
-            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 200, changelessStreak: 14) == 333
-        )
-    }
-
-    @Test("floor tier settles at 1 Hz and never speeds a slow slider up")
-    func floorTopsOutAtOneHertz() {
-        #expect(
-            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 33, changelessStreak: 15) == 1000
+            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 250, changelessStreak: 500) == 4000
         )
         #expect(
-            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 1000, changelessStreak: 500) == 1000
-        )
-        // A 1 fps slider must never back off to a faster tick.
-        #expect(
-            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 1000, changelessStreak: 30) == 1000
+            MenuBarItemImageCache.backedOffTickMilliseconds(
+                baseMilliseconds: 250,
+                changelessStreak: MenuBarItemImageCache.backoffFloorStreak
+            ) == 4000
         )
     }
 
-    @Test("degenerate base values clamp to a positive tick")
+    @Test("A slower setting is never sped up")
+    func slowerSettingIsKept() {
+        #expect(
+            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 5000, changelessStreak: 0) == 5000
+        )
+        #expect(
+            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 5000, changelessStreak: 30) == 5000
+        )
+        #expect(
+            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 3000, changelessStreak: 0) == 3000
+        )
+        #expect(
+            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 3000, changelessStreak: 5) == 4000
+        )
+    }
+
+    @Test("Degenerate base values still tick at the live rate")
     func clampsDegenerateBase() {
         #expect(
-            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 0, changelessStreak: 0) == 1
+            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: 0, changelessStreak: 0) == 2500
         )
         #expect(
-            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: -50, changelessStreak: 70) == 1000
+            MenuBarItemImageCache.backedOffTickMilliseconds(baseMilliseconds: -50, changelessStreak: 70) == 4000
         )
     }
 }

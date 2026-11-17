@@ -336,6 +336,7 @@ Layout gets a pop-out window and undo for every edit, search becomes Floe's laun
 - **Thaw drops far fewer clicks on menu bar items while an app is frozen.** By @Belligerently in [#1580](https://github.com/thaw-app/Thaw/pull/1580).
 - **Thaw no longer crashes when two Apple items swap places while one is briefly unnamed.** By @Belligerently in [#1576](https://github.com/thaw-app/Thaw/pull/1576).
 - **Native hiding no longer mixes visible items in with hidden ones after an app launches.** By @camguillory.
+- **Item pictures refresh every few seconds instead of every second,** so macOS's screen recording indicator no longer stays on while Layout is open.
 
 #### Thaw Bar
 
