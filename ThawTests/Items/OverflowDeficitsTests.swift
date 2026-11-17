@@ -10,9 +10,12 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("A withheld overflow width holds while the same items compete, and drops when one arrives or leaves")
+@Suite("A notch deficit drops when an item arrives or leaves; a learned shortfall stays with its display")
 struct OverflowDeficitsTests {
     private let nominal = OverflowDeficits.nominalStatusItemWidth
+
+    // A notched 14-inch built-in display.
+    private let builtIn = OverflowDeficits.Display(id: 1, width: 1512)
 
     @Test("A held width carries whole while membership is unchanged")
     func carriesWhileMembershipIsUnchanged() {
@@ -39,7 +42,7 @@ struct OverflowDeficitsTests {
         #expect(update == .init(width: nil, previousWidth: nil))
         #expect(!update.changed)
         #expect(deficits.notchOcclusion == nil)
-        #expect(deficits.parkedLane == nil)
+        #expect(deficits.parkedLanes.isEmpty)
     }
 
     @Test("The notch deficit grows while covered, then holds once the concealed item moved to overflow")
@@ -84,16 +87,15 @@ struct OverflowDeficitsTests {
         #expect(deficits.notchOcclusion?.visibleUIDs == ["a", "b", "d"])
     }
 
-    @Test("The parked deficit holds after its items are concealed, and drops when one leaves")
-    func parkedDeficitHoldsThenDrops() {
+    @Test("The parked deficit holds after its items are concealed")
+    func parkedDeficitHoldsAfterConcealing() {
         var deficits = OverflowDeficits()
 
         let found = deficits.updateParkedLane(
             parkedWidths: [32, 38],
             isNativeOverflowActive: true,
             modeledHeadroom: 100,
-            visibleUIDs: ["a", "b", "c"],
-            overflowUIDs: []
+            display: builtIn
         )
         let expected: CGFloat = 100 + 32 + 38 + 2 * 8
         #expect(found == .init(width: expected, previousWidth: nil))
@@ -102,21 +104,104 @@ struct OverflowDeficitsTests {
             parkedWidths: [],
             isNativeOverflowActive: false,
             modeledHeadroom: 900,
-            visibleUIDs: ["c"],
-            overflowUIDs: ["a", "b"]
+            display: builtIn
         )
         #expect(held == .init(width: expected, previousWidth: expected))
         #expect(!held.changed)
+    }
 
-        let dropped = deficits.updateParkedLane(
+    /// macOS left two of 16 Visible items (29.5 pt each, 75 pt with gaps) off a bar the model
+    /// gave 54.5 pt of headroom: 630.5 pt of room for 576 pt of items.
+    private func learnShortfall(_ deficits: inout OverflowDeficits) {
+        _ = deficits.updateParkedLane(
+            parkedWidths: [29.5, 29.5],
+            isNativeOverflowActive: true,
+            modeledHeadroom: 54.5,
+            display: builtIn
+        )
+    }
+
+    @Test("A learned shortfall survives an item leaving Visible")
+    func shortfallSurvivesAnItemLeaving() {
+        var deficits = OverflowDeficits()
+        learnShortfall(&deficits)
+
+        // One app moved to Hidden: 637.5 pt of room for the remaining 536 pt of items.
+        let update = deficits.updateParkedLane(
             parkedWidths: [],
             isNativeOverflowActive: false,
-            modeledHeadroom: 900,
-            visibleUIDs: ["c"],
-            overflowUIDs: ["a"]
+            modeledHeadroom: 101.5,
+            display: builtIn
         )
-        #expect(dropped == .init(width: nil, previousWidth: expected))
-        #expect(deficits.parkedLane == nil)
+
+        #expect(update == .init(width: 129.5, previousWidth: 129.5))
+    }
+
+    @Test("A learned shortfall survives an item arriving in Visible")
+    func shortfallSurvivesAnItemArriving() {
+        var deficits = OverflowDeficits()
+        learnShortfall(&deficits)
+
+        // A 30 pt app arrived: 630.5 pt of room for 606 pt of items.
+        let update = deficits.updateParkedLane(
+            parkedWidths: [],
+            isNativeOverflowActive: false,
+            modeledHeadroom: 24.5,
+            display: builtIn
+        )
+
+        #expect(update == .init(width: 129.5, previousWidth: 129.5))
+    }
+
+    @Test("A learned shortfall is dropped when its display changes width")
+    func shortfallDropsWhenTheDisplayWidthChanges() {
+        var deficits = OverflowDeficits()
+        learnShortfall(&deficits)
+
+        let update = deficits.updateParkedLane(
+            parkedWidths: [],
+            isNativeOverflowActive: false,
+            modeledHeadroom: 101.5,
+            display: .init(id: 1, width: 1800)
+        )
+
+        #expect(update == .init(width: nil, previousWidth: 129.5))
+    }
+
+    @Test("A shortfall learned on one display is not withheld on another")
+    func shortfallIsNotWithheldOnAnotherDisplay() {
+        var deficits = OverflowDeficits()
+        learnShortfall(&deficits)
+
+        let update = deficits.updateParkedLane(
+            parkedWidths: [],
+            isNativeOverflowActive: false,
+            modeledHeadroom: 1200,
+            display: .init(id: 2, width: 1512)
+        )
+
+        #expect(update.width == nil)
+    }
+
+    @Test("Each display keeps its own shortfall while the menu bar moves between them")
+    func shortfallIsKeptPerDisplay() {
+        var deficits = OverflowDeficits()
+        learnShortfall(&deficits)
+        _ = deficits.updateParkedLane(
+            parkedWidths: [],
+            isNativeOverflowActive: false,
+            modeledHeadroom: 1200,
+            display: .init(id: 2, width: 2560)
+        )
+
+        let update = deficits.updateParkedLane(
+            parkedWidths: [],
+            isNativeOverflowActive: false,
+            modeledHeadroom: 54.5,
+            display: builtIn
+        )
+
+        #expect(update.width == 129.5)
     }
 
     @Test("The two deficits are held apart")
@@ -128,12 +213,11 @@ struct OverflowDeficitsTests {
             parkedWidths: [],
             isNativeOverflowActive: true,
             modeledHeadroom: 500,
-            visibleUIDs: ["a", "b"],
-            overflowUIDs: []
+            display: builtIn
         )
 
         #expect(parked == .init(width: nil, previousWidth: nil))
         #expect(deficits.notchOcclusion?.width == 20 + nominal)
-        #expect(deficits.parkedLane == nil)
+        #expect(deficits.parkedLanes.isEmpty)
     }
 }

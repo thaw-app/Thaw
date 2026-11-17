@@ -126,6 +126,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **Items that show up late after a restart go back to their place** instead of staying next to Thaw's icon. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
 - **Opening a hidden item no longer opens the item next to it,** and moves the pointer only when it has to. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
 - **"Move items that don’t fit into Hidden" moves only the items that don't fit.** On a full menu bar it could move most of your Visible items to Hidden.
+- **Items that don't fit stay in Hidden when you change your layout,** instead of all coming back until macOS runs out of room again.
 - **Capture Hidden Items says when the menu bar is full,** instead of listing every hidden item as missing a picture.
 - **Turning off Automatically rehide also stops hides already on their way.** By @Belligerently in [#1575](https://github.com/thaw-app/Thaw/pull/1575).
 - **Closing hidden items stops every section's hide timer,** so an old countdown can't close items you reveal later. By @Belligerently in [#1571](https://github.com/thaw-app/Thaw/pull/1571).

@@ -5,15 +5,19 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import CoreGraphics
 import Foundation
 
-/// How much of the macOS 27 overflow budget to withhold, and the items it was measured against.
+/// How much of the macOS 27 overflow budget to withhold, and what it was measured against.
 ///
 /// Two findings prove the modeled budget is too large: a notch covering one of Thaw's own
 /// control items, and Visible items macOS did not draw. Each withholds some width, and that
-/// width is sticky: it holds while the same items compete for the bar and is dropped once an
-/// item arrives or leaves. Dropping it the moment the icon reappears re-admits the item that
-/// covered it, which covers it again.
+/// width is sticky. Dropping it the moment the evidence goes re-admits the items that caused
+/// it, which brings the evidence back.
+///
+/// The notch deficit holds while the same items compete for the bar and is dropped once an
+/// item arrives or leaves. The parked-lane one is room macOS does not use on that display,
+/// so it holds per display until the display's width changes. Both live in memory only.
 nonisolated struct OverflowDeficits {
     /// A withheld width and the visible and overflowed items it was measured against.
     typealias Held = (width: CGFloat, visibleUIDs: Set<String>)
@@ -30,8 +34,15 @@ nonisolated struct OverflowDeficits {
         }
     }
 
+    /// The display a parked-lane shortfall belongs to, and its width.
+    struct Display: Hashable {
+        let id: CGDirectDisplayID
+        let width: CGFloat
+    }
+
     private(set) var notchOcclusion: Held?
-    private(set) var parkedLane: Held?
+    /// The parked-lane shortfall learned on each display, and the display width it was learned at.
+    private(set) var parkedLanes: [CGDirectDisplayID: (displayWidth: CGFloat, width: CGFloat)] = [:]
 
     /// Nominal width used for the macOS 27 overflow budget when an item's AX
     /// bounds have collapsed to an untrusted sliver (see minimumTrustedGlyphWidth).
@@ -94,28 +105,26 @@ nonisolated struct OverflowDeficits {
     /// Negative headroom counts too: the planner already places the parked items' width,
     /// so only the part beyond the modeled shortfall is withheld.
     ///
-    /// The deficit holds while the same items compete for the bar and is
-    /// dropped once an item arrives or leaves.
+    /// The deficit carries while items arrive and leave: they change how much
+    /// room the bar needs, not how much of the counted room macOS leaves unused.
+    /// It can only grow here, since only showing more items would prove it too
+    /// large, and that brings back the overflow it prevents.
     ///
     /// Parked items only count while macOS shows its own overflow control.
     /// An app switched off in System Settings parks at x == -1 too, and no
     /// amount of concealing brings it back.
     static func parkedLaneDeficit(
-        previous: Held?,
+        carried: CGFloat,
         parkedWidths: [CGFloat],
         isNativeOverflowActive: Bool,
-        modeledHeadroom: CGFloat,
-        visibleUIDs: Set<String>,
-        overflowUIDs: Set<String>
-    ) -> Held? {
-        let membership = visibleUIDs.union(overflowUIDs)
-        let carried = carriedWidth(from: previous, membership: membership)
+        modeledHeadroom: CGFloat
+    ) -> CGFloat? {
         guard isNativeOverflowActive, !parkedWidths.isEmpty else {
-            return carried > 0 ? (carried, membership) : nil
+            return carried > 0 ? carried : nil
         }
         let parked = parkedWidths.reduce(CGFloat.zero) { $0 + budgetWidth(forMeasuredWidth: $1) + 8 }
         let width = max(carried, max(0, modeledHeadroom + parked))
-        return width > 0 ? (width, membership) : nil
+        return width > 0 ? width : nil
     }
 
     /// Works out this pass's notch deficit from the held one, and holds the result.
@@ -134,23 +143,22 @@ nonisolated struct OverflowDeficits {
         return Update(width: notchOcclusion?.width, previousWidth: previousWidth)
     }
 
-    /// Works out this pass's parked-lane deficit from the held one, and holds the result.
+    /// Works out this pass's parked-lane deficit from the one held for this display, and holds
+    /// the result. A shortfall learned at another width of the display is dropped.
     mutating func updateParkedLane(
         parkedWidths: [CGFloat],
         isNativeOverflowActive: Bool,
         modeledHeadroom: CGFloat,
-        visibleUIDs: Set<String>,
-        overflowUIDs: Set<String>
+        display: Display
     ) -> Update {
-        let previousWidth = parkedLane?.width
-        parkedLane = Self.parkedLaneDeficit(
-            previous: parkedLane,
+        let held = parkedLanes[display.id]
+        let width = Self.parkedLaneDeficit(
+            carried: held.flatMap { $0.displayWidth == display.width ? $0.width : nil } ?? 0,
             parkedWidths: parkedWidths,
             isNativeOverflowActive: isNativeOverflowActive,
-            modeledHeadroom: modeledHeadroom,
-            visibleUIDs: visibleUIDs,
-            overflowUIDs: overflowUIDs
+            modeledHeadroom: modeledHeadroom
         )
-        return Update(width: parkedLane?.width, previousWidth: previousWidth)
+        parkedLanes[display.id] = width.map { (display.width, $0) }
+        return Update(width: width, previousWidth: held?.width)
     }
 }
