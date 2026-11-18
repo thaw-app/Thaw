@@ -15,7 +15,8 @@ extension MenuBarItemImageCache {
     /// OpenedItemRecapture. With "Use app icons instead of live previews" on, an item drawn as its
     /// app's icon is left alone, as every other pass leaves it (itemsNeedingCapture(_:demand:)).
     func retakePictureAfterOpening(_ item: MenuBarItem) {
-        guard let appState else { return }
+        // Without Screen Recording no picture can be taken, so the menu isn't watched for a minute first.
+        guard let appState, ScreenCapture.hasCachedScreenRecordingPermission else { return }
         // Its menu is watched by process, so an item listed without one would never count as open.
         let item = ItemOwnerLookup.resolving(item)
         let demand = CaptureDemand(
