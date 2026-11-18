@@ -27,6 +27,7 @@ the items under New and Fixed.
 ### Fixed
 
 - Asking `thawctl` for help with `--help` or `-h` now exits successfully and prints to standard output.
+- **A hidden item you open from the Thaw Bar gets a new picture once its menu closes,** so an icon that changed while hidden, such as one showing an update, no longer keeps its old look. macOS shows the screen recording indicator for a moment. By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
 
 ## [3.0.0-beta.7] - 2026-11-17
 

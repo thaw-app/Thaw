@@ -74,9 +74,25 @@ final class AppNavigationState {
 
     private var settingsPresentationID: UUID?
 
+    /// Captures running with no capture surface open, such as the picture of an item just opened
+    /// from the Thaw Bar. They light the recording indicator outside Thaw. See OpenedItemRecapture.
+    private var backgroundCaptureHolds = 0
+
     var hasCaptureUI: Bool {
         hasVisibleCaptureUI
             || (settingsPresentationID != nil && settingsConsumesCapture)
+            || backgroundCaptureHolds > 0
+    }
+
+    /// Lets captures run until the matching endBackgroundCapture().
+    func beginBackgroundCapture() {
+        backgroundCaptureHolds += 1
+        updateCaptureUIState()
+    }
+
+    func endBackgroundCapture() {
+        backgroundCaptureHolds = max(0, backgroundCaptureHolds - 1)
+        updateCaptureUIState()
     }
 
     func beginSettingsPresentation() -> UUID? {
