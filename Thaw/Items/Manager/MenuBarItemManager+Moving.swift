@@ -1134,7 +1134,7 @@ extension MenuBarItemManager {
             let liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
             let desiredOrder = (controller.sectionItemOrder[.visible] ?? [])
                 .filter { controller.section(for: $0) == .visible }
-            if desiredOrder.isEmpty || liveOrderMatches(
+            if desiredOrder.isEmpty || liveOrderConfirmed(
                 desiredOrder,
                 section: .visible,
                 controller: controller,

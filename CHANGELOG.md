@@ -33,6 +33,7 @@ the items under New and Fixed.
 - **An item with a changing title, such as a countdown, is recognized as one item on a display to the left of your main display too.** There, each new title could make it look like a new item.
 - **Items you reveal in the menu bar hide again when the pointer rests where the Thaw Bar was.** After the Thaw Bar closed, that spot still counted as the bar and kept them open.
 - **A hidden item's new picture is no longer kept highlighted** when its menu opens again while the picture is taken.
+- **A reorder you make in Layout keeps being applied until the menu bar shows it.** A read that missed one of the moved items could count it as done, and the bar kept the old order.
 
 ## [3.0.0-beta.7] - 2026-11-17
 

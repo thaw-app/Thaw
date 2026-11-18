@@ -692,7 +692,7 @@ final class MenuBarItemManager {
                     guard !Task.isCancelled else { return }
                     let liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
                     guard !Task.isCancelled else { return }
-                    if liveOrderMatches(
+                    if liveOrderConfirmed(
                         identifiers,
                         section: .visible,
                         controller: controller,
