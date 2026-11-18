@@ -27,10 +27,13 @@ extension MenuBarItemImageCache {
         let monitor = appState.itemManager.menuOpenMonitor
         let owners = item.reactionPIDs
         let isMenuOpen: @MainActor () async -> Bool = { await monitor.isMenuOpen(ownedBy: owners) }
+        // The picture's checks read the windows anew: one before the screenshot and one after, under
+        // the cache's 250 ms, would otherwise share an answer and keep a picture taken with a menu open.
+        let isMenuOpenNow: @MainActor () async -> Bool = { await monitor.isMenuOpen(ownedBy: owners, fresh: true) }
         let photograph = openedItemPhotograph(appState: appState)
         OpenedItemRecapture.shared.start(item.tag.tagIdentifier, steps: OpenedItemRecapture.Steps(
             isMenuOpen: isMenuOpen,
-            attempt: { await photograph.take(item, isMenuOpen: isMenuOpen) }
+            attempt: { await photograph.take(item, isMenuOpen: isMenuOpenNow) }
         ))
     }
 
