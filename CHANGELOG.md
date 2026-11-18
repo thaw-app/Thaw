@@ -27,6 +27,7 @@ the items under New and Fixed.
 ### Fixed
 
 - Asking `thawctl` for help with `--help` or `-h` now exits successfully and prints to standard output.
+- **A hidden item you open from the Thaw Bar gets a new picture once its menu closes,** so an icon that changed while hidden, such as one showing an update, no longer keeps its old look. macOS shows the screen recording indicator for a moment. By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
 
 ## [3.0.0-beta.7] - 2026-11-17
 
@@ -152,7 +153,6 @@ Thaw 3 is now feature frozen: no new features before 3.0, only finishing the one
 - **Pictures of hidden items fit again after you narrow the menu bar spacing.** By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
 - **An icon that got much narrower gets its new picture,** such as one that stops showing text. By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
 - **A cut-off picture no longer replaces a good one** that Thaw loaded from disk. By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
-- **A hidden item you open from the Thaw Bar gets a new picture once its menu closes,** so an icon that changed while hidden, such as one showing an update, no longer keeps its old look. macOS shows the screen recording indicator for a moment. By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
 - **A hidden item's picture is no longer taken while its icon is still sliding in.** A cut-off one is left out and the item keeps the picture it had.
 - **Thaw stops retrying a picture that keeps failing.** An item whose picture fails on every refresh is now set aside for 30 seconds.
 - **An app Thaw hides to make room keeps its picture.** It was thrown away on every refresh, so the Thaw Bar showed the app's icon instead.
