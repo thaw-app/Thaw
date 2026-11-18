@@ -154,10 +154,12 @@ extension MenuBarItemImageCache {
             let itemWidths = listedItemWidths()
             for pair in revealed {
                 guard let image = captureResult.captured[pair.live.tag] else { continue }
-                let kept = Self.cachedCapture(for: pair.requested.tag, in: capturesByTag).map {
+                let cached = Self.cachedCapture(for: pair.requested.tag, in: capturesByTag)
+                let kept = cached.map {
                     Self.preferredRevealedImage(existing: $0.capture, candidate: image, revealing: pair.requested, listedWidths: itemWidths)
                 }
-                if kept == nil || kept == image {
+                // An earlier build's picture this reveal kept is now this build's, so it counts as taken.
+                if kept == nil || kept == image || cached?.capture.isFromEarlierBuild == true {
                     tally.tags.insert(pair.requested.tag)
                 }
             }

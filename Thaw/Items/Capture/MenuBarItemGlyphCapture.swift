@@ -14,7 +14,7 @@ import Foundation
 /// The scale travels with the bitmap because the cache can outlive a move to
 /// a display with a different backing scale.
 ///
-/// Unchecked Sendable: cgImage and scale are immutable, and presentationCache
+/// Unchecked Sendable: the stored values are immutable, and presentationCache
 /// is only touched from main-actor members.
 struct MenuBarItemGlyphCapture: Hashable, @unchecked Sendable {
     /// A reference box so the memoized trim survives copies of the value.
@@ -31,8 +31,23 @@ struct MenuBarItemGlyphCapture: Hashable, @unchecked Sendable {
     /// by this give points; it is not necessarily today's scale.
     let scale: CGFloat
 
+    /// Whether an earlier build of Thaw took this picture. It is shown until this build takes the
+    /// item's picture again, and a prewarm asks for that. Not part of equality: the pixels are.
+    let isFromEarlierBuild: Bool
+
     /// The memoized trim derived from this immutable capture.
     private let presentationCache = PresentationCache()
+
+    nonisolated init(cgImage: CGImage, scale: CGFloat, isFromEarlierBuild: Bool = false) {
+        self.cgImage = cgImage
+        self.scale = scale
+        self.isFromEarlierBuild = isFromEarlierBuild
+    }
+
+    /// The same picture, taken as this build's own once this build has looked at the item.
+    nonisolated var confirmedByThisBuild: MenuBarItemGlyphCapture {
+        MenuBarItemGlyphCapture(cgImage: cgImage, scale: scale)
+    }
 
     /// cgImage measured in points rather than device pixels.
     nonisolated var pointSize: CGSize {

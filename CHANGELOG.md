@@ -125,6 +125,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **Capture Hidden Items retakes a picture that is cut off at its left or right edge,** and a cut-off picture can no longer replace a complete one.
 - **A hidden item's picture is taken where macOS draws it,** not at the spot its app reports, which could cut it off. ([#1454](https://github.com/thaw-app/Thaw/issues/1454))
 - **Pictures of hidden items survive a restart.** Restarting Thaw could lose all of them, or the saved ones it hadn't loaded yet. Reported by katla on Discord.
+- **Pictures of hidden items survive an update.** Each update threw them away, so hidden items showed app icons until you captured them again. Thaw now keeps them and replaces each one the next time it can take a new picture.
 - **Layout keeps your selection when a move is refused or changes nothing.**
 - **A chosen icon now shows.** Choose Icon kept showing Thaw's picture of the item. Automatic goes back to the picture.
 - **Items that show up late after a restart go back to their place** instead of staying next to Thaw's icon. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).

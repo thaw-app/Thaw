@@ -102,7 +102,9 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
     /// version gate below and the live refresh loop refills them. This matters
     /// because concealed items keep their prior image rather than recropping,
     /// and disk entries survive "Reset all settings", so a bad persisted crop
-    /// would otherwise never be replaced.
+    /// would otherwise never be replaced. A file from another build in this
+    /// version keeps its hidden items' pictures, marked for a retake; bump
+    /// this when even those must go.
     private static nonisolated let cacheVersion = 12
 
     /// How long an unchanged cache may go without its file being re-stamped.
@@ -130,6 +132,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
             let scale: CGFloat
             let width: Int
             let height: Int
+            let isFromEarlierBuild: Bool
         }
 
         private let entries: [String: Entry]
@@ -140,7 +143,8 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
                     image: ObjectIdentifier(element.value.cgImage),
                     scale: element.value.scale,
                     width: element.value.cgImage.width,
-                    height: element.value.cgImage.height
+                    height: element.value.cgImage.height,
+                    isFromEarlierBuild: element.value.isFromEarlierBuild
                 )
             }
         }
@@ -240,7 +244,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
             // knows. Fall through and write the whole thing.
         }
 
-        let cacheData = snapshot.map { tag, image -> (String, Data, CGFloat, Int)? in
+        let cacheData = snapshot.map { tag, image -> (String, Data, CGFloat, Int, Bool)? in
             let png = NSMutableData()
             guard
                 let destination = CGImageDestinationCreateWithData(
@@ -251,7 +255,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
             guard CGImageDestinationFinalize(destination) else { return nil }
 
             let tagString = tag.tagIdentifier
-            return (tagString, png as Data, image.scale, tag.instanceIndex)
+            return (tagString, png as Data, image.scale, tag.instanceIndex, image.isFromEarlierBuild)
         }.compactMap(\.self)
 
         guard cacheData.count == snapshot.count else { return }
@@ -268,8 +272,8 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
             // per identifier; uniquingKeysWith keeps a future collision a
             // last-one-wins overwrite rather than a trap on this queue.
             let images: [String: [String: Any]] = Dictionary(
-                cacheData.map { identifier, png, scale, instanceIndex in
-                    var entry = Self.fileEntry(png: png, scale: scale, instanceIndex: instanceIndex)
+                cacheData.map { identifier, png, scale, instanceIndex, isFromEarlierBuild in
+                    var entry = Self.fileEntry(png: png, scale: scale, instanceIndex: instanceIndex, isFromEarlierBuild: isFromEarlierBuild)
                     if concealed.contains(identifier) {
                         entry["concealed"] = true
                     }
@@ -387,17 +391,17 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
             guard let timestamp = root["timestamp"] as? TimeInterval,
                   let imagesDict = root["images"] as? [String: [String: Any]] else { return nil }
 
-            if !ImageCacheFileValidity.isCurrent(
-                fileVersion: root["version"] as? Int,
-                fileBuild: root["build"] as? String,
-                cacheVersion: Self.cacheVersion,
-                appBuild: ImageCacheFileValidity.appBuild
-            ) {
-                let version = root["version"] as? Int
-                let build = root["build"] as? String
-                Self.diagLog.debug("Disk cache from version \(version ?? -1) build \(build ?? "none") is stale, deleting cache")
+            let version = root["version"] as? Int
+            let build = root["build"] as? String
+            guard let entries = Self.readableEntries(
+                imagesDict, fileVersion: version, fileBuild: build, cacheVersion: Self.cacheVersion
+            ) else {
+                Self.diagLog.debug("Disk cache from version \(version ?? -1) build \(build ?? "none") has nothing this build can use, deleting cache")
                 try? FileManager.default.removeItem(at: readFile)
                 return nil
+            }
+            if entries.count < imagesDict.count {
+                Self.diagLog.info("Disk cache from build \(build ?? "none"): kept \(entries.count) hidden items' pictures until they are taken again")
             }
 
             // A file older than the most generous TTL cannot serve anything.
@@ -408,29 +412,10 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
                 return nil
             }
 
-            return SaveFileContents(entries: imagesDict, age: age, isLegacyJSON: isLegacyJSON)
+            return SaveFileContents(entries: entries, age: age, isLegacyJSON: isLegacyJSON)
         } catch {
             Self.diagLog.error("Failed to load image cache from disk: \(error)")
             return nil
         }
-    }
-
-    /// Decodes one file entry into a capture, or nil when its pixels cannot
-    /// be read.
-    nonisolated func decodeEntry(_ entry: [String: Any], legacyJSON: Bool) -> MenuBarItemGlyphCapture? {
-        // The plist stores PNG bytes natively; the legacy JSON stored them
-        // base64-encoded. JSONSerialization hands back Double for the stored
-        // scale, never CGFloat, so cast through it either way.
-        let pngData: Data? = if legacyJSON {
-            (entry["png"] as? String).flatMap { Data(base64Encoded: $0) }
-        } else {
-            entry["png"] as? Data
-        }
-        guard let scale = entry["scale"] as? Double,
-              let data = pngData,
-              let source = CGImageSourceCreateWithData(data as CFData, nil),
-              let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil)
-        else { return nil }
-        return MenuBarItemGlyphCapture(cgImage: cgImage, scale: CGFloat(scale))
     }
 }

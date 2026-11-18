@@ -64,6 +64,10 @@ extension MenuBarItemImageCache {
     ) -> Bool {
         guard wouldAttemptCapture else { return false }
         guard let cachedImage, !cachedImage.isEffectivelyBlank else { return true }
+        // An earlier build's picture stands in until this build takes its own.
+        if cachedImage.isFromEarlierBuild {
+            return true
+        }
         // Recover from a native overflow chevron («») stored as a successful crop.
         if cachedImage.pointSize.width < Self.minimumTrustedGlyphWidth {
             return true
