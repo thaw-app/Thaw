@@ -295,6 +295,8 @@ final class AppState {
     /// Called by AppDelegate and again after first-launch permission setup.
     /// - Parameter granted: True runs bootstrap with required grants; false keeps subsystems inert and opens permissions.
     func launch(withPermissions granted: Bool) {
+        // Only the app runs the menu bar; the settings process hands finishing to it. See OnboardingLink.
+        guard !SettingsProcessApp.isRequested else { return }
         guard granted, !ReducedModeController.isKeptWithAccessibility else {
             if ReducedModeController.isChosen {
                 dismissWindow(.permissions)

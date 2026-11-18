@@ -20,6 +20,7 @@ struct SettingsProcessApp: App {
         WindowActionBridge(registerWindowActions: delegate.appState.registerWindowActions)
         SettingsWindow(appState: delegate.appState)
         WhatsNewWindow(appState: delegate.appState)
+        PermissionsWindow(appState: delegate.appState)
         AcknowledgementsWindow(appState: delegate.appState)
     }
 }
@@ -40,9 +41,9 @@ private final class SettingsProcessDelegate: NSObject, NSApplicationDelegate {
                 appState.updatesManager.lastUpdateCheckDate = lastCheck
             },
             terminate: { NSApp.terminate(nil) },
-            showWhatsNew: { [appState] in
+            showWindow: { [appState] target in
                 NSApp.activate()
-                appState.openWindow(.whatsNew)
+                appState.openSettingsProcessWindow(target)
             },
             isSettingsShown: { [appState] in appState.navigationState.isSettingsPresented },
             features: SettingsLinkFeatures.child(appState)
@@ -70,8 +71,13 @@ private final class SettingsProcessDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate()
         // The app writes to standard input. When it closes, the app has gone, and so does this process.
         session.start(input: .standardInput, output: .standardOutput, onClose: { exit(0) })
-        let launchesWhatsNew = SettingsProcessRoute.launchPane(in: ProcessInfo.processInfo.arguments) == SettingsProcessRoute.whatsNew
-        appState.openWindow(launchesWhatsNew ? .whatsNew : .settings)
+        if let target = SettingsProcessRoute.launchPane(in: ProcessInfo.processInfo.arguments),
+           SettingsProcessRoute.windowTargets.contains(target)
+        {
+            appState.openSettingsProcessWindow(target)
+        } else {
+            appState.openWindow(.settings)
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {

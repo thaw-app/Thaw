@@ -16,7 +16,8 @@ final class SettingsProcessSession {
         var showSettings: () -> Void
         var updatesStateChanged: (_ canCheck: Bool, _ lastCheck: Date?) -> Void
         var terminate: () -> Void
-        var showWhatsNew: () -> Void = { /* Only the settings process has the window. */ }
+        /// Opens one of SettingsProcessRoute.windowTargets.
+        var showWindow: (String) -> Void = { _ in /* Only the settings process has these windows. */ }
         /// Whether the Settings window is up. With What's New alone, a pane only the app shows stays put.
         var isSettingsShown: () -> Bool = { true }
         /// What each page does with the app's live state, and what it reads again.
@@ -79,8 +80,8 @@ final class SettingsProcessSession {
 
     private func receive(_ message: SettingsLinkMessage) {
         switch message {
-        case let .show(pane) where pane == SettingsProcessRoute.whatsNew:
-            side.showWhatsNew()
+        case let .show(pane?) where SettingsProcessRoute.windowTargets.contains(pane):
+            side.showWindow(pane)
         case let .show(pane):
             select(pane)
             side.showSettings()

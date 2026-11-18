@@ -19,11 +19,11 @@ private struct PermissionsFlowView: View {
             switch stage {
             case let .onboarding(skipsAccessStep):
                 ThawOnboardingView(skipsAccessStep: skipsAccessStep) { outcome, pane in
-                    appState.completeOnboarding(outcome: outcome, opening: pane)
+                    appState.finishOnboarding(outcome: outcome, opening: pane)
                 }
             case .recovery:
                 ThawPermissionsView {
-                    appState.completeFirstLaunchSetup()
+                    appState.finishAccessRecovery()
                 }
             case .none?:
                 // Close mistaken openings on the next turn rather than leaving an empty window.

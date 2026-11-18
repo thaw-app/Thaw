@@ -58,7 +58,7 @@ final class SettingsProcessHost {
 
     init(
         app: AppSide,
-        isEnabled: @escaping @MainActor () -> Bool = SettingsProcessHost.isEnabledInDefaults,
+        isEnabled: @escaping @MainActor () -> Bool = { SettingsProcessHost.isEnabledInDefaults() },
         launch: @escaping Launch = SettingsProcessHost.launchExecutable
     ) {
         self.app = app
@@ -66,9 +66,17 @@ final class SettingsProcessHost {
         launchChild = launch
     }
 
-    /// Never in the settings process itself, which shows its own windows.
-    static func isEnabledInDefaults() -> Bool {
-        Defaults.bool(forKey: .settingsInOwnProcess) && !SettingsProcessApp.isRequested
+    /// Never in the settings process itself, which shows its own windows, nor in a unit-test run.
+    static func isEnabledInDefaults(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        isEnabled(
+            settingOn: Defaults.bool(forKey: .settingsInOwnProcess),
+            isSettingsProcess: SettingsProcessApp.isRequested,
+            isTestHost: TestHosting.isActive(environment: environment)
+        )
+    }
+
+    static nonisolated func isEnabled(settingOn: Bool, isSettingsProcess: Bool, isTestHost: Bool) -> Bool {
+        settingOn && !isSettingsProcess && !isTestHost
     }
 
     /// Shows Settings in its own process. Returns false when the app should show it instead.

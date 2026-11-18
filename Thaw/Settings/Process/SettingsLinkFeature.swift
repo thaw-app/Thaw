@@ -157,6 +157,7 @@ enum SettingsLinkFeatures {
             ThawBarSettingsLink.app(appState),
             .hotkeys(appState),
             ProfilesLink.app(appState),
+            OnboardingLink.app(appState),
         ]
     }
 

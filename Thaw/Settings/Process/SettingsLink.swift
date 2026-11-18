@@ -62,11 +62,15 @@ nonisolated enum SettingsProcessRoute {
 
     static let ownProcessPanes: Set<String> = ["General", "Visibility", "About", "Privacy", "Menu Bar Appearance", "Modules", "Widgets", "Scripts", "Displays", "Tools", "Thaw Bar", "Hotkeys", "Triggers", "Profiles"]
 
-    /// Not a pane: the What's New window, which the process shows in Simple Mode too.
+    /// Not panes: windows of their own, which the process shows in Simple Mode too. Welcome Again is the
+    /// welcome replayed from About; Permissions opens it as Thaw would at launch.
     static let whatsNew = "What's New"
+    static let permissions = "Permissions"
+    static let welcomeAgain = "Welcome Again"
+    static let windowTargets: Set<String> = [whatsNew, permissions, welcomeAgain]
 
     static func runsInOwnProcess(pane: String, simpleMode: Bool, isEnabled: Bool) -> Bool {
-        isEnabled && (pane == whatsNew || !simpleMode && ownProcessPanes.contains(pane))
+        isEnabled && (windowTargets.contains(pane) || !simpleMode && ownProcessPanes.contains(pane))
     }
 
     /// The pane named after the launch argument, if there is one.

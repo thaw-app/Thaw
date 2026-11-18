@@ -20,7 +20,7 @@ final class SettingsProcessSessionTests {
         var updates = [(canCheck: Bool, lastCheck: Date?)]()
         var terminations = 0
         var closes = 0
-        var whatsNewShows = 0
+        var windowShows = [String]()
     }
 
     private let calls = Calls()
@@ -51,7 +51,7 @@ final class SettingsProcessSessionTests {
                 showSettings: { calls.shows += 1 },
                 updatesStateChanged: { calls.updates.append(($0, $1)) },
                 terminate: { calls.terminations += 1 },
-                showWhatsNew: { calls.whatsNewShows += 1 },
+                showWindow: { calls.windowShows.append($0) },
                 isSettingsShown: { settingsShown }
             ),
             handOverTimeout: handOverTimeout
@@ -137,14 +137,17 @@ final class SettingsProcessSessionTests {
         #expect(calls.terminations == 0)
     }
 
-    @Test("Asked for What's New, the process shows it and leaves the Settings pane alone")
-    func whatsNewIsShown() async {
+    @Test("Asked for a window of its own, the process shows it and leaves the Settings pane alone")
+    func windowTargetsAreShown() async {
         let navigation = AppNavigationState()
         navigation.settingsNavigationIdentifier = .about
         let session = makeSession(navigation)
         start(session)
-        appEnd?.send(.show(pane: SettingsProcessRoute.whatsNew))
-        #expect(await settingsLinkWait { calls.whatsNewShows == 1 })
+        for target in [SettingsProcessRoute.whatsNew, SettingsProcessRoute.permissions, SettingsProcessRoute.welcomeAgain] {
+            appEnd?.send(.show(pane: target))
+        }
+        #expect(await settingsLinkWait { calls.windowShows.count == 3 })
+        #expect(calls.windowShows == [SettingsProcessRoute.whatsNew, SettingsProcessRoute.permissions, SettingsProcessRoute.welcomeAgain])
         #expect(calls.shows == 0)
         #expect(navigation.settingsNavigationIdentifier == .about)
     }

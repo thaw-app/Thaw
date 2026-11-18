@@ -15,7 +15,25 @@ extension AppState {
             watchSettingsHandBack()
         }
         guard !isOpenHere, let pane = settingsProcessPane(for: id) else { return false }
-        return settingsProcessHost.show(pane: pane, simpleMode: settings.general.simpleMode)
+        let shown = settingsProcessHost.show(pane: pane, simpleMode: settings.general.simpleMode)
+        if shown, id == .permissions {
+            // The process replays the welcome itself, as told by the target.
+            replayRequested = false
+        }
+        return shown
+    }
+
+    /// In the settings process, opens a window the app sent: one of SettingsProcessRoute.windowTargets.
+    func openSettingsProcessWindow(_ target: String) {
+        switch target {
+        case SettingsProcessRoute.whatsNew:
+            openWindow(.whatsNew)
+        case SettingsProcessRoute.welcomeAgain:
+            replayRequested = true
+            openWindow(.permissions)
+        default:
+            openWindow(.permissions)
+        }
     }
 
     /// What the settings process opens for a window, or nil for one only the app has.
@@ -23,6 +41,7 @@ extension AppState {
         switch id {
         case .settings: navigationState.settingsNavigationIdentifier.rawValue
         case .whatsNew: SettingsProcessRoute.whatsNew
+        case .permissions: replayRequested ? SettingsProcessRoute.welcomeAgain : SettingsProcessRoute.permissions
         default: nil
         }
     }
