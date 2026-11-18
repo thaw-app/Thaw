@@ -107,6 +107,11 @@ struct SettingsProcessHostTests {
         )
     }
 
+    @Test("Settings runs in its own process unless the setting is turned off")
+    func onByDefault() {
+        #expect(Defaults.DefaultValue.settingsInOwnProcess)
+    }
+
     @Test("Nothing starts while the setting is off, in Simple Mode, or for a pane that needs the app")
     func declinedOpens() {
         #expect(!host(isEnabled: false).show(pane: "General", simpleMode: false))

@@ -19,7 +19,9 @@ final class SettingsProcessAppSideTests {
         let appState = AppState()
         #expect(!appState.showsInSettingsProcess(.permissions, isOpenHere: false))
         #expect(!appState.showsInSettingsProcess(.settings, isOpenHere: true))
-        #expect(!appState.showsInSettingsProcess(.settings, isOpenHere: false), "The setting is off in a fresh suite")
+        // Off here, since a yes would start a real settings process.
+        Defaults.set(false, forKey: .settingsInOwnProcess)
+        #expect(!appState.showsInSettingsProcess(.settings, isOpenHere: false), "The setting is turned off")
     }
 
     @Test("A page change from the process moves the app's pane, and an unknown pane is ignored")
@@ -53,9 +55,9 @@ final class SettingsProcessAppSideTests {
 
     @Test("The host reads the setting from the defaults")
     func hostEnabledByDefaults() {
+        #expect(SettingsProcessHost.isEnabledInDefaults() == !SettingsProcessApp.isRequested, "on in a fresh suite")
+        Defaults.set(false, forKey: .settingsInOwnProcess)
         #expect(!SettingsProcessHost.isEnabledInDefaults())
-        Defaults.set(true, forKey: .settingsInOwnProcess)
-        #expect(SettingsProcessHost.isEnabledInDefaults() == !SettingsProcessApp.isRequested)
     }
 }
 

@@ -151,7 +151,7 @@ final class AppState {
 
     let applicationMenuCover = ApplicationMenuCover()
 
-    /// Settings in a process of its own, when SettingsInOwnProcess is set.
+    /// Settings in a process of its own, unless SettingsInOwnProcess is turned off.
     @ObservationIgnored
     private(set) lazy var settingsProcessHost = SettingsProcessHost(app: settingsProcessAppSide())
 

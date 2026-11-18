@@ -9,7 +9,7 @@ import AppKit
 import MenuBarModel
 
 /// Runs Settings in a process of its own, so its memory goes away when the window closes.
-/// Off unless SettingsInOwnProcess is set; the process reads the app's pipe and ends with the app.
+/// On unless SettingsInOwnProcess is turned off; the process reads the app's pipe and ends with the app.
 @MainActor
 final class SettingsProcessHost {
     /// What the app does for the settings process.
