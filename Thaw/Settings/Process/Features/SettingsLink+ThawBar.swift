@@ -14,6 +14,9 @@ import MenuBarModel
 enum ThawBarSettingsLink {
     /// Sent by the app: the apps switched off in System Settings, whose items the bar and its preview leave out.
     static let switchedOffApps = "thawBar.switchedOffApps"
+    /// Sent by the app: Apple's items whose stand-in is running, which the bar and its preview leave out.
+    /// The stand-ins run only in the app, so the settings process would otherwise list both.
+    static let replacedOriginals = "thawBar.replacedOriginals"
     /// Asked of the app: open the real Thaw Bar.
     static let open = "thawBar.open"
 
@@ -31,23 +34,27 @@ enum ThawBarSettingsLink {
         app(
             displaySettings: appState.settings.displaySettings,
             hiding: appState.menuBarManager.nativeAppHidingExperiment,
+            replacedOriginals: { [weak appState] in appState?.menuBarManager.systemExtraTakeover.replacedOriginalIdentifiers ?? [] },
             show: showsBar(of: appState)
         )
     }
 
     static func child(_ appState: AppState) -> SettingsChildFeature {
-        child(hiding: appState.menuBarManager.nativeAppHidingExperiment)
+        let takeover = appState.menuBarManager.systemExtraTakeover
+        return child(hiding: appState.menuBarManager.nativeAppHidingExperiment) { takeover.mirrorReplacedOriginals($0) }
     }
 
     static func app(
         displaySettings: DisplaySettingsManager,
         hiding: NativeAppHidingExperiment,
+        replacedOriginals: @escaping @MainActor () -> Set<String> = { [] },
         show: @escaping Show
     ) -> SettingsAppFeature {
         SettingsAppFeature(
             statuses: [
                 // Sorted, because a set's order is not the same from one encoding to the next.
                 switchedOffApps: { SettingsLinkPayload.encode(hiding.userSwitchedOffBundleIDs.sorted()) },
+                Self.replacedOriginals: { SettingsLinkPayload.encode(replacedOriginals().sorted()) },
             ],
             commands: [
                 open: { payload in
@@ -59,10 +66,16 @@ enum ThawBarSettingsLink {
         )
     }
 
-    static func child(hiding: NativeAppHidingExperiment) -> SettingsChildFeature {
+    static func child(
+        hiding: NativeAppHidingExperiment,
+        mirrorReplacedOriginals: @escaping @MainActor (Set<String>) -> Void = { _ in /* No stand-ins to mirror. */ }
+    ) -> SettingsChildFeature {
         SettingsChildFeature(statuses: [
             switchedOffApps: { payload in
                 SettingsLinkPayload.decode([String].self, from: payload).map { hiding.mirrorUserSwitchedOffApps(Set($0)) }
+            },
+            replacedOriginals: { payload in
+                SettingsLinkPayload.decode([String].self, from: payload).map { mirrorReplacedOriginals(Set($0)) }
             },
         ])
     }

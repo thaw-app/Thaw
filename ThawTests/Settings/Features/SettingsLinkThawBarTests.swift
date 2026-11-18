@@ -124,6 +124,25 @@ struct SettingsLinkThawBarTests {
         #expect((0 ..< 20).allSatisfy { _ in status() == first })
     }
 
+    @Test("The app names Apple's items its stand-ins replace, and the settings process takes them as its own")
+    func replacedOriginalsAreMirrored() throws {
+        let app = Link.app(displaySettings: appDisplays, hiding: appHiding, replacedOriginals: { ["b:B", "a:A"] }) { _, _ in
+            // Not opened here.
+        }
+        let sent = try #require(app.statuses[Link.replacedOriginals]?())
+        #expect(SettingsLinkPayload.decode([String].self, from: sent) == ["a:A", "b:B"])
+
+        let appState = AppState()
+        let takeover = appState.menuBarManager.systemExtraTakeover
+        let feature = Link.child(appState)
+        feature.statuses[Link.replacedOriginals]?(sent)
+        #expect(takeover.replacedOriginalIdentifiers == ["a:A", "b:B"])
+        feature.statuses[Link.replacedOriginals]?(Data("not a list".utf8))
+        #expect(takeover.replacedOriginalIdentifiers == ["a:A", "b:B"], "A payload that can't be read changes nothing")
+        try feature.statuses[Link.replacedOriginals]?(payload([String]()))
+        #expect(takeover.replacedOriginalIdentifiers.isEmpty)
+    }
+
     @Test("The preview leaves out the items of the apps the app names")
     func switchedOffAppsAreLeftOut() throws {
         let appState = AppState()
@@ -133,7 +152,7 @@ struct SettingsLinkThawBarTests {
         let hiding = appState.menuBarManager.nativeAppHidingExperiment
         let feature = Link.child(appState)
         func previewed() -> [String] {
-            ThawBarItems.items(in: .hidden, itemManager: appState.itemManager, switchedOff: hiding.userSwitchedOffBundleIDs).compactMap(\.title)
+            ThawBarItems.items(in: .hidden, itemManager: appState.itemManager, switchedOff: hiding.userSwitchedOffBundleIDs, replacedOriginals: []).compactMap(\.title)
         }
         #expect(previewed() == ["Kept", "Off"])
 

@@ -69,9 +69,19 @@ final class SystemExtraTakeoverCoordinator {
         )
     }
 
+    /// The app's answer, in the settings process, where no stand-in runs. Nil in the app.
+    private var mirroredReplacedOriginals: Set<String>?
+
     /// The canonical identifiers of Apple's module items whose stand-in is running. See ReplacedOriginals.
     var replacedOriginalIdentifiers: Set<String> {
-        Self.originalIdentifiers(replacedBy: activeModuleStandIns)
+        mirroredReplacedOriginals ?? Self.originalIdentifiers(replacedBy: activeModuleStandIns)
+    }
+
+    /// Takes the app's answer, for the settings process: it previews the Thaw Bar and runs no stand-in.
+    func mirrorReplacedOriginals(_ identifiers: Set<String>) {
+        if identifiers != mirroredReplacedOriginals {
+            mirroredReplacedOriginals = identifiers
+        }
     }
 
     static func originalIdentifiers(replacedBy standIns: Set<SystemExtraStandIn>) -> Set<String> {
