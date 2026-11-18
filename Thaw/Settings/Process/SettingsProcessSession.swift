@@ -18,7 +18,7 @@ final class SettingsProcessSession {
         var terminate: () -> Void
         /// Opens one of SettingsProcessRoute.windowTargets.
         var showWindow: (String) -> Void = { _ in /* Only the settings process has these windows. */ }
-        /// Whether the Settings window is up. With What's New alone, a pane only the app shows stays put.
+        /// Whether the Settings window is up. Without it, as with What's New alone, an app-only pane stays here.
         var isSettingsShown: () -> Bool = { true }
         /// What each page does with the app's live state, and what it reads again.
         var features: [SettingsChildFeature] = []

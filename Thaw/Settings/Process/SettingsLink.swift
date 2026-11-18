@@ -62,8 +62,8 @@ nonisolated enum SettingsProcessRoute {
 
     static let ownProcessPanes: Set<String> = ["General", "Visibility", "About", "Privacy", "Menu Bar Appearance", "Modules", "Widgets", "Scripts", "Displays", "Tools", "Thaw Bar", "Hotkeys", "Triggers", "Profiles"]
 
-    /// Not panes: windows of their own, which the process shows in Simple Mode too. Welcome Again is the
-    /// welcome replayed from About; Permissions opens it as Thaw would at launch.
+    /// Windows rather than panes, so the process shows them in Simple Mode too. Welcome Again replays the
+    /// welcome from About; Permissions opens the window as Thaw does at launch.
     static let whatsNew = "What's New"
     static let permissions = "Permissions"
     static let welcomeAgain = "Welcome Again"

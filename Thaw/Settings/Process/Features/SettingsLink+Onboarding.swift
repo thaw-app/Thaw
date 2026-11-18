@@ -43,7 +43,7 @@ enum OnboardingLink {
 }
 
 extension AppState {
-    /// Finishes the welcome. In the settings process the app finishes it instead, since that launches Thaw.
+    /// Finishes the welcome, through the app when called in the settings process.
     func finishOnboarding(outcome: OnboardingOutcome, opening pane: SettingsNavigationIdentifier?) {
         finish(OnboardingLink.Finish(
             outcome: OnboardingLink.Outcome(simpleMode: outcome.simpleMode, automaticUpdates: outcome.automaticUpdates),
@@ -62,8 +62,7 @@ extension AppState {
             return
         }
         Task { [weak self] in
-            // Settings, if finishing opens it, reaches this process before the answer, so closing
-            // this window never leaves the process without one.
+            // Settings, when finishing opens it, arrives before this answer, so the process always keeps a window.
             let answer: OnboardingLink.Answer? = try? await SettingsRemote.current?.request(OnboardingLink.finish, request)
             if answer?.closesWindow == true {
                 self?.dismissWindow(.permissions)

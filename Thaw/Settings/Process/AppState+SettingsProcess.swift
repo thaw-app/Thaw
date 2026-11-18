@@ -8,8 +8,8 @@
 import AppKit
 
 extension AppState {
-    /// Shows Settings or What's New in its own process when that is on and, for Settings, the pane runs there.
-    /// False for every other window, and while the app's own copy of the window is open.
+    /// Shows Settings, What's New or the welcome in the settings process when the window runs there.
+    /// False for other windows, and while the app's own copy is open.
     func showsInSettingsProcess(_ id: ThawWindowIdentifier, isOpenHere: Bool) -> Bool {
         if id == .settings {
             watchSettingsHandBack()
@@ -17,7 +17,7 @@ extension AppState {
         guard !isOpenHere, let pane = settingsProcessPane(for: id) else { return false }
         let shown = settingsProcessHost.show(pane: pane, simpleMode: settings.general.simpleMode)
         if shown, id == .permissions {
-            // The process replays the welcome itself, as told by the target.
+            // The target tells the process to replay the welcome.
             replayRequested = false
         }
         return shown
@@ -46,8 +46,8 @@ extension AppState {
         }
     }
 
-    /// While the app's own Settings window is up, a move to a page the settings process shows hands the
-    /// window to it. The app's window closes once the process says it shows the page, so Settings stays up.
+    /// While the app's Settings window is up, moving to a page the settings process shows hands the window over.
+    /// The app's window closes only once the process shows that page, so Settings never disappears in between.
     func watchSettingsHandBack() {
         guard !SettingsProcessApp.isRequested, settingsProcessHost.handBack.watch == nil else { return }
         let navigationState = navigationState

@@ -53,7 +53,7 @@ final class SettingsProcessHost {
     /// Waits for the app's window to become key; a later window or the process ending cancels it.
     private var shownInAppWait: Task<Void, Never>?
     private let diagLog = DiagLog(category: "SettingsProcessHost")
-    /// The app's Settings window going back to this process; see AppState.watchSettingsHandBack().
+    /// Hands the app's Settings window back to the settings process; see AppState.watchSettingsHandBack().
     let handBack = SettingsHandBack()
 
     init(
