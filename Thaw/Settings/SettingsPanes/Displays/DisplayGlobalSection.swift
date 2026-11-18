@@ -168,13 +168,8 @@ extension DisplaySettingsPane {
         }
     }
 
-    /// Pushes the global template to every known display and saves it to the
-    /// profiles the scope names. The configurations change drives the relaunch
-    /// wave for the active display on the next main-queue dispatch.
-    ///
-    /// A save that fails rolls the live state back rather than leaving the
-    /// broadcast applied without a matching profile entry, which the next
-    /// reapply would revert.
+    /// Pushes the global template to every known display and saves it to the profiles the scope names.
+    /// A failed save rolls the live state back, since the next reapply would revert a template no profile holds.
     private func commitGlobalApply(savingTo scope: SpacingProfileSaveScope? = nil, activeProfileID: UUID? = nil) {
         commit(DisplayProfileCommit(change: .template(displaySettings.globalConfiguration), scope: scope, activeProfileID: activeProfileID))
     }
