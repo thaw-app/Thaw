@@ -35,6 +35,7 @@ the items under New and Fixed.
 - **A hidden item's new picture is no longer kept highlighted** when its menu opens again while the picture is taken.
 - **A reorder you make in Layout keeps being applied until the menu bar shows it.** A read that missed one of the moved items could count it as done, and the bar kept the old order.
 - **A change to the menu bar is saved, and items that don't fit are moved, even when Thaw first saw it in a read that missed some apps.** A full read that found the same bar skipped both.
+- **The widget icon lights another dot as soon as a reading crosses it,** even when the percentage shown stays the same, such as 24.9% and 25.1% both reading 25%.
 
 ## [3.0.0-beta.7] - 2026-11-17
 
