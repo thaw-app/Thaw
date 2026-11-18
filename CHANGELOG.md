@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- Asking `thawctl` for help with `--help` or `-h` now exits successfully and prints to standard output.
+
 ## [3.0.0-beta.7] - 2026-11-17
 
 **macOS 27 only · Build 126**
