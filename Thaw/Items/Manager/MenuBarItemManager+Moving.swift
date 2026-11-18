@@ -380,115 +380,115 @@ extension MenuBarItemManager {
         case throwError(EventError)
     }
 
-    /// Refusal checks, in the order they must run. Manual arrangement refuses
-    /// every move but an explicit Layout edit here, before the normalization defer. Lock screen, clones,
+    /// Refusal checks, in the order they must run; the order lives in
+    /// MoveRefusalGate. Manual arrangement refuses every move but an explicit
+    /// Layout edit here, before the normalization defer. Lock screen, clones,
     /// the native chevron and store recoveries are no-ops; the rest throw so
-    /// the caller knows.
+    /// the caller knows. The logging and the memory of unresponsive owners
+    /// stay here, so every refusal is recorded exactly once.
     private func moveRefusal(
         item: MenuBarItem,
         destination: MoveDestination,
         isUserInitiated: Bool,
         allowSectionBoundaryTarget: Bool
     ) -> MoveRefusal? {
-        guard !arrangementForbidsMoves else {
-            MenuBarItemManager.diagLog.debug(
-                "Refusing move of \(item.logString): manual arrangement is on"
-            )
-            return .unfulfilled
-        }
-
-        // A move under the lock screen lands on a layout the unlock replaces. A
-        // no-op false is the one outcome no caller persists as a verdict.
-        if refuseMenuBarMutationWhileScreenLocked("move of \(item.logString)") {
-            return .unfulfilled
-        }
-
-        // Runaway guard. A user's own move always goes through, even while the
-        // breaker is open: it is one deliberate action, not a storm, and it is
-        // how the user retries. Automatic passes stop.
-        if moveCircuitBreaker.isOpen, !isUserInitiated {
-            MenuBarItemManager.diagLog.debug(
-                "Move circuit breaker open; skipping automatic move of \(item.logString)"
-            )
-            return .unfulfilled
-        }
-        if moveCircuitBreaker.isOpen, isUserInitiated {
-            MenuBarItemManager.diagLog.info(
-                "Move circuit breaker open; allowing the user's move of \(item.logString)"
-            )
-        }
-
-        // Backstop for transient system clones: dragging one displaces real
-        // items, and it vanishes on its own, so a no-op is correct.
-        guard !item.isSystemClone else {
-            MenuBarItemManager.diagLog.warning("Skipping move for \(item.logString) - system status item clone")
-            return .unfulfilled
-        }
-        // The native chevron has no window to grab and no weight the agent honours.
-        guard !item.isNativeOverflowControl, !destination.targetItem.isNativeOverflowControl else {
-            MenuBarItemManager.diagLog.warning("Skipping move for \(item.logString) - native overflow control")
-            return .unfulfilled
-        }
-        // A store recovery is a preference key with a synthetic window ID:
-        // nothing to grab, and only an invented frame to verify against.
-        if PositionStoreItemSource.recoveredTags.contains(item.tag) {
-            MenuBarItemManager.diagLog.warning("Skipping move for \(item.logString) - position-store recovery")
-            return .unfulfilled
-        }
-        guard let appState else {
-            return .throwError(EventError.cannotComplete)
-        }
         let experimentalSystemItemHiding = configuration.enableExperimentalSystemItemHiding
-        guard item.isPhysicallyOrderable(experimentalSystemItemHiding: experimentalSystemItemHiding) else {
+        let target = destination.targetItem
+        let rejection = MoveRefusalGate.firstRejection(.init(
+            arrangementForbidsMoves: arrangementForbidsMoves,
+            isScreenLocked: { [self] in refuseMenuBarMutationWhileScreenLocked("move of \(item.logString)") },
+            isCircuitBreakerOpen: { [self] in
+                let isOpen = moveCircuitBreaker.isOpen
+                if isOpen, isUserInitiated {
+                    MenuBarItemManager.diagLog.info(
+                        "Move circuit breaker open; allowing the user's move of \(item.logString)"
+                    )
+                }
+                return isOpen
+            },
+            isUserInitiated: isUserInitiated,
+            isSystemClone: item.isSystemClone,
+            involvesNativeOverflowControl: item.isNativeOverflowControl || target.isNativeOverflowControl,
+            isPositionStoreRecovery: PositionStoreItemSource.recoveredTags.contains(item.tag),
+            hasAppState: appState != nil,
+            isPhysicallyOrderable: item.isPhysicallyOrderable(experimentalSystemItemHiding: experimentalSystemItemHiding),
+            isUserDraggingItem: appState?.isDraggingMenuBarItem ?? false,
+            isOwnerUnresponsive: { [self] in isMoveOwnerUnresponsive(of: item) },
+            allowsSectionBoundaryTarget: allowSectionBoundaryTarget,
+            targetsLegacyDivider: target.isControlItem && target.tag != .visibleControlItem
+        ))
+        guard let rejection else { return nil }
+        logMoveRefusal(rejection, item: item, destination: destination)
+        switch rejection {
+        case .manualArrangement, .screenLocked, .circuitBreakerOpen, .systemClone,
+             .nativeOverflowControl, .positionStoreRecovery, .legacyDividerTarget:
+            return .unfulfilled
+        case .appStateUnavailable, .userDragInProgress:
+            return .throwError(EventError.cannotComplete)
+        case .itemNotMovable:
             return .throwError(EventError.itemNotMovable(
                 item,
                 item.orderabilityRefusal(experimentalSystemItemHiding: experimentalSystemItemHiding)
             ))
+        case .ownerUnresponsive:
+            return .throwError(EventError.itemResponseTimeout(item))
         }
+    }
 
-        // Never move during a user ⌘-drag: overlapping drags strand or
-        // duplicate icons and can crash Finder. The drop re-runs this work later.
-        if appState.isDraggingMenuBarItem {
+    /// One log line per refusal. The lock check and the owner check log for
+    /// themselves while they run, so they have no line here.
+    private func logMoveRefusal(
+        _ rejection: MoveRefusalGate.Rejection,
+        item: MenuBarItem,
+        destination: MoveDestination
+    ) {
+        switch rejection {
+        case .manualArrangement:
+            MenuBarItemManager.diagLog.debug("Refusing move of \(item.logString): manual arrangement is on")
+        case .circuitBreakerOpen:
+            MenuBarItemManager.diagLog.debug(
+                "Move circuit breaker open; skipping automatic move of \(item.logString)"
+            )
+        case .systemClone:
+            MenuBarItemManager.diagLog.warning("Skipping move for \(item.logString) - system status item clone")
+        case .nativeOverflowControl:
+            MenuBarItemManager.diagLog.warning("Skipping move for \(item.logString) - native overflow control")
+        case .positionStoreRecovery:
+            MenuBarItemManager.diagLog.warning("Skipping move for \(item.logString) - position-store recovery")
+        case .userDragInProgress:
             MenuBarItemManager.diagLog.info("Skipping move for \(item.logString) - user ⌘-drag in progress")
-            return .throwError(EventError.cannotComplete)
+        case .legacyDividerTarget:
+            MenuBarItemManager.diagLog.warning(
+                "Skipping legacy divider hide-move of \(item.logString) to \(destination.logString) on macOS 27"
+            )
+        case .screenLocked, .appStateUnavailable, .itemNotMovable, .ownerUnresponsive:
+            break
         }
+    }
 
-        // A drag at a hung owner only times out. ownerPID is the compositing
-        // host from macOS 26, so sourcePID is asked first.
+    /// Whether a drag at the item's owner would only time out. Also keeps the
+    /// memory of unresponsive owners, so each hang and each recovery is logged once.
+    /// ownerPID is the compositing host from macOS 26, so sourcePID is asked first.
+    private func isMoveOwnerUnresponsive(of item: MenuBarItem) -> Bool {
         let ownerPID = item.sourcePID ?? item.ownerPID
-        if ownerPID != ProcessInfo.processInfo.processIdentifier {
-            if Bridging.isProcessUnresponsive(ownerPID) {
-                if unresponsiveMoveOwners.insert(ownerPID).inserted {
-                    MenuBarItemManager.diagLog.warning(
-                        "Refusing move of \(item.logString): owner pid \(ownerPID) is not responding; " +
-                            "further moves of its items are refused until it answers"
-                    )
-                } else {
-                    MenuBarItemManager.diagLog.debug(
-                        "Refusing move of \(item.logString): owner pid \(ownerPID) is still not responding"
-                    )
-                }
-                return .throwError(EventError.itemResponseTimeout(item))
-            }
-            if unresponsiveMoveOwners.remove(ownerPID) != nil {
-                MenuBarItemManager.diagLog.info("Owner pid \(ownerPID) is responding again; moving its items resumes")
-            }
-        }
-
-        // Legacy divider targets relied on a reflow macOS 27 no longer does.
-        // Section transitions opt in, using the divider as a visible drag anchor.
-        if !allowSectionBoundaryTarget {
-            let target = destination.targetItem
-            if target.isControlItem,
-               target.tag != .visibleControlItem
-            {
+        guard ownerPID != ProcessInfo.processInfo.processIdentifier else { return false }
+        if Bridging.isProcessUnresponsive(ownerPID) {
+            if unresponsiveMoveOwners.insert(ownerPID).inserted {
                 MenuBarItemManager.diagLog.warning(
-                    "Skipping legacy divider hide-move of \(item.logString) to \(destination.logString) on macOS 27"
+                    "Refusing move of \(item.logString): owner pid \(ownerPID) is not responding; " +
+                        "further moves of its items are refused until it answers"
                 )
-                return .unfulfilled
+            } else {
+                MenuBarItemManager.diagLog.debug(
+                    "Refusing move of \(item.logString): owner pid \(ownerPID) is still not responding"
+                )
             }
+            return true
         }
-        return nil
+        if unresponsiveMoveOwners.remove(ownerPID) != nil {
+            MenuBarItemManager.diagLog.info("Owner pid \(ownerPID) is responding again; moving its items resumes")
+        }
+        return false
     }
 
     /// Called every cache tick while locked, so only transitions are logged.
