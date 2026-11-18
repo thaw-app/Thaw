@@ -32,7 +32,13 @@ final class StatusIconWidgetController {
     private let sampler = StatusIconLiveSampler()
     private var samplerCancellable: AnyCancellable?
     private var isStarted = false
-    private var lastPublished: StatusIconDisplayedContent?
+    private var lastPublished: PublishedContent?
+
+    /// What a publication shows: the text and tints, and the image to the precision it draws.
+    private struct PublishedContent: Equatable {
+        let displayed: StatusIconDisplayedContent
+        let drawn: StatusIconDrawnContent
+    }
 
     /// Whether the live sampler is polling. Manual mode shows the sliders' values, so it stops.
     var isSampling: Bool {
@@ -102,8 +108,9 @@ final class StatusIconWidgetController {
     }
 
     /// Redraws the icon only when what it shows changed: most samples differ in a reading it doesn't use.
+    /// Both halves count, as 24.9% and 25.1% read as 25% but light one dot and two.
     private func publish(_ state: StatusIconPreviewState) {
-        let content = state.displayed
+        let content = PublishedContent(displayed: state.displayed, drawn: state.drawn)
         guard content != lastPublished else { return }
         lastPublished = content
         publisher.publish(state)

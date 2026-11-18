@@ -61,6 +61,20 @@ struct StatusIconWidgetControllerTests {
         #expect(controller.liveSamples.cpu == 0.9, "the builder still gets every reading")
     }
 
+    @Test("A reading whose text stays the same but lights another dot is published")
+    func drawnOnlyChangeIsPublished() throws {
+        let controller = try makeController()
+        var samples = StatusIconSamples(network: .wifi)
+        samples.wifi = 0.249
+        controller.absorb(samples)
+        let published = publisher.published.count
+
+        samples.wifi = 0.251
+        controller.absorb(samples)
+        #expect(publisher.published.count == published + 1, "both read 25%, but one dot is lit and then two")
+        #expect(publisher.published.last?.drawn.litSegments == 2)
+    }
+
     @Test("Manual mode stops the live sampler, and live mode starts it again")
     func manualModeStopsSampling() throws {
         let controller = try makeController()
