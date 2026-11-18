@@ -42,8 +42,8 @@ nonisolated enum MoveRefusalGate {
     nonisolated enum Rejection: Equatable {
         /// No-ops: the caller treats each as a move that quietly did nothing.
         case manualArrangement
-        /// A move under the lock screen lands on a layout the unlock replaces. A no-op false is the one
-        /// outcome no caller persists as a verdict.
+        /// A move under the lock screen lands on a layout the unlock replaces, so none is attempted and the
+        /// move returns false. A caller that treats false as a failed move can still count it.
         case screenLocked
         /// Runaway guard: automatic passes stop, a user's own move still goes through, because it is one
         /// deliberate action, not a storm, and it is how the user retries.
