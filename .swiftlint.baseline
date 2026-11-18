@@ -1687,7 +1687,7 @@
     "file": "Thaw/Panels/Appearance/MenuBarOverlayPanel.swift",
     "line": 129
    },
-   "reason": "Class body should span 250 lines or less excluding comments and whitespace: currently spans 336 lines",
+   "reason": "Class body should span 250 lines or less excluding comments and whitespace: currently spans 337 lines",
    "ruleDescription": "Type bodies should not span too many lines",
    "ruleIdentifier": "type_body_length",
    "ruleName": "Type Body Length",
@@ -1700,9 +1700,9 @@
    "location": {
     "character": 15,
     "file": "Thaw/Panels/Appearance/MenuBarOverlayPanel.swift",
-    "line": 559
+    "line": 560
    },
-   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 797 lines",
+   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 798 lines",
    "ruleDescription": "Type bodies should not span too many lines",
    "ruleIdentifier": "type_body_length",
    "ruleName": "Type Body Length",
@@ -1730,9 +1730,9 @@
    "location": {
     "character": 13,
     "file": "Thaw/Panels/Appearance/MenuBarOverlayPanel.swift",
-    "line": 722
+    "line": 723
    },
-   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 109 lines",
+   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 110 lines",
    "ruleDescription": "Function bodies should not span too many lines",
    "ruleIdentifier": "function_body_length",
    "ruleName": "Function Body Length",
@@ -1805,9 +1805,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Panels/Appearance/MenuBarOverlayPanel.swift",
-    "line": 1509
+    "line": 1511
    },
-   "reason": "File should contain 1000 lines or less: currently contains 1509",
+   "reason": "File should contain 1000 lines or less: currently contains 1511",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
