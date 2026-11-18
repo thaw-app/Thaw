@@ -26,6 +26,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- Asking `thawctl` for help with `--help` or `-h` now exits successfully and prints to standard output.
 - Switching apps no longer hides revealed items if you move the pointer back to the menu bar or Thaw Bar while the hide is pending.
 
 ## [3.0.0-beta.7] - 2026-11-16
