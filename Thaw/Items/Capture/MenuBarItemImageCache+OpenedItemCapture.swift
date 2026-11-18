@@ -64,8 +64,11 @@ extension MenuBarItemImageCache {
                 return (admitted ?? Bridging.activeMenuBarDisplayID, admitted)
             },
             shownItem: { item, displayID in
-                await RevealCaptureSession.waitForRevealedItems(matching: [item]) {
-                    await MenuBarItem.getMenuBarItems(on: displayID, option: [.onScreen, .activeSpace])
+                // Live geometry only, the owner first: recovering saved positions is synchronous
+                // LaunchServices work on the main thread, and the wait reads the bar up to 20 times.
+                let owner: Set<pid_t> = [item.sourcePID ?? item.ownerPID]
+                return await RevealCaptureSession.waitForRevealedItems(matching: [item]) {
+                    await MenuBarItem.getMenuBarItems(on: displayID, option: [.onScreen, .activeSpace], freshOnly: true, priorityPIDs: owner)
                 }.first
             },
             settlePixels: { await RevealCaptureSession.settleRevealedPixels([$0], displayID: $1, reader: LiveMenuBarCaptureReader()) },
