@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Changed
+
+- **A shorter welcome.** It says what Thaw does and asks for access. Its last page shows how to hide and show items, with Launch at Login, a shortcut and automatic updates beside it. The feature tour and the choice between Simple Mode and All Settings are gone: a first launch starts in Simple Mode, and showing the welcome again keeps the mode you use.
+
 ### Fixed
 
 - Asking `thawctl` for help with `--help` or `-h` now exits successfully and prints to standard output.

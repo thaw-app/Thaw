@@ -21,6 +21,13 @@ struct SettingsMissingRowsTests {
         #expect(SimpleModeHowItWorks.text(showsIcon: false, showsOnClick: false).contains("shortcut"))
     }
 
+    @Test("The welcome's last page shows the same two sentences as Simple Mode, one at a time")
+    func howItWorksParts() {
+        let show = SimpleModeHowItWorks.show(showsIcon: true, showsOnClick: true)
+        #expect(SimpleModeHowItWorks.text(showsIcon: true, showsOnClick: true) == "\(SimpleModeHowItWorks.hide) \(show)")
+        #expect(SimpleModeHowItWorks.hide.contains("⌘"))
+    }
+
     @Test("With the Dock icon off, a window you open only activates Thaw")
     func dockIconPolicy() {
         #expect(AppState.userWindowActivationPolicy(showDockIcon: true) == .regular)

@@ -18,8 +18,8 @@ private struct PermissionsFlowView: View {
         Group {
             switch stage {
             case let .onboarding(skipsAccessStep):
-                ThawOnboardingView(skipsAccessStep: skipsAccessStep) { outcome, pane in
-                    appState.finishOnboarding(outcome: outcome, opening: pane)
+                ThawOnboardingView(skipsAccessStep: skipsAccessStep) { outcome in
+                    appState.finishOnboarding(outcome: outcome)
                 }
             case .recovery:
                 ThawPermissionsView {

@@ -50,9 +50,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/App/AppState.swift",
-    "line": 786
+    "line": 784
    },
-   "reason": "File should contain 400 lines or less: currently contains 786",
+   "reason": "File should contain 400 lines or less: currently contains 784",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
@@ -1635,21 +1635,6 @@
   }
  },
  {
-  "text": "}",
-  "violation": {
-   "location": {
-    "character": 1,
-    "file": "Thaw/Onboarding/Bento/BentoDemos.swift",
-    "line": 480
-   },
-   "reason": "File should contain 400 lines or less: currently contains 480",
-   "ruleDescription": "Files should not span too many lines.",
-   "ruleIdentifier": "file_length",
-   "ruleName": "File Length",
-   "severity": "warning"
-  }
- },
- {
   "text": "struct MenuBarAppearanceEditor: View {",
   "violation": {
    "location": {
@@ -3015,7 +3000,7 @@
   }
  },
  {
-  "text": "        enum Direction: String { case sent = \"\u2192 SENT\", received = \"\u2190 GOT\" }",
+  "text": "        enum Direction: String { case sent = \"→ SENT\", received = \"← GOT\" }",
   "violation": {
    "location": {
     "character": 9,

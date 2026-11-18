@@ -16,12 +16,9 @@ enum OnboardingLink {
     struct Finish: Codable, Equatable {
         /// The welcome's choices, or nil for the access screen alone.
         var outcome: Outcome?
-        /// The Settings pane the welcome opens on.
-        var pane: String?
     }
 
     struct Outcome: Codable, Equatable {
-        var simpleMode: Bool
         var automaticUpdates: Bool
     }
 
@@ -44,11 +41,8 @@ enum OnboardingLink {
 
 extension AppState {
     /// Finishes the welcome, through the app when called in the settings process.
-    func finishOnboarding(outcome: OnboardingOutcome, opening pane: SettingsNavigationIdentifier?) {
-        finish(OnboardingLink.Finish(
-            outcome: OnboardingLink.Outcome(simpleMode: outcome.simpleMode, automaticUpdates: outcome.automaticUpdates),
-            pane: pane?.rawValue
-        ))
+    func finishOnboarding(outcome: OnboardingOutcome) {
+        finish(OnboardingLink.Finish(outcome: OnboardingLink.Outcome(automaticUpdates: outcome.automaticUpdates)))
     }
 
     /// Finishes the access screen, with access granted or Reduced mode chosen.
@@ -74,8 +68,7 @@ extension AppState {
     func completeFinish(_ request: OnboardingLink.Finish) -> OnboardingLink.Answer {
         permissions.refreshPermissionsState()
         if let outcome = request.outcome {
-            let pane = request.pane.flatMap(SettingsNavigationIdentifier.init(storedValue:))
-            completeOnboarding(outcome: OnboardingOutcome(simpleMode: outcome.simpleMode, automaticUpdates: outcome.automaticUpdates), opening: pane)
+            completeOnboarding(outcome: OnboardingOutcome(automaticUpdates: outcome.automaticUpdates))
         } else {
             completeFirstLaunchSetup()
         }

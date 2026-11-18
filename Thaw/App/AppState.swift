@@ -348,13 +348,11 @@ final class AppState {
         }
     }
 
-    /// Select the destination pane before opening Settings so construction reads it without losing the sidebar's first render.
-    func completeOnboarding(outcome: OnboardingOutcome, opening pane: SettingsNavigationIdentifier?) {
-        settings.general.simpleMode = outcome.simpleMode
-
-        if let pane {
-            SettingsSearchNavigation.selectSidebarPane(pane, navigationState: navigationState)
-        }
+    func completeOnboarding(outcome: OnboardingOutcome) {
+        settings.general.simpleMode = OnboardingOutcome.simpleMode(
+            current: settings.general.simpleMode,
+            hasSeenOnboarding: Defaults.bool(forKey: .hasSeenOnboarding)
+        )
 
         if Constants.supportsSparkleUpdates {
             Defaults.set(true, forKey: .hasSeenUpdateConsent)
