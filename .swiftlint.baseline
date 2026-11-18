@@ -1102,7 +1102,7 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager+Moving.swift",
     "line": 1472
    },
-   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 222 lines",
+   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 221 lines",
    "ruleDescription": "Function bodies should not span too many lines",
    "ruleIdentifier": "function_body_length",
    "ruleName": "Function Body Length",
