@@ -302,6 +302,15 @@ struct MenuBarItemImageCacheDiskKeyTests {
         )
     }
 
+    @Test("an earlier build's glyph is shown but still asks for a capture")
+    func earlierBuildGlyphNeedsCapture() {
+        let carried = Self.capture(scale: 2)
+        let earlier = MenuBarItemGlyphCapture(cgImage: carried.cgImage, scale: 2, isFromEarlierBuild: true)
+        #expect(MenuBarItemImageCache.prewarmNeedsCapture(cachedImage: earlier, wouldAttemptCapture: true))
+        #expect(!MenuBarItemImageCache.prewarmNeedsCapture(cachedImage: earlier.confirmedByThisBuild, wouldAttemptCapture: true))
+        #expect(!MenuBarItemImageCache.prewarmNeedsCapture(cachedImage: earlier, wouldAttemptCapture: false))
+    }
+
     @Test("a concealed item's saved glyph outlives the unclassified age")
     func concealedEntryKeepsStableAge() {
         let store = MenuBarItemImageCacheDiskStore()

@@ -69,6 +69,15 @@ final class SystemExtraTakeoverCoordinator {
         )
     }
 
+    /// The canonical identifiers of Apple's module items whose stand-in is running. See ReplacedOriginals.
+    var replacedOriginalIdentifiers: Set<String> {
+        Self.originalIdentifiers(replacedBy: activeModuleStandIns)
+    }
+
+    static func originalIdentifiers(replacedBy standIns: Set<SystemExtraStandIn>) -> Set<String> {
+        Set(standIns.compactMap { moduleOriginals[$0] }.map(MenuBarItemTag.canonicalPersistentIdentifier))
+    }
+
     /// Reading the engine's observable dictionary makes the Layout rows update live.
     func status(for item: SystemExtraItem) -> SystemExtraTakeoverStatus {
         engine.status(for: item)

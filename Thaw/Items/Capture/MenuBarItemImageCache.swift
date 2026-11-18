@@ -125,13 +125,7 @@ final class MenuBarItemImageCache: @unchecked Sendable {
     @ObservationIgnored
     var accessCounter: UInt64 = 0
 
-    /// Failed capture tracking to skip repeatedly failing items
-    nonisolated struct FailedCapture: Hashable {
-        let tag: MenuBarItemTag
-        let failureCount: Int
-        let lastFailureTime: Date
-    }
-
+    /// Failed capture tracking to skip repeatedly failing items. See FailedCapture.
     let failedCapturesLock = OSAllocatedUnfairLock<[MenuBarItemTag: FailedCapture]>(initialState: [:])
 
     /// Configuration for failed capture handling

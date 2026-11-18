@@ -90,29 +90,20 @@ extension MenuBarItemImageCache {
 
     // MARK: Live Refresh Backoff
 
-    /// Consecutive changeless passes before the tick interval starts backing
-    /// off, and the streak at which it reaches the 1 Hz floor.
-    private static let backoffGraceTicks = 5
-    static let backoffFloorStreak = 15
+    /// Consecutive changeless passes before the tick slows to its floor.
+    nonisolated static let backoffFloorStreak = 5
 
-    /// Sleep for one live-refresh tick.
+    /// Sleep for one live-refresh tick: 2.5 s, or 4 s once the bar stops changing.
     ///
-    /// SCK one-shot captures are the dominant transient memory cost and most
-    /// ticks change nothing, so changeless passes back off to at most 333 ms,
-    /// then 1 Hz. Any change resets the streak to the slider's rate.
+    /// Bar changes recapture on their own, so the tick only refreshes animated icons. Capturing
+    /// about once a second kept macOS's screen-recording indicator on while Layout was open.
+    /// A slower setting is kept.
     static nonisolated func backedOffTickMilliseconds(
         baseMilliseconds: Int,
         changelessStreak: Int
     ) -> Int {
-        let base = max(1, baseMilliseconds)
-        switch changelessStreak {
-        case ..<backoffGraceTicks:
-            return base
-        case ..<backoffFloorStreak:
-            return max(base, min(333, base * 3))
-        default:
-            return max(base, 1000)
-        }
+        let floor = changelessStreak < backoffFloorStreak ? 2500 : 4000
+        return max(baseMilliseconds, floor)
     }
 }
 

@@ -84,6 +84,23 @@ struct RevealedPictureStoreTests {
         #expect(Self.entries(for: Self.item, in: cache) == [Self.item.tag: new])
     }
 
+    @Test("A cut picture keeps an earlier build's picture but confirms it, so it isn't retaken again")
+    func cutPictureConfirmsEarlierBuildPicture() throws {
+        let cache = Cache(screenIsLocked: { false })
+        let complete = try Self.complete()
+        cache.setCapture(
+            MenuBarItemGlyphCapture(cgImage: complete.cgImage, scale: complete.scale, isFromEarlierBuild: true),
+            for: Self.diskTag
+        )
+
+        let changed = try cache.storeRevealedPicture(Self.cut(), of: Self.item, listedWidths: [:])
+
+        #expect(changed)
+        let kept = try #require(cache.capturesByTag[Self.diskTag])
+        #expect(kept.cgImage === complete.cgImage)
+        #expect(!kept.isFromEarlierBuild)
+    }
+
     @Test("An item with no picture gets the new one")
     func firstPictureIsStored() throws {
         let cache = Cache(screenIsLocked: { false })

@@ -29,8 +29,9 @@ struct RevealCapturePrewarm {
     /// False while repeated failures keep the item from being tried.
     let wouldAttemptCapture: @MainActor (MenuBarItem) -> Bool
     let forgetFailures: @MainActor (Set<MenuBarItemTag>) -> Void
-    /// Reveals and photographs one section's chosen items on the display.
-    let captureSection: @MainActor ([MenuBarItem], CGDirectDisplayID) async -> Void
+    /// Reveals and photographs one section's chosen items on the display, and returns those it got to.
+    /// One left out, as when a display change stops the capture, was never photographed.
+    let captureSection: @MainActor ([MenuBarItem], CGDirectDisplayID) async -> [MenuBarItem]
     let save: @MainActor () -> Void
     /// Picks pictures that no longer fit their item for an automatic pass to retake: the one the
     /// Thaw Bar's passes share for the session unless a caller passes another, or nil for none.
@@ -87,10 +88,11 @@ struct RevealCapturePrewarm {
                 )
                 break
             }
-            await captureSection(itemsToCapture, displayID)
-            // A screen locked during the capture revealed nothing, so its retakes are still due.
+            let reached = await captureSection(itemsToCapture, displayID)
+            // A screen locked during the capture revealed nothing, and an item the capture
+            // stopped before wasn't photographed, so their retakes are still due.
             if !isLocked("recording width retakes") {
-                retakeLedger?.noteRetaken(retakes)
+                retakeLedger?.noteRetaken(retakes.intersection(reached.map(\.tag.tagIdentifier)))
             }
         }
 
@@ -118,7 +120,7 @@ struct RevealCapturePrewarm {
     }
 
     /// The items of one section a prewarm reveals, in section order: those missing a picture, and
-    /// retakes. A pass the user asked for also retakes pictures clipped at their left edge.
+    /// retakes. A pass the user asked for also retakes pictures clipped at their left or right edge.
     private func itemsToCapture(
         from items: [MenuBarItem], onlyMissingImages: Bool, retakes: Set<String>, retakesClipped: Bool, on displayID: CGDirectDisplayID
     ) -> [MenuBarItem] {

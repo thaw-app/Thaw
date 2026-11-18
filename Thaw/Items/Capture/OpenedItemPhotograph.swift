@@ -13,7 +13,7 @@ import ThawAXCore
 /// the menu bar. OpenedItemRecapture decides when to try.
 ///
 /// The try finds the item where the menu bar shows it, waits for its pixels to settle, crops it
-/// where MenuBarAgent draws it (DrawnItemFrame.cropFrame) and keeps the picture unless a menu of
+/// where MenuBarAgent draws it (see AXBoundsCropper.Request.seatsOnDrawnBar) and keeps the picture unless a menu of
 /// its app opened meanwhile, since an open menu draws the item highlighted. It holds the reveal
 /// capture slot, so no prewarm reveals or conceals another item into the screenshot.
 @MainActor
@@ -36,13 +36,9 @@ struct OpenedItemPhotograph {
     let shownItem: @MainActor (MenuBarItem, CGDirectDisplayID) async -> Shown?
     /// Waits for the shown item's pixels on the display to stop changing.
     let settlePixels: @MainActor (MenuBarItem, CGDirectDisplayID) async -> Void
-    /// MenuBarAgent's drawn entries, or nil when its window can't be read.
-    let drawnBar: @MainActor () async -> [MenuBarAgentWindow.Entry]?
-    /// The bounds of each display, so entries drawn on another display's bar are left out.
-    let displayBounds: @MainActor () -> [CGRect]
     /// Admits the picture for publishing against the item cache's display. Asked with nothing awaited before the screenshot.
     let admit: @MainActor (CGDirectDisplayID?) -> CapturePublicationAdmission
-    /// Crops the shown item at the frame on the display.
+    /// Crops the shown item at the frame on the display, moved to where MenuBarAgent draws it.
     let crop: @MainActor (MenuBarItem, CGRect, CGDirectDisplayID) async -> CapturePass
     /// Publishes the picture through a revealed batch's checks. False when the bar changed meanwhile.
     let commit: @MainActor (CapturePass, Shown, CapturePublicationAdmission) -> Bool
@@ -73,7 +69,7 @@ struct OpenedItemPhotograph {
         await settlePixels(shown.live, displays.capture)
         guard !Task.isCancelled else { return .missed }
         guard await !isMenuOpen() else { return .menuOpened }
-        guard let cropFrame = await cropSeat(of: shown.live) else { return .missed }
+        let cropFrame = shown.live.bounds
 
         // Admitted with nothing else awaited before the screenshot, as a revealed batch is.
         let admission = admit(displays.admitted)
@@ -89,21 +85,6 @@ struct OpenedItemPhotograph {
         }
         save()
         return .stored
-    }
-
-    /// Where to crop the shown item. A revealed item's Accessibility frame can be a seat another
-    /// app's item is drawn in, and a crop there stores a sliver of the item or the neighbour, so
-    /// the crop goes where MenuBarAgent draws the item.
-    private func cropSeat(of shown: MenuBarItem) async -> CGRect? {
-        let bar = await drawnBar()
-        let displays = displayBounds()
-        let drawn = DrawnItemFrame.drawnFrame(for: shown.bounds, ownerPID: shown.ownerPID, sourcePID: shown.sourcePID, in: bar, displays: displays)
-        let cropFrame = DrawnItemFrame.cropFrame(for: shown.bounds, ownerPID: shown.ownerPID, sourcePID: shown.sourcePID, in: bar, displays: displays)
-        Self.log(
-            "\(shown.logString) frame \(shown.bounds), drawn at \(drawn.map { "\($0)" } ?? "unknown"), " +
-                (cropFrame.map { "cropping at \($0)" } ?? "not where it is drawn, so no picture")
-        )
-        return cropFrame
     }
 
     private static func log(_ message: String) {

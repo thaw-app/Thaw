@@ -12,7 +12,8 @@ import AppKit
 
 // MARK: - Usage
 
-private func printUsage() {
+/// Writes usage to standard error for invalid commands, or the supplied stream for explicit help.
+private func printUsage(to output: FileHandle = .standardError) {
     var out = "Usage: thawctl <command> [args]\n\nCommands:\n"
     for command in Command.all {
         out += "  \(command.usage.padding(toLength: max(command.usage.count + 2, 52), withPad: " ", startingAt: 0))"
@@ -20,16 +21,18 @@ private func printUsage() {
     }
     out += "\nSettings commands require prior authorization: thawctl authorize\n"
     out += "Reading settings needs an app that receives Thaw's callback, such as ThawCtl.\n"
-    FileHandle.standardError.write(Data(out.utf8))
+    output.write(Data(out.utf8))
 }
 
 // MARK: - Entry point
 
+let arguments = Array(CommandLine.arguments.dropFirst())
+let isHelpRequest = arguments == ["--help"] || arguments == ["-h"]
 let status: Int32
 do {
-    guard let parsed = try parse(Array(CommandLine.arguments.dropFirst())) else {
-        printUsage()
-        exit(64) // Usage error.
+    guard let parsed = try parse(arguments) else {
+        printUsage(to: isHelpRequest ? .standardOutput : .standardError)
+        exit(isHelpRequest ? 0 : 64)
     }
 
     var components = URLComponents()

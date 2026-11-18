@@ -14,17 +14,9 @@ import ThawAXCore
 /// phantom: a seat another item is drawn in. A real click aimed there opens the neighbour, and
 /// a crop there shows a sliver of the item. MenuBarAgent's window has one child per drawn item,
 /// owned by the item's app, so for an app with one item drawn it says where that item really is.
-/// Its frames span the bar's full height and leave out the padding the Accessibility frame
-/// includes, so only their x and width are used.
+/// Its frames span the bar's full height, so only their x and width are used. The width is not the
+/// Accessibility frame's: it has been seen both wider and narrower.
 nonisolated enum DrawnItemFrame {
-    /// How far apart, in points, the centres of an item's drawn and Accessibility frames may be
-    /// and still describe the same seat.
-    static let agreementTolerance: CGFloat = 4
-
-    /// How much narrower or wider, in points, an item's drawn entry may be than its
-    /// Accessibility frame and still be the same item. The frame adds about a point each side.
-    static let widthTolerance: CGFloat = 4
-
     /// The frame the item is drawn at: x and width from its drawn entry, y and height from
     /// axFrame. Nil unless the read is settled and exactly one entry belongs to the item's app:
     /// its source process for an item MenuBarAgent hosts, whose own entries are other items.
@@ -82,23 +74,45 @@ nonisolated enum DrawnItemFrame {
         return isPhantom(axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries, displays: displays) ? nil : axFrame
     }
 
-    /// Where to crop the item: axFrame when it is on the seat the item is drawn at, else axFrame
-    /// moved onto that seat, so the picture keeps the padding every other picture has. Nil when
-    /// the drawn entry is not the item's size, wherever it sits, or there is none and axFrame is a
-    /// phantom. Only entries on the display holding axFrame count, as for clickFrame.
+    /// How far apart, in points, the centres of an item's drawn and Accessibility frames may be before its
+    /// picture is cut at the drawn one. Six items at rest on one Mac (macOS 27.3, no notch) were 0.5 to 0.8 apart.
+    static let cropAgreementTolerance: CGFloat = 2
+
+    /// Where a picture of the item is cut: axFrame, moved sideways onto the centre of its drawn frame when
+    /// that is known and more than cropAgreementTolerance away. The size stays axFrame's, like every other picture.
     static func cropFrame(
         for axFrame: CGRect,
         ownerPID: pid_t,
         sourcePID: pid_t?,
-        in entries: [MenuBarAgentWindow.Entry]?,
-        displays: [CGRect] = []
-    ) -> CGRect? {
-        guard let drawn = drawnFrame(for: axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries, displays: displays) else {
-            return isPhantom(axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries, displays: displays) ? nil : axFrame
+        in entries: [MenuBarAgentWindow.Entry]?
+    ) -> CGRect {
+        guard let drawn = drawnFrame(for: axFrame, ownerPID: ownerPID, sourcePID: sourcePID, in: entries) else {
+            return axFrame
         }
-        guard abs(drawn.width - axFrame.width) <= widthTolerance else { return nil }
-        let offset = drawn.midX - axFrame.midX
-        return abs(offset) > agreementTolerance ? axFrame.offsetBy(dx: offset, dy: 0) : axFrame
+        let shift = drawn.midX - axFrame.midX
+        return abs(shift) > cropAgreementTolerance ? axFrame.offsetBy(dx: shift, dy: 0) : axFrame
+    }
+
+    /// Whether a picture cut at frame would take in another app's drawn item. A moved crop keeps the
+    /// reported width, which can be wider than the seat the item is drawn in.
+    static func takesInNeighbour(
+        _ frame: CGRect,
+        ownerPID: pid_t,
+        sourcePID: pid_t?,
+        in entries: [MenuBarAgentWindow.Entry]?
+    ) -> Bool {
+        guard let entries = entries.flatMap(MenuBarAgentWindow.settled) else { return false }
+        let own = Set(processes(ownerPID: ownerPID, sourcePID: sourcePID))
+        return entries.contains { entry in
+            !own.contains(entry.ownerPID)
+                && entry.frame.width >= MenuBarItemGeometry.phantomFramePeerMinimumWidth
+                && min(frame.maxX, entry.frame.maxX) - max(frame.minX, entry.frame.minX) >= MenuBarItemGeometry.phantomFrameMinimumOverlap
+        }
+    }
+
+    /// The process whose drawn entries are the item's: its source for an item MenuBarAgent hosts.
+    static func appPID(ownerPID: pid_t, sourcePID: pid_t?) -> pid_t? {
+        processes(ownerPID: ownerPID, sourcePID: sourcePID).first
     }
 
     /// The entries on the display holding axFrame, or all when none holds it: MenuBarAgent's first

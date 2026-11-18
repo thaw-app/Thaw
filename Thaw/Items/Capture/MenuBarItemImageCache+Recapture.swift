@@ -550,10 +550,10 @@ extension MenuBarItemImageCache {
         controller: any MenuBarSectionControlling,
         displayID: CGDirectDisplayID,
         scale: CGFloat
-    ) async {
+    ) async -> [MenuBarItem] {
         guard !items.isEmpty, !Task.isCancelled,
               !skipCaptureWhileScreenLocked("grouped reveal capture"),
-              let appState else { return }
+              let appState else { return [] }
 
         // Before the first await: the display the caller resolved these items
         // and displayID against. Every batch answers to this one.
@@ -581,7 +581,7 @@ extension MenuBarItemImageCache {
         let batchSize = Self.revealBatchSize(
             hasNotch: NSScreen.screen(for: displayID)?.hasNotch ?? false
         )
-        await captureRevealBatches(
+        return await captureRevealBatches(
             items.chunks(ofCount: batchSize).map(Array.init),
             controller: controller,
             target: RevealCaptureTarget(displayID: displayID, admittedDisplayID: admittedDisplayID, scale: scale),
@@ -615,7 +615,7 @@ extension MenuBarItemImageCache {
         target: RevealCaptureTarget,
         appState: AppState,
         sources: RevealCaptureSession.Sources
-    ) async {
+    ) async -> [MenuBarItem] {
         let session = RevealCaptureSession(
             sources: sources,
             displayID: target.displayID,
@@ -648,7 +648,7 @@ extension MenuBarItemImageCache {
                 )
             }
         )
-        await session.capture(batches)
+        return await session.capture(batches)
     }
 
     /// Publishes one revealed batch, or leaves the cache exactly as it was.
@@ -741,11 +741,11 @@ extension MenuBarItemImageCache {
             wouldAttemptCapture: { self.wouldAttemptCapture(of: $0) },
             forgetFailures: { self.clearCaptureFailures(tags: $0) },
             captureSection: { items, displayID in
-                guard let controller = self.appState?.menuBarManager.sectionController else { return }
+                guard let controller = self.appState?.menuBarManager.sectionController else { return [] }
                 let scale = NSScreen.screen(for: displayID)?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
                 // A blank or chevron-width entry the reveal cannot better is dropped, so the
                 // Layout thumbnail falls back to the app icon.
-                await self.captureConcealedItemsByGroupedReveal(
+                return await self.captureConcealedItemsByGroupedReveal(
                     items, controller: controller, displayID: displayID, scale: scale
                 )
             },

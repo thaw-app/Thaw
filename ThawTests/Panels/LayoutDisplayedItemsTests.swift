@@ -33,6 +33,23 @@ struct LayoutDisplayedItemsTests {
         #expect(shown(world, in: .hidden).isEmpty)
     }
 
+    @Test("Layout leaves out Apple's item while Thaw's stand-in for it is running, and lists it again afterwards")
+    func aReplacedOriginalGetsNoTile() {
+        let world = World()
+        let original = World.item(MenuBarItemTag(namespace: .menuBarAgent, title: "com.apple.menuextra.airdrop"))
+        let standIn = World.item(MenuBarItemTag(namespace: .string(SystemExtraStandIn.airDrop.bundleIdentifier), title: "Thaw.Extra.AirDrop"))
+        world.seat([standIn, original], in: .hidden)
+        let cache = world.appState.itemManager.itemCache
+
+        let running = LayoutDisplayedItems.items(
+            in: .hidden, from: cache, appState: world.appState, replacedOriginals: [original.canonicalIdentifier]
+        )
+        #expect(running == [standIn])
+
+        let stopped = LayoutDisplayedItems.items(in: .hidden, from: cache, appState: world.appState, replacedOriginals: [])
+        #expect(stopped == [standIn, original])
+    }
+
     @Test
     func anItemWhoseAppHasQuitIsLeftOut() {
         let world = World()

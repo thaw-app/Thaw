@@ -10,7 +10,7 @@ import Testing
 @testable import Thaw
 import ThawAXCore
 
-/// Pins where Thaw clicks and crops a revealed item, from MenuBarAgent's own window.
+/// Pins where Thaw clicks and whether it crops a revealed item, from MenuBarAgent's own window.
 @Suite("Drawn item frame")
 struct DrawnItemFrameTests {
     private static let agent: pid_t = 786
@@ -115,43 +115,44 @@ struct DrawnItemFrameTests {
 
     // MARK: cropFrame
 
-    @Test("A frame on the drawn seat is cropped where it is")
-    func cropOnSeat() {
-        let onSeat = [Self.entry(Self.driveDx, x: 929, width: 16)]
-
-        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: onSeat) == Self.axFrame)
-    }
-
-    @Test("A frame off the drawn seat is moved onto it and keeps its size")
-    func cropMovesToSeat() {
-        // Drawn from 908 to 926, centred on 917; reported from 926 to 946, centred on 936.
+    @Test("A picture is cut where the item is drawn, at the size it reports")
+    func cropMovesToTheDrawnSeat() {
         let crop = DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar)
 
-        #expect(crop == CGRect(x: 907, y: 4.5, width: 20, height: 24))
+        #expect(crop == CGRect(x: 907, y: 4.5, width: 20, height: 24), "Centred on the drawn frame's middle, x=917")
     }
 
-    @Test("A drawn entry of another size is not cropped")
-    func cropRefusesOtherSize() {
-        let bar = [Self.entry(Self.driveDx, x: 880, width: 40)]
+    @Test("A picture stays at the reported frame while the drawn one is the same seat")
+    func cropStaysOnAnAgreeingSeat() {
+        let onSeat = [Self.entry(Self.driveDx, x: 929, width: 16)]
+        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: onSeat) == Self.axFrame)
 
-        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: bar) == nil)
+        let twoPointsOff = [Self.entry(Self.driveDx, x: 930, width: 16)]
+        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: twoPointsOff) == Self.axFrame)
     }
 
-    @Test("A drawn entry of another size is not cropped, even with its centre on the frame")
-    func cropRefusesOtherSizeOnCentre() {
-        // Centred on 936 like the frame, but twice as wide: a crop at the frame would cut it in half.
-        let bar = [Self.entry(Self.driveDx, x: 916, width: 40)]
-
-        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: bar) == nil)
-    }
-
-    @Test("Without a drawn entry, a frame is cropped where it is unless it is a phantom")
+    @Test("Without one drawn entry of its own, a picture is cut at the reported frame")
     func cropWithoutDrawn() {
-        let bar = Self.bar.filter { $0.ownerPID != Self.driveDx }
-        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: bar) == nil)
+        let noEntry = Self.bar.filter { $0.ownerPID != Self.driveDx }
+        let twoEntries = Self.bar + [Self.entry(Self.driveDx, x: 880, width: 20)]
 
-        let clear = CGRect(x: 960, y: 4.5, width: 20, height: 24)
-        #expect(DrawnItemFrame.cropFrame(for: clear, ownerPID: Self.driveDx, sourcePID: nil, in: bar) == clear)
+        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: noEntry) == Self.axFrame)
+        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: twoEntries) == Self.axFrame)
+        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: nil) == Self.axFrame)
+    }
+
+    @Test("A crop that runs four points or more into another app's drawn item takes in its neighbour")
+    func cropTakingInANeighbour() {
+        // DriveDx drawn at 908 to 926, Window Manager from 926. A 20 wide crop there ends a point into it.
+        let own = DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar)
+        #expect(!DrawnItemFrame.takesInNeighbour(own, ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar))
+
+        // Reported 38 wide, the crop runs from 898 to 936: ten points of Window Manager.
+        let wide = DrawnItemFrame.cropFrame(for: CGRect(x: 920, y: 4.5, width: 38, height: 24), ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar)
+        #expect(wide == CGRect(x: 898, y: 4.5, width: 38, height: 24))
+        #expect(DrawnItemFrame.takesInNeighbour(wide, ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar))
+
+        #expect(!DrawnItemFrame.takesInNeighbour(wide, ownerPID: Self.driveDx, sourcePID: nil, in: nil), "An unreadable bar says nothing")
     }
 
     // MARK: Displays
@@ -178,17 +179,6 @@ struct DrawnItemFrameTests {
         #expect(click == Self.onSecondDisplay)
         #expect(DrawnItemFrame.drawnFrame(for: Self.onSecondDisplay, ownerPID: Self.dockDoor, sourcePID: nil, in: Self.mainBar, displays: Self.displays) == nil)
         #expect(!DrawnItemFrame.isPhantom(Self.onSecondDisplay, ownerPID: Self.dockDoor, sourcePID: nil, in: Self.mainBar, displays: Self.displays))
-    }
-
-    @Test("Another display's bar neither moves the crop there nor refuses it")
-    func anotherDisplaysBarIsIgnoredForTheCrop() {
-        let crop = DrawnItemFrame.cropFrame(
-            for: Self.onSecondDisplay, ownerPID: Self.dockDoor, sourcePID: nil, in: Self.mainBar, displays: Self.displays
-        )
-
-        #expect(crop == Self.onSecondDisplay)
-        #expect(DrawnItemFrame.cropFrame(for: Self.onSecondDisplay, ownerPID: Self.dockDoor, sourcePID: nil, in: Self.mainBar) == nil,
-                "Without displays, the other bar's 38 pt entry is taken for the item and refuses the crop")
     }
 
     @Test("The bar of the item's own display is still used")

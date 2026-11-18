@@ -53,14 +53,23 @@ extension MenuBarItemImageCache {
     ) -> Bool {
         guard let cached = Self.cachedCapture(for: item.tag, in: capturesByTag) else {
             setCapture(picture, for: item.tag)
+            CaptureDiagnostics.recordStored(picture.cgImage, item: item)
             return true
         }
         let preferred = Self.preferredRevealedImage(existing: cached.capture, candidate: picture, revealing: item, listedWidths: listedWidths)
-        guard !MenuBarItemGlyphCapture.isVisuallyEqual(preferred, cached.capture) else { return false }
+        guard !MenuBarItemGlyphCapture.isVisuallyEqual(preferred, cached.capture) else {
+            // A picture loaded from disk was never saved this session; the export shows what the Thaw Bar keeps.
+            CaptureDiagnostics.recordStored(preferred.cgImage, item: item, replacing: false)
+            // This build saw the item and kept the earlier build's picture, so it stops asking for a retake.
+            guard cached.capture.isFromEarlierBuild else { return false }
+            setCapture(cached.capture.confirmedByThisBuild, for: cached.tag)
+            return true
+        }
         if cached.tag != item.tag {
             removeCapture(for: cached.tag)
         }
         setCapture(preferred, for: item.tag)
+        CaptureDiagnostics.recordStored(preferred.cgImage, item: item)
         return true
     }
 

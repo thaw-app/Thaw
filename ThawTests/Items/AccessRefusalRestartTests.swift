@@ -89,10 +89,12 @@ struct AccessRefusalRestartTests {
     }
 }
 
-@Suite("Apps the walk found refusing", .serialized)
+@Suite("Apps the walk found refusing")
 struct AccessRefusersTests {
     private let start = ContinuousClock.now
-    /// Process IDs no real process has, so the shared ledger holds nothing else of theirs.
+    /// Each test's own ledger. On the app's shared one, a test that ran at the same time saw
+    /// another's refusals as older than its own, or lost its own to the other's list of running apps.
+    private let refusals = MenuBarItemAXProvider.AccessRefusals(initialState: AccessRefusalLedger())
     private let first: pid_t = 9_100_001
     private let second: pid_t = 9_100_002
     private let third: pid_t = 9_100_003
@@ -100,43 +102,45 @@ struct AccessRefusersTests {
     @Test("Apps that refused for a while and still refuse are reported; one that answers now is not")
     func stillRefusing() async {
         for pid in [first, second, third] {
-            MenuBarItemAXProvider.noteAccessAnswer(.apiDisabled, from: pid, now: start)
+            MenuBarItemAXProvider.noteAccessAnswer(.apiDisabled, from: pid, now: start, in: refusals)
         }
         let later = start + AccessRefusalRecovery.minimumDuration
         let third = third
         let refusers = await MenuBarItemAXProvider.persistentAccessRefusers(
-            running: [first, second, third], now: later, read: { $0 == third ? .noValue : .apiDisabled }
+            running: [first, second, third], now: later, in: refusals, read: { $0 == third ? .noValue : .apiDisabled }
         )
         #expect(refusers == [first, second])
         let again = await MenuBarItemAXProvider.persistentAccessRefusers(
-            running: [first, second, third], now: later, read: { _ in .success }
+            running: [first, second, third], now: later, in: refusals, read: { _ in .success }
         )
         #expect(again.isEmpty)
     }
 
     @Test("Apps that only just refused, quit, or are too few are not asked")
     func notAsked() async {
-        MenuBarItemAXProvider.noteAccessAnswer(.apiDisabled, from: first, now: start)
-        MenuBarItemAXProvider.noteAccessAnswer(.apiDisabled, from: second, now: start)
+        MenuBarItemAXProvider.noteAccessAnswer(.apiDisabled, from: first, now: start, in: refusals)
+        MenuBarItemAXProvider.noteAccessAnswer(.apiDisabled, from: second, now: start, in: refusals)
         let read: @Sendable (pid_t) -> AXError = { _ in
             Issue.record("No app should be asked")
             return .apiDisabled
         }
         let early = start + AccessRefusalRecovery.minimumDuration - .seconds(1)
-        #expect(await MenuBarItemAXProvider.persistentAccessRefusers(running: [first, second], now: early, read: read).isEmpty)
+        #expect(await MenuBarItemAXProvider.persistentAccessRefusers(running: [first, second], now: early, in: refusals, read: read).isEmpty)
         let later = start + AccessRefusalRecovery.minimumDuration
-        #expect(await MenuBarItemAXProvider.persistentAccessRefusers(running: [first], now: later, read: read).isEmpty)
-        #expect(await MenuBarItemAXProvider.persistentAccessRefusers(running: [first, second], now: later, read: read).isEmpty)
+        #expect(await MenuBarItemAXProvider.persistentAccessRefusers(running: [first], now: later, in: refusals, read: read).isEmpty)
+        #expect(await MenuBarItemAXProvider.persistentAccessRefusers(running: [first, second], now: later, in: refusals, read: read).isEmpty)
     }
 
     @Test("Reading an app's extras bar the raw way records how it answered")
     @MainActor
     func rawReadIsRecorded() async {
         // The test process has no extras bar, so the read never succeeds; a refusal is recorded as one.
-        let result = MenuBarItemAXProvider.recordedExtrasBarRead(pid: getpid())
+        let result = MenuBarItemAXProvider.recordedExtrasBarRead(pid: getpid(), in: refusals)
         #expect(result != .success)
         let later = ContinuousClock.now + AccessRefusalRecovery.minimumDuration
-        let refusers = await MenuBarItemAXProvider.persistentAccessRefusers(running: [getpid()], now: later, read: { _ in result })
+        let refusers = await MenuBarItemAXProvider.persistentAccessRefusers(
+            running: [getpid()], now: later, in: refusals, read: { _ in result }
+        )
         #expect(refusers.isEmpty, "One app is never enough")
         #expect(!MenuBarAXSubprocess.helperIsTrusted)
     }

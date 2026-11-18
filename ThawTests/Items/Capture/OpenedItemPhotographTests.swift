@@ -9,17 +9,14 @@ import CoreGraphics
 import MenuBarModel
 import Testing
 @testable import Thaw
-import ThawAXCore
 
-/// Pins one try at an opened item's picture: where it is cropped, and when it is kept.
+/// Pins one try at an opened item's picture: where it is cropped, and when it is kept. Moving the crop
+/// to where MenuBarAgent draws the item is the cropper's job (AXBoundsCropper.Request.seatsOnDrawnBar).
 @MainActor
 @Suite("Opened item photograph", .timeLimit(.minutes(1)))
 struct OpenedItemPhotographTests {
     private static let driveDx: pid_t = 1096
-    private static let windowManager: pid_t = 964
-    /// DriveDx reported at x=926 while drawn from 908 to 926, with Window Manager drawn at x=926.
     private static let axFrame = CGRect(x: 926, y: 4.5, width: 20, height: 24)
-    private static let seat = CGRect(x: 907, y: 4.5, width: 20, height: 24)
 
     private static func item(bounds: CGRect = axFrame) -> MenuBarItem {
         MenuBarItem(
@@ -31,10 +28,6 @@ struct OpenedItemPhotographTests {
             title: "Item-0",
             isOnScreen: true
         )
-    }
-
-    private static func entry(_ pid: pid_t, x: CGFloat, width: CGFloat) -> MenuBarAgentWindow.Entry {
-        MenuBarAgentWindow.Entry(ownerPID: pid, frame: CGRect(x: x, y: 0, width: width, height: 33))
     }
 
     private static func glyph() throws -> MenuBarItemGlyphCapture {
@@ -55,10 +48,6 @@ struct OpenedItemPhotographTests {
         var shown: MenuBarItem? = OpenedItemPhotographTests.item()
         /// Menu answers in order; the last one repeats.
         var menuOpen = [false]
-        var drawnBar: [MenuBarAgentWindow.Entry]? = [
-            OpenedItemPhotographTests.entry(OpenedItemPhotographTests.driveDx, x: 908, width: 18),
-            OpenedItemPhotographTests.entry(OpenedItemPhotographTests.windowManager, x: 926, width: 24),
-        ]
         var picture: MenuBarItemGlyphCapture?
         var commits = true
         var displays: OpenedItemPhotograph.Displays = (42, 42)
@@ -81,8 +70,6 @@ struct OpenedItemPhotographTests {
                 displays: { self.displays },
                 shownItem: { item, _ in self.shown.map { (item, $0) } },
                 settlePixels: { _, displayID in self.settled.append(displayID) },
-                drawnBar: { self.drawnBar },
-                displayBounds: { [] },
                 admit: { displayID in
                     self.admitted.append(displayID)
                     return CapturePublicationAdmission(layoutGeneration: 0, displayID: displayID)
@@ -108,15 +95,15 @@ struct OpenedItemPhotographTests {
         }
     }
 
-    @Test("An item drawn off its frame is cropped on its drawn seat, kept and saved")
-    func storedOnTheDrawnSeat() async throws {
+    @Test("A shown item is cropped at the frame the bar shows it at, kept and saved")
+    func storedAtTheShownFrame() async throws {
         let world = World()
         world.picture = try Self.glyph()
         world.displays = (7, nil)
 
         #expect(await world.take() == .stored)
 
-        #expect(world.crops.map(\.frame) == [Self.seat])
+        #expect(world.crops.map(\.frame) == [Self.axFrame])
         #expect(world.crops.map(\.displayID) == [7])
         #expect(world.settled == [7])
         #expect(world.admitted == [nil], "admitted against the item cache's display, read once for the try")
@@ -164,16 +151,6 @@ struct OpenedItemPhotographTests {
         #expect(duringCrop.crops.count == 1)
         #expect(duringCrop.committed == 0)
         #expect(duringCrop.saves == 0)
-    }
-
-    @Test("A frame on another app's item with no drawn entry of its own gets no crop")
-    func phantomFrameIsNotCropped() async {
-        let world = World()
-        world.drawnBar = [Self.entry(Self.windowManager, x: 926, width: 24)]
-
-        #expect(await world.take() == .missed)
-
-        #expect(world.crops.isEmpty)
     }
 
     @Test("A crop that took no picture keeps the old one")

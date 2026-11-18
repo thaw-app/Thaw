@@ -131,7 +131,8 @@ extension MenuBarItemImageCache {
         freshBounds: Bool = false,
         concealedIdentifiers: Set<String> = [],
         forgivenTags: Set<MenuBarItemTag> = [],
-        geometryOwners: Set<pid_t> = []
+        geometryOwners: Set<pid_t> = [],
+        seatsOnDrawnBar: Bool = false
     ) async -> CapturePass {
         let capturable = items.filter(Self.isCapturable)
 
@@ -171,7 +172,9 @@ extension MenuBarItemImageCache {
             capturable,
             on: displayID,
             screenFrame: screenFrame,
-            options: AXBoundsCropper.Options(freshBounds: freshBounds, concealedIdentifiers: concealedIdentifiers, forgivenTags: forgivenTags),
+            options: AXBoundsCropper.Options(
+                freshBounds: freshBounds, concealedIdentifiers: concealedIdentifiers, forgivenTags: forgivenTags, seatsOnDrawnBar: seatsOnDrawnBar
+            ),
             using: LiveMenuBarCaptureReader(geometryOwners: geometryOwners),
             skipping: { self.shouldSkipCapture(for: $0) }
         )
@@ -274,7 +277,9 @@ extension MenuBarItemImageCache {
             freshBounds: shouldUseFreshBounds,
             concealedIdentifiers: concealedIdentifiers,
             forgivenTags: forgivenTags,
-            geometryOwners: geometryOwners
+            geometryOwners: geometryOwners,
+            // A hidden section the user opened was put back on the bar the same way a capture's reveal is.
+            seatsOnDrawnBar: section != .visible
         )
         if !captureResult.unreadable.isEmpty {
             MenuBarItemImageCache.diagLog.debug(

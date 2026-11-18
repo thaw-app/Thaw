@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
 import MenuBarModel
 import Testing
 @testable import Thaw
@@ -27,7 +28,7 @@ struct RevealCaptureSessionTests {
         _ log: Log,
         reader: CaptureFixture? = nil,
         settledItems: (@MainActor ([MenuBarItem]) async -> RevealCaptureSession.RevealedPairs)? = nil,
-        renderSettle: @escaping @MainActor ([MenuBarItem]) async -> Void = { _ in },
+        renderSettle: @escaping @MainActor ([MenuBarItem]) async -> RevealCaptureSession.PixelSettle = { _ in .settled },
         mayReveal: @escaping @MainActor () -> Bool = { true },
         lockedAt: String? = nil,
         admits: Bool = true,
@@ -65,7 +66,7 @@ struct RevealCaptureSessionTests {
     @Test("Each batch waits out moves, is covered before its reveal and uncovered after its conceal")
     func batchesAreCoveredAndHeldForMoves() async throws {
         let log = Log()
-        try await session(log).capture([[first], [second]])
+        let reached = try await session(log).capture([[first], [second]])
 
         let one = first.uniqueIdentifier
         let two = second.uniqueIdentifier
@@ -75,6 +76,63 @@ struct RevealCaptureSessionTests {
         ])
         #expect(log.committed == [[first.tag], [second.tag]])
         #expect(log.captured == [[first.tag], [second.tag]])
+        #expect(reached.map(\.tag) == [first.tag, second.tag])
+    }
+
+    /// The bar with First's glyph drawn across the left edge of its frame, as when it is still sliding in,
+    /// and Second's drawn whole.
+    private func barWithFirstCutOff() throws -> CaptureFixture {
+        try CaptureFixture(hosting: CaptureFixture.barCapture(opaque: false, glyphXs: [996, 1108]), strip: nil)
+    }
+
+    @Test("A picture cut off at an edge, taken while the pixels were still changing, is not published; a whole one is")
+    func unsettledCutOffPictureIsRefused() async throws {
+        let log = Log()
+        try await session(log, reader: barWithFirstCutOff(), renderSettle: Self.allChanging).capture([[first, second]])
+
+        #expect(log.committed == [[first.tag, second.tag]], "The batch is still committed")
+        #expect(log.captured == [[second.tag]])
+    }
+
+    @Test("A picture cut off at an edge is published when the pixels had settled, since an icon can draw to its edge")
+    func settledCutOffPictureIsKept() async throws {
+        let log = Log()
+        try await session(log, reader: barWithFirstCutOff(), renderSettle: { _ in .settled }).capture([[first, second]])
+
+        #expect(log.captured == [[first.tag, second.tag]])
+    }
+
+    @Test("Whole pictures are published even when the pixels never settled, as with an icon that keeps redrawing")
+    func unsettledWholePicturesAreKept() async throws {
+        let log = Log()
+        try await session(log, renderSettle: Self.allChanging).capture([[first, second]])
+
+        #expect(log.captured == [[first.tag, second.tag]])
+    }
+
+    private static let allChanging: @MainActor ([MenuBarItem]) async -> RevealCaptureSession.PixelSettle = { items in
+        .changing(IndexSet(items.indices))
+    }
+
+    /// The bar with both glyphs drawn across the left edge of their frames.
+    private func barWithBothCutOff() throws -> CaptureFixture {
+        try CaptureFixture(hosting: CaptureFixture.barCapture(opaque: false, glyphXs: [996, 1096]), strip: nil)
+    }
+
+    @Test("A neighbour that keeps changing doesn't cost a still item its picture, even one drawn to its edge")
+    func onlyTheChangingItemLosesItsCutOffPicture() async throws {
+        let log = Log()
+        try await session(log, reader: barWithBothCutOff(), renderSettle: { _ in .changing([1]) }).capture([[first, second]])
+
+        #expect(log.captured == [[first.tag]])
+    }
+
+    @Test("A bar that couldn't be read while settling counts every item as still changing")
+    func unreadSettleDropsEveryCutOffPicture() async throws {
+        let log = Log()
+        try await session(log, reader: barWithFirstCutOff(), renderSettle: { _ in .unread }).capture([[first, second]])
+
+        #expect(log.captured == [[second.tag]])
     }
 
     @Test("An item that moves after its first read is settled again and cropped where it ended up")
@@ -86,7 +144,10 @@ struct RevealCaptureSessionTests {
         try await session(log, settledItems: { batch in
             reads += 1
             return batch.map { (requested: $0, live: reads == 1 ? stale : $0) }
-        }, renderSettle: { items in settledAt.append(items.map(\.bounds.minX)) }).capture([[first]])
+        }, renderSettle: { items in
+            settledAt.append(items.map(\.bounds.minX))
+            return .settled
+        }).capture([[first]])
 
         #expect(settledAt == [[stale.bounds.minX], [first.bounds.minX]])
         #expect(log.captured == [[first.tag]])
@@ -101,7 +162,10 @@ struct RevealCaptureSessionTests {
             asked.append(batch.map(\.tag))
             // Second never draws, like a module that stays switched off.
             return batch.filter { $0.tag != second.tag }.map { (requested: $0, live: $0) }
-        }, renderSettle: { _ in settles += 1 }).capture([[first, second]])
+        }, renderSettle: { _ in
+            settles += 1
+            return .settled
+        }).capture([[first, second]])
 
         #expect(asked == [[first.tag, second.tag], [first.tag]])
         #expect(settles == 1)
@@ -124,11 +188,12 @@ struct RevealCaptureSessionTests {
     @Test("A batch that never appears is skipped without a screenshot, and the next one still runs")
     func emptyReadSkipsTheBatch() async throws {
         let log = Log()
-        try await session(log, settledItems: { [second] batch in
+        let reached = try await session(log, settledItems: { [second] batch in
             batch.filter { $0.tag == second.tag }.map { (requested: $0, live: $0) }
         }).capture([[first], [second]])
 
         #expect(log.committed == [[second.tag]])
+        #expect(reached.map(\.tag) == [first.tag, second.tag], "A batch that never drew was still tried")
         #expect(log.events.filter { $0 == "admit" }.count == 1)
     }
 
@@ -138,7 +203,7 @@ struct RevealCaptureSessionTests {
     func stopsConcealed(at step: String) async throws {
         let log = Log()
         let reader = try CaptureFixture(hosting: CaptureFixture.barCapture(opaque: false, glyphXs: [1008, 1108]), strip: nil)
-        try await session(
+        let reached = try await session(
             log, reader: reader, lockedAt: step, admits: step != "admission", commits: step != "commit"
         ).capture([[first], [second]])
 
@@ -147,6 +212,7 @@ struct RevealCaptureSessionTests {
         #expect(log.events.filter { $0.hasPrefix("conceal") } == ["conceal \(first.uniqueIdentifier)"])
         let tookPixels = step == "commit"
         #expect(await reader.captures.isEmpty != tookPixels)
+        #expect(reached.isEmpty, "The batch it stopped at and the one after it were never published")
     }
 
     @Test("A session locked before its first reveal touches nothing")

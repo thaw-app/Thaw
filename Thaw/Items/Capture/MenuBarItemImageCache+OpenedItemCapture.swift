@@ -38,8 +38,7 @@ extension MenuBarItemImageCache {
     /// closed by then, so captures are held open just for it, and the cache is reloaded first:
     /// the idle trim may have dropped pictures a save would otherwise write out.
     func openedItemPhotograph(appState: AppState) -> OpenedItemPhotograph {
-        let drawnBar: @Sendable () async -> [MenuBarAgentWindow.Entry]? = { await MenuBarItemAXProvider.drawnBarConcurrent() }
-        return OpenedItemPhotograph(
+        OpenedItemPhotograph(
             slot: prewarmSlot,
             mayCapture: { [weak self] in
                 ScreenCapture.hasCachedScreenRecordingPermission && self?.skipCaptureWhileScreenLocked("opened item picture") == false
@@ -67,14 +66,13 @@ extension MenuBarItemImageCache {
                 }.first
             },
             settlePixels: { await RevealCaptureSession.settleRevealedPixels([$0], displayID: $1, reader: LiveMenuBarCaptureReader()) },
-            drawnBar: drawnBar,
-            displayBounds: { BarAxis.liveDisplayBounds() },
             admit: { CapturePublicationPolicy.admit(layout: appState.itemManager.layoutPublication, displayID: $0) },
             crop: { [weak self] shown, frame, displayID in
                 guard let self else { return CapturePass() }
                 return await boundsCropper.crop(
-                    AXBoundsCropper.Request(items: [(shown, frame)], displayID: displayID, validateFreshBounds: true),
-                    using: DrawnSeatCaptureReader(base: LiveMenuBarCaptureReader(), item: shown, drawnBar: drawnBar),
+                    // Cut where MenuBarAgent draws it, as a revealed batch is: its reported frame can be a neighbour's seat.
+                    AXBoundsCropper.Request(items: [(shown, frame)], displayID: displayID, validateFreshBounds: true, seatsOnDrawnBar: true),
+                    using: LiveMenuBarCaptureReader(),
                     skipping: { [weak self] in self?.shouldSkipCapture(for: $0) ?? true }
                 )
             },

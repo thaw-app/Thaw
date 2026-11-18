@@ -36,9 +36,15 @@ struct MissionControlShieldProbeTests {
         #expect(!probe.isActive)
         probe.updatePolling(isWanted: false)
         probe.updatePolling(isWanted: false)
-        let askedAfterStop = asked
-        await wait(.milliseconds(300))
-        #expect(asked <= askedAfterStop + 2, "a stopped poll asks at most a tick or two more")
+        // The poll is cancelled on a later main-actor turn. A busy runner can put several ticks before
+        // that turn, so wait for three tick intervals with none instead of counting the late ones.
+        var isQuiet = false
+        for _ in 0 ..< 20 where !isQuiet {
+            let askedBefore = asked
+            await wait(.milliseconds(300))
+            isQuiet = asked == askedBefore
+        }
+        #expect(isQuiet, "a stopped poll stops asking")
         probe.close()
     }
 

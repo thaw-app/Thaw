@@ -16,19 +16,19 @@ import ThawCapture
 struct RevealPixelSettleTests {
     /// Answers each read from a script, repeating its last entry.
     private final class Script {
-        var reads: [[Data]?]
+        var reads: [[Data?]?]
         var count = 0
-        init(_ reads: [[Data]?]) {
+        init(_ reads: [[Data?]?]) {
             self.reads = reads
         }
 
-        func next() -> [Data]? {
+        func next() -> [Data?]? {
             defer { count += 1 }
             return reads[min(count, reads.count - 1)]
         }
     }
 
-    private func wait(_ script: Script, budget: Duration = .seconds(3600)) async -> Bool {
+    private func wait(_ script: Script, budget: Duration = .seconds(3600)) async -> RevealCaptureSession.PixelSettle {
         await RevealCaptureSession.waitForSettledPixels(
             minimumSettle: .zero,
             interval: .zero,
@@ -42,7 +42,7 @@ struct RevealPixelSettleTests {
     func waitsOutASlide() async {
         let a = Data([1]), b = Data([2]), c = Data([3])
         let script = Script([[a], [b], [c], [c], [c], [a]])
-        #expect(await wait(script))
+        #expect(await wait(script) == .settled)
         #expect(script.count == 5)
     }
 
@@ -50,15 +50,23 @@ struct RevealPixelSettleTests {
     func briefPauseIsNotSettled() async {
         let a = Data([1]), b = Data([2])
         let script = Script([[a], [a], [b], [b], [b]])
-        #expect(await wait(script))
+        #expect(await wait(script) == .settled)
         #expect(script.count == 5)
     }
 
-    @Test("A bar that can't be read ends the wait")
+    @Test("A bar that can't be read ends the wait, and shows nothing held still")
     func unreadableBarEndsTheWait() async {
         let script = Script([nil])
-        #expect(await wait(script))
+        #expect(await wait(script) == .unread)
         #expect(script.count == 1)
+    }
+
+    @Test("A bar that stops being readable partway shows nothing held still")
+    func barUnreadableLaterIsUnread() async {
+        let a = Data([1])
+        let script = Script([[a], nil])
+        #expect(await wait(script) == .unread)
+        #expect(script.count == 2)
     }
 
     @Test("With the default sleep, an icon that keeps changing still runs out the budget")
@@ -73,7 +81,7 @@ struct RevealPixelSettleTests {
                 return [Data([value])]
             }
         )
-        #expect(!settled)
+        #expect(settled != .settled)
     }
 
     @Test("An icon that never stops changing runs out the budget")
@@ -89,7 +97,7 @@ struct RevealPixelSettleTests {
                 return [Data([value])]
             }
         )
-        #expect(!settled)
+        #expect(settled != .settled)
     }
 
     /// The read stays suspended until the test opens the gate, which it does only after the wait
@@ -104,7 +112,7 @@ struct RevealPixelSettleTests {
             clock: .init(sleep: { _ in await Task.yield() }),
             read: { await gate.read() }
         )
-        #expect(!settled)
+        #expect(settled == .unread, "The only read never arrived")
         #expect(!gate.finished, "the wait returned while the read was still suspended")
         gate.open()
     }
