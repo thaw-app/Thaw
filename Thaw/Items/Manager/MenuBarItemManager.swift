@@ -388,6 +388,8 @@ final class MenuBarItemManager {
     /// so the full identity-signature AX walk is skipped entirely. nil until
     /// the first gated tick.
     var periodicWindowListSignature: [CGWindowID]?
+    /// A partial scan published the cache and left the saved-order mirror and overflow balancing to a complete one.
+    var publishedCacheAwaitsFullScan = false
 
     /// Persisted identifiers of menu bar items we've already seen.
     var knownItemIdentifiers = Set<String>()
