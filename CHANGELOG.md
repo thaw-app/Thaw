@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A Thaw Bar with its own tint no longer hides its items.** The tint now colors the bar behind the items, so even a fully opaque one leaves them visible.
+
 ## [2.2.0-beta.2] - 2026-11-05
 
 **macOS 15 and 26 · Build 65**

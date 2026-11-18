@@ -378,6 +378,23 @@ private struct IceBarContentView: View {
         appState.appearanceManager.configuration
     }
 
+    /// The Thaw Bar's own tint goes behind the items, so even a fully opaque
+    /// one leaves them visible. An inherited tint keeps its original look.
+    private var tint: MenuBarContainerTint {
+        MenuBarContainerTint(
+            kind: appearance.tintKind,
+            color: appearance.tintColor,
+            gradient: appearance.tintGradient,
+            opacity: appearance.tintOpacity,
+            isBehindContent: configuration.thawBarAppearance.overridesMenuBar
+        )
+    }
+
+    /// What the items sit on, which decides between dark and light content.
+    private var backgroundColorInfo: MenuBarAverageColorInfo? {
+        tint.backgroundColorInfo(over: colorManager.colorInfo)
+    }
+
     private var displaySettings: DisplaySettingsManager {
         appState.settings.displaySettings
     }
@@ -494,14 +511,9 @@ private struct IceBarContentView: View {
             .menuBarItemContainer(
                 appState: appState,
                 colorInfo: colorManager.colorInfo,
-                tintOverride: MenuBarContainerTint(
-                    kind: appearance.tintKind,
-                    color: appearance.tintColor,
-                    gradient: appearance.tintGradient,
-                    opacity: appearance.tintOpacity
-                )
+                tintOverride: tint
             )
-            .foregroundStyle(colorManager.colorInfo?.isBright(for: screen) == true ? .black : .white)
+            .foregroundStyle(backgroundColorInfo?.isBright(for: screen) == true ? .black : .white)
             .clipShape(clipShape)
 
             if appearance.hasBorder {
@@ -599,7 +611,7 @@ private struct IceBarContentView: View {
                 Self.diagLog.warning("IceBar content: showing 'Loading menu bar items…' — itemCache.managedItems is EMPTY. This means the item cache has never been populated.")
             }
         } else {
-            let isLightBackground = colorManager.colorInfo?.isBright(for: screen) == true
+            let isLightBackground = backgroundColorInfo?.isBright(for: screen) == true
             switch layout {
             case .horizontal:
                 ScrollView(.horizontal) {
