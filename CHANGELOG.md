@@ -24,15 +24,13 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
-### Fixed
-
-- Switching apps no longer hides revealed items if you move the pointer back to the menu bar or Thaw Bar while the hide is pending.
-
-## [3.0.0-beta.7] - 2026-11-16
+## [3.0.0-beta.7] - 2026-11-17
 
 **macOS 27 only · Build 126**
 
 This beta has everything from alpha.13 and alpha.14, and the fixes made since. Scripts, Triggers and Widgets become modules you can switch on and off, Settings is rebuilt on [ThawUI](https://github.com/thaw-app/ThawUI), Layout gets a pop-out window and undo for every edit, and search becomes Floe's launcher. Your settings, triggers, scripts and widget design carry over.
+
+Thaw 3 is now feature frozen: no new features before 3.0, only finishing the ones already here, like Pop Out Editor. From here on, betas only get fixes for bugs that get in your way, and smaller fixes ship in the alphas. See you in Vice City.
 
 > [!TIP]
 > If you'd like to help, [#1529](https://github.com/thaw-app/Thaw/issues/1529) lists work that's ready to pick up. Some of it needs no Swift at all.
@@ -125,6 +123,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **Capture Hidden Items retakes a picture that is cut off at its left or right edge,** and a cut-off picture can no longer replace a complete one.
 - **A hidden item's picture is taken where macOS draws it,** not at the spot its app reports, which could cut it off. ([#1454](https://github.com/thaw-app/Thaw/issues/1454))
 - **Pictures of hidden items survive a restart.** Restarting Thaw could lose all of them, or the saved ones it hadn't loaded yet. Reported by katla on Discord.
+- **Pictures of hidden items survive an update.** Each update threw them away, so hidden items showed app icons until you captured them again. Thaw now keeps them and replaces each one the next time it can take a new picture.
 - **Layout keeps your selection when a move is refused or changes nothing.**
 - **A chosen icon now shows.** Choose Icon kept showing Thaw's picture of the item. Automatic goes back to the picture.
 - **Items that show up late after a restart go back to their place** instead of staying next to Thaw's icon. By @Omoeba in [#1531](https://github.com/thaw-app/Thaw/pull/1531).
@@ -135,6 +134,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **Turning off Automatically rehide also stops hides already on their way.** By @Belligerently in [#1575](https://github.com/thaw-app/Thaw/pull/1575).
 - **Closing hidden items stops every section's hide timer,** so an old countdown can't close items you reveal later. By @Belligerently in [#1571](https://github.com/thaw-app/Thaw/pull/1571).
 - **Items you reopen with a shortcut no longer close because of an earlier click elsewhere.**
+- **Switching apps no longer hides items you've revealed when you move the pointer back** to the menu bar or the Thaw Bar before they close. By @Belligerently in [#1628](https://github.com/thaw-app/Thaw/pull/1628).
 - **A cancelled click no longer opens the item, leaves the pointer on it or waits for the pointer to stop.** Partly by @Belligerently in [#1578](https://github.com/thaw-app/Thaw/pull/1578).
 - **Thaw drops far fewer clicks on menu bar items while an app is frozen.** By @Belligerently in [#1580](https://github.com/thaw-app/Thaw/pull/1580).
 - **Thaw no longer crashes when two Apple items swap places while one is briefly unnamed.** By @Belligerently in [#1576](https://github.com/thaw-app/Thaw/pull/1576).
@@ -155,6 +155,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 #### Thaw Bar
 
 - **Showing a section while the Thaw Bar is open no longer hides it early.**
+- **The Thaw Bar keeps hidden items' pictures after macOS warns that memory is low,** instead of showing app icons until they were captured again. Reported by @na-zar in [#1606](https://github.com/thaw-app/Thaw/issues/1606).
 - **App menus keep their place when Always Hidden opens in the Thaw Bar,** and Hidden no longer stays expanded behind the panel.
 - **One click on Thaw's icon works** when double-click opens Always Hidden and macOS's double-click speed is slow. Reported by @bortolatto-creator in [#1492](https://github.com/thaw-app/Thaw/issues/1492).
 - **A long click on a Thaw Bar item opens it,** and the arrow keys move the highlight at once.
