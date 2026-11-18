@@ -168,19 +168,26 @@ extension MenuBarItemImageCache {
     }
 
     func handleMemoryPressure() {
-        if !capturesByTag.isEmpty {
-            let targetSize = capturesByTag.count / 2
-            let removeCount = capturesByTag.count - targetSize
-            let tagsToRemove = leastRecentlyUsedTags(count: removeCount)
+        handleMemoryPressure(concealedTags: concealedItemTags())
+    }
 
-            for tag in tagsToRemove {
-                removeCapture(for: tag)
-                accessTimestamps.removeValue(forKey: tag)
-            }
-            MenuBarItemImageCache.diagLog.info(
-                "Memory pressure: Cleared \(tagsToRemove.count) items from cache"
-            )
+    /// Drops the least recently used half of the cache, except glyphs for items in concealedTags.
+    /// Only a reveal on the live menu bar can refill those, and they are what the Thaw Bar shows, so
+    /// dropping them left it showing app icons after a memory warning (#1606). The idle trim keeps
+    /// them for the same reason; see idleTrimSurvivors(cachedTags:concealedTags:).
+    func handleMemoryPressure(concealedTags: [MenuBarItemTag]) {
+        guard !capturesByTag.isEmpty else { return }
+        let protectedTags = Self.idleTrimSurvivors(cachedTags: capturesByTag.keys, concealedTags: concealedTags)
+        let removeCount = capturesByTag.count - capturesByTag.count / 2
+        let tagsToRemove = leastRecentlyUsedTags(count: removeCount, excluding: protectedTags)
+
+        for tag in tagsToRemove {
+            removeCapture(for: tag)
+            accessTimestamps.removeValue(forKey: tag)
         }
+        MenuBarItemImageCache.diagLog.info(
+            "Memory pressure: Cleared \(tagsToRemove.count) items from cache; kept \(protectedTags.count) for hidden items"
+        )
     }
 
     /// Schedules the cache drop that follows a period with nothing on

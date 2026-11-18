@@ -153,6 +153,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 #### Thaw Bar
 
 - **Showing a section while the Thaw Bar is open no longer hides it early.**
+- **The Thaw Bar keeps hidden items' pictures after macOS warns that memory is low,** instead of showing app icons until they were captured again. Reported by @na-zar in [#1606](https://github.com/thaw-app/Thaw/issues/1606).
 - **App menus keep their place when Always Hidden opens in the Thaw Bar,** and Hidden no longer stays expanded behind the panel.
 - **One click on Thaw's icon works** when double-click opens Always Hidden and macOS's double-click speed is slow. Reported by @bortolatto-creator in [#1492](https://github.com/thaw-app/Thaw/issues/1492).
 - **A long click on a Thaw Bar item opens it,** and the arrow keys move the highlight at once.
