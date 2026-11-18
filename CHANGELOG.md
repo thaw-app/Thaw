@@ -27,6 +27,7 @@ the items under New and Fixed.
 ### Fixed
 
 - Asking `thawctl` for help with `--help` or `-h` now exits successfully and prints to standard output.
+- **`thawctl reveal-item` needs exactly one of `--bundle` or `--item-id`,** and says so. Given neither or both, it reported the request as sent, and Thaw then turned it down.
 - **A hidden item you open from the Thaw Bar gets a new picture once its menu closes,** so an icon that changed while hidden, such as one showing an update, no longer keeps its old look. macOS shows the screen recording indicator for a moment. By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
 - **A hidden item's new picture is no longer kept highlighted** when its menu opens again while the picture is taken.
 - **An app that restarts just before another app opens no longer loses its place when a profile applies.** Thaw now waits for its item to come back, as it already did when no other app opened in the same second.
