@@ -1609,12 +1609,12 @@ extension MenuBarItemManager {
                     return
                 }
 
-                let plannable = plannableItems(in: liveItems)
                 let plannedMove: (item: MenuBarItem, destination: MoveDestination, isBoundary: Bool)
                 if usesPlan {
+                    // Filtered only to build the queue: its moves resolve against liveItems.
                     if plannedQueue == nil {
                         let queue = SectionMovePlanning.planSectionMoves(
-                            items: plannable,
+                            items: plannableItems(in: liveItems),
                             desiredOrder: desiredOrder,
                             section: section,
                             experimentalSystemItemHiding: experimentalSystemItemHiding,
@@ -1660,7 +1660,7 @@ extension MenuBarItemManager {
                     plannedMove = next
                 } else {
                     guard let next = MenuBarLayoutPlannerProvider.current.nextAchievableOrderMove(
-                        items: plannable,
+                        items: plannableItems(in: liveItems),
                         desiredOrder: desiredOrder,
                         experimentalSystemItemHiding: experimentalSystemItemHiding
                     ) else {
