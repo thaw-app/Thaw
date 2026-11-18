@@ -112,3 +112,20 @@ struct DiagnosticFilesSection: View {
         }
     }
 }
+
+#if DEBUG
+    /// Buttons use stand-in actions, so no panel opens, Finder stays put and no log is copied.
+    /// The section still checks the real sample folder once, read only, to enable Show Samples.
+    #Preview("Diagnostic files") {
+        ThawForm {
+            DiagnosticFilesSection(actions: .init(
+                chooseDestination: { _, _ in nil },
+                open: { _ in /* Preview only. */ },
+                reveal: { _ in /* Preview only. */ },
+                exportDiagnostics: { _ in /* Preview only. */ },
+                saveItemList: { _ in /* Preview only. */ }
+            ))
+        }
+        .frame(width: 680, height: 300)
+    }
+#endif
