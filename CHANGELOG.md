@@ -30,6 +30,8 @@ the items under New and Fixed.
 
 This beta has everything from alpha.13 and alpha.14, and the fixes made since. Scripts, Triggers and Widgets become modules you can switch on and off, Settings is rebuilt on [ThawUI](https://github.com/thaw-app/ThawUI), Layout gets a pop-out window and undo for every edit, and search becomes Floe's launcher. Your settings, triggers, scripts and widget design carry over.
 
+Thaw 3 is now feature frozen: nothing new goes in before 3.0. From here on, betas only get fixes for bugs that get in your way, and smaller fixes ship in the alphas. Like GTA VI, Thaw 3 took longer than planned. Unlike GTA VI, it isn't slipping again.
+
 > [!TIP]
 > If you'd like to help, [#1529](https://github.com/thaw-app/Thaw/issues/1529) lists work that's ready to pick up. Some of it needs no Swift at all.
 
