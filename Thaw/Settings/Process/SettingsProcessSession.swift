@@ -16,6 +16,9 @@ final class SettingsProcessSession {
         var showSettings: () -> Void
         var updatesStateChanged: (_ canCheck: Bool, _ lastCheck: Date?) -> Void
         var terminate: () -> Void
+        var showWhatsNew: () -> Void = { /* Only the settings process has the window. */ }
+        /// Whether the Settings window is up. With What's New alone, a pane only the app shows stays put.
+        var isSettingsShown: () -> Bool = { true }
         /// What each page does with the app's live state, and what it reads again.
         var features: [SettingsChildFeature] = []
         /// Hands the app's reply to whoever asked.
@@ -76,6 +79,8 @@ final class SettingsProcessSession {
 
     private func receive(_ message: SettingsLinkMessage) {
         switch message {
+        case let .show(pane) where pane == SettingsProcessRoute.whatsNew:
+            side.showWhatsNew()
         case let .show(pane):
             select(pane)
             side.showSettings()
@@ -112,6 +117,7 @@ final class SettingsProcessSession {
     /// False once the pane has gone to the app and this process is closing.
     private func paneShown(_ identifier: SettingsNavigationIdentifier) -> Bool {
         guard SettingsProcessRoute.ownProcessPanes.contains(identifier.rawValue) else {
+            guard side.isSettingsShown() else { return true }
             handOverToApp(identifier.rawValue)
             return false
         }

@@ -8,14 +8,46 @@
 import AppKit
 
 extension AppState {
-    /// Shows Settings in its own process when that is on and the pane runs there.
-    /// False for every other window, and while the app's own Settings window is open.
+    /// Shows Settings or What's New in its own process when that is on and, for Settings, the pane runs there.
+    /// False for every other window, and while the app's own copy of the window is open.
     func showsInSettingsProcess(_ id: ThawWindowIdentifier, isOpenHere: Bool) -> Bool {
-        guard id == .settings, !isOpenHere else { return false }
-        return settingsProcessHost.show(
-            pane: navigationState.settingsNavigationIdentifier.rawValue,
-            simpleMode: settings.general.simpleMode
-        )
+        if id == .settings {
+            watchSettingsHandBack()
+        }
+        guard !isOpenHere, let pane = settingsProcessPane(for: id) else { return false }
+        return settingsProcessHost.show(pane: pane, simpleMode: settings.general.simpleMode)
+    }
+
+    /// What the settings process opens for a window, or nil for one only the app has.
+    private func settingsProcessPane(for id: ThawWindowIdentifier) -> String? {
+        switch id {
+        case .settings: navigationState.settingsNavigationIdentifier.rawValue
+        case .whatsNew: SettingsProcessRoute.whatsNew
+        default: nil
+        }
+    }
+
+    /// While the app's own Settings window is up, a move to a page the settings process shows hands the
+    /// window to it. The app's window closes once the process says it shows the page, so Settings stays up.
+    func watchSettingsHandBack() {
+        guard !SettingsProcessApp.isRequested, settingsProcessHost.handBack.watch == nil else { return }
+        let navigationState = navigationState
+        settingsProcessHost.handBack.watch = Task { @MainActor [weak self] in
+            for await pane in Observations({ navigationState.settingsNavigationIdentifier }) {
+                guard let self else { return }
+                guard navigationState.isSettingsPresented, !settingsProcessHost.handBack.isPending,
+                      settingsProcessHost.show(pane: pane.rawValue, simpleMode: settings.general.simpleMode)
+                else { continue }
+                settingsProcessHost.handBack.isPending = true
+            }
+        }
+    }
+
+    /// Closes the app's Settings window once the settings process shows the page it was handed.
+    private func finishSettingsHandBack() {
+        guard settingsProcessHost.handBack.isPending else { return }
+        settingsProcessHost.handBack.isPending = false
+        dismissWindow(.settings)
     }
 
     /// What the app does when the settings process asks.
@@ -30,6 +62,7 @@ extension AppState {
                 if let identifier = SettingsNavigationIdentifier(storedValue: pane) {
                     self?.navigationState.settingsNavigationIdentifier = identifier
                 }
+                self?.finishSettingsHandBack()
             },
             checkForUpdates: { [weak self] in self?.updatesManager.checkForUpdates() },
             quit: { ApplicationTermination.request() },
@@ -50,4 +83,12 @@ extension AppState {
         }
         openWindow(.settings, allowSettingsProcess: false)
     }
+}
+
+/// The app's side of handing its Settings window back to the settings process.
+@MainActor
+final class SettingsHandBack {
+    var watch: Task<Void, Never>?
+    /// The process was asked for a page, and the app's window stays up until it shows it.
+    var isPending = false
 }

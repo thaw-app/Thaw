@@ -40,6 +40,11 @@ private final class SettingsProcessDelegate: NSObject, NSApplicationDelegate {
                 appState.updatesManager.lastUpdateCheckDate = lastCheck
             },
             terminate: { NSApp.terminate(nil) },
+            showWhatsNew: { [appState] in
+                NSApp.activate()
+                appState.openWindow(.whatsNew)
+            },
+            isSettingsShown: { [appState] in appState.navigationState.isSettingsPresented },
             features: SettingsLinkFeatures.child(appState)
         )
     )
@@ -65,7 +70,8 @@ private final class SettingsProcessDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate()
         // The app writes to standard input. When it closes, the app has gone, and so does this process.
         session.start(input: .standardInput, output: .standardOutput, onClose: { exit(0) })
-        appState.openWindow(.settings)
+        let launchesWhatsNew = SettingsProcessRoute.launchPane(in: ProcessInfo.processInfo.arguments) == SettingsProcessRoute.whatsNew
+        appState.openWindow(launchesWhatsNew ? .whatsNew : .settings)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {

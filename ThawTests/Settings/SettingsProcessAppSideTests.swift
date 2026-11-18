@@ -24,6 +24,28 @@ final class SettingsProcessAppSideTests {
         #expect(!appState.showsInSettingsProcess(.settings, isOpenHere: false), "The setting is turned off")
     }
 
+    @Test("What's New goes to the process like Settings, never while the app's own is open or the setting is off")
+    func whatsNewInSettingsProcess() {
+        let appState = AppState()
+        #expect(!appState.showsInSettingsProcess(.whatsNew, isOpenHere: true))
+        Defaults.set(false, forKey: .settingsInOwnProcess)
+        #expect(!appState.showsInSettingsProcess(.whatsNew, isOpenHere: false))
+        #expect(SettingsProcessRoute.runsInOwnProcess(pane: SettingsProcessRoute.whatsNew, simpleMode: true, isEnabled: true))
+        #expect(!SettingsProcessRoute.runsInOwnProcess(pane: SettingsProcessRoute.whatsNew, simpleMode: false, isEnabled: false))
+    }
+
+    @Test("The process showing the handed-back page closes the app's Settings window once")
+    func handBackFinishesOnPageChange() {
+        let appState = AppState()
+        let side = appState.settingsProcessAppSide()
+        appState.settingsProcessHost.handBack.isPending = true
+        side.pageChanged("General")
+        #expect(!appState.settingsProcessHost.handBack.isPending)
+        #expect(appState.navigationState.settingsNavigationIdentifier == .general)
+        side.pageChanged("About")
+        #expect(appState.navigationState.settingsNavigationIdentifier == .about, "a later page change is only a page change")
+    }
+
     @Test("A page change from the process moves the app's pane, and an unknown pane is ignored")
     func pageChanged() {
         let appState = AppState()
