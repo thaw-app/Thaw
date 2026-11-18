@@ -207,7 +207,7 @@ extension MenuBarItemImageCache {
             }
 
             if sectionResult.captured.isEmpty {
-                if section == .visible {
+                if sectionResult.suggestsStaleInventory(in: section) {
                     requestInventoryRefresh(reason: "visible pass captured nothing")
                 }
                 // Expected for off-screen sections (e.g. hidden): live refresh
