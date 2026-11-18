@@ -29,6 +29,7 @@ the items under New and Fixed.
 - Asking `thawctl` for help with `--help` or `-h` now exits successfully and prints to standard output.
 - **A hidden item you open from the Thaw Bar gets a new picture once its menu closes,** so an icon that changed while hidden, such as one showing an update, no longer keeps its old look. macOS shows the screen recording indicator for a moment. By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
 - **An app that restarts just before another app opens no longer loses its place when a profile applies.** Thaw now waits for its item to come back, as it already did when no other app opened in the same second.
+- **An item with a changing title, such as a countdown, is recognized as one item on a display to the left of your main display too.** There, each new title could make it look like a new item.
 
 ## [3.0.0-beta.7] - 2026-11-17
 
