@@ -34,6 +34,7 @@ the items under New and Fixed.
 - **Items you reveal in the menu bar hide again when the pointer rests where the Thaw Bar was.** After the Thaw Bar closed, that spot still counted as the bar and kept them open.
 - **A hidden item's new picture is no longer kept highlighted** when its menu opens again while the picture is taken.
 - **A reorder you make in Layout keeps being applied until the menu bar shows it.** A read that missed one of the moved items could count it as done, and the bar kept the old order.
+- **A change to the menu bar is saved, and items that don't fit are moved, even when Thaw first saw it in a read that missed some apps.** A full read that found the same bar skipped both.
 
 ## [3.0.0-beta.7] - 2026-11-17
 
