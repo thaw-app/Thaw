@@ -24,10 +24,6 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
-### Fixed
-
-- Switching apps no longer hides revealed items if you move the pointer back to the menu bar or Thaw Bar while the hide is pending.
-
 ## [3.0.0-beta.7] - 2026-11-16
 
 **macOS 27 only · Build 126**
@@ -136,6 +132,7 @@ This beta has everything from alpha.13 and alpha.14, and the fixes made since. S
 - **Turning off Automatically rehide also stops hides already on their way.** By @Belligerently in [#1575](https://github.com/thaw-app/Thaw/pull/1575).
 - **Closing hidden items stops every section's hide timer,** so an old countdown can't close items you reveal later. By @Belligerently in [#1571](https://github.com/thaw-app/Thaw/pull/1571).
 - **Items you reopen with a shortcut no longer close because of an earlier click elsewhere.**
+- **Switching apps no longer hides items you've revealed when you move the pointer back** to the menu bar or the Thaw Bar before they close. By @Belligerently in [#1628](https://github.com/thaw-app/Thaw/pull/1628).
 - **A cancelled click no longer opens the item, leaves the pointer on it or waits for the pointer to stop.** Partly by @Belligerently in [#1578](https://github.com/thaw-app/Thaw/pull/1578).
 - **Thaw drops far fewer clicks on menu bar items while an app is frozen.** By @Belligerently in [#1580](https://github.com/thaw-app/Thaw/pull/1580).
 - **Thaw no longer crashes when two Apple items swap places while one is briefly unnamed.** By @Belligerently in [#1576](https://github.com/thaw-app/Thaw/pull/1576).
