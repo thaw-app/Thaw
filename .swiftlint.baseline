@@ -307,7 +307,7 @@
     "file": "Thaw/Items/Capture/MenuBarItemImageCache+Recapture.swift",
     "line": 235
    },
-   "reason": "Function should have complexity 10 or less; currently complexity is 27",
+   "reason": "Function should have complexity 10 or less; currently complexity is 26",
    "ruleDescription": "Complexity of function bodies should be limited.",
    "ruleIdentifier": "cyclomatic_complexity",
    "ruleName": "Cyclomatic Complexity",
@@ -322,7 +322,7 @@
     "file": "Thaw/Items/Capture/MenuBarItemImageCache+Recapture.swift",
     "line": 235
    },
-   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 142 lines",
+   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 131 lines",
    "ruleDescription": "Function bodies should not span too many lines",
    "ruleIdentifier": "function_body_length",
    "ruleName": "Function Body Length",
@@ -335,9 +335,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Items/Capture/MenuBarItemImageCache+Recapture.swift",
-    "line": 965
+    "line": 950
    },
-   "reason": "File should contain 400 lines or less: currently contains 965",
+   "reason": "File should contain 400 lines or less: currently contains 950",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
@@ -425,9 +425,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Items/Capture/MenuBarItemImageCache.swift",
-    "line": 812
+    "line": 799
    },
-   "reason": "File should contain 400 lines or less: currently contains 812",
+   "reason": "File should contain 400 lines or less: currently contains 799",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
