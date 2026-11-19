@@ -147,6 +147,14 @@ final class ControlItem {
         !editorDragRevealIDs.isEmpty || appState?.isDraggingMenuBarItem == true
     }
 
+    /// Keeps the visible marker and the physical drop target in sync.
+    var noDividerPresentation: (title: String, statusLength: CGFloat, windowWidth: CGFloat) {
+        if showsTemporaryDivider {
+            return ("|", 3, 3)
+        }
+        return ("", 0, 1)
+    }
+
     /// Reveals the divider and keeps its marker available for this editor drag.
     func beginEditorDragReveal(_ id: UUID) {
         guard editorDragRevealIDs.insert(id).inserted else { return }
@@ -606,9 +614,7 @@ final class ControlItem {
                     setIfChanged(button, \.appearsDisabled, true)
                     setIfChanged(button, \.isHighlighted, false)
                     setImage(nil, customIceIconIsTemplate: customIceIconIsTemplate, on: button)
-
-                    // We still want a subtle marker between sections.
-                    setIfChanged(button, \.title, showsTemporaryDivider ? "|" : "")
+                    setIfChanged(button, \.title, noDividerPresentation.title)
                 case .chevron:
                     updateStatusItemVisibility(true)
                     setIfChanged(button, \.appearsDisabled, false)
@@ -666,8 +672,6 @@ final class ControlItem {
     /// their positions define the sections, and isVisible = false removes
     /// them. So this toggles the width constraint and length instead.
     private func updateStatusItemVisibility(_ isVisible: Bool) {
-        guard appState != nil else { return }
-
         if isVisible {
             if let constraint {
                 setIfChanged(constraint, \.isActive, true)
@@ -682,9 +686,9 @@ final class ControlItem {
             if let constraint {
                 setIfChanged(constraint, \.isActive, false)
             }
-            let showsMarker = showsTemporaryDivider
-            setIfChanged(statusItem, \.length, showsMarker ? 3 : 0)
-            setWindowWidthIfChanged(showsMarker ? 3 : 1)
+            let presentation = noDividerPresentation
+            setIfChanged(statusItem, \.length, presentation.statusLength)
+            setWindowWidthIfChanged(presentation.windowWidth)
         }
     }
 

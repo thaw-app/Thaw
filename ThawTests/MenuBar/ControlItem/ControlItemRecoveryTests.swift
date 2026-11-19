@@ -20,6 +20,25 @@ import Testing
 /// ControlItemPair guard succeeds.
 @Suite("Control item recovery")
 struct ControlItemRecoveryTests {
+    /// The None style provides a real hit target only while dragging.
+    @MainActor
+    @Test("The temporary divider marker has the same width as its drop target")
+    func editorDragDividerPresentation() {
+        let divider = ControlItem(identifier: .alwaysHidden)
+        let drag = UUID()
+        let hidden = divider.noDividerPresentation
+        #expect(hidden.title.isEmpty)
+        #expect(hidden.statusLength == 0)
+        #expect(hidden.windowWidth == 1)
+        divider.beginEditorDragReveal(drag)
+        let revealed = divider.noDividerPresentation
+        #expect(revealed.title == "|")
+        #expect(revealed.statusLength == 3)
+        #expect(revealed.windowWidth == revealed.statusLength)
+        #expect(divider.endEditorDragReveal(drag))
+        #expect(divider.noDividerPresentation.statusLength == hidden.statusLength)
+    }
+
     /// A cancelled editor drag must not hide a divider still needed by another drag.
     @MainActor
     @Test("The temporary divider remains visible until the last editor drag releases it")
