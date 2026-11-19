@@ -461,43 +461,38 @@ final class LayoutBarPaddingView: NSView {
             // (#1010).
             var destination = destination
             var revealedSections: [MenuBarSection] = []
+            let revealID = UUID()
             let targetItem = destination.targetItem
             if targetItem.isControlItem {
                 let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
                 // Frozen bounds predate the drag, so ask the window server.
-                // No answer counts as unreachable.
                 let targetBounds = Bridging.getWindowBounds(for: targetItem.windowID)
-                let isReachable = targetBounds.map {
-                    LayoutSolver.isOnScreen(bounds: $0, screenFrames: screenFrames)
-                } ?? false
-                if !isReachable {
-                    if let (sections, freshDivider) = await revealEmptySectionDivider(
-                        for: targetItem,
-                        appState: appState
-                    ) {
-                        revealedSections = sections
-                        destination = switch destination {
-                        case .leftOfItem: .leftOfItem(freshDivider)
-                        case .rightOfItem: .rightOfItem(freshDivider)
-                        }
-                    } else {
-                        Self.diagLog.warning(
-                            "Skipping drag of \(item.logString): destination divider \(targetItem.logString) is parked offscreen (\(targetBounds.map { "minX=\($0.minX)" } ?? "no window bounds")); section is collapsed"
-                        )
-                        await appState.itemManager.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
-                        _ = await self.resetStabilizingStateIfNeeded(
-                            generation: generation,
-                            sourceContainer: sourceContainer
-                        )
-                        await MainActor.run {
-                            let alert = NSAlert()
-                            alert.alertStyle = .warning
-                            alert.messageText = String(localized: "Couldn't move \(item.displayName) right now.")
-                            alert.informativeText = String(localized: "The \(container.section.displayString) section is collapsed, so its divider is offscreen. Open the section and try dragging the item again.")
-                            alert.runModal()
-                        }
-                        return
+                if let resolved = await Self.resolveEditorDropDivider(
+                    destination: destination,
+                    revealID: revealID,
+                    screenFrames: screenFrames,
+                    initialBounds: targetBounds,
+                    section: { appState.menuBarManager.section(withName: $0) },
+                    itemCount: { appState.itemManager.itemCache[$0].count }
+                ) {
+                    (revealedSections, destination) = resolved
+                } else {
+                    Self.diagLog.warning(
+                        "Skipping drag of \(item.logString): destination divider \(targetItem.logString) is parked offscreen (\(targetBounds.map { "minX=\($0.minX)" } ?? "no window bounds")); section is collapsed"
+                    )
+                    await appState.itemManager.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
+                    _ = await self.resetStabilizingStateIfNeeded(
+                        generation: generation,
+                        sourceContainer: sourceContainer
+                    )
+                    await MainActor.run {
+                        let alert = NSAlert()
+                        alert.alertStyle = .warning
+                        alert.messageText = String(localized: "Couldn't move \(item.displayName) right now.")
+                        alert.informativeText = String(localized: "The \(container.section.displayString) section is collapsed, so its divider is offscreen. Open the section and try dragging the item again.")
+                        alert.runModal()
                     }
+                    return
                 }
             }
 
@@ -510,7 +505,7 @@ final class LayoutBarPaddingView: NSView {
                     cancelOwningTask: true
                 ) else { return }
                 guard let appState else { return }
-                await Self.recoverAfterUnreturnedMove(revealedSections: revealedSections, appState: appState)
+                await Self.recoverAfterUnreturnedMove(revealedSections: revealedSections, revealID: revealID, appState: appState)
             }
             defer { watchdogTask.cancel() }
             do {
@@ -654,17 +649,7 @@ final class LayoutBarPaddingView: NSView {
                     report.run(NSAlert(error: error), in: window)
                 }
             }
-            if !revealedSections.isEmpty {
-                // Re-conceal revealed sections. desiredState was never
-                // changed, so this restores the user's presentation.
-                await MainActor.run {
-                    for section in revealedSections {
-                        section.updateControlItemState(for: nil)
-                    }
-                }
-                // Let the spacer re-park the divider before the cache pass.
-                try? await Task.sleep(for: .milliseconds(250))
-            }
+            await Self.finishEditorDropReveal(revealedSections, revealID: revealID)
             guard isCurrentStabilization(generation) else { return }
             let didRefresh = await appState.itemManager.refreshCacheAfterLayoutEditorMove(
                 forcePersistSavedOrder: didValidateUserMove
@@ -838,16 +823,12 @@ final class LayoutBarPaddingView: NSView {
     /// watchdog has thawed the rows.
     private static func recoverAfterUnreturnedMove(
         revealedSections: [MenuBarSection],
+        revealID: UUID? = nil,
         appState: AppState
     ) async {
         // The completion path that re-conceals revealed sections may never run.
-        if !revealedSections.isEmpty {
-            await MainActor.run {
-                for section in revealedSections {
-                    section.updateControlItemState(for: nil)
-                }
-            }
-            try? await Task.sleep(for: .milliseconds(250))
+        if let revealID {
+            await finishEditorDropReveal(revealedSections, revealID: revealID)
         }
         // Independent so mutual cancellation can't abort it. Retry until the
         // old owner releases CacheGate; a one-shot refresh would likely be dropped.
@@ -1000,6 +981,34 @@ final class LayoutBarPaddingView: NSView {
         }
     }
 
+    /// A concealed Always Hidden divider can report on-display bounds before it is visible.
+    static nonisolated func isEditorDropDividerReachable(
+        bounds: CGRect?,
+        isOnScreen: Bool,
+        requiresVisibility: Bool,
+        screenFrames: [CGRect]
+    ) -> Bool {
+        guard let bounds, !requiresVisibility || isOnScreen else { return false }
+        return LayoutSolver.isOnScreen(bounds: bounds, screenFrames: screenFrames)
+    }
+
+    /// Checks live visibility only where an empty Always Hidden divider may appear at stale bounds.
+    static nonisolated func isInitialEditorDropDividerReachable(
+        tag: MenuBarItemTag,
+        bounds: CGRect?,
+        alwaysHiddenIsEmpty: Bool,
+        screenFrames: [CGRect],
+        liveVisibility: () -> Bool
+    ) -> Bool {
+        let requiresVisibility = tag == .alwaysHiddenControlItem && alwaysHiddenIsEmpty
+        return isEditorDropDividerReachable(
+            bounds: bounds,
+            isOnScreen: requiresVisibility && liveVisibility(),
+            requiresVisibility: requiresVisibility,
+            screenFrames: screenFrames
+        )
+    }
+
     /// Whether an editor drag onto a parked divider should reveal the
     /// destination section instead of refusing (#988).
     ///
@@ -1032,99 +1041,99 @@ final class LayoutBarPaddingView: NSView {
         }
     }
 
-    /// Reveals an empty concealed section so its divider returns onscreen,
-    /// and returns the revealed sections and the divider's fresh item (#988).
-    ///
-    /// Returns nil, leaving the bar untouched, when the state doesn't qualify
-    /// or the divider never returns; the caller then refuses.
-    private func revealEmptySectionDivider(
-        for divider: MenuBarItem,
-        appState: AppState
-    ) async -> (sections: [MenuBarSection], divider: MenuBarItem)? {
-        guard let sectionName = Self.sectionName(forDividerTag: divider.tag) else {
+    /// Keeps a reachable divider or retargets an empty-section drop without changing sides.
+    /// Releases the temporary reveal if the selected section cannot be reached.
+    @MainActor
+    static func resolveEditorDropDivider(
+        destination: MenuBarItemManager.MoveDestination,
+        revealID: UUID,
+        screenFrames: [CGRect],
+        initialBounds: CGRect? = nil,
+        section: (MenuBarSection.Name) -> MenuBarSection?,
+        itemCount: (MenuBarSection.Name) -> Int,
+        isEnabled: (MenuBarSection) -> Bool = { $0.isEnabled },
+        wait: () async -> Void = { try? await Task.sleep(for: .milliseconds(50)) },
+        items: () async -> [MenuBarItem] = { await MenuBarItem.getMenuBarItems(option: .activeSpace) },
+        bounds: (CGWindowID) -> CGRect? = { Bridging.getWindowBounds(for: $0) },
+        liveVisibility: (CGWindowID) -> Bool = { WindowInfo(windowID: $0)?.isOnScreen == true }
+    ) async -> (sections: [MenuBarSection], destination: MenuBarItemManager.MoveDestination)? {
+        let divider = destination.targetItem
+        let dividerTag = divider.tag
+        if isInitialEditorDropDividerReachable(
+            tag: dividerTag,
+            bounds: initialBounds,
+            alwaysHiddenIsEmpty: dividerTag == .alwaysHiddenControlItem && itemCount(.alwaysHidden) == 0,
+            screenFrames: screenFrames,
+            liveVisibility: { liveVisibility(divider.windowID) }
+        ) {
+            return ([], destination)
+        }
+        guard let sectionName = sectionName(forDividerTag: dividerTag), let targetSection = section(sectionName) else {
             return nil
         }
-        guard let section = await MainActor.run(body: {
-            appState.menuBarManager.section(withName: sectionName)
-        }) else {
-            return nil
-        }
-        let (isConcealed, isEnabled) = await MainActor.run {
-            // HidingState's Equatable is MainActor-isolated.
-            (section.controlItem.state == .hideSection, section.isEnabled)
-        }
-        let itemCount = appState.itemManager.itemCache[sectionName].count
-        guard Self.shouldRevealSectionForEditorDrag(
-            dividerTag: divider.tag,
-            isSectionConcealed: isConcealed,
-            isEnabled: isEnabled,
-            sectionItemCount: itemCount
+        guard shouldRevealSectionForEditorDrag(
+            dividerTag: dividerTag,
+            isSectionConcealed: targetSection.controlItem.state == .hideSection,
+            isEnabled: isEnabled(targetSection),
+            sectionItemCount: itemCount(sectionName)
         ) else {
             return nil
         }
 
         // Sections ahead of the destination expand regardless of state.
-        let revealNames = Self.sectionsToRevealForEditorDrag(forDividerTag: divider.tag)
-        var sections: [MenuBarSection] = []
-        for name in revealNames {
-            guard let resolved = await MainActor.run(body: {
-                appState.menuBarManager.section(withName: name)
-            }) else {
-                return nil
-            }
-            sections.append(resolved)
-        }
-
-        Self.diagLog.info(
+        let revealNames = sectionsToRevealForEditorDrag(forDividerTag: dividerTag)
+        let sections = revealNames.compactMap(section)
+        guard sections.count == revealNames.count else { return nil }
+        diagLog.info(
             "Revealing \(revealNames.map(\.logString).joined(separator: " + ")) to bring the \(sectionName.logString) divider onscreen for the editor drag (#988, #1010)"
         )
-        await MainActor.run {
-            for revealedSection in sections {
-                revealedSection.controlItem.state = .showSection
-            }
+        for section in sections {
+            section.controlItem.beginEditorDragReveal(revealID)
         }
-
-        // Cancellation must not leave revealed sections showing.
-        if Task.isCancelled {
-            await revertRevealedSections(sections)
-            return nil
-        }
-
         // Poll until the divider is back on a display. The windowID survives
         // the state change but its bounds don't, so resolve a fresh item.
-        let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
         for _ in 0 ..< 40 {
-            try? await Task.sleep(for: .milliseconds(50))
-            // A cancelled sleep returns immediately; don't fall into the
-            // timeout path.
-            if Task.isCancelled {
-                await revertRevealedSections(sections)
-                return nil
-            }
-            let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
-            if let fresh = items.first(matching: divider.tag),
-               let bounds = Bridging.getWindowBounds(for: fresh.windowID),
-               LayoutSolver.isOnScreen(bounds: bounds, screenFrames: screenFrames)
-            {
-                return (sections, fresh)
+            await wait()
+            guard !Task.isCancelled else { break }
+            if let fresh = await items().first(matching: dividerTag), isEditorDropDividerReachable(
+                bounds: bounds(fresh.windowID),
+                isOnScreen: fresh.isOnScreen,
+                requiresVisibility: dividerTag == .alwaysHiddenControlItem,
+                screenFrames: screenFrames
+            ) {
+                let updatedDestination: MenuBarItemManager.MoveDestination = switch destination {
+                case .leftOfItem: .leftOfItem(fresh)
+                case .rightOfItem: .rightOfItem(fresh)
+                }
+                return (sections, updatedDestination)
             }
         }
 
-        // Never came back. Undo the reveal and let the caller refuse.
-        Self.diagLog.warning(
-            "The \(sectionName.logString) divider did not come onscreen after revealing; refusing the drag"
-        )
-        await revertRevealedSections(sections)
+        if !Task.isCancelled {
+            diagLog.warning("Divider \(dividerTag) did not come onscreen after revealing; refusing the drag")
+        }
+        revertRevealedSections(sections, revealID: revealID)
         return nil
     }
 
-    /// Returns revealed sections to their persisted state.
-    private func revertRevealedSections(_ sections: [MenuBarSection]) async {
-        await MainActor.run {
-            for section in sections {
-                section.updateControlItemState(for: nil)
-            }
+    /// Restores each section when no remaining editor drag uses its divider.
+    @MainActor
+    private static func revertRevealedSections(_ sections: [MenuBarSection], revealID: UUID) {
+        for section in sections where section.controlItem.endEditorDragReveal(revealID) {
+            section.updateControlItemState(for: nil)
         }
+    }
+
+    /// Gives the divider time to re-park before refreshing the cache after a move.
+    @MainActor
+    static func finishEditorDropReveal(
+        _ sections: [MenuBarSection],
+        revealID: UUID,
+        wait: () async -> Void = { try? await Task.sleep(for: .milliseconds(250)) }
+    ) async {
+        guard !sections.isEmpty else { return }
+        revertRevealedSections(sections, revealID: revealID)
+        await wait()
     }
 
     /// Ensures the dragged item remains in the intended section and its icon appears.
