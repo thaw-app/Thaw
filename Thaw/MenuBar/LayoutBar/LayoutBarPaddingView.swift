@@ -1119,14 +1119,12 @@ final class LayoutBarPaddingView: NSView {
                 return nil
             }
             let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
-            if let fresh = items.first(matching: divider.tag),
-               Self.isEditorDropDividerReachable(
-                   bounds: Bridging.getWindowBounds(for: fresh.windowID),
-                   isOnScreen: fresh.isOnScreen,
-                   requiresVisibility: sectionName == .alwaysHidden,
-                   screenFrames: screenFrames
-               )
-            {
+            if let fresh = items.first(matching: divider.tag), Self.isEditorDropDividerReachable(
+                bounds: Bridging.getWindowBounds(for: fresh.windowID),
+                isOnScreen: fresh.isOnScreen,
+                requiresVisibility: sectionName == .alwaysHidden,
+                screenFrames: screenFrames
+            ) {
                 return (sections, fresh)
             }
         }
