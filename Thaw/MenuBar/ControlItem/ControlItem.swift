@@ -140,6 +140,27 @@ final class ControlItem {
 
     @Published var state = HidingState.hideSection
 
+    private var editorDragRevealIDs = Set<UUID>()
+
+    /// The divider marker is needed for both native and Layout editor drags.
+    var showsTemporaryDivider: Bool {
+        !editorDragRevealIDs.isEmpty || appState?.isDraggingMenuBarItem == true
+    }
+
+    /// Reveals the divider and keeps its marker available for this editor drag.
+    func beginEditorDragReveal(_ id: UUID) {
+        guard editorDragRevealIDs.insert(id).inserted else { return }
+        state = .showSection
+        updateStatusItem()
+    }
+
+    /// Lets the caller restore the section once its last editor drag ends.
+    func endEditorDragReveal(_ id: UUID) -> Bool {
+        guard editorDragRevealIDs.remove(id) != nil, editorDragRevealIDs.isEmpty else { return false }
+        updateStatusItem()
+        return true
+    }
+
     @Published private(set) var window: NSWindow?
 
     @Published private(set) var frame: CGRect?
@@ -587,8 +608,7 @@ final class ControlItem {
                     setImage(nil, customIceIconIsTemplate: customIceIconIsTemplate, on: button)
 
                     // We still want a subtle marker between sections.
-                    let showsMarker = appState.isDraggingMenuBarItem
-                    setIfChanged(button, \.title, showsMarker ? "|" : "")
+                    setIfChanged(button, \.title, showsTemporaryDivider ? "|" : "")
                 case .chevron:
                     updateStatusItemVisibility(true)
                     setIfChanged(button, \.appearsDisabled, false)
@@ -646,9 +666,7 @@ final class ControlItem {
     /// their positions define the sections, and isVisible = false removes
     /// them. So this toggles the width constraint and length instead.
     private func updateStatusItemVisibility(_ isVisible: Bool) {
-        guard let appState else {
-            return
-        }
+        guard appState != nil else { return }
 
         if isVisible {
             if let constraint {
@@ -660,14 +678,13 @@ final class ControlItem {
             updateSpacerItems(forHiddenState: shouldUseSpacers)
         } else {
             updateSpacerItems(forHiddenState: false)
-            // A ⌘-drag always opens every section, or there'd be nowhere to drop into a hidden one.
-            let shouldShow = appState.isDraggingMenuBarItem
-
+            // Keep a real hit target even when the preferred divider style is None.
             if let constraint {
                 setIfChanged(constraint, \.isActive, false)
             }
-            setIfChanged(statusItem, \.length, shouldShow ? 3 : 0)
-            setWindowWidthIfChanged(shouldShow ? 3 : 1)
+            let showsMarker = showsTemporaryDivider
+            setIfChanged(statusItem, \.length, showsMarker ? 3 : 0)
+            setWindowWidthIfChanged(showsMarker ? 3 : 1)
         }
     }
 

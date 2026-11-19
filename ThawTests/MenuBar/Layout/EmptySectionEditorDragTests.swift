@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import CoreGraphics
 import Testing
 @testable import Thaw
 
@@ -18,6 +19,51 @@ import Testing
 /// and non-divider tags never get here.
 @Suite("Empty-section editor drag reveal (#988)")
 struct EmptySectionEditorDragTests {
+    /// The window server can report on-display coordinates for a concealed divider.
+    @Test("A geometrically on-display divider must be visible for an empty Always Hidden drop")
+    func emptyAlwaysHiddenDividerRequiresVisibility() {
+        let display = CGRect(x: 0, y: 0, width: 1496, height: 967)
+        let divider = CGRect(x: 632, y: 0, width: 1, height: 29)
+
+        for isOnScreen in [false, true] {
+            #expect(
+                LayoutBarPaddingView.isEditorDropDividerReachable(
+                    bounds: divider,
+                    isOnScreen: isOnScreen,
+                    requiresVisibility: true,
+                    screenFrames: [display]
+                ) == isOnScreen
+            )
+        }
+    }
+
+    /// Ordinary dividers still use the existing leading-edge geometry check.
+    @Test("Ordinary dividers retain their geometry-only reachability check")
+    func ordinaryDividersKeepGeometryCheck() {
+        let display = CGRect(x: 0, y: 0, width: 1496, height: 967)
+        let onDisplay = CGRect(x: 1039, y: 0, width: 1, height: 29)
+        let parked = CGRect(x: -4382, y: 0, width: 1, height: 29)
+
+        #expect(LayoutBarPaddingView.isEditorDropDividerReachable(
+            bounds: onDisplay,
+            isOnScreen: false,
+            requiresVisibility: false,
+            screenFrames: [display]
+        ))
+        #expect(!LayoutBarPaddingView.isEditorDropDividerReachable(
+            bounds: parked,
+            isOnScreen: true,
+            requiresVisibility: true,
+            screenFrames: [display]
+        ))
+        #expect(!LayoutBarPaddingView.isEditorDropDividerReachable(
+            bounds: nil,
+            isOnScreen: true,
+            requiresVisibility: false,
+            screenFrames: [display]
+        ))
+    }
+
     @Test("An empty concealed section reveals — the #988 deadlock")
     func emptyConcealedSectionReveals() {
         #expect(

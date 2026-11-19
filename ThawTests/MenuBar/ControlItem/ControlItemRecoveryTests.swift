@@ -20,6 +20,25 @@ import Testing
 /// ControlItemPair guard succeeds.
 @Suite("Control item recovery")
 struct ControlItemRecoveryTests {
+    /// A cancelled editor drag must not hide a divider still needed by another drag.
+    @MainActor
+    @Test("The temporary divider remains visible until the last editor drag releases it")
+    func editorDragDividerStaysVisibleUntilLastRelease() {
+        let divider = ControlItem(identifier: .alwaysHidden)
+        let first = UUID()
+        let second = UUID()
+
+        #expect(!divider.showsTemporaryDivider)
+        divider.beginEditorDragReveal(first)
+        divider.beginEditorDragReveal(second)
+        #expect(divider.showsTemporaryDivider)
+        #expect(!divider.endEditorDragReveal(first))
+        #expect(!divider.endEditorDragReveal(first))
+        #expect(divider.showsTemporaryDivider)
+        #expect(divider.endEditorDragReveal(second))
+        #expect(!divider.showsTemporaryDivider)
+    }
+
     @Test("Below the threshold, no rebuild is requested")
     func belowThresholdDoesNotRebuild() {
         for count in 0 ..< MenuBarItemManager.controlItemRebuildThreshold {

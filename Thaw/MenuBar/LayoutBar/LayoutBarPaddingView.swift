@@ -461,18 +461,26 @@ final class LayoutBarPaddingView: NSView {
             // (#1010).
             var destination = destination
             var revealedSections: [MenuBarSection] = []
+            let revealID = UUID()
             let targetItem = destination.targetItem
             if targetItem.isControlItem {
                 let screenFrames = NSScreen.screens.map { CGDisplayBounds($0.displayID) }
+                let requiresVisibility = targetItem.tag == .alwaysHiddenControlItem
+                    && appState.itemManager.itemCache[.alwaysHidden].isEmpty
                 // Frozen bounds predate the drag, so ask the window server.
-                // No answer counts as unreachable.
                 let targetBounds = Bridging.getWindowBounds(for: targetItem.windowID)
-                let isReachable = targetBounds.map {
-                    LayoutSolver.isOnScreen(bounds: $0, screenFrames: screenFrames)
-                } ?? false
+                let isOnScreen = requiresVisibility
+                    && WindowInfo(windowID: targetItem.windowID)?.isOnScreen == true
+                let isReachable = Self.isEditorDropDividerReachable(
+                    bounds: targetBounds,
+                    isOnScreen: isOnScreen,
+                    requiresVisibility: requiresVisibility,
+                    screenFrames: screenFrames
+                )
                 if !isReachable {
                     if let (sections, freshDivider) = await revealEmptySectionDivider(
                         for: targetItem,
+                        revealID: revealID,
                         appState: appState
                     ) {
                         revealedSections = sections
@@ -510,7 +518,11 @@ final class LayoutBarPaddingView: NSView {
                     cancelOwningTask: true
                 ) else { return }
                 guard let appState else { return }
-                await Self.recoverAfterUnreturnedMove(revealedSections: revealedSections, appState: appState)
+                await Self.recoverAfterUnreturnedMove(
+                    revealedSections: revealedSections,
+                    revealID: revealID,
+                    appState: appState
+                )
             }
             defer { watchdogTask.cancel() }
             do {
@@ -657,11 +669,7 @@ final class LayoutBarPaddingView: NSView {
             if !revealedSections.isEmpty {
                 // Re-conceal revealed sections. desiredState was never
                 // changed, so this restores the user's presentation.
-                await MainActor.run {
-                    for section in revealedSections {
-                        section.updateControlItemState(for: nil)
-                    }
-                }
+                await Self.revertRevealedSections(revealedSections, revealID: revealID)
                 // Let the spacer re-park the divider before the cache pass.
                 try? await Task.sleep(for: .milliseconds(250))
             }
@@ -838,15 +846,12 @@ final class LayoutBarPaddingView: NSView {
     /// watchdog has thawed the rows.
     private static func recoverAfterUnreturnedMove(
         revealedSections: [MenuBarSection],
+        revealID: UUID? = nil,
         appState: AppState
     ) async {
         // The completion path that re-conceals revealed sections may never run.
-        if !revealedSections.isEmpty {
-            await MainActor.run {
-                for section in revealedSections {
-                    section.updateControlItemState(for: nil)
-                }
-            }
+        if let revealID, !revealedSections.isEmpty {
+            await revertRevealedSections(revealedSections, revealID: revealID)
             try? await Task.sleep(for: .milliseconds(250))
         }
         // Independent so mutual cancellation can't abort it. Retry until the
@@ -1000,6 +1005,17 @@ final class LayoutBarPaddingView: NSView {
         }
     }
 
+    /// A concealed Always Hidden divider can report on-display bounds before it is visible.
+    static nonisolated func isEditorDropDividerReachable(
+        bounds: CGRect?,
+        isOnScreen: Bool,
+        requiresVisibility: Bool,
+        screenFrames: [CGRect]
+    ) -> Bool {
+        guard let bounds, !requiresVisibility || isOnScreen else { return false }
+        return LayoutSolver.isOnScreen(bounds: bounds, screenFrames: screenFrames)
+    }
+
     /// Whether an editor drag onto a parked divider should reveal the
     /// destination section instead of refusing (#988).
     ///
@@ -1039,6 +1055,7 @@ final class LayoutBarPaddingView: NSView {
     /// or the divider never returns; the caller then refuses.
     private func revealEmptySectionDivider(
         for divider: MenuBarItem,
+        revealID: UUID,
         appState: AppState
     ) async -> (sections: [MenuBarSection], divider: MenuBarItem)? {
         guard let sectionName = Self.sectionName(forDividerTag: divider.tag) else {
@@ -1080,13 +1097,13 @@ final class LayoutBarPaddingView: NSView {
         )
         await MainActor.run {
             for revealedSection in sections {
-                revealedSection.controlItem.state = .showSection
+                revealedSection.controlItem.beginEditorDragReveal(revealID)
             }
         }
 
         // Cancellation must not leave revealed sections showing.
         if Task.isCancelled {
-            await revertRevealedSections(sections)
+            await Self.revertRevealedSections(sections, revealID: revealID)
             return nil
         }
 
@@ -1098,13 +1115,17 @@ final class LayoutBarPaddingView: NSView {
             // A cancelled sleep returns immediately; don't fall into the
             // timeout path.
             if Task.isCancelled {
-                await revertRevealedSections(sections)
+                await Self.revertRevealedSections(sections, revealID: revealID)
                 return nil
             }
             let items = await MenuBarItem.getMenuBarItems(option: .activeSpace)
             if let fresh = items.first(matching: divider.tag),
-               let bounds = Bridging.getWindowBounds(for: fresh.windowID),
-               LayoutSolver.isOnScreen(bounds: bounds, screenFrames: screenFrames)
+               Self.isEditorDropDividerReachable(
+                   bounds: Bridging.getWindowBounds(for: fresh.windowID),
+                   isOnScreen: fresh.isOnScreen,
+                   requiresVisibility: sectionName == .alwaysHidden,
+                   screenFrames: screenFrames
+               )
             {
                 return (sections, fresh)
             }
@@ -1114,14 +1135,14 @@ final class LayoutBarPaddingView: NSView {
         Self.diagLog.warning(
             "The \(sectionName.logString) divider did not come onscreen after revealing; refusing the drag"
         )
-        await revertRevealedSections(sections)
+        await Self.revertRevealedSections(sections, revealID: revealID)
         return nil
     }
 
-    /// Returns revealed sections to their persisted state.
-    private func revertRevealedSections(_ sections: [MenuBarSection]) async {
+    /// Restores each section when no remaining editor drag uses its divider.
+    private static func revertRevealedSections(_ sections: [MenuBarSection], revealID: UUID) async {
         await MainActor.run {
-            for section in sections {
+            for section in sections where section.controlItem.endEditorDragReveal(revealID) {
                 section.updateControlItemState(for: nil)
             }
         }
