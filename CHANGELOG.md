@@ -26,6 +26,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- **The VPN trigger sees VPNs that bring up their own tunnel.** OpenVPN Connect and similar apps connect without adding a network service in System Settings, so Thaw showed the VPN as inactive. Thaw now also counts a tunnel that is up with an address.
 - **A Thaw Bar with its own tint no longer hides its items.** The tint now colors the bar behind the items, so even a fully opaque one leaves them visible.
 
 ## [2.2.0-beta.2] - 2026-11-05
