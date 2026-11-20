@@ -853,20 +853,97 @@ final class SystemStateMonitor: ObservableObject {
         return false
     }
 
-    /// Heuristically detects an active VPN by inspecting the scoped system
-    /// proxy settings for tunnel interface names.
+    /// Interface name prefixes that VPN clients use for their tunnels.
+    static nonisolated let tunnelInterfacePrefixes = ["tap", "tun", "ppp", "ipsec", "utun"]
+
+    /// Heuristically detects an active VPN. A VPN counts as active when the
+    /// scoped system proxy settings name a tunnel interface, which covers
+    /// VPNs registered as network services, or when a tunnel interface is up
+    /// with a routable address, which covers clients such as OpenVPN Connect
+    /// that bring up their own utun interface without registering a service.
     static nonisolated func isVPNActive() -> Bool {
+        hasScopedTunnelService() || hasActiveTunnelInterface(tunnelInterfaceAddresses())
+    }
+
+    /// Whether the scoped system proxy settings list a tunnel interface.
+    private static nonisolated func hasScopedTunnelService() -> Bool {
         guard
-            let settings = CFNetworkCopySystemProxySettings()?.takeRetainedValue() as? [String: Any],
-            let scoped = settings["__SCOPED__"] as? [String: Any]
+            let settings = CFNetworkCopySystemProxySettings()?.takeRetainedValue() as? [String: Any], let scoped = settings["__SCOPED__"] as? [String: Any]
         else {
             return false
         }
-        let tunnelPrefixes = ["tap", "tun", "ppp", "ipsec", "utun"]
-        for key in scoped.keys where tunnelPrefixes.contains(where: { key.contains($0) }) {
-            return true
+        return scoped.keys.contains { isTunnelInterfaceName($0) }
+    }
+
+    /// Whether the given interface name looks like a VPN tunnel.
+    static nonisolated func isTunnelInterfaceName(_ name: String) -> Bool {
+        tunnelInterfacePrefixes.contains { name.contains($0) }
+    }
+
+    /// One address assigned to a network interface.
+    struct InterfaceAddress: Equatable {
+        enum Family: Equatable {
+            case ipv4
+            case ipv6(isLinkLocal: Bool)
         }
-        return false
+
+        var name: String
+        var isUp: Bool
+        var isRunning: Bool
+        var family: Family
+    }
+
+    /// Whether any tunnel interface is up and running with an IPv4 address
+    /// or a non link-local IPv6 address. macOS keeps several utun interfaces
+    /// up for its own services, but those only carry link-local IPv6
+    /// addresses, so they don't count.
+    static nonisolated func hasActiveTunnelInterface(_ addresses: [InterfaceAddress]) -> Bool {
+        addresses.contains { address in
+            guard address.isUp, address.isRunning, isTunnelInterfaceName(address.name) else {
+                return false
+            }
+            switch address.family {
+            case .ipv4:
+                return true
+            case let .ipv6(isLinkLocal):
+                return !isLinkLocal
+            }
+        }
+    }
+
+    /// Reads the IPv4 and IPv6 addresses of the tunnel interfaces.
+    static nonisolated func tunnelInterfaceAddresses() -> [InterfaceAddress] {
+        var head: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&head) == 0 else { return [] }
+        defer { freeifaddrs(head) }
+
+        var addresses = [InterfaceAddress]()
+        var cursor = head
+        while let entry = cursor?.pointee {
+            cursor = entry.ifa_next
+            let name = String(cString: entry.ifa_name)
+            guard isTunnelInterfaceName(name), let socketAddress = entry.ifa_addr else { continue }
+            let family: InterfaceAddress.Family
+            switch Int32(socketAddress.pointee.sa_family) {
+            case AF_INET:
+                family = .ipv4
+            case AF_INET6:
+                let bytes = socketAddress.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
+                    $0.pointee.sin6_addr.__u6_addr.__u6_addr8
+                }
+                family = .ipv6(isLinkLocal: bytes.0 == 0xFE && (bytes.1 & 0xC0) == 0x80)
+            default:
+                continue
+            }
+            let flags = Int32(entry.ifa_flags)
+            addresses.append(InterfaceAddress(
+                name: name,
+                isUp: flags & IFF_UP != 0,
+                isRunning: flags & IFF_RUNNING != 0,
+                family: family
+            ))
+        }
+        return addresses
     }
 
     /// Returns the current Wi-Fi SSID, if available. Requires Location
