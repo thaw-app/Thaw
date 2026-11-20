@@ -35,14 +35,14 @@ struct RevealedPictureStoreTests {
     )
 
     /// A 24 pt crop at scale 2 with ink in the pixel columns given.
-    private static func glyph(inkColumns: Range<Int>) throws -> MenuBarItemGlyphCapture {
+    private static func glyph(inkColumns: Range<Int>, inkRows: Range<Int> = 8 ..< 40) throws -> MenuBarItemGlyphCapture {
         let context = try #require(CGContext(
             data: nil, width: 48, height: 48, bitsPerComponent: 8, bytesPerRow: 192,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ))
         context.setFillColor(CGColor(gray: 1, alpha: 1))
-        context.fill(CGRect(x: inkColumns.lowerBound, y: 8, width: inkColumns.count, height: 32))
+        context.fill(CGRect(x: inkColumns.lowerBound, y: inkRows.lowerBound, width: inkColumns.count, height: inkRows.count))
         return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 2)
     }
 
@@ -99,6 +99,18 @@ struct RevealedPictureStoreTests {
         let kept = try #require(cache.capturesByTag[Self.diskTag])
         #expect(kept.cgImage === complete.cgImage)
         #expect(!kept.isFromEarlierBuild)
+    }
+
+    @Test("Without Native hiding running, a revealed picture drawn smaller replaces the cached one")
+    func smallerPictureWinsWithoutNativeHiding() throws {
+        let cache = Cache(screenIsLocked: { false })
+        cache.setCapture(try Self.complete(), for: Self.diskTag)
+        // Under 80% of the flame's height and width, which Native hiding would take for one still scaling in.
+        let smaller = try Self.glyph(inkColumns: 15 ..< 33, inkRows: 14 ..< 34)
+
+        #expect(!cache.revealsRebuildTheBar)
+        #expect(cache.storeRevealedPicture(smaller, of: Self.item, listedWidths: [:]))
+        #expect(Self.entries(for: Self.item, in: cache) == [Self.item.tag: smaller])
     }
 
     @Test("An item with no picture gets the new one")

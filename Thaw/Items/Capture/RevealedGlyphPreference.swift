@@ -15,8 +15,8 @@ extension MenuBarItemImageCache {
 
     /// preferredCachedImage(existing:candidate:) for a picture taken while revealing a hidden
     /// item. Under Native hiding the reveal rebuilds the bar, which draws the icon scaled down
-    /// before it settles, so a glyph that looks like the cached one scaled down loses (see
-    /// looksScaledDown(_:from:)). The rebuild
+    /// before it settles, so while revealRebuildsBar a glyph that looks like the cached one scaled
+    /// down loses (see looksScaledDown(_:from:)). Standard hiding doesn't rebuild the bar. The rebuild
     /// can also catch the glyph mid-slide, its left part not drawn yet or cut off at the crop's
     /// left edge, so such a candidate loses here too. Live items skip these rules: a graph or a
     /// level really can get shorter or lose its left ink.
@@ -28,7 +28,8 @@ extension MenuBarItemImageCache {
         existing: MenuBarItemGlyphCapture,
         candidate: MenuBarItemGlyphCapture,
         recordedItemWidth: CGFloat? = nil,
-        listedItemWidth: CGFloat? = nil
+        listedItemWidth: CGFloat? = nil,
+        revealRebuildsBar: Bool = true
     ) -> MenuBarItemGlyphCapture {
         let isStale = oldPictureIsStale(existing, itemWidths: [recordedItemWidth, listedItemWidth])
         let preferred = preferredCachedImage(existing: existing, candidate: candidate, oldPictureIsStale: isStale)
@@ -36,7 +37,13 @@ extension MenuBarItemImageCache {
         if isLeadingCut(candidate, of: existing) || isNewlyClipped(candidate, comparedTo: existing) {
             return existing
         }
-        return looksScaledDown(candidate, from: existing) ? existing : candidate
+        return revealRebuildsBar && looksScaledDown(candidate, from: existing) ? existing : candidate
+    }
+
+    /// Whether a reveal rebuilds the bar, drawing icons scaled down before they settle: true while Native
+    /// hiding runs this session. Standard hiding, or Native chosen but fallen back to Standard, doesn't.
+    var revealsRebuildTheBar: Bool {
+        appState?.menuBarManager.nativeAppHidingExperiment.isActive == true
     }
 
     /// Whether candidate's ink is existing's drawn smaller, as while it scales in: shorter and narrower,
@@ -64,7 +71,9 @@ extension MenuBarItemImageCache {
             CaptureDiagnostics.recordStored(picture.cgImage, item: item)
             return true
         }
-        let preferred = Self.preferredRevealedImage(existing: cached.capture, candidate: picture, revealing: item, listedWidths: listedWidths)
+        let preferred = Self.preferredRevealedImage(
+            existing: cached.capture, candidate: picture, revealing: item, listedWidths: listedWidths, revealRebuildsBar: revealsRebuildTheBar
+        )
         guard !MenuBarItemGlyphCapture.isVisuallyEqual(preferred, cached.capture) else {
             // A picture loaded from disk was never saved this session; the export shows what the Thaw Bar keeps.
             CaptureDiagnostics.recordStored(preferred.cgImage, item: item, replacing: false)

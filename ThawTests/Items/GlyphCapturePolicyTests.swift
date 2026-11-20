@@ -101,6 +101,15 @@ struct GlyphCapturePolicyTests {
                 "A live item's glyph may really get shorter, like a graph or a level")
     }
 
+    @Test("Without Native hiding, which rebuilds the bar on a reveal, a revealed picture drawn much smaller wins")
+    func smallerRevealWinsUnderStandardHiding() throws {
+        let existing = try Self.capture(width: 24, scale: 2, inkHeight: 16, inkWidth: 22)
+        let candidate = try Self.capture(width: 24, scale: 2, inkHeight: 10, inkWidth: 14)
+
+        #expect(MenuBarItemImageCache.preferredRevealedImage(existing: existing, candidate: candidate, revealRebuildsBar: false) == candidate)
+        #expect(MenuBarItemImageCache.preferredRevealedImage(existing: existing, candidate: candidate, revealRebuildsBar: true) == existing)
+    }
+
     @Test("A redesigned icon that is much shorter but about as wide wins, as Docker Desktop's new whale")
     func shorterRedesignWins() throws {
         // The old icon's ink was 22 × 17.5 pt and the new one's 21 × 13 pt: 74% of the height, 95% of the width.

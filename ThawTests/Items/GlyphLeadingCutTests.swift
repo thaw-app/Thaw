@@ -36,6 +36,8 @@ struct GlyphLeadingCutTests {
         let complete = try Self.crop(width: 24, inkFrom: 4, inkTo: 20)
         let cut = try Self.crop(width: 24, inkFrom: 12, inkTo: 20)
         #expect(Cache.preferredRevealedImage(existing: complete, candidate: cut) == complete)
+        #expect(Cache.preferredRevealedImage(existing: complete, candidate: cut, revealRebuildsBar: false) == complete,
+                "Standard hiding's reveals can still be caught mid-slide")
     }
 
     @Test("A live item whose left ink disappears updates, as right-aligned text getting shorter")
