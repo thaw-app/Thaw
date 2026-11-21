@@ -45,6 +45,8 @@ private final class SettingsProcessDelegate: NSObject, NSApplicationDelegate {
                 NSApp.activate()
                 appState.openSettingsProcessWindow(target)
             },
+            // The hand-over starts from a click in Settings, so its window is the main one.
+            settingsFrame: { NSApp.mainWindow?.frame },
             isSettingsShown: { [appState] in appState.navigationState.isSettingsPresented },
             features: SettingsLinkFeatures.child(appState)
         )

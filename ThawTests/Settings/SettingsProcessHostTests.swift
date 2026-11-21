@@ -286,6 +286,22 @@ struct SettingsProcessHostTests {
         #expect(child.receivedMessages.count { $0 == .shownInApp } == 1)
     }
 
+    @Test("The app's window opens where the process's window was, for that hand-over only")
+    func appWindowTakesTheHandedOverFrame() async throws {
+        let host = host()
+        #expect(host.show(pane: "General", simpleMode: false))
+        let end = try #require(child.launches.first?.end)
+        let frame = CGRect(x: 120, y: 80, width: 1018, height: 720)
+        end.send(.openInApp(pane: "Menu Bar Layout", frame: frame))
+        #expect(await settingsLinkWait { calls.openedInApp == ["Menu Bar Layout"] })
+        let window = NSWindow(contentRect: .zero, styleMask: [], backing: .buffered, defer: true)
+        host.appWindowOpened(window)
+        #expect(window.frame == frame)
+        let later = NSWindow(contentRect: .zero, styleMask: [], backing: .buffered, defer: true)
+        host.appWindowOpened(later)
+        #expect(later.frame == .zero, "A window opened later keeps its own place")
+    }
+
     @Test("A later app window replaces the wait for an earlier one")
     func laterAppWindowReplacesWait() async throws {
         let host = host()

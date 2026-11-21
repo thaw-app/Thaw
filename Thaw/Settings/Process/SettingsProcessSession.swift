@@ -18,6 +18,8 @@ final class SettingsProcessSession {
         var terminate: () -> Void
         /// Opens one of SettingsProcessRoute.windowTargets.
         var showWindow: (String) -> Void = { _ in /* Only the settings process has these windows. */ }
+        /// Where the Settings window is, so the app opens its own there when a pane is handed over.
+        var settingsFrame: () -> CGRect? = { nil }
         /// Whether the Settings window is up. Without it, as with What's New alone, an app-only pane stays here.
         var isSettingsShown: () -> Bool = { true }
         /// What each page does with the app's live state, and what it reads again.
@@ -129,7 +131,7 @@ final class SettingsProcessSession {
     /// Sends the pane to the app and keeps this window up until the app's is, so Settings
     /// doesn't disappear for the moment the app takes to open its window.
     private func handOverToApp(_ pane: String) {
-        link?.send(.openInApp(pane: pane))
+        link?.send(.openInApp(pane: pane, frame: side.settingsFrame()))
         isClosingItself = true
         handOver = Task { @MainActor [weak self, handOverTimeout] in
             guard (try? await Task.sleep(for: handOverTimeout)) != nil else { return }

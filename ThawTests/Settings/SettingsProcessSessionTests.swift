@@ -41,7 +41,8 @@ final class SettingsProcessSessionTests {
     private func makeSession(
         _ navigation: AppNavigationState,
         handOverTimeout: Duration = .seconds(30),
-        settingsShown: Bool = true
+        settingsShown: Bool = true,
+        settingsFrame: CGRect? = nil
     ) -> SettingsProcessSession {
         let calls = calls
         return SettingsProcessSession(
@@ -52,6 +53,7 @@ final class SettingsProcessSessionTests {
                 updatesStateChanged: { calls.updates.append(($0, $1)) },
                 terminate: { calls.terminations += 1 },
                 showWindow: { calls.windowShows.append($0) },
+                settingsFrame: { settingsFrame },
                 isSettingsShown: { settingsShown }
             ),
             handOverTimeout: handOverTimeout
@@ -95,14 +97,15 @@ final class SettingsProcessSessionTests {
         #expect(calls.terminations == 0)
     }
 
-    @Test("A pane that needs the app goes to the app, and this process closes once the app's window is up")
+    @Test("A pane that needs the app goes to the app with the window's place, and this process closes once the app's window is up")
     func appPaneHandsOver() async {
         let navigation = AppNavigationState()
         navigation.settingsNavigationIdentifier = .general
-        let session = makeSession(navigation)
+        let frame = CGRect(x: 451, y: 165, width: 1018, height: 720)
+        let session = makeSession(navigation, settingsFrame: frame)
         start(session)
         navigation.settingsNavigationIdentifier = .menuBarLayout
-        #expect(await settingsLinkWait { appMessages.contains(.openInApp(pane: "Menu Bar Layout")) })
+        #expect(await settingsLinkWait { appMessages.contains(.openInApp(pane: "Menu Bar Layout", frame: frame)) })
         #expect(session.isClosingItself)
         try? await Task.sleep(for: .milliseconds(100))
         #expect(calls.terminations == 0, "The window stays up until the app's is")
