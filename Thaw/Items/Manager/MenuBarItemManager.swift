@@ -388,6 +388,8 @@ final class MenuBarItemManager {
     /// so the full identity-signature AX walk is skipped entirely. nil until
     /// the first gated tick.
     var periodicWindowListSignature: [CGWindowID]?
+    /// A partial scan published the cache and left the saved-order mirror and overflow balancing to a complete one.
+    var publishedCacheAwaitsFullScan = false
 
     /// Persisted identifiers of menu bar items we've already seen.
     var knownItemIdentifiers = Set<String>()
@@ -692,7 +694,7 @@ final class MenuBarItemManager {
                     guard !Task.isCancelled else { return }
                     let liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
                     guard !Task.isCancelled else { return }
-                    if liveOrderMatches(
+                    if liveOrderConfirmed(
                         identifiers,
                         section: .visible,
                         controller: controller,
@@ -1352,39 +1354,23 @@ final class MenuBarItemManager {
         // When any app launches, refresh the cache to detect new menu bar items
         // (e.g., apps with "unremembered" icons that need restoration) and restore
         // any items that moved to incorrect sections after their app restarted.
-        let (launchEvents, launchContinuation) = AsyncStream<String?>.makeStream()
+        let (launchEvents, launchContinuation) = AsyncStream<Void>.makeStream()
         let launchTask = Task { @MainActor [weak self] in
             let observer = NSWorkspace.shared.notificationCenter.addObserver(
                 forName: NSWorkspace.didLaunchApplicationNotification,
                 object: nil,
                 queue: .main
-            ) { notification in
-                launchContinuation.yield(
-                    (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?
-                        .bundleIdentifier
-                )
+            ) { [weak self] notification in
+                let bundleID = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
+                // Noted as it arrives: the refresh below is debounced, and keeping only the last launch of a
+                // burst lost a tracked relaunch that an unrelated app followed within the second.
+                MainActor.assumeIsolated { self?.noteAppLaunched(bundleID: bundleID) }
+                launchContinuation.yield()
             }
             defer { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
-            for await launchedBundleID in launchEvents.debounce(for: .seconds(1)) {
-                guard let self else { return }
-                MenuBarItemManager.diagLog.debug(
-                    "App launched\(launchedBundleID.map { " (\($0))" } ?? ""), refreshing cache for potential new items"
-                )
-
-                // A launched app we already track an item for just relaunched
-                // (an in-app update, say), and its status item is about to
-                // re-register and churn the bar. Settle on its bundle ID so the
-                // move pass (applyProfileLayout waits on
-                // barSettling.settled()) holds off until the item
-                // re-pairs; otherwise the bulk apply runs on the transient
-                // layout and sweeps hidden items into Visible. Settling ends as
-                // soon as the bundle ID reappears with a resolved PID. Apps with
-                // no tracked item arm nothing.
-                if let launchedBundleID,
-                   MenuBarItemManager.tracksMenuBarItem(bundleID: launchedBundleID, in: self.knownItemIdentifiers)
-                {
-                    self.barSettling.note(.appLaunched(bundleID: launchedBundleID))
-                }
+            for await _ in launchEvents.debounce(for: .seconds(1)) {
+                guard self != nil else { return }
+                MenuBarItemManager.diagLog.debug("Refreshing cache for potential new items after app launches")
                 Task { [weak self] in
                     await self?.cacheItemsRegardless()
                     // Many apps register their NSStatusItem more than 1s after

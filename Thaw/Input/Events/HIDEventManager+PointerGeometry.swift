@@ -235,17 +235,16 @@ extension HIDEventManager {
         return drawnItem(in: candidates, at: location, appState: appState) != nil
     }
 
-    /// The frame is grown first, so drifting slightly off the edge does not count as leaving.
     func isMouseInsideThawBar(appState: AppState) -> Bool {
-        guard
-            let thawBarPanel = appState.menuBarManager.thawBarPanelIfCreated,
-            let mouseLocation = MouseHelpers.locationAppKit
-        else {
-            return false
-        }
-        let forgivingFrame = thawBarPanel.frame
-            .insetBy(dx: -15, dy: -15)
-        return forgivingFrame.contains(mouseLocation)
+        guard let thawBarPanel = appState.menuBarManager.thawBarPanelIfCreated else { return false }
+        return Self.isPointer(MouseHelpers.locationAppKit, overThawBarAt: thawBarPanel.frame, isVisible: thawBarPanel.isVisible)
+    }
+
+    /// A closed panel keeps its last frame, so only a visible one counts. The frame is grown first,
+    /// so drifting slightly off the edge does not count as leaving.
+    nonisolated static func isPointer(_ pointer: CGPoint?, overThawBarAt frame: CGRect, isVisible: Bool) -> Bool {
+        guard isVisible, let pointer else { return false }
+        return frame.insetBy(dx: -15, dy: -15).contains(pointer)
     }
 
     /// Whether the pointer is over Thaw's own control item.

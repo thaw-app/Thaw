@@ -36,6 +36,27 @@ struct FreshVolatileTitleLearnerTests {
         )
     }
 
+    /// A display left of the main one, and the main one. Global x is negative left of the main display.
+    private static let displays = [CGRect(x: -1920, y: 0, width: 1920, height: 1080), CGRect(x: 0, y: 0, width: 3000, height: 1080)]
+
+    @Test("A changing title is learned on a display left of the main one, as on the main one", arguments: [-500, 500] as [CGFloat])
+    func learnsOnEitherDisplay(x: CGFloat) {
+        var learner = FreshVolatileTitleLearner()
+        #expect(learner.observe([item(title: " 3", x: x)], displays: Self.displays).isEmpty)
+        #expect(learner.observe([item(title: " 5", x: x)], displays: Self.displays) == ["com.example.chat"])
+    }
+
+    @Test("An item on no display is not learned from, and without displays the main display's left edge decides")
+    func itemOffEveryDisplay() {
+        var offDisplay = FreshVolatileTitleLearner()
+        _ = offDisplay.observe([item(title: " 3", x: -5000)], displays: Self.displays)
+        #expect(offDisplay.observe([item(title: " 5", x: -5000)], displays: Self.displays).isEmpty)
+
+        var unknownDisplays = FreshVolatileTitleLearner()
+        _ = unknownDisplays.observe([item(title: " 3", x: -500)])
+        #expect(unknownDisplays.observe([item(title: " 5", x: -500)]).isEmpty)
+    }
+
     @Test("A changing title on one stable process slot is learned")
     func learnsStableSingleItemTitleChange() {
         var learner = FreshVolatileTitleLearner()

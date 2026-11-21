@@ -177,7 +177,12 @@ extension MenuBarItemManager {
             }
 
             guard itemCache != context.cache else {
-                MenuBarItemManager.diagLog.debug("Menu bar item cache unchanged; leaving the published cache alone")
+                if Self.unchangedCacheOwesDeferredWork(observationOnly: observationOnly, awaitsFullScan: publishedCacheAwaitsFullScan) {
+                    MenuBarItemManager.diagLog.debug("Menu bar item cache unchanged; running the work a partial scan left to this one")
+                    finishPublishedCache(context, running: running)
+                } else {
+                    MenuBarItemManager.diagLog.debug("Menu bar item cache unchanged; leaving the published cache alone")
+                }
                 return
             }
 
@@ -239,25 +244,11 @@ extension MenuBarItemManager {
             break
         }
 
-        guard !observationOnly else { return }
-
-        // Reset isRestoringItemOrder if it's been stuck for too long (10 seconds).
-        // This prevents stale flags from blocking saves after user manual moves.
-        if isRestoringItemOrder, let timestamp = isRestoringItemOrderTimestamp, timestamp.duration(to: .now) > .seconds(10) {
-            MenuBarItemManager.diagLog.debug("Resetting stale isRestoringItemOrder flag (timeout)")
-            isRestoringItemOrder = false
-            isRestoringItemOrderTimestamp = nil
+        guard !observationOnly else {
+            publishedCacheAwaitsFullScan = true
+            return
         }
-
-        mirrorSavedSectionOrderIfSettled(from: context.cache, controlItems: context.controlItems)
-        noteUnseenMenuBarHosts(in: context.cache, running: running)
-
-        MenuBarItemManager.diagLog.debug("Updated menu bar item cache: visible=\(context.cache[.visible].count), hidden=\(context.cache[.hidden].count), alwaysHidden=\(context.cache[.alwaysHidden].count)")
-
-        // Rebalance external item floods here; coalesce tasks so assertion reflow cannot trigger rebalance thrashing.
-        if configuration.enableMenuBarItemOverflow == true {
-            scheduleOverflowRebalance(cause: .cachePublished, reason: .externalChange)
-        }
+        finishPublishedCache(context, running: running)
     }
 
     /// Suspend trailing-anchor checks during moves and command-drags, when reflow violations are expected.
