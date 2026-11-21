@@ -60,6 +60,15 @@ final class MenuBarAppearanceManager {
     /// The most recently observed active Space.
     private(set) var activeSpaceID = SpaceInfo.activeSpace().spaceID
 
+    /// The active Space's key as the app sees it, in the settings process, which lists no Spaces itself.
+    private var mirroredSpaceKey: String?
+
+    /// Runs after the look was saved. The settings process hands the app the look here, since the app draws it.
+    @ObservationIgnored var onLookSaved: (() -> Void)?
+
+    /// Set while a look the other process saved is taken over, so it is not saved a second time.
+    @ObservationIgnored private var isAdoptingSavedLook = false
+
     /// Render the active Space's override, falling back to shared settings.
     /// Observation tracks all three inputs through this computed property.
     var effectiveConfiguration: MenuBarAppearanceConfigurationV2 {
@@ -196,10 +205,12 @@ final class MenuBarAppearanceManager {
 
     /// Records encoding failures in lastPersistenceFailure instead of throwing.
     private func persist(_ value: some Encodable, forKey key: Defaults.Key, label: String) {
+        guard !isAdoptingSavedLook else { return }
         do {
             let data = try encoder.encode(value)
             Defaults.set(data, forKey: key)
             lastPersistenceFailure = nil
+            onLookSaved?()
         } catch {
             diagLog.error("Error encoding \(label): \(error)")
             lastPersistenceFailure = error.localizedDescription
@@ -342,7 +353,29 @@ extension MenuBarAppearanceManager {
 
     /// The active Space's persistent key, nil until the window server lists it.
     var activeSpaceKey: String? {
-        appState?.spaceDirectory.spaces.first { $0.spaceID == activeSpaceID }?.persistentKey
+        appState?.spaceDirectory.spaces.first { $0.spaceID == activeSpaceID }?.persistentKey ?? mirroredSpaceKey
+    }
+
+    /// The active Space as the app follows it, for the settings process, which follows none.
+    func mirrorActiveSpace(id: CGSSpaceID, key: String?) {
+        guard id != activeSpaceID || key != mirroredSpaceKey else { return }
+        activeSpaceID = id
+        mirroredSpaceKey = key
+    }
+
+    /// Takes over a look the other process saved, without saving it again. Only what differs is
+    /// assigned, so a look that is already showing doesn't redraw the menu bar.
+    func adopt(configuration saved: MenuBarAppearanceConfigurationV2, spaceOverrides savedOverrides: [String: MenuBarAppearanceConfigurationV2]) {
+        isAdoptingSavedLook = true
+        defer { isAdoptingSavedLook = false }
+        // The shared look follows the accent color here, so a saved one that lags behind is no change.
+        let shared = saved.withAccentColor(Self.accentColor)
+        if shared != configuration {
+            configuration = shared
+        }
+        if savedOverrides != spaceOverrides {
+            spaceOverrides = savedOverrides
+        }
     }
 
     /// overrides with the Space's entry set or removed, dropping its raw-ID entry once a key exists.

@@ -25,8 +25,6 @@ struct ThawPermissionsView: View {
     @Environment(AppPermissions.self) private var permissions
 
     private let mode: Mode
-    /// Whether granting here ends onboarding, so the button offers to open the app.
-    private let finishesFlow: Bool
     private let onContinue: () -> Void
 
     /// Whether Grant Access was pressed on this visit; gates the waiting row.
@@ -35,9 +33,8 @@ struct ThawPermissionsView: View {
     /// - Parameters:
     ///   - mode: Defaults to Mode.recovery.
     ///   - onContinue: Called once the user has finished with the step.
-    init(mode: Mode = .recovery, finishesFlow: Bool = false, onContinue: @escaping () -> Void) {
+    init(mode: Mode = .recovery, onContinue: @escaping () -> Void) {
         self.mode = mode
-        self.finishesFlow = finishesFlow
         self.onContinue = onContinue
     }
 
@@ -102,7 +99,7 @@ struct ThawPermissionsView: View {
             }
             .frame(maxWidth: 620)
 
-            privacyRow
+            OnboardingTermsLine()
 
             VStack(spacing: ThawSpacing.base) {
                 OnboardingPrimaryButton {
@@ -136,7 +133,7 @@ struct ThawPermissionsView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: 420)
 
-            privacyRow
+            OnboardingTermsLine()
 
             onboardingActions(for: focusPermission)
                 .padding(.top, ThawSpacing.base)
@@ -157,13 +154,9 @@ struct ThawPermissionsView: View {
 
     private var onboardingHeaderBody: LocalizedStringResource {
         if focusIsAccessibility {
-            return finishesFlow
-                ? "One last thing: \(Constants.displayName) needs Accessibility to see and move your menu bar items. Permission checks stay on your Mac."
-                : "\(Constants.displayName) needs Accessibility to see and move your menu bar items. Permission checks stay on your Mac."
+            return "\(Constants.displayName) needs Accessibility to see and move your menu bar items. Permission checks stay on your Mac."
         }
-        return finishesFlow
-            ? "One last thing: \(Constants.displayName) needs Menu Bar Layout Access to put items in their sections and order. It can open only the layout file you choose."
-            : "\(Constants.displayName) needs Menu Bar Layout Access to put items in their sections and order. It can open only the layout file you choose."
+        return "\(Constants.displayName) needs Menu Bar Layout Access to put items in their sections and order. Next, a file window opens: select the file it names. \(Constants.displayName) can open only that file."
     }
 
     /// The page's action, its waiting state, and the System Settings route
@@ -217,10 +210,7 @@ struct ThawPermissionsView: View {
     }
 
     private func onboardingActionTitle(for permission: Permission) -> LocalizedStringResource {
-        if !permission.hasPermission {
-            return "Grant Access"
-        }
-        return finishesFlow ? "Open \(Constants.displayName)" : "Continue"
+        permission.hasPermission ? "Continue" : "Grant Access"
     }
 
     private var quitButton: some View {
@@ -230,29 +220,6 @@ struct ThawPermissionsView: View {
             shortcut: KeyboardShortcut("q")
         ) {
             NSApp.terminate(nil)
-        }
-    }
-
-    // MARK: - Shared
-
-    /// The privacy facts as the welcome screen's capsules, in one row.
-    private var privacyRow: some View {
-        OnboardingFactRow {
-            OnboardingFactCapsule(
-                symbol: "hand.raised",
-                label: Text("No analytics or tracking"),
-                spoken: Text("No analytics or usage tracking")
-            )
-            OnboardingFactCapsule(
-                symbol: "lock",
-                label: Text("Permission checks stay on your Mac"),
-                spoken: Text("Permission checks stay on your Mac")
-            )
-            OnboardingFactCapsule(
-                symbol: "lock.open",
-                label: Text("Open source"),
-                spoken: Text("Open source under GPL; inspect how it works")
-            )
         }
     }
 }

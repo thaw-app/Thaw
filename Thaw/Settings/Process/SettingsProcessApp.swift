@@ -20,6 +20,7 @@ struct SettingsProcessApp: App {
         WindowActionBridge(registerWindowActions: delegate.appState.registerWindowActions)
         SettingsWindow(appState: delegate.appState)
         WhatsNewWindow(appState: delegate.appState)
+        PermissionsWindow(appState: delegate.appState)
         AcknowledgementsWindow(appState: delegate.appState)
     }
 }
@@ -39,7 +40,13 @@ private final class SettingsProcessDelegate: NSObject, NSApplicationDelegate {
                 appState.updatesManager.canCheckForUpdates = canCheck
                 appState.updatesManager.lastUpdateCheckDate = lastCheck
             },
-            terminate: { NSApp.terminate(nil) }
+            terminate: { NSApp.terminate(nil) },
+            showWindow: { [appState] target in
+                NSApp.activate()
+                appState.openSettingsProcessWindow(target)
+            },
+            isSettingsShown: { [appState] in appState.navigationState.isSettingsPresented },
+            features: SettingsLinkFeatures.child(appState)
         )
     )
     private let appPID = getppid()
@@ -48,6 +55,7 @@ private final class SettingsProcessDelegate: NSObject, NSApplicationDelegate {
         super.init()
         appState.settings.loadStoredValues()
         session.selectLaunchPane(in: ProcessInfo.processInfo.arguments)
+        SettingsRemote.current = SettingsRemote { [weak self] in self?.session.send($0) }
         appState.updatesManager.forwardCheck = { [weak self] in
             // The updater's windows belong to the app, which may only come forward if this process lets it.
             if let app = self.flatMap({ NSRunningApplication(processIdentifier: $0.appPID) }) {
@@ -63,7 +71,13 @@ private final class SettingsProcessDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate()
         // The app writes to standard input. When it closes, the app has gone, and so does this process.
         session.start(input: .standardInput, output: .standardOutput, onClose: { exit(0) })
-        appState.openWindow(.settings)
+        if let target = SettingsProcessRoute.launchPane(in: ProcessInfo.processInfo.arguments),
+           SettingsProcessRoute.windowTargets.contains(target)
+        {
+            appState.openSettingsProcessWindow(target)
+        } else {
+            appState.openWindow(.settings)
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {

@@ -15,6 +15,8 @@ struct ProfileChangesSection: View {
 
     let profile: Profile?
     let diff: ProfileLayoutDiff?
+    /// True until the page has asked for a profile once and heard back, so nothing is said about one not read yet.
+    var awaitsPreview = false
     let update: (ProfileManager.ProfileUpdateScope) -> Void
     let updateAll: () -> Void
 
@@ -25,7 +27,7 @@ struct ProfileChangesSection: View {
         ThawSection("Applying this profile changes") {
             if let profile {
                 ProfilePreviewView(profile: profile, diff: diff, liveImages: liveImages, isInline: true)
-            } else {
+            } else if !awaitsPreview {
                 Text("This profile couldn't be read.")
                     .foregroundStyle(ThawInk.supporting)
             }

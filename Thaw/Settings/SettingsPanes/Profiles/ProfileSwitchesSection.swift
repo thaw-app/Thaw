@@ -17,6 +17,8 @@ struct ProfileSwitchesSection: View {
     let displaySettings: DisplaySettingsManager
     let profile: ProfileMetadata
     @Binding var errorMessage: String?
+    /// Set in the settings process, where the app saves the choices.
+    var remote: SettingsRemote? = .current
 
     var body: some View {
         ThawSection {
@@ -41,6 +43,10 @@ struct ProfileSwitchesSection: View {
         .settingsSearchAnchor("profiles.switching")
     }
 
+    private func make(_ edit: ProfileListEdit) {
+        ProfilePageRunner.make(edit, on: profileManager, remote: remote, errorMessage: $errorMessage)
+    }
+
     // MARK: Display
 
     private var displayPicker: some View {
@@ -59,12 +65,7 @@ struct ProfileSwitchesSection: View {
             profileManager.profiles.first { $0.id == profile.id }?.associatedDisplayUUID ?? ""
         } set: { uuid in
             let display = knownDisplays.first { $0.id == uuid }
-            profileManager.setAssociatedDisplay(
-                uuid: uuid.isEmpty ? nil : uuid,
-                displayName: display?.name,
-                forProfileID: profile.id
-            )
-            reportManifestFailure()
+            make(.display(uuid: uuid.isEmpty ? nil : uuid, name: display?.name, profile: profile.id))
         }
     }
 
@@ -132,8 +133,7 @@ struct ProfileSwitchesSection: View {
             // A missing Space keeps the name stored with it.
             let name = groups.lazy.flatMap(\.spaces).first { $0.id == key }?.label
                 ?? profileManager.profiles.first { $0.associatedSpaceKey == key }?.associatedSpaceName
-            profileManager.setAssociatedSpace(key: key.isEmpty ? nil : key, spaceName: name, forProfileID: profile.id)
-            reportManifestFailure()
+            make(.space(key: key.isEmpty ? nil : key, name: name, profile: profile.id))
         }
     }
 
@@ -152,12 +152,6 @@ struct ProfileSwitchesSection: View {
                 "With a Focus",
                 detail: "Add \(Constants.displayName) as a Focus filter in System Settings \(Constants.menuArrow) Focus and pick this profile. When the Focus ends, the display's profile comes back."
             )
-        }
-    }
-
-    private func reportManifestFailure() {
-        if let message = profileManager.takeManifestError() {
-            errorMessage = message
         }
     }
 }

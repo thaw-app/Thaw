@@ -9,7 +9,8 @@ import CoreGraphics
 import Foundation
 
 /// Shared cache for backends that must not depend on the app's orchestrator.
-public struct MenuBarItemCache: Hashable, MenuBarSectionBucketed, Sendable {
+/// Codable so the app can hand a copy to its settings process.
+public struct MenuBarItemCache: Codable, Hashable, MenuBarSectionBucketed, Sendable {
     private var storage = [MenuBarSectionName: [MenuBarItem]]()
 
     /// The display with the active menu bar when this cache was created.

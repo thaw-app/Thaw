@@ -25,6 +25,18 @@ nonisolated enum SettingsLinkMessage: Codable, Equatable, Sendable {
     case checkForUpdates
     /// Quit was chosen in the settings process, and quits the app too.
     case quit
+    /// Live state only the app has, for a page in the settings process to show. The payload is
+    /// that topic's JSON. See SettingsAppFeature.
+    case status(topic: String, payload: Data)
+    /// Something the settings process has the app do, because what it acts on lives there. The
+    /// payload is that command's JSON.
+    case command(name: String, payload: Data)
+    /// The sender saved a store that is kept outside the defaults, so the receiver reads that one again.
+    case storeChanged(store: String)
+    /// Something the settings process asks the app and waits for. The answer comes back as a reply with the same id.
+    case request(id: UUID, name: String, payload: Data)
+    /// The app's answer to a request: its payload, or the words of the error it failed with.
+    case reply(id: UUID, payload: Data?, failure: String?)
 }
 
 nonisolated extension SettingsLinkMessage {
@@ -43,15 +55,22 @@ nonisolated extension SettingsLinkMessage {
     }
 }
 
-/// Which panes the settings process shows itself. The rest need the running menu bar
-/// engine or the updater, which only the app has.
+/// The panes the settings process shows itself: they only store preferences, or get the rest over the link.
+/// The others need the running menu bar engine, which only the app has.
 nonisolated enum SettingsProcessRoute {
     static let launchArgument = "--settings"
 
-    static let ownProcessPanes: Set<String> = ["General", "About", "Privacy"]
+    static let ownProcessPanes: Set<String> = ["General", "Visibility", "About", "Privacy", "Menu Bar Appearance", "Modules", "Widgets", "Scripts", "Displays", "Tools", "Thaw Bar", "Hotkeys", "Triggers", "Profiles"]
+
+    /// Windows rather than panes, so the process shows them in Simple Mode too. Welcome Again replays the
+    /// welcome from About; Permissions opens the window as Thaw does at launch.
+    static let whatsNew = "What's New"
+    static let permissions = "Permissions"
+    static let welcomeAgain = "Welcome Again"
+    static let windowTargets: Set<String> = [whatsNew, permissions, welcomeAgain]
 
     static func runsInOwnProcess(pane: String, simpleMode: Bool, isEnabled: Bool) -> Bool {
-        isEnabled && !simpleMode && ownProcessPanes.contains(pane)
+        isEnabled && (windowTargets.contains(pane) || !simpleMode && ownProcessPanes.contains(pane))
     }
 
     /// The pane named after the launch argument, if there is one.

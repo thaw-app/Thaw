@@ -9,8 +9,8 @@ import CoreGraphics
 
 /// Dominant colors preserve wallpaper detail that averaging loses, such as a sunset averaging to brown.
 /// Derivation is pure and deterministic; pixel reading lives in CGImage.dominantColors(maximumCount:).
-nonisolated struct WallpaperPalette: Equatable {
-    struct Swatch: Equatable {
+nonisolated struct WallpaperPalette: Codable, Equatable {
+    struct Swatch: Codable, Equatable {
         /// Components in the 0...1 range.
         let red: Double
         let green: Double
