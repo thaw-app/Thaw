@@ -22,6 +22,9 @@ private final class FakeApp {
     }
 
     var steps = [String]()
+    /// While set, the first wait for moves holds until heldWait is resumed.
+    var holdsFirstWait = false
+    var heldWait: CheckedContinuation<Void, Never>?
     var backupName: String? = "Backup 1"
     var fails = false
     /// How many times the layout table is found missing before it appears.
@@ -39,7 +42,13 @@ private final class FakeApp {
 
     var performer: ToolsTaskPerformer {
         ToolsTaskPerformer(
-            waitForMoves: { self.steps.append("wait") },
+            waitForMoves: {
+                self.steps.append("wait")
+                if self.holdsFirstWait {
+                    self.holdsFirstWait = false
+                    await withCheckedContinuation { self.heldWait = $0 }
+                }
+            },
             resetSettings: { self.steps.append("resetSettings") },
             rebuildSavedLayout: {
                 self.steps.append("rebuild")
@@ -323,9 +332,15 @@ final class SettingsLinkToolsTests {
         let first = ToolsTaskRequest(id: UUID(), task: .run(.restartMenuBar))
         let second = ToolsTaskRequest(id: UUID(), task: .run(.resetMenuBarLayoutPositions))
         app.fails = true
+        app.holdsFirstWait = true
         try run(#require(SettingsLinkPayload.encode(first)))
         try run(#require(SettingsLinkPayload.encode(second)))
         run(Data("not a task".utf8))
+        #expect(await settingsLinkWait { app.heldWait != nil })
+        await mainActorQueueDrained()
+        #expect(app.steps == ["wait"], "the second task waits while the first is held")
+        app.heldWait?.resume()
+        app.heldWait = nil
         #expect(await settingsLinkWait { app.answers.count == 3 })
         #expect(app.answers == [
             ToolsTaskAnswer(request: first.id, event: .message("The menu bar was restarted. Relaunching…")),

@@ -64,6 +64,8 @@ private final class Recorder {
     var applies: [(forceRelaunch: Bool, relaunchApps: Bool)] = []
     var prompts = 0
     var asked = 0
+    /// Answers the held remote has not sent yet, oldest first.
+    var held: [() async -> Void] = []
     /// The remote whose requests are answered, which its own send closure cannot name.
     weak var remote: SettingsRemote?
 
@@ -129,6 +131,20 @@ struct SettingsLinkDisplaysTests {
                 } catch {
                     recorder.remote?.answered(id: id, payload: nil, failure: error.localizedDescription)
                 }
+            }
+        }
+        recorder.remote = remote
+        return remote
+    }
+
+    /// A remote like linkedRemote(to:) whose answers wait in the recorder until a test sends them.
+    private func heldRemote(to feature: SettingsAppFeature) -> SettingsRemote {
+        let remote = SettingsRemote { [recorder] message in
+            recorder.messages.append(message)
+            guard case let .request(id, name, payload) = message else { return }
+            recorder.held.append {
+                let answer = try? await feature.requests[name]?(payload)
+                recorder.remote?.answered(id: id, payload: answer, failure: answer == nil ? "No answer" : nil)
             }
         }
         recorder.remote = remote
@@ -444,6 +460,56 @@ struct SettingsLinkDisplaysTests {
                 #expect(recorder.failures.last?.displayID == nil && savedOffset(page) == 6)
             }
         }
+    }
+
+    @Test("A second commit waits for the first answer, so it is sent with the settings that answer left")
+    func commitsGoOneAtATime() async throws {
+        let other = "11111111-2222-3333-4444-555555555555"
+        try await withWorld(profiles: ["Work"]) { app in
+            try await withWorld { page in
+                for world in [app, page] {
+                    world.settings.knownDisplays[other] = KnownDisplay(name: "Side", hasNotch: false)
+                    world.settings.configurations[other] = .defaultConfiguration
+                }
+                let remote = heldRemote(to: appFeature(app))
+                let failed: (DisplayCommitFailure) -> Void = { [recorder] in recorder.failures.append($0) }
+                DisplayProfileCommit(change: .spacing(displayID: Self.studio, offset: 6), scope: nil, activeProfileID: nil)
+                    .perform(on: page.appState, remote: remote, failed: failed)
+                DisplayProfileCommit(change: .spacing(displayID: other, offset: 3), scope: nil, activeProfileID: nil)
+                    .perform(on: page.appState, remote: remote, failed: failed)
+                #expect(recorder.requests == [Link.commit], "the second commit waits for the first answer")
+
+                await recorder.held.removeFirst()()
+                #expect(await settingsLinkWait { recorder.requests.count == 2 })
+                await recorder.held.removeFirst()()
+                #expect(await settingsLinkWait { page.settings.configuration(forUUID: other).itemSpacingOffset == 3 })
+                #expect(savedOffset(page) == 6 && savedOffset(app) == 6, "the second commit did not put the first one back")
+                #expect(page.settings.snapshot == app.settings.snapshot && recorder.failures.isEmpty)
+            }
+        }
+    }
+
+    @Test("Taking the app's answer keeps what the page changed meanwhile, except on the display the commit changed")
+    func answerKeepsLocalEdits() {
+        let other = "11111111-2222-3333-4444-555555555555"
+        let base = DisplayThawBarConfiguration.defaultConfiguration
+        let sent = DisplaySettingsManager.Snapshot(configurations: [Self.studio: base, other: base], globalConfiguration: base)
+        let answered = DisplaySettingsManager.Snapshot(
+            configurations: [Self.studio: base.withItemSpacingOffset(6), other: base],
+            globalConfiguration: base
+        )
+        let local = DisplaySettingsManager.Snapshot(
+            configurations: [Self.studio: base.withGridColumns(7), other: base.withGridColumns(5)],
+            globalConfiguration: base.withGridColumns(3)
+        )
+        let spacing = DisplayProfileCommit(change: .spacing(displayID: Self.studio, offset: 6), scope: nil, activeProfileID: nil)
+        let merged = spacing.mergedSettings(answered: answered, local: local, sent: sent)
+        #expect(merged.configurations[Self.studio] == base.withItemSpacingOffset(6), "the commit's display takes the app's value")
+        #expect(merged.configurations[other] == base.withGridColumns(5), "another display keeps the page's edit")
+        #expect(merged.globalConfiguration == base.withGridColumns(3), "the template keeps the page's edit")
+
+        let template = DisplayProfileCommit(change: .template(base), scope: nil, activeProfileID: nil)
+        #expect(template.mergedSettings(answered: answered, local: local, sent: sent) == answered, "a template commit changed every display")
     }
 
     @Test("Reapply Spacing asks in the settings process and has the app relaunch, and relaunches here in the app")

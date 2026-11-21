@@ -26,11 +26,7 @@ struct ProfilePageRunner {
             do {
                 let performed = try await ProfilesLink.run(action, via: remote)
                 if let step = performed.undo, let name = performed.outcome.undoName {
-                    // The app keeps the step. Undo and redo both name it.
-                    registerUndo(step, named: name) { [errorMessage] step in
-                        Self.attempt(errorMessage) { let _: Bool = try await remote.request(ProfilesLink.undo, step) }
-                        return step
-                    }
+                    registerRemoteUndo(step, named: name, via: remote)
                 }
                 then(performed.outcome)
             } catch {
@@ -85,10 +81,30 @@ struct ProfilePageRunner {
         Self.registerUndo(step, named: name, target: performer.profileManager, in: undoManager, errorMessage: errorMessage, apply: apply)
     }
 
+    /// Registers the undo of an edit the app made. The app keeps the step, and undo and redo both name it.
+    /// The app answers after the menu has moved on, so a step it can't run takes its redo away then.
+    private func registerRemoteUndo(_ step: UUID, named name: String, via remote: SettingsRemote) {
+        let token = RemoteUndoStep()
+        Self.registerUndo(step, named: name, target: token, in: undoManager, errorMessage: errorMessage) { [errorMessage, weak undoManager] step in
+            Task {
+                do {
+                    let undone: Bool = try await remote.request(ProfilesLink.undo, step)
+                    if !undone {
+                        undoManager?.removeAllActions(withTarget: token)
+                    }
+                } catch {
+                    undoManager?.removeAllActions(withTarget: token)
+                    errorMessage.wrappedValue = error.localizedDescription
+                }
+            }
+            return step
+        }
+    }
+
     private static func registerUndo<Step: Sendable>(
         _ step: Step,
         named name: String,
-        target: ProfileManager,
+        target: some AnyObject,
         in undoManager: UndoManager?,
         errorMessage: Binding<String?>,
         apply: @escaping @MainActor (Step) throws -> Step
@@ -105,3 +121,7 @@ struct ProfilePageRunner {
         undoManager.setActionName(name)
     }
 }
+
+/// What a remote edit's undo and redo are registered against, so they can be taken away together.
+@MainActor
+private final class RemoteUndoStep {}

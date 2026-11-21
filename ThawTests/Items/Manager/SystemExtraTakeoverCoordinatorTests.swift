@@ -7,6 +7,7 @@
 
 import Foundation
 import MenuBarModel
+import os
 import PlatformRuntimeKit
 import Testing
 @testable import Thaw
@@ -323,17 +324,22 @@ struct ModuleStandInCoordinatorTests {
         let original = TakeoverRig.moduleID(TakeoverRig.airDrop)
         rig.sections.sectionAssignment[original] = .hidden
         #expect(rig.coordinator.replacedOriginalIdentifiers.isEmpty, "Nothing is replaced before a stand-in runs")
+        let changes = ObservedChanges()
+        changes.watch { _ = rig.coordinator.replacedOriginalIdentifiers }
 
         rig.start()
         await settle { rig.fake.startedProcesses.count == 1 }
         await rig.drain()
         #expect(rig.coordinator.replacedOriginalIdentifiers == [original])
+        #expect(changes.count == 1, "whoever reads it hears the stand-in start")
+        changes.watch { _ = rig.coordinator.replacedOriginalIdentifiers }
 
         let process = try #require(rig.fake.startedProcesses.only)
         rig.settings.enableModuleStandIns = false
         await settle { process.terminateCalls > 0 }
         await rig.drain()
         #expect(rig.coordinator.replacedOriginalIdentifiers.isEmpty)
+        #expect(changes.count == 2, "and hears it stop")
     }
 
     @Test("Turning off a stand-in that never joined a saved order returns its original to Visible")
@@ -368,5 +374,18 @@ struct ModuleStandInCoordinatorTests {
         await settle { rig.fake.opens.count == 1 }
 
         #expect(rig.fake.opened(.focus) == 1)
+    }
+}
+
+/// Counts what withObservationTracking reports, one change for each watch.
+private final class ObservedChanges: Sendable {
+    private let changes = OSAllocatedUnfairLock(initialState: 0)
+
+    var count: Int {
+        changes.withLock { $0 }
+    }
+
+    func watch(_ read: () -> Void) {
+        withObservationTracking(read) { [changes] in changes.withLock { $0 += 1 } }
     }
 }

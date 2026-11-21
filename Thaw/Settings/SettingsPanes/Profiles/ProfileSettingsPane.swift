@@ -248,10 +248,11 @@ struct ProfileSettingsPane: View {
     private func previewProfile(id: UUID) {
         runner.run(.preview(id: id)) { outcome in
             awaitsPreview = false
-            // An answer from the app may arrive after another profile was picked.
-            guard let preview = outcome?.preview, preview.profile.id == selectedProfile?.id else { return }
-            previewedDiff = preview.diff
-            previewedProfile = preview.profile
+            // An answer from the app may arrive after another profile was picked. A profile that
+            // couldn't be read clears the one before it, so its changes don't show under this one.
+            guard id == selectedProfile?.id else { return }
+            previewedDiff = outcome?.preview?.diff
+            previewedProfile = outcome?.preview?.profile
         }
     }
 

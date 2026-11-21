@@ -41,7 +41,9 @@ final class SystemExtraTakeoverCoordinator {
     @ObservationIgnored private var layoutSubscription: AnyCancellable?
     /// Shared with the Space indicator, so one spacing restart reaches every stand-in.
     @ObservationIgnored let launcher: SystemExtraStandInLauncher
-    @ObservationIgnored private var activeModuleStandIns: Set<SystemExtraStandIn> = []
+    /// Observed, so the Thaw Bar, Layout and the settings process hear which originals are replaced.
+    /// It is changed only where it really changes, since every write notifies them.
+    private var activeModuleStandIns: Set<SystemExtraStandIn> = []
     @ObservationIgnored private let isShownInMenuBar: @MainActor (String) -> Bool
 
     /// The Control Center modules the runtime removes while hidden, keyed to
@@ -169,8 +171,9 @@ final class SystemExtraTakeoverCoordinator {
             let isWanted = originalSection != .visible || isShownInMenuBar(original)
             let isChosen = Self.isChosen(standIn, enabled: settings.enableModuleStandIns, skipped: settings.skippedModuleStandIns)
             guard isChosen, isWanted else {
-                let wasActive = activeModuleStandIns.remove(standIn) != nil
+                let wasActive = activeModuleStandIns.contains(standIn)
                 if wasActive {
+                    activeModuleStandIns.remove(standIn)
                     launcher.stop(standIn)
                 }
                 // A stand-in whose original was not in the saved order never joined one,
@@ -180,7 +183,8 @@ final class SystemExtraTakeoverCoordinator {
                 }
                 continue
             }
-            guard activeModuleStandIns.insert(standIn).inserted else { continue }
+            guard !activeModuleStandIns.contains(standIn) else { continue }
+            activeModuleStandIns.insert(standIn)
             // A stand-in placed in an earlier session keeps its section; a new
             // one starts where the original was.
             let section = saved.contains(standInID) ? controller.authoredSection(for: standInID) : originalSection

@@ -26,8 +26,13 @@ struct DisplayProfileCommit: Codable, Equatable {
         if case let .spacing(displayID, _) = change { displayID } else { nil }
     }
 
+    /// The last commit sent from the settings process, and how many are still waiting for the app.
+    private static var lastSent: Task<Void, Never>?
+    private static var waiting = 0
+
     /// Runs the commit here, or has the app run it when Settings is in its own process, and hands a failure to failed.
     /// The app gets this process's display settings with it, so an edit made a moment ago is not lost.
+    /// Commits from the settings process go one at a time, each with the settings the one before it left.
     func perform(on appState: AppState, remote: SettingsRemote? = .current, failed: @escaping (DisplayCommitFailure) -> Void) {
         guard let remote else {
             if let failure = failure(runningOn: appState) {
@@ -36,12 +41,17 @@ struct DisplayProfileCommit: Codable, Equatable {
             return
         }
         let settings = appState.settings.displaySettings
-        let request = DisplaysSettingsLink.CommitRequest(commit: self, settings: settings.snapshot)
-        // Immediate, so the request leaves before anything else the page sends.
-        Task.immediate {
+        let previous = Self.waiting > 0 ? Self.lastSent : nil
+        Self.waiting += 1
+        // Immediate, so with nothing waiting the request leaves before anything else the page sends.
+        Self.lastSent = Task.immediate {
+            defer { Self.waiting -= 1 }
+            await previous?.value
+            let sent = settings.snapshot
             do {
+                let request = DisplaysSettingsLink.CommitRequest(commit: self, settings: sent)
                 let result: DisplaysSettingsLink.CommitResult = try await remote.request(DisplaysSettingsLink.commit, request)
-                settings.adopt(result.settings)
+                settings.adopt(mergedSettings(answered: result.settings, local: settings.snapshot, sent: sent))
                 if let failure = result.failure {
                     failed(failure)
                 }
@@ -49,6 +59,26 @@ struct DisplayProfileCommit: Codable, Equatable {
                 failed(DisplayCommitFailure(message: error.localizedDescription, displayID: displayID))
             }
         }
+    }
+
+    /// The settings the app answered with, keeping what this process changed while it waited,
+    /// except where the commit changed it: there the app's value stands.
+    func mergedSettings(
+        answered: DisplaySettingsManager.Snapshot,
+        local: DisplaySettingsManager.Snapshot,
+        sent: DisplaySettingsManager.Snapshot
+    ) -> DisplaySettingsManager.Snapshot {
+        guard let displayID else { return answered }
+        var merged = answered
+        if local.globalConfiguration != sent.globalConfiguration {
+            merged.globalConfiguration = local.globalConfiguration
+        }
+        for id in Set(local.configurations.keys).union(sent.configurations.keys)
+            where id != displayID && local.configurations[id] != sent.configurations[id]
+        {
+            merged.configurations[id] = local.configurations[id]
+        }
+        return merged
     }
 
     /// Runs the commit and returns why the profiles didn't keep it, when they didn't.

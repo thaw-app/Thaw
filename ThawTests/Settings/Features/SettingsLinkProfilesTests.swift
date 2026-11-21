@@ -525,7 +525,7 @@ struct SettingsLinkProfilesTests {
         }
     }
 
-    @Test("An undo the app can't make shows on the page, and asking again changes nothing")
+    @Test("An undo the app can't make shows on the page and leaves no redo behind")
     func failedUndo() async throws {
         try await withWorld(profiles: ["Work"]) { world in
             let work = world.profiles.profiles[0].id
@@ -538,16 +538,7 @@ struct SettingsLinkProfilesTests {
             } tracking: {
                 _ = world.errors.message
             }
-            #expect(world.undo.canRedo)
-
-            world.errors.message = nil
-            world.undo.redo()
-            await waitUntil {
-                world.wire.asked.count == 3
-            } tracking: {
-                _ = world.wire.asked
-            }
-            #expect(world.errors.message == nil)
+            #expect(!world.undo.canRedo)
         }
     }
 

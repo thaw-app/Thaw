@@ -125,6 +125,10 @@ final class SettingsProcessHost {
     }
 
     private func launch(pane: String) -> Bool {
+        // A process can stop running before its end is handled, so it is let go here instead.
+        if child != nil {
+            retire()
+        }
         let launched = generation + 1
         let child: Child
         do {
@@ -181,6 +185,11 @@ final class SettingsProcessHost {
     private func ended(generation ended: Int, status: Int32) {
         guard ended == generation, child != nil else { return }
         diagLog.info("The settings process ended with status \(status)")
+        retire()
+    }
+
+    /// Lets go of the current settings process: its link, its watches, and what each page kept for it.
+    private func retire() {
         child = nil
         link?.close()
         link = nil
