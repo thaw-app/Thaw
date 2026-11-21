@@ -79,7 +79,7 @@ enum LayoutBarItemMenu {
         if let group = group(of: item, in: groups, orderedItems: orderedItems) {
             addMemberEntries(to: menu, item: item, group: group, orderedItems: orderedItems, manager: manager, folders: appState.groupFolders, undoManager: appState.layoutUndo)
         } else {
-            addNonMemberEntries(to: menu, item: item, groups: groups, orderedItems: orderedItems, section: section, manager: manager, undoManager: appState.layoutUndo)
+            addNonMemberEntries(to: menu, item: item, groups: groups, orderedItems: orderedItems, section: section, manager: manager, folders: appState.groupFolders, undoManager: appState.layoutUndo)
         }
     }
 
@@ -179,6 +179,7 @@ enum LayoutBarItemMenu {
         orderedItems: [MenuBarItem],
         section _: MenuBarSection.Name,
         manager: MenuBarItemGroupManager,
+        folders: GroupFolders,
         undoManager: UndoManager
     ) {
         guard MenuBarItemGrouping.isGroupable(item.tag) else {
@@ -215,22 +216,11 @@ enum LayoutBarItemMenu {
         }
 
         if !groups.isEmpty {
+            // The selection's add, so a folder takes the item's app whole here too.
+            let grouping = LayoutSelectionGrouping(items: [item], sectionItems: orderedItems, manager: manager, undoManager: undoManager, folders: folders)
             let submenu = NSMenu()
             for group in groups {
-                let name = manager.displayName(for: group, in: orderedItems)
-                submenu.addItem(
-                    ClosureMenuItem(title: name) {
-                        guard case let .user(id) = group.origin else {
-                            // Automatic clusters need a stored record before adding a foreign member.
-                            let members = group.memberIndices.compactMap {
-                                orderedItems.indices.contains($0) ? orderedItems[$0] : nil
-                            }
-                            LayoutEditUndo.editGroups(String(localized: "Add to \(name)"), manager: manager, undoManager: undoManager) { _ = manager.createGroup(name: name, items: members + [item]) }
-                            return
-                        }
-                        LayoutEditUndo.editGroups(String(localized: "Add to \(name)"), manager: manager, undoManager: undoManager) { manager.add(item, to: id) }
-                    }
-                )
+                submenu.addItem(ClosureMenuItem(title: manager.displayName(for: group, in: orderedItems)) { grouping.add(to: group) })
             }
             let entry = NSMenuItem(title: String(localized: "Add to Group"), action: nil, keyEquivalent: "")
             entry.submenu = submenu
@@ -287,7 +277,7 @@ enum LayoutBarItemMenu {
                     ? String(localized: "Stop Showing “\(name)” as a Folder")
                     : String(localized: "Show “\(name)” as a Folder")
             ) {
-                LayoutEditUndo.setFolder(!isFolder, for: group.origin, members: members, name: name, folders: folders, undoManager: undoManager)
+                LayoutEditUndo.setFolder(!isFolder, for: group.origin, members: members, name: name, manager: manager, folders: folders, undoManager: undoManager)
             }
         )
         menu.addItem(

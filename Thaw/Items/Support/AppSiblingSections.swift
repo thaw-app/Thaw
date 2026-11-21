@@ -124,6 +124,20 @@ nonisolated enum AppSiblingSections {
         return sections.count == 1 ? sections.first : nil
     }
 
+    /// The members followed by every other hideable item of their apps in
+    /// items, so a folder takes an app whole instead of splitting it.
+    /// Members that can't be hidden on their own bring no siblings.
+    static func withAppSiblings(_ members: [MenuBarItem], among items: [MenuBarItem]) -> [MenuBarItem] {
+        let apps = Set(members.filter { MenuBarItemGrouping.isGroupable($0.tag) }.map(\.tag.namespace))
+        var seen = Set(members.map(\.uniqueIdentifier))
+        let siblings = items.filter {
+            apps.contains($0.tag.namespace)
+                && MenuBarItemGrouping.isGroupable($0.tag)
+                && seen.insert($0.uniqueIdentifier).inserted
+        }
+        return members + siblings
+    }
+
     /// The sections the other hideable items of item's app are in.
     private static func siblingSections(
         of item: MenuBarItem,

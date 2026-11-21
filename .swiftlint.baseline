@@ -1875,21 +1875,6 @@
   }
  },
  {
-  "text": "    private static func addNonMemberEntries(",
-  "violation": {
-   "location": {
-    "character": 20,
-    "file": "Thaw/Panels/LayoutBar/LayoutBarItemMenu.swift",
-    "line": 175
-   },
-   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 51 lines",
-   "ruleDescription": "Function bodies should not span too many lines",
-   "ruleIdentifier": "function_body_length",
-   "ruleName": "Function Body Length",
-   "severity": "warning"
-  }
- },
- {
   "text": "final class LayoutBarItemView: LayoutBarArrangedView {",
   "violation": {
    "location": {
