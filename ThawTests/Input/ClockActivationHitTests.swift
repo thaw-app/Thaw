@@ -36,6 +36,14 @@ struct ClockActivationHitTests {
         #expect(!ClockBridgeAvailability.isPossible(engineIsOperational: false, nativeHidingActive: false))
     }
 
+    @Test("A fullscreen Space keeps its Clock band only on a display with a notch")
+    func fullscreenBandNeedsANotch() {
+        #expect(ClockBridgeAvailability.hasClockBand(showsFullscreenSpace: false, hasNotch: false))
+        #expect(ClockBridgeAvailability.hasClockBand(showsFullscreenSpace: false, hasNotch: true))
+        #expect(ClockBridgeAvailability.hasClockBand(showsFullscreenSpace: true, hasNotch: true))
+        #expect(!ClockBridgeAvailability.hasClockBand(showsFullscreenSpace: true, hasNotch: false))
+    }
+
     private let bands = [
         CGRect(x: 0, y: 0, width: 1470, height: 40),
         CGRect(x: -1920, y: -200, width: 1920, height: 24),
