@@ -869,11 +869,9 @@ nonisolated enum MenuBarItemAXProvider {
         let memo = chevronProbeMemo.withLock { $0[display] } ?? ChevronProbeMemo()
         let cooldown = chevronAbsenceCooldown(isBuiltIn: CGDisplayIsBuiltin(display) != 0)
 
-        // A reveal mask sits above the bar, so a hit-test taken while it is up
-        // reads the mask, not the bar; hold the last observation instead.
-        // The same while Thaw's own menus are in the bar: AppKit answers those
-        // hits on this thread and NSMenu asserts off the main one.
-        if RevealCoverActivity.isAnyMaskShowing || isThawTheMenuBarOwner(NSWorkspace.shared.menuBarOwningApplication?.processIdentifier) {
+        // While Thaw's own menus are in the bar, hold the last observation:
+        // AppKit answers those hits on this thread and NSMenu asserts off the main one.
+        if isThawTheMenuBarOwner(NSWorkspace.shared.menuBarOwningApplication?.processIdentifier) {
             if memo.hint == nil, memo.lastAbsentAt == nil, !walkRulesOut {
                 diagLog.debug(
                     "chevron: skipping the strip on display \(display) while it cannot be hit-tested; no absence recorded"

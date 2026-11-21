@@ -14,6 +14,16 @@ import Testing
 struct LeadingEdgePollIntervalTests {
     private let now = ContinuousClock.now
 
+    @Test("The Thaw icon anchors on its width alone; other items must be on screen in the visible section")
+    func anchoring() {
+        typealias Watcher = MenuBarLeadingEdgeWatcher
+        #expect(Watcher.anchorsEdge(width: 20, isVisibleControlItem: true, isOnScreen: false, isInVisibleSection: false))
+        #expect(!Watcher.anchorsEdge(width: 0, isVisibleControlItem: true, isOnScreen: true, isInVisibleSection: true))
+        #expect(Watcher.anchorsEdge(width: 20, isVisibleControlItem: false, isOnScreen: true, isInVisibleSection: true))
+        #expect(!Watcher.anchorsEdge(width: 20, isVisibleControlItem: false, isOnScreen: false, isInVisibleSection: true))
+        #expect(!Watcher.anchorsEdge(width: 20, isVisibleControlItem: false, isOnScreen: true, isInVisibleSection: false))
+    }
+
     @Test("An idle bar is polled at the idle interval")
     func idleWithoutAWindow() {
         let interval = MenuBarLeadingEdgeWatcher.pollInterval(now: now, fastUntil: nil)

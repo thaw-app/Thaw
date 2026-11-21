@@ -55,8 +55,7 @@ extension MenuBarItemImageCache {
     /// glyph meant that one missing item made the Thaw Bar reveal and capture
     /// the whole section, one batch after another.
     ///
-    /// retakesClipped also retakes a picture whose ink runs into its left or right edge. Only a capture the user
-    /// asked for passes it, or an icon that really draws to its edge would be revealed by every automatic pass.
+    /// retakesClipped also retakes a picture whose ink runs into its left or right edge, as Capture Hidden Items asks.
     static nonisolated func prewarmNeedsCapture(
         cachedImage: MenuBarItemGlyphCapture?,
         wouldAttemptCapture: Bool,

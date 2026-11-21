@@ -592,10 +592,6 @@ final class LayoutBarPaddingView: NSView {
                 await self.resetStabilizingStateIfNeeded()
                 guard let appState else { return }
                 await appState.itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
-                await appState.imageCache.prewarmConcealedImages(
-                    sections: MenuBarSection.Name.allCases,
-                    onlyMissingImages: true
-                )
                 await appState.imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
             }
             do {

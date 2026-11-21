@@ -40,8 +40,6 @@ struct RevealCaptureSessionTests {
                 settledItems: settledItems ?? { batch in batch.map { (requested: $0, live: $0) } },
                 renderSettle: renderSettle,
                 reader: reader,
-                cover: { log.events.append("cover") },
-                uncover: { log.events.append("uncover") },
                 mayReveal: mayReveal
             ),
             displayID: 42,
@@ -63,16 +61,16 @@ struct RevealCaptureSessionTests {
         )
     }
 
-    @Test("Each batch waits out moves, is covered before its reveal and uncovered after its conceal")
-    func batchesAreCoveredAndHeldForMoves() async throws {
+    @Test("Each batch waits out moves, then is revealed, admitted and concealed")
+    func batchesAreHeldForMoves() async throws {
         let log = Log()
         let reached = try await session(log).capture([[first], [second]])
 
         let one = first.uniqueIdentifier
         let two = second.uniqueIdentifier
         #expect(log.events == [
-            "wait for moves", "cover", "reveal \(one)", "admit", "conceal \(one)", "uncover",
-            "wait for moves", "cover", "reveal \(two)", "admit", "conceal \(two)", "uncover",
+            "wait for moves", "reveal \(one)", "admit", "conceal \(one)",
+            "wait for moves", "reveal \(two)", "admit", "conceal \(two)",
         ])
         #expect(log.committed == [[first.tag], [second.tag]])
         #expect(log.captured == [[first.tag], [second.tag]])
@@ -207,7 +205,7 @@ struct RevealCaptureSessionTests {
             log, reader: reader, lockedAt: step, admits: step != "admission", commits: step != "commit"
         ).capture([[first], [second]])
 
-        #expect(log.events.last == "uncover")
+        #expect(log.events.last == "conceal \(first.uniqueIdentifier)")
         #expect(log.events.filter { $0.hasPrefix("reveal") } == ["reveal \(first.uniqueIdentifier)"])
         #expect(log.events.filter { $0.hasPrefix("conceal") } == ["conceal \(first.uniqueIdentifier)"])
         let tookPixels = step == "commit"
