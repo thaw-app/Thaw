@@ -16,13 +16,17 @@ import Testing
 @MainActor
 struct SplitAppSectionTests {
     private func item(_ bundle: String, _ title: String, x: CGFloat) -> MenuBarItem {
+        item(MenuBarItemTag(namespace: .string(bundle), title: title, instanceIndex: 0), x: x)
+    }
+
+    private func item(_ tag: MenuBarItemTag, x: CGFloat) -> MenuBarItem {
         MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string(bundle), title: title, instanceIndex: 0),
+            tag: tag,
             windowID: CGWindowID(x),
             ownerPID: 100,
             sourcePID: 200,
             bounds: CGRect(x: x, y: 3, width: 24, height: 24),
-            title: title,
+            title: tag.title,
             isOnScreen: true
         )
     }
@@ -150,5 +154,40 @@ struct SplitAppSectionTests {
         let tooltip = override.tooltip(itemName: "Dropbox")
         #expect(tooltip.hasPrefix("Dropbox \(tooltipPhrase)."))
         #expect(override.menuNote(appName: "Dropbox") == "\(notePrefix) Dropbox’s other items")
+    }
+
+    // MARK: Folders take whole apps
+
+    @Test("a folder takes the other items of its members' apps, after the members and in bar order (#1617)")
+    func folderTakesAppSiblings() {
+        let raycast = item("com.raycast.macos", "Raycast", x: 10)
+        let other = item("com.example.other", "Other", x: 40)
+        let command = item("com.raycast.macos", "Command", x: 70)
+        let unrelated = item("com.example.unrelated", "Unrelated", x: 100)
+        let quicklink = item("com.raycast.macos", "Quicklink", x: 130)
+        let batch = AppSiblingSections.withAppSiblings(
+            [other, raycast],
+            among: [raycast, other, command, unrelated, quicklink]
+        )
+        #expect(batch.map(\.uniqueIdentifier) == [other, raycast, command, quicklink].map(\.uniqueIdentifier))
+    }
+
+    @Test("members whose apps have no other items come back unchanged")
+    func folderWithoutSiblings() {
+        let a = item("com.example.a", "A", x: 10)
+        let b = item("com.example.b", "B", x: 40)
+        let c = item("com.example.c", "C", x: 70)
+        let batch = AppSiblingSections.withAppSiblings([b, a], among: [a, b, c])
+        #expect(batch.map(\.uniqueIdentifier) == [b, a].map(\.uniqueIdentifier))
+    }
+
+    @Test("items that can't be hidden on their own neither bring siblings nor join as one")
+    func folderSkipsUnhideableItems() {
+        let wifi = item(MenuBarItemTag(namespace: .menuBarAgent, title: "WiFi"), x: 10)
+        let battery = item(MenuBarItemTag(namespace: .menuBarAgent, title: "Battery"), x: 40)
+        let control = item(.visibleControlItem, x: 70)
+        let app = item("com.example.app", "A", x: 100)
+        let batch = AppSiblingSections.withAppSiblings([wifi, app], among: [wifi, battery, control, app])
+        #expect(batch.map(\.uniqueIdentifier) == [wifi, app].map(\.uniqueIdentifier))
     }
 }

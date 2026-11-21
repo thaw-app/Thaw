@@ -41,21 +41,29 @@ enum LayoutEditUndo {
         undoManager.setActionName(actionName)
     }
 
-    /// Shows or stops showing a group as a folder; undo flips it back.
+    /// Shows or stops showing a group as a folder; undo flips it back for every
+    /// item it moved and restores the groups it changed.
     static func setFolder(
         _ isFolder: Bool,
         for origin: MenuBarItemGroupOrigin,
         members: [MenuBarItem],
         name: String,
+        manager: MenuBarItemGroupManager,
         folders: GroupFolders,
         undoManager: UndoManager?
     ) {
         guard folders.isFolder(origin) != isFolder else { return }
-        folders.setFolder(isFolder, for: origin, members: members)
+        let before = manager.snapshot()
+        let moved = folders.setFolder(isFolder, for: origin, members: members)
         // setFolder does nothing for a group it can't resolve; then there's nothing to undo.
         guard folders.isFolder(origin) == isFolder else { return }
+        // A new folder takes in its members' app siblings, which undo takes out again.
+        let changedGroups = manager.snapshot() != before
         undoManager?.registerUndo(withTarget: folders) { [weak undoManager] folders in
-            setFolder(!isFolder, for: origin, members: members, name: name, folders: folders, undoManager: undoManager)
+            setFolder(!isFolder, for: origin, members: moved, name: name, manager: manager, folders: folders, undoManager: undoManager)
+            if changedGroups {
+                manager.apply(before)
+            }
         }
         undoManager?.setActionName(String(localized: "Folder Setting for \(name)", comment: "Undo menu action name for showing a group as a folder or not"))
     }
