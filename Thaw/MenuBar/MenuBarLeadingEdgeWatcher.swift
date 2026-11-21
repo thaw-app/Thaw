@@ -195,7 +195,7 @@ final class MenuBarLeadingEdgeWatcher {
         guard let appState else { return }
         let controller = appState.menuBarManager.sectionController
         let visible = appState.itemManager.managedItems.filter { item in
-            RevealCoverGeometry.anchorsBand(
+            Self.anchorsEdge(
                 width: item.bounds.width,
                 isVisibleControlItem: item.tag.matchesVisibleControlItem,
                 isOnScreen: item.isOnScreen,
@@ -223,6 +223,13 @@ final class MenuBarLeadingEdgeWatcher {
             guard !Task.isCancelled else { return }
             self?.anchor = found
         }
+    }
+
+    /// Whether an item's frame can mark the bar's leading edge. The Thaw icon is the
+    /// leftmost visible item on most bars and does not always report itself
+    /// on screen, so it is taken on its width alone.
+    static nonisolated func anchorsEdge(width: CGFloat, isVisibleControlItem: Bool, isOnScreen: Bool, isInVisibleSection: Bool) -> Bool {
+        width > 0 && (isVisibleControlItem || (isOnScreen && isInVisibleSection))
     }
 
     // MARK: Accessibility

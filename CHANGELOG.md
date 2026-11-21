@@ -27,6 +27,7 @@ the items under New and Fixed.
 ### Changed
 
 - **A shorter welcome.** It says what Thaw does and asks for access. Its last page shows how to hide and show items, with Launch at Login, a shortcut and automatic updates beside it. The feature tour and the choice between Simple Mode and All Settings are gone: a first launch starts in Simple Mode, and showing the welcome again keeps the mode you use.
+- **Thaw shows hidden items to take their pictures only when you press Capture Hidden Items,** with either hiding method. With Standard it used to show them for a moment, under a blurred strip, whenever the Thaw Bar or Layout opened with pictures missing. An item without a picture shows as its app's icon until you capture it or open it. Reported by @alexbuildsthings in [#1534](https://github.com/thaw-app/Thaw/issues/1534).
 
 ### Fixed
 
