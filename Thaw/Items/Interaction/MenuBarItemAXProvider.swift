@@ -115,7 +115,10 @@ nonisolated enum MenuBarItemAXProvider {
             return ContinuousClock.now >= deadline
         }
 
-        for runningApp in NSWorkspace.shared.runningApplications {
+        let runningApps = NSWorkspace.shared.runningApplications
+        let drawnOwners = drawnBar.reading(since: .now - drawnReadAge)?.entries?.map(\.ownerPID) ?? []
+        let alwaysRead = controlPIDs(among: runningApps, ourBundleID: ourBundleID).union(drawnOwners)
+        for runningApp in runningApps {
             if isOutOfTime {
                 diagLog.warning(
                     "menuBarItems: walk exceeded its budget before \(runningApp.bundleIdentifier ?? "(unnamed)"); returning incomplete"
@@ -123,6 +126,9 @@ nonisolated enum MenuBarItemAXProvider {
                 return (restoredIdentities(assemble(raw)), false)
             }
             let appBundleID = runningApp.bundleIdentifier ?? runningApp.localizedName ?? "(pid \(runningApp.processIdentifier))"
+            if skipsKnownEmptyApp(runningApp, appBundleID: appBundleID, alwaysRead: alwaysRead, formerHosts: formerHosts) {
+                continue
+            }
             let collected = collectApp(
                 runningApp: runningApp,
                 appBundleID: appBundleID,
@@ -154,21 +160,6 @@ nonisolated enum MenuBarItemAXProvider {
     /// holds their arrivals until they answer on time.
     static func lateOwners() -> Set<pid_t> {
         slowResponders.withLock { $0.lateOwners() }
-    }
-
-    /// Owners whose empty extras-bar read has been logged, with the AX result
-    /// it gave. The wrapper folds "no value" into nil, so without this a host
-    /// the walk cannot see is indistinguishable from an app with no items.
-    private static let loggedEmptyExtrasBarReads = OSAllocatedUnfairLock(
-        initialState: [pid_t: AXError]()
-    )
-
-    /// Former hosts whose last empty read was a plain answer: no extras bar, and no error or timeout.
-    /// Such an app has no items to show. One that timed out or failed is being missed.
-    static func processesAnsweringWithNoItems() -> Set<pid_t> {
-        loggedEmptyExtrasBarReads.withLock { logged in
-            Set(logged.filter { $0.value == .noValue || $0.value == .attributeUnsupported }.keys)
-        }
     }
 
     static let perAppWalkBudget = Duration.milliseconds(400)
@@ -238,6 +229,7 @@ nonisolated enum MenuBarItemAXProvider {
         // are excused from move geometry unless the move names them.
         var slowOwners: [Int32: String] = [:]
         slowResponders.withLock { $0.retain(runningOwners: Set(appsByPID.keys)) }
+        reader.absences.withLock { $0.retain(running: Set(appsByPID.keys)) }
         var truncated = false
         startLateAnswerPump()
         let late = mergedLateAnswers.withLock { dict -> [LateAnswer] in
@@ -265,11 +257,14 @@ nonisolated enum MenuBarItemAXProvider {
         // counters tell one slow app from sheer app count in the log.
         var appsProbed = 0
         var appsWithExtrasBar = 0
+        // Apps that answered with no extras bar lately, whose empty answer stands for this pass.
+        var appsLeftOut = 0
         // Owners that answered this pass with no items, so a drawn one can be told apart.
         var answeredEmpty = Set<pid_t>()
         let drawnOnlyCandidates = drawnOnly.candidates(
             drawn: drawnBar.reading(since: walkStart - drawnReadAge)?.entries
         ).subtracting(controlPIDs)
+        let alwaysRead = requiredOwners.union(drawnOnlyCandidates)
         defer {
             let elapsed = ContinuousClock.now - walkStart
             diagLog.info(
@@ -277,6 +272,7 @@ nonisolated enum MenuBarItemAXProvider {
                 menuBarItems: \(scope.walkLabel) walk \
                 \(truncated ? "TRUNCATED" : "completed") in \(elapsed), \
                 probed \(appsProbed)/\(pass.owners.count) selected / \(runningApps.count) running app(s), \
+                left out \(appsLeftOut) known to have no extras menu bar, \
                 \(appsWithExtrasBar) had an extras menu bar, budget \(globalBudget)
                 """
             )
@@ -300,28 +296,17 @@ nonisolated enum MenuBarItemAXProvider {
                 return .stop
             }
             guard let runningApp = appsByPID[ownerPID] else { return .skip }
-            appsProbed += 1
             let appBundleID = runningApp.bundleIdentifier
                 ?? runningApp.localizedName
                 ?? "(pid \(runningApp.processIdentifier))"
-            let skipsOwner: Bool
-            switch slowResponders.withLock({ $0.decision(for: ownerPID) }) {
-            case .probe:
-                skipsOwner = false
-            case .skipInFlight, .skipCoolingDown:
-                skipsOwner = true
-            case .probeIfResponsive:
-                // Asked outside the lock: a window server round trip, paid only
-                // by owners that were slow before.
-                skipsOwner = Bridging.isProcessUnresponsive(ownerPID)
-                if skipsOwner {
-                    let cooldown = slowResponders.withLock { $0.stillUnresponsive(ownerPID) }
-                    diagLog.warning(
-                        "menuBarItems: \(appBundleID) is not responding; skipping it for \(cooldown)"
-                    )
-                }
+            if skipsKnownEmptyApp(runningApp, appBundleID: appBundleID, alwaysRead: alwaysRead, formerHosts: formerHosts, absences: reader.absences) {
+                appsLeftOut += 1
+                state.didAttempt(owner: ownerPID, generation: pass.generation)
+                state.record([], owner: ownerPID, generation: pass.generation)
+                return .skip
             }
-            if skipsOwner {
+            appsProbed += 1
+            if skipsSlowOwner(ownerPID, appBundleID: appBundleID) {
                 // Not observed, so the walk is incomplete; a complete-but-short
                 // answer would read its icon as departed until the cooldown ends.
                 truncated = true
@@ -488,13 +473,12 @@ nonisolated enum MenuBarItemAXProvider {
         guard let app = AXHelpers.application(for: runningApp) else {
             return ([], true)
         }
-        guard let bar = AXHelpers.extrasMenuBar(for: app) else {
-            noteMissingExtrasBar(of: runningApp, appBundleID: appBundleID, ourBundleID: ourBundleID, formerHosts: formerHosts)
+        guard let bar = extrasBar(of: app, runningApp: runningApp, appBundleID: appBundleID, ourBundleID: ourBundleID, formerHosts: formerHosts) else {
             return ([], true)
         }
         let children = walkChildren(of: bar)
         guard !children.isEmpty else {
-            logEmptyExtrasBarReadOnce(for: runningApp, appBundleID: appBundleID, hasBar: true, formerHosts: formerHosts)
+            logEmptyExtrasBarReadOnce(for: runningApp, appBundleID: appBundleID, result: .success, formerHosts: formerHosts)
             return ([], true)
         }
         let isHost = runningApp.bundleIdentifier == SharedConstants.menuBarHostingBundleID
@@ -541,17 +525,6 @@ nonisolated enum MenuBarItemAXProvider {
         return (RetitledItemIdentities.resolve(raw), true)
     }
 
-    private static func noteMissingExtrasBar(
-        of runningApp: NSRunningApplication, appBundleID: String, ourBundleID: String?, formerHosts: Set<String>
-    ) {
-        if runningApp.bundleIdentifier == ourBundleID {
-            diagLog.warning(
-                "menuBarItems: Thaw (\(appBundleID)) has no AXExtrasMenuBar, control items cannot be discovered"
-            )
-        }
-        logEmptyExtrasBarReadOnce(for: runningApp, appBundleID: appBundleID, hasBar: false, formerHosts: formerHosts)
-    }
-
     /// The native overflow chevron, by AXOverflowButton, by its AXButton role
     /// (not its localized title), or by the memo's last-seen frames.
     private static func isNativeOverflowControl(
@@ -595,34 +568,6 @@ nonisolated enum MenuBarItemAXProvider {
                 "batch=\(attributes.frame.map { NSStringFromRect($0) } ?? "nil") " +
                 "single=\(singleFrame.map { NSStringFromRect($0) } ?? "nil") " +
                 "descendants=\(descendantFrames.map { NSStringFromRect($0) })"
-        )
-    }
-
-    /// Logs, once per owner and AX result, why an app that had menu bar items
-    /// last session gave the walk none.
-    ///
-    /// Most apps never had an extras bar. A former host answering anything
-    /// but "no value" or "unsupported", or with an empty bar, is being missed.
-    private static func logEmptyExtrasBarReadOnce(
-        for runningApp: NSRunningApplication,
-        appBundleID: String,
-        hasBar: Bool,
-        formerHosts: Set<String>
-    ) {
-        guard formerHosts.contains(appBundleID) else { return }
-        let pid = runningApp.processIdentifier
-        let result = recordedExtrasBarRead(pid: pid)
-        let isNew = loggedEmptyExtrasBarReads.withLock { logged in
-            guard logged[pid] != result else { return false }
-            logged[pid] = result
-            return true
-        }
-        guard isNew else { return }
-        diagLog.debug(
-            """
-            menuBarItems: \(appBundleID) (pid \(pid), policy \(runningApp.activationPolicy.rawValue)) gave no items: \
-            extrasBar=\(hasBar ? "present, no children" : "absent") rawRead=\(result.rawValue)
-            """
         )
     }
 

@@ -532,7 +532,7 @@
     "file": "Thaw/Items/Interaction/MenuBarItemAXProvider.swift",
     "line": 26
    },
-   "reason": "Enum body should span 350 lines or less excluding comments and whitespace: currently spans 1059 lines",
+   "reason": "Enum body should span 350 lines or less excluding comments and whitespace: currently spans 1019 lines",
    "ruleDescription": "Type bodies should not span too many lines",
    "ruleIdentifier": "type_body_length",
    "ruleName": "Type Body Length",
@@ -545,9 +545,9 @@
    "location": {
     "character": 5,
     "file": "Thaw/Items/Interaction/MenuBarItemAXProvider.swift",
-    "line": 212
+    "line": 203
    },
-   "reason": "Function should have complexity 10 or less; currently complexity is 18",
+   "reason": "Function should have complexity 10 or less; currently complexity is 15",
    "ruleDescription": "Complexity of function bodies should be limited.",
    "ruleIdentifier": "cyclomatic_complexity",
    "ruleName": "Cyclomatic Complexity",
@@ -560,9 +560,9 @@
    "location": {
     "character": 12,
     "file": "Thaw/Items/Interaction/MenuBarItemAXProvider.swift",
-    "line": 212
+    "line": 203
    },
-   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 173 lines",
+   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 168 lines",
    "ruleDescription": "Function bodies should not span too many lines",
    "ruleIdentifier": "function_body_length",
    "ruleName": "Function Body Length",
@@ -575,7 +575,7 @@
    "location": {
     "character": 20,
     "file": "Thaw/Items/Interaction/MenuBarItemAXProvider.swift",
-    "line": 1026
+    "line": 971
    },
    "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 72 lines",
    "ruleDescription": "Function bodies should not span too many lines",
@@ -590,9 +590,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Items/Interaction/MenuBarItemAXProvider.swift",
-    "line": 1458
+    "line": 1403
    },
-   "reason": "File should contain 1000 lines or less: currently contains 1458",
+   "reason": "File should contain 1000 lines or less: currently contains 1403",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
