@@ -22,9 +22,9 @@ public struct FreshVolatileTitleLearner: Sendable {
         /// The title this one replaced, when that change resized the item. One resize is not learned from.
         var resizedFrom: String?
 
-        /// The observation for an item with a title and a frame on the bar, or nil.
-        static func make(for item: MenuBarItem, sourcePID: pid_t, read: UInt64) -> Self? {
-            guard !item.tag.title.isEmpty, item.bounds.width > 0, item.bounds.midX >= 0
+        /// The observation for an item with a title and a frame on a display, or nil.
+        static func make(for item: MenuBarItem, sourcePID: pid_t, read: UInt64, displays: [CGRect]) -> Self? {
+            guard !item.tag.title.isEmpty, item.bounds.width > 0, FreshVolatileTitleLearner.isOnDisplay(item.bounds, displays: displays)
             else {
                 return nil
             }
@@ -81,9 +81,12 @@ public struct FreshVolatileTitleLearner: Sendable {
     public init() {}
 
     /// Returns owners whose title changed while their single slot stayed in place and the same process kept publishing it.
-    /// - Parameter isAlive: Whether a process still runs, to tell a relaunch from a second process.
+    /// - Parameters:
+    ///   - displays: The displays' global bounds. A display left of the main one has negative x.
+    ///   - isAlive: Whether a process still runs, to tell a relaunch from a second process.
     public mutating func observe(
         _ freshItems: [MenuBarItem],
+        displays: [CGRect] = [],
         isAlive: (pid_t) -> Bool = { kill($0, 0) == 0 || errno == EPERM }
     ) -> Set<String> {
         reads &+= 1
@@ -108,7 +111,7 @@ public struct FreshVolatileTitleLearner: Sendable {
                 sharedBundles[bundleID] = sourcePIDs
                 continue
             }
-            guard items.count == 1, let item = items.first, let sourcePID = item.sourcePID, var observation = Observation.make(for: item, sourcePID: sourcePID, read: reads)
+            guard items.count == 1, let item = items.first, let sourcePID = item.sourcePID, var observation = Observation.make(for: item, sourcePID: sourcePID, read: reads, displays: displays)
             else {
                 continue
             }
@@ -124,6 +127,14 @@ public struct FreshVolatileTitleLearner: Sendable {
             lastObservationByOwner[bundleID] = observation
         }
         return learned
+    }
+
+    /// Whether a frame's centre is on one of the displays. With none known, a frame right of the main
+    /// display's left edge counts, as it did before the displays were passed in.
+    static func isOnDisplay(_ frame: CGRect, displays: [CGRect]) -> Bool {
+        guard !displays.isEmpty else { return frame.midX >= 0 }
+        let centre = CGPoint(x: frame.midX, y: frame.midY)
+        return displays.contains { $0.contains(centre) }
     }
 
     /// Apps whose last title is real and recent enough to compare with the next read, so reading

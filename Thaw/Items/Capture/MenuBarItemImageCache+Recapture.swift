@@ -207,7 +207,7 @@ extension MenuBarItemImageCache {
             }
 
             if sectionResult.captured.isEmpty {
-                if section == .visible {
+                if sectionResult.suggestsStaleInventory(in: section) {
                     requestInventoryRefresh(reason: "visible pass captured nothing")
                 }
                 // Expected for off-screen sections (e.g. hidden): live refresh
@@ -338,27 +338,12 @@ extension MenuBarItemImageCache {
         //
         // Assigned back only when the filter dropped something: a
         // same-contents reassignment still invalidates every observer.
-        let survivingImages = capturesByTag.filter { key, _ in
-            if key.isSystemItem {
-                return allValidTags.contains(key)
-                    || recentlyFailedTags.contains(key)
-                    || assignedSnapshotTags.contains(key)
-            }
-            return containsTagMatchingIgnoringWindowID(allValidTags, target: key) ||
-                containsTagMatchingIgnoringWindowID(recentlyFailedTags, target: key) ||
-                containsTagMatchingIgnoringWindowID(assignedSnapshotTags, target: key)
-        }
+        // validateAndCleanupInvalidEntries(preserving:) applies the same rule, so it isn't run again here.
+        let validity = CapturedTagValidity(keeping: allValidTags.union(recentlyFailedTags).union(assignedSnapshotTags))
+        let survivingImages = capturesByTag.filter { key, _ in validity.keeps(key) }
         if survivingImages.count != capturesByTag.count {
             replaceCaptures(with: survivingImages)
         }
-
-        // Additional cleanup must preserve the same transiently valid sets
-        // as the filter above. Otherwise an assigned snapshot can survive
-        // that filter and then be evicted immediately here while its live
-        // item is between concealment and cache re-addition.
-        _ = validateAndCleanupInvalidEntries(
-            preserving: recentlyFailedTags.union(assignedSnapshotTags)
-        )
 
         // Mark all newly captured images as most recently used
         for tag in newImages.keys {

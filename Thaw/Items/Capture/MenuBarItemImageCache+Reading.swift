@@ -233,7 +233,7 @@ extension MenuBarItemImageCache {
             demand: captureDemand()
         )
         guard !items.isEmpty else {
-            return CapturePass()
+            return .nothingRequested
         }
         let revealedSection = appState.menuBarManager.sectionController.revealedSection
         let shouldUseFreshBounds = Self.shouldUseFreshBounds(

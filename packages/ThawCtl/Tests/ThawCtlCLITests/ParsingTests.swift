@@ -52,6 +52,21 @@ struct ParsingTests {
         #expect(!Command.all.contains { $0.name == "get" })
     }
 
+    @Test("reveal-item sends exactly one of --bundle and --item-id")
+    func revealItemSelector() throws {
+        #expect(try query(["reveal-item", "--bundle", "com.example.app"]) == ["bundle": "com.example.app"])
+        #expect(try query(["reveal-item", "--item-id", "com.example.app:Item-0"]) == ["item-id": "com.example.app:Item-0"])
+    }
+
+    @Test("reveal-item refuses neither selector, both, or an empty one, as Thaw would")
+    func revealItemRefusals() {
+        let refusal = ParseError.needsExactlyOne(command: "reveal-item", params: ["bundle", "item-id"])
+        #expect(throws: refusal) { try parse(["reveal-item"]) }
+        #expect(throws: refusal) { try parse(["reveal-item", "--bundle", "com.example.app", "--item-id", "com.example.app:Item-0"]) }
+        #expect(throws: refusal) { try parse(["reveal-item", "--bundle", ""]) }
+        #expect(refusal.description == "reveal-item: give exactly one of --bundle or --item-id")
+    }
+
     @Test("Help and unknown commands")
     func helpAndUnknown() throws {
         #expect(try parse([]) == nil)

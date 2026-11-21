@@ -739,21 +739,8 @@ extension MenuBarItemImageCache {
             appState.itemManager.managedItems.map(\.tag)
         )
 
-        // Non-system items match ignoring window ID, so disk-loaded entries
-        // (which have none) are not evicted.
-        let invalidTags = capturesByTag.keys.filter { tag in
-            let isValid = if tag.isSystemItem {
-                allValidTags.contains(tag)
-            } else {
-                containsTagMatchingIgnoringWindowID(allValidTags, target: tag)
-            }
-            let isPreserved = if tag.isSystemItem {
-                preservedTags.contains(tag)
-            } else {
-                containsTagMatchingIgnoringWindowID(preservedTags, target: tag)
-            }
-            return !isValid && !isPreserved
-        }
+        let validity = CapturedTagValidity(keeping: allValidTags.union(preservedTags))
+        let invalidTags = capturesByTag.keys.filter { !validity.keeps($0) }
 
         for invalidTag in invalidTags {
             capturesByTag.removeValue(forKey: invalidTag)

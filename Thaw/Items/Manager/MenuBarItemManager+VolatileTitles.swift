@@ -56,7 +56,7 @@ extension MenuBarItemManager {
     /// Collapse retitled single-item owners so changing counts or dates do not trigger new-arrival sorting.
     /// Takes fresh answers only: the cache keeps old titles, which look like extra items.
     func learnVolatileTitleOwners(fresh: [MenuBarItem], current: inout [MenuBarItem]) {
-        let learned = Self.freshVolatileTitleLearner.observe(fresh)
+        let learned = Self.freshVolatileTitleLearner.observe(fresh, displays: BarAxis.liveDisplayBounds())
             .filter { !Self.isThawBundle($0) }
             .filter(MenuBarItemTag.learnVolatileTitleOwner)
         scheduleRetitleFollowUp()

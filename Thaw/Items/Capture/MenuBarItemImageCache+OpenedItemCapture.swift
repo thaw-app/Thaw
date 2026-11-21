@@ -15,7 +15,8 @@ extension MenuBarItemImageCache {
     /// OpenedItemRecapture. With "Use app icons instead of live previews" on, an item drawn as its
     /// app's icon is left alone, as every other pass leaves it (itemsNeedingCapture(_:demand:)).
     func retakePictureAfterOpening(_ item: MenuBarItem) {
-        guard let appState else { return }
+        // Without Screen Recording no picture can be taken, so the menu isn't watched for a minute first.
+        guard let appState, ScreenCapture.hasCachedScreenRecordingPermission else { return }
         // Its menu is watched by process, so an item listed without one would never count as open.
         let item = ItemOwnerLookup.resolving(item)
         let demand = CaptureDemand(
@@ -27,10 +28,13 @@ extension MenuBarItemImageCache {
         let monitor = appState.itemManager.menuOpenMonitor
         let owners = item.reactionPIDs
         let isMenuOpen: @MainActor () async -> Bool = { await monitor.isMenuOpen(ownedBy: owners) }
+        // The picture's checks read the windows anew: one before the screenshot and one after, under
+        // the cache's 250 ms, would otherwise share an answer and keep a picture taken with a menu open.
+        let isMenuOpenNow: @MainActor () async -> Bool = { await monitor.isMenuOpen(ownedBy: owners, fresh: true) }
         let photograph = openedItemPhotograph(appState: appState)
         OpenedItemRecapture.shared.start(item.tag.tagIdentifier, steps: OpenedItemRecapture.Steps(
             isMenuOpen: isMenuOpen,
-            attempt: { await photograph.take(item, isMenuOpen: isMenuOpen) }
+            attempt: { await photograph.take(item, isMenuOpen: isMenuOpenNow) }
         ))
     }
 
@@ -61,8 +65,11 @@ extension MenuBarItemImageCache {
                 return (admitted ?? Bridging.activeMenuBarDisplayID, admitted)
             },
             shownItem: { item, displayID in
-                await RevealCaptureSession.waitForRevealedItems(matching: [item]) {
-                    await MenuBarItem.getMenuBarItems(on: displayID, option: [.onScreen, .activeSpace])
+                // Live geometry only, the owner first: recovering saved positions is synchronous
+                // LaunchServices work on the main thread, and the wait reads the bar up to 20 times.
+                let owner: Set<pid_t> = [item.sourcePID ?? item.ownerPID]
+                return await RevealCaptureSession.waitForRevealedItems(matching: [item]) {
+                    await MenuBarItem.getMenuBarItems(on: displayID, option: [.onScreen, .activeSpace], freshOnly: true, priorityPIDs: owner)
                 }.first
             },
             settlePixels: { await RevealCaptureSession.settleRevealedPixels([$0], displayID: $1, reader: LiveMenuBarCaptureReader()) },
