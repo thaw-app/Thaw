@@ -42,6 +42,7 @@ struct LayoutGroupNavigation {
             to: group,
             manager: appState.itemGroupManager,
             undoManager: appState.layoutUndo,
+            folders: appState.groupFolders,
             sectionItems: { section in
                 let running = NSWorkspace.shared.runningApplications.filter { !$0.isTerminated }
                 return LayoutDisplayedItems.items(in: section, appState: appState, runningApplications: running)
@@ -81,6 +82,7 @@ struct LayoutGroupNavigation {
         to group: MenuBarItemGroup,
         manager: MenuBarItemGroupManager,
         undoManager: UndoManager?,
+        folders: GroupFolders? = nil,
         sectionItems: (MenuBarSectionName) -> [MenuBarItem]
     ) -> AddOutcome {
         let members = Set(group.memberIdentifiers)
@@ -96,7 +98,7 @@ struct LayoutGroupNavigation {
             return .refused(section)
         }
         let joining = items.filter { dropped.contains($0.uniqueIdentifier) }
-        let grouping = LayoutSelectionGrouping(items: joining, sectionItems: items, manager: manager, undoManager: undoManager)
+        let grouping = LayoutSelectionGrouping(items: joining, sectionItems: items, manager: manager, undoManager: undoManager, folders: folders)
         guard let resolved = grouping.joinableGroups.first(where: { $0.origin == .user(group.id) }) else {
             return .unchanged
         }
