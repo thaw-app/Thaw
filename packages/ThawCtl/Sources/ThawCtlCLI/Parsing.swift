@@ -121,10 +121,10 @@ private func requireExactlyOne(of command: Command, in flags: [String: String]) 
     }
 }
 
-/// Reads a name=value argument into the command's values.
+/// Reads a name=value argument, rejecting empty names and values.
 private func readPair(_ arg: String, for command: Command, into values: inout [String: String]) throws {
-    let pair = arg.split(separator: "=", maxSplits: 1).map(String.init)
-    guard pair.count == 2 else {
+    let pair = arg.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+    guard pair.count == 2, !pair[0].isEmpty, !pair[1].isEmpty else {
         throw ParseError.invalidPair(arg)
     }
     if command.valueParams.contains(pair[0]) {

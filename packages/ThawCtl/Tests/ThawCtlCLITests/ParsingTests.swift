@@ -40,6 +40,14 @@ struct ParsingTests {
         #expect(throws: ParseError.missingValue(command: "set", param: "value")) { try parse(["set", "key=showOnHover"]) }
     }
 
+    /// Malformed pairs must not be reinterpreted as a different setting assignment.
+    @Test("set rejects empty names and values", arguments: [
+        "=showOnHover=true", "==showOnHover=true", "=key=showOnHover", "showOnHover=", "=true", "=",
+    ])
+    func emptyPairComponents(argument: String) {
+        #expect(throws: ParseError.invalidPair(argument)) { try parse(["set", argument]) }
+    }
+
     @Test("A one-value command takes its value positionally, and nothing else takes an unknown pair")
     func positional() throws {
         #expect(try query(["toggle-setting", "showOnHover"]) == ["key": "showOnHover"])
