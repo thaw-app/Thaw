@@ -234,7 +234,9 @@ final class IceBarPanel: NSPanel {
 
         // Never defer orderFront: currentSection without a visible panel
         // makes a second click call hide() instead of show().
+        let openingCapture = ThawBarOpeningCapture()
         contentView = IceBarHostingView(
+            openingCapture: openingCapture,
             appState: appState,
             colorManager: colorManager,
             screen: screen,
@@ -252,6 +254,7 @@ final class IceBarPanel: NSPanel {
         let targetDisplayID = screen.displayID
         cacheTask?.cancel()
         cacheTask = Task { [weak appState, weak colorManager] in
+            defer { openingCapture.isPending = false }
             guard let appState else { return }
 
             await colorManager?.refresh(with: panelFrame, screen: screen)
@@ -317,12 +320,14 @@ private final class IceBarHostingView: NSHostingView<IceBarContentView> {
     }
 
     init(
+        openingCapture: ThawBarOpeningCapture,
         appState: AppState,
         colorManager: IceBarColorManager,
         screen: NSScreen,
         section: MenuBarSection.Name
     ) {
         let rootView = IceBarContentView(
+            openingCapture: openingCapture,
             appState: appState,
             colorManager: colorManager,
             itemManager: appState.itemManager,
@@ -352,6 +357,7 @@ private final class IceBarHostingView: NSHostingView<IceBarContentView> {
 // MARK: - IceBarContentView
 
 private struct IceBarContentView: View {
+    let openingCapture: ThawBarOpeningCapture
     let appState: AppState
     let colorManager: IceBarColorManager
     let itemManager: MenuBarItemManager
@@ -564,8 +570,17 @@ private struct IceBarContentView: View {
         appState.openWindow(.settings)
     }
 
-    @ViewBuilder
     private var content: some View {
+        openingCapture.row(
+            for: items,
+            cache: imageCache,
+            prefersAppIcons: prefersAppIcon,
+            canCapture: appState.hasPermission(.screenRecording)
+        ) { itemContent }
+    }
+
+    @ViewBuilder
+    private var itemContent: some View {
         // No Screen Recording check on purpose: uncaptured items fall back to
         // app icons, and notch overflow can force this bar on.
         if section == .alwaysHidden || section == .hidden, items.isEmpty {
