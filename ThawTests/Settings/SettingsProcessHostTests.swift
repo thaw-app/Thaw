@@ -88,12 +88,19 @@ private final class AppSideCalls {
     var updateChecks = 0
     var quits = 0
     var processEnds = 0
+    var pageReloads = 0
+    var storeReloads = 0
+    /// Each read and the page's end, in the order the host ran them.
+    var steps = [String]()
     /// A topic the host keeps sending, so a test can count the watches left running.
     let status = StatusSource()
 
     func side() -> SettingsProcessHost.AppSide {
         SettingsProcessHost.AppSide(
-            reloadSettings: { self.reloads += 1 },
+            reloadSettings: {
+                self.reloads += 1
+                self.steps.append("settings")
+            },
             openInApp: { self.openedInApp.append($0) },
             pageChanged: { self.pagesChanged.append($0) },
             checkForUpdates: { self.updateChecks += 1 },
@@ -101,7 +108,18 @@ private final class AppSideCalls {
             updatesState: { .updatesState(canCheck: true, lastCheck: nil) },
             features: [SettingsAppFeature(
                 statuses: ["test.status": { SettingsLinkPayload.encode(self.status.value) }],
-                processEnded: { self.processEnds += 1 }
+                reload: {
+                    self.pageReloads += 1
+                    self.steps.append("page")
+                },
+                stores: ["test.store": {
+                    self.storeReloads += 1
+                    self.steps.append("store")
+                }],
+                processEnded: {
+                    self.processEnds += 1
+                    self.steps.append("ended")
+                }
             )]
         )
     }
@@ -210,6 +228,38 @@ struct SettingsProcessHostTests {
         #expect(await settingsLinkWait { child.receivedMessages.contains(changed) })
         await mainActorQueueDrained()
         #expect(child.receivedMessages.count { $0 == changed } == 1, "only the new process's watch sends the change")
+    }
+
+    @Test("A process that ends reads the settings and stores again, since its last notice may not have arrived")
+    func endReadsEverythingAgain() async throws {
+        let host = host()
+        #expect(host.show(pane: "General", simpleMode: false))
+        let launched = try #require(child.launches.first)
+        // The process closed its end before its notice went out, so the notice never reaches the app.
+        try launched.fromChild.fileHandleForWriting.close()
+        #expect(await settingsLinkWait { !host.isLinked })
+        calls.steps = []
+        launched.onEnd(0)
+        #expect(await settingsLinkWait { calls.processEnds == 1 })
+        #expect(calls.steps == ["settings", "page", "store", "ended"])
+        #expect(calls.pageReloads == 1)
+        #expect(calls.storeReloads == 1)
+        await mainActorQueueDrained()
+        #expect(calls.steps.count == 4, "the reads send nothing that comes back")
+    }
+
+    @Test("The late end of an earlier process reads nothing again")
+    func staleEndReadsNothing() async throws {
+        let host = host()
+        #expect(host.show(pane: "General", simpleMode: false))
+        child.isRunning = false
+        #expect(host.show(pane: "About", simpleMode: false))
+        #expect(calls.storeReloads == 1, "letting go of the stopped process read the stores")
+        child.isRunning = true
+        try #require(child.launches.first).onEnd(0)
+        await mainActorQueueDrained()
+        #expect(calls.storeReloads == 1)
+        #expect(calls.processEnds == 1)
     }
 
     @Test("A process that fails to start leaves the app to show Settings, and the next open tries again")

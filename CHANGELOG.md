@@ -34,6 +34,7 @@ the items under New and Fixed.
 
 - **With Show on scroll off, scrolling no longer keeps Thaw busy.** Thaw asked macOS which display had the active menu bar on every scroll, anywhere, before it looked at the setting. A drag without Command held no longer asks either.
 - **An item set to show when its icon changes no longer has pictures taken while Triggers is off.** Every Space switch or change in the menu bar took new pictures of hidden items for it, and nothing used them.
+- **A setting you change just before closing Settings is no longer lost.** Thaw reads every setting again when Settings closes, so a change it hadn't heard about yet still takes effect.
 
 - `thawctl set` now rejects assignments with an empty setting name instead of interpreting them as a different setting change.
 - Asking `thawctl` for help with `--help` or `-h` now exits successfully and prints to standard output.

@@ -199,6 +199,17 @@ final class SettingsProcessHost {
         statusWatches = []
         shownInAppWait?.cancel()
         shownInAppWait = nil
+        Self.processEnded(app)
+    }
+
+    /// Its last messages may not have arrived, so the settings and every store are read again,
+    /// then each page undoes what only lasted while it ran. The link is gone, so nothing is sent.
+    static func processEnded(_ app: AppSide) {
+        app.reloadSettings()
+        app.features.forEach { $0.reload() }
+        for feature in app.features {
+            feature.stores.sorted { $0.key < $1.key }.forEach { $0.value() }
+        }
         app.features.forEach { $0.processEnded() }
     }
 
