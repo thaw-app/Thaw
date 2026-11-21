@@ -185,11 +185,13 @@ extension HIDEventManager {
         return Bridging.isSpaceFullscreen(spaceID)
     }
 
-    /// A display showing a fullscreen Space gets no band: the app owns the
-    /// top of the screen there, and the clock's last frame would take its clicks.
+    /// ClockBridgeAvailability.hasClockBand decides which displays get a band.
     func refreshClockMenuBarBands() {
         clockMenuBarBands = NSScreen.screens.compactMap { screen in
-            guard !Self.isShowingFullscreenSpace(screen.displayID) else { return nil }
+            guard ClockBridgeAvailability.hasClockBand(
+                showsFullscreenSpace: Self.isShowingFullscreenSpace(screen.displayID),
+                hasNotch: screen.hasNotch
+            ) else { return nil }
             let bounds = CGDisplayBounds(screen.displayID)
             return CGRect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: screen.getMenuBarHeightEstimate())
         }
