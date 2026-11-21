@@ -26,6 +26,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- When opening the Thaw Bar, a section waiting for its first icon captures shows a loading message instead of briefly displaying application icons. A fully cached row still appears immediately.
 - **A Thaw Bar with its own tint no longer hides its items.** The tint now colors the bar behind the items, so even a fully opaque one leaves them visible.
 
 ## [2.2.0-beta.2] - 2026-11-05
