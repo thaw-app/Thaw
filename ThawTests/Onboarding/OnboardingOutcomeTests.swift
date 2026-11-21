@@ -8,35 +8,16 @@
 import Testing
 @testable import Thaw
 
-/// The flow returns both choices by value, preserving its defaults.
 @Suite("Onboarding outcome")
 struct OnboardingOutcomeTests {
-    @Test("the flow's defaults round-trip")
-    func defaultsRoundTrip() {
-        let outcome = OnboardingOutcome(simpleMode: true, automaticUpdates: true)
-        #expect(outcome.simpleMode)
-        #expect(outcome.automaticUpdates)
-        #expect(outcome == OnboardingOutcome(simpleMode: true, automaticUpdates: true))
+    @Test("A first onboarding starts in Simple Mode, whatever the mode was")
+    func firstOnboardingStartsSimple() {
+        #expect(OnboardingOutcome.simpleMode(current: false, hasSeenOnboarding: false))
+        #expect(OnboardingOutcome.simpleMode(current: true, hasSeenOnboarding: false))
     }
 
-    @Test("outcomes compare by value")
-    func equatableByValue() {
-        let full = OnboardingOutcome(simpleMode: false, automaticUpdates: true)
-        #expect(full != OnboardingOutcome(simpleMode: true, automaticUpdates: true))
-        #expect(full != OnboardingOutcome(simpleMode: false, automaticUpdates: false))
-
-        var copy = full
-        copy.simpleMode = true
-        copy.automaticUpdates = false
-        #expect(copy == OnboardingOutcome(simpleMode: true, automaticUpdates: false))
-        #expect(copy != OnboardingOutcome(simpleMode: true, automaticUpdates: true))
-    }
-
-    /// The bento alone collects both choices; keep their answers independent when passing them to the host.
-    @Test("each field is carried separately", arguments: [false, true], [false, true])
-    func fieldsAreIndependent(simpleMode: Bool, automaticUpdates: Bool) {
-        let outcome = OnboardingOutcome(simpleMode: simpleMode, automaticUpdates: automaticUpdates)
-        #expect(outcome.simpleMode == simpleMode)
-        #expect(outcome.automaticUpdates == automaticUpdates)
+    @Test("A replay or an upgrade keeps the mode in use", arguments: [false, true])
+    func replayKeepsMode(current: Bool) {
+        #expect(OnboardingOutcome.simpleMode(current: current, hasSeenOnboarding: true) == current)
     }
 }

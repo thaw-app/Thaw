@@ -15,6 +15,8 @@ struct DisplaySettingsPane: View {
     @Bindable var displaySettings: DisplaySettingsManager
     /// Nil answers show the alerts below; see Confirmations.
     var confirmations = Confirmations()
+    /// The app, which saves to the profiles when Settings is in its own process.
+    var remote = SettingsRemote.current
 
     /// Slider edits remain drafts until Apply, without saving configuration or relaunching apps.
     @State var draftSpacing: [String: CGFloat] = [:]

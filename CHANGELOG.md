@@ -24,11 +24,24 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Changed
+
+- **A shorter welcome.** It says what Thaw does and asks for access. Its last page shows how to hide and show items, with Launch at Login, a shortcut and automatic updates beside it. The feature tour and the choice between Simple Mode and All Settings are gone: a first launch starts in Simple Mode, and showing the welcome again keeps the mode you use.
+
 ### Fixed
 
+- `thawctl set` now rejects assignments with an empty setting name instead of interpreting them as a different setting change.
 - Asking `thawctl` for help with `--help` or `-h` now exits successfully and prints to standard output.
+- **`thawctl reveal-item` needs exactly one of `--bundle` or `--item-id`,** and says so. Given neither or both, it reported the request as sent, and Thaw then turned it down.
 - **A hidden item you open from the Thaw Bar gets a new picture once its menu closes,** so an icon that changed while hidden, such as one showing an update, no longer keeps its old look. macOS shows the screen recording indicator for a moment. By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
 - **A hidden item's picture catches up with a redesigned icon that got shorter,** such as Docker Desktop's new whale. Thaw took the new icon for the old one still appearing and kept the old picture, even when you retook every picture.
+- **A hidden item's new picture is no longer kept highlighted** when its menu opens again while the picture is taken.
+- **An app that restarts just before another app opens no longer loses its place when a profile applies.** Thaw now waits for its item to come back, as it already did when no other app opened in the same second.
+- **An item with a changing title, such as a countdown, is recognized as one item on a display to the left of your main display too.** There, each new title could make it look like a new item.
+- **A reorder you make in Layout keeps being applied until the menu bar shows it.** A read that missed one of the moved items could count it as done, and the bar kept the old order.
+- **A change to the menu bar is saved, and items that don't fit are moved, even when Thaw first saw it in a read that missed some apps.** A full read that found the same bar skipped both.
+- **Items you reveal in the menu bar hide again when the pointer rests where the Thaw Bar was.** After the Thaw Bar closed, that spot still counted as the bar and kept them open.
+- **The widget icon lights another dot as soon as a reading crosses it,** even when the percentage shown stays the same, such as 24.9% and 25.1% both reading 25%.
 
 ## [3.0.0-beta.7] - 2026-11-17
 

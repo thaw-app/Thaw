@@ -17,6 +17,8 @@ struct ProfileSettingsPane: View {
 
     /// Where the page asks for a file to export to or import from. Tests replace these so no panel opens.
     var fileChoosers = FileChoosers()
+    /// Set in the settings process, where the app runs the page's actions.
+    var remote: SettingsRemote? = .current
 
     @State private var newProfileName = ""
     @State private var isApplying = false
@@ -28,6 +30,8 @@ struct ProfileSettingsPane: View {
     /// Computed with previewedProfile when the selection changes, so drawing
     /// the page does not re-read the bar.
     @State private var previewedDiff: ProfileLayoutDiff?
+    /// Until the first preview has come, which in the settings process the app sends.
+    @State private var awaitsPreview = true
     @State private var selectedProfileID: UUID?
     @FocusState private var isListFocused: Bool
 
@@ -60,16 +64,19 @@ struct ProfileSettingsPane: View {
                     profileManager: profileManager,
                     displaySettings: appState.settings.displaySettings,
                     profile: selected,
-                    errorMessage: $errorMessage
+                    errorMessage: $errorMessage,
+                    remote: remote
                 )
                 ProfileLayoutBehaviorSection(
                     profileManager: profileManager,
                     profile: selected,
-                    errorMessage: $errorMessage
+                    errorMessage: $errorMessage,
+                    remote: remote
                 )
                 ProfileChangesSection(
                     profile: previewedProfile,
                     diff: previewedDiff,
+                    awaitsPreview: awaitsPreview,
                     update: { updateProfile(id: selected.id, scope: $0) },
                     updateAll: updateConfigurationOnAllProfiles
                 )
@@ -219,139 +226,74 @@ struct ProfileSettingsPane: View {
 
     // MARK: - Actions
 
+    private var runner: ProfilePageRunner {
+        ProfilePageRunner(
+            performer: ProfilePagePerformer(profileManager: profileManager, appState: appState),
+            remote: remote,
+            undoManager: undoManager,
+            errorMessage: $errorMessage
+        )
+    }
+
     private func createProfile() {
         let name = newProfileName.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
-        do {
-            let profileID = try profileManager.saveProfile(name: name, from: appState)
-            profileManager.activeProfileID = profileID
-            newProfileName = ""
-            registerProfileUndo(
-                .delete(id: profileID),
-                actionName: String(localized: "Create Profile"),
-                manager: profileManager,
-                undoManager: undoManager,
-                errorBinding: $errorMessage
-            )
-        } catch {
-            errorMessage = error.localizedDescription
+        runner.run(.create(name: name)) { outcome in
+            if outcome != nil {
+                newProfileName = ""
+            }
         }
     }
 
     private func previewProfile(id: UUID) {
-        do {
-            let profile = try profileManager.loadProfile(id: id)
-            previewedDiff = diff(for: profile)
-            previewedProfile = profile
-        } catch {
-            errorMessage = error.localizedDescription
+        runner.run(.preview(id: id)) { outcome in
+            awaitsPreview = false
+            // An answer from the app may arrive after another profile was picked. A profile that
+            // couldn't be read clears the one before it, so its changes don't show under this one.
+            guard id == selectedProfile?.id else { return }
+            previewedDiff = outcome?.preview?.diff
+            previewedProfile = outcome?.preview?.profile
         }
-    }
-
-    func diff(for profile: Profile) -> ProfileLayoutDiff {
-        var diff = ProfileLayoutDiff.between(
-            current: profileManager.currentLayoutSnapshot(from: appState),
-            profile: profile.menuBarLayout
-        )
-        diff.settingChanges = ProfilePreviewChanges.settingChanges(of: profile, appState: appState)
-
-        // Warn only if the spacing the apply leaves on the menu bar's display would relaunch apps.
-        let offset = ProfileRelaunchSafety.spacingOffset(of: profile, activeDisplayUUID: appState.settings.displaySettings.activeMenuBarDisplayUUID)
-        // The mode in effect once the profile is applied, merged the way the apply merges it.
-        let applyMode = ProfileRelaunchSafety.merged(profile, onto: appState.settings.displaySettings).applyMode
-        if applyMode == .relaunchApps, !appState.spacingManager.isOnDisk(offset: offset) {
-            diff.relaunchingSpacingOffset = offset
-        }
-        return diff
     }
 
     private func applyProfile(id: UUID) {
         isApplying = true
-        Task {
-            do {
-                // Waits for the layout task, so the Apply buttons stay off until it ends.
-                try await profileManager.applyProfileAwaitingLayout(id: id, to: appState, spacingRelaunchApproved: approvesSpacingRelaunch(forProfileID: id))
-                refreshPreview()
-                if profileManager.layoutDidNotRun {
-                    errorMessage = String(
-                        localized: "The profile's settings were applied, but its menu bar arrangement was not: \(Constants.displayName) is not managing the menu bar yet. Apply it again once the menu bar is under \(Constants.displayName)'s control."
-                    )
-                }
-            } catch {
-                errorMessage = error.localizedDescription
+        // What the apply would change says whether it restarts apps, which may need a yes first.
+        runner.run(.preview(id: id)) { outcome in
+            guard let preview = outcome?.preview else {
+                isApplying = false
+                return
             }
-            isApplying = false
+            runner.run(.apply(id: id, spacingRelaunchApproved: approvesSpacingRelaunch(for: preview))) { outcome in
+                // The layout has run by now, so the Apply buttons stayed off until it ended.
+                isApplying = false
+                showResult(of: outcome)
+            }
+        }
+    }
+
+    /// After an action that changed a profile or the bar: shows the selected profile's changes
+    /// again, and what the action has to say.
+    private func showResult(of outcome: ProfilePageOutcome?) {
+        guard let outcome else { return }
+        refreshPreview()
+        if let notice = outcome.notice {
+            errorMessage = notice
         }
     }
 
     private func updateProfile(id: UUID, scope: ProfileManager.ProfileUpdateScope = .all) {
-        do {
-            let previous = try profileManager.loadProfile(id: id)
-            try profileManager.updateProfile(id: id, scope: scope, appState: appState)
-            refreshPreview()
-            let actionName = switch scope {
-            case .all: String(localized: "Save Profile")
-            case .layoutOnly: String(localized: "Save Layout")
-            case .configurationOnly: String(localized: "Save Configuration")
-            }
-            registerProfileUndo(
-                .replace([previous]),
-                actionName: actionName,
-                manager: profileManager,
-                undoManager: undoManager,
-                errorBinding: $errorMessage
-            )
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        runner.run(.update(id: id, scope: scope), then: showResult)
     }
 
     private func updateConfigurationOnAllProfiles() {
-        var failed = 0
-        var previous: [Profile] = []
-        for profile in profileManager.profiles {
-            do {
-                try previous.append(profileManager.loadProfile(id: profile.id))
-                try profileManager.updateProfile(id: profile.id, scope: .configurationOnly, appState: appState)
-            } catch {
-                failed += 1
-            }
-        }
-        refreshPreview()
-        if failed > 0 {
-            errorMessage = String(localized: "Failed to update configuration on \(failed) profiles.")
-        }
-        if !previous.isEmpty {
-            registerProfileUndo(
-                .replace(previous),
-                actionName: String(localized: "Save Configuration on All Profiles"),
-                manager: profileManager,
-                undoManager: undoManager,
-                errorBinding: $errorMessage
-            )
-        }
+        runner.run(.updateSettingsInEveryProfile, then: showResult)
     }
 
     private func commitRename(id: UUID) {
         let name = editingName.trimmingCharacters(in: .whitespaces)
-        guard !name.isEmpty else {
-            editingProfileID = nil
-            return
-        }
-        let previousName = profileManager.profiles.first { $0.id == id }?.name
-        do {
-            try profileManager.renameProfile(id: id, to: name)
-            if let previousName, previousName != name {
-                registerProfileUndo(
-                    .rename(id: id, to: previousName),
-                    actionName: String(localized: "Rename Profile"),
-                    manager: profileManager,
-                    undoManager: undoManager,
-                    errorBinding: $errorMessage
-                )
-            }
-        } catch {
-            errorMessage = error.localizedDescription
+        if !name.isEmpty {
+            runner.run(.rename(id: id, name: name))
         }
         editingProfileID = nil
     }
@@ -359,69 +301,33 @@ struct ProfileSettingsPane: View {
     private func duplicateProfile(id: UUID) {
         let profile = profileManager.profiles.first { $0.id == id }
         let name = (profile?.name ?? String(localized: "Profile")) + " " + String(localized: "Copy")
-        let existingIDs = Set(profileManager.profiles.map(\.id))
-        do {
-            try profileManager.duplicateProfile(id: id, newName: name)
-            if let created = profileManager.profiles.first(where: { !existingIDs.contains($0.id) }) {
-                registerProfileUndo(
-                    .delete(id: created.id),
-                    actionName: String(localized: "Duplicate Profile"),
-                    manager: profileManager,
-                    undoManager: undoManager,
-                    errorBinding: $errorMessage
-                )
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        runner.run(.duplicate(id: id, name: name))
     }
 
     private func deleteProfile(id: UUID) {
-        do {
-            let (profile, shortcut) = (try ProfileDeletion.snapshotForUndo { try profileManager.loadProfile(id: id) }, ProfileApplyShortcuts().shortcut(for: id))
-            let index = profileManager.profiles.firstIndex { $0.id == id }
-            let metadata = index.map { profileManager.profiles[$0] }
-            let wasActive = profileManager.activeProfileID == id
-            try profileManager.deleteProfile(id: id)
-            if wasActive {
-                profileManager.activeProfileID = nil
-                appState.itemManager.clearActiveProfileLayout()
-            }
-            if let profile, let index, let metadata {
-                registerProfileUndo(
-                    .restore(profile: profile, metadata: metadata, at: index, wasActive: wasActive, shortcut: shortcut),
-                    actionName: String(localized: "Delete Profile"),
-                    manager: profileManager,
-                    undoManager: undoManager,
-                    errorBinding: $errorMessage
-                )
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        runner.run(.delete(id: id))
     }
 
     private func exportProfile(id: UUID, name: String) {
         let safeName = name.replacingOccurrences(of: "/", with: "-")
         guard let url = fileChoosers.save("\(safeName).json") else { return }
-        do {
-            try profileManager.exportProfile(id: id, to: url)
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        runner.run(.export(id: id)) { write($0, to: url) }
     }
 
     private func exportAllProfiles() {
-        let (json, unreadable) = profileManager.exportAllProfiles()
-        guard let json else {
-            errorMessage = String(localized: "Failed to encode profiles for export.")
-            return
+        runner.run(.export(id: nil)) { outcome in
+            guard outcome != nil, let url = fileChoosers.save("\(Constants.displayName) Profiles.json") else { return }
+            write(outcome, to: url)
         }
-        guard let url = fileChoosers.save("\(Constants.displayName) Profiles.json") else { return }
+    }
+
+    /// Writes an export where the person chose, from the process whose panel they chose it in.
+    private func write(_ outcome: ProfilePageOutcome?, to url: URL) {
+        guard let outcome, let exported = outcome.exported else { return }
         do {
-            try json.write(to: url, atomically: true, encoding: .utf8)
-            if !unreadable.isEmpty {
-                errorMessage = String(localized: "Exported, except profiles that couldn't be read: \(unreadable.formatted(.list(type: .and)))")
+            try exported.write(to: url, options: .atomic)
+            if let notice = outcome.notice {
+                errorMessage = notice
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -431,58 +337,9 @@ struct ProfileSettingsPane: View {
     private func importProfile() {
         guard let url = fileChoosers.open() else { return }
         do {
-            try profileManager.importProfile(from: url)
+            try runner.run(.importFile(Data(contentsOf: url)))
         } catch {
             errorMessage = error.localizedDescription
         }
-    }
-}
-
-// MARK: - Undo
-
-/// Register completed edits against the manager so undo survives pane teardown.
-private func registerProfileUndo(
-    _ step: ProfileUndoStep,
-    actionName: String,
-    manager: ProfileManager,
-    undoManager: UndoManager?,
-    errorBinding: Binding<String?>
-) {
-    guard let undoManager else { return }
-    // The undo stack retains this handler; capture its manager weakly to avoid a cycle.
-    undoManager.registerUndo(withTarget: manager) { [weak undoManager] target in
-        performProfileUndo(
-            step,
-            actionName: actionName,
-            manager: target,
-            undoManager: undoManager,
-            errorBinding: errorBinding
-        )
-    }
-    undoManager.setActionName(actionName)
-}
-
-/// Registers the inverse step so the next redo restores the same edit.
-private func performProfileUndo(
-    _ step: ProfileUndoStep,
-    actionName: String,
-    manager: ProfileManager,
-    undoManager: UndoManager?,
-    errorBinding: Binding<String?>
-) {
-    do {
-        let reverse = try step.apply(to: manager)
-        undoManager?.registerUndo(withTarget: manager) { [weak undoManager] target in
-            performProfileUndo(
-                reverse,
-                actionName: actionName,
-                manager: target,
-                undoManager: undoManager,
-                errorBinding: errorBinding
-            )
-        }
-        undoManager?.setActionName(actionName)
-    } catch {
-        errorBinding.wrappedValue = error.localizedDescription
     }
 }

@@ -9,7 +9,7 @@ import Foundation
 import ThawModuleKit
 
 /// What a module's Info.plist says about it.
-nonisolated struct ModuleManifest: Equatable, Sendable {
+nonisolated struct ModuleManifest: Equatable, Sendable, Codable {
     static let identifierKey = "ThawModuleIdentifier"
     static let minimumAPIVersionKey = "ThawModuleMinimumAPIVersion"
 
@@ -49,7 +49,7 @@ nonisolated struct ModuleManifest: Equatable, Sendable {
 }
 
 /// Whether an installed module may be launched.
-nonisolated enum ModuleLaunchVerdict: Equatable, Sendable {
+nonisolated enum ModuleLaunchVerdict: Equatable, Sendable, Codable {
     case launch
     case notAModule
     case untrusted

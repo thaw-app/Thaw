@@ -217,9 +217,10 @@ final class MenuBarOverlayPanel: NSPanel {
     }
 
     /// Asynchronous layout can initially return the outgoing app's frame; poll for three stable reads, capped at ten.
-    /// Non-main screens need one read because only the main bar reflows on app switches.
-    private func trackApplicationMenuFrame() {
+    /// Non-main screens need one read because only the main bar reflows on app switches. Only a shape that follows the items reads it.
+    func trackApplicationMenuFrame() {
         menuFrameSettleTask?.cancel()
+        guard appState?.appearanceManager.effectiveConfiguration.shapeKind.followsItems == true else { return }
         menuFrameSettleTask = Task { @MainActor [weak self] in
             var candidate: CGRect?
             var settledCount = 0
@@ -742,6 +743,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                             // Start, or stop, reading the items when the shape starts or stops needing them.
                             if full.shapeKind.followsItems != followedItems {
                                 edgeFollow.update(edgeWatcher, wanted: full.shapeKind.followsItems)
+                                overlayPanel.trackApplicationMenuFrame()
                                 scheduleAXItemBoundsRefresh(.immediate)
                             }
                         }

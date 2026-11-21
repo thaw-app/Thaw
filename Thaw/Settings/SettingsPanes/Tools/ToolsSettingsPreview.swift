@@ -22,8 +22,9 @@
             store.removePersistentDomain(forName: domain)
             Defaults.store = store
             let settings = ToolsSettings()
-            // A changed value would otherwise prune the real log folder.
+            // A changed value would otherwise prune the real log folder, or switch the real log on or off.
             settings.sendRotationPolicy = { _ in /* Preview only. */ }
+            settings.setLogEnabled = { _ in /* Preview only. */ }
             return settings
         }
     }

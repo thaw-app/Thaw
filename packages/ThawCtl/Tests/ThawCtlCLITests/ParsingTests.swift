@@ -40,6 +40,14 @@ struct ParsingTests {
         #expect(throws: ParseError.missingValue(command: "set", param: "value")) { try parse(["set", "key=showOnHover"]) }
     }
 
+    /// Malformed pairs must not be reinterpreted as a different setting assignment.
+    @Test("set rejects empty names and values", arguments: [
+        "=showOnHover=true", "==showOnHover=true", "=key=showOnHover", "showOnHover=", "=true", "=",
+    ])
+    func emptyPairComponents(argument: String) {
+        #expect(throws: ParseError.invalidPair(argument)) { try parse(["set", argument]) }
+    }
+
     @Test("A one-value command takes its value positionally, and nothing else takes an unknown pair")
     func positional() throws {
         #expect(try query(["toggle-setting", "showOnHover"]) == ["key": "showOnHover"])
@@ -50,6 +58,21 @@ struct ParsingTests {
     func getRefused() {
         #expect(throws: ParseError.noReplyChannel) { try parse(["get", "showOnHover"]) }
         #expect(!Command.all.contains { $0.name == "get" })
+    }
+
+    @Test("reveal-item sends exactly one of --bundle and --item-id")
+    func revealItemSelector() throws {
+        #expect(try query(["reveal-item", "--bundle", "com.example.app"]) == ["bundle": "com.example.app"])
+        #expect(try query(["reveal-item", "--item-id", "com.example.app:Item-0"]) == ["item-id": "com.example.app:Item-0"])
+    }
+
+    @Test("reveal-item refuses neither selector, both, or an empty one, as Thaw would")
+    func revealItemRefusals() {
+        let refusal = ParseError.needsExactlyOne(command: "reveal-item", params: ["bundle", "item-id"])
+        #expect(throws: refusal) { try parse(["reveal-item"]) }
+        #expect(throws: refusal) { try parse(["reveal-item", "--bundle", "com.example.app", "--item-id", "com.example.app:Item-0"]) }
+        #expect(throws: refusal) { try parse(["reveal-item", "--bundle", ""]) }
+        #expect(refusal.description == "reveal-item: give exactly one of --bundle or --item-id")
     }
 
     @Test("Help and unknown commands")

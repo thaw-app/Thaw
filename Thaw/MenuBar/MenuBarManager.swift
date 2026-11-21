@@ -48,8 +48,8 @@ final class MenuBarManager {
     /// System hiding or auto-hiding, independent of Thaw's concealment.
     private(set) var isMenuBarHiddenBySystem = false
 
-    /// Persisted _HIHideMenuBar value, unlike isMenuBarHiddenBySystem which also reflects transient app presentation options.
-    private(set) var isMenuBarHiddenBySystemUserDefaults = false
+    /// Persisted _HIHideMenuBar value, unlike isMenuBarHiddenBySystem which also reflects transient app presentation options. The settings process, which watches nothing, is handed the app's.
+    var isMenuBarHiddenBySystemUserDefaults = false
 
     /// Pause hover after an explicit toggle so it cannot undo the user; it resumes once the pointer leaves the hover band.
     var showOnHoverAllowed = true {
@@ -83,7 +83,7 @@ final class MenuBarManager {
     private(set) var rehideController: RehideController?
 
     /// Menu-opening hotkeys keyed by uniqueIdentifier, mirroring ProfileManager's per-profile bindings.
-    private(set) var itemHotkeys: [String: Hotkey] = [:]
+    var itemHotkeys: [String: Hotkey] = [:]
 
     /// Reverse map from a hotkey instance to the item identifier it opens.
     /// Read by Hotkey.Listener when an openMenuBarItem hotkey fires.

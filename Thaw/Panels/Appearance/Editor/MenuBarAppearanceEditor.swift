@@ -651,7 +651,7 @@ private struct HoldToPreviewButton: View {
         .buttonStyle(
             PressReportingButtonStyle { isPressed in
                 let manager = appState.appearanceManager
-                manager.previewConfiguration = isPressed ? previewConfiguration(of: manager) : nil
+                manager.showPreview(isPressed ? previewConfiguration(of: manager) : nil)
             }
         )
     }

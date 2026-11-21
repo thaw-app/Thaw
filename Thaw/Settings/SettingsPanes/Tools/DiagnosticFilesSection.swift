@@ -16,6 +16,8 @@ import UniformTypeIdentifiers
 /// and the item list with its capture samples.
 struct DiagnosticFilesSection: View {
     var actions = Actions()
+    /// In the settings process, what the app says about its capture samples. Nil in the app.
+    var appReport: ToolsAppReport?
 
     @State private var isExporting = false
     @State private var errorMessage: String?
@@ -50,9 +52,9 @@ struct DiagnosticFilesSection: View {
                     Button("Save…", action: saveItemList)
                         .accessibilityLabel("Save Item List")
                     Button("Show Samples") {
-                        actions.open(CaptureDiagnostics.sampleDirectory)
+                        actions.open(appReport?.status.sampleDirectory ?? CaptureDiagnostics.sampleDirectory)
                     }
-                    .disabled(!hasCaptureSamples)
+                    .disabled(!(appReport?.status.hasCaptureSamples ?? hasCaptureSamples))
                     .accessibilityLabel("Show Capture Samples")
                 }
                 .buttonStyle(.thawGrouped)
@@ -104,11 +106,13 @@ struct DiagnosticFilesSection: View {
         guard let destination = actions.chooseDestination("\(Constants.displayName) Items.json", .json) else {
             return
         }
-        do {
-            try actions.saveItemList(destination)
-            actions.reveal(destination)
-        } catch {
-            errorMessage = error.localizedDescription
+        Task {
+            do {
+                try await actions.saveItemList(destination)
+                actions.reveal(destination)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }

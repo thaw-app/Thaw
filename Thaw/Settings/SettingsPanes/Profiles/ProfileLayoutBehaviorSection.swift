@@ -14,6 +14,8 @@ struct ProfileLayoutBehaviorSection: View {
     @Bindable var profileManager: ProfileManager
     let profile: ProfileMetadata
     @Binding var errorMessage: String?
+    /// Set in the settings process, where the app saves the switches.
+    var remote: SettingsRemote? = .current
 
     var body: some View {
         ThawSection("Layout") {
@@ -33,21 +35,18 @@ struct ProfileLayoutBehaviorSection: View {
     }
 
     var keepsChanges: Binding<Bool> {
-        binding(\.keepsLayoutChanges) { profileManager.setLayoutBehavior(keepsChanges: $0, forProfileID: profile.id) }
+        binding(\.keepsLayoutChanges) { .layoutBehavior(keepsChanges: $0, reappliesAtLaunch: nil, profile: profile.id) }
     }
 
     var reappliesAtLaunch: Binding<Bool> {
-        binding(\.reappliesAtLaunch) { profileManager.setLayoutBehavior(reappliesAtLaunch: $0, forProfileID: profile.id) }
+        binding(\.reappliesAtLaunch) { .layoutBehavior(keepsChanges: nil, reappliesAtLaunch: $0, profile: profile.id) }
     }
 
-    private func binding(_ keyPath: KeyPath<ProfileMetadata, Bool>, set: @escaping (Bool) -> Void) -> Binding<Bool> {
+    private func binding(_ keyPath: KeyPath<ProfileMetadata, Bool>, edit: @escaping (Bool) -> ProfileListEdit) -> Binding<Bool> {
         Binding {
             (profileManager.profiles.first { $0.id == profile.id } ?? profile)[keyPath: keyPath]
         } set: { value in
-            set(value)
-            if let message = profileManager.takeManifestError() {
-                errorMessage = message
-            }
+            ProfilePageRunner.make(edit(value), on: profileManager, remote: remote, errorMessage: $errorMessage)
         }
     }
 }

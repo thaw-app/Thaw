@@ -23,7 +23,7 @@ struct SpacesControlsContent: View {
     @State private var isHiddenEverywhere = false
 
     private var presentation: any MenuBarPresentationControlling {
-        MenuBarPresentationProvider.current
+        MenuBarPresentationProvider.forSettings
     }
 
     var body: some View {
@@ -113,7 +113,7 @@ private struct ThisSpaceSection: View {
     private static let defaultRevealStripHeight: Double = 4
 
     private var presentation: any MenuBarPresentationControlling {
-        MenuBarPresentationProvider.current
+        MenuBarPresentationProvider.forSettings
     }
 
     /// Space 0 is the "unknown Space" answer from the bridging layer. Acting
@@ -279,7 +279,7 @@ private struct AllSpacesSection: View {
     @State private var failure: LocalizedStringResource?
 
     private var presentation: any MenuBarPresentationControlling {
-        MenuBarPresentationProvider.current
+        MenuBarPresentationProvider.forSettings
     }
 
     var body: some View {

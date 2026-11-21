@@ -19,7 +19,7 @@ struct ReducedModeOfferButton: View {
         VStack(alignment: .trailing, spacing: ThawSpacing.hairline) {
             Button("Continue without Accessibility") {
                 ReducedModeController.isChosen = true
-                appState.completeFirstLaunchSetup()
+                appState.finishAccessRecovery()
             }
             .buttonStyle(.link)
             Text(Self.consequence)

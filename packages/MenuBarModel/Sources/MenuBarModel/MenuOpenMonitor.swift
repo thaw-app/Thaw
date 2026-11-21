@@ -73,8 +73,11 @@ public final class MenuOpenMonitor {
         checkTask = nil
     }
 
-    public func isAnyMenuOpen() async -> Bool {
-        if let cachedAt,
+    /// - Parameter fresh: Read the windows after this call, for a check that must see a menu opened
+    ///   a moment ago. An earlier answer or a probe already running can miss it.
+    public func isAnyMenuOpen(fresh: Bool = false) async -> Bool {
+        if !fresh,
+           let cachedAt,
            let cachedResult,
            cachedAt.duration(to: .now) <= cacheFreshness
         {
@@ -84,9 +87,14 @@ public final class MenuOpenMonitor {
 
         if let existingTask = checkTask {
             Self.diagLog.debug("Menu open check: joining in-flight probe")
-            return await existingTask.value
+            let joined = await existingTask.value
+            guard fresh else { return joined }
         }
+        return await probe()
+    }
 
+    /// Reads the windows once and caches the answer.
+    private func probe() async -> Bool {
         let cachedItems = onScreenItems()
         let controlCenterBundleID = MenuBarItemTag.Namespace.controlCenter.description
         let strips = menuBarStrips()
@@ -105,7 +113,10 @@ public final class MenuOpenMonitor {
 
         checkTask = task
         let result = await task.value
-        checkTask = nil
+        // A fresh call can start its own probe while this one runs; that one stays joinable.
+        if checkTask == task {
+            checkTask = nil
+        }
         cachedResult = result
         cachedAt = ContinuousClock.now
         return result
@@ -113,8 +124,8 @@ public final class MenuOpenMonitor {
 
     /// Whether one of these processes has a menu open. Another app's menu does
     /// not count, so a window that never closes cannot hold someone else's item.
-    public func isMenuOpen(ownedBy pids: Set<pid_t>) async -> Bool {
-        guard await isAnyMenuOpen() else { return false }
+    public func isMenuOpen(ownedBy pids: Set<pid_t>, fresh: Bool = false) async -> Bool {
+        guard await isAnyMenuOpen(fresh: fresh) else { return false }
         return openMenuWindowIDs.contains { candidateOwnerPIDs[$0].map(pids.contains) == true }
     }
 

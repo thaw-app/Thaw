@@ -17,8 +17,8 @@ import MenuBarModel
 @MainActor
 @Observable
 final class DisplaySettingsManager {
-    private(set) var isReapplyingSpacing = false
-    private(set) var lastSpacingApplyFailure: String?
+    var isReapplyingSpacing = false
+    var lastSpacingApplyFailure: String?
     @ObservationIgnored
     let diagLog = DiagLog(category: "DisplaySettingsManager")
 

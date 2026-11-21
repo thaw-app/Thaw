@@ -131,7 +131,7 @@ in-process services.
 | `ThawAXHelper` | Standard input/output pipes through `ThawAXClient` | Accessibility observations |
 | `MenuBarCaptureService` | XPC | Image capture in a recyclable process |
 | `ThawExtraHelper` | Launched as separate stand-in apps | Apple-item replacements with separate owning bundles |
-| Settings child process | Standard input/output pipes | Optional `SettingsInOwnProcess` mode; exits when its last window closes |
+| Settings child process | Standard input/output pipes | On by default (`SettingsInOwnProcess`); exits when its last window closes |
 | `ThawControls` | Darwin notifications for commands, App Group snapshot for state | Control Center controls |
 | `ThawCtl` | `thaw://` URLs | Command-line entry into app automation |
 

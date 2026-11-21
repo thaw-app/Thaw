@@ -199,7 +199,7 @@ extension MenuBarItemImageCache {
         let nav = makeNavigationStateSnapshot()
         return CaptureDemand(
             usesAppIcons: configuration.alwaysUseAppIconForMenuBarItems,
-            hasUnfilteredConsumer: nav.isSearchPresented || nav.isItemHotkeyListExpanded,
+            hasUnfilteredConsumer: nav.isSearchPresented || nav.isItemHotkeyListExpanded || nav.settingsProcess.needsEveryPicture,
             alertRevealIdentifiers: MenuBarItemAlertReveals.identifiers()
         )
     }
@@ -233,7 +233,7 @@ extension MenuBarItemImageCache {
             demand: captureDemand()
         )
         guard !items.isEmpty else {
-            return CapturePass()
+            return .nothingRequested
         }
         let revealedSection = appState.menuBarManager.sectionController.revealedSection
         let shouldUseFreshBounds = Self.shouldUseFreshBounds(

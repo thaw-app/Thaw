@@ -151,7 +151,7 @@ final class AppState {
 
     let applicationMenuCover = ApplicationMenuCover()
 
-    /// Settings in a process of its own, when SettingsInOwnProcess is set.
+    /// Settings in a process of its own, unless SettingsInOwnProcess is turned off.
     @ObservationIgnored
     private(set) lazy var settingsProcessHost = SettingsProcessHost(app: settingsProcessAppSide())
 
@@ -160,8 +160,8 @@ final class AppState {
 
     // MARK: - Published state
 
-    /// observeActiveSpace() compensates for under-reported system space changes.
-    private(set) var activeSpace = SpaceInfo.activeSpace()
+    /// observeActiveSpace() compensates for under-reported system space changes. The settings process sets it to the app's.
+    var activeSpace = SpaceInfo.activeSpace()
 
     /// Mirror of the event layer's drag flag, so views can watch a drag
     /// without subscribing to HIDEventManager themselves.
@@ -295,6 +295,8 @@ final class AppState {
     /// Called by AppDelegate and again after first-launch permission setup.
     /// - Parameter granted: True runs bootstrap with required grants; false keeps subsystems inert and opens permissions.
     func launch(withPermissions granted: Bool) {
+        // Only the app runs the menu bar; the settings process hands finishing to it. See OnboardingLink.
+        guard !SettingsProcessApp.isRequested else { return }
         guard granted, !ReducedModeController.isKeptWithAccessibility else {
             if ReducedModeController.isChosen {
                 dismissWindow(.permissions)
@@ -346,13 +348,11 @@ final class AppState {
         }
     }
 
-    /// Select the destination pane before opening Settings so construction reads it without losing the sidebar's first render.
-    func completeOnboarding(outcome: OnboardingOutcome, opening pane: SettingsNavigationIdentifier?) {
-        settings.general.simpleMode = outcome.simpleMode
-
-        if let pane {
-            SettingsSearchNavigation.selectSidebarPane(pane, navigationState: navigationState)
-        }
+    func completeOnboarding(outcome: OnboardingOutcome) {
+        settings.general.simpleMode = OnboardingOutcome.simpleMode(
+            current: settings.general.simpleMode,
+            hasSeenOnboarding: Defaults.bool(forKey: .hasSeenOnboarding)
+        )
 
         if Constants.supportsSparkleUpdates {
             Defaults.set(true, forKey: .hasSeenUpdateConsent)

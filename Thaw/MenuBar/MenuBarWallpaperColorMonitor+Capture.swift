@@ -23,6 +23,7 @@ extension MenuBarWallpaperColorMonitor {
         return AdaptiveCaptureRequirements(
             configuration: appState.appearanceManager.configuration.current,
             thawBarConfiguration: appState.navigationState.isThawBarPresented || settingsWindow?.isVisible == true
+                || appState.navigationState.settingsProcessCapture.consumesCapture
                 ? appState.appearanceManager.configuration.resolvedThawBarAppearance.fillConfiguration : nil
         )
     }

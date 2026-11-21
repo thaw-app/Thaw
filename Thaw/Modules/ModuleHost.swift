@@ -39,7 +39,7 @@ final class ModuleHost {
         var enabledByDefault: (String) -> Bool
     }
 
-    enum State: Equatable {
+    nonisolated enum State: Equatable, Codable, Sendable {
         case idle
         case refused(ModuleLaunchVerdict)
         case running(pid_t)
@@ -49,7 +49,7 @@ final class ModuleHost {
         case launchFailed
     }
 
-    struct Module: Equatable {
+    nonisolated struct Module: Equatable, Codable, Sendable {
         let manifest: ModuleManifest?
         let verdict: ModuleLaunchVerdict
         var state: State
@@ -66,6 +66,12 @@ final class ModuleHost {
     /// Called with a module's bundle ID whenever it stops running, whether it
     /// quit, crashed or was stopped, so Thaw can undo what it asked for.
     @ObservationIgnored var onModuleQuit: ((String) -> Void)?
+
+    /// How the settings process reaches the app, and nil in the app. With a remote this host starts and
+    /// stops nothing: it asks the app and shows the modules the app sends.
+    @ObservationIgnored var remote: () -> SettingsRemote? = { SettingsRemote.current }
+    /// Whether the app's modules have arrived, in the settings process.
+    private(set) var hasMirrored = false
 
     @ObservationIgnored private let environment: Environment
     @ObservationIgnored private let restartPolicy: ModuleRestartPolicy
@@ -99,6 +105,7 @@ final class ModuleHost {
 
     /// Rereads the Modules folder. Modules already known keep their state.
     func refresh() {
+        if forwards(.refresh) { return }
         let ownTeamID = environment.ownTeamID()
         var found: [URL: Module] = [:]
         var identifiers = Set<String>()
@@ -147,6 +154,7 @@ final class ModuleHost {
 
     /// Switches a module on or off, saves the choice, and starts or stops it.
     func setEnabled(_ enabled: Bool, identifier: String) async {
+        if forwards(.setEnabled(enabled, identifier: identifier)) { return }
         if enabled {
             enabledIdentifiers.insert(identifier)
         } else {
@@ -210,6 +218,7 @@ final class ModuleHost {
     }
 
     func start(_ url: URL, showingWindow: Bool = false) async {
+        if forwards(.start(url, showingWindow: showingWindow)) { return }
         guard let module = modules[url] else { return }
         guard module.verdict == .launch else {
             Self.diagLog.info("Module at \(url.path) not launched: \(String(describing: module.verdict))")
@@ -248,7 +257,8 @@ final class ModuleHost {
     }
 
     func stop(_ url: URL) {
-        guard let state = modules[url]?.state else { return }
+        // Without a remote this is the app, the only process that stops a module.
+        guard remote() == nil, let state = modules[url]?.state else { return }
         stopCounts[url, default: 0] += 1
         modules[url]?.state = .stopped
         if case let .running(pid) = state {
@@ -323,5 +333,15 @@ final class ModuleHost {
                 await self?.moduleDidTerminate(pid: pid)
             }
         }
+    }
+}
+
+extension ModuleHost {
+    /// Takes the modules and the switches as the app has them. For the settings process, whose
+    /// host lists and saves nothing itself.
+    func mirror(modules: [URL: Module], enabledIdentifiers: Set<String>) {
+        self.modules = modules
+        self.enabledIdentifiers = enabledIdentifiers
+        hasMirrored = true
     }
 }

@@ -8,9 +8,9 @@
 import Foundation
 
 /// Compare the running bar with the profile using the apply pipeline's snapshot representation so the preview reflects actual changes.
-nonisolated struct ProfileLayoutDiff: Equatable {
+nonisolated struct ProfileLayoutDiff: Equatable, Codable {
     /// An item named the way the preview should show it.
-    struct Item: Equatable, Identifiable {
+    struct Item: Equatable, Identifiable, Codable {
         /// The namespace:title uniqueIdentifier both snapshots key on.
         let id: String
         /// The namespace half of the identifier, which is a bundle ID for
@@ -22,7 +22,7 @@ nonisolated struct ProfileLayoutDiff: Equatable {
     }
 
     /// An item the apply would move, and where it would move it.
-    struct Move: Equatable, Identifiable {
+    struct Move: Equatable, Identifiable, Codable {
         let item: Item
         let from: String
         let to: String
@@ -33,7 +33,7 @@ nonisolated struct ProfileLayoutDiff: Equatable {
     }
 
     /// One setting whose value differs between the profile and the app.
-    struct SettingChange: Equatable, Identifiable {
+    struct SettingChange: Equatable, Identifiable, Codable {
         /// The coding key, used as the identity and as the fallback label.
         let key: String
         /// A readable name when one is known for key.

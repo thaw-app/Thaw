@@ -41,6 +41,22 @@ extension MenuBarItemImageCache {
         /// record itself is forgotten on the same terms, so a discarded pass
         /// leaves it alone and the next pass sets it aside again.
         var forgivenTags = Set<MenuBarItemTag>()
+        /// Every item of the section is drawn without a picture, so none was asked for. An empty pass is then
+        /// no sign of a stale inventory.
+        var requestedNothing = false
+
+        /// A pass for a section none of whose items needs a picture.
+        static var nothingRequested: CapturePass {
+            var pass = CapturePass()
+            pass.requestedNothing = true
+            return pass
+        }
+
+        /// Whether a section pass points at a stale inventory: a visible pass that asked for pictures and got
+        /// none. With app icons on, Layout can ask for none, and refreshing then rescanned an unchanged bar.
+        func suggestsStaleInventory(in section: MenuBarSection.Name) -> Bool {
+            section == .visible && captured.isEmpty && !requestedNothing
+        }
 
         /// Folds a later section's result into this pass.
         mutating func absorb(_ section: CapturePass) {

@@ -9,12 +9,11 @@ import Foundation
 
 extension ProfileSettingsPane {
     /// Asks before the apply restarts apps when the user chose to be asked; without a yes, spacing is only saved.
-    func approvesSpacingRelaunch(forProfileID id: UUID) throws -> Bool {
-        let profile = try profileManager.loadProfile(id: id)
+    func approvesSpacingRelaunch(for preview: ProfilePreview) -> Bool {
         let displaySettings = appState.settings.displaySettings
         guard
-            diff(for: profile).relaunchingSpacingOffset != nil,
-            ProfileRelaunchSafety.needsConfirmation(for: profile, displaySettings: displaySettings)
+            preview.diff.relaunchingSpacingOffset != nil,
+            ProfileRelaunchSafety.needsConfirmation(for: preview.profile, displaySettings: displaySettings)
         else {
             return false
         }
