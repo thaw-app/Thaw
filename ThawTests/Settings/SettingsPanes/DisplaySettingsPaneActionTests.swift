@@ -61,6 +61,7 @@ struct DisplaySettingsPaneActionTests {
         profiles names: [String] = [],
         studioOffset: Double = 4,
         confirmations: DisplaySettingsPane.Confirmations = .init(),
+        remote: SettingsRemote? = nil,
         _ body: (World) async throws -> Void
     ) async throws {
         let directory = try ProfileTestDirectory.make(seeding: names)
@@ -76,7 +77,7 @@ struct DisplaySettingsPaneActionTests {
             .withItemSpacingOffset(studioOffset)
         let page = OffscreenRender(
             AnyView(
-                DisplaySettingsPane(displaySettings: settings, confirmations: confirmations, selectedDisplayID: Self.studio)
+                DisplaySettingsPane(displaySettings: settings, confirmations: confirmations, remote: remote, selectedDisplayID: Self.studio)
                     .environment(appState)
                     .environment(\.settingsPaneTitle, nil)
                     .frame(width: Self.size.width, height: Self.size.height)
@@ -279,6 +280,30 @@ struct DisplaySettingsPaneActionTests {
             await page.settle { OffscreenAccessibility.label(of: sliders(in: page)[0]) == "4" && !has("Apply", in: page) }
             #expect(savedOffset(world) == 4, "the unsaved spacing is rolled back")
             #expect(OffscreenAccessibility.label(of: try #require(sliders(in: page).first)) == "4")
+        }
+    }
+
+    @Test("A save the app reports as failed puts the slider back on the spacing the display kept")
+    func reportedFailureDropsTheDraft() async throws {
+        // Stands in for the app: it answers each request at once with the answer set below.
+        var app: SettingsRemote?
+        var answer: Data?
+        var asked: [String] = []
+        let remote = SettingsRemote { message in
+            guard case let .request(id, name, _) = message else { return }
+            asked.append(name)
+            app?.answered(id: id, payload: answer, failure: nil)
+        }
+        app = remote
+        try await withWorld(remote: remote) { world in
+            let failure = DisplayCommitFailure(message: "The profile is gone.", displayID: Self.studio)
+            answer = SettingsLinkPayload.encode(DisplaysSettingsLink.CommitResult(settings: world.settings.snapshot, failure: failure))
+            let page = world.page
+            try await applyOneStep(page)
+            await page.settle { !has("Apply", in: page) }
+            #expect(asked == [DisplaysSettingsLink.commit], "the app is asked to save")
+            #expect(OffscreenAccessibility.label(of: try #require(sliders(in: page).first)) == "4")
+            #expect(savedOffset(world) == 4, "the page changes nothing itself")
         }
     }
 

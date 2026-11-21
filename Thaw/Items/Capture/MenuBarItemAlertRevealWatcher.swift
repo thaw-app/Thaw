@@ -81,6 +81,9 @@ final class MenuBarItemAlertRevealWatcher {
 
     private(set) weak var appState: AppState?
 
+    /// The saved choice as the Triggers page lists it. The watcher reads the saved one itself at each capture.
+    let choices = AlertRevealChoices()
+
     func performSetup(with appState: AppState) {
         self.appState = appState
         // MenuBarItemImageCache is @Observable, so captures arrive through

@@ -88,45 +88,30 @@ extension DisplaySettingsPane {
         }
     }
 
-    /// Writes the new spacing; DisplaySettingsManager starts the relaunch wave
-    /// on the next main-queue turn.
-    private func commitSpacing(displayID: String, offset: Double) {
-        draftSpacing[displayID] = CGFloat(offset)
-        displaySettings.updateConfiguration(forDisplayUUID: displayID) { config in
-            config.withItemSpacingOffset(offset)
-        }
-    }
-
-    /// Commits the spacing and, when a profile is active, saves it to the
-    /// profiles the scope names. updateProfile captures live state, so the
-    /// commit comes first and is rolled back if the save fails.
+    /// Writes the new spacing and saves it to the profiles the scope names.
+    /// DisplaySettingsManager starts the relaunch wave on the next main-queue turn.
     private func commitSpacing(
         displayID: String,
         offset: Double,
-        savingTo scope: SpacingProfileSaveScope,
-        activeProfileID: UUID?
+        savingTo scope: SpacingProfileSaveScope? = nil,
+        activeProfileID: UUID? = nil
     ) {
-        let previousOffset = displaySettings.configuration(forUUID: displayID).itemSpacingOffset
-        commitSpacing(displayID: displayID, offset: offset)
-        guard let id = activeProfileID else { return }
-        do {
-            switch scope {
-            case .activeProfile:
-                try appState.profileManager.updateProfile(
-                    id: id,
-                    scope: .configurationOnly,
-                    appState: appState
-                )
-            case .allProfiles:
-                try appState.profileManager.updateAllProfilesItemSpacingOffset(
-                    displayUUID: displayID,
-                    offset: offset
-                )
-            }
-        } catch {
-            commitSpacing(displayID: displayID, offset: previousOffset)
-            errorMessage = error.localizedDescription
+        draftSpacing[displayID] = CGFloat(offset)
+        commit(DisplayProfileCommit(change: .spacing(displayID: displayID, offset: offset), scope: scope, activeProfileID: activeProfileID))
+    }
+
+    /// Makes a change with the profiles that keep it, here or in the app when Settings is in its own process.
+    /// A save that failed has already put the old settings back.
+    func commit(_ commit: DisplayProfileCommit) {
+        commit.perform(on: appState, remote: remote, failed: show)
+    }
+
+    /// Says a commit wasn't saved, with the display's slider back on the spacing it kept.
+    func show(_ failure: DisplayCommitFailure) {
+        if let displayID = failure.displayID {
+            draftSpacing[displayID] = CGFloat(displaySettings.configuration(forUUID: displayID).itemSpacingOffset)
         }
+        errorMessage = failure.message
     }
 
     /// What each button of the spacing alert does.

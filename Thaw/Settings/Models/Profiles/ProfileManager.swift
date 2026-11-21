@@ -18,7 +18,7 @@ import ThawUI
 final class ProfileManager {
     /// loadManifest() fires didSet during construction because only direct init assignments are exempt.
     /// rebuildProfileHotkeys() safely no-ops until appState is wired.
-    private(set) var profiles: [ProfileMetadata] = [] {
+    var profiles: [ProfileMetadata] = [] {
         didSet {
             rebuildProfileHotkeys()
         }
@@ -86,7 +86,7 @@ final class ProfileManager {
     }
 
     /// Hotkeys for switching to each profile, keyed by profile ID.
-    private(set) var profileHotkeys: [UUID: Hotkey] = [:]
+    var profileHotkeys: [UUID: Hotkey] = [:]
     /// Maps Hotkey identity to profile ID for the perform() lookup.
     var hotkeyProfileMap: [ObjectIdentifier: UUID] = [:]
     /// Observers for profile hotkey changes.
@@ -651,7 +651,7 @@ final class ProfileManager {
     // MARK: - Scoped Updates
 
     /// What parts of a profile to update.
-    enum ProfileUpdateScope {
+    enum ProfileUpdateScope: String, Codable {
         case all
         case layoutOnly
         case configurationOnly

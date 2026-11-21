@@ -31,45 +31,41 @@ struct OnboardingViewRenderTests {
         #expect(!continued)
     }
 
-    @Test("The onboarding flow opens on the welcome screen without numbering it")
+    @Test("The onboarding flow opens on the welcome screen")
     func flowOpensOnWelcome() throws {
         var finished = false
-        let flow = ThawOnboardingView(skipsAccessStep: false) { _, _ in finished = true }
+        let flow = ThawOnboardingView(skipsAccessStep: false) { _ in finished = true }
         let (render, pixels) = try render(flow)
         #expect(pixels.contains { $0 != 0 })
         #expect(render.host.fittingSize.height <= 700)
         #expect(!finished)
     }
 
-    @Test("The bento is numbered as step one of two, and not numbered when it is the only step")
-    func bentoStepNumbering() throws {
-        func bento(skipsAccess: Bool) throws -> Data {
-            try render(ThawOnboardingView(skipsAccessStep: skipsAccess, startingStep: .bento) { _, _ in }).1
-        }
-        let numbered = try bento(skipsAccess: false)
-        let unnumbered = try bento(skipsAccess: true)
-        #expect(numbered.contains { $0 != 0 })
-        // The indicator sits along the top edge, above anything the bento changes for the last step.
-        let top = numbered.count / 14
-        #expect(numbered.prefix(top) != unnumbered.prefix(top), "only the two-step flow draws the indicator")
-    }
-
-    @Test("The access step opens numbered without finishing the flow")
+    @Test("The access step draws exactly the permissions screen without finishing the flow")
     func accessStepDraws() throws {
         let appState = AppState()
         let permissions = appState.permissions
         defer { permissions.stopAllChecks() }
         var finished = false
-        let flow = ThawOnboardingView(skipsAccessStep: false, startingStep: .access) { _, _ in finished = true }
+        let flow = ThawOnboardingView(skipsAccessStep: false, startingStep: .access) { _ in finished = true }
         let alone = try render(
-            ThawPermissionsView(mode: .onboarding, finishesFlow: true) {}.environment(permissions).environment(appState)
+            ThawPermissionsView(mode: .onboarding) {}.environment(permissions).environment(appState)
         ).1
         let (access, pixels) = try render(flow.environment(permissions).environment(appState))
         #expect(pixels.contains { $0 != 0 })
-        // Below the step indicator, the flow draws exactly the permissions screen.
-        let top = pixels.count / 8
-        #expect(pixels.dropFirst(top) == alone.dropFirst(top))
+        #expect(pixels == alone)
         #expect(access.host.fittingSize.height <= 700)
+        #expect(!finished)
+    }
+
+    @Test("The last page draws without finishing the flow")
+    func donePageDraws() throws {
+        let appState = AppState()
+        var finished = false
+        let flow = ThawOnboardingView(skipsAccessStep: true, startingStep: .done) { _ in finished = true }
+        let (done, pixels) = try render(flow.environment(appState))
+        #expect(pixels.contains { $0 != 0 })
+        #expect(done.host.fittingSize.height <= 700)
         #expect(!finished)
     }
 
@@ -79,7 +75,7 @@ struct OnboardingViewRenderTests {
         let permissions = appState.permissions
         defer { permissions.stopAllChecks() }
         var continued = false
-        let view = ThawPermissionsView(mode: onboarding ? .onboarding : .recovery, finishesFlow: onboarding) {
+        let view = ThawPermissionsView(mode: onboarding ? .onboarding : .recovery) {
             continued = true
         }
         let size = Self.windowSize

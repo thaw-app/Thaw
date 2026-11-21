@@ -16,6 +16,16 @@ final class SettingsProcessSession {
         var showSettings: () -> Void
         var updatesStateChanged: (_ canCheck: Bool, _ lastCheck: Date?) -> Void
         var terminate: () -> Void
+        /// Opens one of SettingsProcessRoute.windowTargets.
+        var showWindow: (String) -> Void = { _ in /* Only the settings process has these windows. */ }
+        /// Whether the Settings window is up. Without it, as with What's New alone, an app-only pane stays here.
+        var isSettingsShown: () -> Bool = { true }
+        /// What each page does with the app's live state, and what it reads again.
+        var features: [SettingsChildFeature] = []
+        /// Hands the app's reply to whoever asked.
+        var answered: (_ id: UUID, _ payload: Data?, _ failure: String?) -> Void = {
+            SettingsRemote.current?.answered(id: $0, payload: $1, failure: $2)
+        }
     }
 
     private let navigationState: AppNavigationState
@@ -70,16 +80,27 @@ final class SettingsProcessSession {
 
     private func receive(_ message: SettingsLinkMessage) {
         switch message {
+        case let .show(pane?) where SettingsProcessRoute.windowTargets.contains(pane):
+            side.showWindow(pane)
         case let .show(pane):
             select(pane)
             side.showSettings()
         case .settingsChanged:
-            link?.reloading(side.reloadSettings)
+            link?.reloading {
+                side.reloadSettings()
+                side.features.forEach { $0.reload() }
+            }
         case let .updatesState(canCheck, lastCheck):
             side.updatesStateChanged(canCheck, lastCheck)
         case .shownInApp:
             closeAfterHandOver()
-        case .openInApp, .pageChanged, .checkForUpdates, .quit:
+        case let .status(topic, payload):
+            side.features.forEach { $0.statuses[topic]?(payload) }
+        case let .storeChanged(store):
+            link?.reloading { side.features.forEach { $0.stores[store]?() } }
+        case let .reply(id, payload, failure):
+            side.answered(id, payload, failure)
+        case .openInApp, .pageChanged, .checkForUpdates, .quit, .command, .request:
             break
         }
     }
@@ -97,6 +118,7 @@ final class SettingsProcessSession {
     /// False once the pane has gone to the app and this process is closing.
     private func paneShown(_ identifier: SettingsNavigationIdentifier) -> Bool {
         guard SettingsProcessRoute.ownProcessPanes.contains(identifier.rawValue) else {
+            guard side.isSettingsShown() else { return true }
             handOverToApp(identifier.rawValue)
             return false
         }

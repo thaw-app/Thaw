@@ -76,7 +76,7 @@ struct MenuBarHidingSection: View {
     @State private var failure: LocalizedStringResource?
 
     private var presentation: any MenuBarPresentationControlling {
-        MenuBarPresentationProvider.current
+        MenuBarPresentationProvider.forSettings
     }
 
     var body: some View {

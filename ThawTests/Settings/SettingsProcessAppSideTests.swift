@@ -14,12 +14,61 @@ import Testing
 @Suite("Settings process, app side", .serialized, .scratchDefaults)
 @MainActor
 final class SettingsProcessAppSideTests {
-    @Test("Only Settings goes to the process, never while it is open here or the setting is off")
+    @Test("Only Settings and its own windows go to the process, never while open here or with the setting off")
     func showsInSettingsProcess() {
         let appState = AppState()
-        #expect(!appState.showsInSettingsProcess(.permissions, isOpenHere: false))
+        #expect(!appState.showsInSettingsProcess(.acknowledgements, isOpenHere: false), "only the app has it")
         #expect(!appState.showsInSettingsProcess(.settings, isOpenHere: true))
-        #expect(!appState.showsInSettingsProcess(.settings, isOpenHere: false), "The setting is off in a fresh suite")
+        // Off here, since a yes would start a real settings process.
+        Defaults.set(false, forKey: .settingsInOwnProcess)
+        #expect(!appState.showsInSettingsProcess(.settings, isOpenHere: false), "The setting is turned off")
+    }
+
+    @Test("What's New goes to the process like Settings, never while the app's own is open or the setting is off")
+    func whatsNewInSettingsProcess() {
+        let appState = AppState()
+        #expect(!appState.showsInSettingsProcess(.whatsNew, isOpenHere: true))
+        Defaults.set(false, forKey: .settingsInOwnProcess)
+        #expect(!appState.showsInSettingsProcess(.whatsNew, isOpenHere: false))
+        #expect(SettingsProcessRoute.runsInOwnProcess(pane: SettingsProcessRoute.whatsNew, simpleMode: true, isEnabled: true))
+        #expect(!SettingsProcessRoute.runsInOwnProcess(pane: SettingsProcessRoute.whatsNew, simpleMode: false, isEnabled: false))
+    }
+
+    @Test("The welcome and the access screen go to the process like What's New, in Simple Mode too")
+    func permissionsInSettingsProcess() {
+        for target in [SettingsProcessRoute.permissions, SettingsProcessRoute.welcomeAgain] {
+            #expect(SettingsProcessRoute.runsInOwnProcess(pane: target, simpleMode: true, isEnabled: true))
+            #expect(!SettingsProcessRoute.runsInOwnProcess(pane: target, simpleMode: false, isEnabled: false))
+        }
+        let appState = AppState()
+        #expect(!appState.showsInSettingsProcess(.permissions, isOpenHere: true))
+    }
+
+    @Test("Finishing the welcome in the app answers whether the window closes, and the process never launches")
+    func finishAnswersAndProcessNeverLaunches() throws {
+        let appState = AppState()
+        let feature = OnboardingLink.app(appState)
+        let finish = try #require(feature.requests[OnboardingLink.finish])
+        #expect(finish != nil)
+        // The app's answer follows the access it has and the Reduced mode choice.
+        ReducedModeController.isChosen = true
+        let answer = appState.completeFinish(OnboardingLink.Finish())
+        #expect(answer.closesWindow)
+        ReducedModeController.isChosen = false
+        // A launch in the settings process does nothing; only the app runs the menu bar.
+        #expect(!SettingsProcessApp.isRequested, "tests run as the app")
+    }
+
+    @Test("The process showing the handed-back page closes the app's Settings window once")
+    func handBackFinishesOnPageChange() {
+        let appState = AppState()
+        let side = appState.settingsProcessAppSide()
+        appState.settingsProcessHost.handBack.isPending = true
+        side.pageChanged("General")
+        #expect(!appState.settingsProcessHost.handBack.isPending)
+        #expect(appState.navigationState.settingsNavigationIdentifier == .general)
+        side.pageChanged("About")
+        #expect(appState.navigationState.settingsNavigationIdentifier == .about, "a later page change is only a page change")
     }
 
     @Test("A page change from the process moves the app's pane, and an unknown pane is ignored")
@@ -53,9 +102,13 @@ final class SettingsProcessAppSideTests {
 
     @Test("The host reads the setting from the defaults")
     func hostEnabledByDefaults() {
-        #expect(!SettingsProcessHost.isEnabledInDefaults())
-        Defaults.set(true, forKey: .settingsInOwnProcess)
-        #expect(SettingsProcessHost.isEnabledInDefaults() == !SettingsProcessApp.isRequested)
+        #expect(SettingsProcessHost.isEnabledInDefaults(environment: [:]) == !SettingsProcessApp.isRequested, "on in a fresh suite")
+        #expect(!SettingsProcessHost.isEnabledInDefaults(), "never in a unit-test run, which would start real processes")
+        Defaults.set(false, forKey: .settingsInOwnProcess)
+        #expect(!SettingsProcessHost.isEnabledInDefaults(environment: [:]))
+        #expect(SettingsProcessHost.isEnabled(settingOn: true, isSettingsProcess: false, isTestHost: false))
+        #expect(!SettingsProcessHost.isEnabled(settingOn: true, isSettingsProcess: true, isTestHost: false))
+        #expect(!SettingsProcessHost.isEnabled(settingOn: true, isSettingsProcess: false, isTestHost: true))
     }
 }
 

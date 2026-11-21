@@ -21,6 +21,8 @@ struct MenuBarLayoutBackupsSection: View {
     /// Bumped by the pane when a reset writes a backup, so the list reloads
     /// without the section having to watch the folder.
     let refreshToken: Int
+    /// How the section reaches the running app from its settings process. Nil in the app.
+    var remote = SettingsRemote.current
 
     @State private var backups: [MenuBarLayoutBackups.Backup] = []
     @State private var previewedBackup: MenuBarLayoutBackups.Backup?
@@ -68,7 +70,7 @@ struct MenuBarLayoutBackupsSection: View {
                     systemImage: "arrow.clockwise.circle.fill",
                     tint: .blue,
                     actionTitle: "Relaunch",
-                    action: { appState.restartSelf() }
+                    action: { ToolsTasks.relaunch(appState, remote: remote) }
                 )
             }
 
@@ -213,7 +215,11 @@ struct MenuBarLayoutBackupsSection: View {
     /// True when the host keeps its table somewhere this process may not read,
     /// which is what makes a capture come out partial.
     private var isLayoutTableUnreadable: Bool {
-        RuntimePreferenceStore.positionsDomainAccess() == .denied
+        // Only the app holds the grant to that table, so its settings process asks it.
+        guard remote == nil else {
+            return appState.settings.tools.appReport.status.isLayoutTableUnreadable
+        }
+        return RuntimePreferenceStore.positionsDomainAccess() == .denied
     }
 
     // MARK: - Actions
@@ -222,25 +228,30 @@ struct MenuBarLayoutBackupsSection: View {
         isWorking = true
         statusMessage = nil
         defer { isWorking = false }
-        // Killing the host mid-move strands the move's events.
-        await appState.itemManager.moveActivity.waitUntilIdle()
 
         do {
-            let outcome = try await MaintenanceTools.restoreMenuBarLayout(from: backup)
+            var written = 0
+            var skipped = 0
+            try await ToolsTasks.perform(.restoreBackup(backup.url), appState: appState, remote: remote, report: { event in
+                if case let .restored(wrote, missed) = event {
+                    written = wrote
+                    skipped = missed
+                }
+            })
             backups = await MenuBarLayoutBackups.list()
 
-            if outcome.restored.isEmpty {
+            if written == 0 {
                 awaitsRelaunch = false
                 report(String(localized: "Nothing could be written back. Grant Menu Bar Layout Access on the Privacy page and try again."))
-            } else if outcome.skipped.isEmpty {
+            } else if skipped == 0 {
                 awaitsRelaunch = true
                 report(String(localized: "Layout restored. The positions in use before this are saved as a new backup."))
             } else {
                 awaitsRelaunch = true
-                let total = outcome.restored.count + outcome.skipped.count
+                let total = written + skipped
                 report(
                     String(
-                        localized: "Layout partly restored: \(outcome.skipped.count) of \(total) files could not be written. Grant Menu Bar Layout Access on the Privacy page to restore the rest."
+                        localized: "Layout partly restored: \(skipped) of \(total) files could not be written. Grant Menu Bar Layout Access on the Privacy page to restore the rest."
                     )
                 )
             }

@@ -32,7 +32,7 @@ struct ModuleControls: View {
                 }
                 .labelsHidden()
                 .toggleStyle(.switch)
-            } else {
+            } else if !moduleHost.awaitsModules {
                 Text("Not installed")
                     .foregroundStyle(ThawInk.supporting)
             }

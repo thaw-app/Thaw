@@ -22,12 +22,19 @@ import Observation
 @Observable
 final class MovePipelineMonitor {
     /// One completed pass through the pipeline for one item.
-    struct MoveRecord: Identifiable {
-        let id = UUID()
+    nonisolated struct MoveRecord: Identifiable, Codable, Equatable, Sendable {
+        var id = UUID()
         let date: Date
         let itemDescription: String
         let destinationDescription: String
         let succeeded: Bool
+    }
+
+    /// Everything the monitor holds, as the app sends it to its settings process.
+    nonisolated struct Snapshot: Codable, Equatable, Sendable {
+        var storeMoveCount = 0
+        var sawStoreUnavailable = false
+        var records: [MoveRecord] = []
     }
 
     /// Cursor-free store writes this session.
@@ -56,6 +63,18 @@ final class MovePipelineMonitor {
     /// Marks that a move wanted the position table and could not reach it.
     func recordStoreUnavailable() {
         sawStoreUnavailable = true
+    }
+
+    var snapshot: Snapshot {
+        Snapshot(storeMoveCount: storeMoveCount, sawStoreUnavailable: sawStoreUnavailable, records: records)
+    }
+
+    /// Shows the moves of the running app. The settings process moves nothing itself, so its
+    /// monitor only ever holds what the app sent last.
+    func show(_ snapshot: Snapshot) {
+        storeMoveCount = snapshot.storeMoveCount
+        sawStoreUnavailable = snapshot.sawStoreUnavailable
+        records = Array(snapshot.records.prefix(Self.recordLimit))
     }
 
     private func insert(_ record: MoveRecord) {

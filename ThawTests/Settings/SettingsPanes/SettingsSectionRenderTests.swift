@@ -153,6 +153,7 @@ struct SettingsSectionRenderTests {
         let list = URL(fileURLWithPath: "/tmp/items-test.json")
         recorder.destination = list
         try page.press("Save Item List")
+        await page.settle { recorder.revealed == [zip, list] }
         #expect(recorder.savedLists == [list])
         #expect(recorder.revealed == [zip, list])
 

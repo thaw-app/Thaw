@@ -9,8 +9,7 @@ import AppKit
 import SwiftUI
 import ThawUI
 
-/// "The new" addresses upgraders too, since the shared bundle identifier's onboarding flag can outlive an earlier tour.
-/// Capsules fit or scale uneven label lengths, with fuller claims in accessibility labels; matched spacers center the stack in the 580pt area.
+/// The website's headline and terms, with one sentence on what Thaw does.
 struct OnboardingWelcomeView: View {
     var onContinue: () -> Void
 
@@ -39,55 +38,30 @@ struct OnboardingWelcomeView: View {
 
     @ViewBuilder
     private var copyBlock: some View {
-        Text("Welcome to the new \(Constants.displayName)")
+        Text("Take back your menu bar")
             .font(ThawType.display)
             .multilineTextAlignment(.center)
 
         Text("\(Constants.displayName) hides the icons you don't need and brings them back with a click on its menu bar icon.")
-            .font(ThawType.heading)
+            .font(ThawType.body)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: 440)
             .padding(.top, ThawSpacing.compact)
 
-        // Give the longest passage more width to avoid many short lines.
-        Text("\(Constants.displayName) 3 is rebuilt for macOS 27: a new settings window, keyboard search across your menu bar, and rules that bring an item back when you need it.")
-            .font(ThawType.body)
+        OnboardingTermsLine()
+            .padding(.top, ThawSpacing.gutter)
+    }
+}
+
+/// The terms line from under the website's headline, shared by the welcome and the access screen.
+struct OnboardingTermsLine: View {
+    var body: some View {
+        Text("Free under GPL-3.0, with no tracking and no account.")
+            .font(ThawType.caption)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: 540)
-            .padding(.top, ThawSpacing.inset)
-
-        factsRow
-            .padding(.top, ThawSpacing.gutter)
-    }
-
-    /// Present pre-permission facts in one glanceable row.
-    private var factsRow: some View {
-        OnboardingFactRow {
-            OnboardingFactCapsule(
-                symbol: "lock.open",
-                label: Text("Open source"),
-                spoken: Text("Free and open source")
-            )
-            OnboardingFactCapsule(
-                symbol: "hand.raised",
-                label: Text("No analytics or tracking"),
-                // Updates and release notes make outbound calls; claim no analytics, not "nothing leaves your Mac".
-                spoken: Text("No analytics, no tracking")
-            )
-            OnboardingFactCapsule(
-                symbol: "record.circle",
-                label: Text("Screen Recording optional"),
-                spoken: Text("Screen Recording is optional")
-            )
-            OnboardingFactCapsule(
-                symbol: "globe",
-                label: Text("20 languages"),
-                spoken: Text("Speaks 20 languages")
-            )
-        }
     }
 }

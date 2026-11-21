@@ -168,6 +168,18 @@ private enum MenuBarCaptureServiceMain {
                 return true
             }
         }
+
+        /// Gives up an idle exit's claim when a session opened since generation, so a later exit can claim it.
+        /// Returns whether the exit may go ahead.
+        func confirmIdleExit(since generation: Int) -> Bool {
+            state.withLock { state in
+                let idle = state.idleGeneration == generation && state.activeSessions == 0 && state.inFlightRequests == 0
+                if !idle {
+                    state.exitScheduled = false
+                }
+                return idle
+            }
+        }
     }
 
     /// Retires the process once it has been idle for idleExitGrace; a
@@ -176,17 +188,22 @@ private enum MenuBarCaptureServiceMain {
         let generation = lifecycle.idleGeneration
         DispatchQueue.global().asyncAfter(deadline: .now() + idleExitGrace) {
             guard lifecycle.isIdle(since: generation) else { return }
-            scheduleExit(reason: reason)
+            scheduleExit(reason: reason, idleSince: generation)
         }
     }
 
-    /// Retires the process after letting any just-returned reply flush.
-    static func scheduleExit(reason: String) {
+    /// Retires the process after letting any just-returned reply flush. An idle exit checks again at the end
+    /// of the flush, since a session that opened during it would lose its first capture.
+    static func scheduleExit(reason: String, idleSince idleGeneration: Int? = nil) {
         guard lifecycle.claimExit() else {
             return
         }
         diagLog.notice("MenuBarCaptureService exiting: \(reason)")
         DispatchQueue.global().asyncAfter(deadline: .now() + exitFlushDelay) {
+            if let idleGeneration, !lifecycle.confirmIdleExit(since: idleGeneration) {
+                diagLog.notice("MenuBarCaptureService staying up: a session opened while it was exiting")
+                return
+            }
             exit(0)
         }
     }

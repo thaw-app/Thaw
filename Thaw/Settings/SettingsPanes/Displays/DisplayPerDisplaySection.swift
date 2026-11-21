@@ -158,7 +158,7 @@ extension DisplaySettingsPane {
         {
             LabeledContent {
                 Button(displaySettings.isReapplyingSpacing ? "Reapplying…" : "Reapply Spacing") {
-                    displaySettings.reapplySpacing(forDisplayUUID: display.id)
+                    displaySettings.requestSpacingReapply(forDisplayUUID: display.id)
                 }
                 .buttonStyle(.settingsGlass)
                 .disabled(displaySettings.isReapplyingSpacing)

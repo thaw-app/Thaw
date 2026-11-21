@@ -26,17 +26,31 @@ struct AlertRevealItemList: View {
 
     @Environment(AppState.self) private var appState
 
-    /// Local copy of the Defaults-backed set, which is not observable;
-    /// re-read on appear.
-    @State private var enabledIdentifiers: Set<String> = []
+    /// The saved choice, which is not observable: read again on appear, and in the
+    /// settings process whenever the app saves one.
+    private var choices: AlertRevealChoices {
+        appState.alertRevealWatcher.choices
+    }
 
     var body: some View {
         content
-            .onAppear { enabledIdentifiers = MenuBarItemAlertReveals.identifiers() }
+            .onAppear { choices.reload() }
     }
 
     @ViewBuilder
     private var content: some View {
+        if choices.awaitsItems {
+            // Without the app's items nothing here is known to be hidden, or to have left.
+            ProgressView()
+                .controlSize(.small)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            list
+        }
+    }
+
+    @ViewBuilder
+    private var list: some View {
         let rows = rows()
         if rows.isEmpty {
             Text("Hide an item first. Anything in Hidden or Always Hidden can be set to reappear when its icon changes.")
@@ -72,7 +86,7 @@ struct AlertRevealItemList: View {
         }
         .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
 
-        rows += enabledIdentifiers
+        rows += choices.identifiers
             .subtracting(rows.map(\.id))
             .sorted()
             .map { Row(id: $0, name: $0, isPresent: false) }
@@ -82,11 +96,8 @@ struct AlertRevealItemList: View {
 
     private func binding(for identifier: String) -> Binding<Bool> {
         Binding(
-            get: { enabledIdentifiers.contains(identifier) },
-            set: { isEnabled in
-                MenuBarItemAlertReveals.setEnabled(isEnabled, for: identifier)
-                enabledIdentifiers = MenuBarItemAlertReveals.identifiers()
-            }
+            get: { choices.identifiers.contains(identifier) },
+            set: { choices.setEnabled($0, for: identifier) }
         )
     }
 }
