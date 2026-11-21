@@ -1455,20 +1455,19 @@ final class MenuBarItemManager {
         // marker windows that source-PID marker-pair resolution depends on,
         // which can appear and disappear between sparser app-event triggers. A
         // short interval keeps marker-pair latency low; the windowID comparison
-        // bails fast and triggers no recache when nothing changed.
-        cacheTickCancellable = Timer.publish(every: 3, tolerance: 0.3, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                Task { [weak self] in
-                    guard let self else { return }
-                    // Liveness first: an exit whose terminate notification never
-                    // arrived (macOS 27 does not reliably post it) must still
-                    // leave the cache, and the window-list gate below never
-                    // sees an AX-only status item withdraw.
-                    await self.purgeDepartedOwnersWhenDue()
-                    await self.cacheItemsIfNeeded()
-                }
-            }
+        // bails fast and triggers no recache when nothing changed. It rests while the
+        // displays sleep or the session is away; one full scan on resume catches up.
+        cacheTickCancellable = IdleGate.shared.repeating(every: 3, tolerance: 0.3, mode: .common) { [weak self] in
+            await self?.cacheItemsRegardless()
+        } tick: { [weak self] in
+            guard let self else { return }
+            // Liveness first: an exit whose terminate notification never
+            // arrived (macOS 27 does not reliably post it) must still
+            // leave the cache, and the window-list gate below never
+            // sees an AX-only status item withdraw.
+            await purgeDepartedOwnersWhenDue()
+            await cacheItemsIfNeeded()
+        }
 
         // Control Center posts com.apple.controlcenter.bentoBoxDidChange
         // when the user drags a control in or out of the bento box. The control

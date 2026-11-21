@@ -28,8 +28,12 @@ the items under New and Fixed.
 
 - **A shorter welcome.** It says what Thaw does and asks for access. Its last page shows how to hide and show items, with Launch at Login, a shortcut and automatic updates beside it. The feature tour and the choice between Simple Mode and All Settings are gone: a first launch starts in Simple Mode, and showing the welcome again keeps the mode you use.
 - **Thaw shows hidden items to take their pictures only when you press Capture Hidden Items,** with either hiding method. With Standard it used to show them for a moment, under a blurred strip, whenever the Thaw Bar or Layout opened with pictures missing. An item without a picture shows as its app's icon until you capture it or open it. Reported by @alexbuildsthings in [#1534](https://github.com/thaw-app/Thaw/issues/1534).
+- **Thaw rests while your displays sleep or you switch to another user.** Its regular checks stop until you're back, and then it looks over the menu bar once, so anything that changed meanwhile is picked up. While you work it wakes less often too: the check for which display has the active menu bar now runs only when a display uses Always show hidden items.
 
 ### Fixed
+
+- **With Show on scroll off, scrolling no longer keeps Thaw busy.** Thaw asked macOS which display had the active menu bar on every scroll, anywhere, before it looked at the setting. A drag without Command held no longer asks either.
+- **An item set to show when its icon changes no longer has pictures taken while Triggers is off.** Every Space switch or change in the menu bar took new pictures of hidden items for it, and nothing used them.
 
 - `thawctl set` now rejects assignments with an empty setting name instead of interpreting them as a different setting change.
 - Asking `thawctl` for help with `--help` or `-h` now exits successfully and prints to standard output.

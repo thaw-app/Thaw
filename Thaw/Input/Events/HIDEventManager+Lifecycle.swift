@@ -140,13 +140,9 @@ extension HIDEventManager {
 
         // macOS can invalidate the tap's Mach port under resource pressure or
         // a permission change. 10 s matches the stuck-disable recovery threshold.
-        healthCheckTimer?.invalidate()
-        healthCheckTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor in
-                self.performHealthCheck()
-            }
+        // It rests while the displays sleep or the session is away; the next check comes 10 s after.
+        healthCheck = IdleGate.shared.repeating(every: 10, tolerance: 2) { [weak self] in
+            self?.performHealthCheck()
         }
-        healthCheckTimer?.tolerance = 2
     }
 }

@@ -45,14 +45,18 @@ extension HIDEventManager {
             : nil
     }
 
-    /// Notices the start of an item drag.
+    /// Whether a drag event can start an item move, decided before anything asks the window server.
     ///
     /// Holding command is what makes a drag in the menu bar a move of the item
     /// rather than a drag inside whichever app owns it.
+    nonisolated static func dragMayMoveItem(modifiers: NSEvent.ModifierFlags, isDragging: Bool) -> Bool {
+        !isDragging && modifiers.contains(.command)
+    }
+
+    /// Notices the start of an item drag.
     func handleMenuBarItemDragStart(with event: NSEvent, appState: AppState) {
         guard
-            !isDraggingMenuBarItem,
-            event.modifierFlags.contains(.command),
+            Self.dragMayMoveItem(modifiers: event.modifierFlags, isDragging: isDraggingMenuBarItem),
             isMouseInsideMenuBarItem(appState: appState)
         else {
             return
