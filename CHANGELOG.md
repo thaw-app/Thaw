@@ -24,35 +24,59 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+## [3.0.0-alpha.15] - 2026-11-22
+
+**macOS 27 only · Build 127**
+
+Greetings from Vice City! This alpha rolls up every fix since beta 7, plus the first round of making Thaw lighter. Thaw 3 is feature frozen now, so it's fixes from here on. Small ones land in the alphas first, and anything that gets in your way heads to the next beta too.
+
+> [!NOTE]
+> Making Thaw lighter meant changes across the app, so an issue fixed before might come back. If you see one, please [let us know](https://github.com/thaw-app/Thaw/issues/new/choose), so we can plan around it.
+
+> [!TIP]
+> If you'd like to help, [#1529](https://github.com/thaw-app/Thaw/issues/1529) lists work that's ready to pick up. Some of it needs no Swift at all.
+
 ### Changed
 
-- **A shorter welcome.** It says what Thaw does and asks for access. Its last page shows how to hide and show items, with Launch at Login, a shortcut and automatic updates beside it. The feature tour and the choice between Simple Mode and All Settings are gone: a first launch starts in Simple Mode, and showing the welcome again keeps the mode you use.
-- **Thaw shows hidden items to take their pictures only when you press Capture Hidden Items,** with either hiding method. With Standard it used to show them for a moment, under a blurred strip, whenever the Thaw Bar or Layout opened with pictures missing. An item without a picture shows as its app's icon until you capture it or open it. Reported by @alexbuildsthings in [#1534](https://github.com/thaw-app/Thaw/issues/1534).
-- **Thaw rests while your displays sleep or you switch to another user.** Its regular checks stop until you're back, and then it looks over the menu bar once, so anything that changed meanwhile is picked up. While you work it wakes less often too: the check for which display has the active menu bar now runs only when a display uses Always show hidden items.
+- **Thaw uses less memory and power.**
+- **The welcome is shorter,** and a first launch starts in Simple Mode.
+- **The permissions window is smaller,** with every permission in one list.
+- **Simple Mode can take pictures of your hidden items.** Capture Hidden Items shows under the sections preview while any of them has no picture.
+- **Setup and Troubleshooting no longer offer Reduced mode.** If you're using it, it keeps working.
+- **Thaw takes pictures of hidden items only when you press Capture Hidden Items,** with either hiding method. Reported by @alexbuildsthings in [#1534](https://github.com/thaw-app/Thaw/issues/1534).
 
 ### Fixed
 
-- **With Show on scroll off, scrolling no longer keeps Thaw busy.** Thaw asked macOS which display had the active menu bar on every scroll, anywhere, before it looked at the setting. A drag without Command held no longer asks either.
-- **An item set to show when its icon changes no longer has pictures taken while Triggers is off.** Every Space switch or change in the menu bar took new pictures of hidden items for it, and nothing used them.
-- **A setting you change just before closing Settings is no longer lost.** Thaw reads every setting again when Settings closes, so a change it hadn't heard about yet still takes effect.
-- **Thaw keeps less in memory over time.** It no longer lets macOS fill a Window menu for it while it has no window open. Its own windows still close with ⌘W and minimize with ⌘M.
+#### Layout and items
 
-- `thawctl set` now rejects assignments with an empty setting name instead of interpreting them as a different setting change.
-- Asking `thawctl` for help with `--help` or `-h` now exits successfully and prints to standard output.
-- **`thawctl reveal-item` needs exactly one of `--bundle` or `--item-id`,** and says so. Given neither or both, it reported the request as sent, and Thaw then turned it down.
-- **A hidden item you open from the Thaw Bar gets a new picture once its menu closes,** so an icon that changed while hidden, such as one showing an update, no longer keeps its old look. macOS shows the screen recording indicator for a moment. By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
-- **A hidden item's picture catches up with a redesigned icon that got shorter,** such as Docker Desktop's new whale. Thaw took the new icon for the old one still appearing and kept the old picture, even when you retook every picture.
-- **A hidden item's new picture is no longer kept highlighted** when its menu opens again while the picture is taken.
-- **An app that restarts just before another app opens no longer loses its place when a profile applies.** Thaw now waits for its item to come back, as it already did when no other app opened in the same second.
-- **An item with a changing title, such as a countdown, is recognized as one item on a display to the left of your main display too.** There, each new title could make it look like a new item.
-- **A reorder you make in Layout keeps being applied until the menu bar shows it.** A read that missed one of the moved items could count it as done, and the bar kept the old order.
-- **A change to the menu bar is saved, and items that don't fit are moved, even when Thaw first saw it in a read that missed some apps.** A full read that found the same bar skipped both.
-- **Items you reveal in the menu bar hide again when the pointer rests where the Thaw Bar was.** After the Thaw Bar closed, that spot still counted as the bar and kept them open.
-- **The widget icon lights another dot as soon as a reading crosses it,** even when the percentage shown stays the same, such as 24.9% and 25.1% both reading 25%.
-- **A hidden item you open from the Thaw Bar on another display opens its menu on that display,** instead of on the display with the active menu bar. Reported by @RyuSeongbin in [#1356](https://github.com/thaw-app/Thaw/issues/1356).
-- **An app's icons no longer show in a folder and in the menu bar at once.** macOS hides an app as a whole, so when you put one of an app's items in a folder, its other items now join that folder too. Reported by @AuthorProxy in [#1617](https://github.com/thaw-app/Thaw/issues/1617).
-- **Thaw no longer asks every running app for menu bar items each time it looks.** Apps that have none are checked again every few minutes, so the log no longer fills with failed lookups or a repeated warning about Thaw's own icon. Reported by @wangzi0218 in [#1662](https://github.com/thaw-app/Thaw/issues/1662).
 - **The menu bar no longer has an empty gap where Thaw's section dividers sit while their sections are closed.** macOS gave each hidden divider the full spacing between items, so a gap could appear after a Space switch and stay until Thaw restarted. Reported by @void-AGT in [#1596](https://github.com/thaw-app/Thaw/issues/1596).
+- **An app that restarts while a profile applies keeps its place.**
+- **Thaw no longer mistakes an item with a changing title for a new one** on a display to the left of your main display.
+- **A reorder in Layout keeps applying until the menu bar shows it.**
+- **Thaw saves menu bar changes and moves items that don't fit,** even when it missed some apps while looking.
+- **An app's icons no longer show in a folder and in the menu bar at once.** Reported by @AuthorProxy in [#1617](https://github.com/thaw-app/Thaw/issues/1617).
+- **The log no longer fills with failed lookups from Thaw.** Reported by @wangzi0218 in [#1662](https://github.com/thaw-app/Thaw/issues/1662).
+
+#### Thaw Bar and item pictures
+
+- **A hidden item you open from the Thaw Bar gets a new picture once its menu closes.** By @Omoeba in [#1620](https://github.com/thaw-app/Thaw/pull/1620).
+- **Thaw updates a hidden item's picture when its icon gets shorter,** such as Docker Desktop's new whale. By @Omoeba in [#1666](https://github.com/thaw-app/Thaw/pull/1666).
+- **A new picture no longer shows the item highlighted** when its menu was open at the time.
+- **Revealed items hide again when the pointer rests where the Thaw Bar was.**
+- **A hidden item opened from the Thaw Bar on another display opens its menu there.** Reported by @RyuSeongbin in [#1356](https://github.com/thaw-app/Thaw/issues/1356).
+
+#### Other
+
+- **Clicking the clock in a full-screen app on a MacBook with a notch opens Notification Center again.** By @dmisgano99 in [#1673](https://github.com/thaw-app/Thaw/pull/1673).
+- **`thawctl --help` and `thawctl -h` exit successfully** and print to standard output. By @Belligerently in [#1634](https://github.com/thaw-app/Thaw/pull/1634).
+- **`thawctl reveal-item` needs exactly one of `--bundle` or `--item-id`.**
+- **`thawctl set` turns down a setting with no name.** By @Belligerently in [#1656](https://github.com/thaw-app/Thaw/pull/1656).
+- **Thaw keeps a setting you change right before closing Settings.**
+- **The widget icon lights another dot as soon as a reading crosses it.**
+
+### Thanks
+
+- @elior-esh added isolated previews for the Tools pages ([#1603](https://github.com/thaw-app/Thaw/pull/1603)) and moved the move refusal checks out of `MenuBarItemManager+Moving` ([#1654](https://github.com/thaw-app/Thaw/pull/1654)). In ThawUI they added Xcode previews for the shared controls, the onboarding and settings pieces, pickers, sections, forms, sliders and the sidebar ([ThawUI#11](https://github.com/thaw-app/ThawUI/pull/11), [ThawUI#12](https://github.com/thaw-app/ThawUI/pull/12), [ThawUI#13](https://github.com/thaw-app/ThawUI/pull/13)).
 
 ## [3.0.0-beta.7] - 2026-11-17
 
