@@ -39,13 +39,15 @@ extension MenuBarItemImageCache {
         existing: MenuBarItemGlyphCapture,
         candidate: MenuBarItemGlyphCapture,
         revealing item: MenuBarItem,
-        listedWidths: [MenuBarItemTag: CGFloat]
+        listedWidths: [MenuBarItemTag: CGFloat],
+        revealRebuildsBar: Bool = true
     ) -> MenuBarItemGlyphCapture {
         preferredRevealedImage(
             existing: existing,
             candidate: candidate,
             recordedItemWidth: item.bounds.width,
-            listedItemWidth: listedWidth(of: item.tag, in: listedWidths)
+            listedItemWidth: listedWidth(of: item.tag, in: listedWidths),
+            revealRebuildsBar: revealRebuildsBar
         )
     }
 

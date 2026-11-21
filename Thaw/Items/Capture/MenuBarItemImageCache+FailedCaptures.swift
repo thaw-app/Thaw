@@ -152,11 +152,14 @@ extension MenuBarItemImageCache {
     ) {
         if let tally = prewarmSlot.tally {
             let itemWidths = listedItemWidths()
+            let rebuildsBar = revealsRebuildTheBar
             for pair in revealed {
                 guard let image = captureResult.captured[pair.live.tag] else { continue }
                 let cached = Self.cachedCapture(for: pair.requested.tag, in: capturesByTag)
                 let kept = cached.map {
-                    Self.preferredRevealedImage(existing: $0.capture, candidate: image, revealing: pair.requested, listedWidths: itemWidths)
+                    Self.preferredRevealedImage(
+                        existing: $0.capture, candidate: image, revealing: pair.requested, listedWidths: itemWidths, revealRebuildsBar: rebuildsBar
+                    )
                 }
                 // An earlier build's picture this reveal kept is now this build's, so it counts as taken.
                 if kept == nil || kept == image || cached?.capture.isFromEarlierBuild == true {
