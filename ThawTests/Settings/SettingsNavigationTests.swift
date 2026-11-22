@@ -1,21 +1,20 @@
 //
-//  UXRefreshNavigationTests.swift
+//  SettingsNavigationTests.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
 import SwiftUI
 import Testing
 @testable import Thaw
-import ThawModuleKit
-import ThawUI
 
 /// The sidebar lists direct destinations in groups, ending with About.
 /// Scripts is an unbuilt placeholder with no route from the window.
 @MainActor
-@Suite("UX refresh navigation")
-struct UXRefreshNavigationTests {
+@Suite("Settings sidebar")
+struct SettingsSidebarTests {
     // MARK: - Sidebar shape
 
     @Test("The sidebar puts Thaw's everyday pages first, then the modules that are on, then Manage, About alone last")
@@ -26,7 +25,7 @@ struct UXRefreshNavigationTests {
             .profiles, .scripts, .triggers, .widgets,
             .modules, .privacy, .tools,
             .about,
-        ], "Got: \(SettingsSidebarPanes.all)")
+        ])
     }
 
     @Test("Modules and Manage have their headings, and About opens with a gap")
@@ -82,11 +81,6 @@ struct UXRefreshNavigationTests {
         #expect(panes["lab.zenModeWhileRecording"] == .visibility)
     }
 
-    @Test("Links and saved panes that name Experiments open General")
-    func experimentsOpensGeneral() {
-        #expect(SettingsNavigationIdentifier(storedValue: "The Lab") == .general)
-    }
-
     @Test("The arrow keys step over headings and stop at the ends")
     func arrowKeysSkipHeadings() {
         func page(moving direction: MoveCommandDirection, from current: SettingsNavigationIdentifier) -> SettingsNavigationIdentifier? {
@@ -105,102 +99,32 @@ struct UXRefreshNavigationTests {
         #expect(!SettingsSidebarPanes.showsSelection(current: .visibility, isSearching: true))
     }
 
-    @Test("About is last")
-    func aboutIsLast() {
-        #expect(SettingsSidebarPanes.rows.last == .page(.about))
-    }
-
     @Test("Every identifier is a page in the sidebar")
     func everyIdentifierIsAPage() {
         #expect(Set(SettingsSidebarPanes.all) == Set(SettingsNavigationIdentifier.allCases))
     }
 
-    @Test("Every sidebar pane is a direct destination, no hub indirection")
-    func listedPanesAreDirect() {
-        // Each listed identifier must render its own pane, without hub remapping.
-        let listed = Set(SettingsSidebarPanes.all)
-        let allPanes = Set(SettingsNavigationIdentifier.allCases)
-        #expect(listed.isSubset(of: allPanes))
-    }
-
-    // MARK: - Persistence compatibility
-
-    @Test("Old pane raw values still decode")
-    func oldRawValuesDecode() {
-        // Raw values are the persistence contract for saved lastSettingsPane selections.
-        let legacy: [String: SettingsNavigationIdentifier] = [
-            "General": .general,
-            "Menu Bar Layout": .menuBarLayout,
-            "Visibility": .visibility,
-            "Thaw Bar": .thawBar,
-            "Displays": .displays,
-            "Spaces": .displays,
-            "Menu Bar Appearance": .menuBarAppearance,
-            "Hotkeys": .hotkeys,
-            "Profiles": .profiles,
-            "Advanced": .menuBarLayout,
-            "Automation": .triggers,
-            "Triggers": .triggers,
-            "Scripts": .scripts,
-            "Widgets": .widgets,
-            "The Lab": .general,
-            "Tools": .tools,
-            "Privacy": .privacy,
-            "About": .about,
-        ]
-        for (raw, expected) in legacy {
-            #expect(SettingsNavigationIdentifier(storedValue: raw) == expected, "Legacy raw value \(raw) no longer decodes")
-        }
-    }
-
-    // MARK: - Search relocation
-
-    @Test("Thaw Bar search entries route to the Thaw Bar page")
-    func thawBarEntriesRouteToThawBar() {
-        let thawBarIDs: Set = [
-            "pane.thawBar",
-            "displays.useThawBar",
-            "displays.alwaysShowHiddenItems",
-            "displays.thawBarLocation",
-            "displays.thawBarLayout",
-            "displays.thawBarItemSize",
-            "general.lockThawBarPosition",
-            "general.thawBarLocationOnHotkey",
-        ]
-        for entry in SearchIndex.entries where thawBarIDs.contains(entry.id) {
-            #expect(entry.pane == .thawBar, "Entry \(entry.id) should route to .thawBar, got \(entry.pane)")
-        }
-        let indexed = Set(SearchIndex.entries.map(\.id))
-        for id in thawBarIDs {
-            #expect(indexed.contains(id), "Expected Thaw Bar entry \(id) is missing from the index")
-        }
-    }
-
-    @Test("Reveal, rehide, search, and tooltip entries route to Visibility")
-    func revealEntriesRouteToVisibility() {
-        let visibilityIDs: Set = [
-            "general.showOnClick",
-            "general.showOnHover",
-            "general.showOnScroll",
-            "general.autoRehide",
-            "general.menuBarSearchPresentation",
-            "general.showMenuBarTooltips",
-            "general.tempShowInterval",
-        ]
-        for entry in SearchIndex.entries where visibilityIDs.contains(entry.id) {
-            #expect(entry.pane == .visibility, "Entry \(entry.id) should route to .visibility, got \(entry.pane)")
-        }
-    }
-
-    @Test("Menu bar spacing entries stay on the Displays page")
-    func spacingEntriesStayOnDisplays() {
-        let stayIDs: Set = [
-            "displays.itemSpacing",
-            "displays.spacingApplyMode",
-        ]
-        for entry in SearchIndex.entries where stayIDs.contains(entry.id) {
-            #expect(entry.pane == .displays, "Entry \(entry.id) should stay on .displays, got \(entry.pane)")
-        }
+    @Test("Search entries for settings that moved pages open their new page", arguments: [
+        ("pane.thawBar", SettingsNavigationIdentifier.thawBar),
+        ("displays.useThawBar", .thawBar),
+        ("displays.alwaysShowHiddenItems", .thawBar),
+        ("displays.thawBarLocation", .thawBar),
+        ("displays.thawBarLayout", .thawBar),
+        ("displays.thawBarItemSize", .thawBar),
+        ("general.lockThawBarPosition", .thawBar),
+        ("general.thawBarLocationOnHotkey", .thawBar),
+        ("general.showOnClick", .visibility),
+        ("general.showOnHover", .visibility),
+        ("general.showOnScroll", .visibility),
+        ("general.autoRehide", .visibility),
+        ("general.menuBarSearchPresentation", .visibility),
+        ("general.showMenuBarTooltips", .visibility),
+        ("general.tempShowInterval", .visibility),
+        ("displays.itemSpacing", .displays),
+        ("displays.spacingApplyMode", .displays),
+    ])
+    func movedEntryOpensItsPage(id: String, pane: SettingsNavigationIdentifier) throws {
+        #expect(try #require(SearchIndex.entries.first { $0.id == id }).pane == pane)
     }
 
     @Test("Every search entry opens a pane that is in the sidebar")
@@ -209,5 +133,72 @@ struct UXRefreshNavigationTests {
         for entry in SearchIndex.entries {
             #expect(sidebar.contains(entry.pane), "Entry \(entry.id) routes to \(entry.pane), which has no sidebar row")
         }
+    }
+}
+
+/// Saved panes and links name a page by its stored identifier, including pages since retired.
+@MainActor
+@Suite("Settings page identifiers", .serialized)
+struct SettingsPageIdentifierTests {
+    @Test("A stored pane name, current or retired, opens its page", arguments: [
+        ("General", SettingsNavigationIdentifier.general),
+        ("Menu Bar Layout", .menuBarLayout),
+        ("Visibility", .visibility),
+        ("Thaw Bar", .thawBar),
+        ("Displays", .displays),
+        ("Spaces", .displays),
+        ("Menu Bar Appearance", .menuBarAppearance),
+        ("Hotkeys", .hotkeys),
+        ("Profiles", .profiles),
+        ("Advanced", .menuBarLayout),
+        ("Automation", .triggers),
+        ("Triggers", .triggers),
+        ("Scripts", .scripts),
+        ("Widgets", .widgets),
+        ("Modules", .modules),
+        ("The Lab", .general),
+        ("Tools", .tools),
+        ("Privacy", .privacy),
+        ("About", .about),
+    ])
+    func storedNameOpensItsPage(stored: String, pane: SettingsNavigationIdentifier) {
+        #expect(SettingsNavigationIdentifier(storedValue: stored) == pane)
+    }
+
+    @Test("The Extras page keeps its stored identifier, so saved settings and links still find it")
+    func extrasKeepsItsIdentifier() {
+        #expect(SettingsNavigationIdentifier.modules.rawValue == "Modules")
+    }
+
+    @Test("An unknown pane name opens nothing")
+    func unknownName() {
+        #expect(SettingsNavigationIdentifier(storedValue: "Nowhere") == nil)
+    }
+
+    @Test("A saved Spaces pane opens Displays", .scratchDefaults)
+    func restoringSpaces() {
+        Defaults.store.set("Spaces", forKey: Defaults.Key.lastSettingsPane.rawValue)
+        #expect(AppNavigationState().settingsNavigationIdentifier == .displays)
+    }
+
+    @Test("A page is named by its label, not its stored identifier", arguments: [
+        (SettingsNavigationIdentifier.menuBarLayout, "Layout"),
+        (.menuBarAppearance, "Appearance"),
+        (.hotkeys, "Shortcuts"),
+        (.displays, "Displays"),
+        (.modules, "Modules"),
+        (.triggers, "Triggers"),
+        (.scripts, "Scripts"),
+        (.widgets, "Widgets"),
+    ])
+    func labelNotIdentifier(pane: SettingsNavigationIdentifier, label: String) {
+        #expect(String(localized: pane.localized) == label)
+    }
+
+    @Test("Each module card opens its own page")
+    func moduleCardPages() {
+        #expect(ModulesSettingsPane.pane(for: "automation") == .scripts)
+        #expect(ModulesSettingsPane.pane(for: "triggers") == .triggers)
+        #expect(ModulesSettingsPane.pane(for: "widgets") == .widgets)
     }
 }
