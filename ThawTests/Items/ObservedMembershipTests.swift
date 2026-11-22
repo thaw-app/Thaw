@@ -14,15 +14,7 @@ import Testing
 @Suite("Membership read from the position table")
 struct ObservedMembershipTests {
     private static func item(_ title: String, windowID: CGWindowID) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.\(title)"), title: title, instanceIndex: 0),
-            windowID: windowID,
-            ownerPID: pid_t(windowID),
-            sourcePID: pid_t(windowID),
-            bounds: CGRect(x: 0, y: 3, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, x: 0, y: 3, windowID: windowID, ownerPID: pid_t(windowID), sourcePID: pid_t(windowID))
     }
 
     private static func candidate(

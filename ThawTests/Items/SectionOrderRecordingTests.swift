@@ -126,15 +126,7 @@ struct SectionOrderRecordingTests {
     }
 
     private static func item(_ title: String, x: CGFloat) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.\(title)"), title: title, instanceIndex: 0),
-            windowID: UInt32(x) + 1,
-            ownerPID: 100,
-            sourcePID: 200,
-            bounds: CGRect(x: x, y: 0, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, x: x, windowID: UInt32(x) + 1)
     }
 
     @Test("Recording concealed order leaves physical application to reveal", arguments: [MenuBarSectionName.hidden, .alwaysHidden])

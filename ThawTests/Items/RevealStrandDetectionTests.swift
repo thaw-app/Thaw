@@ -28,15 +28,7 @@ struct RevealStrandDetectionTests {
         x: CGFloat,
         windowID: UInt32
     ) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string(bundleID), title: title, instanceIndex: 0),
-            windowID: windowID,
-            ownerPID: 100,
-            sourcePID: 200,
-            bounds: CGRect(x: x, y: 0, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, bundle: bundleID, x: x, windowID: windowID)
     }
 
     private static func control(_ tag: MenuBarItemTag, title: String, x: CGFloat, windowID: UInt32) -> MenuBarItem {

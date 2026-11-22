@@ -38,13 +38,7 @@ struct MenuBarItemImageCacheDiskSaveTests {
     }
 
     private static func capture() -> MenuBarItemGlyphCapture {
-        let context = CGContext(
-            data: nil, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 32,
-            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )!
-        context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
-        return MenuBarItemGlyphCapture(cgImage: context.makeImage()!, scale: 2)
+        try! ItemsFixture.glyph(width: 8, height: 8, scale: 2, color: CGColor(red: 1, green: 0, blue: 0, alpha: 1))
     }
 
     /// Saves and waits for the store's serial queue to finish the drain.

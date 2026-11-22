@@ -20,15 +20,7 @@ struct MenuBarItemGroupManagerTests {
     }
 
     private func item(_ title: String, bundle: String = "com.example.groups", pid: pid_t = 999_997) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string(bundle), title: title, instanceIndex: 0),
-            windowID: CGWindowID(abs(title.hashValue % 10000) + 1),
-            ownerPID: pid,
-            sourcePID: pid,
-            bounds: CGRect(x: 600, y: 0, width: 22, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, bundle: bundle, x: 600, width: 22, windowID: CGWindowID(abs(title.hashValue % 10000) + 1), ownerPID: pid, sourcePID: pid)
     }
 
     private var storageKey: String {

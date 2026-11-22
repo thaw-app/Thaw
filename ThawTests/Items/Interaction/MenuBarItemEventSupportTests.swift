@@ -12,15 +12,7 @@ import Testing
 
 @Suite("Synthetic menu bar item events carry the fields the window server reads")
 struct MenuBarItemEventSupportTests {
-    private let item = MenuBarItem(
-        tag: MenuBarItemTag(namespace: .string("com.example.events"), title: "Item", instanceIndex: 0),
-        windowID: 7777,
-        ownerPID: 999_993,
-        sourcePID: 999_993,
-        bounds: CGRect(x: 800, y: 0, width: 22, height: 24),
-        title: "Item",
-        isOnScreen: true
-    )
+    private let item = ItemsFixture.item("Item", bundle: "com.example.events", x: 800, width: 22, windowID: 7777, ownerPID: 999_993, sourcePID: 999_993)
 
     @Test("Each button maps to its own press and release pair")
     func pairsFollowTheButton() {

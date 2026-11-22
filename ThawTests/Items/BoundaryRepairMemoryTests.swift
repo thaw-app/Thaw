@@ -21,15 +21,7 @@ struct BoundaryRepairMemoryTests {
     }
 
     private func item(_ title: String, pid: pid_t = 100) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("test.memory"), title: title),
-            windowID: 1,
-            ownerPID: pid,
-            sourcePID: pid,
-            bounds: CGRect(x: 100, y: 0, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, bundle: "test.memory", ownerPID: pid, sourcePID: pid)
     }
 
     private func begin(

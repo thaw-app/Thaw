@@ -14,15 +14,7 @@ import Testing
 @Suite("Saved Visible order completed with live items")
 struct VisibleOrderCompletionTests {
     private func item(_ bundleID: String, windowID: CGWindowID, x: CGFloat) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string(bundleID), title: "Item-0", instanceIndex: 0),
-            windowID: windowID,
-            ownerPID: 100,
-            sourcePID: 200,
-            bounds: CGRect(x: x, y: 0, width: 24, height: 24),
-            title: "Item-0",
-            isOnScreen: true
-        )
+        ItemsFixture.item("Item-0", bundle: bundleID, x: x, windowID: windowID)
     }
 
     @Test("A live item the saved order does not name is filled in where the bar has it")
