@@ -59,18 +59,6 @@ final class SettingsProcessAppSideTests {
         #expect(!SettingsProcessApp.isRequested, "tests run as the app")
     }
 
-    @Test("The process showing the handed-back page closes the app's Settings window once")
-    func handBackFinishesOnPageChange() {
-        let appState = AppState()
-        let side = appState.settingsProcessAppSide()
-        appState.settingsProcessHost.handBack.isPending = true
-        side.pageChanged("General")
-        #expect(!appState.settingsProcessHost.handBack.isPending)
-        #expect(appState.navigationState.settingsNavigationIdentifier == .general)
-        side.pageChanged("About")
-        #expect(appState.navigationState.settingsNavigationIdentifier == .about, "a later page change is only a page change")
-    }
-
     @Test("A page change from the process moves the app's pane, and an unknown pane is ignored")
     func pageChanged() {
         let appState = AppState()
@@ -79,6 +67,21 @@ final class SettingsProcessAppSideTests {
         #expect(appState.navigationState.settingsNavigationIdentifier == .privacy)
         side.pageChanged("Nowhere")
         #expect(appState.navigationState.settingsNavigationIdentifier == .privacy)
+    }
+
+    @Test("Simple Mode set with no Settings window open, here or in the settings process, is what capture follows")
+    func simpleModeReachesNavigation() {
+        let appState = AppState()
+        let navigation = appState.navigationState
+        appState.settings.general.performSetup(with: appState)
+        #expect(!navigation.isSimpleModeSettings)
+        Defaults.set(true, forKey: .simpleMode)
+        appState.settingsProcessAppSide().reloadSettings()
+        #expect(navigation.isSimpleModeSettings, "The settings process turned it on")
+        appState.settings.general.simpleMode = false
+        #expect(!navigation.isSimpleModeSettings)
+        appState.settings.general.simpleMode = true
+        #expect(navigation.isSimpleModeSettings, "The welcome turns it on before Settings opens")
     }
 
     @Test("The updater state sent to the process is the app's own")

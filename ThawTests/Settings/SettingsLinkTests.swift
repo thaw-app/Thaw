@@ -16,6 +16,7 @@ struct SettingsLinkTests {
         .show(pane: nil),
         .settingsChanged,
         .openInApp(pane: "Menu Bar Layout"),
+        .openInApp(pane: "Menu Bar Layout", frame: CGRect(x: -1533, y: 129, width: 1018, height: 720)),
         .pageChanged(pane: "About"),
         .updatesState(canCheck: true, lastCheck: Date(timeIntervalSince1970: 1_800_000_000)),
         .updatesState(canCheck: false, lastCheck: nil),

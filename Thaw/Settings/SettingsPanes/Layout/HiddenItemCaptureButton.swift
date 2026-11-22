@@ -9,6 +9,37 @@ import AppKit
 import SwiftUI
 import ThawUI
 
+/// A line of text with Capture Hidden Items at its end, under the Layout page's bars and Simple Mode's preview.
+struct HiddenItemCaptureFooter<Trailing: View>: View {
+    let text: Text
+    /// Where Settings search lands for the button, on the page that has one.
+    var searchAnchor: String?
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: ThawSpacing.base) {
+            text
+                .font(ThawType.footnote)
+                .foregroundStyle(ThawInk.supporting)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: ThawSpacing.base)
+            if let searchAnchor {
+                HiddenItemCaptureButton()
+                    .settingsSearchAnchor(searchAnchor)
+            } else {
+                HiddenItemCaptureButton()
+            }
+            trailing
+        }
+    }
+}
+
+extension HiddenItemCaptureFooter where Trailing == EmptyView {
+    init(text: Text) {
+        self.init(text: text, searchAnchor: nil) { EmptyView() }
+    }
+}
+
 /// Takes new pictures of the Hidden and Always Hidden items, and says how it went.
 struct HiddenItemCaptureButton: View {
     @Environment(AppState.self) private var appState

@@ -13,8 +13,8 @@ nonisolated enum SettingsLinkMessage: Codable, Equatable, Sendable {
     case show(pane: String?)
     /// The sender wrote settings, so the receiver reads them again.
     case settingsChanged
-    /// The settings process can't show this pane, so the app shows it instead.
-    case openInApp(pane: String)
+    /// The settings process can't show this pane, so the app shows it instead, in the same place.
+    case openInApp(pane: String, frame: CGRect? = nil)
     /// The app's Settings window is up, so the settings process closes its own.
     case shownInApp
     /// The settings process moved to this pane, so the app opens on it next time.

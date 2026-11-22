@@ -38,14 +38,7 @@ struct LayoutBarsSection: View {
                     // The same width as the bars, which the form would otherwise centre at its row width.
                     .containerRelativeFrame(.horizontal, alignment: .leading) { width, _ in width - 40 }
             } else {
-                HStack(alignment: .firstTextBaseline, spacing: ThawSpacing.base) {
-                    Text(Self.dragHint)
-                        .font(ThawType.footnote)
-                        .foregroundStyle(ThawInk.supporting)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: ThawSpacing.base)
-                    HiddenItemCaptureButton()
-                        .settingsSearchAnchor("layout.captureHiddenItems")
+                HiddenItemCaptureFooter(text: Text(Self.dragHint), searchAnchor: "layout.captureHiddenItems") {
                     if showsPopOutButton {
                         popOutButton
                     }
