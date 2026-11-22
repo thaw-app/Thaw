@@ -88,7 +88,6 @@ private final class AppSideCalls {
     var updateChecks = 0
     var quits = 0
     var processEnds = 0
-    var pageReloads = 0
     var storeReloads = 0
     /// Each read and the page's end, in the order the host ran them.
     var steps = [String]()
@@ -108,10 +107,7 @@ private final class AppSideCalls {
             updatesState: { .updatesState(canCheck: true, lastCheck: nil) },
             features: [SettingsAppFeature(
                 statuses: ["test.status": { SettingsLinkPayload.encode(self.status.value) }],
-                reload: {
-                    self.pageReloads += 1
-                    self.steps.append("page")
-                },
+                reload: { self.steps.append("page") },
                 stores: ["test.store": {
                     self.storeReloads += 1
                     self.steps.append("store")
@@ -242,8 +238,6 @@ struct SettingsProcessHostTests {
         launched.onEnd(0)
         #expect(await settingsLinkWait { calls.processEnds == 1 })
         #expect(calls.steps == ["settings", "page", "store", "ended"])
-        #expect(calls.pageReloads == 1)
-        #expect(calls.storeReloads == 1)
         await mainActorQueueDrained()
         #expect(calls.steps.count == 4, "the reads send nothing that comes back")
     }

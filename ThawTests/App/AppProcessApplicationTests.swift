@@ -13,13 +13,9 @@ import Testing
 @MainActor
 @Suite("The app process gives AppKit no Windows menu")
 struct AppProcessApplicationTests {
-    @Test("The app process is launched with the application object that drops the Windows menu")
-    func launchesWithSubclass() {
-        #expect(NSApp is AppProcessApplication)
-    }
-
     @Test("SwiftUI's Window menu, or any other, never becomes the Windows menu")
     func windowsMenuStaysNil() {
+        #expect(NSApp is AppProcessApplication)
         #expect(NSApp.windowsMenu == nil)
         NSApp.windowsMenu = NSMenu(title: "Window")
         #expect(NSApp.windowsMenu == nil)
