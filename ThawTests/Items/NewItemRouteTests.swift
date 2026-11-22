@@ -12,21 +12,19 @@ import Testing
 @MainActor
 @Suite("A new item reaches the section the New Items setting names")
 struct NewItemRouteTests {
-    @Test("A newcomer bound for a concealed section's divider is assigned the section", arguments: [
-        MenuBarSectionName.hidden, .alwaysHidden,
-    ])
-    func concealedSectionIsAssigned(section: MenuBarSectionName) {
-        #expect(NewItemRoute(section: section, destinationIsDivider: true) == .assign)
-    }
-
-    @Test("A newcomer with an anchor item to sit beside is moved there")
-    func anchoredNewcomerIsMoved() {
-        #expect(NewItemRoute(section: .hidden, destinationIsDivider: false) == .move)
-        #expect(NewItemRoute(section: .visible, destinationIsDivider: false) == .move)
-    }
-
-    @Test("A newcomer bound for Visible keeps the move, since it is Visible already")
-    func visibleKeepsTheMove() {
-        #expect(NewItemRoute(section: .visible, destinationIsDivider: true) == .move)
+    /// A newcomer bound for a concealed section's divider is assigned the section; one with an
+    /// anchor item to sit beside, or bound for Visible, which it is in already, is moved.
+    @Test(
+        "A newcomer is assigned only to a concealed section's divider",
+        arguments: [
+            (MenuBarSectionName.hidden, true, NewItemRoute.assign),
+            (.alwaysHidden, true, .assign),
+            (.visible, true, .move),
+            (.hidden, false, .move),
+            (.visible, false, .move),
+        ]
+    )
+    func route(section: MenuBarSectionName, destinationIsDivider: Bool, expected: NewItemRoute) {
+        #expect(NewItemRoute(section: section, destinationIsDivider: destinationIsDivider) == expected)
     }
 }

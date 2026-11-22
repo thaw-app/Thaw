@@ -15,36 +15,34 @@ struct SettledSectionOrderTests {
     // Higher weights sit further left: Always Hidden 1368, Hidden 247, Visible control 113.
     private let dividers = ObservedMembership.Dividers(hidden: 247, alwaysHidden: 1368, visibleControl: 113)!
 
-    @Test("Six Hidden items with falling weights are already in order")
-    func loggedHiddenOrderIsSettled() {
-        #expect(SettledSectionOrder.isInOrder([661, 660, 573, 492, 442, 419], section: .hidden, dividers: dividers))
+    @Test(
+        "Members on their side of the divider with strictly falling weights are already in order",
+        arguments: [
+            ([661, 660, 573, 492, 442, 419], MenuBarSectionName.hidden),
+            ([3000, 2000, 1500], .alwaysHidden),
+        ] as [([Int?], MenuBarSectionName)]
+    )
+    func settled(weights: [Int?], section: MenuBarSectionName) {
+        #expect(SettledSectionOrder.isInOrder(weights, section: section, dividers: dividers))
     }
 
-    @Test("Two members out of order need the write")
-    func swappedMembersNeedTheWrite() {
-        #expect(!SettledSectionOrder.isInOrder([661, 573, 660, 492], section: .hidden, dividers: dividers))
-    }
-
-    @Test("Tied weights need the write, since the agent breaks a tie its own way")
-    func tiedWeightsNeedTheWrite() {
-        #expect(!SettledSectionOrder.isInOrder([661, 661, 573], section: .hidden, dividers: dividers))
-    }
-
-    @Test("A member without a weight needs the write")
-    func missingWeightNeedsTheWrite() {
-        #expect(!SettledSectionOrder.isInOrder([661, nil, 573], section: .hidden, dividers: dividers))
-    }
-
-    @Test("A member across the divider needs the write even in order")
-    func memberAcrossDividerNeedsTheWrite() {
-        #expect(!SettledSectionOrder.isInOrder([661, 573, 200], section: .hidden, dividers: dividers))
-        #expect(!SettledSectionOrder.isInOrder([2000, 661, 573], section: .hidden, dividers: dividers))
-    }
-
-    @Test("Always Hidden members beyond their divider and in order are settled")
-    func alwaysHiddenSettled() {
-        #expect(SettledSectionOrder.isInOrder([3000, 2000, 1500], section: .alwaysHidden, dividers: dividers))
-        #expect(!SettledSectionOrder.isInOrder([3000, 1500, 2000], section: .alwaysHidden, dividers: dividers))
+    /// Tied weights need the write since the agent breaks a tie its own way, and fewer than two
+    /// members leave nothing to check.
+    @Test(
+        "Swapped, tied, unweighed, misplaced or lone members need the write",
+        arguments: [
+            ([661, 573, 660, 492], MenuBarSectionName.hidden),
+            ([661, 661, 573], .hidden),
+            ([661, nil, 573], .hidden),
+            ([661, 573, 200], .hidden),
+            ([2000, 661, 573], .hidden),
+            ([3000, 1500, 2000], .alwaysHidden),
+            ([661], .hidden),
+            ([], .hidden),
+        ] as [([Int?], MenuBarSectionName)]
+    )
+    func needsTheWrite(weights: [Int?], section: MenuBarSectionName) {
+        #expect(!SettledSectionOrder.isInOrder(weights, section: section, dividers: dividers))
     }
 
     @Test("An ascending axis reads the order the other way round")
@@ -52,11 +50,5 @@ struct SettledSectionOrderTests {
         let ascending = ObservedMembership.Dividers(hidden: -247, alwaysHidden: -1368, visibleControl: -113)!
         #expect(SettledSectionOrder.isInOrder([-661, -660, -573], section: .hidden, dividers: ascending))
         #expect(!SettledSectionOrder.isInOrder([-573, -660, -661], section: .hidden, dividers: ascending))
-    }
-
-    @Test("Fewer than two members leave nothing to check, so the write goes ahead")
-    func singleMemberWrites() {
-        #expect(!SettledSectionOrder.isInOrder([661], section: .hidden, dividers: dividers))
-        #expect(!SettledSectionOrder.isInOrder([], section: .hidden, dividers: dividers))
     }
 }
