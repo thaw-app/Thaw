@@ -13,14 +13,6 @@ enum ThawOnboardingWindowMetrics {
     static let width: CGFloat = 520
 }
 
-extension View {
-    /// Room above and below a page drawn with OnboardingWelcomeLayout, whose own spacing is for a taller window.
-    func onboardingPageMargins() -> some View {
-        padding(.vertical, ThawSpacing.gutter)
-            .background(VisualEffectBackground())
-    }
-}
-
 /// The host applies all decisions at completion; the flow never writes settings, so quitting leaves no partial changes.
 nonisolated struct OnboardingOutcome: Equatable, Sendable {
     var automaticUpdates: Bool

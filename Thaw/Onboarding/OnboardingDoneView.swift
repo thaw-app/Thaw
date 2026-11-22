@@ -19,30 +19,35 @@ struct OnboardingDoneView: View {
     @State private var automaticUpdates = true
 
     var body: some View {
-        OnboardingWelcomeLayout(continueTitle: Text("Open \(Constants.displayName)"), onContinue: finish) {
-            EmptyView()
-        } copy: {
-            Text("\(Constants.displayName) is in your menu bar")
-                .font(ThawType.display)
-                .multilineTextAlignment(.center)
-
-            howItWorks
-                .padding(.top, ThawSpacing.gutter)
-
-            choices
-                .padding(.top, ThawSpacing.section)
-
-            Text("Settings opens next in Simple Mode. For everything else, click All Settings in its toolbar.")
-                .font(ThawType.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: 420)
-                .padding(.top, ThawSpacing.gutter)
-        } exit: {
-            EmptyView()
+        OnboardingPage {
+            VStack(spacing: 0) {
+                content
+            }
+        } footer: {
+            Spacer()
+            OnboardingContinueButton(title: "Open \(Constants.displayName)", action: finish)
         }
-        .onboardingPageMargins()
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        Text("\(Constants.displayName) is in your menu bar")
+            .font(ThawType.display)
+            .multilineTextAlignment(.center)
+
+        howItWorks
+            .padding(.top, ThawSpacing.gutter)
+
+        choices
+            .padding(.top, ThawSpacing.section)
+
+        Text("Settings opens next in Simple Mode. For everything else, click All Settings in its toolbar.")
+            .font(ThawType.caption)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: 420)
+            .padding(.top, ThawSpacing.gutter)
     }
 
     private var howItWorks: some View {

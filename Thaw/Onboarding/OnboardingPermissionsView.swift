@@ -23,15 +23,12 @@ struct ThawPermissionsView: View {
 
     private let mode: Mode
     private let onContinue: () -> Void
-    private let chooseReducedMode: (() -> Void)?
 
     /// - Parameters:
     ///   - mode: Defaults to Mode.recovery.
-    ///   - chooseReducedMode: Replaces the Reduced mode choice, for previews.
     ///   - onContinue: Called once the user has finished with the step.
-    init(mode: Mode = .recovery, chooseReducedMode: (() -> Void)? = nil, onContinue: @escaping () -> Void) {
+    init(mode: Mode = .recovery, onContinue: @escaping () -> Void) {
         self.mode = mode
-        self.chooseReducedMode = chooseReducedMode
         self.onContinue = onContinue
     }
 
@@ -53,7 +50,7 @@ struct ThawPermissionsView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        OnboardingPage {
             VStack(spacing: ThawSpacing.gutter) {
                 Image(nsImage: NSApp.applicationIconImage)
                     .resizable()
@@ -64,25 +61,10 @@ struct ThawPermissionsView: View {
                 OnboardingHeader(title: Text("Allow access"), message: Text(headerMessage))
 
                 lists
-
-                if !permissions.accessibility.hasPermission {
-                    Text(ReducedModeOfferButton.offer)
-                        .font(ThawType.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .transition(.opacity)
-                }
             }
-            .padding(ThawSpacing.section)
-            .frame(maxHeight: .infinity)
-
-            Divider()
-
+        } footer: {
             footer
         }
-        .thawAnimation(ThawMotion.settle, value: permissions.accessibility.hasPermission)
-        .background(VisualEffectBackground())
         .onAppear {
             // Preflight only: appearing must never raise a Screen Recording
             // prompt. The async probe is for the continue button.
@@ -114,29 +96,15 @@ struct ThawPermissionsView: View {
             .accessibilityAddTraits(.isHeader)
     }
 
+    @ViewBuilder
     private var footer: some View {
-        HStack(spacing: ThawSpacing.base) {
-            // The window has no close button while access is missing.
-            Button("Quit \(Constants.displayName)") {
-                NSApp.terminate(nil)
-            }
-            .keyboardShortcut("q")
-            .help("Quit \(Constants.displayName) without granting access")
+        // The window has no close button while access is missing.
+        OnboardingQuitButton(help: "Quit \(Constants.displayName) without granting access")
 
-            Spacer(minLength: ThawSpacing.base)
+        Spacer(minLength: ThawSpacing.base)
 
-            if !permissions.accessibility.hasPermission {
-                ReducedModeOfferButton(choose: chooseReducedMode)
-            }
-
-            Button("Continue", action: finish)
-                .buttonStyle(.thawProminent)
-                .keyboardShortcut(.defaultAction)
-                .disabled(!requiredGranted)
-        }
-        .controlSize(.large)
-        .padding(.horizontal, ThawSpacing.section)
-        .padding(.vertical, ThawSpacing.gutter)
+        OnboardingContinueButton(title: "Continue", action: finish)
+            .disabled(!requiredGranted)
     }
 
     private func finish() {
@@ -212,6 +180,7 @@ private struct PermissionRow: View {
                 }
                 control
             }
+            .buttonStyle(.settingsGlass)
             .fixedSize()
         }
         .padding(.horizontal, ThawSpacing.inset)
@@ -279,18 +248,11 @@ extension Permission {
     private struct PermissionsPreview: View {
         let mode: ThawPermissionsView.Mode
         @State var permissions: AppPermissions
-        /// The Reduced mode button reads it, though the preview replaces its action.
-        @State private var appState = OnboardingPreview.appState()
 
         var body: some View {
-            ThawPermissionsView(
-                mode: mode,
-                chooseReducedMode: { /* Preview only. */ },
-                onContinue: { /* Preview only. */ }
-            )
-            .environment(permissions)
-            .environment(appState)
-            .onboardingPreviewFrame()
+            ThawPermissionsView(mode: mode, onContinue: { /* Preview only. */ })
+                .environment(permissions)
+                .onboardingPreviewFrame()
         }
     }
 

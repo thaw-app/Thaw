@@ -165,15 +165,7 @@ struct ToolsSettingsPane: View {
                 pendingAction = .resetPermissions
             }
             .settingsSearchAnchor("tools.resetPermissions")
-
-            toolRow(
-                title: "Reduced mode",
-                detail: "Run \(Constants.displayName) as one icon that hides whole apps, without reading the menu bar. Switch back from its menu.",
-                buttonTitle: "Switch to Reduced Mode…",
-                statusFor: .enterReducedMode
-            ) {
-                pendingAction = .enterReducedMode
-            }
+            // Reduced mode is off the visible UI until it moves to its own app; the task stays for the link.
         }
         MenuBarLayoutBackupsSection(refreshToken: backupsRefreshToken, remote: remote)
     }
