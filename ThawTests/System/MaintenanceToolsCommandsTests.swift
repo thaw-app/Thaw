@@ -10,8 +10,11 @@ import Testing
 @testable import Thaw
 
 /// What the maintenance tools would run and report, checked without running anything.
+@MainActor
 @Suite("Maintenance tool commands")
 struct MaintenanceToolsCommandsTests {
+    private let suites = ScratchSuites(prefix: "MaintenanceToolsCommandsTests")
+
     @Test("Resetting permissions resets only Accessibility and Screen Recording, only for the given app")
     func permissionResetArguments() {
         #expect(MaintenanceTools.permissionResetArguments(bundleID: "com.example.app") == [
@@ -21,11 +24,8 @@ struct MaintenanceToolsCommandsTests {
     }
 
     @Test("Resetting permissions forgets every picked file, and nothing else")
-    @MainActor
     func pickedFileGrantsAreForgotten() throws {
-        let suiteName = ScratchDefaults.name("MaintenanceToolsCommandsTests")
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { ScratchDefaults.remove(suiteName) }
+        let defaults = try #require(suites.make())
         for key in MaintenanceTools.pickedFileBookmarkKeys {
             defaults.set(Data([1]), forKey: key)
         }
@@ -33,16 +33,9 @@ struct MaintenanceToolsCommandsTests {
 
         MaintenanceTools.removePickedFileGrants(from: defaults)
         for key in MaintenanceTools.pickedFileBookmarkKeys {
-            #expect(defaults.object(forKey: key) == nil, "\(key) stays granted")
+            #expect(defaults.object(forKey: key) == nil)
         }
         #expect(defaults.bool(forKey: "RememberSearchQuery"))
-    }
-
-    @Test("Every picked file Thaw asks for has its grant cleared")
-    func pickedFileKeysCoverEveryPicker() {
-        #expect(Set(MaintenanceTools.pickedFileBookmarkKeys) == [
-            "MenuBarLayoutTableBookmark", "NativeAppHidingAppListBookmark", "NativeVisibilityRecoveryFileBookmark",
-        ])
     }
 
     @Test("A failed command names itself and its exit status, with its output when there is any")

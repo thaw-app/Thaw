@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import CoreServices
 import Foundation
 import Testing
 @testable import Thaw
@@ -46,5 +47,31 @@ struct ApplicationTerminationTests {
             try? await Task.sleep(for: .milliseconds(10))
         }
         #expect(recorder.terminations == 1)
+    }
+}
+
+/// 2026-10-22: Thaw quit at the same moment as another app while Steam ran,
+/// and the log couldn't say who asked.
+@Suite("The log names who asked Thaw to quit")
+struct QuitRequestSourceTests {
+    @Test("A quit request names who sent it", arguments: [
+        (nil, nil, nil, "from Thaw itself"),
+        (812, "Steam", nil, "by Steam (pid 812)"),
+        (812, nil, nil, "by pid 812"),
+        (42, "Thaw", nil, "from Thaw itself"),
+        (98, "loginwindow", OSType(kAELogOut), "by loginwindow (pid 98), reason logo"),
+    ] as [(pid_t?, String?, OSType?, String)])
+    func describesTheSender(pid: pid_t?, name: String?, reason: OSType?, expected: String) {
+        #expect(QuitRequestSource.describe(senderPID: pid, senderName: name, reason: reason, ownPID: 42) == expected)
+    }
+
+    @Test func fourCharCodesReadAsTheirLetters() {
+        #expect(QuitRequestSource.string(fromFourCharCode: 0x7175_6974) == "quit")
+    }
+
+    /// Outside a quit event, as in a test, the request reads as Thaw's own.
+    @MainActor
+    @Test func theCurrentRequestOutsideAnEventIsThaws() {
+        #expect(QuitRequestSource.current() == "from Thaw itself")
     }
 }

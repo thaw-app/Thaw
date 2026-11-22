@@ -1,11 +1,12 @@
 //
-//  ReducedModeControllerTests.swift
+//  ReducedModeTests.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Foundation
 import Testing
 @testable import Thaw
 
@@ -195,5 +196,118 @@ struct ReducedModeControllerEdgeTests {
         ReducedModeController.isChosen = true
         #expect(Defaults.bool(forKey: .reducedModeChosen))
         #expect(ReducedModeController.isChosen)
+    }
+}
+
+@MainActor
+@Suite("Reduced mode choice", .serialized, .scratchDefaults)
+struct ReducedModeChoiceTests {
+    @Test("Choosing it from Troubleshooting keeps it with Accessibility granted")
+    func troubleshootingChoiceIsKept() {
+        ReducedModeController.choose(keepingWithAccessibility: true)
+        #expect(ReducedModeController.isChosen)
+        #expect(ReducedModeController.isKeptWithAccessibility)
+    }
+
+    @Test("Onboarding's choice still gives way to the full app once access is granted")
+    func onboardingChoiceGivesWay() {
+        ReducedModeController.isChosen = true
+        #expect(!ReducedModeController.isKeptWithAccessibility)
+    }
+
+    @Test("Switching to the full app clears both, however it was chosen")
+    func leavingClearsBoth() {
+        ReducedModeController.choose(keepingWithAccessibility: true)
+        ReducedModeController.leave()
+        #expect(!ReducedModeController.isChosen)
+        #expect(!ReducedModeController.isKeptWithAccessibility)
+    }
+}
+
+@MainActor
+struct ReducedModeURLCommandTests {
+    private func command(_ string: String) throws -> ReducedModeURLCommand? {
+        try ReducedModeURLCommand(#require(URL(string: string)))
+    }
+
+    @Test
+    func `reads each request the reduced mode answers`() throws {
+        #expect(try command("thaw://toggle-hidden") == .toggleHidden)
+        #expect(try command("thaw://list-apps") == .listApps)
+        #expect(try command("thaw://hide-app?bundle=com.example.a") == .hideApp("com.example.a"))
+        #expect(try command("thaw://show-app?bundle=com.example.a") == .showApp("com.example.a"))
+    }
+
+    @Test
+    func `ignores the case of the request's name`() throws {
+        #expect(try command("thaw://Toggle-Hidden") == .toggleHidden)
+    }
+
+    @Test
+    func `refuses a hide or show that names no app`() throws {
+        #expect(try command("thaw://hide-app") == nil)
+        #expect(try command("thaw://show-app?bundle=") == nil)
+        #expect(try command("thaw://hide-app?app=com.example.a") == nil)
+    }
+
+    @Test
+    func `refuses the full app's requests`() throws {
+        for request in ["open-settings", "set?key=showOnHover&value=true", "toggle-thawbar", "search", "dump-items"] {
+            #expect(try command("thaw://\(request)") == nil)
+        }
+    }
+}
+
+@MainActor
+struct ReducedModeInventoryTests {
+    private func app(_ bundleID: String?, _ name: String? = nil, background: Bool = false) -> ReducedModeInventory.Running {
+        .init(bundleID: bundleID, name: name, isBackgroundOnly: background)
+    }
+
+    @Test
+    func `lists other developers' apps by name and leaves out Thaw, Apple and background processes`() {
+        let apps = ReducedModeInventory.candidates(
+            running: [
+                app("com.example.zeta", "Zeta"),
+                app("com.apple.Safari", "Safari"),
+                app("com.stonerl.Thaw", "Thaw"),
+                app("com.example.daemon", "Daemon", background: true),
+                app(nil, "Nameless"),
+                app("com.example.alpha", "alpha"),
+            ],
+            tableKeys: nil,
+            isOwn: { $0 == "com.stonerl.Thaw" }
+        )
+        #expect(apps.map(\.bundleID) == ["com.example.alpha", "com.example.zeta"])
+    }
+
+    @Test
+    func `keeps only apps with a row in the position table when the table can be read`() {
+        let apps = ReducedModeInventory.candidates(
+            running: [app("com.example.withitem", "With"), app("com.example.noitem", "Without")],
+            tableKeys: ["status:com.example.withitem::Item-0", "module:Clock"],
+            isOwn: { _ in false }
+        )
+        #expect(apps.map(\.bundleID) == ["com.example.withitem"])
+    }
+
+    @Test
+    func `lists an app once when it runs twice, under whichever name it has`() {
+        let apps = ReducedModeInventory.candidates(
+            running: [app("com.example.twice", nil), app("com.example.twice", "Twice"), app("com.example.bare", nil)],
+            tableKeys: nil,
+            isOwn: { _ in false }
+        )
+        #expect(apps == [
+            ReducedModeApp(bundleID: "com.example.bare", name: "com.example.bare"),
+            ReducedModeApp(bundleID: "com.example.twice", name: "Twice"),
+        ])
+    }
+
+    @Test
+    func `maps each hidden app to an identifier the kit can conceal`() {
+        let input = ReducedModeHider.input(hiding: ["com.example.b", "com.example.a"])
+        #expect(input.assignment == ["reduced:com.example.a": .hidden, "reduced:com.example.b": .hidden])
+        #expect(input.owners == ["reduced:com.example.a": "com.example.a", "reduced:com.example.b": "com.example.b"])
     }
 }
