@@ -8,8 +8,7 @@
 import SwiftUI
 import ThawUI
 
-/// Lets someone who will not grant Accessibility still hide whole apps. The permissions window shows the
-/// consequence above it, so it is read before the choice.
+/// Lets someone who will not grant Accessibility still hide whole apps.
 struct ReducedModeOfferButton: View {
     @Environment(AppState.self) private var appState
     /// Previews pass their own, so the choice doesn't start the app.

@@ -238,3 +238,113 @@ struct AppPermissionsTests {
         }
     }
 }
+
+/// Permissions whose system calls are replaced, as the onboarding previews use them.
+@MainActor
+@Suite("Permission stubs")
+struct PermissionStubTests {
+    @Test("A stubbed permission keeps its settings pane and answers only from the stub")
+    func stubReplacesSystemCalls() async {
+        let grant = PreviewGrant()
+        let permission = ScreenRecordingPermission(stub: OnboardingPreview.stub(grant, .grants))
+        defer { permission.stopCheck() }
+        #expect(permission.hasSettingsPane)
+        await permission.refreshStatus()
+        #expect(!permission.hasPermission, "the asynchronous system probe is not used")
+        permission.performRequest()
+        #expect(grant.requests == 1)
+        #expect(permission.hasPermission)
+    }
+
+    @Test("The preview's permissions start with the given grants and grant on request")
+    func previewGrants() {
+        let permissions = OnboardingPreview.permissions(granted: [.accessibility])
+        defer { permissions.stopAllChecks() }
+        #expect(permissions.accessibility.hasPermission)
+        #expect(permissions.permissionsState == .missing)
+        permissions.fullDiskAccess.performRequest()
+        #expect(permissions.permissionsState == .hasRequired)
+    }
+
+    @Test("The preview's Launch at Login stays on and writes nothing")
+    func previewLaunchAtLogin() async {
+        let setting = OnboardingPreview.launchAtLogin()
+        await setting.refresh()
+        #expect(setting.isEnabled)
+        await setting.setEnabled(false)
+        #expect(setting.isEnabled)
+    }
+}
+
+/// What the permissions window's rows offer as a request is answered, on the preview's stubs.
+@MainActor
+@Suite("Permission rows")
+struct PermissionRowTests {
+    @Test("A prompt waits for its answer, and after a decline keeps waiting until the grant lands")
+    func promptWaitsUntilGranted() {
+        let grant = PreviewGrant()
+        let accessibility = AccessibilityPermission(stub: OnboardingPreview.stub(grant, .declines))
+        defer { accessibility.stopCheck() }
+        #expect(!accessibility.awaitingPromptAnswer)
+        accessibility.performRequest()
+        #expect(accessibility.awaitingPromptAnswer)
+        #expect(!accessibility.waitsAfterDecline, "the prompt is still up")
+        accessibility.handlePollTick()
+        #expect(!accessibility.awaitingPromptAnswer)
+        #expect(accessibility.wasDeclined)
+        #expect(accessibility.waitsAfterDecline)
+        grant.isGranted = true
+        accessibility.handlePollTick()
+        #expect(accessibility.hasPermission)
+        #expect(!accessibility.isWaitingForGrant)
+        #expect(!accessibility.waitsAfterDecline)
+    }
+
+    @Test("A granted request does not wait")
+    func grantDoesNotWait() {
+        let permissions = OnboardingPreview.permissions()
+        defer { permissions.stopAllChecks() }
+        permissions.fullDiskAccess.performRequest()
+        #expect(permissions.fullDiskAccess.hasPermission)
+        #expect(!permissions.fullDiskAccess.isWaitingForGrant)
+    }
+
+    @Test("Only a dismissed Menu Bar Layout Access file panel offers the file again, instead of waiting")
+    func choosingFileAgain() {
+        let permissions = OnboardingPreview.permissions(answer: .declines)
+        defer { permissions.stopAllChecks() }
+        for permission in permissions.allPermissions {
+            #expect(!permission.offersChoosingFileAgain, "nothing was declined yet")
+            permission.performRequest()
+            permission.handlePollTick()
+            #expect(permission.wasDeclined)
+        }
+        let layout = permissions.fullDiskAccess
+        #expect(layout.offersChoosingFileAgain)
+        #expect(!layout.waitsAfterDecline)
+        #expect(layout.rowSubtitle(grantedWhileShown: false) == layout.declinedHint)
+        #expect(!permissions.accessibility.offersChoosingFileAgain, "no file panel")
+        #expect(!permissions.screenRecording.offersChoosingFileAgain, "no file panel")
+        #expect(
+            !permissions.controlCenterAppList.offersChoosingFileAgain,
+            "without a settings pane its own button opens the panel again"
+        )
+    }
+
+    @Test("A file granted on the screen says a relaunch may be needed")
+    func relaunchNote() {
+        let note = String(localized: "You may need to quit and reopen \(Constants.displayName) before it takes effect.")
+        let permissions = OnboardingPreview.permissions()
+        defer { permissions.stopAllChecks() }
+        for permission in permissions.allPermissions {
+            #expect(permission.rowSubtitle(grantedWhileShown: false) == permission.summary)
+            permission.performRequest()
+            #expect(permission.hasPermission)
+            #expect(permission.rowSubtitle(grantedWhileShown: false) == permission.summary, "granted before the screen opened")
+        }
+        #expect(permissions.fullDiskAccess.rowSubtitle(grantedWhileShown: true) == note)
+        #expect(permissions.controlCenterAppList.rowSubtitle(grantedWhileShown: true) == note)
+        #expect(permissions.accessibility.rowSubtitle(grantedWhileShown: true) == permissions.accessibility.summary)
+        #expect(permissions.screenRecording.rowSubtitle(grantedWhileShown: true) == permissions.screenRecording.summary)
+    }
+}

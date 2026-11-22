@@ -91,4 +91,23 @@ struct OnboardingViewRenderTests {
         #expect(render.host.fittingSize.width > 0)
         #expect(!continued)
     }
+
+    @Test("The permissions window offers no Reduced mode while Accessibility is missing")
+    func noReducedModeOffer() {
+        let missing = OnboardingPreview.permissions()
+        let granted = OnboardingPreview.permissions(granted: [.accessibility])
+        defer {
+            missing.stopAllChecks()
+            granted.stopAllChecks()
+        }
+        #expect(fittingHeight(missing) == fittingHeight(granted), "no extra line above the footer")
+    }
+
+    private func fittingHeight(_ permissions: AppPermissions) -> CGFloat {
+        let host = NSHostingView(rootView: ThawPermissionsView(mode: .onboarding, onContinue: {})
+            .frame(width: ThawOnboardingWindowMetrics.width)
+            .environment(permissions))
+        host.layoutSubtreeIfNeeded()
+        return host.fittingSize.height
+    }
 }
