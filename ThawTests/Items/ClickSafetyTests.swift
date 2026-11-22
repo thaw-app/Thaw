@@ -34,6 +34,15 @@ struct ClickSafetyTests {
         }
     }
 
+    @Test("A click meant for another display's bar lands there, and aims by the pointer once that display is gone")
+    func clickAimsAtChosenBar() {
+        let bounds = CGRect(x: 2400, y: 5, width: 24, height: 24)
+        #expect(ClickTargetCheck.clickPoint(for: bounds, onBarOf: Self.screens[1], displays: Self.screens) == CGPoint(x: 4122, y: 307))
+        #expect(ClickTargetCheck.clickPoint(for: bounds, onBarOf: Self.screens[0], displays: Self.screens) == CGPoint(x: 2412, y: 17))
+        let unplugged = CGRect(x: -1920, y: 0, width: 1920, height: 1080)
+        #expect(ClickTargetCheck.clickPoint(for: bounds, onBarOf: unplugged, displays: Self.screens) == nil)
+    }
+
     @Test("A lower bar is safe to click, while frames below it and host windows are refused")
     func lowerDisplayClickSafety() {
         let seated = CGRect(x: 3600, y: 295, width: 24, height: 24)

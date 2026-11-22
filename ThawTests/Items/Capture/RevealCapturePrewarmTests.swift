@@ -21,7 +21,6 @@ struct RevealCapturePrewarmTests {
         var locked: Set<String> = []
         var mayReveal = true
         var nativeOverflow = false
-        var allowsCaptureReveal = false
         var images: [MenuBarItemTag: MenuBarItemGlyphCapture] = [:]
         var blacklisted: Set<MenuBarItemTag> = []
         var displayID: CGDirectDisplayID = 42
@@ -43,7 +42,6 @@ struct RevealCapturePrewarmTests {
                 sectionItems: { self.appIsGone ? nil : self.sections[$0] ?? [] },
                 displayID: { self.displayID },
                 isNativeOverflowActive: { _ in self.nativeOverflow },
-                allowsCaptureReveal: { self.allowsCaptureReveal },
                 cachedImage: { self.images[$0] },
                 wouldAttemptCapture: { !self.blacklisted.contains($0.tag) },
                 forgetFailures: { self.forgotten.append($0) },
@@ -86,6 +84,26 @@ struct RevealCapturePrewarmTests {
         context.setFillColor(CGColor(gray: 0, alpha: 1))
         context.fill(CGRect(x: inset, y: 0, width: pixelWidth - inset * 2, height: 48))
         return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 2)
+    }
+
+    @Test("Hidden items need pictures while one lacks a picture a capture could take")
+    func hiddenItemsNeedPictures() throws {
+        let world = World()
+        let pictured = Self.item("Pictured"), missing = Self.item("Missing"), visible = Self.item("Visible")
+        world.sections[.visible] = [visible]
+        world.sections[.hidden] = [pictured]
+        world.images[pictured.tag] = try Self.glyph(pixelWidth: 48)
+        #expect(!world.prewarm().hiddenItemsNeedPictures, "a visible item without one doesn't count")
+
+        world.sections[.alwaysHidden] = [missing]
+        #expect(world.prewarm().hiddenItemsNeedPictures)
+
+        world.blacklisted = [missing.tag]
+        #expect(!world.prewarm().hiddenItemsNeedPictures, "an item that keeps failing isn't offered again")
+
+        world.blacklisted = []
+        world.appIsGone = true
+        #expect(!world.prewarm().hiddenItemsNeedPictures)
     }
 
     @Test("An automatic pass retakes a picture that no longer fits its item, once a session")
@@ -177,19 +195,17 @@ struct RevealCapturePrewarmTests {
         #expect(RevealCapturePrewarm.prewarmSections([.alwaysHidden, .visible, .hidden, .alwaysHidden]) == [.alwaysHidden, .hidden])
     }
 
-    @Test("Control Center modules are always left out, blank items only outside a requested Native capture")
+    @Test("Control Center modules are left out; blank and ordinary items are not")
     func skips() {
         let module = Self.item("com.apple.menuextra.wifi", namespace: .menuBarAgent)
         let blank = Self.item("Blank", width: 2)
         let normal = Self.item("Normal")
-        #expect(RevealCapturePrewarm.skips(module, allowsCaptureReveal: false))
-        #expect(RevealCapturePrewarm.skips(module, allowsCaptureReveal: true))
-        #expect(RevealCapturePrewarm.skips(blank, allowsCaptureReveal: false))
-        #expect(!RevealCapturePrewarm.skips(blank, allowsCaptureReveal: true))
-        #expect(!RevealCapturePrewarm.skips(normal, allowsCaptureReveal: false))
+        #expect(RevealCapturePrewarm.skips(module))
+        #expect(!RevealCapturePrewarm.skips(blank))
+        #expect(!RevealCapturePrewarm.skips(normal))
     }
 
-    @Test("A missing-only prewarm reveals the items without a trusted picture, leaving out blank ones")
+    @Test("A missing-only prewarm reveals the items without a trusted picture, blank ones included")
     func missingOnlyFilter() async throws {
         let world = World()
         let good = Self.item("Good"), narrow = Self.item("Narrow"), none = Self.item("None")
@@ -201,19 +217,18 @@ struct RevealCapturePrewarmTests {
 
         await world.run([.hidden])
 
-        #expect(world.captured.map(\.items) == [[narrow.tag, none.tag]])
+        #expect(world.captured.map(\.items) == [[narrow.tag, none.tag, blank.tag]])
         #expect(world.captured.map(\.displayID) == [42])
-        #expect(world.forgotten.isEmpty, "An automatic pass keeps its failures")
+        #expect(world.forgotten.isEmpty, "A pass that keeps no tally keeps its failures")
         #expect(world.saves == 1)
         #expect(!world.slot.isHeld)
     }
 
-    @Test("A blank item is revealed while Capture Hidden Items runs under Native hiding")
-    func blankItemUnderNativeCapture() async {
+    @Test("A blank item is revealed, since Native hiding parks an app with no size until it is")
+    func blankItemIsRevealed() async {
         let world = World()
         let blank = Self.item("Blank", width: 2)
         world.sections[.hidden] = [blank]
-        world.allowsCaptureReveal = true
 
         await world.run([.hidden])
 

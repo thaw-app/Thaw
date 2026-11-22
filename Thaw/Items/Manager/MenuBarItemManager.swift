@@ -1427,11 +1427,11 @@ final class MenuBarItemManager {
         }
         registered.insert(AnyCancellable { activateTask.cancel() })
 
-        // Gap-fill the layout pane's images whenever it comes on screen:
+        // Refresh the layout pane's images whenever it comes on screen:
         // either the selection changes to it, or Settings reopens with it
         // already selected. AppNavigationState is @Observable, so both
-        // flips arrive through one Observations sequence. Gap-fill only,
-        // a forced full recapture can replace settled glyphs with native
+        // flips arrive through one Observations sequence. Only a warranted
+        // recapture: a forced full one can replace settled glyphs with native
         // overflow chevron crops.
         navigationStateObservationTask?.cancel()
         navigationStateObservationTask = Task { @MainActor [weak self, navigationState] in
@@ -1444,10 +1444,6 @@ final class MenuBarItemManager {
                     continue
                 }
                 guard let imageCache = self.appState?.imageCache else { continue }
-                await imageCache.prewarmConcealedImages(
-                    sections: MenuBarSection.Name.allCases,
-                    onlyMissingImages: true
-                )
                 await imageCache.recaptureIfWarranted(sections: MenuBarSection.Name.allCases)
             }
         }
@@ -1459,20 +1455,19 @@ final class MenuBarItemManager {
         // marker windows that source-PID marker-pair resolution depends on,
         // which can appear and disappear between sparser app-event triggers. A
         // short interval keeps marker-pair latency low; the windowID comparison
-        // bails fast and triggers no recache when nothing changed.
-        cacheTickCancellable = Timer.publish(every: 3, tolerance: 0.3, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                Task { [weak self] in
-                    guard let self else { return }
-                    // Liveness first: an exit whose terminate notification never
-                    // arrived (macOS 27 does not reliably post it) must still
-                    // leave the cache, and the window-list gate below never
-                    // sees an AX-only status item withdraw.
-                    await self.purgeDepartedOwnersWhenDue()
-                    await self.cacheItemsIfNeeded()
-                }
-            }
+        // bails fast and triggers no recache when nothing changed. It rests while the
+        // displays sleep or the session is away; one full scan on resume catches up.
+        cacheTickCancellable = IdleGate.shared.repeating(every: 3, tolerance: 0.3, mode: .common) { [weak self] in
+            await self?.cacheItemsRegardless()
+        } tick: { [weak self] in
+            guard let self else { return }
+            // Liveness first: an exit whose terminate notification never
+            // arrived (macOS 27 does not reliably post it) must still
+            // leave the cache, and the window-list gate below never
+            // sees an AX-only status item withdraw.
+            await purgeDepartedOwnersWhenDue()
+            await cacheItemsIfNeeded()
+        }
 
         // Control Center posts com.apple.controlcenter.bentoBoxDidChange
         // when the user drags a control in or out of the bento box. The control

@@ -27,8 +27,15 @@ the items under New and Fixed.
 ### Changed
 
 - **A shorter welcome.** It says what Thaw does and asks for access. Its last page shows how to hide and show items, with Launch at Login, a shortcut and automatic updates beside it. The feature tour and the choice between Simple Mode and All Settings are gone: a first launch starts in Simple Mode, and showing the welcome again keeps the mode you use.
+- **Thaw shows hidden items to take their pictures only when you press Capture Hidden Items,** with either hiding method. With Standard it used to show them for a moment, under a blurred strip, whenever the Thaw Bar or Layout opened with pictures missing. An item without a picture shows as its app's icon until you capture it or open it. Reported by @alexbuildsthings in [#1534](https://github.com/thaw-app/Thaw/issues/1534).
+- **Thaw rests while your displays sleep or you switch to another user.** Its regular checks stop until you're back, and then it looks over the menu bar once, so anything that changed meanwhile is picked up. While you work it wakes less often too: the check for which display has the active menu bar now runs only when a display uses Always show hidden items.
 
 ### Fixed
+
+- **With Show on scroll off, scrolling no longer keeps Thaw busy.** Thaw asked macOS which display had the active menu bar on every scroll, anywhere, before it looked at the setting. A drag without Command held no longer asks either.
+- **An item set to show when its icon changes no longer has pictures taken while Triggers is off.** Every Space switch or change in the menu bar took new pictures of hidden items for it, and nothing used them.
+- **A setting you change just before closing Settings is no longer lost.** Thaw reads every setting again when Settings closes, so a change it hadn't heard about yet still takes effect.
+- **Thaw keeps less in memory over time.** It no longer lets macOS fill a Window menu for it while it has no window open. Its own windows still close with ⌘W and minimize with ⌘M.
 
 - `thawctl set` now rejects assignments with an empty setting name instead of interpreting them as a different setting change.
 - Asking `thawctl` for help with `--help` or `-h` now exits successfully and prints to standard output.
@@ -42,6 +49,9 @@ the items under New and Fixed.
 - **A change to the menu bar is saved, and items that don't fit are moved, even when Thaw first saw it in a read that missed some apps.** A full read that found the same bar skipped both.
 - **Items you reveal in the menu bar hide again when the pointer rests where the Thaw Bar was.** After the Thaw Bar closed, that spot still counted as the bar and kept them open.
 - **The widget icon lights another dot as soon as a reading crosses it,** even when the percentage shown stays the same, such as 24.9% and 25.1% both reading 25%.
+- **A hidden item you open from the Thaw Bar on another display opens its menu on that display,** instead of on the display with the active menu bar. Reported by @RyuSeongbin in [#1356](https://github.com/thaw-app/Thaw/issues/1356).
+- **An app's icons no longer show in a folder and in the menu bar at once.** macOS hides an app as a whole, so when you put one of an app's items in a folder, its other items now join that folder too. Reported by @AuthorProxy in [#1617](https://github.com/thaw-app/Thaw/issues/1617).
+- **Thaw no longer asks every running app for menu bar items each time it looks.** Apps that have none are checked again every few minutes, so the log no longer fills with failed lookups or a repeated warning about Thaw's own icon. Reported by @wangzi0218 in [#1662](https://github.com/thaw-app/Thaw/issues/1662).
 
 ## [3.0.0-beta.7] - 2026-11-17
 

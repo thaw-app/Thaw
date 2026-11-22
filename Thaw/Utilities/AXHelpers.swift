@@ -37,6 +37,19 @@ nonisolated enum AXHelpers {
         app.value(kAXExtrasMenuBarAttribute) as? AXElement
     }
 
+    /// The extras menu bar with the code the read returned and how long it took. The code and the time
+    /// tell an app with no bar, or no Accessibility server, apart from one that did not answer in time.
+    static func extrasMenuBarRead(for app: AXElement) -> (bar: AXElement?, result: AXError, elapsed: Duration) {
+        var value: CFTypeRef?
+        let start = ContinuousClock.now
+        let result = AXUIElementCopyAttributeValue(app.raw, kAXExtrasMenuBarAttribute as CFString, &value)
+        let elapsed = ContinuousClock.now - start
+        guard result == .success, let value, CFGetTypeID(value) == AXUIElementGetTypeID() else {
+            return (nil, result, elapsed)
+        }
+        return (AXElement(unsafeDowncast(value, to: AXUIElement.self)), result, elapsed)
+    }
+
     /// Everything the walk reads from one extras-bar child, in one message.
     /// The timeout bounds each read, so batching caps a slow app at one timeout
     /// per item. Unanswered attributes are nil, as in the single accessors.

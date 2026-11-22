@@ -53,8 +53,8 @@ final class SettingsProcessHost {
     /// Waits for the app's window to become key; a later window or the process ending cancels it.
     private var shownInAppWait: Task<Void, Never>?
     private let diagLog = DiagLog(category: "SettingsProcessHost")
-    /// Hands the app's Settings window back to the settings process; see AppState.watchSettingsHandBack().
-    let handBack = SettingsHandBack()
+    /// Where the settings process's window was when it handed a pane over, for the app's window to open there.
+    private var handedOverFrame: CGRect?
 
     init(
         app: AppSide,
@@ -157,6 +157,10 @@ final class SettingsProcessHost {
     /// Tells a settings process that handed a pane over that the app's window is up, once that
     /// window is key, so the process closes its own window only then.
     func appWindowOpened(_ window: NSWindow) {
+        if let frame = handedOverFrame {
+            handedOverFrame = nil
+            window.setFrame(frame, display: false)
+        }
         shownInAppWait?.cancel()
         shownInAppWait = nil
         guard link != nil else { return }
@@ -199,6 +203,17 @@ final class SettingsProcessHost {
         statusWatches = []
         shownInAppWait?.cancel()
         shownInAppWait = nil
+        Self.processEnded(app)
+    }
+
+    /// Its last messages may not have arrived, so the settings and every store are read again,
+    /// then each page undoes what only lasted while it ran. The link is gone, so nothing is sent.
+    static func processEnded(_ app: AppSide) {
+        app.reloadSettings()
+        app.features.forEach { $0.reload() }
+        for feature in app.features {
+            feature.stores.sorted { $0.key < $1.key }.forEach { $0.value() }
+        }
         app.features.forEach { $0.processEnded() }
     }
 
@@ -209,7 +224,8 @@ final class SettingsProcessHost {
                 app.reloadSettings()
                 app.features.forEach { $0.reload() }
             }
-        case let .openInApp(pane):
+        case let .openInApp(pane, frame):
+            handedOverFrame = frame
             app.openInApp(pane)
         case let .pageChanged(pane):
             app.pageChanged(pane)

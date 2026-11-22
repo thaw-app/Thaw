@@ -14,6 +14,16 @@ import Testing
 struct LeadingEdgePollIntervalTests {
     private let now = ContinuousClock.now
 
+    @Test("The Thaw icon anchors on its width alone; other items must be on screen in the visible section")
+    func anchoring() {
+        typealias Watcher = MenuBarLeadingEdgeWatcher
+        #expect(Watcher.anchorsEdge(width: 20, isVisibleControlItem: true, isOnScreen: false, isInVisibleSection: false))
+        #expect(!Watcher.anchorsEdge(width: 0, isVisibleControlItem: true, isOnScreen: true, isInVisibleSection: true))
+        #expect(Watcher.anchorsEdge(width: 20, isVisibleControlItem: false, isOnScreen: true, isInVisibleSection: true))
+        #expect(!Watcher.anchorsEdge(width: 20, isVisibleControlItem: false, isOnScreen: false, isInVisibleSection: true))
+        #expect(!Watcher.anchorsEdge(width: 20, isVisibleControlItem: false, isOnScreen: true, isInVisibleSection: false))
+    }
+
     @Test("An idle bar is polled at the idle interval")
     func idleWithoutAWindow() {
         let interval = MenuBarLeadingEdgeWatcher.pollInterval(now: now, fastUntil: nil)
@@ -50,6 +60,27 @@ struct LeadingEdgePollIntervalTests {
         let second = try #require(watcher.fastPollUntil)
         #expect(second >= first, "A later sign of change must never shorten the window")
         #expect(watcher.leadingEdge == nil, "Expecting a change is not itself a reading")
+    }
+
+    @MainActor
+    @Test("A followed edge stops polling while the displays sleep and starts again when they wake")
+    func pollingRestsWhileAsleep() {
+        let gate = IdleGate(center: NotificationCenter())
+        let watcher = MenuBarLeadingEdgeWatcher(idleGate: gate)
+        gate.note(.displaysSlept)
+        let follow = watcher.follow { _ in /* No reading is expected without an app state. */ }
+        #expect(!watcher.isPolling, "A follower that arrives while asleep waits for the wake")
+        gate.note(.displaysWoke)
+        #expect(watcher.isPolling)
+        gate.note(.sessionResigned)
+        #expect(!watcher.isPolling)
+        gate.note(.sessionBecameActive)
+        #expect(watcher.isPolling)
+        follow.cancel()
+        #expect(!watcher.isPolling)
+        gate.note(.displaysSlept)
+        gate.note(.displaysWoke)
+        #expect(!watcher.isPolling, "Waking does not poll an edge nobody follows")
     }
 }
 

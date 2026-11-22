@@ -166,9 +166,6 @@ final class MenuBarManager {
             .map(MenuBarGroupMoveRefusal.init)
     }
 
-    /// Covers hidden items that flash while an icon capture reveals them.
-    let revealCover = RevealCover()
-
     /// What the bar is drawn over, for anything that paints over the bar.
     let backdrop = MenuBarBackdrop()
 
@@ -243,7 +240,6 @@ final class MenuBarManager {
         newIconFollower.start(appState: appState)
         MenuBarPresentationProvider.startDiagnosticSessionIfGated()
         leadingEdgeWatcher.performSetup(with: appState)
-        revealCover.performSetup(with: appState)
         synchronizeAlwaysShowHiddenItems()
         rebuildItemHotkeys()
     }

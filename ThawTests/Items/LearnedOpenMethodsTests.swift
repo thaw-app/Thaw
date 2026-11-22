@@ -50,6 +50,17 @@ struct LearnedOpenMethodsTests {
         #expect(store.method(for: identity) == .revealAndPress)
     }
 
+    @Test("a click from another display neither teaches nor forgets what left clicks learned")
+    func anotherDisplayKeepsLeftClickMethod() throws {
+        let store = try makeStore()
+        store.record(.revealAndPress, for: identity, clickedWith: .left)
+        store.record(.revealAndClick, for: identity, clickedWith: .left, fromAnotherDisplay: true)
+        store.record(.revealAndClick, for: identity, clickedWith: .left, fromAnotherDisplay: true)
+        #expect(store.method(for: identity) == .revealAndPress)
+        store.record(nil, for: identity, clickedWith: .left, fromAnotherDisplay: true)
+        #expect(store.method(for: identity) == .revealAndPress)
+    }
+
     // MARK: The real click
 
     @Test("one real click is not learned, and keeps what was learned before")

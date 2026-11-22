@@ -24,6 +24,11 @@ enum ClockBridgeAvailability {
     nonisolated static func hasClockBand(showsFullscreenSpace: Bool, hasNotch: Bool) -> Bool {
         !showsFullscreenSpace || hasNotch
     }
+
+    /// Whether the shortcut tap should be up. A key still held keeps it up, so its release is not lost.
+    nonisolated static func wantsHotkeyTap(canBridge: Bool, hasHotkeys: Bool, hasHeldKeys: Bool) -> Bool {
+        (canBridge && hasHotkeys) || hasHeldKeys
+    }
 }
 
 extension HIDEventManager {
@@ -39,5 +44,13 @@ extension HIDEventManager {
             }
         }
         return [AnyCancellable { task.cancel() }]
+    }
+
+    /// Keeps the shortcut last read, which includes the system's default Fn-N, and logs a change.
+    func updateNotificationCenterHotkeys(_ hotkeys: [SystemNotificationCenterHotkey]) {
+        if hotkeys != notificationCenterHotkeys {
+            Self.diagLog.info("Notification Center shortcut bindings updated: \(hotkeys.count) enabled")
+        }
+        notificationCenterHotkeys = hotkeys
     }
 }

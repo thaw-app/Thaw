@@ -85,7 +85,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for item in NSApp.mainMenu?.items ?? [] {
             item.isHidden = true
         }
-        WindowMenuTrimmer.shared.watch { [weak appState] in appState?.hasOpenWindow ?? false }
 
         // Allow hiding the mouse while the app is in the background
         // to make menu bar item movement less jarring.

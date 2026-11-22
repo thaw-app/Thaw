@@ -213,11 +213,11 @@ struct SettingsLinkTriggersTests {
         try watcher.process([clock: glyph(red: 1)], sectionController: controller, now: start)
         try watcher.process([clock: glyph(red: 0.2)], sectionController: controller, now: start)
         #expect(controller.temporaryReveals.isEmpty, "Not chosen yet")
-        #expect(!imageCache.hasBackgroundCaptureDemand())
+        #expect(!imageCache.hasBackgroundCaptureDemand(triggersOn: true))
 
         page.setEnabled(true, for: identifier)
         #expect(sent.messages.isEmpty, "Nothing but the saved choice goes to the app")
-        #expect(imageCache.hasBackgroundCaptureDemand())
+        #expect(imageCache.hasBackgroundCaptureDemand(triggersOn: true))
         try watcher.process([clock: glyph(red: 1)], sectionController: controller, now: start)
         #expect(controller.temporaryReveals.isEmpty, "The first picture after the choice is only compared against")
         try watcher.process([clock: glyph(red: 0.2)], sectionController: controller, now: start)
@@ -229,7 +229,7 @@ struct SettingsLinkTriggersTests {
         #expect(controller.temporaryReveals.count == 1, "Nothing is revealed while the Triggers module is off")
 
         page.setEnabled(false, for: identifier)
-        #expect(!imageCache.hasBackgroundCaptureDemand())
+        #expect(!imageCache.hasBackgroundCaptureDemand(triggersOn: true))
         try watcher.process([clock: glyph(red: 1)], sectionController: controller, now: start + .seconds(120))
         try watcher.process([clock: glyph(red: 0.5)], sectionController: controller, now: start + .seconds(121))
         #expect(controller.temporaryReveals.count == 1, "Withdrawn from the page, the item stays hidden")

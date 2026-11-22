@@ -8,32 +8,18 @@
 import Testing
 @testable import Thaw
 
-@Suite("A prewarm reveals hidden items only when it can photograph them", .scratchDefaults)
+@Suite("Hidden items are revealed for a picture only when one can be taken", .scratchDefaults)
 struct PrewarmRevealGateTests {
     @Test func revealsWithScreenRecordingAndAController() {
-        #expect(ConcealedPrewarmGate.mayReveal(
-            hasSectionController: true, screenRecordingGranted: true, nativeHidingActive: false
-        ))
+        #expect(ConcealedPrewarmGate.mayReveal(hasSectionController: true, screenRecordingGranted: true))
     }
 
     @Test func staysShutWithoutScreenRecording() {
-        #expect(!ConcealedPrewarmGate.mayReveal(
-            hasSectionController: true, screenRecordingGranted: false, nativeHidingActive: false
-        ))
+        #expect(!ConcealedPrewarmGate.mayReveal(hasSectionController: true, screenRecordingGranted: false))
     }
 
     @Test func staysShutWithoutAController() {
-        #expect(!ConcealedPrewarmGate.mayReveal(
-            hasSectionController: false, screenRecordingGranted: true, nativeHidingActive: false
-        ))
-    }
-
-    /// 2026-10-22 report: with native hiding each reveal switched an app back
-    /// on, macOS rebuilt the bar, and every picture was refused anyway.
-    @Test func staysShutWithNativeHiding() {
-        #expect(!ConcealedPrewarmGate.mayReveal(
-            hasSectionController: true, screenRecordingGranted: true, nativeHidingActive: true
-        ))
+        #expect(!ConcealedPrewarmGate.mayReveal(hasSectionController: false, screenRecordingGranted: true))
     }
 
     @MainActor
@@ -41,11 +27,12 @@ struct PrewarmRevealGateTests {
         #expect(!ConcealedPrewarmGate.mayReveal(for: nil))
     }
 
-    /// A prewarm the gate refuses returns without revealing or saving anything.
+    /// Capture Hidden Items, refused by the gate, returns without revealing or saving anything.
     @MainActor
-    @Test func prewarmStopsAtTheGate() async {
+    @Test func captureStopsAtTheGate() async {
         let appState = AppState()
-        await appState.imageCache.prewarmConcealedImages(sections: [.hidden])
+        let result = await appState.imageCache.captureHiddenItems()
+        #expect(result == nil)
         #expect(appState.imageCache.capturesByTag.isEmpty)
     }
 }

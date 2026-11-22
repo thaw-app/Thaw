@@ -28,11 +28,8 @@ extension MenuBarItemManager {
         repairs.interruptAutomaticWork(by: .userClickedItem)
         guard let controller = appState?.menuBarManager.sectionController else { return .activationFailed }
 
-        // Opening an item on another display activates it; the repair pass must
-        // not read that as a topology change.
-        if displayID != (Bridging.activeMenuBarDisplayID) {
-            barSettling.note(.thawPressFlipsDisplay)
-        }
+        // A press opens the menu on the active bar, so an item opened from another display is clicked there.
+        let otherDisplay = displayID != Bridging.activeMenuBarDisplayID ? displayID : nil
 
         // A visible-authored item can still be concealed by the automatic-overflow
         // set, which hides it through the same assertion the hidden sections use.
@@ -75,19 +72,19 @@ extension MenuBarItemManager {
         let identity = openMethodIdentity(for: item)
         let learned = LearnedOpenMethods.standard.method(for: identity)
         let showInMenuBar = appState?.settings.thawBar.openHiddenItemsInMenuBar ?? false
-        for attempt in ConcealedItemOpenMethod.openAttempts(for: mouseButton, learned: learned, showInMenuBar: showInMenuBar) {
+        for attempt in ConcealedItemOpenMethod.openAttempts(for: mouseButton, learned: learned, showInMenuBar: showInMenuBar, onAnotherDisplay: otherDisplay != nil) {
             let opened: ConcealedItemOpenMethod? = switch attempt[0] {
             case .pressInPlace, .showMenuInPlace:
                 await revealAndPressConcealedItem(item, method: attempt[0], controller: controller) ? attempt[0] : nil
             case .revealAndPress, .revealAndClick:
-                await revealInPlaceAndClick(item: item, with: mouseButton, on: displayID, trying: attempt, controller: controller)
+                await revealInPlaceAndClick(item: item, with: mouseButton, on: otherDisplay, trying: attempt, controller: controller)
             }
             if let opened {
                 MenuBarItemManager.diagLog.info(
                     "clickConcealedItem: opened \(item.logString) via \(opened.rawValue)"
                 )
                 menusOpenedByClick[key] = ownerMenuWindowIDs(item).subtracting(menusBefore)
-                LearnedOpenMethods.standard.record(opened, for: identity, clickedWith: mouseButton)
+                LearnedOpenMethods.standard.record(opened, for: identity, clickedWith: mouseButton, fromAnotherDisplay: otherDisplay != nil)
                 return .completed(reactionObserved: true)
             }
             MenuBarItemManager.diagLog.debug(
@@ -97,7 +94,7 @@ extension MenuBarItemManager {
 
         // Nothing opened it. Leave it in the bar for the temporary-show
         // interval so the user can click the real icon.
-        LearnedOpenMethods.standard.record(nil, for: identity, clickedWith: mouseButton)
+        LearnedOpenMethods.standard.record(nil, for: identity, clickedWith: mouseButton, fromAnotherDisplay: otherDisplay != nil)
         MenuBarItemManager.diagLog.warning(
             "clickConcealedItem: no method opened \(item.logString); leaving it shown in the menu bar"
         )

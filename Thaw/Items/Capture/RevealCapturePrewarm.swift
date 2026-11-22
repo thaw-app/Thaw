@@ -22,8 +22,6 @@ struct RevealCapturePrewarm {
     /// The display the item cache describes, asked once per section.
     let displayID: @MainActor () -> CGDirectDisplayID
     let isNativeOverflowActive: @MainActor (CGDirectDisplayID) -> Bool
-    /// True while Capture Hidden Items runs under Native hiding, which keeps apps off the bar until revealed.
-    let allowsCaptureReveal: @MainActor () -> Bool
     /// The picture a consumer would draw for the tag. Reading it counts as a use.
     let cachedImage: @MainActor (MenuBarItemTag) -> MenuBarItemGlyphCapture?
     /// False while repeated failures keep the item from being tried.
@@ -33,8 +31,8 @@ struct RevealCapturePrewarm {
     /// One left out, as when a display change stops the capture, was never photographed.
     let captureSection: @MainActor ([MenuBarItem], CGDirectDisplayID) async -> [MenuBarItem]
     let save: @MainActor () -> Void
-    /// Picks pictures that no longer fit their item for an automatic pass to retake: the one the
-    /// Thaw Bar's passes share for the session unless a caller passes another, or nil for none.
+    /// Picks pictures that no longer fit their item for a pass to retake: one ledger for the
+    /// session unless a caller passes another, or nil for none.
     var retakeLedger: GlyphRetakeLedger? = .shared
 
     /// Briefly reveals concealed sections so their live glyphs can be captured before the assertion hides them again.
@@ -51,8 +49,7 @@ struct RevealCapturePrewarm {
         guard !Task.isCancelled, !isLocked("queued prewarm"), mayReveal() else { return }
 
         let sections = Self.prewarmSections(requestedSections)
-        // Only a pass the user asked for retries failed items at once. Automatic
-        // passes wait out the cooldown, so they don't rewrite the bar on every open.
+        // A pass the user asked for retries failed items at once.
         if !onlyMissingImages || tally != nil {
             let tags = sections.reduce(into: Set<MenuBarItemTag>()) { result, section in
                 result.formUnion((sectionItems(section) ?? []).map(\.tag))
@@ -127,9 +124,8 @@ struct RevealCapturePrewarm {
         // Native notch overflow stays in force when Thaw lifts an item's concealment,
         // so a prewarm then captures only the system chevron.
         guard !isNativeOverflowActive(displayID) else { return [] }
-        let allowsCaptureReveal = allowsCaptureReveal()
         return items.filter { item in
-            guard !Self.skips(item, allowsCaptureReveal: allowsCaptureReveal) else { return false }
+            guard !Self.skips(item) else { return false }
             return !onlyMissingImages || retakes.contains(item.tag.tagIdentifier) || MenuBarItemImageCache.prewarmNeedsCapture(
                 cachedImage: cachedImage(item.tag),
                 wouldAttemptCapture: wouldAttemptCapture(item),
@@ -141,9 +137,8 @@ struct RevealCapturePrewarm {
     /// The items whose picture no longer fits them and the ledger has this pass retake, limit at most.
     private func widthRetakes(among items: [MenuBarItem], on displayID: CGDirectDisplayID, limit: Int) -> Set<String> {
         guard let retakeLedger, limit > 0, !isNativeOverflowActive(displayID) else { return [] }
-        let allowsCaptureReveal = allowsCaptureReveal()
         let candidates = items.compactMap { item -> GlyphRetakeLedger.Candidate? in
-            guard !Self.skips(item, allowsCaptureReveal: allowsCaptureReveal), wouldAttemptCapture(item),
+            guard !Self.skips(item), wouldAttemptCapture(item),
                   let picture = cachedImage(item.tag)
             else { return nil }
             return GlyphRetakeLedger.Candidate(identifier: item.tag.tagIdentifier, pictureWidth: picture.pointSize.width, itemWidth: item.bounds.width)
@@ -163,9 +158,22 @@ struct RevealCapturePrewarm {
         }
     }
 
-    /// Whether a prewarm leaves this item out: a switched-off Control Center module never draws, and a
-    /// blank item has no size unless Native hiding parks it until this capture reveals it.
-    static nonisolated func skips(_ item: MenuBarItem, allowsCaptureReveal: Bool) -> Bool {
-        item.tag.isControlCenterGovernable || !allowsCaptureReveal && MenuBarItemImageCache.isBlankItem(item.bounds)
+    /// Whether a Hidden or Always Hidden item still draws its app icon for want of a picture that a capture
+    /// would try to take. Items that keep failing are left out, so a capture that can't help isn't offered.
+    var hiddenItemsNeedPictures: Bool {
+        [MenuBarSection.Name.hidden, .alwaysHidden].contains { section in
+            (sectionItems(section) ?? []).contains { item in
+                !Self.skips(item) && MenuBarItemImageCache.prewarmNeedsCapture(
+                    cachedImage: cachedImage(item.tag),
+                    wouldAttemptCapture: wouldAttemptCapture(item)
+                )
+            }
+        }
+    }
+
+    /// Whether a prewarm leaves this item out: a switched-off Control Center module never draws.
+    /// A blank item is kept, since Native hiding parks an app with no size until this capture reveals it.
+    static nonisolated func skips(_ item: MenuBarItem) -> Bool {
+        item.tag.isControlCenterGovernable
     }
 }

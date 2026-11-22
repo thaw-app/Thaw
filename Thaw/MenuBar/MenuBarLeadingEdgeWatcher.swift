@@ -34,6 +34,8 @@ final class MenuBarLeadingEdgeWatcher {
     /// Bumped to hand followers the current reading again; see expectChange(resending:).
     private var resends = 0
     @ObservationIgnored private let diagLog = DiagLog(category: "MenuBarLeadingEdgeWatcher")
+    @ObservationIgnored private let idleGate: IdleGate
+    @ObservationIgnored private var idleGateSubscription: AnyCancellable?
 
     /// Short enough that a follower is at most half a second behind the bar,
     /// long enough that an idle bar costs two reads a second.
@@ -56,6 +58,13 @@ final class MenuBarLeadingEdgeWatcher {
         return fastPollInterval
     }
 
+    init(idleGate: IdleGate = .shared) {
+        self.idleGate = idleGate
+        idleGateSubscription = idleGate.subscribe { [weak self] mayRun in
+            self?.idleGateChanged(mayRun: mayRun)
+        }
+    }
+
     deinit {
         pollTask?.cancel()
         walkObservation?.cancel()
@@ -74,7 +83,7 @@ final class MenuBarLeadingEdgeWatcher {
         }
     }
 
-    /// Whether the edge is being polled, which it is only while followed.
+    /// Whether the edge is being polled, which it is only while followed and the displays are awake.
     var isPolling: Bool {
         pollTask != nil
     }
@@ -86,7 +95,7 @@ final class MenuBarLeadingEdgeWatcher {
     /// polling stopped.
     func follow(_ onEdge: @escaping @MainActor (MenuBarLeadingEdgeSample) -> Void) -> AnyCancellable {
         let id = UUID()
-        if followers.add(id) == .start {
+        if followers.add(id) == .start, idleGate.mayRunIdleWork {
             fastPollUntil = .now + Self.fastPollWindow
             startPolling(readingFirst: true)
         }
@@ -108,6 +117,18 @@ final class MenuBarLeadingEdgeWatcher {
         pollTask?.cancel()
         pollTask = nil
         leadingEdge = nil
+    }
+
+    /// Followers stay while the displays sleep; only the reads stop, and the first one after waking comes at once.
+    private func idleGateChanged(mayRun: Bool) {
+        guard followers.isFollowed else { return }
+        if mayRun {
+            fastPollUntil = .now + Self.fastPollWindow
+            startPolling(readingFirst: true)
+        } else {
+            pollTask?.cancel()
+            pollTask = nil
+        }
     }
 
     private func startPolling(readingFirst: Bool = false) {
@@ -195,7 +216,7 @@ final class MenuBarLeadingEdgeWatcher {
         guard let appState else { return }
         let controller = appState.menuBarManager.sectionController
         let visible = appState.itemManager.managedItems.filter { item in
-            RevealCoverGeometry.anchorsBand(
+            Self.anchorsEdge(
                 width: item.bounds.width,
                 isVisibleControlItem: item.tag.matchesVisibleControlItem,
                 isOnScreen: item.isOnScreen,
@@ -223,6 +244,13 @@ final class MenuBarLeadingEdgeWatcher {
             guard !Task.isCancelled else { return }
             self?.anchor = found
         }
+    }
+
+    /// Whether an item's frame can mark the bar's leading edge. The Thaw icon is the
+    /// leftmost visible item on most bars and does not always report itself
+    /// on screen, so it is taken on its width alone.
+    static nonisolated func anchorsEdge(width: CGFloat, isVisibleControlItem: Bool, isOnScreen: Bool, isInVisibleSection: Bool) -> Bool {
+        width > 0 && (isVisibleControlItem || (isOnScreen && isInVisibleSection))
     }
 
     // MARK: Accessibility

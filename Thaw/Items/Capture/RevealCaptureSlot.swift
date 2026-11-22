@@ -20,7 +20,7 @@ final class RequestedCaptureTally {
 final class RevealCaptureSlot {
     /// Whether a prewarm holds the slot.
     private(set) var isHeld = false
-    /// The tally of the pass holding the slot. Nil for an automatic pass, so it records nothing.
+    /// The tally of the pass holding the slot. Nil for a pass that keeps none, so it records nothing.
     private(set) var tally: RequestedCaptureTally?
     /// Prewarms waiting for the running one to finish, first in line first.
     private var waiters = Deque<CheckedContinuation<Void, Never>>()
