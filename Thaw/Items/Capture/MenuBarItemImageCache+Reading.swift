@@ -190,17 +190,18 @@ extension MenuBarItemImageCache {
         /// directly and ignore the app-icon preference.
         let hasUnfilteredConsumer: Bool
         /// Items the alert-reveal watcher compares capture to capture, so they
-        /// are captured whatever the preference says.
+        /// are captured whatever the preference says. Empty while Triggers is off.
         let alertRevealIdentifiers: Set<String>
     }
 
+    /// triggersOn stands in for the Triggers module in tests; nil asks the app state.
     @MainActor
-    private func captureDemand() -> CaptureDemand {
+    func captureDemand(triggersOn: Bool? = nil) -> CaptureDemand {
         let nav = makeNavigationStateSnapshot()
         return CaptureDemand(
             usesAppIcons: configuration.alwaysUseAppIconForMenuBarItems,
             hasUnfilteredConsumer: nav.isSearchPresented || nav.isItemHotkeyListExpanded || nav.settingsProcess.needsEveryPicture,
-            alertRevealIdentifiers: MenuBarItemAlertReveals.identifiers()
+            alertRevealIdentifiers: MenuBarItemAlertReveals.watched(in: appState, triggersOn: triggersOn)
         )
     }
 

@@ -22,6 +22,7 @@ enum ThawEntryPoint {
             if SettingsProcessApp.isRequested {
                 SettingsProcessApp.main()
             } else {
+                ResidentBench.startAfterLaunchIfRequested()
                 ThawApp.main()
             }
         }

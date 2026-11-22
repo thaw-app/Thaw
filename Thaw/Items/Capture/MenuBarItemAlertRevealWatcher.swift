@@ -25,6 +25,12 @@ enum MenuBarItemAlertReveals {
         triggersOn ? saved : []
     }
 
+    /// The saved items to watch under appState's Triggers module, or under triggersOn when given.
+    /// Without an app state the module counts as off.
+    static func watched(in appState: AppState?, triggersOn: Bool? = nil) -> Set<String> {
+        watched(saved: identifiers(), triggersOn: triggersOn ?? appState?.moduleHost.isEnabled(.triggers) ?? false)
+    }
+
     static func contains(_ identifier: String) -> Bool {
         identifiers().contains(identifier)
     }

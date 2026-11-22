@@ -31,6 +31,15 @@ struct DragRevealSectionTests {
 struct DragRevealDecisionTests {
     private let appItem = MenuBarItemTag(namespace: .string("com.example.app"), title: "Item-0")
 
+    @Test("Only a command drag that is not already moving an item can start a move")
+    func dragNeedsCommand() {
+        #expect(HIDEventManager.dragMayMoveItem(modifiers: [.command], isDragging: false))
+        #expect(HIDEventManager.dragMayMoveItem(modifiers: [.command, .shift], isDragging: false))
+        #expect(!HIDEventManager.dragMayMoveItem(modifiers: [], isDragging: false))
+        #expect(!HIDEventManager.dragMayMoveItem(modifiers: [.option], isDragging: false))
+        #expect(!HIDEventManager.dragMayMoveItem(modifiers: [.command], isDragging: true))
+    }
+
     @Test func opensForAnAppItem() {
         #expect(HIDEventManager.dragRevealsSections(enabled: true, nativeHidingActive: false, draggedTag: appItem))
     }

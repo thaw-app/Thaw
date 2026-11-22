@@ -39,8 +39,10 @@ final class ApplicationMenuCover {
     /// flashes as a black square.
     private var lastBackdrop: CGImage?
 
-    /// Installed only while Finder is frontmost.
+    /// Installed only while Finder is frontmost and the displays are awake.
     private var pollCancellable: AnyCancellable?
+
+    @ObservationIgnored private let idleGate: IdleGate
 
     private var panel: NSPanel?
     private var lastState: DesktopFocusState = .notFinder
@@ -53,11 +55,22 @@ final class ApplicationMenuCover {
         generalSettings?.enableDesktopMenuHiding ?? false
     }
 
+    init(idleGate: IdleGate = .shared) {
+        self.idleGate = idleGate
+    }
+
     func performSetup(with appState: AppState) {
         self.appState = appState
         generalSettings = appState.settings.general
-        cancellables = [observeSettingFlips(), observeAverageColors(), observeActivation()]
+        cancellables = [observeSettingFlips(), observeAverageColors(), observeActivation(), observeIdleGate()]
         update()
+    }
+
+    /// Stops the poll while the displays sleep, and looks again at once when they wake.
+    private func observeIdleGate() -> AnyCancellable {
+        idleGate.subscribe { [weak self] _ in
+            self?.update()
+        }
     }
 
     /// Observes the property rather than defaults, so the pane, a thaw:// flip
@@ -125,7 +138,7 @@ final class ApplicationMenuCover {
     }
 
     private func updatePolling(frontmostIsFinder: Bool) {
-        guard isEnabled, frontmostIsFinder else {
+        guard isEnabled, frontmostIsFinder, idleGate.mayRunIdleWork else {
             pollCancellable = nil
             return
         }

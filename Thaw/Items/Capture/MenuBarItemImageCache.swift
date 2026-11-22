@@ -267,12 +267,11 @@ final class MenuBarItemImageCache: @unchecked Sendable {
 
     /// Whether anything off screen still has a claim on fresh pixels.
     ///
-    /// Only the alert-reveal watcher counts: it compares capture to capture.
-    /// A layout pane opened earlier does not, or background passes would undo
-    /// the idle trim.
+    /// Only the alert-reveal watcher counts, and only while Triggers is on: it
+    /// compares capture to capture. A layout pane opened earlier does not.
     @MainActor
-    func hasBackgroundCaptureDemand() -> Bool {
-        !MenuBarItemAlertReveals.identifiers().isEmpty
+    func hasBackgroundCaptureDemand(triggersOn: Bool? = nil) -> Bool {
+        !MenuBarItemAlertReveals.watched(in: appState, triggersOn: triggersOn).isEmpty
     }
 
     /// First consumer opened: cancel any pending trim, load disk once,

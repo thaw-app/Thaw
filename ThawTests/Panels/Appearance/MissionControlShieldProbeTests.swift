@@ -81,4 +81,24 @@ struct MissionControlShieldProbeTests {
         #expect(!probe.isActive, "no Expose shield is up during the test")
         probe.close()
     }
+
+    @Test("A wanted poll stops while the displays sleep and comes back when they wake")
+    func pollRestsWhileAsleep() throws {
+        let gate = IdleGate(center: NotificationCenter())
+        let probe = try MissionControlShieldProbe(owningScreen: #require(NSScreen.screens.first), idleGate: gate)
+        probe.shouldRun = { false }
+        probe.updatePolling(isWanted: true)
+        #expect(probe.isPolling)
+        gate.note(.displaysSlept)
+        #expect(!probe.isPolling)
+        probe.updatePolling(isWanted: true)
+        #expect(!probe.isPolling, "Asking again while asleep does not start it")
+        gate.note(.displaysWoke)
+        #expect(probe.isPolling)
+        probe.updatePolling(isWanted: false)
+        gate.note(.sessionResigned)
+        gate.note(.sessionBecameActive)
+        #expect(!probe.isPolling, "Waking does not start a poll nobody wants")
+        probe.close()
+    }
 }

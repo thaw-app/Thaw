@@ -110,6 +110,30 @@ swift test --package-path packages/ThawConcurrency
 
 To run every package's tests, as CI does, use `sh scripts/test-packages.sh`. Name packages to run only those: `sh scripts/test-packages.sh ThawLayout ThawCapture`.
 
+## Resident memory benchmark
+
+`scripts/bench-resident.sh` measures how much memory the installed Thaw Debug holds through a short scripted life. Install Thaw Debug with `./scripts/devrun.sh`, quit it, then run:
+
+```sh
+./scripts/bench-resident.sh
+```
+
+The script opens Thaw Debug with `--bench-resident`. Thaw reads its physical footprint, the memory figure Activity Monitor shows, at seven stages:
+
+1. Just after it starts.
+2. After its first scan of the menu bar settles.
+3. After the Thaw Bar is shown and closed three times.
+4. After search is shown and closed three times.
+5. After Settings opens on the Layout page in the app and closes.
+6. After the image cache's idle trim and a relief sweep.
+7. The highest of twelve samples over the next minute.
+
+Thaw then quits the normal way, and the script prints a table. It exits 1 when a stage is over its budget or the run doesn't finish. A run takes about three minutes.
+
+It uses the live menu bar and your real settings. The Thaw Bar, search and Settings open on screen as they do when you open them. It moves no items and changes no settings. Settings remembers the page it last showed, so the benchmark puts your page back after showing Layout. Thaw needs its usual permissions: without Accessibility the first scan never starts and the run fails.
+
+The budgets are in [ResidentBench.swift](../Thaw/App/ResidentBench.swift). They are first guesses from one Mac and need calibrating. The benchmark is not part of CI. `scripts/check-memory-budget.sh` is a separate check that draws Settings and search off screen without starting the app.
+
 ## Project documentation
 
 - [Architecture](ARCHITECTURE.md).
