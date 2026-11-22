@@ -49,9 +49,9 @@ extension ReducedModeController {
         if case .custom = icon.name, let image {
             // Settings are not loaded in this mode, so the template choice is read where it is saved.
             image.isTemplate = Defaults.bool(forKey: .customThawIconIsTemplate)
-            button.image = ControlItemImage.scaledToFitMenuBar(image)
+            button.image = OwnStatusItemSpacing.padded(ControlItemImage.scaledToFitMenuBar(image))
         } else {
-            button.image = image
+            button.image = OwnStatusItemSpacing.padded(image)
         }
     }
 
