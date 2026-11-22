@@ -8,10 +8,9 @@
 import SwiftUI
 import ThawUI
 
-/// Sized for the recovery screen's two columns of permission cards, the widest page the window shows.
+/// The window is this wide and as tall as the page it shows.
 enum ThawOnboardingWindowMetrics {
-    static let width: CGFloat = 680
-    static let height: CGFloat = 560
+    static let width: CGFloat = 520
 }
 
 /// The host applies all decisions at completion; the flow never writes settings, so quitting leaves no partial changes.

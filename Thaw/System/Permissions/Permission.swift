@@ -12,6 +12,12 @@ import ThawCapture
 
 // MARK: - Permission
 
+/// Stands in for a permission's system calls, so a preview never checks, prompts or opens System Settings.
+struct PermissionStub {
+    var check: () -> Bool
+    var request: (@escaping @MainActor @Sendable (Bool, Bool) -> Void) -> Void
+}
+
 /// Checks and requests one app permission.
 @MainActor
 @Observable
@@ -22,20 +28,51 @@ class Permission: Identifiable {
             // actual transition should notify the owner.
             guard oldValue != hasPermission else { return }
             if hasPermission {
-                wasDeclined = false
-                awaitingPromptAnswer = false
+                requestState = .idle
             }
             onChange?()
         }
     }
 
+    /// Where the latest request stands, from the press until the grant lands.
+    enum RequestState: Equatable {
+        /// Nothing asked yet, or the grant landed.
+        case idle
+        /// A prompt or file panel is up, and the next poll tick turns it into a decline if still ungranted.
+        case awaitingAnswer(afterDecline: Bool)
+        /// No prompt to answer: System Settings is open, and the poll watches for the grant.
+        case waiting
+        /// A shown prompt went ungranted. Waiting while the person may still grant it in System Settings.
+        case declined(waiting: Bool)
+    }
+
+    private(set) var requestState = RequestState.idle
+
     /// A shown prompt remained ungranted, so surfaces may offer System Settings instead of waiting.
     /// Persists across ungranted requests until a grant; requests without a prompt open Settings directly and do not count.
-    private(set) var wasDeclined = false
+    var wasDeclined: Bool {
+        if case .declined = requestState { return true }
+        return requestState == .awaitingAnswer(afterDecline: true)
+    }
 
-    /// Set by a request that showed the system prompt, cleared by the poll
-    /// tick that turns it into wasDeclined or by the grant landing.
-    private var awaitingPromptAnswer = false
+    /// The permissions window shows it as waiting.
+    var awaitingPromptAnswer: Bool {
+        if case .awaitingAnswer = requestState { true } else { false }
+    }
+
+    /// Until the grant lands or the poll gives up; the permissions window shows a spinner meanwhile.
+    var isWaitingForGrant: Bool {
+        switch requestState {
+        case .awaitingAnswer, .waiting, .declined(waiting: true): true
+        case .idle, .declined(waiting: false): false
+        }
+    }
+
+    /// The line the permissions window shows after a decline, or nil to keep the summary.
+    let declinedHint: String?
+
+    /// Whether the request is a file panel: a dismissal is a plain no, and granting can need a relaunch.
+    let requestOpensFilePanel: Bool
 
     /// Notify owners only after a changed permission value is stored.
     @ObservationIgnored
@@ -49,13 +86,8 @@ class Permission: Identifiable {
 
     let details: [String]
 
-    /// Shorter copy for onboarding cards; falls back to details when unset.
-    let shortDetails: [String]?
-
-    /// Details shown in compact onboarding layouts.
-    var onboardingDetails: [String] {
-        shortDetails ?? details
-    }
+    /// One line for the permissions window's list; the first detail when none is given.
+    let summary: String
 
     /// Whether the app requires this permission to work.
     let isRequired: Bool
@@ -108,7 +140,9 @@ class Permission: Identifiable {
     /// - Parameters:
     ///   - title: The title of the permission.
     ///   - details: Descriptive details for the permission.
-    ///   - shortDetails: Optional shorter onboarding copy.
+    ///   - summary: The line under the title in the permissions window.
+    ///   - declinedHint: The line that replaces the summary after a decline.
+    ///   - requestOpensFilePanel: Whether the request opens a file panel instead of a prompt.
     ///   - isRequired: A Boolean value that indicates if the app can work without this permission.
     ///   - settingsURL: The URL of the settings pane to open.
     ///   - check: A function that checks permissions.
@@ -119,12 +153,15 @@ class Permission: Identifiable {
     ///     poll stops itself. At the default interval, three minutes.
     ///   - activationCenter: Where the app's return to the foreground is posted.
     ///   - openURL: Opens the settings pane.
+    ///   - stub: Replaces the check, the request and the settings pane, for previews.
     init(
         title: String,
         iconName: String,
         iconColor: Color,
         details: [String],
-        shortDetails: [String]? = nil,
+        summary: String? = nil,
+        declinedHint: String? = nil,
+        requestOpensFilePanel: Bool = false,
         isRequired: Bool,
         settingsURL: URL?,
         check: @escaping () -> Bool,
@@ -133,23 +170,26 @@ class Permission: Identifiable {
         pollInterval: TimeInterval = 3,
         ungrantedPollBudget: Int = 60,
         activationCenter: NotificationCenter = .default,
-        openURL: @escaping (URL) -> Void = { NSWorkspace.shared.open($0) }
+        openURL: @escaping (URL) -> Void = { NSWorkspace.shared.open($0) },
+        stub: PermissionStub? = nil
     ) {
         self.title = title
         self.iconName = iconName
         self.iconColor = iconColor
         self.details = details
-        self.shortDetails = shortDetails
+        self.summary = summary ?? details.first ?? title
+        self.declinedHint = declinedHint
+        self.requestOpensFilePanel = requestOpensFilePanel
         self.isRequired = isRequired
         self.settingsURL = settingsURL
-        self.check = check
-        self.asyncCheck = asyncCheck
-        self.request = request
+        self.check = stub?.check ?? check
+        self.asyncCheck = stub == nil ? asyncCheck : nil
+        self.request = stub?.request ?? request
         self.pollInterval = pollInterval
         self.ungrantedPollBudget = ungrantedPollBudget
         self.activationCenter = activationCenter
-        self.openURL = openURL
-        self.hasPermission = check()
+        self.openURL = stub == nil ? openURL : { _ in /* A stub opens nothing. */ }
+        self.hasPermission = self.check()
         configureCancellables()
     }
 
@@ -176,12 +216,12 @@ class Permission: Identifiable {
         }
         ungrantedTickCount += 1
         if awaitingPromptAnswer {
-            awaitingPromptAnswer = false
-            wasDeclined = true
+            requestState = .declined(waiting: true)
         }
         if ungrantedTickCount >= ungrantedPollBudget {
             timerCancellable?.cancel()
             timerCancellable = nil
+            stopWaiting()
             // Keep the settings-return observer armed to catch grants after the polling budget expires.
         }
     }
@@ -207,6 +247,7 @@ class Permission: Identifiable {
     /// Arm preflight-only activation checks either way to recognize later grants without prompting.
     func performRequest() {
         configureCancellables()
+        beginWaiting()
         if settingsURL != nil {
             armSettingsReturnObserver()
         }
@@ -219,7 +260,7 @@ class Permission: Identifiable {
             }
             if prompted {
                 // Prompt requests return before the user's answer; defer the ungranted verdict to the next poll tick.
-                awaitingPromptAnswer = true
+                requestState = .awaitingAnswer(afterDecline: wasDeclined)
             } else {
                 openSettingsPane()
             }
@@ -235,7 +276,22 @@ class Permission: Identifiable {
     /// Never open Settings alongside a prompt or automatically after decline.
     func openSettingsPane() {
         guard let settingsURL else { return }
+        resumePollingIfNeeded()
+        beginWaiting()
         openURL(settingsURL)
+    }
+
+    /// A decline stays a decline while waiting, so surfaces keep offering System Settings.
+    private func beginWaiting() {
+        guard !hasPermission else { return }
+        requestState = wasDeclined ? .declined(waiting: true) : .waiting
+    }
+
+    private func stopWaiting() {
+        requestState = switch requestState {
+        case .declined, .awaitingAnswer(afterDecline: true): .declined(waiting: false)
+        case .idle, .waiting, .awaitingAnswer(afterDecline: false): .idle
+        }
     }
 
     /// Re-checks (preflight only) whenever the app becomes active again, so
@@ -270,6 +326,7 @@ class Permission: Identifiable {
 
     /// Stops running the permission check.
     func stopCheck() {
+        stopWaiting()
         timerCancellable?.cancel()
         timerCancellable = nil
         settingsReturnCancellable?.cancel()
@@ -282,7 +339,7 @@ class Permission: Identifiable {
 /// The Accessibility permission, required for Thaw to detect, move, and
 /// interact with menu bar items on the user's behalf.
 final class AccessibilityPermission: Permission {
-    init() {
+    init(stub: PermissionStub? = nil) {
         super.init(
             title: String(localized: "Accessibility"),
             iconName: "accessibility",
@@ -292,10 +349,8 @@ final class AccessibilityPermission: Permission {
                 String(localized: "Move menu bar items to rearrange or hide them."),
                 String(localized: "Click menu bar items on your behalf, such as when using the search bar."),
             ],
-            shortDetails: [
-                String(localized: "Detect menu bar items on your Mac and where they're positioned."),
-                String(localized: "Move menu bar items to rearrange or hide them."),
-            ],
+            summary: String(localized: "See and move your menu bar items."),
+            declinedHint: String(localized: "Turn on \(Constants.displayName) in Privacy & Security \(Constants.menuArrow) Accessibility."),
             isRequired: true,
             // Ungranted AX trust checks always report prompted, so this URL is only for explicit Settings choices and return checks.
             settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"),
@@ -306,7 +361,8 @@ final class AccessibilityPermission: Permission {
                 // Untrusted checks show guidance and return immediately; ungranted means prompted, not necessarily refused.
                 let granted = AXHelpers.isProcessTrusted(prompt: true)
                 completion(granted, !granted)
-            }
+            },
+            stub: stub
         )
     }
 }
@@ -315,7 +371,7 @@ final class AccessibilityPermission: Permission {
 
 /// Optional permission for menu bar colors, item previews and visual search; Thaw still runs without it.
 final class ScreenRecordingPermission: Permission {
-    init() {
+    init(stub: PermissionStub? = nil) {
         super.init(
             title: String(localized: "Screen Recording"),
             iconName: "record.circle",
@@ -325,10 +381,7 @@ final class ScreenRecordingPermission: Permission {
                 String(localized: "Sample colors from the menu bar to adjust its tint and appearance."),
                 String(localized: "Find menu bar items visually when searching."),
             ],
-            shortDetails: [
-                String(localized: "Show live previews of your menu bar items."),
-                String(localized: "Sample colors from the menu bar to adjust tint."),
-            ],
+            summary: String(localized: "Show live previews of your menu bar items."),
             isRequired: false,
             settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"),
             check: {
@@ -339,7 +392,8 @@ final class ScreenRecordingPermission: Permission {
             },
             request: { completion in
                 ScreenCapture.requestPermissions(completion: completion)
-            }
+            },
+            stub: stub
         )
     }
 }

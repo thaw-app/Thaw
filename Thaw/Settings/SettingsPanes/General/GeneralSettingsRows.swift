@@ -16,9 +16,11 @@ import ThawUI
 /// Whether the app starts with the user's session.
 struct LaunchAtLoginRow: View {
     @Environment(AppState.self) private var appState
+    /// Previews pass one that never reaches ServiceManagement.
+    var setting: LaunchAtLoginSetting?
 
     var body: some View {
-        let setting = appState.settings.launchAtLogin
+        let setting = setting ?? appState.settings.launchAtLogin
         Toggle("Launch at Login", isOn: Binding(
             get: { setting.isEnabled },
             set: { enabled in
