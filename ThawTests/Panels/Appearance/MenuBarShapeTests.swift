@@ -1,11 +1,12 @@
 //
-//  MenuBarShapePathBuilderTests.swift
+//  MenuBarShapeTests.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import CoreGraphics
 import Testing
 @testable import Thaw
 
@@ -122,5 +123,82 @@ struct MenuBarShapePathBuilderTests {
 
         let merged = split(leading, CGRect(x: 150, y: 0, width: 650, height: 24))
         #expect(merged.contains(CGPoint(x: 400, y: 12)), "overlapping pills merge into one shape")
+    }
+}
+
+@MainActor
+@Suite("Split shape when the application menu reaches the items", .bug("https://github.com/thaw-app/Thaw/issues/1324"))
+struct SplitPillOverlapTests {
+    private let leading = CGRect(x: 8, y: 0, width: 500, height: 24)
+    private let trailing = CGRect(x: 900, y: 0, width: 600, height: 24)
+
+    @Test("Overlapping halves are both kept, so the builder draws one merged shape")
+    func overlapKeepsBothHalves() {
+        let longMenu = CGRect(x: 8, y: 0, width: 950, height: 24)
+        let resolved = MenuBarSplitPillGeometry.resolveSplitPathBounds(
+            leading: longMenu,
+            trailing: trailing,
+            geometryFrozen: false,
+            lastStableLeading: leading,
+            lastStableTrailing: trailing
+        )
+        #expect(resolved.leading == longMenu)
+        #expect(resolved.trailing == trailing)
+        #expect(resolved.leading.intersects(resolved.trailing))
+    }
+
+    @Test("Halves with a gap between them stay two shapes")
+    func separateHalvesStaySeparate() {
+        let resolved = MenuBarSplitPillGeometry.resolveSplitPathBounds(
+            leading: leading,
+            trailing: trailing,
+            geometryFrozen: false,
+            lastStableLeading: .zero,
+            lastStableTrailing: .zero
+        )
+        #expect(resolved.leading == leading)
+        #expect(resolved.trailing == trailing)
+        #expect(!resolved.leading.intersects(resolved.trailing))
+    }
+}
+
+@MainActor
+@Suite("Glass under a shape reaches the shape's corners")
+struct GlassCornerRadiusTests {
+    @Test("A menu bar shape gets a capsule of glass")
+    func capsuleByDefault() {
+        let bounds = CGRect(x: 0, y: 0, width: 300, height: 24)
+        #expect(MenuBarLiquidGlassGeometry.glassCornerRadius(for: bounds) == 12)
+    }
+
+    @Test("A Thaw Bar with square corners keeps its quarter-height corners")
+    func squareCornersKeepTheirRadius() {
+        let bounds = CGRect(x: 0, y: 0, width: 300, height: 24)
+        let clip = ThawBarBorderShape.thawBarClip(height: 24, hasRoundedShape: false)
+        #expect(MenuBarLiquidGlassGeometry.glassCornerRadius(for: bounds, pathCornerRadius: clip.cornerRadius) == 6)
+    }
+
+    @Test("A bar several rows tall keeps one row's rounding")
+    func tallBarKeepsRowRounding() {
+        let bounds = CGRect(x: 0, y: 0, width: 200, height: 96)
+        let clip = ThawBarBorderShape.thawBarClip(height: 24, hasRoundedShape: true)
+        #expect(MenuBarLiquidGlassGeometry.glassCornerRadius(for: bounds, pathCornerRadius: clip.cornerRadius) == 12)
+    }
+
+    @Test("A radius the bounds cannot hold falls back to the capsule")
+    func oversizedRadiusIsCapped() {
+        let bounds = CGRect(x: 0, y: 0, width: 300, height: 24)
+        #expect(MenuBarLiquidGlassGeometry.glassCornerRadius(for: bounds, pathCornerRadius: 40) == 12)
+        #expect(MenuBarLiquidGlassGeometry.glassCornerRadius(for: bounds, pathCornerRadius: -3) == 0)
+    }
+}
+
+@MainActor
+struct CornersSliderTests {
+    @Test("The Corners slider reads Square and Round at its ends and a percentage between")
+    func valueText() {
+        #expect(CornersSlider.valueText(0) == "Square")
+        #expect(CornersSlider.valueText(1) == "Round")
+        #expect(CornersSlider.valueText(0.4) == 0.4.formatted(.percent.precision(.fractionLength(0))))
     }
 }

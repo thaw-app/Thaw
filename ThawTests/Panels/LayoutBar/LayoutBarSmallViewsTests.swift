@@ -22,10 +22,7 @@ struct LayoutBarSmallViewsTests {
 
     private func pixels(of view: NSView, size: CGSize) throws -> Data {
         view.frame = CGRect(origin: .zero, size: size)
-        let bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
-        view.cacheDisplay(in: view.bounds, to: bitmap)
-        let bytes = try #require(bitmap.bitmapData)
-        return Data(bytes: bytes, count: bitmap.bytesPerRow * bitmap.pixelsHigh)
+        return try view.cachedPixels()
     }
 
     // MARK: Group refusal copy
