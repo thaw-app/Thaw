@@ -72,6 +72,8 @@ struct OnboardingDoneView: View {
                 HotkeyRecorder(hotkey: hotkey) {
                     Text("Shortcut to show and hide")
                 }
+                // Outside a Form nothing caps its height, and its symbol grows to fill the page.
+                .fixedSize(horizontal: false, vertical: true)
             }
             if Constants.supportsSparkleUpdates {
                 Toggle("Check for updates automatically", isOn: $automaticUpdates)
