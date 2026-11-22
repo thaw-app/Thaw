@@ -1,5 +1,5 @@
 //
-//  MenuBarShapeTests.swift
+//  MenuBarShapePathTests.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
