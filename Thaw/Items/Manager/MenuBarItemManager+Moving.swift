@@ -730,17 +730,11 @@ extension MenuBarItemManager {
         aftermath: RepairTurn.Aftermath? = nil,
         permit: borrowing StoreWritePermit
     ) async {
-        // Manual arrangement owns the order: a reveal shows the items where
-        // the user last dragged them, and no structural write may re-seat
-        // anything.
-        guard !arrangementIsManual else {
-            MenuBarItemManager.diagLog.debug("synchronizeRevealedOrder: skipping, manual arrangement is on")
-            return
-        }
-        // A re-seat during or right after a ⌘-drag undoes the drop before its
-        // sections are read.
-        guard !isUserArrangingMenuBar else {
-            MenuBarItemManager.diagLog.debug("synchronizeRevealedOrder: skipping, the user is arranging the menu bar")
+        if let skip = RevealRepairScope.firstSkip(
+            arrangementIsManual: arrangementIsManual,
+            isUserArranging: isUserArrangingMenuBar
+        ) {
+            MenuBarItemManager.diagLog.debug("synchronizeRevealedOrder: skipping, \(skip.logReason)")
             return
         }
         // With the store inert the batch write does nothing; repair with drags.
@@ -871,16 +865,18 @@ extension MenuBarItemManager {
         liveItems: [MenuBarItem],
         permit: borrowing StoreWritePermit
     ) async {
-        let sections: [MenuBarSection.Name] = switch revealedSection {
-        case .alwaysHidden: [.hidden, .alwaysHidden]
-        case .hidden, .visible: [.hidden]
-        }
+        let sections = RevealRepairScope.sectionsToOrder(revealing: revealedSection)
         var liveItems = liveItems
         for attempt in 1 ... Self.authoredVisibleOrderApplyAttempts {
             let disagreeing = sections.filter { section in
                 let authored = controller.sectionItemOrder[section] ?? []
-                return authored.count > 1 && !revealLeavesOrderToMacOS(section, items: liveItems) &&
-                    !liveOrderMatches(authored, section: section, controller: controller, items: liveItems)
+                return RevealRepairScope.authoredOrderNeedsApply(
+                    authoredCount: authored.count,
+                    leavesOrderToMacOS: { revealLeavesOrderToMacOS(section, items: liveItems) },
+                    liveOrderMatches: {
+                        liveOrderMatches(authored, section: section, controller: controller, items: liveItems)
+                    }
+                )
             }
             guard !disagreeing.isEmpty else { return }
             guard !Task.isCancelled, controller.revealedSection == revealedSection else { return }
@@ -927,14 +923,11 @@ extension MenuBarItemManager {
         aftermath: RepairTurn.Aftermath? = nil,
         permit: borrowing StoreWritePermit
     ) async {
-        // Manual arrangement owns the order: boundary repairs are automatic
-        // reordering, which the user explicitly declined.
-        guard !arrangementIsManual else {
-            MenuBarItemManager.diagLog.debug("reconcileSectionBoundaries: skipping, manual arrangement is on")
-            return
-        }
-        guard !isUserArrangingMenuBar else {
-            MenuBarItemManager.diagLog.debug("reconcileSectionBoundaries: skipping, the user is arranging the menu bar")
+        if let skip = RevealRepairScope.firstSkip(
+            arrangementIsManual: arrangementIsManual,
+            isUserArranging: isUserArrangingMenuBar
+        ) {
+            MenuBarItemManager.diagLog.debug("reconcileSectionBoundaries: skipping, \(skip.logReason)")
             return
         }
         guard let appState else { return }
@@ -971,12 +964,7 @@ extension MenuBarItemManager {
 
         // Include .visible: an item re-allowed at a hidden-side slot with no
         // weight of its own is moved back nowhere else.
-        let sectionsToReconcile: Set<MenuBarSection.Name> = switch revealedSection {
-        case .visible, .hidden:
-            [.hidden, .visible]
-        case .alwaysHidden:
-            [.hidden, .alwaysHidden, .visible]
-        }
+        let sectionsToReconcile = RevealRepairScope.sectionsToReconcile(revealing: revealedSection)
         let assignments = controller.sectionAssignment
             .filter { sectionsToReconcile.contains($0.value) }
             .sorted { lhs, rhs in lhs.key < rhs.key }
@@ -1109,15 +1097,10 @@ extension MenuBarItemManager {
         }
         liveItems = strand.items
 
-        var sectionsToOrder: [MenuBarSection.Name] = switch revealedSection {
-        case .visible, .hidden: [.hidden]
-        case .alwaysHidden: [.hidden, .alwaysHidden]
-        }
-        if authoredVisibleOrderPendingPhysicalApply {
-            // A pending pane edit: without this, an item moved into visible
-            // stays at its old hidden-side slot for the whole reveal.
-            sectionsToOrder.append(.visible)
-        }
+        let sectionsToOrder = RevealRepairScope.sectionsToOrder(
+            revealing: revealedSection,
+            includeVisible: authoredVisibleOrderPendingPhysicalApply
+        )
         await applySectionItemOrder(
             sections: sectionsToOrder.filter { !revealLeavesOrderToMacOS($0, items: liveItems) },
             controller: controller,
@@ -1441,27 +1424,11 @@ extension MenuBarItemManager {
             weightByIdentifier[item.uniqueIdentifier] = weight
         }
 
-        // Only groups that actually live in the order being applied. A group
-        // sitting entirely in Hidden is not this pass's problem, and re-spacing
-        // the visible segment would not help it anyway.
-        let inScope = Set(desiredOrder)
-        for group in groups.groups where group.contains(where: inScope.contains) {
-            let memberWeights = group.compactMap { weightByIdentifier[$0] }
-            guard memberWeights.count >= 2,
-                  let low = memberWeights.min(),
-                  let high = memberWeights.max()
-            else {
-                continue
-            }
-            let memberSet = Set(group)
-            let interloper = weightByIdentifier.contains { identifier, weight in
-                !memberSet.contains(identifier) && weight > low && weight < high
-            }
-            if interloper {
-                return true
-            }
-        }
-        return false
+        return GroupInterleaving.isInterleaved(
+            groups: groups.groups,
+            inScope: Set(desiredOrder),
+            weightByIdentifier: weightByIdentifier
+        )
     }
 
     /// - Parameter visibleOrderOverride: Replaces the authored Visible order
