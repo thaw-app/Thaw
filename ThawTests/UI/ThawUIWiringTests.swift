@@ -1,11 +1,13 @@
 //
-//  ThawUIWordsTests.swift
+//  ThawUIWiringTests.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Foundation
+import SwiftUI
 import Testing
 @testable import Thaw
 import ThawUI
@@ -55,5 +57,47 @@ struct ThawUIWordsTests {
         #expect(Set(callouts).count == callouts.count)
         let channels = UpdateChannel.allCases.map(\.localized.key)
         #expect(Set(channels).count == channels.count)
+    }
+}
+
+/// Reduce Motion removed fades too, though a short cross-fade is what it should keep.
+@MainActor
+@Suite("Reduce Motion")
+struct ReduceMotionTests {
+    @Test("Under Reduce Motion a fade keeps a quick ease-out; otherwise it keeps the animation it was given")
+    func fadeKeepsAQuickFade() {
+        #expect(AnyTransition.fadeAnimation(reduceMotion: true, animation: .spring) == ThawMotion.reducedFade)
+        #expect(AnyTransition.fadeAnimation(reduceMotion: true, animation: nil) == ThawMotion.reducedFade)
+        #expect(AnyTransition.fadeAnimation(reduceMotion: false, animation: .spring) == .spring)
+        #expect(AnyTransition.fadeAnimation(reduceMotion: false, animation: nil) == nil)
+    }
+
+    @Test("Under Reduce Motion a transaction drops its movement but leaves transitions their own fades")
+    func transactionDropsMovement() {
+        var reduced = Transaction(animation: .spring)
+        ReduceMotionFade.apply(to: &reduced, reduceMotion: true)
+        #expect(reduced.animation == nil)
+        #expect(!reduced.disablesAnimations)
+
+        var kept = Transaction(animation: .spring)
+        ReduceMotionFade.apply(to: &kept, reduceMotion: false)
+        #expect(kept.animation == .spring)
+    }
+}
+
+@Suite("Small UI types")
+@MainActor
+struct UISmallTypesTests {
+    @Test("Every HUD placement has a picker label")
+    func placementLabels() {
+        let labels = ThawHUDPlacement.allCases.map(\.localized)
+        #expect(labels.count == 3)
+        #expect(labels == ["Top left", "Top center", "Top right"])
+    }
+
+    @Test("A unit with more than one member is a group")
+    func unitIsGroup() {
+        #expect(!LayoutEditorOrder.Unit(id: "a", memberIDs: ["a"]).isGroup)
+        #expect(LayoutEditorOrder.Unit(id: "g", memberIDs: ["a", "b"]).isGroup)
     }
 }

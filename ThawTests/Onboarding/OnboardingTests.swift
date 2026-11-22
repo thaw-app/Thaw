@@ -1,10 +1,12 @@
 //
-//  OnboardingSequencerTests.swift
+//  OnboardingTests.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import AppKit
+import SwiftUI
 import Testing
 @testable import Thaw
 
@@ -217,5 +219,37 @@ struct OnboardingSequencerTests {
                 }
             }
         }
+    }
+}
+
+@Suite("Onboarding outcome")
+struct OnboardingOutcomeTests {
+    @Test("A first onboarding starts in Simple Mode, whatever the mode was")
+    func firstOnboardingStartsSimple() {
+        #expect(OnboardingOutcome.simpleMode(current: false, hasSeenOnboarding: false))
+        #expect(OnboardingOutcome.simpleMode(current: true, hasSeenOnboarding: false))
+    }
+
+    @Test("A replay or an upgrade keeps the mode in use", arguments: [false, true])
+    func replayKeepsMode(current: Bool) {
+        #expect(OnboardingOutcome.simpleMode(current: current, hasSeenOnboarding: true) == current)
+    }
+}
+
+/// A granted permission's checkmark appeared without any sign that something had just happened.
+@MainActor
+@Suite("Granted bounce")
+struct GrantedBounceTests {
+    @Test("The checkmark bounces only for a grant made while it is shown, and never under Reduce Motion", arguments: [false, true])
+    func bouncesOnlyForAFreshGrant(reduceMotion: Bool) {
+        #expect(GrantedBounce.bounces(justGranted: true, reduceMotion: reduceMotion) == !reduceMotion)
+        #expect(!GrantedBounce.bounces(justGranted: false, reduceMotion: reduceMotion))
+    }
+
+    @Test("Content keeps its size with the bounce applied")
+    func keepsLayout() {
+        let plain = NSHostingView(rootView: Image(systemName: "checkmark.circle.fill"))
+        let bounced = NSHostingView(rootView: Image(systemName: "checkmark.circle.fill").modifier(GrantedBounce(justGranted: true)))
+        #expect(plain.fittingSize == bounced.fittingSize)
     }
 }

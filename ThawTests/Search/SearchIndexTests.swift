@@ -1,5 +1,5 @@
 //
-//  SearchIndexDriftTests.swift
+//  SearchIndexTests.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
@@ -123,5 +123,80 @@ struct SearchIndexDriftTests {
         #expect(visibility.contains("tooltipDelay"))
         #expect(!general.contains("settingsURIChanges"), "@ObservationIgnored members must not count as user-facing")
         #expect(!layout.contains("appState"), "@ObservationIgnored members must not count as user-facing")
+    }
+}
+
+@MainActor
+@Suite("Search results open the part of the pane that holds them")
+struct SearchIndexDisclosureTests {
+    private func entry(_ id: String) throws -> SearchEntry {
+        try #require(SearchIndex.entries.first { $0.id == id })
+    }
+
+    @Test("Shape fill and Background open their own Appearance sections, the shape itself none")
+    func appearanceDisclosures() throws {
+        #expect(try entry("appearance.shapeFill").disclosure == .appearanceInsideShape)
+        #expect(try entry("appearance.background").disclosure == .appearanceBehindShape)
+        #expect(try entry("appearance.shape").disclosure == nil)
+    }
+
+    @Test("Entries for a pane are exactly that pane's share of the index")
+    func entriesPerPane() {
+        let appearance = SearchIndex.entries(for: .menuBarAppearance)
+        #expect(!appearance.isEmpty)
+        #expect(appearance.allSatisfy { $0.pane == .menuBarAppearance })
+        #expect(appearance.count == SearchIndex.entries.count { $0.pane == .menuBarAppearance })
+    }
+
+    @Test("A result group is identified by its pane")
+    func groupIdentity() {
+        let group = SearchGroup(pane: .hotkeys, entries: SearchIndex.entries(for: .hotkeys))
+        #expect(group.id == SettingsNavigationIdentifier.hotkeys.rawValue)
+    }
+}
+
+/// The ordering contract of SearchRanker.sortedByRelevance(_:), shared by both
+/// search surfaces. Fuzzy matching lives in Fuse.
+@Suite("SearchRanker relevance sort")
+struct SearchRankerTests {
+    @Test("Lower diff scores rank first")
+    func sortsAscendingByScore() {
+        let ranked = SearchRanker.sortedByRelevance([
+            (item: "worst", diffScore: 0.9),
+            (item: "best", diffScore: 0.1),
+            (item: "middle", diffScore: 0.5),
+        ])
+        #expect(ranked == ["best", "middle", "worst"])
+    }
+
+    /// The reason the sort carries an explicit tiebreak: Fuse hands back the
+    /// same score for every equally good short name, so ties are routine.
+    @Test("Equal scores keep their input order")
+    func tiesPreserveInputOrder() {
+        let tied = (0 ..< 32).map { (item: $0, diffScore: 0.42) }
+        #expect(SearchRanker.sortedByRelevance(tied) == Array(0 ..< 32))
+    }
+
+    @Test("Repeated ranking of the same input gives the same order")
+    func rankingIsReproducible() {
+        // Interleaves ties with distinct scores so a permutation among the
+        // tied members is not hidden by the surrounding order.
+        let input = [
+            (item: "a", diffScore: 0.2),
+            (item: "b", diffScore: 0.2),
+            (item: "c", diffScore: 0.1),
+            (item: "d", diffScore: 0.2),
+            (item: "e", diffScore: 0.1),
+        ]
+        let first = SearchRanker.sortedByRelevance(input)
+        #expect(first == ["c", "e", "a", "b", "d"])
+        for _ in 0 ..< 8 {
+            #expect(SearchRanker.sortedByRelevance(input) == first)
+        }
+    }
+
+    @Test("Empty input ranks to nothing")
+    func emptyInput() {
+        #expect(SearchRanker.sortedByRelevance([(item: Int, diffScore: Double)]()).isEmpty)
     }
 }
