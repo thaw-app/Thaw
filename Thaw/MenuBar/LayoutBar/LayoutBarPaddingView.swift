@@ -478,7 +478,7 @@ final class LayoutBarPaddingView: NSView {
                     (revealedSections, destination) = resolved
                 } else {
                     Self.diagLog.warning(
-                        "Skipping drag of \(item.logString): destination divider \(targetItem.logString) is parked offscreen (\(targetBounds.map { "minX=\($0.minX)" } ?? "no window bounds")); section is collapsed"
+                        "Skipping drag of \(item.logString): destination divider \(targetItem.logString) is not reachable (\(targetBounds.map { "minX=\($0.minX)" } ?? "no window bounds")); the section is collapsed or its divider is not on screen"
                     )
                     await appState.itemManager.cacheItemsRegardless(options: .init(skipRecentMoveCheck: true))
                     _ = await self.resetStabilizingStateIfNeeded(
@@ -981,7 +981,9 @@ final class LayoutBarPaddingView: NSView {
         }
     }
 
-    /// A concealed Always Hidden divider can report on-display bounds before it is visible.
+    /// Whether a divider's bounds place it on a display. A caller that
+    /// requires visibility also wants the divider listed as on screen, which
+    /// catches stale on-display bounds for a concealed divider.
     static nonisolated func isEditorDropDividerReachable(
         bounds: CGRect?,
         isOnScreen: Bool,
@@ -992,7 +994,14 @@ final class LayoutBarPaddingView: NSView {
         return LayoutSolver.isOnScreen(bounds: bounds, screenFrames: screenFrames)
     }
 
-    /// Checks live visibility only where an empty Always Hidden divider may appear at stale bounds.
+    /// Checks live visibility only where a divider's bounds can lie.
+    ///
+    /// A concealed section parks offscreen, and a divider with items beside it
+    /// has only ever been observed reporting offscreen bounds, so the geometric
+    /// check alone refuses the drag. An empty Always Hidden section is the
+    /// exception its reporter hit (#1658): the parked divider kept reporting
+    /// bounds on the display while its window was not on screen. Only that case
+    /// pays for a live window-server query.
     static nonisolated func isInitialEditorDropDividerReachable(
         tag: MenuBarItemTag,
         bounds: CGRect?,
@@ -1092,6 +1101,9 @@ final class LayoutBarPaddingView: NSView {
         }
         // Poll until the divider is back on a display. The windowID survives
         // the state change but its bounds don't, so resolve a fresh item.
+        // Every Always Hidden divider must also be listed on screen by now:
+        // after the reveal it should genuinely be visible, not merely parked
+        // at bounds a stale query still reports as on the display.
         for _ in 0 ..< 40 {
             await wait()
             guard !Task.isCancelled else { break }
