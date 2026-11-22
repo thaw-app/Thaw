@@ -12,6 +12,8 @@ import ThawUI
 /// Launch at Login and the shortcut apply at once, as in Settings; the update choice waits for onFinish.
 struct OnboardingDoneView: View {
     @Environment(AppState.self) private var appState
+    /// Previews pass one that never reaches ServiceManagement.
+    var launchAtLogin: LaunchAtLoginSetting?
     let onFinish: (OnboardingOutcome) -> Void
 
     @State private var automaticUpdates = true
@@ -66,7 +68,7 @@ struct OnboardingDoneView: View {
 
     private var choices: some View {
         VStack(alignment: .leading, spacing: ThawSpacing.row) {
-            LaunchAtLoginRow()
+            LaunchAtLoginRow(setting: launchAtLogin)
                 .toggleStyle(.thawCheckbox)
             if let hotkey = appState.settings.hotkeys.hotkey(withAction: .toggleHiddenSection) {
                 HotkeyRecorder(hotkey: hotkey) {
@@ -89,3 +91,11 @@ struct OnboardingDoneView: View {
         onFinish(OnboardingOutcome(automaticUpdates: automaticUpdates))
     }
 }
+
+#if DEBUG
+    #Preview("How to use") {
+        OnboardingDoneView(launchAtLogin: OnboardingPreview.launchAtLogin()) { _ in /* Preview only. */ }
+            .environment(OnboardingPreview.appState())
+            .onboardingPreviewFrame()
+    }
+#endif

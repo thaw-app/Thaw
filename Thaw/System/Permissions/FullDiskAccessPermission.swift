@@ -25,7 +25,7 @@ final class FullDiskAccessPermission: Permission {
         string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
     )
 
-    init() {
+    init(stub: PermissionStub? = nil) {
         super.init(
             title: String(localized: "Menu Bar Layout Access"),
             iconName: "checkmark.shield",
@@ -52,7 +52,8 @@ final class FullDiskAccessPermission: Permission {
                 // Report the panel as a prompt, or the base class would open the
                 // Full Disk Access pane behind it. A dismissal sets wasDeclined.
                 completion(granted, true)
-            }
+            },
+            stub: stub
         )
     }
 }
@@ -61,7 +62,7 @@ final class FullDiskAccessPermission: Permission {
 /// hiding switches apps off there instead of holding the assertion, leaving
 /// camera, microphone and Notification Center to macOS. Optional.
 final class ControlCenterAppListPermission: Permission {
-    init() {
+    init(stub: PermissionStub? = nil) {
         super.init(
             title: String(localized: "Control Center App List"),
             iconName: "switch.2",
@@ -80,7 +81,8 @@ final class ControlCenterAppListPermission: Permission {
             },
             request: { completion in
                 completion(PickedFileAccess.controlCenterAppList.requestAccessViaOpenPanel(), true)
-            }
+            },
+            stub: stub
         )
     }
 }

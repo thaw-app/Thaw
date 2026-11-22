@@ -26,15 +26,18 @@ struct ThawPermissionsView: View {
 
     private let mode: Mode
     private let onContinue: () -> Void
+    private let chooseReducedMode: (() -> Void)?
 
     /// Whether Grant Access was pressed on this visit; gates the waiting row.
     @State private var hasRequested = false
 
     /// - Parameters:
     ///   - mode: Defaults to Mode.recovery.
+    ///   - chooseReducedMode: Replaces the Reduced mode choice, for previews.
     ///   - onContinue: Called once the user has finished with the step.
-    init(mode: Mode = .recovery, onContinue: @escaping () -> Void) {
+    init(mode: Mode = .recovery, chooseReducedMode: (() -> Void)? = nil, onContinue: @escaping () -> Void) {
         self.mode = mode
+        self.chooseReducedMode = chooseReducedMode
         self.onContinue = onContinue
     }
 
@@ -64,7 +67,7 @@ struct ThawPermissionsView: View {
         // The onboarding window has no close button, so offer a small way out.
         .overlay(alignment: .bottomTrailing) {
             HStack(spacing: 0) {
-                ReducedModeOfferButton()
+                ReducedModeOfferButton(choose: chooseReducedMode)
                 if mode == .onboarding {
                     quitButton
                 }
@@ -269,3 +272,47 @@ private struct PermissionCard: View {
         }
     }
 }
+
+#if DEBUG
+    /// The access step and the recovery screen, on sample permissions.
+    private struct PermissionsPreview: View {
+        let mode: ThawPermissionsView.Mode
+        @State var permissions: AppPermissions
+        /// The Reduced mode button reads it, though the preview replaces its action.
+        @State private var appState = OnboardingPreview.appState()
+
+        var body: some View {
+            ThawPermissionsView(
+                mode: mode,
+                chooseReducedMode: { /* Preview only. */ },
+                onContinue: { /* Preview only. */ }
+            )
+            .environment(permissions)
+            .environment(appState)
+            .onboardingPreviewFrame()
+        }
+    }
+
+    #Preview("Access") {
+        PermissionsPreview(mode: .onboarding, permissions: OnboardingPreview.permissions())
+    }
+
+    #Preview("Access, declined") {
+        PermissionsPreview(mode: .onboarding, permissions: OnboardingPreview.permissions(answer: .declines))
+    }
+
+    #Preview("Access, Menu Bar Layout Access next") {
+        PermissionsPreview(mode: .onboarding, permissions: OnboardingPreview.permissions(granted: [.accessibility]))
+    }
+
+    #Preview("Missing permissions") {
+        PermissionsPreview(mode: .recovery, permissions: OnboardingPreview.permissions())
+    }
+
+    #Preview("Missing permissions, only optional ones") {
+        PermissionsPreview(
+            mode: .recovery,
+            permissions: OnboardingPreview.permissions(granted: [.accessibility, .fullDiskAccess])
+        )
+    }
+#endif

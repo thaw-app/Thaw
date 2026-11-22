@@ -65,3 +65,10 @@ struct OnboardingTermsLine: View {
             .fixedSize(horizontal: false, vertical: true)
     }
 }
+
+#if DEBUG
+    #Preview("Welcome") {
+        OnboardingWelcomeView(onContinue: { /* Preview only. */ })
+            .onboardingPreviewFrame()
+    }
+#endif

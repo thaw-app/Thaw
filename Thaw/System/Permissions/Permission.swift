@@ -12,6 +12,12 @@ import ThawCapture
 
 // MARK: - Permission
 
+/// Stands in for a permission's system calls, so a preview never checks, prompts or opens System Settings.
+struct PermissionStub {
+    var check: () -> Bool
+    var request: (@escaping @MainActor @Sendable (Bool, Bool) -> Void) -> Void
+}
+
 /// Checks and requests one app permission.
 @MainActor
 @Observable
@@ -119,6 +125,7 @@ class Permission: Identifiable {
     ///     poll stops itself. At the default interval, three minutes.
     ///   - activationCenter: Where the app's return to the foreground is posted.
     ///   - openURL: Opens the settings pane.
+    ///   - stub: Replaces the check, the request and the settings pane, for previews.
     init(
         title: String,
         iconName: String,
@@ -133,7 +140,8 @@ class Permission: Identifiable {
         pollInterval: TimeInterval = 3,
         ungrantedPollBudget: Int = 60,
         activationCenter: NotificationCenter = .default,
-        openURL: @escaping (URL) -> Void = { NSWorkspace.shared.open($0) }
+        openURL: @escaping (URL) -> Void = { NSWorkspace.shared.open($0) },
+        stub: PermissionStub? = nil
     ) {
         self.title = title
         self.iconName = iconName
@@ -142,14 +150,14 @@ class Permission: Identifiable {
         self.shortDetails = shortDetails
         self.isRequired = isRequired
         self.settingsURL = settingsURL
-        self.check = check
-        self.asyncCheck = asyncCheck
-        self.request = request
+        self.check = stub?.check ?? check
+        self.asyncCheck = stub == nil ? asyncCheck : nil
+        self.request = stub?.request ?? request
         self.pollInterval = pollInterval
         self.ungrantedPollBudget = ungrantedPollBudget
         self.activationCenter = activationCenter
-        self.openURL = openURL
-        self.hasPermission = check()
+        self.openURL = stub == nil ? openURL : { _ in /* A stub opens nothing. */ }
+        self.hasPermission = self.check()
         configureCancellables()
     }
 
@@ -282,7 +290,7 @@ class Permission: Identifiable {
 /// The Accessibility permission, required for Thaw to detect, move, and
 /// interact with menu bar items on the user's behalf.
 final class AccessibilityPermission: Permission {
-    init() {
+    init(stub: PermissionStub? = nil) {
         super.init(
             title: String(localized: "Accessibility"),
             iconName: "accessibility",
@@ -306,7 +314,8 @@ final class AccessibilityPermission: Permission {
                 // Untrusted checks show guidance and return immediately; ungranted means prompted, not necessarily refused.
                 let granted = AXHelpers.isProcessTrusted(prompt: true)
                 completion(granted, !granted)
-            }
+            },
+            stub: stub
         )
     }
 }
@@ -315,7 +324,7 @@ final class AccessibilityPermission: Permission {
 
 /// Optional permission for menu bar colors, item previews and visual search; Thaw still runs without it.
 final class ScreenRecordingPermission: Permission {
-    init() {
+    init(stub: PermissionStub? = nil) {
         super.init(
             title: String(localized: "Screen Recording"),
             iconName: "record.circle",
@@ -339,7 +348,8 @@ final class ScreenRecordingPermission: Permission {
             },
             request: { completion in
                 ScreenCapture.requestPermissions(completion: completion)
-            }
+            },
+            stub: stub
         )
     }
 }

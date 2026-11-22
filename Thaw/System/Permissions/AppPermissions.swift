@@ -51,17 +51,17 @@ final class AppPermissions: PermissionsManaging {
     let diagLog = DiagLog(category: "Permissions")
 
     /// The permission for Accessibility features.
-    let accessibility = AccessibilityPermission()
+    let accessibility: AccessibilityPermission
 
     /// The permission for Screen Recording features.
-    let screenRecording = ScreenRecordingPermission()
+    let screenRecording: ScreenRecordingPermission
 
     /// The layout-table grant for cursor-free reordering on macOS 27. Required;
     /// without it Thaw reorders by synthetic Command-drag.
-    let fullDiskAccess = FullDiskAccessPermission()
+    let fullDiskAccess: FullDiskAccessPermission
 
     /// Control Center's app list, for native app hiding. Optional.
-    let controlCenterAppList = ControlCenterAppListPermission()
+    let controlCenterAppList: ControlCenterAppListPermission
 
     /// Fired after any permission's granted state transitions, for owners
     /// that must react to a specific grant, e.g. re-arming machinery that
@@ -85,8 +85,17 @@ final class AppPermissions: PermissionsManaging {
         allPermissions.filter(\.isRequired)
     }
 
-    /// Creates a new permissions manager.
-    init() {
+    /// Creates a new permissions manager. Previews pass stubbed permissions.
+    init(
+        accessibility: AccessibilityPermission = AccessibilityPermission(),
+        screenRecording: ScreenRecordingPermission = ScreenRecordingPermission(),
+        fullDiskAccess: FullDiskAccessPermission = FullDiskAccessPermission(),
+        controlCenterAppList: ControlCenterAppListPermission = ControlCenterAppListPermission()
+    ) {
+        self.accessibility = accessibility
+        self.screenRecording = screenRecording
+        self.fullDiskAccess = fullDiskAccess
+        self.controlCenterAppList = controlCenterAppList
         self.updatePermissionsState()
         // Permission is @Observable, so changes arrive via onChange.
         for permission in allPermissions {
