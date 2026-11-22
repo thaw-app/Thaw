@@ -149,6 +149,30 @@ The reduced-permission mode and the optional settings child process have
 separate startup paths; don't start the full menu bar stack in either just to
 obtain a dependency.
 
+### The settings process
+
+Settings runs as `Thaw --settings <pane>`: the same executable and bundle,
+started by the app with pipes for its standard input and output. It builds an
+`AppState` but never launches it, so whatever a page needs from the running menu
+bar goes through the app:
+
+- Preferences are written in the settings process. Both processes share the
+  defaults domain, and a change sends `.settingsChanged` so the other side reads
+  its settings again.
+- Live state, such as items, profiles and presentation, comes from the app as
+  statuses. Actions go to the app as the page's commands and requests, from a
+  fixed list per page. Only the app reads the screen; it writes item pictures to
+  a file the settings process reads.
+- Every manager `AppState` creates also exists in the settings process. Keep
+  initializers free of work that only makes sense in the running app.
+- A side doesn't echo back the defaults it writes while reading the other's
+  change: `SettingsLinkEndpoint` ignores changes made during that reload. A page
+  that writes defaults later, from its own task or queue, sends a
+  `.settingsChanged` the other side reads again. That's harmless while reading
+  settings is idempotent, so keep it that way.
+- macOS delivers `thaw://` links to the app even while Settings is in front, so
+  the settings process registers no handler for them.
+
 ### How Thaw works with macOS 27's menu bar
 
 On macOS 27 the menu bar is drawn by Apple's MenuBarAgent, and items have no
