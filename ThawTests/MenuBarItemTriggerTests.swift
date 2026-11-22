@@ -226,6 +226,52 @@ struct MenuBarItemTriggerTests {
         #expect(!SystemStateMonitor.shouldIncludeMountedVolume(isInternal: true, isRemovable: false, isNetwork: false))
     }
 
+    @Test("A tunnel with a routable address counts as an active VPN")
+    func tunnelInterfaceWithRoutableAddressIsVPN() {
+        typealias Address = SystemStateMonitor.InterfaceAddress
+        let systemTunnels = (0 ..< 8).map {
+            Address(name: "utun\($0)", isUp: true, isRunning: true, family: .ipv6(isLinkLocal: true))
+        }
+        let openVPN = Address(name: "utun8", isUp: true, isRunning: true, family: .ipv4)
+        let ipv6Tunnel = Address(name: "utun9", isUp: true, isRunning: true, family: .ipv6(isLinkLocal: false))
+
+        #expect(!SystemStateMonitor.hasActiveTunnelInterface([]))
+        #expect(!SystemStateMonitor.hasActiveTunnelInterface(systemTunnels))
+        #expect(SystemStateMonitor.hasActiveTunnelInterface(systemTunnels + [openVPN]))
+        #expect(SystemStateMonitor.hasActiveTunnelInterface([ipv6Tunnel]))
+    }
+
+    @Test("A tunnel that is down, not running or not a tunnel doesn't count as a VPN")
+    func inactiveOrNonTunnelInterfaceIsNotVPN() {
+        typealias Address = SystemStateMonitor.InterfaceAddress
+        #expect(!SystemStateMonitor.hasActiveTunnelInterface([
+            Address(name: "utun8", isUp: false, isRunning: true, family: .ipv4),
+        ]))
+        #expect(!SystemStateMonitor.hasActiveTunnelInterface([
+            Address(name: "utun8", isUp: true, isRunning: false, family: .ipv4),
+        ]))
+        #expect(!SystemStateMonitor.hasActiveTunnelInterface([
+            Address(name: "en0", isUp: true, isRunning: true, family: .ipv4),
+        ]))
+    }
+
+    @Test("Reading this Mac's interfaces returns only tunnel interfaces")
+    func liveTunnelInterfaceAddressesAreTunnels() {
+        let addresses = SystemStateMonitor.tunnelInterfaceAddresses()
+        #expect(addresses.allSatisfy { SystemStateMonitor.isTunnelInterfaceName($0.name) })
+        #expect(SystemStateMonitor.isVPNActive() || !SystemStateMonitor.hasActiveTunnelInterface(addresses))
+    }
+
+    @Test("Tunnel interface names cover the common VPN prefixes")
+    func tunnelInterfaceNames() {
+        for name in ["utun3", "ipsec0", "ppp0", "tun0", "tap1"] {
+            #expect(SystemStateMonitor.isTunnelInterfaceName(name))
+        }
+        for name in ["en0", "lo0", "bridge100", "awdl0"] {
+            #expect(!SystemStateMonitor.isTunnelInterfaceName(name))
+        }
+    }
+
     @Test("A named external drive requires a nonblank configured name and a mounted local drive")
     func namedExternalDriveRequiresNameAndMountedDrive() {
         let current = state(mountedVolumes: [
