@@ -24,21 +24,7 @@ struct RootSettingsPagesRenderTests {
     private typealias Page = OffscreenRender<AnyView>
 
     private func page(_ view: some View, appState: AppState) -> Page {
-        OffscreenRender(
-            AnyView(
-                view
-                    .environment(appState)
-                    .environment(\.settingsPaneTitle, nil)
-                    .frame(width: Self.size.width, height: Self.size.height)
-            ),
-            size: Self.size
-        )
-    }
-
-    /// Waits until the page shows text, and returns what it shows.
-    private func shownTexts(_ page: Page, containing text: String) async -> [String] {
-        await page.settle { page.texts().contains { $0.contains(text) } }
-        return page.texts()
+        Page(settingsPage: view, appState: appState, size: Self.size)
     }
 
     // MARK: Triggers
@@ -47,14 +33,14 @@ struct RootSettingsPagesRenderTests {
     func triggersPane() async {
         let off = AppState()
         let offPage = page(TriggersSettingsPane(), appState: off)
-        let offTexts = await shownTexts(offPage, containing: "When an app runs")
+        let offTexts = await offPage.texts(once: "When an app runs")
         #expect(offTexts.contains { $0.contains("Not installed") }, "no module is installed in the test host")
         #expect(!offTexts.contains { $0.contains("Hide an item first") })
 
         Defaults.set([ModuleIdentifier.triggers.rawValue], forKey: .enabledModules)
         let on = AppState()
         let onPage = page(TriggersSettingsPane(), appState: on)
-        let onTexts = await shownTexts(onPage, containing: "Hide an item first")
+        let onTexts = await onPage.texts(once: "Hide an item first")
         #expect(onTexts.contains { $0.contains("Hide an item first") })
     }
 
@@ -79,7 +65,7 @@ struct RootSettingsPagesRenderTests {
         let profiles = ProfilesFeature()
         let page = page(ModulesSettingsPane(moduleHost: host, profiles: profiles), appState: appState)
 
-        let texts = await shownTexts(page, containing: "Not signed by")
+        let texts = await page.texts(once: "Not signed by")
         #expect(texts.contains { $0.contains("Switches saved layouts") }, "the Profiles card comes first")
         #expect(texts.contains { $0.contains("Needs a newer version") })
         #expect(texts.contains { $0.contains("Shows chosen menu bar items") })
@@ -138,7 +124,7 @@ struct RootSettingsPagesRenderTests {
             SimpleModeSettingsPane(itemManager: appState.itemManager, updatesManager: appState.updatesManager, settings: general),
             appState: appState
         )
-        let texts = await shownTexts(page, containing: "Item arrangement")
+        let texts = await page.texts(once: "Item arrangement")
         #expect(texts.contains { $0.contains("Sections preview") })
         #expect(texts.contains { $0.contains("double-click") }, "Always Hidden names the double-click while it works")
         if !appState.permissions.accessibility.hasPermission {
@@ -180,13 +166,13 @@ struct RootSettingsPagesRenderTests {
         let appState = AppState()
         let monitor = appState.itemManager.moveMonitor
         let page = page(ThawForm { MoveInspectorSection() }, appState: appState)
-        _ = await shownTexts(page, containing: "saved menu bar layout")
+        _ = await page.texts(once: "saved menu bar layout")
         #expect(!page.texts().contains { $0.contains("This session") }, "no counters before a move")
 
         monitor.recordStoreMove(item: "Example Item", destination: "Hidden, after Clock", satisfied: true)
         monitor.recordStoreMove(item: "Other Item", destination: "Visible", satisfied: false)
         monitor.recordStoreUnavailable()
-        let texts = await shownTexts(page, containing: "Example Item")
+        let texts = await page.texts(once: "Example Item")
         #expect(texts.contains { $0.contains("Other Item") })
         #expect(texts.contains { $0.contains("This session") })
         #expect(texts.contains { $0.contains("refused access") })
@@ -194,23 +180,11 @@ struct RootSettingsPagesRenderTests {
 
     // MARK: Folded menu bar
 
-    private static func item(_ title: String, x: CGFloat) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.\(title)"), title: title, instanceIndex: 0),
-            windowID: UInt32(x) + 1,
-            ownerPID: 100,
-            sourcePID: 200,
-            bounds: CGRect(x: x, y: 0, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
-    }
-
     /// Seeds the item list, so the bars draw what is there and never preload from the live bar.
     private func seedItems(_ appState: AppState) {
-        appState.itemManager.itemCache[.visible] = [Self.item("Visible", x: 300)]
-        appState.itemManager.itemCache[.hidden] = [Self.item("Hidden", x: 200)]
-        appState.itemManager.itemCache[.alwaysHidden] = [Self.item("Always", x: 100)]
+        appState.itemManager.itemCache[.visible] = [MenuBarItem.fixture("Visible", x: 300)]
+        appState.itemManager.itemCache[.hidden] = [MenuBarItem.fixture("Hidden", x: 200)]
+        appState.itemManager.itemCache[.alwaysHidden] = [MenuBarItem.fixture("Always", x: 100)]
     }
 
     @Test("The folded bar names each section, with a sort menu, and marks the one a drag hovers")
@@ -243,7 +217,7 @@ struct RootSettingsPagesRenderTests {
             SimpleModeSettingsPane(itemManager: appState.itemManager, updatesManager: appState.updatesManager, settings: general),
             appState: appState
         )
-        let texts = await shownTexts(page, containing: "Item arrangement")
+        let texts = await page.texts(once: "Item arrangement")
         let showsBars = texts.contains { $0 == "Visible" }
         let showsAutoHideWarning = texts.contains { $0.contains("set to hide itself") }
         #expect(showsBars || showsAutoHideWarning, "the preview, or why there is none")

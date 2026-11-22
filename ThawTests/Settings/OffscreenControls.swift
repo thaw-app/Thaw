@@ -38,6 +38,12 @@ extension OffscreenRender {
         }
     }
 
+    /// What the view shows once some of its text contains text, or at the settle timeout.
+    func texts(once text: String) async -> [String] {
+        await settle { texts().contains { $0.contains(text) } }
+        return texts()
+    }
+
     /// Presses the button with this label, as VoiceOver's press does.
     func press(_ label: String, at index: Int = 0, sourceLocation: SourceLocation = #_sourceLocation) throws {
         let buttons = elements(role: .button, label: label)

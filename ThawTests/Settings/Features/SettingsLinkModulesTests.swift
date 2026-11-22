@@ -13,21 +13,6 @@ import Testing
 @testable import Thaw
 import ThawModuleKit
 
-/// What a module host in the settings process asked the app for.
-@MainActor
-private final class AppRequests {
-    private(set) var messages = [SettingsLinkMessage]()
-    private(set) lazy var remote = SettingsRemote { [weak self] in self?.messages.append($0) }
-
-    /// The payloads of the commands with this name, in the order they were sent.
-    func payloads<Payload: Decodable>(_: Payload.Type, of name: String) -> [Payload] {
-        messages.compactMap { message in
-            guard case .command(name: name, let payload) = message else { return nil }
-            return SettingsLinkPayload.decode(Payload.self, from: payload)
-        }
-    }
-}
-
 @Suite("Settings process link for modules")
 @MainActor
 struct SettingsLinkModulesTests {
@@ -37,7 +22,7 @@ struct SettingsLinkModulesTests {
     private let system = FakeSystem()
     /// The settings process's system. Its host must leave it alone.
     private let settingsSystem = FakeSystem()
-    private let requests = AppRequests()
+    private let requests = SettingsLinkOutbox()
 
     /// The app's host, which owns the modules.
     private func appHost() -> ModuleHost {
@@ -227,7 +212,7 @@ struct SettingsLinkModulesTests {
         #expect(!host.isEnabled("widgets"), "The switch shows the choice before the app answers")
         await host.setEnabled(true, identifier: "widgets")
         #expect(host.isEnabled("widgets"))
-        #expect(requests.payloads(ModulesLink.Switch.self, of: ModulesLink.setEnabled) == [
+        #expect(requests.commands(ModulesLink.setEnabled, as: ModulesLink.Switch.self) == [
             ModulesLink.Switch(identifier: "widgets", enabled: false),
             ModulesLink.Switch(identifier: "widgets", enabled: true),
         ])
@@ -236,7 +221,7 @@ struct SettingsLinkModulesTests {
         await host.openWindow(of: .widgets)
         await host.start(widgets)
         await host.start(URL(filePath: "/Modules/unknown.app"), showingWindow: true)
-        #expect(requests.payloads(ModulesLink.Start.self, of: ModulesLink.start) == [
+        #expect(requests.commands(ModulesLink.start, as: ModulesLink.Start.self) == [
             ModulesLink.Start(identifier: "widgets", showingWindow: true),
             ModulesLink.Start(identifier: "widgets", showingWindow: true),
             ModulesLink.Start(identifier: "widgets", showingWindow: false),
@@ -257,7 +242,7 @@ struct SettingsLinkModulesTests {
         let host = settingsHost()
         host.mirror(modules: [widgets: module("widgets", state: .gaveUp)], enabledIdentifiers: ["widgets"])
         await host.start(widgets, showingWindow: true)
-        #expect(requests.payloads(ModulesLink.Start.self, of: ModulesLink.start) == [ModulesLink.Start(identifier: "widgets", showingWindow: true)])
+        #expect(requests.commands(ModulesLink.start, as: ModulesLink.Start.self) == [ModulesLink.Start(identifier: "widgets", showingWindow: true)])
         #expect(settingsSystem.launchesBegun == 0)
     }
 

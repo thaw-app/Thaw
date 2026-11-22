@@ -27,16 +27,6 @@ private enum Fixture {
         )
     }
 
-    static func capture(width: Int) throws -> MenuBarItemGlyphCapture {
-        let context = try #require(CGContext(
-            data: nil, width: width, height: 16, bitsPerComponent: 8, bytesPerRow: width * 4,
-            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ))
-        context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: width, height: 16))
-        return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 1)
-    }
-
     static func payload(_ value: some Encodable) throws -> Data {
         try #require(SettingsLinkPayload.encode(value))
     }
@@ -123,7 +113,7 @@ struct SettingsItemsRelayTests {
     func pictures() async throws {
         let (clock, wifi) = (Fixture.tag("Clock", windowID: 5), Fixture.tag("Wi-Fi"))
         try listen()
-        fake.captures = try [clock: Fixture.capture(width: 20), wifi: Fixture.capture(width: 30)]
+        fake.captures = try [clock: MenuBarItemGlyphCapture.sample(width: 20), wifi: MenuBarItemGlyphCapture.sample(width: 30)]
         for _ in 0 ..< 3 {
             await mainActorQueueDrained()
         }
@@ -142,7 +132,7 @@ struct SettingsItemsRelayTests {
         let second = try #require(status(SettingsItemsLink.pictures, SettingsItemPictures.self)).revision
         #expect(second > first)
 
-        fake.captures[clock] = try Fixture.capture(width: 20)
+        fake.captures[clock] = try MenuBarItemGlyphCapture.sample(width: 20)
         #expect(await settingsLinkWait { (status(SettingsItemsLink.pictures, SettingsItemPictures.self)?.revision ?? 0) > second })
         #expect(fake.saves == 2)
 
@@ -282,7 +272,7 @@ final class SettingsItemsMirrorTests {
         let (clock, wifi, unsaved) = (Fixture.tag("Clock", windowID: 5), Fixture.tag("Wi-Fi"), Fixture.tag("Unsaved"))
         let url = try #require(store.cacheFileURL)
         let store = store
-        try store.enqueueSave([clock: Fixture.capture(width: 20), wifi: Fixture.capture(width: 30)])
+        try store.enqueueSave([clock: MenuBarItemGlyphCapture.sample(width: 20), wifi: MenuBarItemGlyphCapture.sample(width: 30)])
         queue.sync {}
         let slot = imageCache.glyphSlot(for: clock)
 
@@ -299,7 +289,7 @@ final class SettingsItemsMirrorTests {
         #expect(imageCache.capturesByTag[clock]?.cgImage === shown, "An unchanged picture is not decoded again")
         #expect(imageCache.capturesByTag[wifi]?.cgImage.width == 30)
 
-        try store.enqueueSave([clock: Fixture.capture(width: 40)])
+        try store.enqueueSave([clock: MenuBarItemGlyphCapture.sample(width: 40)])
         queue.sync {}
         try show(3, [clock, wifi])
         #expect(imageCache.capturesByTag.mapValues(\.cgImage.width) == [clock: 40])

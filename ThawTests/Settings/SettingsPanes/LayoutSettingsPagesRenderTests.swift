@@ -24,37 +24,11 @@ struct LayoutSettingsPagesRenderTests {
     private typealias Page = OffscreenRender<AnyView>
 
     private func page(_ view: some View, appState: AppState) -> Page {
-        OffscreenRender(
-            AnyView(
-                view
-                    .environment(appState)
-                    .environment(\.settingsPaneTitle, nil)
-                    .frame(width: Self.size.width, height: Self.size.height)
-            ),
-            size: Self.size
-        )
+        Page(settingsPage: view, appState: appState, size: Self.size)
     }
 
-    /// Waits until the page shows text, and returns what it shows.
-    private func shownTexts(_ page: Page, containing text: String) async -> [String] {
-        await page.settle { page.texts().contains { $0.contains(text) } }
-        return page.texts()
-    }
-
-    private static func item(_ title: String, x: CGFloat) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.\(title)"), title: title, instanceIndex: 0),
-            windowID: UInt32(x) + 1,
-            ownerPID: 100,
-            sourcePID: 200,
-            bounds: CGRect(x: x, y: 0, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
-    }
-
-    private static let visibleItem = item("Visible", x: 300)
-    private static let hiddenItem = item("Hidden", x: 200)
+    private static let visibleItem = MenuBarItem.fixture("Visible", x: 300)
+    private static let hiddenItem = MenuBarItem.fixture("Hidden", x: 200)
 
     /// Seeds the item list, so nothing preloads from the live bar.
     private func seededAppState() -> AppState {
@@ -70,7 +44,7 @@ struct LayoutSettingsPagesRenderTests {
     func layoutPane() async throws {
         let appState = seededAppState()
         let page = page(MenuBarLayoutSettingsPane(itemManager: appState.itemManager), appState: appState)
-        let texts = await shownTexts(page, containing: "Item arrangement")
+        let texts = await page.texts(once: "Item arrangement")
         #expect(texts.contains { $0.contains("Hiding method") })
         #expect(texts.contains { $0.contains("Overflow and previews") })
 
@@ -83,7 +57,7 @@ struct LayoutSettingsPagesRenderTests {
             appState.navigationState.requestedSettingsDisclosure = disclosure
             await page.settle { appState.navigationState.requestedSettingsDisclosure == nil }
             #expect(appState.navigationState.requestedSettingsDisclosure == nil, "the page takes \(disclosure)")
-            let shown = await shownTexts(page, containing: text)
+            let shown = await page.texts(once: text)
             #expect(shown.contains { $0.contains(text) }, "\(disclosure) shows \(text)")
         }
     }
@@ -95,7 +69,7 @@ struct LayoutSettingsPagesRenderTests {
             LayoutDetailTabs(itemManager: appState.itemManager, canArrangeLayout: false, isHidingUnavailable: true),
             appState: appState
         )
-        let texts = await shownTexts(page, containing: "Hiding unavailable")
+        let texts = await page.texts(once: "Hiding unavailable")
         #expect(texts.contains { $0.contains("Hiding unavailable") })
         #expect(!texts.contains { $0.contains("Apple’s Items") })
 
@@ -103,7 +77,7 @@ struct LayoutSettingsPagesRenderTests {
             LayoutDetailTabs(itemManager: appState.itemManager, canArrangeLayout: true, isHidingUnavailable: false, includesOptions: false, fixedTab: .appleItems),
             appState: appState
         )
-        let fixedTexts = await shownTexts(fixed, containing: "Replace Control Center items")
+        let fixedTexts = await fixed.texts(once: "Replace Control Center items")
         #expect(fixedTexts.contains { $0.contains("Replace Control Center items") }, "a fixed tab draws without the tab bar")
     }
 
@@ -116,7 +90,7 @@ struct LayoutSettingsPagesRenderTests {
         layout.sectionDividerStyle = .custom
         layout.customSectionDividerImage = nil
         let page = page(ThawForm { LayoutSectionOptions(settings: layout, isHidingUnavailable: false) }, appState: appState)
-        let texts = await shownTexts(page, containing: "Divider image")
+        let texts = await page.texts(once: "Divider image")
         #expect(texts.contains { $0.contains("Dividers show the chevron") })
         #expect(!page.elements(role: .button, label: "Choose Image…").isEmpty)
 
@@ -126,7 +100,7 @@ struct LayoutSettingsPagesRenderTests {
             return true
         }
         layout.customSectionDividerImage = try #require(image.tiffRepresentation)
-        let withImage = await shownTexts(page, containing: "Match the menu bar's appearance")
+        let withImage = await page.texts(once: "Match the menu bar's appearance")
         #expect(withImage.contains { $0.contains("Shown between sections while they are open") })
         #expect(!page.elements(role: .button, label: "Change Image…").isEmpty)
     }
@@ -137,7 +111,7 @@ struct LayoutSettingsPagesRenderTests {
         let layout = appState.settings.layout
         layout.enableNativeAppHiding = false
         let page = page(ThawForm { HidingMethodSection(settings: layout) }, appState: appState)
-        let standard = await shownTexts(page, containing: "Known macOS 27 limitations")
+        let standard = await page.texts(once: "Known macOS 27 limitations")
         #expect(standard.contains { $0.contains("Hiding method") })
 
         let before = page.texts()
@@ -146,7 +120,7 @@ struct LayoutSettingsPagesRenderTests {
         #expect(page.texts() != before, "choosing Native swaps in its own explanation")
 
         let list = self.page(PlatformLimitationsList(), appState: appState)
-        let limitations = await shownTexts(list, containing: "Several items from one app")
+        let limitations = await list.texts(once: "Several items from one app")
         #expect(limitations.contains { $0.contains("The Native hiding method") })
     }
 
@@ -156,7 +130,7 @@ struct LayoutSettingsPagesRenderTests {
         let layout = appState.settings.layout
         layout.controlCenterReplacements.isOn = false
         let page = page(ThawForm { ControlCenterReplacementsSection(settings: layout) }, appState: appState)
-        let off = await shownTexts(page, containing: "Replace Control Center items")
+        let off = await page.texts(once: "Replace Control Center items")
         #expect(!off.contains { $0 == "AirDrop" })
 
         layout.controlCenterReplacements.isOn = true
@@ -181,7 +155,7 @@ struct LayoutSettingsPagesRenderTests {
             },
             appState: appState
         )
-        let texts = await shownTexts(page, containing: "Undo host")
+        let texts = await page.texts(once: "Undo host")
         #expect(texts.contains("Undo host"))
     }
 
@@ -191,7 +165,7 @@ struct LayoutSettingsPagesRenderTests {
     func groupsEmpty() async {
         let appState = seededAppState()
         let page = page(ThawForm { MenuBarLayoutGroupsSection() }, appState: appState)
-        let texts = await shownTexts(page, containing: "No item groups")
+        let texts = await page.texts(once: "No item groups")
         #expect(texts.contains { $0.contains("No item groups") })
     }
 
@@ -199,11 +173,11 @@ struct LayoutSettingsPagesRenderTests {
     func groupRows() async throws {
         let appState = seededAppState()
         let manager = appState.itemGroupManager
-        let gone = Self.item("Gone", x: 500)
+        let gone = MenuBarItem.fixture("Gone", x: 500)
         _ = try #require(manager.createGroup(name: "Work", items: [Self.visibleItem, Self.hiddenItem, gone]))
         let page = page(ThawForm { MenuBarLayoutGroupsSection() }, appState: appState)
 
-        let texts = await shownTexts(page, containing: "not running")
+        let texts = await page.texts(once: "not running")
         #expect(texts.contains { $0.contains("Groups always move and hide together") })
         #expect(texts.contains { $0.contains(gone.uniqueIdentifier) }, "a quit app's member shows its identifier")
 

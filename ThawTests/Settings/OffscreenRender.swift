@@ -8,6 +8,7 @@
 import AppKit
 import SwiftUI
 import Testing
+@testable import Thaw
 
 /// A SwiftUI view hosted in a window that is never shown, so tests can lay it
 /// out, draw it into a bitmap and wait for its state changes to apply.
@@ -65,5 +66,15 @@ final class OffscreenRender<Content: View> {
             return true
         }
         return matched
+    }
+}
+
+extension OffscreenRender where Content == AnyView {
+    /// A settings page as the settings window shows it, without its title, against appState.
+    convenience init(settingsPage page: some View, appState: AppState, size: CGSize) {
+        self.init(
+            AnyView(page.environment(appState).environment(\.settingsPaneTitle, nil).frame(width: size.width, height: size.height)),
+            size: size
+        )
     }
 }

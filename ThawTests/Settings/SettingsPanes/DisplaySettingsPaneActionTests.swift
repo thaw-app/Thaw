@@ -76,12 +76,8 @@ struct DisplaySettingsPaneActionTests {
         settings.configurations[Self.studio] = DisplayThawBarConfiguration.defaultConfiguration
             .withItemSpacingOffset(studioOffset)
         let page = OffscreenRender(
-            AnyView(
-                DisplaySettingsPane(displaySettings: settings, confirmations: confirmations, remote: remote, selectedDisplayID: Self.studio)
-                    .environment(appState)
-                    .environment(\.settingsPaneTitle, nil)
-                    .frame(width: Self.size.width, height: Self.size.height)
-            ),
+            settingsPage: DisplaySettingsPane(displaySettings: settings, confirmations: confirmations, remote: remote, selectedDisplayID: Self.studio),
+            appState: appState,
             size: Self.size
         )
         await page.settle { (try? page.pixels())?.contains { $0 != 0 } == true }

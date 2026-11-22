@@ -34,24 +34,6 @@ struct OverflowFallbackIconTests {
         )
     }
 
-    /// A capture of the given point size, filled or fully transparent.
-    private static func capture(width: Int, height: Int = 16, filled: Bool = true, scale: CGFloat = 1) throws -> MenuBarItemGlyphCapture {
-        let context = try #require(CGContext(
-            data: nil,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: width * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ))
-        if filled {
-            context.setFillColor(CGColor(gray: 0, alpha: 1))
-            context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        }
-        return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: scale)
-    }
-
     @Test("A capture is usable up to the width limit, or the item's own width when it is wider")
     func captureWidthLimit() {
         #expect(!OverflowFallbackIcon.isUsableCapture(width: nil))
@@ -64,10 +46,10 @@ struct OverflowFallbackIconTests {
     @Test("A blank or missing capture is not usable, a drawn one is")
     func blankCaptures() throws {
         #expect(!OverflowFallbackIcon.isUsableCapture(nil))
-        #expect(try !OverflowFallbackIcon.isUsableCapture(Self.capture(width: 20, filled: false)))
-        #expect(try OverflowFallbackIcon.isUsableCapture(Self.capture(width: 20)))
-        #expect(try !OverflowFallbackIcon.isUsableCapture(Self.capture(width: 400)))
-        #expect(try OverflowFallbackIcon.isUsableCapture(Self.capture(width: 400), for: Self.item(.string("com.example"), width: 400)))
+        #expect(try !OverflowFallbackIcon.isUsableCapture(MenuBarItemGlyphCapture.sample(width: 20, filled: false)))
+        #expect(try OverflowFallbackIcon.isUsableCapture(MenuBarItemGlyphCapture.sample(width: 20)))
+        #expect(try !OverflowFallbackIcon.isUsableCapture(MenuBarItemGlyphCapture.sample(width: 400)))
+        #expect(try OverflowFallbackIcon.isUsableCapture(MenuBarItemGlyphCapture.sample(width: 400), for: Self.item(.string("com.example"), width: 400)))
     }
 
     @Test("System hosts keep their captures, other apps can draw from their app icon")
@@ -91,7 +73,7 @@ struct OverflowFallbackIconTests {
     @Test("A usable capture is shown as captured")
     func usableCaptureWins() throws {
         let appState = AppState()
-        let capture = try Self.capture(width: 20)
+        let capture = try MenuBarItemGlyphCapture.sample(width: 20)
         let image = OverflowFallbackIcon.resolvedImage(
             for: Self.item(.string("com.example")),
             section: .hidden,
@@ -135,7 +117,7 @@ struct OverflowFallbackIconTests {
             for: Self.item(.controlCenter),
             section: .visible,
             appState: appState,
-            capturedImage: Self.capture(width: 20, filled: false)
+            capturedImage: MenuBarItemGlyphCapture.sample(width: 20, filled: false)
         )
         guard case let .icon(icon) = image else {
             Issue.record("expected the host icon, got \(String(describing: image))")
@@ -192,7 +174,7 @@ struct OverflowFallbackIconTests {
         let quit = Self.item(.string("com.example.quit"), sourcePID: nil)
         #expect(!OverflowFallbackIcon.shouldPreferAppIcon(for: quit, in: .visible, appState: appState, hasUsableCapture: true))
 
-        let image = try OverflowFallbackIcon.resolvedImage(for: item, section: .visible, appState: appState, capturedImage: Self.capture(width: 20))
+        let image = try OverflowFallbackIcon.resolvedImage(for: item, section: .visible, appState: appState, capturedImage: MenuBarItemGlyphCapture.sample(width: 20))
         guard case .icon = image else {
             Issue.record("expected an app icon, got \(String(describing: image))")
             return
@@ -245,24 +227,9 @@ struct OverflowFallbackIconTests {
 @Suite("Menu bar item glyph")
 @MainActor
 struct MenuBarItemGlyphTests {
-    private static func capture(width: Int, height: Int, scale: CGFloat) throws -> MenuBarItemGlyphCapture {
-        let context = try #require(CGContext(
-            data: nil,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: width * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ))
-        context.setFillColor(CGColor(gray: 0, alpha: 1))
-        context.fill(CGRect(x: 4, y: 4, width: width - 8, height: height - 8))
-        return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: scale)
-    }
-
     @Test("A capture's size is in points and it fits a shorter row without upscaling in a taller one")
     func captureSizing() throws {
-        let image = try MenuBarItemDisplayImage.capture(Self.capture(width: 40, height: 32, scale: 2))
+        let image = try MenuBarItemDisplayImage.capture(MenuBarItemGlyphCapture.sample(width: 40, height: 32, inset: 4, scale: 2))
         #expect(image.pointSize == CGSize(width: 20, height: 16))
         #expect(!image.isTemplate)
         #expect(image.isReinkable, "one black ink on transparency reads as a single-ink glyph")
@@ -316,7 +283,7 @@ struct MenuBarItemGlyphTests {
 
     @Test("The glyph draws at its fitted size")
     func glyphDraws() throws {
-        let image = try MenuBarItemDisplayImage.capture(Self.capture(width: 40, height: 32, scale: 2))
+        let image = try MenuBarItemDisplayImage.capture(MenuBarItemGlyphCapture.sample(width: 40, height: 32, inset: 4, scale: 2))
         let glyph = MenuBarItemGlyph(image: image, fittingHeight: 8, reinksCaptures: true)
         let host = NSHostingView(rootView: glyph)
         host.layoutSubtreeIfNeeded()
