@@ -36,6 +36,14 @@ struct ClockActivationHitTests {
         #expect(!ClockBridgeAvailability.isPossible(engineIsOperational: false, nativeHidingActive: false))
     }
 
+    @Test("A fullscreen Space keeps its Clock band only on a display with a notch")
+    func fullscreenBandNeedsANotch() {
+        #expect(ClockBridgeAvailability.hasClockBand(showsFullscreenSpace: false, hasNotch: false))
+        #expect(ClockBridgeAvailability.hasClockBand(showsFullscreenSpace: false, hasNotch: true))
+        #expect(ClockBridgeAvailability.hasClockBand(showsFullscreenSpace: true, hasNotch: true))
+        #expect(!ClockBridgeAvailability.hasClockBand(showsFullscreenSpace: true, hasNotch: false))
+    }
+
     @Test("The shortcut tap is up for a bridge with a shortcut, or while a key it swallowed is still held")
     func hotkeyTapNeedsTheBridge() {
         #expect(ClockBridgeAvailability.wantsHotkeyTap(canBridge: true, hasHotkeys: true, hasHeldKeys: false))
