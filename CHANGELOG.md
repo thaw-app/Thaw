@@ -26,6 +26,8 @@ the items under New and Fixed.
 
 ### Fixed
 
+- **The VPN trigger sees VPNs that bring up their own tunnel.** OpenVPN Connect and similar apps connect without adding a network service in System Settings, so Thaw showed the VPN as inactive. Thaw now also counts a tunnel that is up with an address.
+- When opening the Thaw Bar, a section waiting for its first icon captures shows a loading message instead of briefly displaying application icons. A fully cached row still appears immediately.
 - **A Thaw Bar with its own tint no longer hides its items.** The tint now colors the bar behind the items, so even a fully opaque one leaves them visible.
 - **Moving an icon into an empty Always Hidden section works again.** The menu bar could report the section's parked divider as on the display while it wasn't, so the move was refused as if the menu bar had rearranged. Thaw now checks that the divider is really on screen, and shows a temporary drop divider while dragging, even when the divider style is set to None.
 
