@@ -12,49 +12,18 @@ import Testing
 /// Inline reveals cannot fit overflow-ejected items beside the notch; use the Thaw Bar unless the user opts out.
 @Suite("Notch overflow reveal")
 struct NotchOverflowRevealTests {
-    @Test("Ejected items with the preference on force the Thaw Bar")
-    func forcesBarWhenOverflowEnabledPreferenceOnAndItemsEjected() {
-        #expect(
-            MenuBarSection.forcesThawBarForNotchOverflow(
-                overflowEnabled: true,
-                useThawBarOnOverflow: true,
-                hasEjectedItems: true
-            )
-        )
-    }
-
-    @Test("Nothing ejected does not force the Thaw Bar")
-    func doesNotForceBarWhenNothingIsEjected() {
-        #expect(
-            !MenuBarSection.forcesThawBarForNotchOverflow(
-                overflowEnabled: true,
-                useThawBarOnOverflow: true,
-                hasEjectedItems: false
-            )
-        )
-    }
-
-    @Test("The preference turned off does not force the Thaw Bar")
-    func doesNotForceBarWhenPreferenceIsOff() {
-        #expect(
-            !MenuBarSection.forcesThawBarForNotchOverflow(
-                overflowEnabled: true,
-                useThawBarOnOverflow: false,
-                hasEjectedItems: true
-            )
-        )
-    }
-
-    /// Stale ejection bookkeeping must not keep forcing the bar after the user
-    /// turns overflow off; the items are on their way back to visible.
-    @Test("Overflow disabled does not force the Thaw Bar")
-    func doesNotForceBarWhenOverflowIsDisabled() {
-        #expect(
-            !MenuBarSection.forcesThawBarForNotchOverflow(
-                overflowEnabled: false,
-                useThawBarOnOverflow: true,
-                hasEjectedItems: true
-            )
-        )
+    /// Overflow turned off must win over stale ejection bookkeeping: the items are on their way back.
+    @Test("Only ejected items with overflow and the preference on force the Thaw Bar", arguments: [
+        (true, true, true, true),
+        (true, true, false, false),
+        (true, false, true, false),
+        (false, true, true, false),
+    ])
+    func forcesThawBar(overflowEnabled: Bool, useThawBarOnOverflow: Bool, hasEjectedItems: Bool, forces: Bool) {
+        #expect(MenuBarSection.forcesThawBarForNotchOverflow(
+            overflowEnabled: overflowEnabled,
+            useThawBarOnOverflow: useThawBarOnOverflow,
+            hasEjectedItems: hasEjectedItems
+        ) == forces)
     }
 }
