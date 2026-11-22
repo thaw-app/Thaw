@@ -43,6 +43,13 @@ nonisolated enum ClickTargetCheck {
         return MirroredBarGeometry.frame(bounds, on: display, displayBounds: displays).center
     }
 
+    /// A click meant for one display's bar aims at its mirrored copy there, wherever the pointer is.
+    /// Nil when that display is gone, so the caller aims by the pointer instead.
+    static func clickPoint(for bounds: CGRect, onBarOf display: CGRect, displays: [CGRect]) -> CGPoint? {
+        guard displays.contains(display) else { return nil }
+        return MirroredBarGeometry.frame(bounds, on: display, displayBounds: displays).center
+    }
+
     /// - Parameter barWidth: The width of the bar the frame sits on; zero skips the width check.
     static func rejection(for bounds: CGRect, barWidth: CGFloat, displays: [CGRect]) -> Rejection? {
         guard !bounds.isNull, bounds.width.isFinite, bounds.height.isFinite,

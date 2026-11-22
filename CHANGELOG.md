@@ -43,6 +43,7 @@ the items under New and Fixed.
 - **A change to the menu bar is saved, and items that don't fit are moved, even when Thaw first saw it in a read that missed some apps.** A full read that found the same bar skipped both.
 - **Items you reveal in the menu bar hide again when the pointer rests where the Thaw Bar was.** After the Thaw Bar closed, that spot still counted as the bar and kept them open.
 - **The widget icon lights another dot as soon as a reading crosses it,** even when the percentage shown stays the same, such as 24.9% and 25.1% both reading 25%.
+- **A hidden item you open from the Thaw Bar on another display opens its menu on that display,** instead of on the display with the active menu bar. Reported by @RyuSeongbin in [#1356](https://github.com/thaw-app/Thaw/issues/1356).
 
 ## [3.0.0-beta.7] - 2026-11-17
 

@@ -80,4 +80,20 @@ struct ConcealedItemOpenMethodTests {
                 == [[.revealAndClick]]
         )
     }
+
+    @Test("an item opened from another display is clicked on that display's bar before any press")
+    func anotherDisplayClicksFirst() {
+        for learned in [nil] + ConcealedItemOpenMethod.allCases.map(Optional.some) {
+            for showInMenuBar in [false, true] {
+                #expect(
+                    ConcealedItemOpenMethod.openAttempts(for: .left, learned: learned, showInMenuBar: showInMenuBar, onAnotherDisplay: true)
+                        == [[.revealAndClick], [.pressInPlace]]
+                )
+                #expect(
+                    ConcealedItemOpenMethod.openAttempts(for: .right, learned: learned, showInMenuBar: showInMenuBar, onAnotherDisplay: true)
+                        == [[.revealAndClick], [.showMenuInPlace]]
+                )
+            }
+        }
+    }
 }

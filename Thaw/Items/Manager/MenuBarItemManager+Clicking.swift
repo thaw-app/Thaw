@@ -53,31 +53,6 @@ extension MenuBarItemManager {
         return (down, up)
     }
 
-    /// The point a synthetic click on bounds should aim at.
-    ///
-    /// macOS 27 mirrors one status-item set onto every bar but reports its
-    /// frames in a single display's space, so a click aimed at the reported
-    /// frame lands on the wrong bar when the cursor is on another one. Rebase
-    /// the frame onto the display under the cursor, the bar the user is
-    /// looking at. A cursor outside every menu bar leaves the frame alone,
-    /// which keeps hotkey and search activation targeting the item's own bar.
-    private static func clickPoint(for bounds: CGRect) -> CGPoint {
-        guard
-            let pointer = MouseHelpers.locationCoreGraphics,
-            let screen = NSScreen.screen(containingCGPoint: pointer),
-            let menuBarHeight = screen.getMenuBarHeight()
-        else {
-            return bounds.center
-        }
-        return ClickTargetCheck.clickPoint(
-            for: bounds,
-            pointer: pointer,
-            display: CGDisplayBounds(screen.displayID),
-            menuBarHeight: menuBarHeight,
-            displays: NSScreen.allDisplayBoundsCG
-        )
-    }
-
     /// Synthesizes one click on item and waits for its owner to take
     /// delivery of both halves.
     ///
@@ -131,7 +106,7 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.error("postClickEvents: synthetic click budget spent; not clicking \(item.logString)")
             throw EventError.cannotComplete
         }
-        let clickPoint = Self.clickPoint(for: aimedBounds)
+        let clickPoint = ClickAim.point(for: aimedBounds)
         let restoreLocation = try getMouseLocation()
         let source = try getEventSource()
 
@@ -382,11 +357,11 @@ extension MenuBarItemManager {
     /// Reveal and press presses the element drawn at the item's spot; reveal and click clicks it
     /// for real, without that press first. No move, so it works for items the move path cannot
     /// seat. It is also the only way to right-click: AXPress opens the default action, not the
-    /// secondary menu.
+    /// secondary menu. The real click aims at displayID's bar, or at the pointer's when it is nil.
     func revealInPlaceAndClick(
         item: MenuBarItem,
         with mouseButton: CGMouseButton,
-        on _: CGDirectDisplayID,
+        on displayID: CGDirectDisplayID?,
         trying methods: [ConcealedItemOpenMethod],
         controller: any MenuBarSectionControlling
     ) async -> ConcealedItemOpenMethod? {
@@ -414,8 +389,14 @@ extension MenuBarItemManager {
             failureLedger.recordSuccess(for: pressTarget)
             opened = .revealAndPress
         } else if methods.contains(.revealAndClick) {
+            // A click on another display's bar makes it active; the repair pass must not read that as a topology change.
+            if displayID != nil {
+                barSettling.note(.thawPressFlipsDisplay)
+            }
             do {
-                let reaction = try await click(item: pressTarget ?? item, with: mouseButton, requireObservedReaction: true, pressFirst: false)
+                let reaction = try await ClickAim.$barDisplay.withValue(displayID) {
+                    try await click(item: pressTarget ?? item, with: mouseButton, requireObservedReaction: true, pressFirst: false)
+                }
                 opened = reaction.didReact ? .revealAndClick : nil
             } catch {
                 MenuBarItemManager.diagLog.error(
