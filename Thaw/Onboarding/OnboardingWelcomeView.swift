@@ -34,6 +34,7 @@ struct OnboardingWelcomeView: View {
                 NSApp.terminate(nil)
             }
         }
+        .onboardingPageMargins()
     }
 
     @ViewBuilder
@@ -55,7 +56,7 @@ struct OnboardingWelcomeView: View {
     }
 }
 
-/// The terms line from under the website's headline, shared by the welcome and the access screen.
+/// The terms line from under the website's headline.
 struct OnboardingTermsLine: View {
     var body: some View {
         Text("Free under GPL-3.0, with no tracking and no account.")

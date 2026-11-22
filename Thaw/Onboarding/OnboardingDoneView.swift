@@ -42,6 +42,7 @@ struct OnboardingDoneView: View {
         } exit: {
             EmptyView()
         }
+        .onboardingPageMargins()
     }
 
     private var howItWorks: some View {

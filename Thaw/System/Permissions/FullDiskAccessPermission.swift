@@ -35,9 +35,7 @@ final class FullDiskAccessPermission: Permission {
                 String(localized: "macOS keeps that layout in one protected file (~/Library/Group Containers/com.apple.MenuBar). \(Constants.displayName) reads it to place items and writes it only when you reorder."),
                 String(localized: "Choosing that file gives \(Constants.displayName) access to it alone. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
             ],
-            shortDetails: [
-                String(localized: "\(Constants.displayName) puts items in place by updating macOS's saved menu bar layout. It touches only that one file. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
-            ],
+            summary: String(localized: "Put items in their sections and order. In the file window that opens, choose the file it names."),
             isRequired: true,
             settingsURL: Self.settingsPane,
             check: {
@@ -71,9 +69,7 @@ final class ControlCenterAppListPermission: Permission {
                 String(localized: "Lets \(Constants.displayName) keep Live Activities and the camera indicator on the menu bar while apps are hidden."),
                 String(localized: "It also stops hidden items from flashing when Notification Center opens. Choosing the file gives \(Constants.displayName) access to it alone. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
             ],
-            shortDetails: [
-                String(localized: "Keeps Live Activities and the camera indicator visible while apps are hidden, and helps with hidden items flashing when Notification Center opens. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
-            ],
+            summary: String(localized: "Keep Live Activities and the camera indicator visible while apps are hidden."),
             isRequired: false,
             settingsURL: nil,
             check: {

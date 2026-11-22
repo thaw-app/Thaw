@@ -23,7 +23,7 @@ struct PermissionRequestTests {
 
     private func makePermission(
         stub: Stub,
-        shortDetails: [String]? = nil,
+        summary: String? = nil,
         isRequired: Bool = true,
         asyncCheck: Bool = false,
         reply: (granted: Bool, prompted: Bool) = (false, true)
@@ -33,7 +33,7 @@ struct PermissionRequestTests {
             iconName: "star",
             iconColor: .orange,
             details: ["Long detail"],
-            shortDetails: shortDetails,
+            summary: summary,
             isRequired: isRequired,
             // Nil, so a request that falls back to System Settings opens nothing.
             settingsURL: nil,
@@ -48,6 +48,20 @@ struct PermissionRequestTests {
         )
         permission.onChange = { stub.changes += 1 }
         return permission
+    }
+
+    @Test("Waiting for a grant ends when the poll gives up")
+    func waitingEndsWithBudget() {
+        let stub = Stub()
+        let permission = makePermission(stub: stub)
+        defer { permission.stopCheck() }
+        permission.performRequest()
+        #expect(permission.isWaitingForGrant)
+        for _ in 0 ..< 10 {
+            permission.handlePollTick()
+        }
+        #expect(!permission.isPolling)
+        #expect(!permission.isWaitingForGrant)
     }
 
     @Test("A granted request publishes the grant and stops polling")
@@ -127,11 +141,11 @@ struct PermissionRequestTests {
         #expect(permission.hasPermission)
     }
 
-    @Test("Onboarding uses the short copy when there is one")
-    func onboardingCopy() {
+    @Test("The summary falls back to the first detail")
+    func summaryCopy() {
         let stub = Stub()
-        #expect(makePermission(stub: stub).onboardingDetails == ["Long detail"])
-        #expect(makePermission(stub: stub, shortDetails: ["Short"]).onboardingDetails == ["Short"])
+        #expect(makePermission(stub: stub).summary == "Long detail")
+        #expect(makePermission(stub: stub, summary: "Short").summary == "Short")
     }
 
     @Test("Stopping the check disarms the poll and opening a missing pane does nothing")
@@ -220,7 +234,7 @@ struct AppPermissionsTests {
         for permission in permissions.allPermissions {
             #expect(!permission.title.isEmpty)
             #expect(!permission.details.isEmpty)
-            #expect(!permission.onboardingDetails.isEmpty)
+            #expect(!permission.summary.isEmpty)
         }
     }
 }

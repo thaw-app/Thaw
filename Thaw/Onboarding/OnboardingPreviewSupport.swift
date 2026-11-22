@@ -67,10 +67,10 @@
     }
 
     extension View {
-        /// The onboarding window's width, and its height growing with the content as the window does.
+        /// The onboarding window's width, and the page's own height, as the window sizes itself.
         func onboardingPreviewFrame() -> some View {
             frame(width: ThawOnboardingWindowMetrics.width)
-                .frame(minHeight: ThawOnboardingWindowMetrics.height)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

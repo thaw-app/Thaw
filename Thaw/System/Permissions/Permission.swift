@@ -30,6 +30,7 @@ class Permission: Identifiable {
             if hasPermission {
                 wasDeclined = false
                 awaitingPromptAnswer = false
+                isWaitingForGrant = false
             }
             onChange?()
         }
@@ -39,9 +40,13 @@ class Permission: Identifiable {
     /// Persists across ungranted requests until a grant; requests without a prompt open Settings directly and do not count.
     private(set) var wasDeclined = false
 
-    /// Set by a request that showed the system prompt, cleared by the poll
-    /// tick that turns it into wasDeclined or by the grant landing.
-    private var awaitingPromptAnswer = false
+    /// From a request that showed a prompt until the next poll tick declines it or the grant lands.
+    /// The permissions window shows it as waiting.
+    private(set) var awaitingPromptAnswer = false
+
+    /// From a request or a trip to System Settings until the grant lands or the poll gives up, so the
+    /// permissions window keeps waiting while the person is in System Settings after a declined prompt.
+    private(set) var isWaitingForGrant = false
 
     /// Notify owners only after a changed permission value is stored.
     @ObservationIgnored
@@ -55,13 +60,8 @@ class Permission: Identifiable {
 
     let details: [String]
 
-    /// Shorter copy for onboarding cards; falls back to details when unset.
-    let shortDetails: [String]?
-
-    /// Details shown in compact onboarding layouts.
-    var onboardingDetails: [String] {
-        shortDetails ?? details
-    }
+    /// One line for the permissions window's list; the first detail when none is given.
+    let summary: String
 
     /// Whether the app requires this permission to work.
     let isRequired: Bool
@@ -114,7 +114,7 @@ class Permission: Identifiable {
     /// - Parameters:
     ///   - title: The title of the permission.
     ///   - details: Descriptive details for the permission.
-    ///   - shortDetails: Optional shorter onboarding copy.
+    ///   - summary: The line under the title in the permissions window.
     ///   - isRequired: A Boolean value that indicates if the app can work without this permission.
     ///   - settingsURL: The URL of the settings pane to open.
     ///   - check: A function that checks permissions.
@@ -131,7 +131,7 @@ class Permission: Identifiable {
         iconName: String,
         iconColor: Color,
         details: [String],
-        shortDetails: [String]? = nil,
+        summary: String? = nil,
         isRequired: Bool,
         settingsURL: URL?,
         check: @escaping () -> Bool,
@@ -147,7 +147,7 @@ class Permission: Identifiable {
         self.iconName = iconName
         self.iconColor = iconColor
         self.details = details
-        self.shortDetails = shortDetails
+        self.summary = summary ?? details.first ?? title
         self.isRequired = isRequired
         self.settingsURL = settingsURL
         self.check = stub?.check ?? check
@@ -190,6 +190,7 @@ class Permission: Identifiable {
         if ungrantedTickCount >= ungrantedPollBudget {
             timerCancellable?.cancel()
             timerCancellable = nil
+            isWaitingForGrant = false
             // Keep the settings-return observer armed to catch grants after the polling budget expires.
         }
     }
@@ -215,6 +216,7 @@ class Permission: Identifiable {
     /// Arm preflight-only activation checks either way to recognize later grants without prompting.
     func performRequest() {
         configureCancellables()
+        isWaitingForGrant = !hasPermission
         if settingsURL != nil {
             armSettingsReturnObserver()
         }
@@ -243,6 +245,8 @@ class Permission: Identifiable {
     /// Never open Settings alongside a prompt or automatically after decline.
     func openSettingsPane() {
         guard let settingsURL else { return }
+        resumePollingIfNeeded()
+        isWaitingForGrant = !hasPermission
         openURL(settingsURL)
     }
 
@@ -278,6 +282,7 @@ class Permission: Identifiable {
 
     /// Stops running the permission check.
     func stopCheck() {
+        isWaitingForGrant = false
         timerCancellable?.cancel()
         timerCancellable = nil
         settingsReturnCancellable?.cancel()
@@ -300,10 +305,7 @@ final class AccessibilityPermission: Permission {
                 String(localized: "Move menu bar items to rearrange or hide them."),
                 String(localized: "Click menu bar items on your behalf, such as when using the search bar."),
             ],
-            shortDetails: [
-                String(localized: "Detect menu bar items on your Mac and where they're positioned."),
-                String(localized: "Move menu bar items to rearrange or hide them."),
-            ],
+            summary: String(localized: "See and move your menu bar items."),
             isRequired: true,
             // Ungranted AX trust checks always report prompted, so this URL is only for explicit Settings choices and return checks.
             settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"),
@@ -334,10 +336,7 @@ final class ScreenRecordingPermission: Permission {
                 String(localized: "Sample colors from the menu bar to adjust its tint and appearance."),
                 String(localized: "Find menu bar items visually when searching."),
             ],
-            shortDetails: [
-                String(localized: "Show live previews of your menu bar items."),
-                String(localized: "Sample colors from the menu bar to adjust tint."),
-            ],
+            summary: String(localized: "Show live previews of your menu bar items."),
             isRequired: false,
             settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"),
             check: {

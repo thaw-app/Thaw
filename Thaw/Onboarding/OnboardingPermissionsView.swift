@@ -9,16 +9,13 @@ import AppKit
 import SwiftUI
 import ThawUI
 
-/// Permission step for first-launch onboarding and for startup recovery when
-/// a grant went missing. Onboarding asks for one required grant at a time;
-/// recovery lists every permission and allows continuing without optional ones.
+/// The permissions window's list, for first-launch onboarding and for startup recovery when a grant went
+/// missing. Onboarding lists what Thaw needs; recovery adds the optional ones.
 struct ThawPermissionsView: View {
     enum Mode {
-        /// First launch: Accessibility only, one primary action, and a way
-        /// out for a window that has no close button.
+        /// First launch: the required permissions only.
         case onboarding
-        /// Startup recovery: every permission, with a limited-mode continue
-        /// when only the optional ones are missing.
+        /// Startup recovery: every permission, the optional ones in their own group.
         case recovery
     }
 
@@ -27,9 +24,6 @@ struct ThawPermissionsView: View {
     private let mode: Mode
     private let onContinue: () -> Void
     private let chooseReducedMode: (() -> Void)?
-
-    /// Whether Grant Access was pressed on this visit; gates the waiting row.
-    @State private var hasRequested = false
 
     /// - Parameters:
     ///   - mode: Defaults to Mode.recovery.
@@ -45,34 +39,49 @@ struct ThawPermissionsView: View {
         permissions.permissionsState != .missing
     }
 
-    private var allGranted: Bool {
-        permissions.permissionsState == .hasAll
+    private var headerMessage: LocalizedStringResource {
+        switch mode {
+        case .onboarding:
+            "\(Constants.displayName) needs these to see and arrange your menu bar items. Permission checks stay on your Mac."
+        case .recovery:
+            "\(Constants.displayName) needs the required ones to see and arrange your menu bar items. Permission checks stay on your Mac."
+        }
+    }
+
+    private var optionalPermissions: [Permission] {
+        permissions.allPermissions.filter { !$0.isRequired }
     }
 
     var body: some View {
-        // Centred between matched spacers, as the welcome screen is; the
-        // minimum spacing handles Larger Text with no spare height.
         VStack(spacing: 0) {
-            Spacer(minLength: ThawSpacing.section)
-            switch mode {
-            case .onboarding:
-                onboardingLayout
-            case .recovery:
-                recoveryLayout
-            }
-            Spacer(minLength: ThawSpacing.section)
-        }
-        .padding(.horizontal, ThawSpacing.section)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // The onboarding window has no close button, so offer a small way out.
-        .overlay(alignment: .bottomTrailing) {
-            HStack(spacing: 0) {
-                ReducedModeOfferButton(choose: chooseReducedMode)
-                if mode == .onboarding {
-                    quitButton
+            VStack(spacing: ThawSpacing.gutter) {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 64, height: 64)
+                    .accessibilityHidden(true)
+
+                OnboardingHeader(title: Text("Allow access"), message: Text(headerMessage))
+
+                lists
+
+                if !permissions.accessibility.hasPermission {
+                    Text(ReducedModeOfferButton.offer)
+                        .font(ThawType.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .transition(.opacity)
                 }
             }
+            .padding(ThawSpacing.section)
+            .frame(maxHeight: .infinity)
+
+            Divider()
+
+            footer
         }
+        .thawAnimation(ThawMotion.settle, value: permissions.accessibility.hasPermission)
         .background(VisualEffectBackground())
         .onAppear {
             // Preflight only: appearing must never raise a Screen Recording
@@ -81,194 +90,199 @@ struct ThawPermissionsView: View {
         }
     }
 
-    // MARK: - Recovery
-
-    private var recoveryLayout: some View {
-        VStack(spacing: ThawSpacing.gutter) {
-            OnboardingHeader(
-                title: Text("Enable Permissions"),
-                message: Text("\(Constants.displayName) uses the permissions below to manage your menu bar. Permission checks happen on your Mac.")
-            )
-
-            // Two cards a row, as the bento lays out its cards: four across
-            // left each one too narrow for its details.
-            LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: ThawSpacing.inset, alignment: .top), count: 2),
-                spacing: ThawSpacing.inset
-            ) {
-                ForEach(permissions.allPermissions) { permission in
-                    PermissionCard(permission: permission)
-                }
+    @ViewBuilder
+    private var lists: some View {
+        switch mode {
+        case .onboarding:
+            PermissionList(permissions: permissions.requiredPermissions)
+        case .recovery:
+            VStack(alignment: .leading, spacing: ThawSpacing.compact) {
+                groupTitle("Required")
+                PermissionList(permissions: permissions.requiredPermissions)
+                groupTitle("Optional")
+                    .padding(.top, ThawSpacing.base)
+                PermissionList(permissions: optionalPermissions)
             }
-            .frame(maxWidth: 620)
+        }
+    }
 
-            OnboardingTermsLine()
+    private func groupTitle(_ title: LocalizedStringResource) -> some View {
+        Text(title)
+            .font(ThawType.sublabel.weight(.medium))
+            .foregroundStyle(.secondary)
+            .padding(.leading, ThawSpacing.inset)
+            .accessibilityAddTraits(.isHeader)
+    }
 
-            VStack(spacing: ThawSpacing.base) {
-                OnboardingPrimaryButton {
-                    Task {
-                        await permissions.refreshPermissionsState()
-                        onContinue()
-                    }
-                } label: {
-                    Text(requiredGranted && !allGranted ? "Continue Without Screen Recording" : "Continue")
-                }
+    private var footer: some View {
+        HStack(spacing: ThawSpacing.base) {
+            // The window has no close button while access is missing.
+            Button("Quit \(Constants.displayName)") {
+                NSApp.terminate(nil)
+            }
+            .keyboardShortcut("q")
+            .help("Quit \(Constants.displayName) without granting access")
+
+            Spacer(minLength: ThawSpacing.base)
+
+            if !permissions.accessibility.hasPermission {
+                ReducedModeOfferButton(choose: chooseReducedMode)
+            }
+
+            Button("Continue", action: finish)
+                .buttonStyle(.thawProminent)
+                .keyboardShortcut(.defaultAction)
                 .disabled(!requiredGranted)
-
-                Text(RequiredPermissionsNotice.text(for: permissions))
-                    .font(ThawType.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .opacity(requiredGranted ? 0 : 1)
-            }
-            .padding(.top, ThawSpacing.base)
         }
+        .controlSize(.large)
+        .padding(.horizontal, ThawSpacing.section)
+        .padding(.vertical, ThawSpacing.gutter)
     }
 
-    // MARK: - Onboarding
-
-    private var onboardingLayout: some View {
-        VStack(spacing: ThawSpacing.gutter) {
-            OnboardingHeader(title: Text("Allow access"), message: Text(onboardingHeaderBody))
-
-            // The page's primary action is below, so no second Grant button.
-            PermissionCard(permission: focusPermission, showsRequestButton: false)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: 420)
-
-            OnboardingTermsLine()
-
-            onboardingActions(for: focusPermission)
-                .padding(.top, ThawSpacing.base)
-        }
-    }
-
-    /// The first required grant still missing, Accessibility first, so the
-    /// step never gates on a permission it did not ask for.
-    private var focusPermission: Permission {
-        permissions.requiredPermissions.first { !$0.hasPermission } ?? permissions.accessibility
-    }
-
-    /// Copy branches on this instead of interpolating a permission name, so
-    /// each sentence stays a literal the string catalog can extract.
-    private var focusIsAccessibility: Bool {
-        focusPermission === permissions.accessibility
-    }
-
-    private var onboardingHeaderBody: LocalizedStringResource {
-        if focusIsAccessibility {
-            return "\(Constants.displayName) needs Accessibility to see and move your menu bar items. Permission checks stay on your Mac."
-        }
-        return "\(Constants.displayName) needs Menu Bar Layout Access to put items in their sections and order. Next, a file window opens: select the file it names. \(Constants.displayName) can open only that file."
-    }
-
-    /// The page's action, its waiting state, and the System Settings route
-    /// after a declined prompt.
-    private func onboardingActions(for permission: Permission) -> some View {
-        VStack(spacing: ThawSpacing.base) {
-            if permission.wasDeclined {
-                SettingsWarningPill(
-                    title: focusIsAccessibility
-                        ? "Accessibility was not turned on"
-                        : "Menu Bar Layout Access was not granted",
-                    message: focusIsAccessibility
-                        ? "Open System Settings, go to Privacy & Security \(Constants.menuArrow) Accessibility, and turn on \(Constants.displayName)."
-                        : "Choose the file again, or give \(Constants.displayName) Full Disk Access in System Settings instead.",
-                    actionTitle: "Open System Settings",
-                    action: { permission.openSettingsPane() }
-                )
-                .frame(maxWidth: 520)
-                .transition(.opacity)
+    private func finish() {
+        switch mode {
+        case .onboarding:
+            // Preflight only: the async probe can raise a Screen Recording
+            // prompt this page never mentioned.
+            permissions.refreshPermissionsState()
+            onContinue()
+        case .recovery:
+            Task {
+                await permissions.refreshPermissionsState()
+                onContinue()
             }
-
-            OnboardingPrimaryButton {
-                if permission.hasPermission {
-                    // Preflight only: the async probe can raise a Screen
-                    // Recording prompt this page never mentioned.
-                    permissions.refreshPermissionsState()
-                    onContinue()
-                } else {
-                    hasRequested = true
-                    permission.performRequest()
-                }
-            } label: {
-                Text(onboardingActionTitle(for: permission))
-            }
-
-            if hasRequested, !permission.hasPermission {
-                HStack(spacing: ThawSpacing.compact) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text(focusIsAccessibility ? "Waiting for Accessibility…" : "Waiting for access…")
-                }
-                .font(ThawType.caption)
-                .foregroundStyle(.secondary)
-                .accessibilityElement(children: .combine)
-                .transition(.opacity)
-            }
-        }
-        .thawAnimation(ThawMotion.settle, value: permission.wasDeclined)
-        .thawAnimation(ThawMotion.settle, value: permission.hasPermission)
-        .thawAnimation(ThawMotion.settle, value: hasRequested)
-    }
-
-    private func onboardingActionTitle(for permission: Permission) -> LocalizedStringResource {
-        permission.hasPermission ? "Continue" : "Grant Access"
-    }
-
-    private var quitButton: some View {
-        OnboardingQuietButton(
-            title: Text("Quit \(Constants.displayName)"),
-            help: Text("Quit \(Constants.displayName) without granting access"),
-            shortcut: KeyboardShortcut("q")
-        ) {
-            NSApp.terminate(nil)
         }
     }
 }
 
-private struct PermissionCard: View {
+/// Permissions as rows in one rounded group, as a grouped form draws them.
+private struct PermissionList: View {
+    let permissions: [Permission]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(permissions.enumerated()), id: \.element.id) { index, permission in
+                if index > 0 {
+                    Divider()
+                        .padding(.leading, ThawSpacing.inset + 24 + ThawSpacing.inset)
+                }
+                PermissionRow(permission: permission)
+            }
+        }
+        .onboardingCard()
+    }
+}
+
+/// A permission's name, what it is for, and its Grant Access button or granted mark.
+private struct PermissionRow: View {
     let permission: Permission
 
-    /// Off in onboarding, where the page's primary action grants instead.
-    var showsRequestButton = true
-
-    /// True once the permission is granted while this card is on screen. The control can be
-    /// inserted by the grant itself, so the card, which was there before, is what notices it.
+    /// True once the permission is granted while this row is on screen, so the mark bounces only then.
     @State private var grantedWhileShown = false
 
     var body: some View {
-        OnboardingPermissionCard(surface: .glass, isGranted: permission.hasPermission) {
-            PermissionLabel(
-                permission: permission,
-                titleFont: ThawType.heading,
-                badgePlacement: .below
-            )
-        } details: {
-            VStack(alignment: .leading, spacing: 5) {
-                ForEach(permission.onboardingDetails, id: \.self) { detail in
-                    HStack(alignment: .top, spacing: ThawSpacing.compact) {
-                        // A 3pt bullet, not type: no text style is this small.
-                        Image(systemName: "circle.fill")
-                            .font(.system(size: 3))
-                            .foregroundStyle(.tertiary)
-                            .padding(.top, 5)
+        HStack(spacing: ThawSpacing.inset) {
+            Image(systemName: permission.iconName)
+                .font(ThawType.sidebarSymbol)
+                .foregroundStyle(permission.iconColor)
+                .frame(width: 24)
+                .accessibilityHidden(true)
 
-                        Text(detail)
-                            .font(ThawType.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+            VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
+                Text(permission.title)
+                    .font(ThawType.label)
+                Text(permission.rowSubtitle(grantedWhileShown: grantedWhileShown))
+                    .font(ThawType.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if permission.waitsAfterDecline {
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityLabel(Text("Waiting for access"))
+                    .transition(.opacity)
+            }
+
+            VStack(alignment: .trailing, spacing: ThawSpacing.compact) {
+                if permission.offersChoosingFileAgain {
+                    Button("Choose File…", action: permission.performRequest)
+                        .transition(.opacity)
                 }
+                control
             }
-        } control: {
-            if showsRequestButton || permission.hasPermission {
-                PermissionStatusControl(permission: permission, layout: .filled)
-                    .modifier(GrantedBounce(justGranted: grantedWhileShown))
-            }
+            .fixedSize()
         }
+        .padding(.horizontal, ThawSpacing.inset)
+        .padding(.vertical, ThawSpacing.row)
+        .accessibilityElement(children: .contain)
+        .thawAnimation(ThawMotion.settle, value: permission.awaitingPromptAnswer)
+        .thawAnimation(ThawMotion.settle, value: permission.offersChoosingFileAgain)
+        .thawAnimation(ThawMotion.settle, value: permission.waitsAfterDecline)
         .onChange(of: permission.hasPermission) { _, granted in
             grantedWhileShown = granted
+        }
+    }
+
+    /// Hidden rather than removed while waiting, so the row keeps its width and the granted bounce still fires.
+    private var control: some View {
+        let waiting = permission.awaitingPromptAnswer
+        return PermissionStatusControl(permission: permission)
+            .modifier(GrantedBounce(justGranted: grantedWhileShown))
+            .opacity(waiting ? 0 : 1)
+            .allowsHitTesting(!waiting)
+            .accessibilityHidden(waiting)
+            .overlay(alignment: .trailing) {
+                if waiting {
+                    HStack(spacing: ThawSpacing.compact) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Waiting…")
+                            .font(ThawType.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .fixedSize()
+                    .accessibilityElement(children: .combine)
+                    .transition(.opacity)
+                }
+            }
+    }
+}
+
+// MARK: - Row copy
+
+extension Permission {
+    /// The picked-file grants, which can need a relaunch and keep the file panel as the narrower route.
+    private var opensFilePanel: Bool {
+        self is FullDiskAccessPermission || self is ControlCenterAppListPermission
+    }
+
+    /// After a declined file panel the request control opens System Settings, so the row keeps the panel too.
+    var offersChoosingFileAgain: Bool {
+        opensFilePanel && wasDeclined && hasSettingsPane && !hasPermission
+    }
+
+    /// A declined prompt sends the person to System Settings, so the row keeps waiting beside Open System Settings.
+    /// A dismissed file panel is a plain no, and the row offers the file again instead.
+    var waitsAfterDecline: Bool {
+        isWaitingForGrant && wasDeclined && !awaitingPromptAnswer && hasSettingsPane && !offersChoosingFileAgain
+    }
+
+    /// The line under the row's title: what to turn on after a decline, or the relaunch note for a file granted here.
+    func rowSubtitle(grantedWhileShown: Bool) -> String {
+        if hasPermission {
+            guard grantedWhileShown, opensFilePanel else { return summary }
+            return String(localized: "You may need to quit and reopen \(Constants.displayName) before it takes effect.")
+        }
+        guard wasDeclined else { return summary }
+        return switch self {
+        case is AccessibilityPermission:
+            String(localized: "Turn on \(Constants.displayName) in Privacy & Security \(Constants.menuArrow) Accessibility.")
+        case is FullDiskAccessPermission:
+            String(localized: "Choose the file again, or turn on Full Disk Access for \(Constants.displayName) instead.")
+        default:
+            summary
         }
     }
 }
@@ -301,7 +315,7 @@ private struct PermissionCard: View {
         PermissionsPreview(mode: .onboarding, permissions: OnboardingPreview.permissions(answer: .declines))
     }
 
-    #Preview("Access, Menu Bar Layout Access next") {
+    #Preview("Access, Accessibility granted") {
         PermissionsPreview(mode: .onboarding, permissions: OnboardingPreview.permissions(granted: [.accessibility]))
     }
 

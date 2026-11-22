@@ -15,7 +15,10 @@ import ThawUI
 @MainActor
 @Suite("Onboarding screens render", .serialized, .scratchDefaults)
 struct OnboardingViewRenderTests {
-    private static let windowSize = CGSize(width: 680, height: 680)
+    private static let windowSize = CGSize(
+        width: ThawOnboardingWindowMetrics.width,
+        height: 640
+    )
 
     private func render(_ view: some View, size: CGSize = windowSize) throws -> (OffscreenRender<AnyView>, Data) {
         let render = OffscreenRender(AnyView(view.frame(width: size.width, height: size.height)), size: size)

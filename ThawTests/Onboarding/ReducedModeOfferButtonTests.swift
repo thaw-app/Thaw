@@ -12,14 +12,27 @@ import Testing
 
 /// What declining Accessibility costs was only in a tooltip under a caption-sized button.
 @MainActor
-@Suite("Reduced mode offer", .scratchDefaults)
+@Suite("Reduced mode offer", .serialized, .scratchDefaults)
 struct ReducedModeOfferButtonTests {
-    @Test("The consequence is visible text next to the button")
-    func consequenceIsVisible() {
-        let consequence = String(localized: ReducedModeOfferButton.consequence)
-        #expect(consequence.contains(Constants.displayName))
-        let host = NSHostingView(rootView: ReducedModeOfferButton().environment(AppState()))
+    private func height(_ permissions: AppPermissions) -> CGFloat {
+        let view = ThawPermissionsView(mode: .onboarding, chooseReducedMode: {}, onContinue: {})
+            .frame(width: ThawOnboardingWindowMetrics.width)
+            .environment(permissions)
+            .environment(AppState())
+        let host = NSHostingView(rootView: view)
         host.layoutSubtreeIfNeeded()
-        #expect(host.fittingSize.height > 30, "the button and a line of text")
+        return host.fittingSize.height
+    }
+
+    @Test("The consequence is visible text, shown only while Accessibility is missing")
+    func consequenceIsVisible() {
+        #expect(String(localized: ReducedModeOfferButton.offer).contains(Constants.displayName))
+        let missing = OnboardingPreview.permissions()
+        let granted = OnboardingPreview.permissions(granted: [.accessibility])
+        defer {
+            missing.stopAllChecks()
+            granted.stopAllChecks()
+        }
+        #expect(height(missing) > height(granted) + 10, "a line of text above the footer")
     }
 }
