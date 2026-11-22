@@ -14,6 +14,10 @@ extension AppState {
     func showsInSettingsProcess(_ id: ThawWindowIdentifier, isOpenHere: Bool) -> Bool {
         guard !isOpenHere, let pane = settingsProcessPane(for: id) else { return false }
         let shown = settingsProcessHost.show(pane: pane, simpleMode: settings.general.simpleMode)
+        if shown {
+            // Callers make the app regular for its window first; the settings process has its own Dock icon.
+            restoreAccessoryPolicyIfUnused()
+        }
         if shown, id == .permissions {
             // The target tells the process to replay the welcome.
             replayRequested = false
