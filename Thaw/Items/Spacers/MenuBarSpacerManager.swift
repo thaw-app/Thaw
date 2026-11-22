@@ -86,8 +86,8 @@ final class MenuBarSpacerManager {
     @ObservationIgnored private var pendingWidthUndo: (id: UUID, undoManager: ObjectIdentifier, at: Date)?
 
     private var statusItems: [UUID: NSStatusItem] = [:]
-    /// The spacer state each live status item was last configured with.
-    private var applied: [UUID: MenuBarSpacer] = [:]
+    /// The spacer state and spacing padding each live status item was last configured with.
+    private var applied: [UUID: (spacer: MenuBarSpacer, padding: CGFloat)] = [:]
 
     func performSetup(with _: AppState) {
         loadInitialState()
@@ -237,6 +237,18 @@ final class MenuBarSpacerManager {
         }
     }
 
+    /// Redraws the image only when the spacer changed, and resizes it when the spacer or the padding did.
+    private func refresh(_ item: NSStatusItem, for spacer: MenuBarSpacer, padding: CGFloat) {
+        let last = applied[spacer.id]
+        if last?.spacer != spacer {
+            item.button?.image = Self.spacerImage(width: spacer.width, color: spacer.color)
+        }
+        if last?.spacer != spacer || last?.padding != padding {
+            item.length = OwnStatusItemSpacing.padded(length: spacer.width, by: padding)
+        }
+        applied[spacer.id] = (spacer, padding)
+    }
+
     private func reconcileStatusItems() {
         // Drop items whose spacer is gone, and clean up the autosave litter
         // so removed spacers can't influence future layout.
@@ -252,13 +264,11 @@ final class MenuBarSpacerManager {
             diagLog.info("Removed spacer \(id)")
         }
 
+        // Thaw isn't relaunched when the menu bar spacing changes, so an item can carry an old padding.
+        let padding = OwnStatusItemSpacing.padding
         for spacer in spacers {
             if let item = statusItems[spacer.id] {
-                if applied[spacer.id] != spacer {
-                    item.length = OwnStatusItemSpacing.padded(length: spacer.width)
-                    item.button?.image = Self.spacerImage(width: spacer.width, color: spacer.color)
-                    applied[spacer.id] = spacer
-                }
+                refresh(item, for: spacer, padding: padding)
                 continue
             }
 
@@ -283,7 +293,7 @@ final class MenuBarSpacerManager {
             UserDefaults.standard.set(true, forKey: "NSStatusItem Visible \(name)")
             UserDefaults.standard.set(true, forKey: "NSStatusItem VisibleCC \(name)")
 
-            let item = NSStatusBar.system.statusItem(withLength: OwnStatusItemSpacing.padded(length: spacer.width))
+            let item = NSStatusBar.system.statusItem(withLength: OwnStatusItemSpacing.padded(length: spacer.width, by: padding))
             item.autosaveName = name
             item.button?.image = Self.spacerImage(width: spacer.width, color: spacer.color)
             item.button?.imageScaling = .scaleNone
@@ -293,7 +303,7 @@ final class MenuBarSpacerManager {
             statusItems[spacer.id] = item
             // Retry delayed button-window creation; its title prevents generic "Item-0" cache identities.
             assertWindowTitle(for: spacer.id, attempt: 0)
-            applied[spacer.id] = spacer
+            applied[spacer.id] = (spacer, padding)
             diagLog.info("Created spacer \(spacer.id), width=\(Int(spacer.width))pt")
         }
     }

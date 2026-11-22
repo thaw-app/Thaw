@@ -166,6 +166,7 @@ final class OverflowSpacer {
         }
 
         let spacerImage = Self.spacerImage(width: width)
+        let length = OwnStatusItemSpacing.padded(length: width)
 
         if statusItem == nil {
             // Park it just left of the Thaw icon (larger position = further
@@ -177,7 +178,7 @@ final class OverflowSpacer {
             // there keeps the item off the bar, so assert both keys.
             UserDefaults.standard.set(true, forKey: "NSStatusItem Visible \(Self.spacerAutosaveName)")
             UserDefaults.standard.set(true, forKey: "NSStatusItem VisibleCC \(Self.spacerAutosaveName)")
-            let item = NSStatusBar.system.statusItem(withLength: OwnStatusItemSpacing.padded(length: width))
+            let item = NSStatusBar.system.statusItem(withLength: length)
             item.autosaveName = Self.spacerAutosaveName
             // A contentless button composites as nothing on macOS 27.
             item.button?.image = spacerImage
@@ -188,8 +189,8 @@ final class OverflowSpacer {
             diagLog.notice(
                 "spacer created, width=\(Int(width))pt, parked left of Thaw icon (position \(Int(thawIconPosition + 1)))"
             )
-        } else if statusItem?.length != width {
-            statusItem?.length = OwnStatusItemSpacing.padded(length: width)
+        } else if statusItem?.length != length {
+            statusItem?.length = length
             statusItem?.button?.image = spacerImage
             diagLog.notice("spacer resized, width=\(Int(width))pt")
         } else {

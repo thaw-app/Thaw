@@ -87,6 +87,11 @@ enum OwnStatusItemSpacing {
         }
     }
 
-    /// Each image's padded copy, kept while the image lives, so redrawing an item assigns the same object.
-    private static let paddedImages = NSMapTable<NSImage, Padded>.weakToStrongObjects()
+    /// Each image's padded copy, so redrawing an item assigns the same object. Bounded rather than weak-keyed:
+    /// a padded copy draws from its source image, so a weak key would never be released.
+    private static let paddedImages: NSCache<NSImage, Padded> = {
+        let cache = NSCache<NSImage, Padded>()
+        cache.countLimit = 64
+        return cache
+    }()
 }
