@@ -32,11 +32,18 @@ nonisolated enum ConcealedItemOpenMethod: String, CaseIterable, Sendable {
     /// through to the real click: a press that worked before and isn't seen this time leaves
     /// the item shown to be clicked. Right clicks skip press, which opens the default action;
     /// showInMenuBar reveals first.
+    ///
+    /// A press opens the menu on the active menu bar, so an item opened from another display
+    /// takes the real click on that display's bar first and keeps its in-place method as a fallback.
     static func openAttempts(
         for mouseButton: CGMouseButton,
         learned: ConcealedItemOpenMethod?,
-        showInMenuBar: Bool = false
+        showInMenuBar: Bool = false,
+        onAnotherDisplay: Bool = false
     ) -> [[ConcealedItemOpenMethod]] {
+        if onAnotherDisplay {
+            return [[.revealAndClick], [mouseButton == .right ? .showMenuInPlace : .pressInPlace]]
+        }
         if mouseButton == .right {
             return showInMenuBar ? [[.revealAndClick]] : [[.showMenuInPlace], [.revealAndClick]]
         }

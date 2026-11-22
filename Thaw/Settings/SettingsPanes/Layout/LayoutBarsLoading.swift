@@ -169,14 +169,6 @@ struct LayoutBarsLoading: ViewModifier {
         await itemManager.cacheItemsRegardless(skipRecentMoveCheck: true)
         guard !Task.isCancelled else { return }
 
-        // Fill gaps only so opening Layout cannot overwrite settled
-        // Hidden glyphs with native overflow chevron («») crops.
-        await appState.imageCache.prewarmConcealedImages(
-            sections: [.hidden, .alwaysHidden],
-            onlyMissingImages: true
-        )
-        guard !Task.isCancelled else { return }
-
         await appState.imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
     }
 }

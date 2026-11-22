@@ -1427,11 +1427,11 @@ final class MenuBarItemManager {
         }
         registered.insert(AnyCancellable { activateTask.cancel() })
 
-        // Gap-fill the layout pane's images whenever it comes on screen:
+        // Refresh the layout pane's images whenever it comes on screen:
         // either the selection changes to it, or Settings reopens with it
         // already selected. AppNavigationState is @Observable, so both
-        // flips arrive through one Observations sequence. Gap-fill only,
-        // a forced full recapture can replace settled glyphs with native
+        // flips arrive through one Observations sequence. Only a warranted
+        // recapture: a forced full one can replace settled glyphs with native
         // overflow chevron crops.
         navigationStateObservationTask?.cancel()
         navigationStateObservationTask = Task { @MainActor [weak self, navigationState] in
@@ -1444,10 +1444,6 @@ final class MenuBarItemManager {
                     continue
                 }
                 guard let imageCache = self.appState?.imageCache else { continue }
-                await imageCache.prewarmConcealedImages(
-                    sections: MenuBarSection.Name.allCases,
-                    onlyMissingImages: true
-                )
                 await imageCache.recaptureIfWarranted(sections: MenuBarSection.Name.allCases)
             }
         }

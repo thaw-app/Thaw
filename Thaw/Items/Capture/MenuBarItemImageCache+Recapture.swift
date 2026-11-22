@@ -561,8 +561,6 @@ extension MenuBarItemImageCache {
             }
         }
 
-        await appState.menuBarManager.revealCover.prepare()
-        defer { appState.menuBarManager.revealCover.dropUnusedPictures() }
         let batchSize = Self.revealBatchSize(
             hasNotch: NSScreen.screen(for: displayID)?.hasNotch ?? false
         )
@@ -579,9 +577,6 @@ extension MenuBarItemImageCache {
                 },
                 renderSettle: { await RevealCaptureSession.settleRevealedPixels($0, displayID: displayID, reader: LiveMenuBarCaptureReader()) },
                 reader: LiveMenuBarCaptureReader(),
-                // Captures never see Thaw's own windows, so the cover hides the reveal from the user only.
-                cover: { appState.menuBarManager.revealCover.show(lifetime: Constants.MenuBarTuning.revealCaptureCoverLifetime) },
-                uncover: { appState.menuBarManager.revealCover.hide() },
                 mayReveal: { ConcealedPrewarmGate.mayReveal(for: appState) }
             )
         )
@@ -699,18 +694,7 @@ extension MenuBarItemImageCache {
         return true
     }
 
-    /// Briefly reveals concealed macOS 27 sections so their live glyphs can be
-    /// captured before the assertion hides them again.
-    @MainActor
-    func prewarmConcealedImages(
-        sections: [MenuBarSection.Name],
-        onlyMissingImages: Bool = true,
-        tally: RequestedCaptureTally? = nil
-    ) async {
-        await concealedPrewarm().capture(sections: sections, onlyMissingImages: onlyMissingImages, tally: tally)
-    }
-
-    /// The prewarm over this cache and the live bar.
+    /// The prewarm over this cache and the live bar. Only Capture Hidden Items runs it.
     func concealedPrewarm() -> RevealCapturePrewarm {
         RevealCapturePrewarm(
             slot: prewarmSlot,
@@ -721,7 +705,6 @@ extension MenuBarItemImageCache {
                 self.appState?.itemManager.itemDisplayID ?? Bridging.activeMenuBarDisplayID
             },
             isNativeOverflowActive: { self.appState?.menuBarManager.sectionController.isNativeOverflowActive(on: $0) == true },
-            allowsCaptureReveal: { self.appState?.menuBarManager.nativeAppHidingExperiment.allowsCaptureReveal == true },
             cachedImage: { self.image(for: $0) },
             wouldAttemptCapture: { self.wouldAttemptCapture(of: $0) },
             forgetFailures: { self.clearCaptureFailures(tags: $0) },
@@ -938,11 +921,6 @@ extension MenuBarItemImageCache {
         currentUpdateTask?.cancel()
         currentUpdateTask = Task { [weak self] in
             guard let self else { return }
-            await self.prewarmConcealedImages(
-                sections: [.hidden, .alwaysHidden],
-                onlyMissingImages: true
-            )
-            guard !Task.isCancelled else { return }
             await self.recaptureNow(sections: MenuBarSection.Name.allCases)
             self.saveToDisk()
         }

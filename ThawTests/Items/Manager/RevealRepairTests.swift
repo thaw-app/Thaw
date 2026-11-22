@@ -131,12 +131,4 @@ struct NativeRevealStartTests {
 
         #expect(experiment.switchedOnForReveal.isEmpty)
     }
-
-    @Test("While Native isn't running, nothing blocks a reveal for a picture")
-    func inactiveNativeAllowsCaptureReveal() {
-        let experiment = NativeAppHidingExperiment()
-
-        #expect(!experiment.isActive)
-        #expect(!experiment.blocksCaptureReveal)
-    }
 }

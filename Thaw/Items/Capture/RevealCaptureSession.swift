@@ -22,15 +22,6 @@ struct RevealCaptureSession {
         /// Says which of the items, by position, were still changing at the end of it.
         let renderSettle: @MainActor ([MenuBarItem]) async -> PixelSettle
         let reader: any MenuBarCaptureReading
-        /// Raised before a batch is revealed and lowered after it is concealed,
-        /// so the user sees the bar as it was while the capture sees the reveal.
-        var cover: @MainActor () -> Void = {
-            // No cover unless the caller supplies one, as in tests.
-        }
-
-        var uncover: @MainActor () -> Void = {
-            // Nothing to take down when no cover was raised.
-        }
 
         /// Asked right before each batch's reveal, since the hiding method can
         /// change while a pass is suspended between batches.
@@ -63,7 +54,6 @@ struct RevealCaptureSession {
             await waitWhileMoving()
             guard !Task.isCancelled, !isLocked("revealing capture batch"), sources.mayReveal() else { return reached }
 
-            sources.cover()
             for item in batch {
                 reveal(item.uniqueIdentifier)
             }
@@ -71,7 +61,6 @@ struct RevealCaptureSession {
                 for item in batch {
                     conceal(item.uniqueIdentifier)
                 }
-                sources.uncover()
             }
 
             let firstRead = await sources.settledItems(batch)
