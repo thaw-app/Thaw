@@ -253,37 +253,24 @@ private struct PermissionRow: View {
 // MARK: - Row copy
 
 extension Permission {
-    /// The picked-file grants, which can need a relaunch and keep the file panel as the narrower route.
-    private var opensFilePanel: Bool {
-        self is FullDiskAccessPermission || self is ControlCenterAppListPermission
-    }
-
     /// After a declined file panel the request control opens System Settings, so the row keeps the panel too.
     var offersChoosingFileAgain: Bool {
-        opensFilePanel && wasDeclined && hasSettingsPane && !hasPermission
+        requestOpensFilePanel && wasDeclined && hasSettingsPane && !hasPermission
     }
 
     /// A declined prompt sends the person to System Settings, so the row keeps waiting beside Open System Settings.
     /// A dismissed file panel is a plain no, and the row offers the file again instead.
     var waitsAfterDecline: Bool {
-        isWaitingForGrant && wasDeclined && !awaitingPromptAnswer && hasSettingsPane && !offersChoosingFileAgain
+        requestState == .declined(waiting: true) && hasSettingsPane && !offersChoosingFileAgain
     }
 
     /// The line under the row's title: what to turn on after a decline, or the relaunch note for a file granted here.
     func rowSubtitle(grantedWhileShown: Bool) -> String {
         if hasPermission {
-            guard grantedWhileShown, opensFilePanel else { return summary }
+            guard grantedWhileShown, requestOpensFilePanel else { return summary }
             return String(localized: "You may need to quit and reopen \(Constants.displayName) before it takes effect.")
         }
-        guard wasDeclined else { return summary }
-        return switch self {
-        case is AccessibilityPermission:
-            String(localized: "Turn on \(Constants.displayName) in Privacy & Security \(Constants.menuArrow) Accessibility.")
-        case is FullDiskAccessPermission:
-            String(localized: "Choose the file again, or turn on Full Disk Access for \(Constants.displayName) instead.")
-        default:
-            summary
-        }
+        return wasDeclined ? declinedHint ?? summary : summary
     }
 }
 

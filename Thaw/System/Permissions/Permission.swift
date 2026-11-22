@@ -28,25 +28,51 @@ class Permission: Identifiable {
             // actual transition should notify the owner.
             guard oldValue != hasPermission else { return }
             if hasPermission {
-                wasDeclined = false
-                awaitingPromptAnswer = false
-                isWaitingForGrant = false
+                requestState = .idle
             }
             onChange?()
         }
     }
 
+    /// Where the latest request stands, from the press until the grant lands.
+    enum RequestState: Equatable {
+        /// Nothing asked yet, or the grant landed.
+        case idle
+        /// A prompt or file panel is up, and the next poll tick turns it into a decline if still ungranted.
+        case awaitingAnswer(afterDecline: Bool)
+        /// No prompt to answer: System Settings is open, and the poll watches for the grant.
+        case waiting
+        /// A shown prompt went ungranted. Waiting while the person may still grant it in System Settings.
+        case declined(waiting: Bool)
+    }
+
+    private(set) var requestState = RequestState.idle
+
     /// A shown prompt remained ungranted, so surfaces may offer System Settings instead of waiting.
     /// Persists across ungranted requests until a grant; requests without a prompt open Settings directly and do not count.
-    private(set) var wasDeclined = false
+    var wasDeclined: Bool {
+        if case .declined = requestState { return true }
+        return requestState == .awaitingAnswer(afterDecline: true)
+    }
 
-    /// From a request that showed a prompt until the next poll tick declines it or the grant lands.
     /// The permissions window shows it as waiting.
-    private(set) var awaitingPromptAnswer = false
+    var awaitingPromptAnswer: Bool {
+        if case .awaitingAnswer = requestState { true } else { false }
+    }
 
-    /// From a request or a trip to System Settings until the grant lands or the poll gives up, so the
-    /// permissions window keeps waiting while the person is in System Settings after a declined prompt.
-    private(set) var isWaitingForGrant = false
+    /// Until the grant lands or the poll gives up; the permissions window shows a spinner meanwhile.
+    var isWaitingForGrant: Bool {
+        switch requestState {
+        case .awaitingAnswer, .waiting, .declined(waiting: true): true
+        case .idle, .declined(waiting: false): false
+        }
+    }
+
+    /// The line the permissions window shows after a decline, or nil to keep the summary.
+    let declinedHint: String?
+
+    /// Whether the request is a file panel: a dismissal is a plain no, and granting can need a relaunch.
+    let requestOpensFilePanel: Bool
 
     /// Notify owners only after a changed permission value is stored.
     @ObservationIgnored
@@ -115,6 +141,8 @@ class Permission: Identifiable {
     ///   - title: The title of the permission.
     ///   - details: Descriptive details for the permission.
     ///   - summary: The line under the title in the permissions window.
+    ///   - declinedHint: The line that replaces the summary after a decline.
+    ///   - requestOpensFilePanel: Whether the request opens a file panel instead of a prompt.
     ///   - isRequired: A Boolean value that indicates if the app can work without this permission.
     ///   - settingsURL: The URL of the settings pane to open.
     ///   - check: A function that checks permissions.
@@ -132,6 +160,8 @@ class Permission: Identifiable {
         iconColor: Color,
         details: [String],
         summary: String? = nil,
+        declinedHint: String? = nil,
+        requestOpensFilePanel: Bool = false,
         isRequired: Bool,
         settingsURL: URL?,
         check: @escaping () -> Bool,
@@ -148,6 +178,8 @@ class Permission: Identifiable {
         self.iconColor = iconColor
         self.details = details
         self.summary = summary ?? details.first ?? title
+        self.declinedHint = declinedHint
+        self.requestOpensFilePanel = requestOpensFilePanel
         self.isRequired = isRequired
         self.settingsURL = settingsURL
         self.check = stub?.check ?? check
@@ -184,13 +216,12 @@ class Permission: Identifiable {
         }
         ungrantedTickCount += 1
         if awaitingPromptAnswer {
-            awaitingPromptAnswer = false
-            wasDeclined = true
+            requestState = .declined(waiting: true)
         }
         if ungrantedTickCount >= ungrantedPollBudget {
             timerCancellable?.cancel()
             timerCancellable = nil
-            isWaitingForGrant = false
+            stopWaiting()
             // Keep the settings-return observer armed to catch grants after the polling budget expires.
         }
     }
@@ -216,7 +247,7 @@ class Permission: Identifiable {
     /// Arm preflight-only activation checks either way to recognize later grants without prompting.
     func performRequest() {
         configureCancellables()
-        isWaitingForGrant = !hasPermission
+        beginWaiting()
         if settingsURL != nil {
             armSettingsReturnObserver()
         }
@@ -229,7 +260,7 @@ class Permission: Identifiable {
             }
             if prompted {
                 // Prompt requests return before the user's answer; defer the ungranted verdict to the next poll tick.
-                awaitingPromptAnswer = true
+                requestState = .awaitingAnswer(afterDecline: wasDeclined)
             } else {
                 openSettingsPane()
             }
@@ -246,8 +277,21 @@ class Permission: Identifiable {
     func openSettingsPane() {
         guard let settingsURL else { return }
         resumePollingIfNeeded()
-        isWaitingForGrant = !hasPermission
+        beginWaiting()
         openURL(settingsURL)
+    }
+
+    /// A decline stays a decline while waiting, so surfaces keep offering System Settings.
+    private func beginWaiting() {
+        guard !hasPermission else { return }
+        requestState = wasDeclined ? .declined(waiting: true) : .waiting
+    }
+
+    private func stopWaiting() {
+        requestState = switch requestState {
+        case .declined, .awaitingAnswer(afterDecline: true): .declined(waiting: false)
+        case .idle, .waiting, .awaitingAnswer(afterDecline: false): .idle
+        }
     }
 
     /// Re-checks (preflight only) whenever the app becomes active again, so
@@ -282,7 +326,7 @@ class Permission: Identifiable {
 
     /// Stops running the permission check.
     func stopCheck() {
-        isWaitingForGrant = false
+        stopWaiting()
         timerCancellable?.cancel()
         timerCancellable = nil
         settingsReturnCancellable?.cancel()
@@ -306,6 +350,7 @@ final class AccessibilityPermission: Permission {
                 String(localized: "Click menu bar items on your behalf, such as when using the search bar."),
             ],
             summary: String(localized: "See and move your menu bar items."),
+            declinedHint: String(localized: "Turn on \(Constants.displayName) in Privacy & Security \(Constants.menuArrow) Accessibility."),
             isRequired: true,
             // Ungranted AX trust checks always report prompted, so this URL is only for explicit Settings choices and return checks.
             settingsURL: URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"),

@@ -12,10 +12,6 @@ import Testing
 @MainActor
 @Suite("Permission rows")
 struct PermissionRowTests {
-    private final class PreviewToggle {
-        var isOn = false
-    }
-
     @Test("A request waits for its answer until the next check declines it")
     func waitsUntilDeclined() {
         let permissions = OnboardingPreview.permissions(answer: .declines)
@@ -31,11 +27,8 @@ struct PermissionRowTests {
 
     @Test("After a declined prompt the row keeps waiting until the grant lands")
     func waitsAfterDecline() {
-        let grant = PreviewToggle()
-        let accessibility = AccessibilityPermission(stub: PermissionStub(
-            check: { grant.isOn },
-            request: { completion in completion(false, true) }
-        ))
+        let grant = PreviewGrant()
+        let accessibility = AccessibilityPermission(stub: OnboardingPreview.stub(grant, .declines))
         defer { accessibility.stopCheck() }
         #expect(!accessibility.waitsAfterDecline)
         accessibility.performRequest()
@@ -43,7 +36,7 @@ struct PermissionRowTests {
         accessibility.handlePollTick()
         #expect(accessibility.wasDeclined)
         #expect(accessibility.waitsAfterDecline)
-        grant.isOn = true
+        grant.isGranted = true
         accessibility.handlePollTick()
         #expect(accessibility.hasPermission)
         #expect(!accessibility.isWaitingForGrant)

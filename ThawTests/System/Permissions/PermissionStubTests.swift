@@ -12,27 +12,13 @@ import Testing
 @MainActor
 @Suite("Permission stubs")
 struct PermissionStubTests {
-    private final class Grant {
-        var isGranted = false
-        var requests = 0
-    }
-
-    private func stub(_ grant: Grant, grants: Bool) -> PermissionStub {
-        PermissionStub(
-            check: { grant.isGranted },
-            request: { completion in
-                grant.requests += 1
-                if grants {
-                    grant.isGranted = true
-                }
-                completion(grants, !grants)
-            }
-        )
+    private func stub(_ grant: PreviewGrant, grants: Bool) -> PermissionStub {
+        OnboardingPreview.stub(grant, grants ? .grants : .declines)
     }
 
     @Test("A stubbed permission keeps its copy and answers only from the stub")
     func stubReplacesSystemCalls() async {
-        let grant = Grant()
+        let grant = PreviewGrant()
         let permission = ScreenRecordingPermission(stub: stub(grant, grants: true))
         defer { permission.stopCheck() }
         #expect(permission.title == String(localized: "Screen Recording"))
@@ -47,9 +33,8 @@ struct PermissionStubTests {
 
     @Test("App permissions built from stubs report the stubs' grants")
     func appPermissionsFromStubs() {
-        let granted = Grant()
-        granted.isGranted = true
-        let missing = Grant()
+        let granted = PreviewGrant(true)
+        let missing = PreviewGrant()
         let permissions = AppPermissions(
             accessibility: AccessibilityPermission(stub: stub(granted, grants: false)),
             screenRecording: ScreenRecordingPermission(stub: stub(missing, grants: false)),

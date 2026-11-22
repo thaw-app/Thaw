@@ -36,6 +36,8 @@ final class FullDiskAccessPermission: Permission {
                 String(localized: "Choosing that file gives \(Constants.displayName) access to it alone. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
             ],
             summary: String(localized: "Put items in their sections and order. In the file window that opens, choose the file it names."),
+            declinedHint: String(localized: "Choose the file again, or turn on Full Disk Access for \(Constants.displayName) instead."),
+            requestOpensFilePanel: true,
             isRequired: true,
             settingsURL: Self.settingsPane,
             check: {
@@ -70,6 +72,7 @@ final class ControlCenterAppListPermission: Permission {
                 String(localized: "It also stops hidden items from flashing when Notification Center opens. Choosing the file gives \(Constants.displayName) access to it alone. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
             ],
             summary: String(localized: "Keep Live Activities and the camera indicator visible while apps are hidden."),
+            requestOpensFilePanel: true,
             isRequired: false,
             settingsURL: nil,
             check: {

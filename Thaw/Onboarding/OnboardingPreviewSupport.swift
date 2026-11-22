@@ -26,10 +26,10 @@
             answer: Answer = .grants
         ) -> AppPermissions {
             AppPermissions(
-                accessibility: AccessibilityPermission(stub: stub(granted.contains(.accessibility), answer)),
-                screenRecording: ScreenRecordingPermission(stub: stub(granted.contains(.screenRecording), answer)),
-                fullDiskAccess: FullDiskAccessPermission(stub: stub(granted.contains(.fullDiskAccess), answer)),
-                controlCenterAppList: ControlCenterAppListPermission(stub: stub(granted.contains(.controlCenterAppList), answer))
+                accessibility: AccessibilityPermission(stub: stub(PreviewGrant(granted.contains(.accessibility)), answer)),
+                screenRecording: ScreenRecordingPermission(stub: stub(PreviewGrant(granted.contains(.screenRecording)), answer)),
+                fullDiskAccess: FullDiskAccessPermission(stub: stub(PreviewGrant(granted.contains(.fullDiskAccess)), answer)),
+                controlCenterAppList: ControlCenterAppListPermission(stub: stub(PreviewGrant(granted.contains(.controlCenterAppList)), answer))
             )
         }
 
@@ -48,11 +48,12 @@
             LaunchAtLoginSetting(readStatus: { true }, writeStatus: { _ in /* Preview only. */ })
         }
 
-        private static func stub(_ isGranted: Bool, _ answer: Answer) -> PermissionStub {
-            let grant = PreviewGrant(isGranted: isGranted)
-            return PermissionStub(
+        /// A permission's calls answered from grant, which tests can turn on and whose requests they can count.
+        static func stub(_ grant: PreviewGrant, _ answer: Answer) -> PermissionStub {
+            PermissionStub(
                 check: { grant.isGranted },
                 request: { completion in
+                    grant.requests += 1
                     switch answer {
                     case .grants:
                         grant.isGranted = true
@@ -75,10 +76,11 @@
     }
 
     /// One stub's grant, which Grant Access can turn on.
-    private final class PreviewGrant {
+    final class PreviewGrant {
         var isGranted: Bool
+        var requests = 0
 
-        init(isGranted: Bool) {
+        init(_ isGranted: Bool = false) {
             self.isGranted = isGranted
         }
     }
