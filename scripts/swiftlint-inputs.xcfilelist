@@ -67,6 +67,7 @@ $(SRCROOT)/Thaw/MenuBar/IceBar/IceBarLayout.swift
 $(SRCROOT)/Thaw/MenuBar/IceBar/IceBarLocation.swift
 $(SRCROOT)/Thaw/MenuBar/IceBar/MenuBarItemIconFallback.swift
 $(SRCROOT)/Thaw/MenuBar/IceBar/ThawBarBorderShape.swift
+$(SRCROOT)/Thaw/MenuBar/IceBar/ThawBarOpeningCapture.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBar.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarArrangedView.swift
 $(SRCROOT)/Thaw/MenuBar/LayoutBar/LayoutBarContainer.swift
