@@ -8,9 +8,31 @@
 @testable import MenuBarModel
 import Testing
 
-@Suite(.timeLimit(.minutes(1)))
+@Suite("Shared inventory scan gate", .timeLimit(.minutes(1)))
 struct MenuBarInventoryScanGateTests {
-    @Test("Pre-request scans and scans missing a required owner cannot satisfy fresh geometry", arguments: [false, true], [MenuBarScanScope.knownOwners, .requestedOwners])
+    /// A gate whose discovery records owner 1, signals `started`, then blocks until `release` finishes.
+    /// Any other scope answers the first retained observation.
+    private func blockingDiscoveryGate(
+        started: AsyncStream<Void>.Continuation,
+        release: AsyncStream<Void>
+    ) -> MenuBarInventoryScanGate<String, String> {
+        MenuBarInventoryScanGate<String, String> { previous, scope, _ in
+            guard scope == .discovery else { return (previous.observations.first ?? "missing", previous) }
+            var state = previous
+            state.answer(1, ["known owner"], in: state.begin(owners: [1], priorityOwners: []))
+            started.yield(())
+            started.finish()
+            for await _ in release {
+                break
+            }
+            return (Task.isCancelled ? "cancelled" : "completed", state)
+        }
+    }
+
+    @Test(
+        "Pre-request scans and scans missing a required owner cannot satisfy fresh geometry",
+        arguments: [false, true], [MenuBarScanScope.knownOwners, .requestedOwners]
+    )
     func requestNeedsSuccessor(addsOwner: Bool, scope: MenuBarScanScope) async {
         let started = AsyncStream.makeStream(of: Void.self)
         let release = AsyncStream.makeStream(of: Void.self)
@@ -67,23 +89,14 @@ struct MenuBarInventoryScanGateTests {
         #expect(await background.value == true)
     }
 
-    @Test("Foreground geometry stops background discovery instead of waiting for empty apps", arguments: [MenuBarScanScope.knownOwners, .requestedOwners])
+    @Test(
+        "Foreground geometry stops background discovery, keeping its progress, instead of waiting for empty apps",
+        arguments: [MenuBarScanScope.knownOwners, .requestedOwners]
+    )
     func foregroundPreemptsDiscovery(scope: MenuBarScanScope) async {
         let started = AsyncStream.makeStream(of: Void.self)
         let release = AsyncStream.makeStream(of: Void.self)
-        let gate = MenuBarInventoryScanGate<String, String> { previous, scope, _ in
-            guard scope == .discovery else { return (previous.observations.first ?? "missing", previous) }
-            var state = previous
-            let pass = state.begin(owners: [1], priorityOwners: [])
-            state.didAttempt(owner: 1, generation: pass.generation)
-            state.record(["known owner"], owner: 1, generation: pass.generation)
-            started.continuation.yield(())
-            started.continuation.finish()
-            for await _ in release.stream {
-                break
-            }
-            return (Task.isCancelled ? "cancelled" : "completed", state)
-        }
+        let gate = blockingDiscoveryGate(started: started.continuation, release: release.stream)
         let background = Task { await gate.snapshot(freshOnly: false) }
         for await _ in started.stream {
             break
@@ -95,28 +108,15 @@ struct MenuBarInventoryScanGateTests {
             release.continuation.finish()
         }
         defer { watchdog.cancel() }
-        let foreground = await gate.snapshot(freshOnly: true, scope: scope)
-        #expect(foreground == "known owner", "Preemption must retain discovery progress")
-        #expect(await background.value == "cancelled", "Discovery should stop at its current owner")
+        #expect(await gate.snapshot(freshOnly: true, scope: scope) == "known owner")
+        #expect(await background.value == "cancelled")
     }
 
     @Test("A periodic reader waits for background discovery instead of cancelling it")
     func periodicReaderDoesNotPreemptDiscovery() async {
         let started = AsyncStream.makeStream(of: Void.self)
         let release = AsyncStream.makeStream(of: Void.self)
-        let gate = MenuBarInventoryScanGate<String, String> { previous, scope, _ in
-            guard scope == .discovery else { return (previous.observations.first ?? "missing", previous) }
-            var state = previous
-            let pass = state.begin(owners: [1], priorityOwners: [])
-            state.didAttempt(owner: 1, generation: pass.generation)
-            state.record(["known owner"], owner: 1, generation: pass.generation)
-            started.continuation.yield(())
-            started.continuation.finish()
-            for await _ in release.stream {
-                break
-            }
-            return (Task.isCancelled ? "cancelled" : "completed", state)
-        }
+        let gate = blockingDiscoveryGate(started: started.continuation, release: release.stream)
         let background = Task { await gate.snapshot(freshOnly: false) }
         for await _ in started.stream {
             break
@@ -129,6 +129,7 @@ struct MenuBarInventoryScanGateTests {
         try? await Task.sleep(for: .milliseconds(100))
         release.continuation.finish()
         #expect(await background.value == "completed")
-        #expect(await periodic.value == "known owner", "The reader still gets a walk of its own afterwards")
+        // The reader still gets a walk of its own afterwards.
+        #expect(await periodic.value == "known owner")
     }
 }

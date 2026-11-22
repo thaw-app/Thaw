@@ -1,5 +1,5 @@
 //
-//  MenuBarItemCacheCodingTests.swift
+//  MenuBarItemCacheTests.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
@@ -9,11 +9,11 @@ import Foundation
 @testable import MenuBarModel
 import Testing
 
-@Suite("Menu bar item cache coding")
-struct MenuBarItemCacheCodingTests {
-    private func item(_ title: String, windowID: UInt32, sourcePID: pid_t?) -> MenuBarItem {
+@Suite("Menu bar item cache")
+struct MenuBarItemCacheTests {
+    private func item(_ title: String, namespace: String = "com.example.app", windowID: UInt32, sourcePID: pid_t? = 1) -> MenuBarItem {
         MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.app"), title: title, windowID: windowID),
+            tag: MenuBarItemTag(namespace: .string(namespace), title: title, windowID: windowID),
             windowID: windowID,
             ownerPID: 7,
             sourcePID: sourcePID,
@@ -46,6 +46,20 @@ struct MenuBarItemCacheCodingTests {
         let decoded = try JSONDecoder().decode(MenuBarItemCache.self, from: JSONEncoder().encode(cache))
         #expect(decoded == cache)
         #expect(decoded.isEmpty)
-        #expect(decoded.displayID == nil)
+    }
+
+    @Test("A merge puts fresh items first and fills the gaps with cached items")
+    func mergesItems() {
+        let fresh = item("Fresh", namespace: "com.example.fresh", windowID: 3)
+        let cachedControl = MenuBarItem.fixture(MenuBarItemTag(namespace: .thaw, title: "Visible", windowID: 1), isOnScreen: false)
+        let cachedHidden = item("Hidden", namespace: "com.example.hidden", windowID: 2)
+        #expect(MenuBarItemCache.merging([fresh], withCachedItems: [cachedControl, cachedHidden]) == [fresh, cachedControl, cachedHidden])
+    }
+
+    @Test("A cached item with a churned window ID does not duplicate a fresh item")
+    func deduplicatesPersistentIdentities() {
+        let cached = item("Menu", windowID: 2)
+        let fresh = item("Menu", windowID: 99)
+        #expect(MenuBarItemCache.merging([fresh], withCachedItems: [cached]) == [fresh])
     }
 }
