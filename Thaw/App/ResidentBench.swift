@@ -7,10 +7,7 @@
 
 import Foundation
 
-/// Walks Thaw's own process through a scripted life and samples its physical footprint at each stage:
-/// started, after the first menu bar scan settles, after the Thaw Bar and search are each shown and
-/// closed three times, after Settings is opened on the Layout page and closed, after the image cache's
-/// idle trim and a relief sweep, and settled for a minute.
+/// Walks Thaw's own process through a scripted life and samples its physical footprint at each Stage.
 /// The live app supplies what it drives through Life; see ResidentBench+Live.swift.
 final class ResidentBench {
     private let life: Life

@@ -69,16 +69,12 @@ struct ActiveMenuBarDisplayWatcherTests {
 
     @Test("The one-second check exists only while something needs it and the displays are awake")
     func timerFollowsNeedAndGate() {
-        #expect(ActiveMenuBarDisplayWatcher.wantsTimer(isNeeded: true, mayRunIdleWork: true))
-        #expect(!ActiveMenuBarDisplayWatcher.wantsTimer(isNeeded: false, mayRunIdleWork: true))
-        #expect(!ActiveMenuBarDisplayWatcher.wantsTimer(isNeeded: true, mayRunIdleWork: false))
-
         let gate = IdleGate(center: NotificationCenter())
         var isNeeded = false
         let watcher = ActiveMenuBarDisplayWatcher(readDisplayID: { 1 }, idleGate: gate)
         watcher.isNeeded = { isNeeded }
         watcher.updateTimer()
-        #expect(!watcher.isTimerArmed, "Nothing needs the answer")
+        #expect(!watcher.isTimerArmed)
 
         isNeeded = true
         watcher.updateTimer()
@@ -86,7 +82,7 @@ struct ActiveMenuBarDisplayWatcherTests {
 
         gate.note(.displaysSlept)
         watcher.updateTimer()
-        #expect(!watcher.isTimerArmed, "The displays are asleep")
+        #expect(!watcher.isTimerArmed)
 
         gate.note(.displaysWoke)
         watcher.updateTimer()

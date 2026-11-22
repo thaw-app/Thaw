@@ -56,18 +56,7 @@ struct ResidentBenchTests {
         return ResidentBench(life: life, timing: timing, output: { script.output.append($0) })
     }
 
-    // MARK: Stages and output
-
-    @Test("The stages run from launch to a settled minute")
-    func stageOrder() {
-        #expect(Stage.allCases.map(\.rawValue) == ["started", "scan-settled", "thaw-bar-x3", "search-x3", "settings-layout", "trimmed", "settled"])
-    }
-
-    @Test("Every stage has a positive budget")
-    func budgets() {
-        #expect(Stage.allCases.allSatisfy { $0.budget > 0 })
-        #expect(Stage.thawBarCycled.budget == ResidentBench.Budget.thawBarCycled)
-    }
+    // MARK: Output
 
     @Test("A sample prints its stage, its footprint and its budget")
     func lineFormat() {

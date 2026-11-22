@@ -218,8 +218,6 @@ struct SettingsLinkTriggersTests {
         page.setEnabled(true, for: identifier)
         #expect(sent.messages.isEmpty, "Nothing but the saved choice goes to the app")
         #expect(imageCache.hasBackgroundCaptureDemand(triggersOn: true))
-        #expect(!imageCache.hasBackgroundCaptureDemand(triggersOn: false), "With Triggers off nothing reads the pictures")
-        #expect(!imageCache.hasBackgroundCaptureDemand(), "Without an app state the module counts as off")
         try watcher.process([clock: glyph(red: 1)], sectionController: controller, now: start)
         #expect(controller.temporaryReveals.isEmpty, "The first picture after the choice is only compared against")
         try watcher.process([clock: glyph(red: 0.2)], sectionController: controller, now: start)

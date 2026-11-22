@@ -12,45 +12,21 @@ import Testing
 
 @Suite("Idle gate state")
 struct IdleGateStateTests {
-    private func state(after signals: [IdleGateState.Signal]) -> IdleGateState {
-        signals.reduce(IdleGateState()) { $0.applying($1) }
-    }
-
-    @Test("Idle work runs until a signal says nobody is looking")
-    func startsOpen() {
-        #expect(IdleGateState().mayRunIdleWork)
-    }
-
-    @Test("Display sleep pauses and wake resumes")
-    func displaySleep() {
-        #expect(!state(after: [.displaysSlept]).mayRunIdleWork)
-        #expect(state(after: [.displaysSlept, .displaysWoke]).mayRunIdleWork)
-    }
-
-    @Test("An inactive session pauses and a return resumes")
-    func session() {
-        #expect(!state(after: [.sessionResigned]).mayRunIdleWork)
-        #expect(state(after: [.sessionResigned, .sessionBecameActive]).mayRunIdleWork)
-    }
-
-    @Test("Waking before the session returns stays paused until it does")
-    func wakeBeforeActive() {
-        let asleepAndAway = state(after: [.sessionResigned, .displaysSlept])
-        #expect(!asleepAndAway.applying(.displaysWoke).mayRunIdleWork)
-        #expect(asleepAndAway.applying(.displaysWoke).applying(.sessionBecameActive).mayRunIdleWork)
-    }
-
-    @Test("The session returning before the displays wake stays paused until they do")
-    func activeBeforeWake() {
-        let asleepAndAway = state(after: [.displaysSlept, .sessionResigned])
-        #expect(!asleepAndAway.applying(.sessionBecameActive).mayRunIdleWork)
-        #expect(asleepAndAway.applying(.sessionBecameActive).applying(.displaysWoke).mayRunIdleWork)
-    }
-
-    @Test("A repeated or unmatched signal changes nothing on its own")
-    func repeatedSignals() {
-        #expect(state(after: [.displaysWoke, .sessionBecameActive]).mayRunIdleWork)
-        #expect(!state(after: [.displaysSlept, .displaysSlept, .displaysWoke, .sessionResigned]).mayRunIdleWork)
+    @Test("Idle work runs only once the displays are awake and the session is active", arguments: [
+        ([], true),
+        ([.displaysSlept], false),
+        ([.displaysSlept, .displaysWoke], true),
+        ([.sessionResigned], false),
+        ([.sessionResigned, .sessionBecameActive], true),
+        ([.sessionResigned, .displaysSlept, .displaysWoke], false),
+        ([.sessionResigned, .displaysSlept, .displaysWoke, .sessionBecameActive], true),
+        ([.displaysSlept, .sessionResigned, .sessionBecameActive], false),
+        ([.displaysSlept, .sessionResigned, .sessionBecameActive, .displaysWoke], true),
+        ([.displaysWoke, .sessionBecameActive], true),
+        ([.displaysSlept, .displaysSlept, .displaysWoke, .sessionResigned], false),
+    ] as [([IdleGateState.Signal], Bool)])
+    func mayRunIdleWork(after signals: [IdleGateState.Signal], expected: Bool) {
+        #expect(signals.reduce(IdleGateState()) { $0.applying($1) }.mayRunIdleWork == expected)
     }
 }
 
@@ -75,10 +51,9 @@ struct IdleGateTests {
 
     @Test("A gated timer exists only while the gate is open and resumes with one call")
     func gatedTimer() async {
-        let gate = IdleGate(center: NotificationCenter())
         let (resumes, resumed) = AsyncStream.makeStream(of: Void.self)
         let timer = IdleGatedTimer(interval: 60, tolerance: 1, mode: .default, onResume: { resumed.yield() }, tick: { /* Never fires in a test this short. */ })
-        timer.apply(mayRun: gate.mayRunIdleWork, resuming: false)
+        timer.apply(mayRun: true, resuming: false)
         #expect(timer.isArmed)
         timer.apply(mayRun: false, resuming: false)
         #expect(!timer.isArmed)

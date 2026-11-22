@@ -53,7 +53,7 @@ final class ActiveMenuBarDisplayWatcher {
         observationTasks.forEach { $0.cancel() }
     }
 
-    /// Whether the one-second check should exist: only while something needs the answer and the displays are awake.
+    /// Whether the one-second check should exist.
     nonisolated static func wantsTimer(isNeeded: Bool, mayRunIdleWork: Bool) -> Bool {
         isNeeded && mayRunIdleWork
     }

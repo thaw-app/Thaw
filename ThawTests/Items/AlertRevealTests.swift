@@ -21,21 +21,14 @@ struct AlertRevealTests {
         #expect(MenuBarItemAlertReveals.watched(saved: saved, triggersOn: false).isEmpty)
     }
 
-    @Test("A saved choice with Triggers off asks for no capture off screen")
-    func noBackgroundDemandWithTriggersOff() {
+    @Test("A saved choice asks for captures only while Triggers is on, and counts as off without an app state")
+    func captureDemandFollowsTriggers() {
         MenuBarItemAlertReveals.setEnabled(true, for: identifier)
         defer { MenuBarItemAlertReveals.setEnabled(false, for: identifier) }
         let imageCache = MenuBarItemImageCache()
         #expect(imageCache.hasBackgroundCaptureDemand(triggersOn: true))
         #expect(!imageCache.hasBackgroundCaptureDemand(triggersOn: false))
-        #expect(!imageCache.hasBackgroundCaptureDemand(), "Without an app state the module counts as off")
-    }
-
-    @Test("A saved choice with Triggers off keeps no item in a pass that uses app icons")
-    func captureDemandFollowsTriggers() {
-        MenuBarItemAlertReveals.setEnabled(true, for: identifier)
-        defer { MenuBarItemAlertReveals.setEnabled(false, for: identifier) }
-        let imageCache = MenuBarItemImageCache()
+        #expect(!imageCache.hasBackgroundCaptureDemand())
         #expect(imageCache.captureDemand(triggersOn: true).alertRevealIdentifiers == [identifier])
         #expect(imageCache.captureDemand(triggersOn: false).alertRevealIdentifiers.isEmpty)
         #expect(imageCache.captureDemand().alertRevealIdentifiers.isEmpty)
