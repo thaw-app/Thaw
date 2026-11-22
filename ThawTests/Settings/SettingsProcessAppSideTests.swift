@@ -69,6 +69,21 @@ final class SettingsProcessAppSideTests {
         #expect(appState.navigationState.settingsNavigationIdentifier == .privacy)
     }
 
+    @Test("Simple Mode set with no Settings window open, here or in the settings process, is what capture follows")
+    func simpleModeReachesNavigation() {
+        let appState = AppState()
+        let navigation = appState.navigationState
+        appState.settings.general.performSetup(with: appState)
+        #expect(!navigation.isSimpleModeSettings)
+        Defaults.set(true, forKey: .simpleMode)
+        appState.settingsProcessAppSide().reloadSettings()
+        #expect(navigation.isSimpleModeSettings, "The settings process turned it on")
+        appState.settings.general.simpleMode = false
+        #expect(!navigation.isSimpleModeSettings)
+        appState.settings.general.simpleMode = true
+        #expect(navigation.isSimpleModeSettings, "The welcome turns it on before Settings opens")
+    }
+
     @Test("The updater state sent to the process is the app's own")
     func updatesState() {
         let appState = AppState()

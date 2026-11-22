@@ -24,6 +24,7 @@ final class SettingsProcessSessionTests {
     }
 
     private let calls = Calls()
+    private let general = GeneralSettings()
     private let toProcess = Pipe()
     private let fromProcess = Pipe()
     private var appReceived = [SettingsLinkMessage]()
@@ -44,7 +45,7 @@ final class SettingsProcessSessionTests {
         settingsShown: Bool = true,
         settingsFrame: CGRect? = nil
     ) -> SettingsProcessSession {
-        let calls = calls
+        let (calls, general) = (calls, general)
         return SettingsProcessSession(
             navigationState: navigation,
             side: SettingsProcessSession.ProcessSide(
@@ -54,7 +55,8 @@ final class SettingsProcessSessionTests {
                 terminate: { calls.terminations += 1 },
                 showWindow: { calls.windowShows.append($0) },
                 settingsFrame: { settingsFrame },
-                isSettingsShown: { settingsShown }
+                isSettingsShown: { settingsShown },
+                isSimpleMode: { general.simpleMode }
             ),
             handOverTimeout: handOverTimeout
         )
@@ -117,6 +119,34 @@ final class SettingsProcessSessionTests {
         session.willTerminate(hasOpenWindow: true)
         try? await Task.sleep(for: .milliseconds(100))
         #expect(!appMessages.contains(.quit), "Closing itself is not the user's Quit")
+    }
+
+    @Test("Simple Mode turned on here goes to the app, which reads the settings before it opens its window")
+    func simpleModeHandsOver() async throws {
+        let navigation = AppNavigationState()
+        navigation.settingsNavigationIdentifier = .general
+        let frame = CGRect(x: 305, y: 329, width: 804, height: 600)
+        let session = makeSession(navigation, settingsFrame: frame)
+        start(session)
+        #expect(await settingsLinkWait { appMessages.contains(.pageChanged(pane: "General")) })
+        general.simpleMode = true
+        let handOver = SettingsLinkMessage.openInApp(pane: "General", frame: frame)
+        #expect(await settingsLinkWait { appMessages.contains(handOver) })
+        #expect(session.isClosingItself)
+        let opened = try #require(appReceived.firstIndex(of: handOver))
+        #expect(appReceived[..<opened].last == .settingsChanged)
+    }
+
+    @Test("In Simple Mode with only What's New open, nothing is handed to the app")
+    func whatsNewAloneKeepsSimpleMode() async {
+        let navigation = AppNavigationState()
+        navigation.settingsNavigationIdentifier = .general
+        general.simpleMode = true
+        let session = makeSession(navigation, settingsShown: false)
+        start(session)
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(!appMessages.contains { if case .openInApp = $0 { true } else { false } })
+        #expect(!session.isClosingItself)
     }
 
     @Test("The app's messages show the window, reload settings and carry the updater state")

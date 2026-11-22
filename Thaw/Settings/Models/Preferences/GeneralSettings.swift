@@ -74,6 +74,8 @@ final class GeneralSettings: SettingsURIHandling {
     /// disables the features themselves or discards their configuration.
     var simpleMode = Defaults.DefaultValue.simpleMode {
         didSet {
+            // Every load too, since a change from the welcome or the settings process reaches no Settings window.
+            appState?.navigationState.isSimpleModeSettings = simpleMode
             guard oldValue != simpleMode else { return }
             Defaults.set(simpleMode, forKey: .simpleMode)
         }
