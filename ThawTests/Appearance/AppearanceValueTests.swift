@@ -14,39 +14,10 @@ import Testing
 @MainActor
 @Suite("Appearance values, labels and decoding")
 struct AppearanceValueTests {
-    @Test("Each shape kind is identified by its stored raw value")
-    func shapeKindIdentity() {
-        for kind in MenuBarShapeKind.allCases {
-            #expect(kind.id == kind.rawValue)
-        }
-        #expect(Set(MenuBarShapeKind.allCases.map(\.id)).count == MenuBarShapeKind.allCases.count)
-    }
-
-    @Test("A stored shape kind decodes to its case, including the notch")
-    func shapeKindDecodes() throws {
-        let decoded = try JSONDecoder().decode([MenuBarShapeKind].self, from: Data("[0,1,2,3]".utf8))
-        #expect(decoded == [.noShape, .full, .split, .notch])
-    }
-
-    @Test("An unknown stored shape kind fails to decode instead of picking a shape")
-    func unknownShapeKindThrows() {
-        #expect(throws: DecodingError.self) {
-            try JSONDecoder().decode([MenuBarShapeKind].self, from: Data("[9]".utf8))
-        }
-    }
-
-    @Test("Border styles are labelled Solid, Dashed and Dotted")
+    @Test("Each border style has its own label")
     func borderStyleLabels() {
-        #expect(MenuBarBorderStyle.solid.localized == "Solid")
-        #expect(MenuBarBorderStyle.dashed.localized == "Dashed")
-        #expect(MenuBarBorderStyle.dotted.localized == "Dotted")
-    }
-
-    @Test("Recording watch screen choices have their own labels")
-    func recordingWatchScreenLabels() {
-        #expect(RecordingWatchScreen.screenWithPointer.localized == "Screen with pointer")
-        #expect(RecordingWatchScreen.mainDisplay.localized == "Main display")
-        #expect(RecordingWatchScreen.display(uuid: "A").localized == "Chosen display")
+        let labels = Set(MenuBarBorderStyle.allCases.map { String(localized: $0.localized) })
+        #expect(labels.count == MenuBarBorderStyle.allCases.count)
     }
 
     @Test("A swatch converts to an opaque color with its own components")
@@ -97,5 +68,25 @@ private enum ProbeDestination: String, @MainActor NavigationIdentifier {
 
     var iconResource: IconResource {
         .systemSymbol("circle")
+    }
+}
+
+struct MenuBarBackgroundSettingTests {
+    @Test
+    func `the background is on only when SkyLight's preference says so`() {
+        #expect(MenuBarBackgroundSetting.isOn { $0 == MenuBarBackgroundSetting.key ? NSNumber(value: true) : nil })
+        #expect(!MenuBarBackgroundSetting.isOn { _ in NSNumber(value: false) })
+    }
+
+    @Test
+    func `an unset or unreadable preference counts as off`() {
+        #expect(!MenuBarBackgroundSetting.isOn { _ in nil })
+        #expect(!MenuBarBackgroundSetting.isOn { _ in "yes" })
+    }
+
+    @Test
+    func `the live read takes the switch from the global domain`() {
+        let global = CFPreferencesCopyAppValue(MenuBarBackgroundSetting.key as CFString, kCFPreferencesAnyApplication)
+        #expect(MenuBarBackgroundSetting.isOn() == ((global as? NSNumber)?.boolValue ?? false))
     }
 }

@@ -1,5 +1,5 @@
 //
-//  MenuBarShapeRoundnessTests.swift
+//  MenuBarShapeTests.swift
 //  Project: Thaw
 //
 //  Copyright (Thaw) © 2026 Toni Förster
@@ -74,5 +74,62 @@ struct MenuBarShapeRoundnessTests {
         #expect(path.contains(CGPoint(x: 1.5, y: 2)))
         #expect(!path.contains(CGPoint(x: 198.5, y: 2)))
         #expect(path.contains(CGPoint(x: 100, y: 12)))
+    }
+}
+
+@MainActor
+struct MenuBarShapeKindTests {
+    @Test
+    func `only the split shape is drawn around the items`() {
+        #expect(MenuBarShapeKind.split.followsItems)
+        for shape in MenuBarShapeKind.allCases where shape != .split {
+            #expect(!shape.followsItems)
+        }
+    }
+
+    @Test
+    func `a stored shape kind decodes to its case and is identified by its stored value`() throws {
+        let decoded = try JSONDecoder().decode([MenuBarShapeKind].self, from: Data("[0,1,2,3]".utf8))
+        #expect(decoded == [.noShape, .full, .split, .notch])
+        #expect(decoded.map(\.id) == [0, 1, 2, 3])
+    }
+
+    @Test
+    func `an unknown stored shape kind fails to decode instead of picking a shape`() {
+        #expect(throws: DecodingError.self) {
+            try JSONDecoder().decode([MenuBarShapeKind].self, from: Data("[9]".utf8))
+        }
+    }
+}
+
+struct MenuBarTwoPartShapeInfoTests {
+    private let leading = MenuBarFullShapeInfo(leadingEndCap: .round, trailingEndCap: .square, roundness: 0.4)
+    private let trailing = MenuBarFullShapeInfo(leadingEndCap: .square, trailingEndCap: .square)
+
+    @Test("Split and notch shapes take their outer caps from the outer ends and the leading roundness")
+    func outerEndCaps() {
+        let expected = MenuBarFullShapeInfo(leadingEndCap: .round, trailingEndCap: .square, roundness: 0.4)
+        #expect(MenuBarSplitShapeInfo(leading: leading, trailing: trailing).outerEndCaps == expected)
+        #expect(MenuBarNotchShapeInfo(leading: leading, trailing: trailing).outerEndCaps == expected)
+    }
+
+    @Test("A two-part shape is rounded when either part is")
+    func roundedWhenEitherPartIs() {
+        #expect(MenuBarSplitShapeInfo(leading: leading, trailing: trailing).hasRoundedShape)
+        #expect(MenuBarNotchShapeInfo(leading: trailing, trailing: leading).hasRoundedShape)
+        #expect(!MenuBarSplitShapeInfo(leading: trailing, trailing: trailing).hasRoundedShape)
+    }
+
+    @Test("A saved split or notch shape stores only its two parts")
+    func storedKeys() throws {
+        let split = try JSONEncoder().encode(MenuBarSplitShapeInfo(leading: leading, trailing: trailing))
+        let notch = try JSONEncoder().encode(MenuBarNotchShapeInfo(leading: leading, trailing: trailing))
+        for data in [split, notch] {
+            let object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            #expect(Set(object.keys) == ["leading", "trailing"])
+        }
+        let decoded = try JSONDecoder().decode(MenuBarNotchShapeInfo.self, from: notch)
+        #expect(decoded.leading == leading)
+        #expect(decoded.trailing == trailing)
     }
 }
