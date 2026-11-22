@@ -26,13 +26,7 @@ struct MenuBarItemImageCacheDiskStoreTests {
     }
 
     private static func capture() -> MenuBarItemGlyphCapture {
-        let context = CGContext(
-            data: nil, width: 20, height: 16, bitsPerComponent: 8, bytesPerRow: 80,
-            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )!
-        context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: 20, height: 16))
-        return MenuBarItemGlyphCapture(cgImage: context.makeImage()!, scale: 1)
+        try! ItemsFixture.glyph(width: 20, height: 16)
     }
 
     /// The save runs on the store's queue, which the test owns, so draining it means the write is done.
@@ -291,5 +285,82 @@ struct MenuBarItemImageCacheDiskStoreTests {
         #expect(store.cacheFileURL == nil)
         #expect(store.legacyCacheFileURL == nil)
         #expect(store.readSaveFile() == nil)
+    }
+}
+
+/// A saved image cache is used whole only by the build that wrote it.
+@Suite("Image cache file validity")
+struct ImageCacheFileValidityTests {
+    /// A file written before builds were recorded counts as another build's, and without a
+    /// known app build only the format decides.
+    @Test(
+        "A file is current in this format from this build, another build's otherwise, and dropped in another format",
+        arguments: [
+            (12, "114", "114", ImageCacheFileValidity.Verdict.current),
+            (12, nil, nil, .current),
+            (12, "113", "114", .otherBuild),
+            (12, nil, "114", .otherBuild),
+            (11, "114", "114", .otherFormat),
+            (11, "113", "114", .otherFormat),
+            (nil, "114", "114", .otherFormat),
+        ] as [(Int?, String?, String?, ImageCacheFileValidity.Verdict)]
+    )
+    func verdict(fileVersion: Int?, fileBuild: String?, appBuild: String?, expected: ImageCacheFileValidity.Verdict) {
+        #expect(ImageCacheFileValidity.verdict(fileVersion: fileVersion, fileBuild: fileBuild, cacheVersion: 12, appBuild: appBuild) == expected)
+        #expect(
+            ImageCacheFileValidity.isCurrent(fileVersion: fileVersion, fileBuild: fileBuild, cacheVersion: 12, appBuild: appBuild)
+                == (expected == .current)
+        )
+    }
+}
+
+@Suite("Image cache disk load state")
+struct DiskLoadStateTests {
+    @Test("With no load in flight a save runs at once")
+    func saveRunsWhenIdle() {
+        var state = DiskLoadState()
+        let held = state.holdsSave()
+        #expect(!held)
+        #expect(!state.isSaveOwed)
+    }
+
+    @Test("A save asked for while a load is in flight is held, and runs once when the load is done")
+    func saveWaitsForLoad() {
+        var state = DiskLoadState()
+        state.began()
+        let first = state.holdsSave()
+        let second = state.holdsSave()
+        // The file still holds pictures the load has not merged.
+        #expect(first)
+        #expect(second)
+
+        let owed = state.finished()
+        let heldAfter = state.holdsSave()
+        let owedAgain = state.finished()
+        #expect(owed)
+        #expect(!heldAfter)
+        #expect(!owedAgain)
+    }
+
+    @Test("A load nobody saved during owes nothing when it is done")
+    func quietLoadOwesNothing() {
+        var state = DiskLoadState()
+        state.began()
+        let owed = state.finished()
+        #expect(!owed)
+    }
+
+    @Test("Emptying the cache on purpose refuses the load's result and drops the held save")
+    func abandonedLoad() {
+        var state = DiskLoadState()
+        state.began()
+        _ = state.holdsSave()
+        let before = state.generation
+
+        state.abandoned()
+        let owed = state.finished()
+        #expect(state.generation != before)
+        #expect(!state.isInFlight)
+        #expect(!owed)
     }
 }
