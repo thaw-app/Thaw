@@ -10,23 +10,13 @@ import Foundation
 import Testing
 @testable import Thaw
 
-/// Pins CGImage.knockingOutNearUniformBackground(), the display-strip
-/// background knock-out that keeps a status-item glyph and clears the menu bar
-/// fill it was cut from.
-///
-/// The knock-out estimates the background color from the crop's edges. A
-/// glyph that fills its AX frame and touches a crop corner (a full-frame icon)
-/// can poison a corner-sampled estimate, so the knock-out clears the glyph and
-/// the bar fill bleeds into the cached icon. These tests build synthetic crops
-/// (uniform background plus a full-frame glyph) and assert the glyph survives
-/// and the background is cleared.
+/// The knock-out reads the background from the crop's edges. A glyph that touches a corner
+/// must not poison that estimate, or the glyph is cleared and the bar fill is cached instead.
 @Suite("Near-uniform background knock-out")
 struct NearUniformBackgroundKnockOutTests {
     // MARK: - Image synthesis
 
-    /// Builds an RGBA image of size filled with background, then draws a
-    /// solid glyph rectangle covering the given pixel rect on top of it.
-    /// Premultiplied-last (RGBA) byte order to match the knock-out's reader.
+    /// A background-filled image with a solid glyph rectangle, premultiplied-last as the knock-out reads it.
     private static func image(
         size: CGSize,
         background: (r: CGFloat, g: CGFloat, b: CGFloat),
@@ -105,9 +95,7 @@ struct NearUniformBackgroundKnockOutTests {
         return false
     }
 
-    /// Whether the image still holds an opaque pixel whose color matches the
-    /// given background (within a small tolerance), i.e. background was NOT
-    /// fully knocked out.
+    /// Whether an opaque pixel still matches the background, within tolerance.
     private static func retainsBackground(
         _ image: CGImage,
         background: (r: CGFloat, g: CGFloat, b: CGFloat),
@@ -150,11 +138,7 @@ struct NearUniformBackgroundKnockOutTests {
 
     @Test("A glyph that nearly fills the frame (1px background border) survives, background cleared")
     func fullFrameGlyphSurvives() {
-        // A 24x24 crop with a dark bar fill and a bright glyph that fills all
-        // but a 1px border, realistic for a tight AX frame whose glyph touches
-        // the corners. Every corner is a glyph pixel, which poisons a
-        // corner-sample estimate. The 1px edge ring still exposes enough bar
-        // fill for an edge-aware estimate to pick it.
+        // Every corner is glyph, as in a tight AX frame; only the 1px ring shows bar fill.
         let bg: (CGFloat, CGFloat, CGFloat) = (0.12, 0.12, 0.14)
         let glyph: (CGFloat, CGFloat, CGFloat) = (0.92, 0.32, 0.20)
         let image = Self.image(
@@ -166,20 +150,12 @@ struct NearUniformBackgroundKnockOutTests {
 
         let knocked = image.knockingOutNearUniformBackground()
 
-        // The glyph must survive.
-        #expect(knocked != nil, "glyph was knocked out entirely")
-        // The bar fill must be cleared from the 1px border, not retained as a
-        // bleed into the cached icon.
-        #expect(knocked.map { !Self.retainsBackground($0, background: bg) } ?? false,
-                "bar fill was retained (background bled into the glyph)")
+        #expect(knocked != nil)
+        #expect(knocked.map { !Self.retainsBackground($0, background: bg) } ?? false)
     }
 
     @Test("A glyph that touches one corner still keeps the glyph and clears the background")
     func glyphTouchingOneCorner() {
-        // Glyph covering the top-left corner only, on a uniform background
-        // everywhere else. A corner sample would read the glyph at the
-        // top-left and skew the average; the edge-aware estimate must still
-        // pick the bar fill from the other three edges.
         let bg: (CGFloat, CGFloat, CGFloat) = (0.10, 0.10, 0.12)
         let glyph: (CGFloat, CGFloat, CGFloat) = (0.95, 0.95, 0.95)
         let image = Self.image(
@@ -228,12 +204,10 @@ struct NearUniformBackgroundKnockOutTests {
 
     @Test("An image that is already transparent returns nil")
     func alreadyTransparentReturnsNil() {
-        // Fully-transparent 4x4 image.
         let width = 4, height = 4
         let bytesPerPixel = 4
         let bytesPerRow = width * bytesPerPixel
         let pixels = [UInt8](repeating: 0, count: bytesPerRow * height)
-        // all zero => fully transparent already
         let provider = CGDataProvider(data: Data(pixels) as CFData)
         guard let provider,
               let image = CGImage(
@@ -259,8 +233,7 @@ struct NearUniformBackgroundKnockOutTests {
 
     // MARK: - Edge-ring background estimate (the mode-over-corners decision)
 
-    /// Builds an RGBA pixel buffer of the given size filled with background,
-    /// with a solid glyph rectangle drawn on top, premultiplied-last.
+    /// The pixels of image(size:background:glyph:glyphRect:), for the edge-ring estimate.
     private static func pixelBuffer(
         size: CGSize,
         background: (r: UInt8, g: UInt8, b: UInt8),
@@ -288,19 +261,13 @@ struct NearUniformBackgroundKnockOutTests {
 
     @Test("Edge-ring estimate picks bar fill when a glyph only touches the corners")
     func estimateIgnoresGlyphTouchingCorners() {
-        // 24x24 bar-fill crop with a glyph that touches all four corners but
-        // leaves bar fill along most of each edge, the real-world shape of a
-        // full-frame icon. The bar-fill edge pixels (the majority of the
-        // ring) outvote the glyph's corner pixels in the mode, so the estimate
-        // is bar fill, where a corner sample would read glyph at all four.
+        // Glyph in all four corners, bar fill along most of each edge: the edge pixels outvote the corners.
         let buf = Self.pixelBuffer(
             size: CGSize(width: 24, height: 24),
             background: (r: 30, g: 30, b: 36),
             glyph: (r: 220, g: 80, b: 50),
             glyphRect: CGRect(x: 0, y: 0, width: 6, height: 6)
         )
-        // Add the other three corner glyphs so all four corners are glyph.
-        // (pixelBuffer draws one rect; stamp the other three by re-filling.)
         var pixels = buf.pixels
         let stamp: [(x: Int, y: Int)] = [(18, 0), (0, 18), (18, 18)]
         for (sx, sy) in stamp {
@@ -324,7 +291,6 @@ struct NearUniformBackgroundKnockOutTests {
             Issue.record("edge-ring estimate returned nil for a bar-fill crop")
             return
         }
-        // The estimate must be the bar fill, not the glyph color.
         #expect(abs(bg.r - 30) <= 8)
         #expect(abs(bg.g - 30) <= 8)
         #expect(abs(bg.b - 36) <= 8)
@@ -332,8 +298,6 @@ struct NearUniformBackgroundKnockOutTests {
 
     @Test("Edge-ring estimate returns nil for a fully transparent perimeter")
     func estimateReturnsNilForTransparentEdge() {
-        // All edge pixels transparent (alpha 0); interior opaque. There is no
-        // background to read on the ring.
         let width = 8, height = 8, bytesPerPixel = 4, bytesPerRow = width * bytesPerPixel
         var pixels = [UInt8](repeating: 0, count: bytesPerRow * height)
         for y in 2 ..< 6 {
@@ -447,10 +411,7 @@ struct NearUniformBackgroundKnockOutTests {
         return image
     }
 
-    /// With one modelled background colour, everything in a wallpaper
-    /// gradient away from that band survives as "glyph" and the cached icon is
-    /// the wallpaper. The local model has to clear all of it and keep only
-    /// the glyph.
+    /// One background colour would keep the rest of the gradient as glyph, so the model is local.
     @Test("A gradient background is cleared, not cached as the glyph")
     func gradientBackgroundIsCleared() {
         let image = Self.gradientImage(
@@ -479,9 +440,7 @@ struct NearUniformBackgroundKnockOutTests {
         )
     }
 
-    /// When the ring has no dominant colour there is no background to model,
-    /// and the honest answer is a rejection: the caller falls back to the app
-    /// icon instead of caching a crop of the wallpaper.
+    /// With no dominant colour on the ring, the caller falls back to the app icon.
     @Test("A busy background is rejected rather than cached")
     func busyBackgroundIsRejected() {
         let image = Self.noisyImage(
@@ -505,8 +464,7 @@ struct NearUniformBackgroundKnockOutTests {
         let bytesPerRow = width * bytesPerPixel
         var pixels = [UInt8](repeating: 0, count: bytesPerRow * height)
 
-        /// Smooth field: low amplitude on purpose, so the per-pixel background
-        /// model follows it and clears it, exactly as it clears a soft wallpaper.
+        /// Low amplitude on purpose, so the background model follows it as it follows a soft wallpaper.
         func field(x: Int, y: Int) -> (r: Double, g: Double, b: Double) {
             let fx = Double(x), fy = Double(y)
             return (
@@ -515,8 +473,7 @@ struct NearUniformBackgroundKnockOutTests {
                 b: 128 + 18 * sin((fx + fy) / 13)
             )
         }
-        // Scattered patches the model cannot follow: distinct hue, small,
-        // separated, the foliage islands seen beside real glyphs.
+        // Small patches of another hue, which the model cannot follow.
         var patches = Set<Int>()
         for (px, py) in [(3, 2), (12, 4), (34, 3), (43, 9), (6, 17), (25, 19), (39, 18), (17, 21)] {
             for dy in 0 ..< 2 {
@@ -543,10 +500,7 @@ struct NearUniformBackgroundKnockOutTests {
         return makeImage(pixels: pixels, width: width, height: height)
     }
 
-    /// Blurred multi-hue patches, a photographic wallpaper, are the case that
-    /// actually shipped: the local model cleared most of it, but islands of the
-    /// wallpaper survived beside the glyph and were cached as the icon.
-    /// Scattered survivors are not a glyph, so this must be rejected.
+    /// Shipped once: islands of a photographic wallpaper survived beside the glyph and were cached as the icon.
     @Test("Blurred wallpaper patches behind a glyph are rejected")
     func blurredWallpaperIsRejected() {
         let image = Self.patchworkImage(
