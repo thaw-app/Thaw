@@ -51,6 +51,12 @@ extension MenuBarItemImageCache {
         return await concealedPrewarm().captureHiddenItems(retakingAll: retakingAll)
     }
 
+    /// Whether Capture Hidden Items would give a hidden item its first good picture.
+    @MainActor
+    var hiddenItemsNeedPictures: Bool {
+        appState != nil && concealedPrewarm().hiddenItemsNeedPictures
+    }
+
     /// Counts kept and attempted pictures using identities that survive a rebuilt menu bar.
     /// Known pictures stay counted even when Native hiding makes their parked frames narrow.
     static nonisolated func hiddenItemCaptureResult(

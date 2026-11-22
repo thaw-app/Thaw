@@ -158,6 +158,19 @@ struct RevealCapturePrewarm {
         }
     }
 
+    /// Whether a Hidden or Always Hidden item still draws its app icon for want of a picture that a capture
+    /// would try to take. Items that keep failing are left out, so a capture that can't help isn't offered.
+    var hiddenItemsNeedPictures: Bool {
+        [MenuBarSection.Name.hidden, .alwaysHidden].contains { section in
+            (sectionItems(section) ?? []).contains { item in
+                !Self.skips(item) && MenuBarItemImageCache.prewarmNeedsCapture(
+                    cachedImage: cachedImage(item.tag),
+                    wouldAttemptCapture: wouldAttemptCapture(item)
+                )
+            }
+        }
+    }
+
     /// Whether a prewarm leaves this item out: a switched-off Control Center module never draws.
     /// A blank item is kept, since Native hiding parks an app with no size until this capture reveals it.
     static nonisolated func skips(_ item: MenuBarItem) -> Bool {

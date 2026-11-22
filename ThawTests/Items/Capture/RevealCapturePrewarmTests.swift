@@ -86,6 +86,26 @@ struct RevealCapturePrewarmTests {
         return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 2)
     }
 
+    @Test("Hidden items need pictures while one lacks a picture a capture could take")
+    func hiddenItemsNeedPictures() throws {
+        let world = World()
+        let pictured = Self.item("Pictured"), missing = Self.item("Missing"), visible = Self.item("Visible")
+        world.sections[.visible] = [visible]
+        world.sections[.hidden] = [pictured]
+        world.images[pictured.tag] = try Self.glyph(pixelWidth: 48)
+        #expect(!world.prewarm().hiddenItemsNeedPictures, "a visible item without one doesn't count")
+
+        world.sections[.alwaysHidden] = [missing]
+        #expect(world.prewarm().hiddenItemsNeedPictures)
+
+        world.blacklisted = [missing.tag]
+        #expect(!world.prewarm().hiddenItemsNeedPictures, "an item that keeps failing isn't offered again")
+
+        world.blacklisted = []
+        world.appIsGone = true
+        #expect(!world.prewarm().hiddenItemsNeedPictures)
+    }
+
     @Test("An automatic pass retakes a picture that no longer fits its item, once a session")
     func retakesStaleWidthOnce() async throws {
         let world = World()
