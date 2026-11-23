@@ -38,7 +38,7 @@ nonisolated extension MaintenanceTools {
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
         if fileManager.fileExists(atPath: logs.path(percentEncoded: false)) {
             let stagedLogs = root.appending(path: "Logs", directoryHint: .isDirectory)
-            try fileManager.copyItem(at: logs, to: stagedLogs)
+            try fileManager.copyItem(at: logs.resolvingSymlinksInPath(), to: stagedLogs)
             for url in try fileManager.contentsOfDirectory(at: stagedLogs, includingPropertiesForKeys: nil) where ItemEnumerationDump.isDump(url) {
                 try fileManager.removeItem(at: url)
             }
