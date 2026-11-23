@@ -441,10 +441,10 @@ extension MenuBarItemManager {
         return 0
     }
 
-    /// Holds `isResettingLayout` for `body` only, so later captures are not rejected as `.layoutResetting`.
+    /// Holds `isResettingLayout` for `body` only, then voids captures admitted before it ended, so only the recapture publishes.
     func whileResettingLayout<T>(_ body: () async throws -> T) async rethrows -> T {
         isResettingLayout = true
-        defer { isResettingLayout = false }
+        defer { isResettingLayout = false; layoutPublication.invalidate() }
         return try await body()
     }
 

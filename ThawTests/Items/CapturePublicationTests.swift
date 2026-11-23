@@ -330,11 +330,12 @@ struct RecapturePassPublicationTests {
         #expect(await world.reader.captures.contains(.strip), "The pass was rejected after it took pixels, not before")
     }
 
-    @Test("A layout reset blocks captures only while it runs, so the recapture after it publishes")
+    @Test("A layout reset blocks captures while it runs and voids earlier ones, so only the recapture after it publishes")
     func recaptureAfterLayoutResetPublishes() async throws {
         struct ResetFailed: Error {}
         let world = try CaptureWorld(gated: false)
         let itemManager = world.appState.itemManager
+        let earlier = itemManager.layoutPublication.generation
 
         try? await itemManager.whileResettingLayout {
             #expect(itemManager.isResettingLayout)
@@ -343,6 +344,7 @@ struct RecapturePassPublicationTests {
         }
 
         #expect(!itemManager.isResettingLayout)
+        #expect(!itemManager.layoutPublication.canPublish(generation: earlier))
         #expect(await world.recapture(forced: false))
         #expect(world.cache.capturesByTag[world.fresh.tag] != nil)
     }
