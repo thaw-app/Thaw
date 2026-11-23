@@ -431,10 +431,24 @@ extension MenuBarItemManager {
     /// Reassigns movable, hideable items except Thaw's control; protected system items require experimental hiding.
     /// - Returns: Always 0, since there are no physical moves; an unavailable engine throws LayoutResetError.engineNotRunning.
     private func resetAssignments(to target: MenuBarSection.Name = .hidden) async throws -> Int {
-        isResettingLayout = true
-        defer { isResettingLayout = false }
-
         guard let appState else { throw LayoutResetError.missingAppState }
+        try await whileResettingLayout { try await sweepAssignments(to: target, appState: appState) }
+        await MainActor.run { appState.imageCache.performCacheCleanup() }
+        if itemCache.displayID == nil {
+            try? await Task.sleep(for: .milliseconds(350))
+        }
+        await appState.imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
+        return 0
+    }
+
+    /// Holds `isResettingLayout` for `body` only, then voids captures admitted before it ended, so only the recapture publishes.
+    func whileResettingLayout<T>(_ body: () async throws -> T) async rethrows -> T {
+        isResettingLayout = true
+        defer { isResettingLayout = false; layoutPublication.invalidate() }
+        return try await body()
+    }
+
+    private func sweepAssignments(to target: MenuBarSection.Name, appState: AppState) async throws {
         let controller = appState.menuBarManager.sectionController
         guard controller.isOperational else {
             MenuBarItemManager.diagLog.warning("macOS 27 reset: no RuntimeSectionController; nothing to do")
@@ -486,18 +500,6 @@ extension MenuBarItemManager {
             controller.refresh(forceRestrictionPulse: true)
             await cacheItemsRegardless(skipRecentMoveCheck: true)
         }
-
-        await MainActor.run {
-            appState.imageCache.performCacheCleanup()
-        }
-        if itemCache.displayID != nil {
-            await appState.imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
-        } else {
-            try? await Task.sleep(for: .milliseconds(350))
-            await appState.imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
-        }
-
-        return 0
     }
 
     /// Resets layout data and moves movable, hideable items except Thaw's icon to Hidden.
@@ -526,10 +528,15 @@ extension MenuBarItemManager {
     /// Clears assignments to return hideable items to Visible through RuntimeSectionController.
     /// - Returns: Always 0, since there are no physical moves; an unavailable engine throws LayoutResetError.engineNotRunning.
     private func clearAssignmentsToVisible() async throws -> Int {
-        isResettingLayout = true
-        defer { isResettingLayout = false }
-
         guard let appState else { throw LayoutResetError.missingAppState }
+        try await whileResettingLayout { try await clearAllAssignments(appState: appState) }
+
+        await MainActor.run { appState.imageCache.clearAll(); appState.imageCache.performCacheCleanup() }
+        await appState.imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
+        return 0
+    }
+
+    private func clearAllAssignments(appState: AppState) async throws {
         let controller = appState.menuBarManager.sectionController
         guard controller.isOperational else {
             MenuBarItemManager.diagLog.warning("macOS 27 reset-to-visible: no RuntimeSectionController; nothing to do")
@@ -544,14 +551,6 @@ extension MenuBarItemManager {
         MenuBarItemManager.diagLog.info("macOS 27 reset-to-visible: cleared all section assignments")
 
         await cacheItemsRegardless(skipRecentMoveCheck: true)
-
-        await MainActor.run {
-            appState.imageCache.clearAll()
-            appState.imageCache.performCacheCleanup()
-        }
-        await appState.imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
-
-        return 0
     }
 
     /// Moves every movable, hideable item to the always-hidden section.
