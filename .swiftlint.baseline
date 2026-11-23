@@ -855,27 +855,12 @@
   }
  },
  {
-  "text": "    private func resetAssignments(to target: MenuBarSection.Name = .hidden) async throws -> Int {",
-  "violation": {
-   "location": {
-    "character": 13,
-    "file": "Thaw/Items/Manager/MenuBarItemManager+LayoutReset.swift",
-    "line": 433
-   },
-   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 56 lines",
-   "ruleDescription": "Function bodies should not span too many lines",
-   "ruleIdentifier": "function_body_length",
-   "ruleName": "Function Body Length",
-   "severity": "warning"
-  }
- },
- {
   "text": "    private func restoreVisibleControlOrder(items: [MenuBarItem]) async -> Bool {",
   "violation": {
    "location": {
     "character": 13,
     "file": "Thaw/Items/Manager/MenuBarItemManager+LayoutReset.swift",
-    "line": 809
+    "line": 808
    },
    "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 89 lines",
    "ruleDescription": "Function bodies should not span too many lines",
@@ -890,9 +875,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Items/Manager/MenuBarItemManager+LayoutReset.swift",
-    "line": 913
+    "line": 912
    },
-   "reason": "File should contain 400 lines or less: currently contains 913",
+   "reason": "File should contain 400 lines or less: currently contains 912",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",

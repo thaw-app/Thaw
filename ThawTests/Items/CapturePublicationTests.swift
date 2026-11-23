@@ -330,6 +330,23 @@ struct RecapturePassPublicationTests {
         #expect(await world.reader.captures.contains(.strip), "The pass was rejected after it took pixels, not before")
     }
 
+    @Test("A layout reset blocks captures only while it runs, so the recapture after it publishes")
+    func recaptureAfterLayoutResetPublishes() async throws {
+        struct ResetFailed: Error {}
+        let world = try CaptureWorld(gated: false)
+        let itemManager = world.appState.itemManager
+
+        try? await itemManager.whileResettingLayout {
+            #expect(itemManager.isResettingLayout)
+            #expect(await world.recapture(forced: false) == false)
+            throw ResetFailed()
+        }
+
+        #expect(!itemManager.isResettingLayout)
+        #expect(await world.recapture(forced: false))
+        #expect(world.cache.capturesByTag[world.fresh.tag] != nil)
+    }
+
     @Test("A forced refresh keeps its result after a move that completed before it; an ordinary pass waits out the cooldown")
     func forcedRefreshAfterCompletedMovePublishes() async throws {
         let world = try CaptureWorld(gated: false)

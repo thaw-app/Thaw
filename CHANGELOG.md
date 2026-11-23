@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- Resetting the layout now shows item pictures in the Layout bar right away instead of leaving them blank.
+
 ## [3.0.0-alpha.15] - 2026-11-22
 
 **macOS 27 only · Build 127**
