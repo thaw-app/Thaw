@@ -36,6 +36,7 @@ struct DiagnosticExportTests {
         let logs = root.appending(path: "Logs", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
         try Data("log".utf8).write(to: logs.appending(path: "thaw.log"))
+        try Data("{}".utf8).write(to: logs.appending(path: "item-dump-1.json"))
         let samples = root.appending(path: "samples", directoryHint: .isDirectory)
 
         let withoutSamples = try MaintenanceTools.stageDiagnostics(logs: logs, samples: samples, in: root.appending(path: "a"))
@@ -46,6 +47,7 @@ struct DiagnosticExportTests {
         let withSamples = try MaintenanceTools.stageDiagnostics(logs: logs, samples: samples, in: root.appending(path: "b"))
         #expect(try Set(FileManager.default.contentsOfDirectory(atPath: withSamples.path(percentEncoded: false))) == ["Logs", "Capture Samples"])
         #expect(FileManager.default.fileExists(atPath: withSamples.appending(path: "Logs/thaw.log").path(percentEncoded: false)))
+        #expect(!FileManager.default.fileExists(atPath: withSamples.appending(path: "Logs/item-dump-1.json").path(percentEncoded: false)), "item lists stay out")
     }
 
     @Test("Export writes a zip that unpacks to the logs")

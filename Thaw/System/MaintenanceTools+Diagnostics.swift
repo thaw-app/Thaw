@@ -30,14 +30,18 @@ nonisolated extension MaintenanceTools {
         return dump
     }
 
-    /// The folder an export zips: the logs, and the capture samples when there are any.
+    /// The folder an export zips: the logs without item lists, and the capture samples when there are any.
     static func stageDiagnostics(logs: URL, samples: URL, in staging: URL) throws -> URL {
         let fileManager = FileManager.default
         let root = staging.appending(path: "Thaw Diagnostics", directoryHint: .isDirectory)
         try? fileManager.removeItem(at: root)
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
         if fileManager.fileExists(atPath: logs.path(percentEncoded: false)) {
-            try fileManager.copyItem(at: logs, to: root.appending(path: "Logs", directoryHint: .isDirectory))
+            let stagedLogs = root.appending(path: "Logs", directoryHint: .isDirectory)
+            try fileManager.copyItem(at: logs, to: stagedLogs)
+            for url in try fileManager.contentsOfDirectory(at: stagedLogs, includingPropertiesForKeys: nil) where ItemEnumerationDump.isDump(url) {
+                try fileManager.removeItem(at: url)
+            }
         }
         if hasCaptureSamples(in: samples) {
             try fileManager.copyItem(at: samples, to: root.appending(path: "Capture Samples", directoryHint: .isDirectory))

@@ -163,9 +163,9 @@ enum ItemEnumerationDump {
             diagLog.error("dump: write failed: \(error.localizedDescription)")
             return nil
         }
+        pruneDumps(in: directory)
 
-        let totalItems = dumpedApps.reduce(0) { $0 + $1.items.count }
-        diagLog.info("dump: \(totalItems) item(s) across \(dumpedApps.count) app(s), \(helperFramedCount(dumpedApps)) framed only by the AX helper → \(fileURL.path)")
+        diagLog.info("dump: \(dumpedApps.reduce(0) { $0 + $1.items.count }) item(s) across \(dumpedApps.count) app(s), \(helperFramedCount(dumpedApps)) framed only by the AX helper → \(fileURL.path)")
         return fileURL
     }
 

@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Changed
+
+- **Exported diagnostics no longer include saved item lists,** and Thaw keeps only the newest five item lists.
+
 ## [3.0.0-alpha.15] - 2026-11-22
 
 **macOS 27 only · Build 127**
