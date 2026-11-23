@@ -1132,7 +1132,7 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager+Moving.swift",
     "line": 2333
    },
-   "reason": "File should contain 1000 lines or less: currently contains 2300",
+   "reason": "File should contain 1000 lines or less: currently contains 2298",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",

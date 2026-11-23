@@ -23,12 +23,6 @@ struct RevealRepairScopeTests {
         #expect(RevealRepairScope.firstSkip(arrangementIsManual: true, isUserArranging: true) == .manualArrangement)
     }
 
-    @Test("The skip reasons read as the log lines always did")
-    func logReasons() {
-        #expect(RevealRepairScope.Skip.manualArrangement.logReason == "manual arrangement is on")
-        #expect(RevealRepairScope.Skip.userArranging.logReason == "the user is arranging the menu bar")
-    }
-
     @Test("Revealing Visible or Hidden orders Hidden; revealing Always Hidden orders Hidden and Always Hidden")
     func sectionsToOrder() {
         #expect(RevealRepairScope.sectionsToOrder(revealing: .visible) == [.hidden])

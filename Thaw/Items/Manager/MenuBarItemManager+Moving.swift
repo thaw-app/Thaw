@@ -962,8 +962,6 @@ extension MenuBarItemManager {
             }
         }
 
-        // Include .visible: an item re-allowed at a hidden-side slot with no
-        // weight of its own is moved back nowhere else.
         let sectionsToReconcile = RevealRepairScope.sectionsToReconcile(revealing: revealedSection)
         let assignments = controller.sectionAssignment
             .filter { sectionsToReconcile.contains($0.value) }

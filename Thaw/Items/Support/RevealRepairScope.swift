@@ -9,9 +9,10 @@ import MenuBarModel
 
 /// What a repair that runs while a hidden section is revealed looks at, and when it stays out of the way.
 ///
-/// The structural sync after a reveal, the boundary reconcile and the authored-order apply all start from
-/// the same two refusals and pick the sections to work on from the section that was revealed. The caller
-/// reads the live state and passes plain values in.
+/// The read before a reveal turn, the structural sync after it and the boundary reconcile start from the
+/// same two refusals. The authored-order apply runs only from the sync, after the sync checked them. Each
+/// repair picks the sections to work on from the section that was revealed. The caller reads the live
+/// state and passes plain values in.
 nonisolated enum RevealRepairScope {
     /// Why a reveal repair does nothing.
     enum Skip: Equatable {
