@@ -9,7 +9,8 @@ SwiftLint matches a baseline entry by its message, which holds the measured
 size ("currently spans 77 lines"), so shrinking a grandfathered file or
 function fails lint just like growing it. `update` replaces CURRENT with FRESH
 (a `swiftlint lint --write-baseline` run) when FRESH only removes entries or
-lowers their sizes. `check` fails when NEW adds an entry or raises a size
+lowers their sizes, and keeps the old entry wherever nothing but its line
+number changed. `check` fails when NEW adds an entry or raises a size
 compared with OLD, which catches a baseline raised by hand.
 """
 
@@ -47,6 +48,20 @@ def grouped(entries):
     return {key: sorted(sizes, reverse=True) for key, sizes in groups.items()}
 
 
+def keep_unchanged(old, new):
+    # A fresh run renumbers entries of files nobody touched; keep the old entry
+    # whenever its file, rule, source line and size are all unchanged.
+    pool = defaultdict(list)
+    for entry in old:
+        pool[entry_key(entry)].append(entry)
+    return [pool[entry_key(entry)].pop(0) if pool[entry_key(entry)] else entry for entry in new]
+
+
+def entry_key(entry):
+    violation = entry["violation"]
+    return (violation["location"]["file"], violation["ruleIdentifier"], entry.get("text", ""), size(entry))
+
+
 def growth(old, new):
     problems = []
     for entry in new:
@@ -80,6 +95,7 @@ def main(argv):
             print(f"  {problem}", file=sys.stderr)
         return 1
     if command == "update":
+        new = keep_unchanged(old, new)
         # A stable order keeps the next update's diff to the entries that changed.
         new.sort(key=lambda entry: (
             entry["violation"]["location"]["file"],
