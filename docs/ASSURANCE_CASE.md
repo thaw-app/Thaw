@@ -83,6 +83,7 @@ of Apple’s notarization infrastructure.
 | --- | --- | --- |
 | External URL → settings | `thaw://set` etc. | Allowlisted keys; range checks; sender whitelist + `SecCode` Team ID binding |
 | App ↔ XPC helpers | Codable requests | Fixed service names; limited request vocabulary; capture requests accept only menu-bar window IDs, validated bounds, and BGRA size limits; listeners accept only same-team peers (`XPCListener(requirement: .isFromSameTeam())`), and a teamless ad-hoc build logs a warning that it is running without peer validation |
+| App ↔ settings process | Link messages (settings changed, statuses, a page's commands and requests) and the item picture file | Started by the app as the same signed executable, with pipes only the two processes hold, so no other process can send on the link; the commands are a fixed list per page and do what that page's controls do in the app's own Settings window; only the app reads the screen and writes profiles |
 | App ↔ network | Appcast / downloads | HTTPS; Sparkle EdDSA (`SUPublicEDKey`); Apple notarization on shipped builds |
 | App ↔ OS | AX / capture | Explicit TCC; features degrade without grants |
 
@@ -182,6 +183,7 @@ defect classes before merge.
 
 | Date | Note |
 | --- | --- |
+| 2026-11-22 | Added the settings process to the trust boundaries: private pipes, a fixed command list per page, and screen reading and profile writes kept in the app |
 | 2026-11-01 | Listed the Strix pull request security review as evidence |
 | 2026-08-15 | Documented `MenuBarCaptureService`: same-team XPC, menu-bar-only window IDs, BGRA size limits, and helper recycle to contain the SkyLight dictionary leak |
 | 2026-07-27 | Initial version from `development` for OpenSSF docs |
