@@ -187,7 +187,7 @@ final class GroupFolders {
         } else {
             image?.isTemplate = true
         }
-        button.image = image
+        button.image = OwnStatusItemSpacing.padded(image)
     }
 
     private func reconcile() {

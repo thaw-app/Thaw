@@ -612,15 +612,7 @@ struct MenuBarItemCaptureFallbackTests {
         windowID: CGWindowID = 101,
         ownerPID: pid_t = 999_991
     ) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.status"), title: title, instanceIndex: 0),
-            windowID: windowID,
-            ownerPID: ownerPID,
-            sourcePID: ownerPID,
-            bounds: CGRect(x: x, y: 4.5, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, bundle: "com.example.status", x: x, y: 4.5, windowID: windowID, ownerPID: ownerPID, sourcePID: ownerPID)
     }
 
     private func makeCapture(

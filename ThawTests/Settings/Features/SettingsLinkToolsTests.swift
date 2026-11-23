@@ -506,10 +506,7 @@ final class SettingsLinkToolsTests {
         let remote = recordingRemote()
         let size = CGSize(width: 760, height: 1600)
         func page(_ view: some View) -> OffscreenRender<AnyView> {
-            OffscreenRender(
-                AnyView(view.environment(child).environment(\.settingsPaneTitle, nil).frame(width: size.width, height: size.height)),
-                size: size
-            )
+            OffscreenRender(settingsPage: view, appState: child, size: size)
         }
 
         let pane = page(ToolsSettingsPane(settings: settings, remote: remote))

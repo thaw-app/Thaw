@@ -18,15 +18,7 @@ struct MenuBarCaptureReadingTests {
     private static let absentPID: pid_t = 999_998
 
     private static func item(_ title: String, owner: pid_t, source: pid_t? = nil) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.capture"), title: title, instanceIndex: 0),
-            windowID: 12,
-            ownerPID: owner,
-            sourcePID: source,
-            bounds: CGRect(x: 500, y: 0, width: 22, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, bundle: "com.example.capture", x: 500, width: 22, windowID: 12, ownerPID: owner, sourcePID: source)
     }
 
     // MARK: Drawn seats

@@ -9,6 +9,7 @@ import AppKit
 import SwiftUI
 import Testing
 @testable import Thaw
+import ThawUI
 
 /// The names and symbols the settings pickers show for their choices.
 @MainActor
@@ -19,7 +20,7 @@ struct ChoiceLabelsTests {
         let symbols = ThawBarLayout.allCases.map(\.systemImage)
         #expect(Set(symbols).count == ThawBarLayout.allCases.count)
         for symbol in symbols {
-            #expect(NSImage(systemSymbolName: symbol, accessibilityDescription: nil) != nil, "\(symbol) is a system symbol")
+            #expect(NSImage(systemSymbolName: symbol, accessibilityDescription: nil) != nil)
         }
     }
 
@@ -31,11 +32,7 @@ struct ChoiceLabelsTests {
         #expect(MenuBarGlassStyle.edge.localized == "Edge")
         #expect(MenuBarGlassStyle.sheer.localized == "Sheer")
         #expect(MenuBarGlassStyle.dim.localized == "Dim")
-        let names = MenuBarGlassStyle.allCases.map(\.localized)
-        #expect(names.count == MenuBarGlassStyle.allCases.count)
-        for (index, name) in names.enumerated() {
-            #expect(!names[(index + 1)...].contains(name), "each finish has its own name")
-        }
+        #expect(Set(MenuBarGlassStyle.allCases.map { String(localized: $0.localized) }).count == MenuBarGlassStyle.allCases.count)
     }
 
     @Test("The Effect menu lists plain glass under Glass, then every other finish under Liquid Glass")
@@ -90,5 +87,14 @@ struct ChoiceLabelsTests {
         let message = StoredImageData.Failure.unreadable.errorDescription
         #expect(message?.isEmpty == false)
         #expect(StoredImageData.Failure.unreadable.localizedDescription == message)
+    }
+
+    @Test("Each automatic update choice has its own picker label and a shorter pill name")
+    func automaticUpdatesLabels() {
+        let labels: [(AutomaticUpdates, LocalizedStringResource, LocalizedStringResource)] = [(.off, "Off", "Off"), (.check, "Check only", "Check"), (.download, "Check and download", "Download")]
+        for (choice, label, short) in labels {
+            #expect(choice.localized == label)
+            #expect(choice.shortLocalized == short)
+        }
     }
 }

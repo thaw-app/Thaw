@@ -1,0 +1,204 @@
+//
+//  SettingsNavigationTests.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import Foundation
+import SwiftUI
+import Testing
+@testable import Thaw
+
+/// The sidebar lists direct destinations in groups, ending with About.
+/// Scripts is an unbuilt placeholder with no route from the window.
+@MainActor
+@Suite("Settings sidebar")
+struct SettingsSidebarTests {
+    // MARK: - Sidebar shape
+
+    @Test("The sidebar puts Thaw's everyday pages first, then the modules that are on, then Manage, About alone last")
+    func sidebarGroups() {
+        #expect(SettingsSidebarPanes.groups.map(\.heading) == [nil, "Modules", "Manage", nil])
+        #expect(SettingsSidebarPanes.all == [
+            .general, .menuBarLayout, .visibility, .menuBarAppearance, .thawBar, .displays, .hotkeys,
+            .profiles, .scripts, .triggers, .widgets,
+            .modules, .privacy, .tools,
+            .about,
+        ])
+    }
+
+    @Test("Modules and Manage have their headings, and About opens with a gap")
+    func headingsAndGaps() {
+        let rows = SettingsSidebarPanes.rows
+        let on = String(localized: "Modules")
+        let manage = String(localized: "Manage")
+        #expect(rows.filter { $0.page == nil } == [.heading(on), .heading(manage), .gap])
+        #expect(rows[7] == .heading(on))
+        #expect(rows[12] == .heading(manage))
+        #expect(rows.compactMap(\.page) == SettingsSidebarPanes.all)
+    }
+
+    @Test("A page that only opens a module leaves the sidebar while its module is off")
+    func modulePanesFollowTheirModule() {
+        let allOff = SettingsSidebarPanes.panesTurnedOff { _ in false }
+        #expect(allOff == [.scripts, .triggers, .widgets])
+        #expect(SettingsSidebarPanes.panesTurnedOff { $0 != .triggers } == [.triggers])
+        #expect(SettingsSidebarPanes.panesTurnedOff { _ in true }.isEmpty)
+        #expect(
+            SettingsSidebarPanes.panesTurnedOff(isEnabled: { _ in true }, profilesOn: false) == [.profiles],
+            "Profiles leaves the sidebar while its switch in Modules is off"
+        )
+
+        let pages = SettingsSidebarPanes.rows(turnedOff: allOff).compactMap(\.page)
+        #expect(!pages.contains(.scripts))
+        #expect(!pages.contains(.triggers))
+        #expect(!pages.contains(.widgets))
+        #expect(pages.contains(.profiles))
+    }
+
+    @Test("A group whose pages are all off loses its heading, and the arrow keys skip what's off")
+    func turnedOffGroupsAndArrows() {
+        let rows = SettingsSidebarPanes.rows(turnedOff: [.profiles, .scripts, .triggers, .widgets])
+        #expect(!rows.contains(.heading(String(localized: "Modules"))))
+        #expect(SettingsSidebarRow.page(moving: .down, from: .hotkeys, in: rows) == .modules)
+        let scriptsOff = SettingsSidebarPanes.rows(turnedOff: [.scripts])
+        #expect(SettingsSidebarRow.page(moving: .up, from: .triggers, in: scriptsOff) == .profiles)
+        #expect(SettingsSidebarRow.page(moving: .down, from: .profiles, in: scriptsOff) == .triggers)
+    }
+
+    @Test("Settings that left Experiments and Triggers are found on their new panes")
+    func movedSettingsSearchToTheirNewPanes() {
+        let panes = Dictionary(uniqueKeysWithValues: SearchIndex.advancedEntries.map { ($0.id, $0.pane) })
+        for id in ["lab.enableRecordingWatch", "lab.recordingWatchScreen", "lab.recordingWatchPlacement"] {
+            #expect(panes[id] == nil, "\(id) is hidden for now, so search doesn't offer it")
+        }
+        #expect(panes["lab.enableControlItemPanel"] == .widgets)
+        #expect(panes["lab.enableMenuBarItemDescenders"] == .visibility)
+        #expect(panes["advanced.autoZenWhileSharingScreen"] == .visibility)
+        #expect(panes["automation.menuBarItemAlertReveals"] == .triggers)
+        #expect(panes["lab.enableDesktopMenuHiding"] == .general)
+        #expect(panes["lab.zenModeWhileRecording"] == .visibility)
+    }
+
+    @Test("The arrow keys step over headings and stop at the ends")
+    func arrowKeysSkipHeadings() {
+        func page(moving direction: MoveCommandDirection, from current: SettingsNavigationIdentifier) -> SettingsNavigationIdentifier? {
+            SettingsSidebarRow.page(moving: direction, from: current, in: SettingsSidebarPanes.rows)
+        }
+        #expect(page(moving: .down, from: .hotkeys) == .profiles)
+        #expect(page(moving: .up, from: .profiles) == .hotkeys)
+        #expect(page(moving: .up, from: .general) == nil)
+        #expect(page(moving: .down, from: .about) == nil)
+        #expect(page(moving: .left, from: .hotkeys) == nil)
+    }
+
+    @Test("No sidebar row is selected while search results show, so any row ends the search")
+    func searchDeselectsTheSidebar() {
+        #expect(SettingsSidebarPanes.showsSelection(current: .visibility, isSearching: false))
+        #expect(!SettingsSidebarPanes.showsSelection(current: .visibility, isSearching: true))
+    }
+
+    @Test("Every identifier is a page in the sidebar")
+    func everyIdentifierIsAPage() {
+        #expect(Set(SettingsSidebarPanes.all) == Set(SettingsNavigationIdentifier.allCases))
+    }
+
+    @Test("Search entries for settings that moved pages open their new page", arguments: [
+        ("pane.thawBar", SettingsNavigationIdentifier.thawBar),
+        ("displays.useThawBar", .thawBar),
+        ("displays.alwaysShowHiddenItems", .thawBar),
+        ("displays.thawBarLocation", .thawBar),
+        ("displays.thawBarLayout", .thawBar),
+        ("displays.thawBarItemSize", .thawBar),
+        ("general.lockThawBarPosition", .thawBar),
+        ("general.thawBarLocationOnHotkey", .thawBar),
+        ("general.showOnClick", .visibility),
+        ("general.showOnHover", .visibility),
+        ("general.showOnScroll", .visibility),
+        ("general.autoRehide", .visibility),
+        ("general.menuBarSearchPresentation", .visibility),
+        ("general.showMenuBarTooltips", .visibility),
+        ("general.tempShowInterval", .visibility),
+        ("displays.itemSpacing", .displays),
+        ("displays.spacingApplyMode", .displays),
+    ])
+    func movedEntryOpensItsPage(id: String, pane: SettingsNavigationIdentifier) throws {
+        #expect(try #require(SearchIndex.entries.first { $0.id == id }).pane == pane)
+    }
+
+    @Test("Every search entry opens a pane that is in the sidebar")
+    func everyEntryPaneIsInTheSidebar() {
+        let sidebar = Set(SettingsSidebarPanes.all)
+        for entry in SearchIndex.entries {
+            #expect(sidebar.contains(entry.pane), "Entry \(entry.id) routes to \(entry.pane), which has no sidebar row")
+        }
+    }
+}
+
+/// Saved panes and links name a page by its stored identifier, including pages since retired.
+@MainActor
+@Suite("Settings page identifiers", .serialized)
+struct SettingsPageIdentifierTests {
+    @Test("A stored pane name, current or retired, opens its page", arguments: [
+        ("General", SettingsNavigationIdentifier.general),
+        ("Menu Bar Layout", .menuBarLayout),
+        ("Visibility", .visibility),
+        ("Thaw Bar", .thawBar),
+        ("Displays", .displays),
+        ("Spaces", .displays),
+        ("Menu Bar Appearance", .menuBarAppearance),
+        ("Hotkeys", .hotkeys),
+        ("Profiles", .profiles),
+        ("Advanced", .menuBarLayout),
+        ("Automation", .triggers),
+        ("Triggers", .triggers),
+        ("Scripts", .scripts),
+        ("Widgets", .widgets),
+        ("Modules", .modules),
+        ("The Lab", .general),
+        ("Tools", .tools),
+        ("Privacy", .privacy),
+        ("About", .about),
+    ])
+    func storedNameOpensItsPage(stored: String, pane: SettingsNavigationIdentifier) {
+        #expect(SettingsNavigationIdentifier(storedValue: stored) == pane)
+    }
+
+    @Test("The Extras page keeps its stored identifier, so saved settings and links still find it")
+    func extrasKeepsItsIdentifier() {
+        #expect(SettingsNavigationIdentifier.modules.rawValue == "Modules")
+    }
+
+    @Test("An unknown pane name opens nothing")
+    func unknownName() {
+        #expect(SettingsNavigationIdentifier(storedValue: "Nowhere") == nil)
+    }
+
+    @Test("A saved Spaces pane opens Displays", .scratchDefaults)
+    func restoringSpaces() {
+        Defaults.store.set("Spaces", forKey: Defaults.Key.lastSettingsPane.rawValue)
+        #expect(AppNavigationState().settingsNavigationIdentifier == .displays)
+    }
+
+    @Test("A page is named by its label, not its stored identifier", arguments: [
+        (SettingsNavigationIdentifier.menuBarLayout, "Layout"),
+        (.menuBarAppearance, "Appearance"),
+        (.hotkeys, "Shortcuts"),
+        (.displays, "Displays"),
+        (.modules, "Modules"),
+        (.triggers, "Triggers"),
+        (.scripts, "Scripts"),
+        (.widgets, "Widgets"),
+    ])
+    func labelNotIdentifier(pane: SettingsNavigationIdentifier, label: String) {
+        #expect(String(localized: pane.localized) == label)
+    }
+
+    @Test("Each module card opens its own page")
+    func moduleCardPages() {
+        #expect(ModulesSettingsPane.pane(for: "automation") == .scripts)
+        #expect(ModulesSettingsPane.pane(for: "triggers") == .triggers)
+        #expect(ModulesSettingsPane.pane(for: "widgets") == .widgets)
+    }
+}

@@ -23,21 +23,7 @@ struct SettingsSectionRenderTests {
     private typealias Page = OffscreenRender<AnyView>
 
     private func page(_ view: some View, appState: AppState) -> Page {
-        OffscreenRender(
-            AnyView(
-                view
-                    .environment(appState)
-                    .environment(\.settingsPaneTitle, nil)
-                    .frame(width: Self.size.width, height: Self.size.height)
-            ),
-            size: Self.size
-        )
-    }
-
-    /// Waits until the page shows text, and returns it.
-    private func shownTexts(_ page: Page, containing text: String) async -> [String] {
-        await page.settle { page.texts().contains { $0.contains(text) } }
-        return page.texts()
+        Page(settingsPage: view, appState: appState, size: Self.size)
     }
 
     // MARK: General
@@ -52,7 +38,7 @@ struct SettingsSectionRenderTests {
             },
             appState: appState
         )
-        let texts = await shownTexts(page, containing: "isn't in the menu bar")
+        let texts = await page.texts(once: "isn't in the menu bar")
         #expect(texts.contains { $0.contains("isn't allowing \(Constants.displayName)") })
         #expect(texts.contains { $0.contains("icon isn't in the menu bar") })
     }
@@ -94,7 +80,7 @@ struct SettingsSectionRenderTests {
         general.lastCustomThawIcon = custom
         general.thawIcon = custom
         let page = page(ThawForm { ThawIconPicker(settings: general) }, appState: appState)
-        let texts = await shownTexts(page, containing: "dynamic appearance")
+        let texts = await page.texts(once: "dynamic appearance")
         #expect(texts.contains { $0.contains("Custom icon uses dynamic appearance") })
 
         let builtIn = try #require(ControlItemImageSet.userSelectableThawIcons.first)
@@ -216,10 +202,10 @@ struct SettingsSectionRenderTests {
         let model = records.model(bypass: true)
         let page = page(NativeVisibilityRecoveryView(model: model), appState: appState)
 
-        let busy = await shownTexts(page, containing: "Checking menu bar visibility")
+        let busy = await page.texts(once: "Checking menu bar visibility")
         #expect(busy.contains { $0.contains("Checking menu bar visibility") }, "another manager running keeps it busy")
 
-        let texts = await shownTexts(page, containing: "Other disabled apps")
+        let texts = await page.texts(once: "Other disabled apps")
         #expect(texts.contains { $0.contains("Recorded changes to restore") })
         #expect(texts.contains { $0.contains("com.example.recorded") })
         #expect(texts.contains { $0.contains("App com.example.manual") })
@@ -240,7 +226,7 @@ struct SettingsSectionRenderTests {
 
         model.selectedBundleIDs = ["com.example.manual"]
         await model.restore()
-        let done = await shownTexts(page, containing: "Visibility settings were saved")
+        let done = await page.texts(once: "Visibility settings were saved")
         #expect(done.contains { $0.contains("Visibility settings were saved") })
         #expect(records.restored == ["com.example.manual"])
     }
@@ -255,13 +241,13 @@ struct SettingsSectionRenderTests {
         let model = records.model()
         let page = page(NativeVisibilityRecoveryView(model: model), appState: appState)
 
-        let texts = await shownTexts(page, containing: "can't read its record")
+        let texts = await page.texts(once: "can't read its record")
         #expect(texts.contains { $0.contains("can't read its record") })
         #expect(!page.elements(role: .button, label: "Set Aside Record…").isEmpty)
         #expect(page.elements(role: .button, label: "Skip Recovery…").isEmpty, "this runtime can't skip recovery")
 
         model.setAsideUnreadableRecords()
-        let after = await shownTexts(page, containing: "previous recovery records are kept")
+        let after = await page.texts(once: "previous recovery records are kept")
         #expect(after.contains { $0.contains("RecoveryRecord.unreadable.json") })
         #expect(after.contains { $0.contains("No other apps are available for recovery") })
     }
@@ -274,43 +260,31 @@ struct SettingsSectionRenderTests {
         records.waitTime = .milliseconds(1)
         let model = records.model()
         let page = page(NativeVisibilityRecoveryView(model: model), appState: appState)
-        let texts = await shownTexts(page, containing: "Recovery records are kept")
+        let texts = await page.texts(once: "Recovery records are kept")
         #expect(texts.contains { $0.contains("Recovery records are kept until the visibility settings are verified") })
     }
 
     // MARK: Advanced
 
-    private static func item(_ title: String, x: CGFloat) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.\(title)"), title: title, instanceIndex: 0),
-            windowID: UInt32(x) + 1,
-            ownerPID: 100,
-            sourcePID: 200,
-            bounds: CGRect(x: x, y: 0, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
-    }
-
     @Test("The alert reveal list asks for a hidden item first when there is none")
     func alertRevealListEmpty() async {
         let appState = AppState()
         let page = page(ThawForm { AlertRevealItemList() }, appState: appState)
-        let texts = await shownTexts(page, containing: "Hide an item first")
+        let texts = await page.texts(once: "Hide an item first")
         #expect(texts.contains { $0.contains("Hide an item first") })
     }
 
     @Test("The alert reveal list offers every hidden item and an absent opt-in, and its switches save")
     func alertRevealListRows() async throws {
         let appState = AppState()
-        let hidden = Self.item("Hidden", x: 10)
-        let alwaysHidden = Self.item("Always", x: 40)
+        let hidden = MenuBarItem.fixture("Hidden", x: 10)
+        let alwaysHidden = MenuBarItem.fixture("Always", x: 40)
         appState.itemManager.itemCache[.hidden] = [hidden]
         appState.itemManager.itemCache[.alwaysHidden] = [alwaysHidden]
         MenuBarItemAlertReveals.setEnabled(true, for: "com.example.gone:Gone")
         let page = page(ThawForm { AlertRevealItemList() }, appState: appState)
 
-        let texts = await shownTexts(page, containing: "not currently in the menu bar")
+        let texts = await page.texts(once: "not currently in the menu bar")
         #expect(texts.contains { $0.contains("com.example.gone:Gone (not currently in the menu bar)") })
         await page.settle { page.elements().count { OffscreenAccessibility.role(of: $0) == .checkBox } == 3 }
         let checkBoxes = page.elements().filter { OffscreenAccessibility.role(of: $0) == .checkBox }

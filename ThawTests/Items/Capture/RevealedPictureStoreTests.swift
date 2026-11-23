@@ -36,14 +36,8 @@ struct RevealedPictureStoreTests {
 
     /// A 24 pt crop at scale 2 with ink in the pixel columns given.
     private static func glyph(inkColumns: Range<Int>, inkRows: Range<Int> = 8 ..< 40) throws -> MenuBarItemGlyphCapture {
-        let context = try #require(CGContext(
-            data: nil, width: 48, height: 48, bitsPerComponent: 8, bytesPerRow: 192,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ))
-        context.setFillColor(CGColor(gray: 1, alpha: 1))
-        context.fill(CGRect(x: inkColumns.lowerBound, y: inkRows.lowerBound, width: inkColumns.count, height: inkRows.count))
-        return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 2)
+        let ink = CGRect(x: inkColumns.lowerBound, y: inkRows.lowerBound, width: inkColumns.count, height: inkRows.count)
+        return try ItemsFixture.glyph(width: 48, height: 48, scale: 2, ink: ink)
     }
 
     /// The flame, whole and centred.

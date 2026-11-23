@@ -18,11 +18,7 @@ struct MoveLandingTests {
     private static let thaw = ThawMenuBarIdentity.bundleIdentifier
 
     private static func item(_ bundle: String, _ title: String, windowID: CGWindowID) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string(bundle), title: title, instanceIndex: 0),
-            windowID: windowID, ownerPID: 100, sourcePID: 200,
-            bounds: CGRect(x: 100, y: 3, width: 24, height: 24), title: title, isOnScreen: true
-        )
+        ItemsFixture.item(title, bundle: bundle, y: 3, windowID: windowID)
     }
 
     private let visibleControl = item(thaw, ControlItemIdentifier.visible.rawValue, windowID: 1)

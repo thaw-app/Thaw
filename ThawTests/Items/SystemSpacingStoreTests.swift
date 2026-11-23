@@ -109,3 +109,17 @@ struct SystemSpacingStoreTests {
         #expect(SystemSpacingStore.current.read(Self.spacing) == 4)
     }
 }
+
+@MainActor
+@Suite("Spacing reapply")
+struct SpacingReapplyTests {
+    /// An automatic refresh with matching values does not relaunch apps; an explicit reapply
+    /// reloads an already saved value, and changed values always apply.
+    @Test(
+        "A relaunch is skipped only when the values match and nothing forces it",
+        arguments: [(true, false, true), (true, true, false), (false, false, false), (false, true, false)]
+    )
+    func skipsRelaunch(valuesMatch: Bool, forceRelaunch: Bool, skips: Bool) {
+        #expect(MenuBarItemSpacingManager.shouldSkipRelaunch(valuesMatch: valuesMatch, forceRelaunch: forceRelaunch) == skips)
+    }
+}

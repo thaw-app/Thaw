@@ -196,4 +196,10 @@ final class ScratchSuites {
         names.append(name)
         return UserDefaults(suiteName: name)
     }
+
+    /// A new suite with its name, for reading back only what was written through persistentDomain(forName:).
+    func makeNamed() throws -> (defaults: UserDefaults, name: String) {
+        let defaults = try #require(make())
+        return (defaults, try #require(names.last))
+    }
 }

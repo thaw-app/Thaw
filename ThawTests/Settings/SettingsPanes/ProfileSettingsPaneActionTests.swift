@@ -57,12 +57,8 @@ struct ProfileSettingsPaneActionTests {
         let appState = try Self.makeAppState()
         try prepare(manager, appState)
         let page = OffscreenRender(
-            AnyView(
-                ProfileSettingsPane(profileManager: manager, fileChoosers: fileChoosers)
-                    .environment(appState)
-                    .environment(\.settingsPaneTitle, nil)
-                    .frame(width: Self.size.width, height: Self.size.height)
-            ),
+            settingsPage: ProfileSettingsPane(profileManager: manager, fileChoosers: fileChoosers),
+            appState: appState,
             size: Self.size
         )
         await page.settle { (try? page.pixels())?.contains { $0 != 0 } == true }

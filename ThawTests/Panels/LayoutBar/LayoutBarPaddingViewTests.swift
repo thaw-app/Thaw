@@ -10,61 +10,6 @@ import MenuBarModel
 import Testing
 @testable import Thaw
 
-/// A drag as a layout bar sees it, from a chosen source at a fixed spot in the window.
-@MainActor
-private final class BarDrag: NSObject, NSDraggingInfo {
-    let draggingSource: Any?
-    var draggingLocation: NSPoint
-    var draggingFormation = NSDraggingFormation.default
-    var animatesToDestination = false
-    var numberOfValidItemsForDrop = 1
-
-    init(source: Any?, location: NSPoint) {
-        self.draggingSource = source
-        self.draggingLocation = location
-    }
-
-    var draggingDestinationWindow: NSWindow? {
-        nil
-    }
-
-    var draggingSourceOperationMask: NSDragOperation {
-        .move
-    }
-
-    var draggedImageLocation: NSPoint {
-        draggingLocation
-    }
-
-    var draggedImage: NSImage? {
-        nil
-    }
-
-    var draggingPasteboard: NSPasteboard {
-        NSPasteboard(name: NSPasteboard.Name("ThawTests.LayoutBarPadding"))
-    }
-
-    var draggingSequenceNumber: Int {
-        1
-    }
-
-    var springLoadingHighlight: NSSpringLoadingHighlight {
-        .none
-    }
-
-    func slideDraggedImage(to _: NSPoint) {}
-
-    func enumerateDraggingItems(
-        options _: NSDraggingItemEnumerationOptions = [],
-        for _: NSView?,
-        classes _: [AnyClass],
-        searchOptions _: [NSPasteboard.ReadingOptionKey: Any] = [:],
-        using _: (NSDraggingItem, Int, UnsafeMutablePointer<ObjCBool>) -> Void
-    ) {}
-
-    func resetSpringLoading() {}
-}
-
 /// The layout bar's drag preview, group handle and refused drops. Every drop sent here is
 /// one the bar refuses, so nothing is committed to the menu bar.
 @MainActor
@@ -141,7 +86,7 @@ struct LayoutBarPaddingViewTests {
         let padding = try bars.padding()
         let views = try bars.itemViews()
         try #require(views.count == 3)
-        let drag = BarDrag(source: views[0], location: bars.point(on: views[2]))
+        let drag = TestDrag(source: views[0], location: bars.point(on: views[2]))
 
         #expect(padding.draggingEntered(drag) == .move)
         #expect(try !bars.container().acceptsViewUpdates, "the bar is frozen while a drag is over it")
@@ -156,7 +101,7 @@ struct LayoutBarPaddingViewTests {
     func foreignDrag() throws {
         let bars = try Bars([World.item("A")])
         let padding = try bars.padding()
-        let drag = BarDrag(source: nil, location: .zero)
+        let drag = TestDrag(source: nil, location: .zero)
         #expect(padding.draggingEntered(drag) == [])
         #expect(!padding.performDragOperation(drag))
         padding.draggingExited(nil)
@@ -168,7 +113,7 @@ struct LayoutBarPaddingViewTests {
     func dividerDropRefused() throws {
         let bars = try Bars([World.item("A")])
         let divider = LayoutBarItemView(appState: bars.world.appState, item: World.item(.hiddenControlItem))
-        let drag = BarDrag(source: divider, location: .zero)
+        let drag = TestDrag(source: divider, location: .zero)
         #expect(try !bars.padding().performDragOperation(drag))
         #expect(try bars.container().acceptsViewUpdates)
     }
@@ -178,7 +123,7 @@ struct LayoutBarPaddingViewTests {
         let bars = try Bars([World.item("A")], sections: [.visible, .hidden])
         let icon = LayoutBarItemView(appState: bars.world.appState, item: World.item(.visibleControlItem))
         icon.hasContainer = true
-        let drag = BarDrag(source: icon, location: .zero)
+        let drag = TestDrag(source: icon, location: .zero)
         #expect(try !bars.padding(.hidden).performDragOperation(drag))
         #expect(!icon.hasContainer)
         let refusal = try #require(bars.world.appState.layoutFeedback.refusal)
@@ -193,7 +138,7 @@ struct LayoutBarPaddingViewTests {
         #expect(handle.sourceSection == .visible)
         #expect(handle.memberIdentifiers.count == 2)
         let padding = try bars.padding()
-        let drag = try BarDrag(source: handle, location: bars.point(on: bars.itemViews().last ?? handle))
+        let drag = try TestDrag(source: handle, location: bars.point(on: bars.itemViews().last ?? handle))
 
         #expect(padding.draggingEntered(drag) == .move)
         #expect(try bars.container().groupDropMarkerX != nil)
@@ -211,7 +156,7 @@ struct LayoutBarPaddingViewTests {
             sourceSection: .hidden,
             memberIdentifiers: ["missing-one", "missing-two"]
         )
-        let drag = BarDrag(source: handle, location: .zero)
+        let drag = TestDrag(source: handle, location: .zero)
         #expect(try bars.padding().draggingEntered(drag) == [])
         #expect(try bars.padding().draggingUpdated(drag) == [])
     }
@@ -229,10 +174,7 @@ struct LayoutBarPaddingViewTests {
         #expect(handle.toolTip?.isEmpty == false)
 
         handle.frame = CGRect(x: 0, y: 0, width: 11, height: 18)
-        let bitmap = try #require(handle.bitmapImageRepForCachingDisplay(in: handle.bounds))
-        handle.cacheDisplay(in: handle.bounds, to: bitmap)
-        let bytes = try #require(bitmap.bitmapData)
-        #expect(Data(bytes: bytes, count: bitmap.bytesPerRow * bitmap.pixelsHigh).contains { $0 != 0 })
+        #expect(try handle.cachedPixels().contains { $0 != 0 })
         handle.resetCursorRects()
 
         let event = try #require(NSEvent.mouseEvent(
@@ -269,10 +211,7 @@ struct LayoutBarPaddingViewTests {
         #expect(container.closestView(toX: loneView.frame.midX, excludingBadge: true) === loneView)
 
         container.groupDropMarkerX = loneView.frame.minX
-        let bitmap = try #require(container.bitmapImageRepForCachingDisplay(in: container.bounds))
-        container.cacheDisplay(in: container.bounds, to: bitmap)
-        let bytes = try #require(bitmap.bitmapData)
-        #expect(Data(bytes: bytes, count: bitmap.bytesPerRow * bitmap.pixelsHigh).contains { $0 != 0 }, "the cluster and marker are drawn")
+        #expect(try container.cachedPixels().contains { $0 != 0 }, "the cluster and marker are drawn")
         container.groupDropMarkerX = nil
     }
 

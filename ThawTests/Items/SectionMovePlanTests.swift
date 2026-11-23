@@ -253,14 +253,6 @@ struct SectionMovePlanTests {
     }
 
     private func item(_ title: String, namespace: String? = nil, x: CGFloat) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string(namespace ?? "com.example.\(title)"), title: title, instanceIndex: 0),
-            windowID: UInt32(x) + 1,
-            ownerPID: 100,
-            sourcePID: 200,
-            bounds: CGRect(x: x, y: 0, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, bundle: namespace, x: x, windowID: UInt32(x) + 1)
     }
 }

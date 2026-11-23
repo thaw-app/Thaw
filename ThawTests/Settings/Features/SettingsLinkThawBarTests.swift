@@ -12,21 +12,6 @@ import os
 import Testing
 @testable import Thaw
 
-/// What the settings process sent, as the app would receive it.
-@MainActor
-private final class SentMessages {
-    private(set) var messages = [SettingsLinkMessage]()
-    private(set) lazy var remote = SettingsRemote { [weak self] in self?.messages.append($0) }
-
-    /// The payloads of the commands sent under this name, decoded.
-    func commands<Payload: Decodable>(_ name: String, as _: Payload.Type = Payload.self) -> [Payload] {
-        messages.compactMap { message in
-            guard case .command(name, let payload) = message else { return nil }
-            return SettingsLinkPayload.decode(Payload.self, from: payload)
-        }
-    }
-}
-
 /// The Thaw Bar page across the app and its settings process: one set of models stands for each,
 /// both on one throwaway defaults suite, as the two processes share the real one.
 @Suite("Settings process link, Thaw Bar page", .serialized, .scratchDefaults)
@@ -39,7 +24,7 @@ struct SettingsLinkThawBarTests {
     private let appHiding = NativeAppHidingExperiment()
     private let childDisplays = DisplaySettingsManager()
     private let childHiding = NativeAppHidingExperiment()
-    private let sent = SentMessages()
+    private let sent = SettingsLinkOutbox()
 
     private func payload(_ value: some Encodable) throws -> Data {
         try #require(SettingsLinkPayload.encode(value))

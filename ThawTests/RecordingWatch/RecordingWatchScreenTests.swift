@@ -9,10 +9,6 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// The recording watch's announcement-target rules: the storage round trip
-/// and the pure resolution that decides which display a banner lands on.
-/// The caller reads the live screen list; everything decided here is value
-/// math, see RecordingWatchScreen.
 @Suite("Recording watch announcement screen")
 struct RecordingWatchScreenTests {
     private static let primary: (uuid: String, displayID: CGDirectDisplayID) = (
@@ -43,8 +39,7 @@ struct RecordingWatchScreenTests {
     @Test("A display's storage key carries the UUID, not the display ID")
     func storageKeyEncodesUUID() {
         let key = RecordingWatchScreen.display(uuid: Self.external.uuid).storageKey
-        // Display IDs are transient across reboots; nothing persisted may
-        // depend on them. The prefix names the case, the tail is the UUID.
+        // Display IDs change across reboots, so nothing saved may depend on them.
         #expect(key.hasPrefix("display:"))
         #expect(key.hasSuffix(Self.external.uuid))
         #expect(!key.contains("displayID"))
@@ -70,9 +65,7 @@ struct RecordingWatchScreenTests {
             connectedDisplays: connectedDisplays
         ) == Self.external.displayID)
 
-        // A pointer over a display Thaw cannot identify (or no pointer at
-        // all, e.g. an announcement fired by automation) still lands
-        // somewhere readable rather than nowhere.
+        // No pointer, as for an announcement fired by automation, still lands somewhere.
         #expect(choice.resolve(
             pointerDisplayID: nil,
             primaryDisplayID: Self.primary.displayID,
@@ -99,13 +92,20 @@ struct RecordingWatchScreenTests {
             connectedDisplays: connectedDisplays
         ) == Self.external.displayID)
 
-        // The display was unplugged: the announcement must not vanish, and
-        // the primary display is the predictable place for it.
+        // The chosen display was unplugged.
         #expect(choice.resolve(
             pointerDisplayID: Self.primary.displayID,
             primaryDisplayID: Self.primary.displayID,
             connectedDisplays: [Self.primary]
         ) == Self.primary.displayID)
+    }
+
+    @Test("Each screen choice has its own label")
+    func labels() {
+        let pointer = RecordingWatchScreen.screenWithPointer.localized
+        let main = RecordingWatchScreen.mainDisplay.localized
+        let chosen = RecordingWatchScreen.display(uuid: "A").localized
+        #expect(pointer != main && main != chosen && pointer != chosen)
     }
 
     @Test("With no screens at all there is nowhere to show")

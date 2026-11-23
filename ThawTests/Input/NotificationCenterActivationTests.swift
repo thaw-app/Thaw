@@ -12,6 +12,8 @@ import Testing
 
 @MainActor
 struct NotificationCenterActivationTests {
+    private let suites = ScratchSuites(prefix: "NotificationCenterActivationTests")
+
     @Test("Clock and keyboard requests share one ordered activation queue")
     func serialDelivery() async {
         let gate = Gate()
@@ -383,10 +385,7 @@ extension NotificationCenterActivationTests {
 
     @Test("The bridge is on unless the hidden default turns it off")
     func bridgeSwitch() throws {
-        let name = ScratchDefaults.name("NotificationCenterActivationTests")
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { ScratchDefaults.remove(name) }
-        ScratchDefaults.remove(name)
+        let defaults = try #require(suites.make())
         #expect(NotificationCenterActivation.isBridgeEnabled(in: defaults))
         defaults.set(true, forKey: NotificationCenterActivation.bridgeDisabledKey)
         #expect(!NotificationCenterActivation.isBridgeEnabled(in: defaults))

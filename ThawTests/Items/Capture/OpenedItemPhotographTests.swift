@@ -31,14 +31,7 @@ struct OpenedItemPhotographTests {
     }
 
     private static func glyph() throws -> MenuBarItemGlyphCapture {
-        let context = try #require(CGContext(
-            data: nil, width: 40, height: 48, bitsPerComponent: 8, bytesPerRow: 160,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ))
-        context.setFillColor(CGColor(gray: 0, alpha: 1))
-        context.fill(CGRect(x: 8, y: 8, width: 24, height: 32))
-        return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 2)
+        try ItemsFixture.glyph(width: 40, height: 48, scale: 2, ink: CGRect(x: 8, y: 8, width: 24, height: 32), color: CGColor(gray: 0, alpha: 1))
     }
 
     /// The bar and the cache one try reads, and everything it did.

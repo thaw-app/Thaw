@@ -37,3 +37,70 @@ struct LayoutEditorWorld {
         appState.itemManager.itemCache[section] = items
     }
 }
+
+/// A drag that a Layout drop view can read: a source, a location and a pasteboard, and nothing to animate.
+@MainActor
+final class TestDrag: NSObject, NSDraggingInfo {
+    let draggingSource: Any?
+    var draggingLocation: NSPoint
+    let draggingPasteboard: NSPasteboard
+    var draggingFormation = NSDraggingFormation.default
+    var animatesToDestination = false
+    var numberOfValidItemsForDrop = 1
+
+    init(
+        source: Any? = nil,
+        location: NSPoint = .zero,
+        pasteboard: NSPasteboard = NSPasteboard(name: NSPasteboard.Name("ThawTests.TestDrag"))
+    ) {
+        draggingSource = source
+        draggingLocation = location
+        draggingPasteboard = pasteboard
+    }
+
+    var draggingDestinationWindow: NSWindow? {
+        nil
+    }
+
+    var draggingSourceOperationMask: NSDragOperation {
+        .move
+    }
+
+    var draggedImageLocation: NSPoint {
+        draggingLocation
+    }
+
+    var draggedImage: NSImage? {
+        nil
+    }
+
+    var draggingSequenceNumber: Int {
+        1
+    }
+
+    var springLoadingHighlight: NSSpringLoadingHighlight {
+        .none
+    }
+
+    func slideDraggedImage(to _: NSPoint) { /* Drop views never slide the image. */ }
+
+    func enumerateDraggingItems(
+        options _: NSDraggingItemEnumerationOptions = [],
+        for _: NSView?,
+        classes _: [AnyClass],
+        searchOptions _: [NSPasteboard.ReadingOptionKey: Any] = [:],
+        using _: (NSDraggingItem, Int, UnsafeMutablePointer<ObjCBool>) -> Void
+    ) { /* Drop views read the pasteboard, not the dragging items. */ }
+
+    func resetSpringLoading() { /* Not spring-loaded. */ }
+}
+
+extension NSView {
+    /// The view's pixels as it draws its bounds now.
+    func cachedPixels() throws -> Data {
+        let bitmap = try #require(bitmapImageRepForCachingDisplay(in: bounds))
+        cacheDisplay(in: bounds, to: bitmap)
+        let bytes = try #require(bitmap.bitmapData)
+        return Data(bytes: bytes, count: bitmap.bytesPerRow * bitmap.pixelsHigh)
+    }
+}

@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import CoreGraphics
 import Foundation
 import MenuBarModel
 import Testing
@@ -13,15 +14,7 @@ import Testing
 @Suite("Layout suggestions")
 struct LayoutSuggestionsTests {
     private func item(_ title: String, x: CGFloat = 100) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.\(title)"), title: title),
-            windowID: 1,
-            ownerPID: 100,
-            sourcePID: 100,
-            bounds: CGRect(x: x, y: 0, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, x: x, sourcePID: 100)
     }
 
     @Test("Only items mostly under the notch are reported")
@@ -34,15 +27,7 @@ struct LayoutSuggestionsTests {
     }
 
     private func littleSnitchItem() -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string(LayoutSuggestions.littleSnitchAgentBundleID), title: "Item-0"),
-            windowID: 2,
-            ownerPID: 200,
-            sourcePID: 200,
-            bounds: CGRect(x: 200, y: 0, width: 24, height: 24),
-            title: "Item-0",
-            isOnScreen: true
-        )
+        ItemsFixture.item("Item-0", bundle: LayoutSuggestions.littleSnitchAgentBundleID, x: 200, windowID: 2, ownerPID: 200)
     }
 
     @Test("Little Snitch running without an enumerated item is reported")
@@ -134,5 +119,29 @@ struct ThawBarKeyboardFocusTests {
         focus.begin()
         focus.activate()
         #expect(focus.activationRequest == 1)
+    }
+}
+
+@MainActor
+@Suite("Suggestion texts name a few items and count the rest", .scratchDefaults)
+struct LayoutSuggestionNamesTests {
+    private func named(_ name: String) -> MenuBarItem {
+        var item = ItemsFixture.item(name, bundle: "com.example.suggest.\(name)", x: 0, width: 22, windowID: 5, ownerPID: 999_972, sourcePID: 999_972)
+        item.customName = name
+        return item
+    }
+
+    @Test("Up to three names are joined as a list")
+    func shortList() {
+        let names = LayoutSuggestions.names(of: ["Alpha", "Beta", "Gamma"].map(named))
+        #expect(names == ["Alpha", "Beta", "Gamma"].formatted(.list(type: .and)))
+    }
+
+    @Test("Past three names, the rest are counted")
+    func longListIsShortened() {
+        let names = LayoutSuggestions.names(of: ["A", "B", "C", "D", "E"].map(named))
+        let more = String(localized: "\(2) more", comment: "Last entry of a shortened list of menu bar item names")
+        #expect(names == ["A", "B", "C", more].formatted(.list(type: .and)))
+        #expect(!names.contains("D"))
     }
 }

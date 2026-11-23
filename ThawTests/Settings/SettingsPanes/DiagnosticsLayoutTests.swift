@@ -48,13 +48,7 @@ struct DiagnosticsLayoutTests {
         let appState = AppState()
         appState.settings.tools.enableDiagnosticLogging = false
         let size = CGSize(width: 760, height: 1600)
-        let render = OffscreenRender(
-            ToolsSettingsPane(settings: appState.settings.tools)
-                .environment(appState)
-                .environment(\.settingsPaneTitle, nil)
-                .frame(width: size.width, height: size.height),
-            size: size
-        )
+        let render = OffscreenRender(settingsPage: ToolsSettingsPane(settings: appState.settings.tools), appState: appState, size: size)
         let drawn = await render.pixels(until: { $0.contains { $0 != 0 } })
         let off = try drawn ?? render.pixels()
         appState.settings.tools.enableDiagnosticLogging = true

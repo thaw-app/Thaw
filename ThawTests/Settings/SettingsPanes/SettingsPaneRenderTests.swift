@@ -18,14 +18,8 @@ import ThawUI
 struct SettingsPaneRenderTests {
     private static let size = CGSize(width: 760, height: 2400)
 
-    private func render(_ view: some View, appState: AppState) -> OffscreenRender<some View> {
-        OffscreenRender(
-            view
-                .environment(appState)
-                .environment(\.settingsPaneTitle, nil)
-                .frame(width: Self.size.width, height: Self.size.height),
-            size: Self.size
-        )
+    private func render(_ view: some View, appState: AppState) -> OffscreenRender<AnyView> {
+        OffscreenRender(settingsPage: view, appState: appState, size: Self.size)
     }
 
     /// Draws the page, waits for it to put something on screen, and returns its pixels.
