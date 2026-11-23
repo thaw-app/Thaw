@@ -166,8 +166,8 @@ final class MenuBarWallpaperColorMonitor {
         .store(in: &bag)
     }
 
-    /// Banks colors while the idle gate is closed (sleep or an inactive session) and restores them
-    /// the moment it opens, so wake shows no white flash before the settled samples arrive.
+    /// Banks colors and stops any wake poll while the idle gate is closed (sleep or an inactive session), and restores
+    /// them the moment it opens, so wake shows no white flash before the settled samples arrive.
     private func observeDisplaySleepCycle(into bag: inout Set<AnyCancellable>) {
         IdleGate.shared.subscribe { [weak self] mayRun in
             guard let self else { return }
@@ -175,6 +175,7 @@ final class MenuBarWallpaperColorMonitor {
                 restoreColorsAfterWake()
             } else {
                 sleepColorCache = averageColors
+                wakePollTimer = nil
             }
         }
         .store(in: &bag)
