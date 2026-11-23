@@ -321,9 +321,9 @@ extension MenuBarItemManager {
         diagnosticContext: String = "structural restore",
         permit: borrowing StoreWritePermit
     ) -> Bool {
-        // Same stranded-control exemption from Manual as enforceControlItemOrder.
+        // Same Manual exemption as enforceControlItemOrder.
         // Startup settling still gates it: weight writes need a quiet bar.
-        guard !arrangementIsManual || ControlOrderRules.visibleControlIsStranded(among: items),
+        guard !arrangementIsManual || ControlOrderRules.manualRelaysControls(controlItems, among: items),
               !barSettling.isSettling else { return false }
         guard !ControlOrderRules.framesSpanSeveralBars(items) else {
             MenuBarItemManager.diagLog.debug("Skipping \(diagnosticContext): item frames span more than one bar")
@@ -427,9 +427,9 @@ extension MenuBarItemManager {
         reason: StructuralControlOrderReason,
         permit: borrowing StoreWritePermit
     ) async -> Bool {
-        // Manual owns the app order, but a stranded control item is still
-        // reseated; the re-lay below moves only control items.
-        guard !arrangementIsManual || ControlOrderRules.visibleControlIsStranded(among: items) else { return false }
+        // Manual owns the app order, but stranded or out-of-order controls are
+        // still reseated; the re-lay below moves only control items.
+        guard !arrangementIsManual || ControlOrderRules.manualRelaysControls(controlItems, among: items) else { return false }
         let hidden = controlItems.hidden
         var didRestoreOrder = false
 

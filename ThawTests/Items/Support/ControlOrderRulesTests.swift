@@ -81,6 +81,18 @@ struct ControlOrderRulesStructureTests {
         #expect(ControlOrderRules.visibleControlIsStranded(among: [parked]))
     }
 
+    @Test("Manual re-lays the controls when Thaw's icon is drawn left of the Hidden divider, and only then")
+    func manualRelaysInvertedControls() {
+        let icon = Self.item(.visibleControlItem, x: 1141, width: 35, windowID: 1)
+        let divider = Self.item(.hiddenControlItem, x: 1448, width: 3, windowID: 2)
+        let pair = ControlItemPair(hidden: divider, alwaysHidden: nil)
+        #expect(ControlOrderRules.manualRelaysControls(pair, among: [icon, divider]))
+
+        let inOrder = Self.item(.visibleControlItem, x: 1500, width: 35, windowID: 1)
+        #expect(!ControlOrderRules.manualRelaysControls(pair, among: [inOrder, divider]))
+        #expect(!ControlOrderRules.manualRelaysControls(nil, among: [icon]), "without a known divider there is no order to judge")
+    }
+
     @Test("A non-anchored item right of an anchored system item is a violation")
     func nonAnchoredAfterAnchored() {
         let clock = Self.item(.clock, x: 100, windowID: 1)

@@ -531,8 +531,8 @@ extension MenuBarItemManager {
             guard let appState else { return }
             let situation = structuralNormalizationSituation()
             guard WriteHold.first([.userDragging, .startupSettling, .profileApplying], in: situation) == nil else { return }
-            // Manual arrangement turns this off, except to re-lay a stranded
-            // visible control item, which the user cannot drag back.
+            // Manual arrangement turns this off, except to re-lay stranded or
+            // out-of-order control items, which the user cannot drag back.
             guard manualArrangementAllowsControlRelay else {
                 MenuBarItemManager.diagLog.debug("structural normalization: skipping, manual arrangement is on")
                 return

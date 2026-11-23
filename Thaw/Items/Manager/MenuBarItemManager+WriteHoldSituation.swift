@@ -10,12 +10,14 @@ import Foundation
 import MenuBarModel
 
 extension MenuBarItemManager {
-    /// Manual arrangement turns the pass off, except to re-lay a stranded
-    /// visible control item, which the user cannot drag back.
+    /// Manual arrangement turns the pass off, except to re-lay stranded or
+    /// out-of-order control items, which the user cannot drag back.
     var manualArrangementAllowsControlRelay: Bool {
         guard arrangementIsManual else { return true }
         let settled = itemCache.managedItems
-        return !settled.isEmpty && ControlOrderRules.visibleControlIsStranded(among: settled)
+        guard !settled.isEmpty else { return false }
+        let withDividers = ControlOrderRules.withDividers(settled, cacheDividers())
+        return ControlOrderRules.manualRelaysControls(withDividers?.controlItems, among: withDividers?.items ?? settled)
     }
 
     /// Reads the manager's flags into the situation the structural
