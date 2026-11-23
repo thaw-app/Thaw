@@ -17,7 +17,7 @@ compared with OLD, which catches a baseline raised by hand.
 import json
 import re
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 
 RULES = {
     "cyclomatic_complexity",
@@ -49,17 +49,31 @@ def grouped(entries):
 
 
 def keep_unchanged(old, new):
-    # A fresh run renumbers entries of files nobody touched; keep the old entry
-    # whenever its file, rule, source line and size are all unchanged.
+    # A fresh run renumbers entries of files nobody touched; keep the old entry when only its line moved.
+    # Exact matches are claimed first so two fresh entries never take the same old line.
+    unclaimed = Counter(line_key(entry) for entry in old)
+    exact = []
+    for entry in new:
+        exact.append(unclaimed[line_key(entry)] > 0)
+        unclaimed[line_key(entry)] -= exact[-1]
     pool = defaultdict(list)
     for entry in old:
-        pool[entry_key(entry)].append(entry)
-    return [pool[entry_key(entry)].pop(0) if pool[entry_key(entry)] else entry for entry in new]
+        if unclaimed[line_key(entry)] > 0:
+            unclaimed[line_key(entry)] -= 1
+            pool[entry_key(entry)].append(entry)
+    return [
+        pool[entry_key(entry)].pop(0) if not is_exact and pool[entry_key(entry)] else entry
+        for entry, is_exact in zip(new, exact)
+    ]
 
 
 def entry_key(entry):
     violation = entry["violation"]
-    return (violation["location"]["file"], violation["ruleIdentifier"], entry.get("text", ""), size(entry))
+    return (violation["location"]["file"], violation["ruleIdentifier"], entry.get("text", ""), violation["reason"])
+
+
+def line_key(entry):
+    return (*entry_key(entry), entry["violation"]["location"].get("line"))
 
 
 def growth(old, new):
@@ -103,7 +117,7 @@ def main(argv):
             entry["violation"]["ruleIdentifier"],
         ))
         with open(old_path, "w", encoding="utf-8") as handle:
-            json.dump(new, handle, indent=1, sort_keys=True)
+            json.dump(new, handle, indent=1, sort_keys=True, ensure_ascii=False)
             handle.write("\n")
         print(f"Baseline updated: {len(old)} entries before, {len(new)} now.")
     return 0
