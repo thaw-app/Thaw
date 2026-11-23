@@ -16,7 +16,10 @@ enum RevealTurns {
     static func restoreOrder(revealing section: MenuBarSectionName, cause: RepairOrchestrator.Cause, on itemManager: MenuBarItemManager) async {
         let read: () async -> [MenuBarItem]? = {
             // Nothing is restored while the user arranges, so nothing is read.
-            guard !itemManager.arrangementIsManual, !itemManager.isUserArrangingMenuBar else { return nil }
+            guard RevealRepairScope.firstSkip(
+                arrangementIsManual: itemManager.arrangementIsManual,
+                isUserArranging: itemManager.isUserArrangingMenuBar
+            ) == nil else { return nil }
             return await MenuBarItem.getMenuBarItems(option: .activeSpace)
         }
         itemManager.repairs.request(.revealReconcile, cause: cause)

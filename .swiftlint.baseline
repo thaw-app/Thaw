@@ -967,7 +967,7 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager+Moving.swift",
     "line": 727
    },
-   "reason": "Function should have complexity 10 or less; currently complexity is 13",
+   "reason": "Function should have complexity 10 or less; currently complexity is 12",
    "ruleDescription": "Complexity of function bodies should be limited.",
    "ruleIdentifier": "cyclomatic_complexity",
    "ruleName": "Cyclomatic Complexity",
@@ -982,7 +982,7 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager+Moving.swift",
     "line": 727
    },
-   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 110 lines",
+   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 109 lines",
    "ruleDescription": "Function bodies should not span too many lines",
    "ruleIdentifier": "function_body_length",
    "ruleName": "Function Body Length",
@@ -997,7 +997,7 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager+Moving.swift",
     "line": 925
    },
-   "reason": "Function should have complexity 10 or less; currently complexity is 27",
+   "reason": "Function should have complexity 10 or less; currently complexity is 21",
    "ruleDescription": "Complexity of function bodies should be limited.",
    "ruleIdentifier": "cyclomatic_complexity",
    "ruleName": "Cyclomatic Complexity",
@@ -1012,7 +1012,7 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager+Moving.swift",
     "line": 925
    },
-   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 187 lines",
+   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 178 lines",
    "ruleDescription": "Function bodies should not span too many lines",
    "ruleIdentifier": "function_body_length",
    "ruleName": "Function Body Length",
@@ -1132,7 +1132,7 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager+Moving.swift",
     "line": 2333
    },
-   "reason": "File should contain 1000 lines or less: currently contains 2333",
+   "reason": "File should contain 1000 lines or less: currently contains 2298",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
