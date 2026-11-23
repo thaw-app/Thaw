@@ -67,10 +67,6 @@ final class MenuBarWallpaperColorMonitor {
     @ObservationIgnored
     private var sleepColorCache: [CGDirectDisplayID: MenuBarAverageColorInfo]?
 
-    /// Skip sampling sleeping displays: captures cost work and do not reflect the wallpaper.
-    @ObservationIgnored
-    private var displaysAreAsleep = false
-
     /// Polling state for adaptive wake stabilization.
     @ObservationIgnored
     private var wakePollTimer: AnyCancellable?
@@ -141,12 +137,9 @@ final class MenuBarWallpaperColorMonitor {
                     return
                 }
                 updateAverageColorInfo()
-                averageColorRefreshCancellable = Timer.publish(every: 60, tolerance: 10, on: .main, in: .default)
-                    .autoconnect()
-                    .sink { [weak self] _ in
-                        guard let self, !displaysAreAsleep else { return }
-                        updateAverageColorInfo()
-                    }
+                averageColorRefreshCancellable = IdleGate.shared.repeating(every: 60, tolerance: 10) { [weak self] in
+                    self?.updateAverageColorInfo()
+                }
             }
     }
 
@@ -173,26 +166,18 @@ final class MenuBarWallpaperColorMonitor {
         .store(in: &bag)
     }
 
-    /// Restore banked colors immediately on wake to avoid a white flash, then poll for changed, settled samples.
-    /// Screen sleep/wake notifications cover both display-only sleep and system sleep.
+    /// Banks colors while the idle gate is closed (sleep or an inactive session) and restores them
+    /// the moment it opens, so wake shows no white flash before the settled samples arrive.
     private func observeDisplaySleepCycle(into bag: inout Set<AnyCancellable>) {
-        NSWorkspace.shared.notificationCenter
-            .publisher(for: NSWorkspace.screensDidSleepNotification)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                displaysAreAsleep = true
+        IdleGate.shared.subscribe { [weak self] mayRun in
+            guard let self else { return }
+            if mayRun {
+                restoreColorsAfterWake()
+            } else {
                 sleepColorCache = averageColors
             }
-            .store(in: &bag)
-
-        NSWorkspace.shared.notificationCenter
-            .publisher(for: NSWorkspace.screensDidWakeNotification)
-            .sink { [weak self] _ in
-                guard let self else { return }
-                displaysAreAsleep = false
-                restoreColorsAfterWake()
-            }
-            .store(in: &bag)
+        }
+        .store(in: &bag)
     }
 
     /// Refresh without stabilization polling if no pre-sleep colors were banked.
@@ -287,17 +272,12 @@ final class MenuBarWallpaperColorMonitor {
                     captureAdaptiveColorWithRetry()
                 case .start:
                     captureAdaptiveColorWithRetry()
-                    adaptiveColorRefreshCancellable = Timer.publish(
+                    // No onResume: waking restores banked colors and runs its own poll.
+                    adaptiveColorRefreshCancellable = IdleGate.shared.repeating(
                         every: Self.adaptiveRefreshInterval,
-                        tolerance: Self.adaptiveRefreshTolerance,
-                        on: .main,
-                        in: .default
-                    )
-                    .autoconnect()
-                    .sink { [weak self] _ in
-                        // Skip sleep ticks; wake restores banked colors and runs its own poll.
-                        guard let self, !displaysAreAsleep else { return }
-                        updateAverageColorInfo()
+                        tolerance: Self.adaptiveRefreshTolerance
+                    ) { [weak self] in
+                        self?.updateAverageColorInfo()
                     }
                     wallpaperChangeMonitor.onChange = { [weak self] in
                         self?.wallpaperGeneration += 1
