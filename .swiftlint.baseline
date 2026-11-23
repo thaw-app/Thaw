@@ -2510,7 +2510,7 @@
    "location": {
     "character": 9,
     "file": "Thaw/System/ItemEnumerationDump.swift",
-    "line": 37
+    "line": 40
    },
    "reason": "Types should be nested at most 1 level deep",
    "ruleDescription": "Types should be nested at most 1 level deep, and functions should be nested at most 2 levels deep.",
@@ -2525,9 +2525,9 @@
    "location": {
     "character": 12,
     "file": "Thaw/System/ItemEnumerationDump.swift",
-    "line": 68
+    "line": 71
    },
-   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 95 lines",
+   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 87 lines",
    "ruleDescription": "Function bodies should not span too many lines",
    "ruleIdentifier": "function_body_length",
    "ruleName": "Function Body Length",

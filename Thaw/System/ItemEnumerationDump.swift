@@ -33,6 +33,9 @@ enum ItemEnumerationDump {
         let childCount: Int
         /// Child identity attributes for containers that publish none.
         let innerAttributes: [Inner]?
+        /// The AXPosition and AXSize frame the AX helper keeps for an item without AXFrame, which the
+        /// in-process walk skips. Nil when both walks read the same frame.
+        var helperFrame: HelperFrame?
 
         struct Inner: Codable {
             let role: String?
@@ -103,17 +106,7 @@ enum ItemEnumerationDump {
                 let child = children[childIndex]
                 let frame = frames[childIndex] ?? .zero
                 let innerChildren = AXHelpers.children(for: child)
-
-                let inner = innerChildren.map { element in
-                    let attributes = AXHelpers.descendantAttributes(for: element)
-                    return DumpedItem.Inner(
-                        role: attributes.role,
-                        title: attributes.title?.trimmed,
-                        identifier: attributes.identifier?.trimmed,
-                        description: attributes.accessibilityDescription?.trimmed,
-                        help: AXHelpers.help(for: element)?.trimmed
-                    )
-                }
+                let inner = innerChildren.map(innerAttributes(of:))
 
                 items.append(
                     DumpedItem(
@@ -131,7 +124,8 @@ enum ItemEnumerationDump {
                         frameWidth: frame.width,
                         frameHeight: frame.height,
                         childCount: innerChildren.count,
-                        innerAttributes: inner.isEmpty ? nil : inner
+                        innerAttributes: inner.isEmpty ? nil : inner,
+                        helperFrame: helperFrame(of: child, appFrame: frames[childIndex])
                     )
                 )
             }
@@ -171,8 +165,19 @@ enum ItemEnumerationDump {
         }
 
         let totalItems = dumpedApps.reduce(0) { $0 + $1.items.count }
-        diagLog.info("dump: \(totalItems) item(s) across \(dumpedApps.count) app(s) → \(fileURL.path)")
+        diagLog.info("dump: \(totalItems) item(s) across \(dumpedApps.count) app(s), \(helperFramedCount(dumpedApps)) framed only by the AX helper → \(fileURL.path)")
         return fileURL
+    }
+
+    private static func innerAttributes(of element: AXElement) -> DumpedItem.Inner {
+        let attributes = AXHelpers.descendantAttributes(for: element)
+        return DumpedItem.Inner(
+            role: attributes.role,
+            title: attributes.title?.trimmed,
+            identifier: attributes.identifier?.trimmed,
+            description: attributes.accessibilityDescription?.trimmed,
+            help: AXHelpers.help(for: element)?.trimmed
+        )
     }
 
     /// Sends the dump's path and summary to a callback that deliverableCallback accepted, with the app it confirmed.
