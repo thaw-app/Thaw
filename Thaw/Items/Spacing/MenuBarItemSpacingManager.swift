@@ -148,16 +148,7 @@ final class MenuBarItemSpacingManager {
             "Signaling application \"\(app.logString)\" to quit"
         )
 
-        app.terminate()
-
-        let pollInterval: Duration = .milliseconds(50)
-        let deadline = ContinuousClock.now.advanced(by: .seconds(forceTerminateDelay))
-
-        while !app.isTerminated, ContinuousClock.now < deadline {
-            await sleepIgnoringCancellation(for: pollInterval)
-        }
-
-        if !app.isTerminated {
+        if await !app.terminateAndWait(upTo: .seconds(forceTerminateDelay), sleep: sleepIgnoringCancellation) {
             MenuBarItemSpacingManager.diagLog.debug(
                 """
                 Application "\(app.logString)" did not terminate within \

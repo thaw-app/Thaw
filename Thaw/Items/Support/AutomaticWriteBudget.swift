@@ -12,7 +12,7 @@ nonisolated struct AutomaticWriteBudget {
     static let window = Duration.seconds(30)
     static let pause = Duration.seconds(60)
 
-    private var writingPasses = [ContinuousClock.Instant]()
+    private var writingPasses = TimestampWindow(length: Self.window, expiry: .atLength)
     private var pausedUntil: ContinuousClock.Instant?
 
     func allowsAutomaticWrites(at now: ContinuousClock.Instant = .now) -> Bool {
@@ -22,8 +22,7 @@ nonisolated struct AutomaticWriteBudget {
     /// Records an automatic pass that wrote, and returns true when it starts a pause.
     @discardableResult
     mutating func noteWritingPass(at now: ContinuousClock.Instant = .now) -> Bool {
-        writingPasses.removeAll { $0.duration(to: now) >= Self.window }
-        writingPasses.append(now)
+        writingPasses.record(at: now)
         guard writingPasses.count > Self.limit else { return false }
         writingPasses.removeAll()
         pausedUntil = now + Self.pause
