@@ -1042,7 +1042,7 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager+Moving.swift",
     "line": 1472
    },
-   "reason": "Function should have complexity 10 or less; currently complexity is 31",
+   "reason": "Function should have complexity 10 or less; currently complexity is 29",
    "ruleDescription": "Complexity of function bodies should be limited.",
    "ruleIdentifier": "cyclomatic_complexity",
    "ruleName": "Cyclomatic Complexity",
@@ -1057,7 +1057,7 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager+Moving.swift",
     "line": 1472
    },
-   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 221 lines",
+   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 220 lines",
    "ruleDescription": "Function bodies should not span too many lines",
    "ruleIdentifier": "function_body_length",
    "ruleName": "Function Body Length",
