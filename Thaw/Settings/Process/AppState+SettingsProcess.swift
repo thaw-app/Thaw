@@ -25,6 +25,21 @@ extension AppState {
         return shown
     }
 
+    /// Closing Settings hands focus back unless another Thaw window, such as What's New, is open or opening.
+    /// Settings itself is still in openWindows when this runs.
+    nonisolated static func shouldDeactivateAfterSettingsClosed(
+        openWindows: Set<ThawWindowIdentifier>,
+        pendingWindows: Set<ThawWindowIdentifier>
+    ) -> Bool {
+        openWindows.subtracting([.settings]).isEmpty && pendingWindows.isEmpty
+    }
+
+    func deactivateAfterSettingsClosed() {
+        if Self.shouldDeactivateAfterSettingsClosed(openWindows: openWindows, pendingWindows: pendingOpenWindows) {
+            deactivate(withPolicy: .accessory)
+        }
+    }
+
     /// In the settings process, opens a window the app sent: one of SettingsProcessRoute.windowTargets.
     func openSettingsProcessWindow(_ target: String) {
         switch target {
