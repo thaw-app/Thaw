@@ -292,6 +292,7 @@ public actor MenuBarCaptureServiceClient {
         do {
             let created = try XPCSession(
                 xpcService: serviceName,
+                options: .inactive,
                 cancellationHandler: { [weak self] error in
                     // Fires when the helper exits (capture budget reached,
                     // crash, or system reclaim), and also after this client
@@ -301,6 +302,12 @@ public actor MenuBarCaptureServiceClient {
                     Task { await self?.sessionCancelled(token: token, reason: "cancelled: \(error)") }
                 }
             )
+            if CodeSigningInfo.processTeamIdentifier != nil {
+                created.setPeerRequirement(.isFromSameTeam())
+            } else {
+                Self.diagLog.warning("MenuBarCaptureService session has no peer validation (ad-hoc/teamless build)")
+            }
+            try created.activate()
             Self.diagLog.debug("Opened MenuBarCaptureService session (\(self.serviceName))")
             session = created
             sessionToken = token

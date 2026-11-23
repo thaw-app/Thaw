@@ -34,20 +34,13 @@ nonisolated enum AXHelpers {
     }
 
     static func extrasMenuBar(for app: AXElement) -> AXElement? {
-        app.value(kAXExtrasMenuBarAttribute) as? AXElement
+        AXPrimitives.elementAttribute(app.raw, kAXExtrasMenuBarAttribute).map(AXElement.init)
     }
 
-    /// The extras menu bar with the code the read returned and how long it took. The code and the time
-    /// tell an app with no bar, or no Accessibility server, apart from one that did not answer in time.
+    /// AXPrimitives.extrasMenuBarRead(of:) with the bar wrapped.
     static func extrasMenuBarRead(for app: AXElement) -> (bar: AXElement?, result: AXError, elapsed: Duration) {
-        var value: CFTypeRef?
-        let start = ContinuousClock.now
-        let result = AXUIElementCopyAttributeValue(app.raw, kAXExtrasMenuBarAttribute as CFString, &value)
-        let elapsed = ContinuousClock.now - start
-        guard result == .success, let value, CFGetTypeID(value) == AXUIElementGetTypeID() else {
-            return (nil, result, elapsed)
-        }
-        return (AXElement(unsafeDowncast(value, to: AXUIElement.self)), result, elapsed)
+        let read = AXPrimitives.extrasMenuBarRead(of: app.raw)
+        return (read.bar.map(AXElement.init), read.result, read.elapsed)
     }
 
     /// Everything the walk reads from one extras-bar child, in one message.

@@ -24,6 +24,9 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Changed
+
+- **Exported diagnostics no longer include saved item lists,** and Thaw keeps only the newest five item lists.
 ### Fixed
 
 - **Resetting the layout shows item pictures in the Layout bar right away,** instead of leaving them blank.
