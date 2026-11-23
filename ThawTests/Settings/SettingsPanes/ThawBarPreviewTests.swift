@@ -26,15 +26,7 @@ struct ThawBarPreviewTests {
     private static let missingDisplay = CGDirectDisplayID(0x00FF_FF00)
 
     private func render(_ view: some View, appState: AppState) -> Page {
-        OffscreenRender(
-            AnyView(
-                view
-                    .environment(appState)
-                    .environment(\.settingsPaneTitle, nil)
-                    .frame(width: Self.size.width, height: Self.size.height)
-            ),
-            size: Self.size
-        )
+        Page(settingsPage: view, appState: appState, size: Self.size)
     }
 
     private func preview(

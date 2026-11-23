@@ -25,7 +25,8 @@ struct WidgetsViewRenderTests {
         host.layoutSubtreeIfNeeded()
         let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
         host.cacheDisplay(in: host.bounds, to: bitmap)
-        #expect(bitmap.pixelsWide > 0)
+        let bytes = try #require(bitmap.bitmapData)
+        #expect(UnsafeBufferPointer(start: bytes, count: bitmap.bytesPerRow * bitmap.pixelsHigh).contains { $0 != 0 })
     }
 
     @Test("The builder draws with live readings and with sample readings")

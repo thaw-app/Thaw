@@ -14,15 +14,7 @@ import Testing
 @Suite("Strand selection")
 struct StrandSelectionTests {
     static func app(_ name: String, x: CGFloat, width: CGFloat = 24, windowID: CGWindowID) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.\(name)"), title: name, instanceIndex: 0),
-            windowID: windowID,
-            ownerPID: 100,
-            sourcePID: 200,
-            bounds: CGRect(x: x, y: 3, width: width, height: 24),
-            title: name,
-            isOnScreen: true
-        )
+        ItemsFixture.item(name, x: x, y: 3, width: width, windowID: windowID)
     }
 
     static func hiddenDivider(x: CGFloat) -> MenuBarItem {

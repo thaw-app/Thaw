@@ -30,15 +30,7 @@ struct NotShownOnBarTests {
     }
 
     private func item(_ title: String, x: CGFloat, y: CGFloat = 3, width: CGFloat = 24, windowID: CGWindowID) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.\(title)"), title: title, instanceIndex: 0),
-            windowID: windowID,
-            ownerPID: 100,
-            sourcePID: 200,
-            bounds: CGRect(x: x, y: y, width: width, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, x: x, y: y, width: width, windowID: windowID)
     }
 
     @Test("an item on a seat of its own is shown")

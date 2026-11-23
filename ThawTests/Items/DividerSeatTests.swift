@@ -14,15 +14,7 @@ import Testing
 @Suite("A divider whose frame stopped following the bar is seated by its weight")
 struct DividerSeatTests {
     private func item(_ name: String, x: CGFloat, width: CGFloat, windowID: CGWindowID) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.\(name)"), title: name, instanceIndex: 0),
-            windowID: windowID,
-            ownerPID: 100,
-            sourcePID: 200,
-            bounds: CGRect(x: x, y: 3, width: width, height: 24),
-            title: name,
-            isOnScreen: true
-        )
+        ItemsFixture.item(name, x: x, y: 3, width: width, windowID: windowID)
     }
 
     private func divider(x: CGFloat) -> MenuBarItem {

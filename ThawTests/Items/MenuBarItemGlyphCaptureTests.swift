@@ -9,8 +9,7 @@ import CoreGraphics
 import Testing
 @testable import Thaw
 
-/// Pins the value half of MenuBarItemGlyphCapture: its point size, its blank
-/// test and the pixel comparison the cache uses to skip a republish.
+/// The point size, the blank test, and the pixel comparison the cache uses to skip a republish.
 @MainActor
 @Suite("Glyph capture value")
 struct MenuBarItemGlyphCaptureTests {
@@ -21,20 +20,7 @@ struct MenuBarItemGlyphCaptureTests {
         scale: CGFloat = 1,
         gray: CGFloat? = 1
     ) throws -> MenuBarItemGlyphCapture {
-        let context = try #require(CGContext(
-            data: nil,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: width * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ))
-        if let gray {
-            context.setFillColor(CGColor(red: gray, green: gray, blue: gray, alpha: 1))
-            context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        }
-        return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: scale)
+        try ItemsFixture.glyph(width: width, height: height, scale: scale, color: gray.map { CGColor(red: $0, green: $0, blue: $0, alpha: 1) })
     }
 
     @Test("The point size divides the pixels by the capture's own scale")
@@ -91,18 +77,9 @@ struct MenuBarItemGlyphCaptureTests {
 
     @Test("The horizontal trim drops transparent side columns and is memoized")
     func horizontalTrim() throws {
-        let context = try #require(CGContext(
-            data: nil,
-            width: 20,
-            height: 16,
-            bitsPerComponent: 8,
-            bytesPerRow: 80,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ))
-        context.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1))
-        context.fill(CGRect(x: 6, y: 2, width: 8, height: 12))
-        let capture = try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 1)
+        let capture = try ItemsFixture.glyph(
+            width: 20, height: 16, ink: CGRect(x: 6, y: 2, width: 8, height: 12), color: CGColor(gray: 0, alpha: 1)
+        )
 
         let trimmed = try #require(capture.horizontallyTrimmedCGImage)
 

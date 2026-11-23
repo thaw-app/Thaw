@@ -15,11 +15,7 @@ import Testing
 @Suite("Section reading properties")
 struct SectionReadingPropertyTests {
     private static func item(_ index: Int) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.property.app\(index)"), title: "Item-0", instanceIndex: 0),
-            windowID: CGWindowID(index + 1), ownerPID: 1, sourcePID: 1,
-            bounds: CGRect(x: CGFloat(index) * 30, y: 3, width: 24, height: 24), title: "Item-0", isOnScreen: true
-        )
+        ItemsFixture.item("Item-0", bundle: "com.property.app\(index)", x: CGFloat(index) * 30, y: 3, windowID: CGWindowID(index + 1), ownerPID: 1, sourcePID: 1)
     }
 
     @Test("Misplaced dividers never move anything", arguments: 0 ..< 300)

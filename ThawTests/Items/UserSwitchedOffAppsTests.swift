@@ -13,15 +13,7 @@ import Testing
 @Suite("Apps switched off in System Settings stay out of the Thaw Bar")
 struct UserSwitchedOffAppsTests {
     private func item(_ bundleID: String, title: String = "Item-0") -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string(bundleID), title: title, instanceIndex: 0),
-            windowID: 1,
-            ownerPID: 1,
-            sourcePID: 1,
-            bounds: CGRect(x: -1, y: 1068, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, bundle: bundleID, x: -1, y: 1068, ownerPID: 1, sourcePID: 1)
     }
 
     @Test("An app switched off in System Settings is left out, and every other item stays in order")

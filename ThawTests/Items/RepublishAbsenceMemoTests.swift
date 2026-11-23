@@ -18,7 +18,6 @@ struct RepublishAbsenceMemoTests {
         let memo = RepublishAbsenceMemo()
 
         #expect(memo.isEmpty)
-        #expect(memo.isEmpty)
         #expect(!memo.isKnownAbsent("a"))
     }
 
@@ -93,11 +92,6 @@ struct RepublishAbsenceMemoTests {
         #expect(!memo.isKnownAbsent("a"))
     }
 
-    @Test("The memory window is ten seconds")
-    func memoryWindow() {
-        #expect(RepublishAbsenceMemo.memory == .seconds(10))
-    }
-
     @Test("A left-out member is still watched for after the ten-second memory lapses")
     func leftOutOutlastsTheMemory() {
         var memo = RepublishAbsenceMemo()
@@ -167,19 +161,10 @@ struct RepublishAbsenceMemoTests {
         #expect(memo.watchGeneration == 2)
     }
 
-    @Test("A left-out member is watched for two minutes")
-    func leftOutWindow() {
-        #expect(RepublishAbsenceMemo.leftOutMemory == .seconds(120))
-    }
-
-    @Test
-    func anEmptyReadNamesNoAbsentees() {
-        #expect(RepublishAbsenceMemo.absentees(wanted: ["a", "b"], live: []).isEmpty)
-    }
-
-    @Test
-    func aReadWithItemsNamesTheWantedMembersItLacks() {
+    @Test("A read with items names the wanted members it lacks, and an empty read names none")
+    func absentees() {
         #expect(RepublishAbsenceMemo.absentees(wanted: ["a", "b"], live: ["a", "c"]) == ["b"])
+        #expect(RepublishAbsenceMemo.absentees(wanted: ["a", "b"], live: []).isEmpty)
     }
 
     @Test("A member whose app is neither running nor on the bar cannot republish")

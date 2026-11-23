@@ -15,15 +15,7 @@ import Testing
 struct MenuBarItemIconChoicesTests {
     private let suites = ScratchSuites(prefix: "MenuBarItemIconChoicesTests")
 
-    private let item = MenuBarItem(
-        tag: MenuBarItemTag(namespace: .string("com.example.icons"), title: "Item", instanceIndex: 0),
-        windowID: 3,
-        ownerPID: 999_974,
-        sourcePID: 999_974,
-        bounds: CGRect(x: 0, y: 0, width: 22, height: 24),
-        title: "Item",
-        isOnScreen: true
-    )
+    private let item = ItemsFixture.item("Item", bundle: "com.example.icons", x: 0, width: 22, windowID: 3, ownerPID: 999_974, sourcePID: 999_974)
 
     /// A 2x image with one filled square, so the PNG keeps its pixels.
     private func makeImage(isTemplate: Bool) -> NSImage {

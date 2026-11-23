@@ -315,19 +315,9 @@ struct MenuBarItemOpaquePerimeterTests {
     }
 
     private static func bitmap(width: Int, height: Int, opaqueColumns: Int) -> CGImage {
-        let context = CGContext(
-            data: nil,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: width * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )!
-        if opaqueColumns > 0 {
-            context.setFillColor(CGColor(gray: 1, alpha: 1))
-            context.fill(CGRect(x: 0, y: 0, width: opaqueColumns, height: height))
-        }
-        return context.makeImage()!
+        try! ItemsFixture.image(
+            width: width, height: height, ink: CGRect(x: 0, y: 0, width: opaqueColumns, height: height),
+            color: opaqueColumns > 0 ? CGColor(gray: 1, alpha: 1) : nil
+        )
     }
 }

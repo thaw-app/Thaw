@@ -17,20 +17,19 @@ struct CacheGateTests {
     func admissionAndCoalescedReruns() async {
         let gate = MenuBarItemManager.CacheGate()
 
-        #expect(await gate.begin(), "The first pass must be admitted")
-        #expect(await gate.begin() == false, "A concurrent pass must be rejected")
-        #expect(await gate.begin() == false, "Further concurrent passes must still be rejected")
-        #expect(await gate.end(), "A rerun must be requested after concurrent rejections")
+        #expect(await gate.begin())
+        #expect(await gate.begin() == false)
+        #expect(await gate.begin() == false)
+        #expect(await gate.end())
 
-        #expect(await gate.begin(), "The follow-up pass must be admitted")
-        #expect(await gate.end() == false, "A quiet pass must not report a rerun")
+        #expect(await gate.begin())
+        #expect(await gate.end() == false)
     }
 }
 
 @Suite("Partial AX cache merge")
 @MainActor
 struct PartialAXCacheMergeTests {
-    /// A menu bar item for these tests.
     private func item(
         namespace: MenuBarItemTag.Namespace,
         title: String,

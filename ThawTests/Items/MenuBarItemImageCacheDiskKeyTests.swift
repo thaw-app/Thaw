@@ -25,20 +25,7 @@ struct MenuBarItemImageCacheDiskKeyTests {
 
     /// Scale distinguishes captures; opaque 20pt fixtures avoid blank-image misses and minimumTrustedGlyphWidth's chevron-bleed rejection.
     private static func capture(scale: CGFloat) -> MenuBarItemGlyphCapture {
-        let width = Int(20 * scale)
-        let height = Int(16 * scale)
-        let context = CGContext(
-            data: nil,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: width * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )!
-        context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        return MenuBarItemGlyphCapture(cgImage: context.makeImage()!, scale: scale)
+        try! ItemsFixture.glyph(width: Int(20 * scale), height: Int(16 * scale), scale: scale)
     }
 
     @Test("A second instance's saved identifier rebuilds a tag that matches the live item")

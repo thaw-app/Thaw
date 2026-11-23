@@ -550,10 +550,7 @@ struct SettingsLinkProfilesTests {
             try world.wire.send()
             let size = CGSize(width: 760, height: 2400)
             let pane = ProfileSettingsPane(profileManager: world.childProfiles, remote: world.wire.remote)
-            let page = OffscreenRender(
-                AnyView(pane.environment(world.childState).environment(\.settingsPaneTitle, nil).frame(width: size.width, height: size.height)),
-                size: size
-            )
+            let page = OffscreenRender(settingsPage: pane, appState: world.childState, size: size)
             await page.settle { page.texts().contains("What will change") }
             #expect(page.texts().contains("What will change"), "the app's preview of the selected profile has arrived")
             #expect(!page.texts().contains("This profile couldn't be read."))

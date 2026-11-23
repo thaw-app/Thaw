@@ -239,3 +239,38 @@ struct ProfileSnapshotPageModelTests {
         #expect(settings.tools.enableDiagnosticLogging == saved.enableDiagnosticLogging)
     }
 }
+
+/// Switching profiles must not turn off Always Hidden or the overflow switch.
+@Suite("Profile section switches")
+struct ProfileSectionSwitchesTests {
+    private func snapshot(alwaysHidden: Bool, overflow: Bool = false, tooltips: Bool = false) -> AdvancedSettingsSnapshot {
+        var snapshot = AdvancedSettingsSnapshot.defaults
+        snapshot.enableAlwaysHiddenSection = alwaysHidden
+        snapshot.enableMenuBarItemOverflow = overflow
+        snapshot.showMenuBarTooltips = tooltips
+        return snapshot
+    }
+
+    @Test("Always Hidden follows a profile that stores it, and an older profile without the switch only turns it on", arguments: [
+        (false, true, true, false),
+        (false, true, false, true),
+        (true, false, false, true),
+    ])
+    func alwaysHidden(saved: Bool, current: Bool, storesSwitch: Bool, expected: Bool) {
+        let merged = snapshot(alwaysHidden: saved).merged(onto: snapshot(alwaysHidden: current), storesAlwaysHiddenSection: storesSwitch)
+        #expect(merged.enableAlwaysHiddenSection == expected)
+    }
+
+    @Test("The overflow switch keeps the current value either way", arguments: [true, false])
+    func overflowStaysCurrent(current: Bool) {
+        let merged = snapshot(alwaysHidden: false, overflow: !current).merged(onto: snapshot(alwaysHidden: false, overflow: current), storesAlwaysHiddenSection: true)
+        #expect(merged.enableMenuBarItemOverflow == current)
+    }
+
+    @Test("Other settings still come from the profile")
+    func otherSettingsApply() {
+        let merged = snapshot(alwaysHidden: false, tooltips: true)
+            .merged(onto: snapshot(alwaysHidden: false, tooltips: false), storesAlwaysHiddenSection: true)
+        #expect(merged.showMenuBarTooltips)
+    }
+}

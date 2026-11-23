@@ -11,61 +11,6 @@ import SwiftUI
 import Testing
 @testable import Thaw
 
-/// A drag from inside the bar, at a fixed spot in the window.
-@MainActor
-private final class RowDrag: NSObject, NSDraggingInfo {
-    let draggingSource: Any?
-    let draggingLocation: NSPoint
-    var draggingFormation = NSDraggingFormation.default
-    var animatesToDestination = false
-    var numberOfValidItemsForDrop = 1
-
-    init(source: Any?, location: NSPoint) {
-        self.draggingSource = source
-        self.draggingLocation = location
-    }
-
-    var draggingDestinationWindow: NSWindow? {
-        nil
-    }
-
-    var draggingSourceOperationMask: NSDragOperation {
-        .move
-    }
-
-    var draggedImageLocation: NSPoint {
-        draggingLocation
-    }
-
-    var draggedImage: NSImage? {
-        nil
-    }
-
-    var draggingPasteboard: NSPasteboard {
-        NSPasteboard(name: NSPasteboard.Name("ThawTests.LayoutBarWrap"))
-    }
-
-    var draggingSequenceNumber: Int {
-        1
-    }
-
-    var springLoadingHighlight: NSSpringLoadingHighlight {
-        .none
-    }
-
-    func slideDraggedImage(to _: NSPoint) {}
-
-    func enumerateDraggingItems(
-        options _: NSDraggingItemEnumerationOptions = [],
-        for _: NSView?,
-        classes _: [AnyClass],
-        searchOptions _: [NSPasteboard.ReadingOptionKey: Any] = [:],
-        using _: (NSDraggingItem, Int, UnsafeMutablePointer<ObjCBool>) -> Void
-    ) {}
-
-    func resetSpringLoading() {}
-}
-
 /// The Layout window's bars wrap a long section onto rows, and drags read the rows as one bar.
 @MainActor
 @Suite("Layout bar rows", .serialized, .scratchDefaults)
@@ -148,7 +93,7 @@ struct LayoutBarWrapTests {
         let targetView = bar.views[target]
         let location = bar.windowPoint(CGPoint(x: targetView.frame.midX, y: targetView.frame.midY))
         bar.container.animatesNextLayoutPass = false
-        bar.container.handleDrag(RowDrag(source: source, location: location), phase: .entered)
+        bar.container.handleDrag(TestDrag(source: source, location: location), phase: .entered)
         #expect(bar.views.firstIndex(of: source) == target, "the item takes the slot it was dragged onto")
         #expect(bar.views.firstIndex(of: targetView) == target - 1, "and the item it passed moves back one")
         #expect(bar.container.dropMarker() == nil, "no gap is open, since the item is not a placeholder here")

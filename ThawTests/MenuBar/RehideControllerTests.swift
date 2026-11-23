@@ -707,3 +707,17 @@ struct SectionRehideTests {
         #expect(world.sleeps.isEmpty)
     }
 }
+
+@Suite("Timed rehide countdown")
+struct TimedRehideStepTests {
+    /// With no countdown and the pointer outside, one starts, so a reveal with no movement still rehides.
+    @Test("The pointer outside starts or keeps the countdown, and in either bar stops it", arguments: [
+        (false, false, TimedRehideStep.start),
+        (false, true, .keep),
+        (true, false, .cancel),
+        (true, true, .cancel),
+    ] as [(Bool, Bool, TimedRehideStep)])
+    func nextStep(pointerInBar: Bool, countdownRunning: Bool, step: TimedRehideStep) {
+        #expect(TimedRehideStep.next(pointerInBar: pointerInBar, countdownRunning: countdownRunning) == step)
+    }
+}

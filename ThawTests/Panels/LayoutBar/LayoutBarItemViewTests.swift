@@ -58,13 +58,6 @@ struct LayoutBarItemViewTests {
         }
     }
 
-    private func pixels(of view: NSView) throws -> Data {
-        let bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
-        view.cacheDisplay(in: view.bounds, to: bitmap)
-        let bytes = try #require(bitmap.bitmapData)
-        return Data(bytes: bytes, count: bitmap.bytesPerRow * bitmap.pixelsHigh)
-    }
-
     @Test("A fallback icon fills the tile's square, and Thaw's own icon keeps its size")
     func fallbackDrawRect() {
         let bounds = CGRect(x: 0, y: 0, width: 40, height: 20)
@@ -183,24 +176,24 @@ struct LayoutBarItemViewTests {
         let alpha = World.item("Alpha")
         let bar = try Bar([alpha])
         let view = try bar.view(alpha)
-        let normal = try pixels(of: view)
+        let normal = try view.cachedPixels()
         #expect(normal.contains { $0 != 0 })
 
         view.isEnabled = false
-        let disabled = try pixels(of: view)
+        let disabled = try view.cachedPixels()
         view.isEnabled = true
         view.isOwnerUnresponsive = true
-        let unresponsive = try pixels(of: view)
+        let unresponsive = try view.cachedPixels()
         view.isOwnerUnresponsive = false
         view.visibilityLimit = .cannotHide
         #expect(view.toolTip == LayoutBarVisibilityLimit.cannotHide.explanation)
-        let limited = try pixels(of: view)
+        let limited = try view.cachedPixels()
         view.visibilityLimit = nil
         #expect(view.toolTip == nil)
 
         #expect(Set([normal, disabled, unresponsive, limited]).count == 4)
         view.isDraggingPlaceholder = true
-        #expect(try !pixels(of: view).contains { $0 != 0 })
+        #expect(try !view.cachedPixels().contains { $0 != 0 })
         view.isDraggingPlaceholder = false
         #expect(view.draggingImage() != nil)
     }
@@ -210,7 +203,7 @@ struct LayoutBarItemViewTests {
         let icon = World.item(.visibleControlItem)
         let bar = try Bar([World.item("Alpha"), icon])
         let view = try bar.view(icon)
-        #expect(try pixels(of: view).contains { $0 != 0 })
+        #expect(try view.cachedPixels().contains { $0 != 0 })
         #expect(view.draggingImage() != nil)
     }
 
@@ -261,19 +254,19 @@ struct LayoutBarItemViewTests {
         let alpha = World.item("Alpha")
         let bar = try Bar([alpha])
         let view = try bar.view(alpha)
-        let plain = try pixels(of: view)
+        let plain = try view.cachedPixels()
         let entered = try #require(NSEvent.enterExitEvent(
             with: .mouseEntered, location: .zero, modifierFlags: [], timestamp: 0,
             windowNumber: bar.window.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil
         ))
         view.mouseEntered(with: entered)
-        #expect(try pixels(of: view) != plain)
+        #expect(try view.cachedPixels() != plain)
         let exited = try #require(NSEvent.enterExitEvent(
             with: .mouseExited, location: .zero, modifierFlags: [], timestamp: 0,
             windowNumber: bar.window.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil
         ))
         view.mouseExited(with: exited)
-        #expect(try pixels(of: view) == plain)
+        #expect(try view.cachedPixels() == plain)
     }
 
     @Test("The unresponsive badge explains itself in the tooltip and to VoiceOver")

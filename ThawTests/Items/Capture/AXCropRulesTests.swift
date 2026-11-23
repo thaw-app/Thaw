@@ -191,15 +191,7 @@ struct AXCropRulesTests {
         y: CGFloat = 4.5,
         width: CGFloat = 24
     ) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string(namespace), title: title, instanceIndex: 0),
-            windowID: 101,
-            ownerPID: 999_991,
-            sourcePID: 999_991,
-            bounds: CGRect(x: x, y: y, width: width, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, bundle: namespace, x: x, y: y, width: width, windowID: 101, ownerPID: 999_991, sourcePID: 999_991)
     }
 }
 

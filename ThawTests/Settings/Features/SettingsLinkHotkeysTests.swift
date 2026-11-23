@@ -75,26 +75,12 @@ private final class FakePages {
     }
 }
 
-/// What the settings process sent, as the app would receive it.
-@MainActor
-private final class SentMessages {
-    private(set) var messages = [SettingsLinkMessage]()
-    private(set) lazy var remote = SettingsRemote { [weak self] in self?.messages.append($0) }
-
-    func commands<Payload: Decodable>(_ name: String, as _: Payload.Type = Payload.self) -> [Payload] {
-        messages.compactMap { message in
-            guard case .command(name, let payload) = message else { return nil }
-            return SettingsLinkPayload.decode(Payload.self, from: payload)
-        }
-    }
-}
-
 @Suite("Settings process link, Shortcuts page")
 @MainActor
 struct SettingsLinkHotkeysTests {
     private let fake = FakeApp()
     private let pages = FakePages()
-    private let sent = SentMessages()
+    private let sent = SettingsLinkOutbox()
     private let optionA = KeyCombination(key: .a, modifiers: .option)
     private let controlB = KeyCombination(key: .b, modifiers: .control)
     private let profileID = UUID()

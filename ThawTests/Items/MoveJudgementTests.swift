@@ -15,11 +15,7 @@ import Testing
 @Suite("Move judgement")
 struct MoveJudgementTests {
     private static func item(_ bundle: String, _ title: String, windowID: CGWindowID, width: CGFloat = 24) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string(bundle), title: title, instanceIndex: 0),
-            windowID: windowID, ownerPID: pid_t(windowID), sourcePID: pid_t(windowID),
-            bounds: CGRect(x: CGFloat(windowID) * 30, y: 3, width: width, height: 24), title: title, isOnScreen: true
-        )
+        ItemsFixture.item(title, bundle: bundle, x: CGFloat(windowID) * 30, y: 3, width: width, windowID: windowID, ownerPID: pid_t(windowID), sourcePID: pid_t(windowID))
     }
 
     @Test("A repaired item was applied")

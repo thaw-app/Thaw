@@ -45,7 +45,7 @@ extension SettingsURIResponseSuites {
             #expect(capture.openedURLs.count == 1)
         }
 
-        @Test("Callbacks that could run code or read files are refused unopened", arguments: [
+        @Test("Callbacks that could run code, read files or carry the response off the machine are refused unopened", arguments: [
             "file:///etc/hosts",
             "FILE:///etc/hosts",
             "javascript:alert(1)",
@@ -55,24 +55,12 @@ extension SettingsURIResponseSuites {
             "x-apple-systempreferences:com.apple.preference.security",
             "no-scheme-here",
             "",
-        ])
-        func unsafeCallbackIsRefused(callback: String) async {
-            let capture = URIDeliveryCapture()
-            let sent = await capture.run {
-                SettingsURIHandler.sendCallbackResponse(response: response, callback: callback, recipient: nil)
-            }
-
-            #expect(!sent)
-            #expect(capture.openedURLs.isEmpty)
-        }
-
-        @Test("A public read's callback cannot carry the response off the machine", arguments: [
             "https://example.com/collect",
             "HTTP://example.com/collect",
             "mailto:someone@example.com",
             "sms:12345",
         ])
-        func publicCallbackStaysOnTheMachine(callback: String) async {
+        func unsafeCallbackIsRefused(callback: String) async {
             let capture = URIDeliveryCapture()
             let sent = await capture.run {
                 SettingsURIHandler.sendCallbackResponse(response: response, callback: callback, recipient: nil)

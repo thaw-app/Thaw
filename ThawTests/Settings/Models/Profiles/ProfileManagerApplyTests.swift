@@ -310,6 +310,37 @@ struct ProfileManagerApplyTests {
         }
     }
 
+    @Test("Applying by identifier a profile with no file fails and leaves the active profile alone")
+    func missingProfileChangesNothing() async throws {
+        try await withManager(seeding: []) { manager, _ in
+            let active = UUID()
+            manager.activeProfileID = active
+
+            await #expect(throws: (any Error).self) {
+                try await manager.applyProfileAwaitingLayout(id: UUID(), to: AppState())
+            }
+
+            #expect(manager.activeProfileID == active)
+            #expect(manager.layoutTask == nil)
+            #expect(!manager.layoutDidNotRun)
+        }
+    }
+
+    @Test("Applying by identifier a profile file that cannot be decoded fails the same way")
+    func unreadableProfileChangesNothing() async throws {
+        try await withManager(seeding: []) { manager, directory in
+            let id = UUID()
+            try Data("not a profile".utf8).write(to: directory.appendingPathComponent("\(id.uuidString).json"))
+
+            await #expect(throws: (any Error).self) {
+                try await manager.applyProfileAwaitingLayout(id: id, to: AppState())
+            }
+
+            #expect(manager.activeProfileID == nil)
+            #expect(manager.layoutTask == nil)
+        }
+    }
+
     private func withManager(
         seeding names: [String],
         _ body: (ProfileManager, URL) async throws -> Void
