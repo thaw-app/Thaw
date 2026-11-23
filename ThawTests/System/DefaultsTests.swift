@@ -121,3 +121,22 @@ struct DefaultsAccessorTests {
         #expect(Set(global.keys) == Set(expected.keys))
     }
 }
+
+@MainActor
+@Suite("Defaults JSON values", .scratchDefaults)
+struct DefaultsCodableTests {
+    @Test("An encoded value reads back, and a missing one reads as nil")
+    func roundTrip() throws {
+        #expect(try Defaults.decoded([String: Int].self, forKey: .knownDisplays) == nil)
+        try Defaults.setEncoded(["a": 1], forKey: .knownDisplays)
+        #expect(try Defaults.decoded([String: Int].self, forKey: .knownDisplays) == ["a": 1])
+    }
+
+    @Test("Stored data that doesn't decode throws, and a value that doesn't encode keeps the stored one")
+    func failures() throws {
+        try Defaults.setEncoded(["a": 1], forKey: .knownDisplays)
+        #expect(throws: EncodingError.self) { try Defaults.setEncoded(["a": Double.nan], forKey: .knownDisplays) }
+        #expect(throws: DecodingError.self) { try Defaults.decoded([String: String].self, forKey: .knownDisplays) }
+        #expect(try Defaults.decoded([String: Int].self, forKey: .knownDisplays) == ["a": 1])
+    }
+}

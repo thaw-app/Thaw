@@ -35,8 +35,7 @@ final class GeneralSettings: SettingsURIHandling {
                 lastCustomThawIcon = thawIcon
             }
             do {
-                let data = try encoder.encode(thawIcon)
-                Defaults.set(data, forKey: .thawIcon)
+                try Defaults.setEncoded(thawIcon, forKey: .thawIcon)
             } catch {
                 diagLog.error("Error encoding \(Constants.displayName) icon: \(error)")
                 thawIconPersistenceError = error
@@ -141,14 +140,6 @@ final class GeneralSettings: SettingsURIHandling {
         }
     }
 
-    /// Encoder for properties.
-    @ObservationIgnored
-    private let encoder = JSONEncoder()
-
-    /// Decoder for properties.
-    @ObservationIgnored
-    private let decoder = JSONDecoder()
-
     /// The thaw:// settings subscription.
     @ObservationIgnored
     private var settingsURIChanges: AnyCancellable?
@@ -176,16 +167,18 @@ final class GeneralSettings: SettingsURIHandling {
         Defaults.ifPresent(key: .hideApplicationMenus, assign: &hideApplicationMenus)
         Defaults.ifPresent(key: .enableSecondaryContextMenu, assign: &enableSecondaryContextMenu)
         Defaults.ifPresent(key: .enableDesktopMenuHiding, assign: &enableDesktopMenuHiding)
+        loadStoredThawIcon()
+    }
 
-        if let data = Defaults.data(forKey: .thawIcon) {
-            do {
-                thawIcon = try decoder.decode(ControlItemImageSet.self, from: data)
-            } catch {
-                diagLog.error("Error decoding \(Constants.displayName) icon: \(error)")
-            }
-            if case .custom = thawIcon.name {
-                lastCustomThawIcon = thawIcon
-            }
+    private func loadStoredThawIcon() {
+        do {
+            guard let stored = try Defaults.decoded(ControlItemImageSet.self, forKey: .thawIcon) else { return }
+            thawIcon = stored
+        } catch {
+            diagLog.error("Error decoding \(Constants.displayName) icon: \(error)")
+        }
+        if case .custom = thawIcon.name {
+            lastCustomThawIcon = thawIcon
         }
     }
 
