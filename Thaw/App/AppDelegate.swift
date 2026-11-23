@@ -45,6 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillFinishLaunching(_: Notification) {
         LiveApp.register(self)
         ThawHUD.menuBarHeight = { $0.getMenuBarHeightEstimate() }
+        guard !TestHosting.isActiveInProcess else { return }
         #if DEBUG
             // Don't perform setup if running as a preview.
             if isRunningForPreviews {
@@ -97,19 +98,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         #endif
 
+        guard !TestHosting.isActiveInProcess else { return }
         ConflictingAppDetector.showWarningIfNeeded()
-
-        switch appState.permissions.permissionsState {
-        case .hasAll:
-            appState.permissions.diagLog.debug("Passed all permissions checks")
-            appState.launch(withPermissions: true)
-        case .hasRequired:
-            appState.permissions.diagLog.debug("Passed required permissions checks")
-            appState.launch(withPermissions: true)
-        case .missing:
-            appState.permissions.diagLog.debug("Failed required permissions checks")
-            appState.launch(withPermissions: false)
-        }
+        let permissionsState = appState.permissions.permissionsState
+        appState.permissions.diagLog.debug("Permissions at launch: \(permissionsState)")
+        appState.launch(withPermissions: permissionsState != .missing)
 
         // Share the window's onboarding inputs so the delegate neither opens an empty window nor skips a needed one.
         let stage = OnboardingSequencer.stage(

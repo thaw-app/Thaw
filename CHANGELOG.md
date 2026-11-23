@@ -27,6 +27,10 @@ the items under New and Fixed.
 ### Changed
 
 - **Exported diagnostics no longer include saved item lists,** and Thaw keeps only the newest five item lists.
+### Fixed
+
+- **Resetting the layout shows item pictures in the Layout bar right away,** instead of leaving them blank.
+- **Closing Settings no longer sends What's New or Credits behind other apps.**
 
 ## [3.0.0-alpha.15] - 2026-11-22
 

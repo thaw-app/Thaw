@@ -7,6 +7,7 @@
 
 import CoreGraphics
 import Foundation
+import os
 
 /// One menu bar item's pixels as they were read off the screen, paired with the
 /// backing scale that was in effect at that moment.
@@ -18,10 +19,12 @@ import Foundation
 /// is only touched from main-actor members.
 struct MenuBarItemGlyphCapture: Hashable, @unchecked Sendable {
     /// A reference box so the memoized trim survives copies of the value.
-    /// Only reached from main-actor members.
+    /// Only reached from main-actor members, except the locked blank flag,
+    /// which capture paths off the main actor read too.
     private final class PresentationCache: @unchecked Sendable {
         var horizontallyTrimmedCGImage: CGImage?
         var isSingleInkGlyph: Bool?
+        let isEffectivelyBlank = OSAllocatedUnfairLock<Bool?>(initialState: nil)
     }
 
     /// The raw crop, sized in device pixels.
@@ -91,8 +94,14 @@ struct MenuBarItemGlyphCapture: Hashable, @unchecked Sendable {
     }
 
     /// Whether the capture is effectively blank for UI thumbnail purposes.
+    /// Memoized because draw paths read it continuously and each check scans the pixels.
     nonisolated var isEffectivelyBlank: Bool {
-        cgImage.isTransparent(alphaThreshold: 0.05)
+        if let cached = presentationCache.isEffectivelyBlank.withLock({ $0 }) {
+            return cached
+        }
+        let result = cgImage.isTransparent(alphaThreshold: 0.05)
+        presentationCache.isEffectivelyBlank.withLock { $0 = result }
+        return result
     }
 
     /// Returns whether two optional captured images have equivalent visual content.
