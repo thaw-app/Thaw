@@ -227,3 +227,12 @@ nonisolated enum ThawBarTab: CaseIterable, ThawTab {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Thaw Bar") {
+        SettingsPagePreview(
+            prepare: { $0.settings.displaySettings.addPreviewSavedDisplay() },
+            page: { ThawBarSettingsPane(displaySettings: $0.settings.displaySettings) }
+        )
+    }
+#endif

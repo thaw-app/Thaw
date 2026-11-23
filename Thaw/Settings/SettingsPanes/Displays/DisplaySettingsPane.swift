@@ -216,3 +216,12 @@ nonisolated enum DisplaysTab: CaseIterable, ThawTab {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Displays") {
+        SettingsPagePreview(
+            prepare: { $0.settings.displaySettings.addPreviewSavedDisplay() },
+            page: { DisplaySettingsPane(displaySettings: $0.settings.displaySettings) }
+        )
+    }
+#endif

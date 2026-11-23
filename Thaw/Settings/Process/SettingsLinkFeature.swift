@@ -64,7 +64,8 @@ nonisolated enum SettingsLinkPayload {
 /// Nil in the app itself, where a page acts on the engine directly.
 @MainActor
 final class SettingsRemote {
-    /// Set once by the settings process as it starts.
+    /// Set once by the settings process as it starts. A settings preview sets a link that leads
+    /// nowhere (see SettingsPreviewApp).
     static var current: SettingsRemote?
 
     private let send: (SettingsLinkMessage) -> Void

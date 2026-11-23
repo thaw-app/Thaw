@@ -8,9 +8,10 @@
 /// Where Thaw reads and writes the menu bar spacing macOS draws items with:
 /// NSStatusItemSpacing and NSStatusItemSelectionPadding in the current host's global domain.
 ///
-/// Only tests replace current, with a scratch store (see ScratchDefaultsTrait). The real values
-/// are the user's menu bar spacing, and a test that sets up the display settings writes them.
-/// The unchecked annotation covers only that test-setup reassignment, as for Defaults.store.
+/// Only tests and settings previews replace current: tests with a scratch store (see
+/// ScratchDefaultsTrait), previews with one that keeps nothing (see SettingsPreviewApp). The real
+/// values are the user's menu bar spacing, and a test that sets up the display settings writes them.
+/// The unchecked annotation covers only those setup reassignments, as for Defaults.store.
 nonisolated struct SystemSpacingStore: Sendable {
     /// The value for the key, or nil when it is unset.
     let read: @Sendable (_ key: String) -> Int?
