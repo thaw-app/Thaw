@@ -109,6 +109,7 @@ struct ThawBarItemView: View {
                 image: image,
                 fittingHeight: sizing.fittingHeight,
                 reinksCaptures: true,
+                trimsCapturePadding: true,
                 drawnSize: sizing.glyphSize(for: image)
             )
             .contentShape(Rectangle())

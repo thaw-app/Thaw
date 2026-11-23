@@ -41,11 +41,15 @@ enum MenuBarItemDisplayImage {
         }
     }
 
-    var swiftUIImage: Image {
+    func swiftUIImage(trimsCapturePadding: Bool) -> Image {
         switch self {
-        case let .capture(capture): Image(decorative: capture.cgImage, scale: capture.scale)
+        case let .capture(capture): Image(decorative: captureBitmap(capture, trimsPadding: trimsCapturePadding), scale: capture.scale)
         case let .icon(image): Image(nsImage: image)
         }
+    }
+
+    private func captureBitmap(_ capture: MenuBarItemGlyphCapture, trimsPadding: Bool) -> CGImage {
+        (trimsPadding ? capture.horizontallyTrimmedCGImage : nil) ?? capture.cgImage
     }
 
     /// The tallest an icon standing in for a capture is drawn, about a menu bar glyph's height,
@@ -55,8 +59,11 @@ enum MenuBarItemDisplayImage {
     /// Fit downward only; upscaling native raster glyphs blurs them in taller rows.
     /// Nil or non-positive row/image heights leave intrinsic size unchanged, except that an icon
     /// is never drawn taller than appIconHeight.
-    func targetSize(fittingHeight rowHeight: CGFloat?) -> CGSize {
-        let intrinsic = pointSize
+    func targetSize(fittingHeight rowHeight: CGFloat?, trimsCapturePadding: Bool = false) -> CGSize {
+        var intrinsic = pointSize
+        if trimsCapturePadding, case let .capture(capture) = self {
+            intrinsic.width = CGFloat(captureBitmap(capture, trimsPadding: true).width) / capture.scale
+        }
         var limit = rowHeight.flatMap { $0 > 0 ? $0 : nil }
         if case .icon = self {
             limit = min(limit ?? Self.appIconHeight, Self.appIconHeight)
@@ -83,13 +90,16 @@ struct MenuBarItemGlyph: View {
     /// Keep original ink over the menu bar, where it already matches.
     var reinksCaptures = false
 
+    /// Let the Thaw Bar set the space between neighboring captures.
+    var trimsCapturePadding = false
+
     /// Overrides the fitted size, for a surface that scales its glyphs like the Thaw Bar.
     var drawnSize: CGSize?
 
     var body: some View {
-        let size = drawnSize ?? image.targetSize(fittingHeight: fittingHeight)
+        let size = drawnSize ?? image.targetSize(fittingHeight: fittingHeight, trimsCapturePadding: trimsCapturePadding)
         // Templating opaque app icons makes blank blocks; preserve their colors.
-        image.swiftUIImage
+        image.swiftUIImage(trimsCapturePadding: trimsCapturePadding)
             .renderingMode(image.isTemplate || (reinksCaptures && image.isReinkable) ? .template : .original)
             .interpolation(.high)
             .antialiased(true)
