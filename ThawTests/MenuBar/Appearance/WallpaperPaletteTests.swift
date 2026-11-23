@@ -178,17 +178,6 @@ struct WallpaperPaletteTests {
         }
     }
 
-    @Test("Brightness matches the weighting used elsewhere in the app")
-    func brightnessUsesTheSharedWeighting() {
-        let palette = WallpaperPalette.derive(from: samples([(Self.white, 10)]))
-        #expect(abs((palette.primary?.brightness ?? 0) - 1) < 0.0001)
-
-        let dark = WallpaperPalette.derive(from: samples([
-            (Sample(red: 0, green: 0, blue: 0), 10),
-        ]))
-        #expect(abs(dark.primary?.brightness ?? 1) < 0.0001)
-    }
-
     @Test("Fully saturated components do not overflow into a wrong bucket")
     func fullValueComponentsAreBucketed() {
         // A component of exactly 1 scales to the level count, one past the

@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import Cocoa
 import CoreGraphics
 import MenuBarModel
@@ -144,8 +145,7 @@ extension MenuBarItemManager {
                 controller.section(for: $0) == .visible
         }
         var liveParkedIDs = ParkedItems.parkedSetAndBarMidY(in: liveItems, screens: BarAxis.liveDisplayBounds()).parkedIDs
-        let prePulseParked = pulseCandidates.filter { liveParkedIDs.contains($0.windowID) }
-        let prePulseOnBand = pulseCandidates.filter { !liveParkedIDs.contains($0.windowID) }
+        let (prePulseOnBand, prePulseParked) = pulseCandidates.partitioned { liveParkedIDs.contains($0.windowID) }
         // The picture came with the reading when there is one, so the lane does not wait on a capture.
         let prePulseBlank = if let readBeforeTurn, readBeforeTurn.covers(displayID) {
             readBeforeTurn.blankTags(among: prePulseOnBand)

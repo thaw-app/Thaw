@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import AsyncAlgorithms
 import Cocoa
 import Combine
@@ -640,14 +641,11 @@ final class LayoutBarContainer: NSView {
                 recyclable[identifier] = view
             }
         }
-        var seenIdentifiers = Set<String>()
         var newViews = [LayoutBarArrangedView]()
-        for item in displayedItems {
-            let identifier = item.canonicalIdentifier
-            guard seenIdentifiers.insert(identifier).inserted else { continue }
+        for item in displayedItems.uniqued(on: \.canonicalIdentifier) {
             // A recycled view is only valid for the same live item: its canonical
             // identifier can survive a refresh that mints a new synthetic window ID.
-            if let recycled = recyclable[identifier] as? LayoutBarItemView,
+            if let recycled = recyclable[item.canonicalIdentifier] as? LayoutBarItemView,
                recycled.item.uniqueIdentifier == item.uniqueIdentifier
             {
                 recycled.adopt(item: item, appState: appState)

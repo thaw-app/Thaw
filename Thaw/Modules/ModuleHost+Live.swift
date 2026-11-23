@@ -82,12 +82,10 @@ extension ModuleHost.Environment {
     /// and an Apple-issued certificate vouches for that team. Any signer can
     /// write a team into a signature, so the team string alone proves nothing.
     private static func validTeamID(ofAppAt url: URL) -> String? {
-        var staticCode: SecStaticCode?
-        guard SecStaticCodeCreateWithPath(url as CFURL, [], &staticCode) == errSecSuccess,
-              let staticCode,
-              SecStaticCodeCheckValidity(staticCode, SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSStrictValidate), nil) == errSecSuccess,
-              let team = SettingsURIHandler.teamIdentifier(ofAppAt: url, logName: url.lastPathComponent),
-              SettingsURISender.isAnchored(staticCode, toTeam: team)
+        guard let signature = try? CodeSignature(appAt: url),
+              signature.isValid(flags: SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSStrictValidate)),
+              let team = SettingsURIHandler.teamIdentifier(of: signature, logName: url.lastPathComponent),
+              signature.isAnchored(toTeam: team)
         else {
             return nil
         }
