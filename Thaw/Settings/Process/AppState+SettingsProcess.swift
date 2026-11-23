@@ -34,12 +34,6 @@ extension AppState {
         openWindows.subtracting([.settings]).isEmpty && pendingWindows.isEmpty
     }
 
-    func deactivateAfterSettingsClosed() {
-        if Self.shouldDeactivateAfterSettingsClosed(openWindows: openWindows, pendingWindows: pendingOpenWindows) {
-            deactivate(withPolicy: .accessory)
-        }
-    }
-
     /// In the settings process, opens a window the app sent: one of SettingsProcessRoute.windowTargets.
     func openSettingsProcessWindow(_ target: String) {
         switch target {

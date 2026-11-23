@@ -98,7 +98,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         #endif
 
-        guard launchAppState() else { return }
+        guard !TestHosting.isActiveInProcess else { return }
+        ConflictingAppDetector.showWarningIfNeeded()
+        let permissionsState = appState.permissions.permissionsState
+        appState.permissions.diagLog.debug("Permissions at launch: \(permissionsState)")
+        appState.launch(withPermissions: permissionsState != .missing)
 
         // Share the window's onboarding inputs so the delegate neither opens an empty window nor skips a needed one.
         let stage = OnboardingSequencer.stage(

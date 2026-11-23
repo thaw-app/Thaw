@@ -7,7 +7,7 @@
     "file": "Thaw/App/AppDelegate.swift",
     "line": 15
    },
-   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 386 lines",
+   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 390 lines",
    "ruleDescription": "Type bodies should not span too many lines",
    "ruleIdentifier": "type_body_length",
    "ruleName": "Type Body Length",
@@ -22,7 +22,7 @@
     "file": "Thaw/App/AppDelegate.swift",
     "line": 523
    },
-   "reason": "File should contain 400 lines or less: currently contains 523",
+   "reason": "File should contain 400 lines or less: currently contains 527",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",

@@ -181,7 +181,7 @@ final class AppState {
     // MARK: - Window bookkeeping
 
     /// Track open windows to prevent duplicates
-    private(set) var openWindows = Set<ThawWindowIdentifier>()
+    private var openWindows = Set<ThawWindowIdentifier>()
 
     /// Whether any Thaw window is open.
     var hasOpenWindow: Bool {
@@ -198,7 +198,7 @@ final class AppState {
     /// Fresh EnvironmentValues have inert window actions; scenes register live actions without eagerly creating windows.
     private var openWindowAction: OpenWindowAction?
     private var dismissWindowAction: DismissWindowAction?
-    private(set) var pendingOpenWindows = Set<ThawWindowIdentifier>()
+    private var pendingOpenWindows = Set<ThawWindowIdentifier>()
 
     // MARK: - Private state
 
@@ -666,8 +666,8 @@ final class AppState {
             if navigationState.isWhatsNewRequested, !isUpdateConsentPresented {
                 navigationState.settingsNavigationIdentifier = .about
             }
-        } else {
-            deactivateAfterSettingsClosed()
+        } else if Self.shouldDeactivateAfterSettingsClosed(openWindows: openWindows, pendingWindows: pendingOpenWindows) {
+            deactivate(withPolicy: .accessory)
         }
     }
 
