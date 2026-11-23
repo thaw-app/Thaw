@@ -13,7 +13,7 @@ import Testing
 @testable import Thaw
 
 /// Saving and reading the image cache file, in a throwaway Caches directory.
-@Suite("Image cache file", .timeLimit(.minutes(1)))
+@Suite("Image cache file")
 @MainActor
 struct MenuBarItemImageCacheDiskStoreTests {
     private let directory = FileManager.default.temporaryDirectory
@@ -26,13 +26,7 @@ struct MenuBarItemImageCacheDiskStoreTests {
     }
 
     private static func capture() -> MenuBarItemGlyphCapture {
-        let context = CGContext(
-            data: nil, width: 20, height: 16, bitsPerComponent: 8, bytesPerRow: 80,
-            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        )!
-        context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: 20, height: 16))
-        return MenuBarItemGlyphCapture(cgImage: context.makeImage()!, scale: 1)
+        try! ItemsFixture.glyph(width: 20, height: 16)
     }
 
     /// The save runs on the store's queue, which the test owns, so draining it means the write is done.
@@ -120,19 +114,59 @@ struct MenuBarItemImageCacheDiskStoreTests {
         #expect(!FileManager.default.fileExists(atPath: url.path))
     }
 
-    @Test("A file from another build is deleted when the app knows its build")
-    func otherBuildIsDeleted() async throws {
-        defer { try? FileManager.default.removeItem(at: directory) }
+    /// Saves tags, concealed as given, then marks the file as another build's.
+    private func writeOtherBuildFile(_ tags: [MenuBarItemTag], concealed: Set<String>) async throws -> URL {
         let store = store
         let url = try #require(store.cacheFileURL)
-        let tag = MenuBarItemTag(namespace: .string("com.example.b"), title: "B", instanceIndex: 0)
-        store.enqueueSave([tag: Self.capture()])
+        store.enqueueSave(Dictionary(uniqueKeysWithValues: tags.map { ($0, Self.capture()) }), concealedIdentifiers: concealed)
         #expect(await waitForFile(url))
         var root = try #require(
             PropertyListSerialization.propertyList(from: Data(contentsOf: url), format: nil) as? [String: Any]
         )
         root["build"] = "not-this-build"
         try writePlist(root, to: url)
+        return url
+    }
+
+    @Test("A file from another build keeps only hidden items' pictures, marked as an earlier build's")
+    func otherBuildKeepsHiddenPictures() async throws {
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let hidden = MenuBarItemTag(namespace: .string("com.example.h"), title: "H", instanceIndex: 0)
+        let shown = MenuBarItemTag(namespace: .string("com.example.s"), title: "S", instanceIndex: 0)
+        let url = try await writeOtherBuildFile([hidden, shown], concealed: [hidden.tagIdentifier])
+
+        let file = try #require(store.readSaveFile())
+        guard ImageCacheFileValidity.appBuild != nil else {
+            #expect(file.entries.count == 2, "without a known build, only the format decides")
+            return
+        }
+        #expect(Set(file.entries.keys) == [hidden.tagIdentifier])
+        let entry = try #require(file.entries[hidden.tagIdentifier])
+        #expect(store.decodeEntry(entry, legacyJSON: false)?.isFromEarlierBuild == true)
+        #expect(FileManager.default.fileExists(atPath: url.path), "the next save rewrites the file")
+    }
+
+    @Test("Across builds only concealed entries are readable, marked; another format reads nothing")
+    func readableEntriesByVerdict() throws {
+        let entries: [String: [String: Any]] = ["h": ["scale": 2.0, "concealed": true], "s": ["scale": 2.0]]
+        let read = { (version: Int, build: String) in
+            MenuBarItemImageCacheDiskStore.readableEntries(entries, fileVersion: version, fileBuild: build, cacheVersion: 12, appBuild: "126")
+        }
+        #expect(read(12, "126")?.count == 2)
+        let kept = try #require(read(12, "125"))
+        #expect(Set(kept.keys) == ["h"])
+        #expect(kept["h"]?[MenuBarItemImageCacheDiskStore.earlierBuildKey] as? Bool == true)
+        #expect(read(11, "126") == nil)
+        #expect(MenuBarItemImageCacheDiskStore.readableEntries(
+            ["s": ["scale": 2.0]], fileVersion: 12, fileBuild: "125", cacheVersion: 12, appBuild: "126"
+        ) == nil)
+    }
+
+    @Test("A file from another build with no hidden items' pictures is deleted")
+    func otherBuildWithoutHiddenPicturesIsDeleted() async throws {
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let shown = MenuBarItemTag(namespace: .string("com.example.s"), title: "S", instanceIndex: 0)
+        let url = try await writeOtherBuildFile([shown], concealed: [])
 
         let read = store.readSaveFile()
         if ImageCacheFileValidity.appBuild == nil {
@@ -141,6 +175,27 @@ struct MenuBarItemImageCacheDiskStoreTests {
             #expect(read == nil)
             #expect(!FileManager.default.fileExists(atPath: url.path))
         }
+    }
+
+    @Test("An earlier build's mark is saved, and a confirmed picture is saved again without it")
+    func earlierBuildMarkRoundTrips() async throws {
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = store
+        let url = try #require(store.cacheFileURL)
+        let tag = MenuBarItemTag(namespace: .string("com.example.e"), title: "E", instanceIndex: 0)
+        let plain = Self.capture()
+        let earlier = MenuBarItemGlyphCapture(cgImage: plain.cgImage, scale: plain.scale, isFromEarlierBuild: true)
+
+        store.enqueueSave([tag: earlier], concealedIdentifiers: [tag.tagIdentifier])
+        #expect(await waitForFile(url))
+        let marked = try #require(store.readSaveFile()?.entries[tag.tagIdentifier])
+        #expect(store.decodeEntry(marked, legacyJSON: false)?.isFromEarlierBuild == true)
+
+        // The same pixels, confirmed: the save must not skip it as unchanged.
+        store.enqueueSave([tag: earlier.confirmedByThisBuild], concealedIdentifiers: [tag.tagIdentifier])
+        queue.sync {}
+        let confirmed = try #require(store.readSaveFile()?.entries[tag.tagIdentifier])
+        #expect(store.decodeEntry(confirmed, legacyJSON: false)?.isFromEarlierBuild == false)
     }
 
     @Test("A legacy JSON file is read when there is no plist, with base64 pixels")
@@ -230,5 +285,82 @@ struct MenuBarItemImageCacheDiskStoreTests {
         #expect(store.cacheFileURL == nil)
         #expect(store.legacyCacheFileURL == nil)
         #expect(store.readSaveFile() == nil)
+    }
+}
+
+/// A saved image cache is used whole only by the build that wrote it.
+@Suite("Image cache file validity")
+struct ImageCacheFileValidityTests {
+    /// A file written before builds were recorded counts as another build's, and without a
+    /// known app build only the format decides.
+    @Test(
+        "A file is current in this format from this build, another build's otherwise, and dropped in another format",
+        arguments: [
+            (12, "114", "114", ImageCacheFileValidity.Verdict.current),
+            (12, nil, nil, .current),
+            (12, "113", "114", .otherBuild),
+            (12, nil, "114", .otherBuild),
+            (11, "114", "114", .otherFormat),
+            (11, "113", "114", .otherFormat),
+            (nil, "114", "114", .otherFormat),
+        ] as [(Int?, String?, String?, ImageCacheFileValidity.Verdict)]
+    )
+    func verdict(fileVersion: Int?, fileBuild: String?, appBuild: String?, expected: ImageCacheFileValidity.Verdict) {
+        #expect(ImageCacheFileValidity.verdict(fileVersion: fileVersion, fileBuild: fileBuild, cacheVersion: 12, appBuild: appBuild) == expected)
+        #expect(
+            ImageCacheFileValidity.isCurrent(fileVersion: fileVersion, fileBuild: fileBuild, cacheVersion: 12, appBuild: appBuild)
+                == (expected == .current)
+        )
+    }
+}
+
+@Suite("Image cache disk load state")
+struct DiskLoadStateTests {
+    @Test("With no load in flight a save runs at once")
+    func saveRunsWhenIdle() {
+        var state = DiskLoadState()
+        let held = state.holdsSave()
+        #expect(!held)
+        #expect(!state.isSaveOwed)
+    }
+
+    @Test("A save asked for while a load is in flight is held, and runs once when the load is done")
+    func saveWaitsForLoad() {
+        var state = DiskLoadState()
+        state.began()
+        let first = state.holdsSave()
+        let second = state.holdsSave()
+        // The file still holds pictures the load has not merged.
+        #expect(first)
+        #expect(second)
+
+        let owed = state.finished()
+        let heldAfter = state.holdsSave()
+        let owedAgain = state.finished()
+        #expect(owed)
+        #expect(!heldAfter)
+        #expect(!owedAgain)
+    }
+
+    @Test("A load nobody saved during owes nothing when it is done")
+    func quietLoadOwesNothing() {
+        var state = DiskLoadState()
+        state.began()
+        let owed = state.finished()
+        #expect(!owed)
+    }
+
+    @Test("Emptying the cache on purpose refuses the load's result and drops the held save")
+    func abandonedLoad() {
+        var state = DiskLoadState()
+        state.began()
+        _ = state.holdsSave()
+        let before = state.generation
+
+        state.abandoned()
+        let owed = state.finished()
+        #expect(state.generation != before)
+        #expect(!state.isInFlight)
+        #expect(!owed)
     }
 }

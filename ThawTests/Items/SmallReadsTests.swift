@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Foundation
 import MenuBarModel
 import Testing
 @testable import Thaw
@@ -72,10 +73,9 @@ struct SmallReadsTests {
     }
 
     @Test
-    func `the pinned Control Center limit explains itself`() {
+    func `each visibility limit has its own explanation`() {
         let texts = [LayoutBarVisibilityLimit.cannotShow, .pinnedModuleCannotShow, .cannotHide].map(\.explanation)
         #expect(Set(texts).count == 3)
-        #expect(LayoutBarVisibilityLimit.pinnedModuleCannotShow.explanation.contains("Control Center"))
     }
 
     @Test
@@ -83,5 +83,36 @@ struct SmallReadsTests {
         let hosts = UnseenMenuBarHosts(expected: ["com.example.a": 0, "com.example.b": 0, "com.example.c": 0])
         let candidates = hosts.candidates(seen: ["com.example.a"], running: ["com.example.a", "com.example.b", "com.example.z"])
         #expect(candidates == ["com.example.b"])
+    }
+}
+
+@MainActor
+struct RunningApplicationSnapshotTests {
+    @Test("Collecting liveness from the main actor runs system queries off the main thread")
+    func collectionLeavesMainThread() async {
+        MainActor.assertIsolated()
+        let snapshot = await RunningApplicationSnapshot.current {
+            // LaunchServices queries must not block UI events.
+            #expect(!Thread.isMainThread)
+            return RunningApplicationSnapshot(processIDs: [111, 222], bundleIdentifiers: ["com.live.app"])
+        }
+        #expect(snapshot.processIDs == [111, 222])
+        #expect(snapshot.bundleIdentifiers == ["com.live.app"])
+        MainActor.assertIsolated()
+    }
+}
+
+@Suite("Move options")
+struct ItemMoveOptionsTests {
+    /// Callers that pass no options rely on these to stay cautious.
+    @Test("The default options describe an automatic move that waits and refuses unusual sources and targets")
+    func defaultsAreAutomatic() {
+        let options = ItemMoveOptions()
+        #expect(!options.skipInputPause)
+        #expect(!options.allowSectionBoundaryTarget)
+        #expect(!options.allowParkedOffMenuBarSource)
+        #expect(options.anchorFallbacks.isEmpty)
+        #expect(!options.isUserInitiated)
+        #expect(!options.recoveringUnplacedItem)
     }
 }

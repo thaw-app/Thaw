@@ -53,6 +53,21 @@ struct SettingsResetterTests {
         #expect(settings.privacy.whitelistedApps.isEmpty)
     }
 
+    @Test("Resetting the appearance also forgets every per-Space look")
+    func resetAppearanceClearsSpaceOverrides() {
+        let appState = AppState()
+        let settings = appState.settings
+        settings.performSetup(with: appState)
+        let appearance = appState.appearanceManager
+        appearance.saveOverrideForActiveSpace()
+        #expect(!appearance.spaceOverrides.isEmpty)
+
+        settings.resetAppearance()
+
+        #expect(appearance.spaceOverrides.isEmpty)
+        #expect(appearance.configuration == Defaults.DefaultValue.menuBarAppearanceConfigurationV2)
+    }
+
     @Test("Reset brings every first-run hint back")
     func resetHints() {
         var stored = [FirstRunHint.allCases.first.map(\.rawValue) ?? ""]

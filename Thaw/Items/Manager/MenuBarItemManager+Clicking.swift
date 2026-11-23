@@ -53,31 +53,6 @@ extension MenuBarItemManager {
         return (down, up)
     }
 
-    /// The point a synthetic click on bounds should aim at.
-    ///
-    /// macOS 27 mirrors one status-item set onto every bar but reports its
-    /// frames in a single display's space, so a click aimed at the reported
-    /// frame lands on the wrong bar when the cursor is on another one. Rebase
-    /// the frame onto the display under the cursor, the bar the user is
-    /// looking at. A cursor outside every menu bar leaves the frame alone,
-    /// which keeps hotkey and search activation targeting the item's own bar.
-    private static func clickPoint(for bounds: CGRect) -> CGPoint {
-        guard
-            let pointer = MouseHelpers.locationCoreGraphics,
-            let screen = NSScreen.screen(containingCGPoint: pointer),
-            let menuBarHeight = screen.getMenuBarHeight()
-        else {
-            return bounds.center
-        }
-        return ClickTargetCheck.clickPoint(
-            for: bounds,
-            pointer: pointer,
-            display: CGDisplayBounds(screen.displayID),
-            menuBarHeight: menuBarHeight,
-            displays: NSScreen.allDisplayBoundsCG
-        )
-    }
-
     /// Synthesizes one click on item and waits for its owner to take
     /// delivery of both halves.
     ///
@@ -131,7 +106,7 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.error("postClickEvents: synthetic click budget spent; not clicking \(item.logString)")
             throw EventError.cannotComplete
         }
-        let clickPoint = Self.clickPoint(for: aimedBounds)
+        let clickPoint = ClickAim.point(for: aimedBounds)
         let restoreLocation = try getMouseLocation()
         let source = try getEventSource()
 
@@ -149,52 +124,44 @@ extension MenuBarItemManager {
             source: source
         )
 
-        // Warp the cursor to the click point so the Window Server's hit-test
-        // matches the event coordinates rather than the cursor's current position.
-        MouseHelpers.warpCursor(to: clickPoint)
-        // Small delay to let the Window Server process the warp before posting
-        // the event. Without this, the event can be routed using the cursor's
-        // old position (e.g. the Apple menu) instead of the warped target.
-        try await Task.sleep(for: .milliseconds(10))
-        MouseHelpers.hideCursor()
-        defer {
-            MouseHelpers.warpCursor(to: restoreLocation)
-            MouseHelpers.showCursor()
-        }
-
-        let eventStartTime = ContinuousClock.now
-        do {
-            try await postEventWithBarrier(
-                clickEvents.down,
-                to: item,
-                timeout: timeout
-            )
-            try await postEventWithBarrier(
-                clickEvents.up,
-                to: item,
-                timeout: timeout,
-                repeating: Self.clickMouseUpCount
-            )
-
-            let successDuration = eventStartTime.duration(to: .now)
-            updateClickOperationTimeout(successDuration, for: item)
-        } catch {
-            // However this failed, the owner may be sitting on a press that was
-            // never released, so send the release once more on the way out.
+        // Park the cursor on the click point and let the Window Server take the
+        // warp, or the event routes by the old position (e.g. the Apple menu).
+        let pointer = ClickPointer.live { await self.eventSleep(for: .milliseconds(10)) }
+        try await Self.withPointerParked(at: clickPoint, restoringTo: restoreLocation, pointer: pointer) {
+            let eventStartTime = ContinuousClock.now
             do {
-                MenuBarItemManager.diagLog.warning("Click events failed, posting fallback")
+                try await postEventWithBarrier(
+                    clickEvents.down,
+                    to: item,
+                    timeout: timeout
+                )
                 try await postEventWithBarrier(
                     clickEvents.up,
                     to: item,
                     timeout: timeout,
                     repeating: Self.clickMouseUpCount
                 )
+
+                let successDuration = eventStartTime.duration(to: .now)
+                updateClickOperationTimeout(successDuration, for: item)
             } catch {
-                // Logged and dropped on purpose: the caller needs to see what
-                // actually went wrong, not how the cleanup went.
-                MenuBarItemManager.diagLog.error("Fallback failed with error: \(error)")
+                // However this failed, the owner may be sitting on a press that was
+                // never released, so send the release once more on the way out.
+                do {
+                    MenuBarItemManager.diagLog.warning("Click events failed, posting fallback")
+                    try await postEventWithBarrier(
+                        clickEvents.up,
+                        to: item,
+                        timeout: timeout,
+                        repeating: Self.clickMouseUpCount
+                    )
+                } catch {
+                    // Logged and dropped on purpose: the caller needs to see what
+                    // actually went wrong, not how the cleanup went.
+                    MenuBarItemManager.diagLog.error("Fallback failed with error: \(error)")
+                }
+                throw error
             }
-            throw error
         }
     }
 
@@ -307,19 +274,17 @@ extension MenuBarItemManager {
         // mark records that it drops synthetic events, which is the case this
         // path is most likely to succeed at.
         if pressFirst, mouseButton == .left, let reaction = await MenuBarItemDirectPresser.press(item: item) {
-            if reaction.didReact {
-                MenuBarItemManager.diagLog.debug(
-                    "Opened \(item.logString) without synthesizing events"
-                )
-                failureLedger.recordSuccess(for: item)
-                return reaction
-            }
             // Some owners accept the press and open nothing. Callers that
             // need a reaction post a real click; a second activation would re-toggle the rest.
-            guard requireObservedReaction else {
-                MenuBarItemManager.diagLog.debug(
-                    "Pressed \(item.logString) without synthesizing events; no reaction seen"
-                )
+            let outcome = ClickAttemptPolicy.pressOutcome(
+                didReact: reaction.didReact,
+                requireObservedReaction: requireObservedReaction
+            )
+            if outcome != .postRealClick {
+                MenuBarItemManager.diagLog.debug("Pressed \(item.logString) without synthesizing events: \(outcome)")
+                if outcome == .opened {
+                    failureLedger.recordSuccess(for: item)
+                }
                 return reaction
             }
             MenuBarItemManager.diagLog.debug(
@@ -332,11 +297,7 @@ extension MenuBarItemManager {
             appState.hidEventManager.startAll()
         }
 
-        // An owner already known to ignore synthetic events gets one attempt
-        // instead of three. Retrying it only repeats the cursor warp that the
-        // user sees as the item jittering, and the extra attempts have never
-        // been what makes such an owner answer.
-        let attemptBudget = failureLedger.isUnresponsive(item) ? 1 : max(1, maxAttempts)
+        let attemptBudget = ClickAttemptPolicy.attemptBudget(ownerUnresponsive: failureLedger.isUnresponsive(item), maxAttempts: maxAttempts)
         let attemptStartTime = ContinuousClock.now
 
         for attempt in 1 ... attemptBudget {
@@ -369,17 +330,19 @@ extension MenuBarItemManager {
                 let attemptDuration = attemptStartTime.duration(to: .now)
                 MenuBarItemManager.diagLog.debug("Attempt \(attempt) failed after \(Int(attemptDuration.milliseconds))ms: \(error)")
 
-                guard attempt == attemptBudget else {
+                let next = ClickAttemptPolicy.afterFailure(
+                    attempt: attempt,
+                    budget: attemptBudget,
+                    failure: (error as? EventError)?.attemptFailure ?? .other
+                )
+                guard !next.retries else {
                     await eventSleep()
                     continue
                 }
-                guard let error = error as? EventError else {
-                    throw EventError.cannotComplete
-                }
-                if error.indicatesUnresponsiveOwner {
+                if next.recordsUnresponsiveOwner {
                     failureLedger.recordFailure(for: item, kind: .unresponsiveOwner)
                 }
-                throw error
+                throw next.reportsCannotComplete ? EventError.cannotComplete : error
             }
         }
 
@@ -394,11 +357,11 @@ extension MenuBarItemManager {
     /// Reveal and press presses the element drawn at the item's spot; reveal and click clicks it
     /// for real, without that press first. No move, so it works for items the move path cannot
     /// seat. It is also the only way to right-click: AXPress opens the default action, not the
-    /// secondary menu.
+    /// secondary menu. The real click aims at displayID's bar, or at the pointer's when it is nil.
     func revealInPlaceAndClick(
         item: MenuBarItem,
         with mouseButton: CGMouseButton,
-        on _: CGDirectDisplayID,
+        on displayID: CGDirectDisplayID?,
         trying methods: [ConcealedItemOpenMethod],
         controller: any MenuBarSectionControlling
     ) async -> ConcealedItemOpenMethod? {
@@ -426,8 +389,14 @@ extension MenuBarItemManager {
             failureLedger.recordSuccess(for: pressTarget)
             opened = .revealAndPress
         } else if methods.contains(.revealAndClick) {
+            // A click on another display's bar makes it active; the repair pass must not read that as a topology change.
+            if displayID != nil {
+                barSettling.note(.thawPressFlipsDisplay)
+            }
             do {
-                let reaction = try await click(item: pressTarget ?? item, with: mouseButton, requireObservedReaction: true, pressFirst: false)
+                let reaction = try await ClickAim.$barDisplay.withValue(displayID) {
+                    try await click(item: pressTarget ?? item, with: mouseButton, requireObservedReaction: true, pressFirst: false)
+                }
                 opened = reaction.didReact ? .revealAndClick : nil
             } catch {
                 MenuBarItemManager.diagLog.error(

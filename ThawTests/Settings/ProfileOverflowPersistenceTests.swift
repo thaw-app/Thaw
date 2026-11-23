@@ -17,18 +17,6 @@ import Testing
 @MainActor
 @Suite("Profile overflow persistence")
 struct ProfileOverflowPersistenceTests {
-    private static func item(_ title: String, x: CGFloat) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.\(title)"), title: title, instanceIndex: 0),
-            windowID: UInt32(x) + 1,
-            ownerPID: 100,
-            sourcePID: 200,
-            bounds: CGRect(x: x, y: 0, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
-    }
-
     /// A profile manager whose profiles live in a throwaway directory, so the
     /// test never reads or rewrites the tester's real profiles.
     private func withManager<T>(_ body: (ProfileManager) throws -> T) throws -> T {
@@ -41,9 +29,9 @@ struct ProfileOverflowPersistenceTests {
 
     @Test("Profile capture keeps an overflowed Visible item in Visible")
     func captureKeepsOverflowedItemVisible() throws {
-        let a = Self.item("A", x: 10)
-        let b = Self.item("B", x: 40)
-        let c = Self.item("C", x: 70)
+        let a = MenuBarItem.fixture("A", x: 10)
+        let b = MenuBarItem.fixture("B", x: 40)
+        let c = MenuBarItem.fixture("C", x: 70)
         let manager = MenuBarItemManager()
         manager.itemCache[.visible] = [a, c]
         manager.itemCache[.hidden] = [b]
@@ -66,9 +54,9 @@ struct ProfileOverflowPersistenceTests {
     @Test("Profile capture after overflow clears still keeps the item Visible")
     func captureAfterOverflowClearKeepsItemVisible() throws {
         // The controller cleared overflow but the cache still shows B Hidden.
-        let a = Self.item("A", x: 10)
-        let b = Self.item("B", x: 40)
-        let c = Self.item("C", x: 70)
+        let a = MenuBarItem.fixture("A", x: 10)
+        let b = MenuBarItem.fixture("B", x: 40)
+        let c = MenuBarItem.fixture("C", x: 70)
         let manager = MenuBarItemManager()
         manager.itemCache[.visible] = [a, c]
         manager.itemCache[.hidden] = [b]
@@ -87,9 +75,9 @@ struct ProfileOverflowPersistenceTests {
 
     @Test("Profile capture keeps an authored-Hidden item Hidden")
     func captureKeepsAuthoredHiddenItemHidden() throws {
-        let a = Self.item("A", x: 10)
-        let b = Self.item("B", x: 40)
-        let c = Self.item("C", x: 70)
+        let a = MenuBarItem.fixture("A", x: 10)
+        let b = MenuBarItem.fixture("B", x: 40)
+        let c = MenuBarItem.fixture("C", x: 70)
         let manager = MenuBarItemManager()
         manager.itemCache[.visible] = [a, c]
         manager.itemCache[.hidden] = [b]

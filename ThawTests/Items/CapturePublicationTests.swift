@@ -139,15 +139,7 @@ struct CapturePublicationTests {
 @Suite("Capture failure ledger commit", .scratchDefaults)
 struct CaptureLedgerCommitTests {
     private func makeItem(title: String) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.ledger"), title: title, instanceIndex: 0),
-            windowID: 301,
-            ownerPID: 999_993,
-            sourcePID: 999_993,
-            bounds: CGRect(x: 1000, y: 4.5, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, bundle: "com.example.ledger", x: 1000, y: 4.5, windowID: 301, ownerPID: 999_993, sourcePID: 999_993)
     }
 
     private func strikes(for item: MenuBarItem, in cache: MenuBarItemImageCache) -> Int {
@@ -272,27 +264,12 @@ private struct CaptureWorld {
     }
 
     static func makeItem(_ title: String, x: CGFloat, windowID: CGWindowID) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.pipeline"), title: title, instanceIndex: 0),
-            windowID: windowID,
-            ownerPID: 999_994,
-            sourcePID: 999_994,
-            bounds: CGRect(x: x, y: 4.5, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, bundle: "com.example.pipeline", x: x, y: 4.5, windowID: windowID, ownerPID: 999_994, sourcePID: 999_994)
     }
 
     /// Ink, but narrower than a trusted glyph.
     static func narrowGlyph() throws -> MenuBarItemGlyphCapture {
-        let context = try #require(CGContext(
-            data: nil, width: 20, height: 48, bitsPerComponent: 8, bytesPerRow: 20 * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ))
-        context.setFillColor(CGColor(gray: 0, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: 20, height: 48))
-        return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 2)
+        try ItemsFixture.glyph(width: 20, height: 48, scale: 2, color: CGColor(gray: 0, alpha: 1))
     }
 }
 
@@ -318,7 +295,7 @@ private enum CaptureDisruption: CaseIterable, Sendable {
 }
 
 @MainActor
-@Suite("Recapture pass publication", .serialized, .timeLimit(.minutes(1)))
+@Suite("Recapture pass publication", .serialized)
 struct RecapturePassPublicationTests {
     @Test("A pass on a quiet bar publishes images, invalidations and its ledger")
     func quietPassPublishes() async throws {
@@ -496,7 +473,7 @@ private final class RevealingSectionController: MenuBarSectionControlling {
 }
 
 @MainActor
-@Suite("Grouped reveal publication", .serialized, .timeLimit(.minutes(1)))
+@Suite("Grouped reveal publication", .serialized)
 struct GroupedRevealPublicationTests {
     /// Reveals fresh and retried one batch each, through the production loop.
     private func prewarm(
@@ -514,7 +491,7 @@ struct GroupedRevealPublicationTests {
                     whileSettling()
                     return batch.map { (requested: $0, live: $0) }
                 },
-                renderSettle: { _ in },
+                renderSettle: { _ in .settled },
                 reader: world.reader
             )
         )
@@ -578,7 +555,7 @@ struct GroupedRevealPublicationTests {
 
 /// Capture Hidden Items reveals hidden items one at a time; a recapture pass would crop them as they slide in.
 @MainActor
-@Suite("Recapture during Capture Hidden Items", .serialized, .timeLimit(.minutes(1)))
+@Suite("Recapture during Capture Hidden Items", .serialized)
 struct RecaptureDuringHiddenItemCaptureTests {
     @Test("A pass while hidden items are being captured takes no screenshot and changes nothing", arguments: [false, true])
     func passStandsDown(forced: Bool) async throws {

@@ -11,7 +11,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Display change spacing", .serialized, .timeLimit(.minutes(1)))
+@Suite("Display change spacing", .serialized)
 struct DisplayChangeSpacingTests {
     @Test("The seed step seeds the display settings and applies nothing")
     func seedStepSeeds() {

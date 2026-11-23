@@ -125,19 +125,24 @@ enum AXReader {
             if let deadline, Date() >= deadline {
                 return (observations, false)
             }
-            AXUIElementSetMessagingTimeout(child, messagingTimeout)
-            guard let reported = AXPrimitives.frame(of: child), !reported.isNull, !reported.isEmpty else { continue }
-            guard let frame = AXPrimitives.itemFrame(reported, maximumHeight: maximumItemHeight) else { continue }
-            if let displayBounds, !AXPrimitives.frame(frame, isWithin: displayBounds) {
-                continue
+            let item: AXItemObservation? = autoreleasepool {
+                AXUIElementSetMessagingTimeout(child, messagingTimeout)
+                guard let reported = AXPrimitives.frame(of: child), !reported.isNull, !reported.isEmpty else { return nil }
+                guard let frame = AXPrimitives.itemFrame(reported, maximumHeight: maximumItemHeight) else { return nil }
+                if let displayBounds, !AXPrimitives.frame(frame, isWithin: displayBounds) {
+                    return nil
+                }
+                return observation(
+                    of: child, app: app, frame: frame,
+                    isOverflowControl: overflow.map { CFEqual($0, child) } ?? false
+                        || isMenuBarAgent && AXPrimitives.isMenuBarAgentOverflowRole(
+                            AXPrimitives.stringAttribute(child, kAXRoleAttribute)
+                        )
+                )
             }
-            observations.append(observation(
-                of: child, app: app, frame: frame,
-                isOverflowControl: overflow.map { CFEqual($0, child) } ?? false
-                    || isMenuBarAgent && AXPrimitives.isMenuBarAgentOverflowRole(
-                        AXPrimitives.stringAttribute(child, kAXRoleAttribute)
-                    )
-            ))
+            if let item {
+                observations.append(item)
+            }
         }
         return (observations, true)
     }

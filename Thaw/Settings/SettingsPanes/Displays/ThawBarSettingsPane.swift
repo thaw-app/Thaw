@@ -34,7 +34,8 @@ struct ThawBarSettingsPane: View {
                     useThawBar: configuration.useThawBar,
                     displayID: previewDisplayID,
                     itemSpacingOffset: configuration.itemSpacingOffset,
-                    itemScale: configuration.thawBarItemScale
+                    itemScale: configuration.thawBarItemScale,
+                    useThawBarForAlwaysHidden: configuration.useThawBarForAlwaysHidden
                 )
             }
 
@@ -143,6 +144,8 @@ struct ThawBarSettingsPane: View {
                     get: { ThawBarShortcutPlacement(opensAtPointer: appState.settings.thawBar.thawBarLocationOnHotkey) },
                     set: { appState.settings.thawBar.thawBarLocationOnHotkey = $0.opensAtPointer }
                 ),
+                useThawBarForAlwaysHidden: displaySettings.configuration(forUUID: uuid).useThawBarForAlwaysHidden
+                    && appState.settings.layout.isAlwaysHiddenSectionEnabled,
                 context: .display
             ) {
                 // Only matters while the bar is off here and Always Hidden is on.

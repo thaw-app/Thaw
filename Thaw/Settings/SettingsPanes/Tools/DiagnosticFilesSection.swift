@@ -2,7 +2,7 @@
 //  DiagnosticFilesSection.swift
 //  Project: Thaw
 //
-//  Copyright (Thaw) © 2026 René Jiménez
+//  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import AppKit
@@ -15,6 +15,10 @@ import UniformTypeIdentifiers
 /// The files to attach to a bug report, as two rows like Repair's: the logs,
 /// and the item list with its capture samples.
 struct DiagnosticFilesSection: View {
+    var actions = Actions()
+    /// In the settings process, what the app says about its capture samples. Nil in the app.
+    var appReport: ToolsAppReport?
+
     @State private var isExporting = false
     @State private var errorMessage: String?
     /// Read when the section appears and set again when a sample is written.
@@ -29,7 +33,7 @@ struct DiagnosticFilesSection: View {
                     }
                     ThawActionGroup {
                         Button("Show in Finder") {
-                            NSWorkspace.shared.open(DiagnosticLogger.shared.logDirectory)
+                            actions.open(DiagnosticLogger.shared.logDirectory)
                         }
                         .accessibilityLabel("Show Log Files in Finder")
                         Button("Export…", action: exportLogs)
@@ -48,9 +52,9 @@ struct DiagnosticFilesSection: View {
                     Button("Save…", action: saveItemList)
                         .accessibilityLabel("Save Item List")
                     Button("Show Samples") {
-                        NSWorkspace.shared.open(CaptureDiagnostics.sampleDirectory)
+                        actions.open(appReport?.status.sampleDirectory ?? CaptureDiagnostics.sampleDirectory)
                     }
-                    .disabled(!hasCaptureSamples)
+                    .disabled(!(appReport?.status.hasCaptureSamples ?? hasCaptureSamples))
                     .accessibilityLabel("Show Capture Samples")
                 }
                 .buttonStyle(.thawGrouped)
@@ -83,19 +87,15 @@ struct DiagnosticFilesSection: View {
     }
 
     private func exportLogs() {
-        guard let destination = Self.chooseDestination(name: "\(Constants.displayName) Diagnostics.zip", type: .zip) else {
+        guard let destination = actions.chooseDestination("\(Constants.displayName) Diagnostics.zip", .zip) else {
             return
         }
         isExporting = true
         Task {
             defer { isExporting = false }
             do {
-                try await MaintenanceTools.exportDiagnostics(
-                    logs: DiagnosticLogger.shared.logDirectory,
-                    samples: CaptureDiagnostics.sampleDirectory,
-                    to: destination
-                )
-                NSWorkspace.shared.activateFileViewerSelecting([destination])
+                try await actions.exportDiagnostics(destination)
+                actions.reveal(destination)
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -103,23 +103,33 @@ struct DiagnosticFilesSection: View {
     }
 
     private func saveItemList() {
-        guard let destination = Self.chooseDestination(name: "\(Constants.displayName) Items.json", type: .json) else {
+        guard let destination = actions.chooseDestination("\(Constants.displayName) Items.json", .json) else {
             return
         }
-        do {
-            try MaintenanceTools.saveItemList(to: destination)
-            NSWorkspace.shared.activateFileViewerSelecting([destination])
-        } catch {
-            errorMessage = error.localizedDescription
+        Task {
+            do {
+                try await actions.saveItemList(destination)
+                actions.reveal(destination)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
-
-    private static func chooseDestination(name: String, type: UTType) -> URL? {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [type]
-        panel.nameFieldStringValue = name
-        panel.canCreateDirectories = true
-        guard panel.runModal() == .OK else { return nil }
-        return panel.url
-    }
 }
+
+#if DEBUG
+    /// Buttons use stand-in actions, so no panel opens, Finder stays put and no log is copied.
+    /// The section still checks the real sample folder once, read only, to enable Show Samples.
+    #Preview("Diagnostic files") {
+        ThawForm {
+            DiagnosticFilesSection(actions: .init(
+                chooseDestination: { _, _ in nil },
+                open: { _ in /* Preview only. */ },
+                reveal: { _ in /* Preview only. */ },
+                exportDiagnostics: { _ in /* Preview only. */ },
+                saveItemList: { _ in /* Preview only. */ }
+            ))
+        }
+        .frame(width: 680, height: 300)
+    }
+#endif

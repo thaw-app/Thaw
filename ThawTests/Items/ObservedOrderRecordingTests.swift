@@ -18,15 +18,7 @@ struct ObservedOrderRecordingTests {
     private static let defaultsKey = "MenuBarItemManager.savedSectionOrder"
 
     private static func item(x: CGFloat, windowID: CGWindowID) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("com.example.app\(windowID)"), title: "Item-0", instanceIndex: 0),
-            windowID: windowID,
-            ownerPID: pid_t(windowID),
-            sourcePID: pid_t(windowID),
-            bounds: CGRect(x: x, y: 3.5, width: 24, height: 24),
-            title: "Item-0",
-            isOnScreen: true
-        )
+        ItemsFixture.item("Item-0", bundle: "com.example.app\(windowID)", x: x, y: 3.5, windowID: windowID, ownerPID: pid_t(windowID), sourcePID: pid_t(windowID))
     }
 
     private static func cache(visible: [MenuBarItem]) -> MenuBarItemCache {

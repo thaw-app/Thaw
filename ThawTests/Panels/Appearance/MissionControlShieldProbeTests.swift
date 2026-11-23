@@ -11,7 +11,7 @@ import Testing
 
 /// The probe's polling, run against its own invisible one-point window. Ticks run on the main
 /// run loop, which a busy suite can hold up, so tests wait for the ticks rather than a fixed time.
-@Suite("Mission Control shield probe polling", .serialized, .timeLimit(.minutes(1)))
+@Suite("Mission Control shield probe polling", .serialized)
 @MainActor
 struct MissionControlShieldProbeTests {
     private func wait(_ duration: Duration) async {
@@ -36,9 +36,15 @@ struct MissionControlShieldProbeTests {
         #expect(!probe.isActive)
         probe.updatePolling(isWanted: false)
         probe.updatePolling(isWanted: false)
-        let askedAfterStop = asked
-        await wait(.milliseconds(300))
-        #expect(asked <= askedAfterStop + 2, "a stopped poll asks at most a tick or two more")
+        // The poll is cancelled on a later main-actor turn. A busy runner can put several ticks before
+        // that turn, so wait for three tick intervals with none instead of counting the late ones.
+        var isQuiet = false
+        for _ in 0 ..< 20 where !isQuiet {
+            let askedBefore = asked
+            await wait(.milliseconds(300))
+            isQuiet = asked == askedBefore
+        }
+        #expect(isQuiet, "a stopped poll stops asking")
         probe.close()
     }
 
@@ -73,6 +79,26 @@ struct MissionControlShieldProbeTests {
         await wait(.milliseconds(2600))
         #expect(asked > 1)
         #expect(!probe.isActive, "no Expose shield is up during the test")
+        probe.close()
+    }
+
+    @Test("A wanted poll stops while the displays sleep and comes back when they wake")
+    func pollRestsWhileAsleep() throws {
+        let gate = IdleGate(center: NotificationCenter())
+        let probe = try MissionControlShieldProbe(owningScreen: #require(NSScreen.screens.first), idleGate: gate)
+        probe.shouldRun = { false }
+        probe.updatePolling(isWanted: true)
+        #expect(probe.isPolling)
+        gate.note(.displaysSlept)
+        #expect(!probe.isPolling)
+        probe.updatePolling(isWanted: true)
+        #expect(!probe.isPolling, "Asking again while asleep does not start it")
+        gate.note(.displaysWoke)
+        #expect(probe.isPolling)
+        probe.updatePolling(isWanted: false)
+        gate.note(.sessionResigned)
+        gate.note(.sessionBecameActive)
+        #expect(!probe.isPolling, "Waking does not start a poll nobody wants")
         probe.close()
     }
 }

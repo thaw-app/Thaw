@@ -67,16 +67,39 @@ final class AppNavigationState {
         }
     }
 
+    /// What the page shown in the settings process needs captured. The app reads the screen for
+    /// it; nothing while no such process runs.
+    var settingsProcessCapture = SettingsProcessCaptureDemand.none {
+        didSet { updateCaptureUIState() }
+    }
+
     var hasVisibleCaptureUI: Bool {
         isThawBarPresented || isSearchPresented || isLayoutEditorPresented
             || (isSettingsPresented && settingsConsumesCapture)
+            || settingsProcessCapture.consumesCapture
     }
 
     private var settingsPresentationID: UUID?
 
+    /// Captures running with no capture surface open, such as the picture of an item just opened
+    /// from the Thaw Bar. They light the recording indicator outside Thaw. See OpenedItemRecapture.
+    private var backgroundCaptureHolds = 0
+
     var hasCaptureUI: Bool {
         hasVisibleCaptureUI
             || (settingsPresentationID != nil && settingsConsumesCapture)
+            || backgroundCaptureHolds > 0
+    }
+
+    /// Lets captures run until the matching endBackgroundCapture().
+    func beginBackgroundCapture() {
+        backgroundCaptureHolds += 1
+        updateCaptureUIState()
+    }
+
+    func endBackgroundCapture() {
+        backgroundCaptureHolds = max(0, backgroundCaptureHolds - 1)
+        updateCaptureUIState()
     }
 
     func beginSettingsPresentation() -> UUID? {

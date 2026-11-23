@@ -402,7 +402,7 @@ final class ThawBarPanel: NSPanel {
         // Nonactivating panels get no resign-key dismissal, so watch for outside clicks.
         installOutsideClickMonitor()
 
-        // Non-section items are never on the bar; capturing would unnecessarily reveal and reconceal the user's section.
+        // Non-section items are never on the bar, so there is nothing to refresh.
         guard presentation == .section else {
             cacheTask?.cancel()
             cacheTask = nil
@@ -411,18 +411,13 @@ final class ThawBarPanel: NSPanel {
 
         // Cancel background refresh on close to avoid retaining appState.
         cacheTask?.cancel()
-        cacheTask = Task { [weak appState, weak self] in
+        cacheTask = Task { [weak appState] in
             guard let appState else { return }
             guard !Task.isCancelled else { return }
             // Wait for control windows after screen activation; stale bounds can classify everything Visible and empty Hidden.
             try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled else { return }
             await appState.itemManager.cacheItemsIfNeeded()
-            guard !Task.isCancelled else { return }
-            // Prewarm on open as well as per-item so uncaptured glyphs do not leave blank slots.
-            if let section = await MainActor.run(body: { self?.currentSection }) {
-                await appState.imageCache.prewarmConcealedImages(sections: [section])
-            }
             guard !Task.isCancelled else { return }
             await appState.imageCache.recaptureIfWarranted()
         }
@@ -544,11 +539,10 @@ final class ThawBarPanel: NSPanel {
         MemoryReclaimer.scheduleRelief(reason: "Thaw Bar closed")
     }
 
+    /// Stops the closed section's countdown too, or it outlives the bar and hides a section revealed inline later.
     private func resetSectionStateAfterClose(_ closingSection: MenuBarSection.Name?) {
-        guard closingSection != nil, let menuBarManager = appState?.menuBarManager else {
-            return
-        }
-
+        guard let closingSection, let menuBarManager = appState?.menuBarManager else { return }
+        menuBarManager.rehideController?.hidden(closingSection, closingPresentation: false)
         menuBarManager.showOnHoverAllowed = true
         for section in menuBarManager.sections {
             section.desiredState = .hideSection

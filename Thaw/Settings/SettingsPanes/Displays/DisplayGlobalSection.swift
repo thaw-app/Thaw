@@ -44,8 +44,19 @@ extension DisplaySettingsPane {
             layout: displaySettings.binding(for: .template, \.thawBarLayout) { $0.withThawBarLayout($1) },
             gridColumns: displaySettings.binding(for: .template, \.gridColumns) { $0.withGridColumns($1) },
             itemScale: displaySettings.binding(for: .template, \.thawBarItemScale) { $0.withThawBarItemScale($1) },
+            useThawBarForAlwaysHidden: displaySettings.globalConfiguration.useThawBarForAlwaysHidden
+                && appState.settings.layout.isAlwaysHiddenSectionEnabled,
             context: .globalTemplate
-        )
+        ) {
+            // The same switch as each display's, so the controls it shows can be turned off here too.
+            if !displaySettings.globalConfiguration.useThawBar, appState.settings.layout.isAlwaysHiddenSectionEnabled {
+                Toggle(
+                    "Open Always Hidden in the \(Constants.displayName) Bar",
+                    isOn: displaySettings.binding(for: .template, \.useThawBarForAlwaysHidden) { $0.withUseThawBarForAlwaysHidden($1) }
+                )
+                .annotation("Hidden items still show in the menu bar. Showing Always Hidden there would open Hidden too.")
+            }
+        }
     }
 
     /// The template's spacing and the Apply-to-All button. Edits stage on
@@ -145,65 +156,55 @@ extension DisplaySettingsPane {
         let activeName = activeID.flatMap { id in
             appState.profileManager.profiles.first(where: { $0.id == id })?.name
         }
-        pendingGlobalApply = PendingGlobalApply(
+        let pending = PendingGlobalApply(
             displayCount: displayCount,
             activeProfileID: activeID,
             activeProfileName: activeName
         )
+        if let answer = confirmations.template {
+            answerGlobalApply(pending, with: answer(pending))
+        } else {
+            pendingGlobalApply = pending
+        }
     }
 
-    /// Pushes the global template to every known display via the manager's
-    /// broadcast helper. The Combine sink in DisplaySettingsManager picks
-    /// the resulting configurations change up and drives the relaunch wave
-    /// for the active display on the next main-queue dispatch.
-    private func commitGlobalApply() {
-        displaySettings.applyGlobalToAllKnownDisplays()
+    /// Pushes the global template to every known display and saves it to the profiles the scope names.
+    /// A failed save rolls the live state back, since the next reapply would revert a template no profile holds.
+    private func commitGlobalApply(savingTo scope: SpacingProfileSaveScope? = nil, activeProfileID: UUID? = nil) {
+        commit(DisplayProfileCommit(change: .template(displaySettings.globalConfiguration), scope: scope, activeProfileID: activeProfileID))
+    }
+
+    /// What each button of the template alert does.
+    func answerGlobalApply(_ pending: PendingGlobalApply, with choice: ConfirmationChoice) {
+        switch choice {
+        case .updateActiveProfile:
+            commitGlobalApply(savingTo: .activeProfile, activeProfileID: pending.activeProfileID)
+        case .updateAllProfiles:
+            commitGlobalApply(savingTo: .allProfiles, activeProfileID: pending.activeProfileID)
+        case .apply:
+            commitGlobalApply()
+        case .cancel:
+            // The dialog dismisses itself; cancelling needs no other work.
+            break
+        }
     }
 
     @ViewBuilder
     func globalConfirmationButtons(for pending: PendingGlobalApply) -> some View {
         if pending.activeProfileID != nil {
             Button(String(localized: "Update Active Profile"), role: .destructive) {
-                if let id = pending.activeProfileID {
-                    // Snapshot the previous configurations so a save failure
-                    // can roll the live state back rather than leaving the
-                    // broadcast applied without a matching profile entry,
-                    // which the next reapply would revert.
-                    let previousConfigurations = displaySettings.configurations
-                    commitGlobalApply()
-                    do {
-                        try appState.profileManager.updateProfile(
-                            id: id,
-                            scope: .configurationOnly,
-                            appState: appState
-                        )
-                    } catch {
-                        displaySettings.configurations = previousConfigurations
-                        errorMessage = error.localizedDescription
-                    }
-                } else {
-                    commitGlobalApply()
-                }
+                answerGlobalApply(pending, with: .updateActiveProfile)
             }
             Button(String(localized: "Update All Profiles"), role: .destructive) {
-                let previousConfigurations = displaySettings.configurations
-                commitGlobalApply()
-                do {
-                    try appState.profileManager.updateAllProfilesGlobalConfiguration(
-                        displaySettings.globalConfiguration,
-                        propagateToDisplays: true
-                    )
-                } catch {
-                    displaySettings.configurations = previousConfigurations
-                    errorMessage = error.localizedDescription
-                }
+                answerGlobalApply(pending, with: .updateAllProfiles)
             }
-            Button(String(localized: "Cancel"), role: .cancel) { /* The dialog dismisses itself; cancelling needs no other work. */ }
         } else {
             Button(String(localized: "Apply"), role: .destructive) {
-                commitGlobalApply()
+                answerGlobalApply(pending, with: .apply)
             }
-            Button(String(localized: "Cancel"), role: .cancel) { /* The dialog dismisses itself; cancelling needs no other work. */ }
+        }
+        Button(String(localized: "Cancel"), role: .cancel) {
+            answerGlobalApply(pending, with: .cancel)
         }
     }
 

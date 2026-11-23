@@ -18,6 +18,9 @@ struct SimpleModeSettingsPane: View {
     let updatesManager: UpdatesManager
     @Bindable var settings: GeneralSettings
 
+    /// Stays once offered, so the button and its result survive the capture that fills the last picture.
+    @State private var offersHiddenCapture = false
+
     var body: some View {
         ThawForm {
             if !appState.permissions.accessibility.hasPermission {
@@ -68,9 +71,21 @@ struct SimpleModeSettingsPane: View {
                         actionTitle: "Grant Access",
                         action: { appState.permissions.screenRecording.performRequest() }
                     )
+                } else if offersHiddenCapture {
+                    hiddenCaptureRow
+                }
+            }
+            .onChange(of: appState.imageCache.hiddenItemsNeedPictures, initial: true) { _, needed in
+                if needed {
+                    offersHiddenCapture = true
                 }
             }
         }
+    }
+
+    /// Hidden items get their pictures only when asked, and Simple Mode has no Layout page to ask from.
+    private var hiddenCaptureRow: some View {
+        HiddenItemCaptureFooter(text: Text("Some hidden items show their app's icon until \(Constants.displayName) takes their picture."))
     }
 
     // MARK: How it works

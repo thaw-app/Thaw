@@ -217,9 +217,10 @@ final class MenuBarOverlayPanel: NSPanel {
     }
 
     /// Asynchronous layout can initially return the outgoing app's frame; poll for three stable reads, capped at ten.
-    /// Non-main screens need one read because only the main bar reflows on app switches.
-    private func trackApplicationMenuFrame() {
+    /// Non-main screens need one read because only the main bar reflows on app switches. Only a shape that follows the items reads it.
+    func trackApplicationMenuFrame() {
         menuFrameSettleTask?.cancel()
+        guard appState?.appearanceManager.effectiveConfiguration.shapeKind.followsItems == true else { return }
         menuFrameSettleTask = Task { @MainActor [weak self] in
             var candidate: CGRect?
             var settledCount = 0
@@ -671,6 +672,12 @@ private final class MenuBarOverlayPanelContentView: NSView {
     /// The last live edge reported by the edge watcher, and when.
     private var leadingEdgeSeen: (sample: MenuBarLeadingEdgeSample, at: ContinuousClock.Instant)?
 
+    /// Follows the live edge only while the shape is drawn around the items, the one use of the reading.
+    private lazy var edgeFollow = LeadingEdgeFollow { [weak self] edge in
+        self?.leadingEdgeSeen = (edge, .now)
+        self?.followLeadingEdge(to: edge)
+    }
+
     private lazy var geometryRefresh = MenuBarGeometryRefresh(
         read: { [weak self] minimumReadTime in
             await self?.readAXItemBounds(notBefore: minimumReadTime)
@@ -724,7 +731,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         if let overlayPanel {
             if let appState = overlayPanel.appState {
                 // Observe effective and preview configuration together; effectiveConfiguration also covers Space overrides.
-                let task = Task { @MainActor [weak self, appearanceManager = appState.appearanceManager] in
+                let task = Task { @MainActor [weak self, appearanceManager = appState.appearanceManager, edgeWatcher = appState.menuBarManager.leadingEdgeWatcher] in
                     let changes = Observations {
                         (appearanceManager.effectiveConfiguration, appearanceManager.previewConfiguration)
                     }
@@ -735,6 +742,8 @@ private final class MenuBarOverlayPanelContentView: NSView {
                             fullConfiguration = full
                             // Start, or stop, reading the items when the shape starts or stops needing them.
                             if full.shapeKind.followsItems != followedItems {
+                                edgeFollow.update(edgeWatcher, wanted: full.shapeKind.followsItems)
+                                overlayPanel.trackApplicationMenuFrame()
                                 scheduleAXItemBoundsRefresh(.immediate)
                             }
                         }
@@ -808,17 +817,6 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 AnyCancellable { cacheTask.cancel() }
                     .store(in: &subscriptions)
 
-                // The direct edge watcher avoids cache-walk delays after external changes.
-                let edgeTask = Task { @MainActor [weak self, watcher = appState.menuBarManager.leadingEdgeWatcher] in
-                    for await edge in Observations({ watcher.leadingEdge }) {
-                        guard let self, let edge else { continue }
-                        leadingEdgeSeen = (edge, .now)
-                        followLeadingEdge(to: edge)
-                    }
-                }
-                AnyCancellable { edgeTask.cancel() }
-                    .store(in: &subscriptions)
-
                 appState.menuBarManager.revealedSectionChanges
                     .receive(on: DispatchQueue.main)
                     .sink { [weak self] revealed in
@@ -832,7 +830,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
             }
 
             // Menu movement can accompany external item additions or removals; refresh item geometry too.
-            overlayPanel.$applicationMenuFrame
+            overlayPanel.$applicationMenuFrame.removeDuplicates()
                 .sink { [weak self] _ in
                     guard let self else { return }
                     self.needsDisplay = true
@@ -845,7 +843,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
         $fullConfiguration.replace(with: ())
             .merge(with: $previewConfiguration.replace(with: ()))
             .merge(with: $averageColorInfo.removeDuplicates().replace(with: ()))
-            .merge(with: $wallpaperPalette.replace(with: ()))
+            .merge(with: $wallpaperPalette.removeDuplicates().replace(with: ()))
             .merge(with: $iconShade.replace(with: ()))
             .sink { [weak self] _ in
                 self?.updateBackgroundGlass()
@@ -854,6 +852,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
             .store(in: &subscriptions)
 
         cancellables = subscriptions
+        edgeFollow.update(overlayPanel?.appState?.menuBarManager.leadingEdgeWatcher, wanted: fullConfiguration.shapeKind.followsItems)
 
         // Populate before the first draw.
         scheduleAXItemBoundsRefresh(.immediate)
@@ -1117,7 +1116,7 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 rect.fill()
             }
         case .adaptiveGradient:
-            if let gradient = adaptiveGradient(opacity: configuration.tintOpacity) {
+            if let gradient = wallpaperPalette?.gradient(opacity: configuration.tintOpacity) {
                 gradient.draw(in: rect, angle: 0)
             } else if let colorInfo = averageColorInfo,
                       let color = NSColor(cgColor: colorInfo.color)?
@@ -1128,27 +1127,6 @@ private final class MenuBarOverlayPanelContentView: NSView {
                 rect.fill()
             }
         }
-    }
-
-    /// Use the two dominant swatches, or nil before capture; repeated swatches produce a flat tint for single-colour wallpaper.
-    private func adaptiveGradient(opacity: CGFloat) -> NSGradient? {
-        guard
-            let palette = wallpaperPalette,
-            let primary = palette.primary,
-            let secondary = palette.secondary
-        else {
-            return nil
-        }
-        let colorSpace = CGColorSpace(name: CGColorSpace.displayP3) ?? CGColorSpaceCreateDeviceRGB()
-        guard
-            let start = primary.cgColor(in: colorSpace),
-            let end = secondary.cgColor(in: colorSpace),
-            let startColor = NSColor(cgColor: start)?.withAlphaComponent(opacity),
-            let endColor = NSColor(cgColor: end)?.withAlphaComponent(opacity)
-        else {
-            return nil
-        }
-        return NSGradient(starting: startColor, ending: endColor)
     }
 
     private var isBackgroundGlassActive = false
@@ -1411,6 +1389,15 @@ private final class MenuBarOverlayPanelContentView: NSView {
         )
         color.setFill()
         NSBezierPath(rect: borderBounds).fill()
+    }
+
+    /// AppKit asks for a finished picture instead of calling draw(_:); see showBitmapOfOwnDrawing().
+    override var wantsUpdateLayer: Bool {
+        true
+    }
+
+    override func updateLayer() {
+        showBitmapOfOwnDrawing()
     }
 
     override func draw(_: NSRect) {

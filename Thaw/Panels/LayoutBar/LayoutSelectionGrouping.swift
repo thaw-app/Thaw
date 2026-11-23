@@ -2,7 +2,7 @@
 //  LayoutSelectionGrouping.swift
 //  Project: Thaw
 //
-//  Copyright (Thaw) © 2026 René Jiménez
+//  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import AppKit
@@ -24,14 +24,24 @@ struct LayoutSelectionGrouping {
     let sectionItems: [MenuBarItem]
     let manager: MenuBarItemGroupManager
     let undoManager: UndoManager?
+    /// Takes the other items of a joining app into a folder; nil leaves groups as they are.
+    let folders: GroupFolders?
     /// Nil when the selection is in one section.
     let sectionRefusal: Refusal?
 
-    init(items: [MenuBarItem], sectionItems: [MenuBarItem], manager: MenuBarItemGroupManager, undoManager: UndoManager?, isOneSection: Bool = true) {
+    init(
+        items: [MenuBarItem],
+        sectionItems: [MenuBarItem],
+        manager: MenuBarItemGroupManager,
+        undoManager: UndoManager?,
+        folders: GroupFolders? = nil,
+        isOneSection: Bool = true
+    ) {
         self.items = items
         self.sectionItems = sectionItems
         self.manager = manager
         self.undoManager = undoManager
+        self.folders = folders
         sectionRefusal = isOneSection ? nil : .severalSections
     }
 
@@ -49,6 +59,7 @@ struct LayoutSelectionGrouping {
             sectionItems: sectionItems,
             manager: appState.itemGroupManager,
             undoManager: appState.layoutUndo,
+            folders: appState.groupFolders,
             isOneSection: section != nil
         )
     }
@@ -125,6 +136,7 @@ struct LayoutSelectionGrouping {
                 for item in joining {
                     manager.add(item, to: id)
                 }
+                folders?.takeAppSiblings(of: joining, into: id)
             case .automatic:
                 let existing = members(of: group)
                 let ids = Set(existing.map(\.uniqueIdentifier))
@@ -142,12 +154,12 @@ struct LayoutSelectionGrouping {
             undoManager?.endUndoGrouping()
         }
         if let existing = selectedGroup {
-            LayoutEditUndo.setFolder(true, for: existing.origin, members: members(of: existing), name: name(of: existing), folders: folders, undoManager: undoManager)
+            LayoutEditUndo.setFolder(true, for: existing.origin, members: members(of: existing), name: name(of: existing), manager: manager, folders: folders, undoManager: undoManager)
             return
         }
         guard let created = group() else { return }
         let members = groupable
-        LayoutEditUndo.setFolder(true, for: .user(created.id), members: members, name: folders.folderName(for: created), folders: folders, undoManager: undoManager)
+        LayoutEditUndo.setFolder(true, for: .user(created.id), members: members, name: folders.folderName(for: created), manager: manager, folders: folders, undoManager: undoManager)
     }
 
     /// Whether the selection's group already shows as a folder.

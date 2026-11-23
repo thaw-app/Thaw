@@ -315,3 +315,43 @@ struct RepairOrchestratorTests {
         #expect(repairs.ledger.causesWaiting(for: .revealReconcile) == [.policyReveal])
     }
 }
+
+@MainActor
+@Suite("An automatic pass can tell when the user is waiting behind it")
+struct RepairYieldTests {
+    @Test("Nobody is waiting on a lane with one holder")
+    func nobodyWaiting() async throws {
+        let repairs = RepairOrchestrator()
+        let holder = try #require(await repairs.enter(.postRestrictionRepair))
+
+        #expect(!repairs.userWorkIsWaiting)
+        repairs.leave(holder)
+    }
+
+    @Test("A queued automatic pass does not count as the user waiting")
+    func automaticWaiterDoesNotCount() async throws {
+        let repairs = RepairOrchestrator()
+        let holder = try #require(await repairs.enter(.postRestrictionRepair))
+        let queued = await startedTask { await repairs.enter(.overflowRebalance) }
+
+        #expect(!repairs.userWorkIsWaiting)
+
+        repairs.leave(holder)
+        let next = try #require(await queued.value)
+        repairs.leave(next)
+    }
+
+    @Test("A queued user edit counts, until it is admitted")
+    func userWaiterCounts() async throws {
+        let repairs = RepairOrchestrator()
+        let holder = try #require(await repairs.enter(.postRestrictionRepair))
+        let queued = await startedTask { await repairs.enterForUserEdit() }
+
+        #expect(repairs.userWorkIsWaiting)
+
+        repairs.leave(holder)
+        let next = try #require(await queued.value)
+        #expect(!repairs.userWorkIsWaiting)
+        repairs.leave(next)
+    }
+}

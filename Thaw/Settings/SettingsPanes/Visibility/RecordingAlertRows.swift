@@ -2,7 +2,7 @@
 //  RecordingAlertRows.swift
 //  Project: Thaw
 //
-//  Copyright (Thaw) © 2026 René Jiménez
+//  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import AppKit
@@ -50,3 +50,11 @@ struct RecordingAlertRows: View {
         return choices
     }
 }
+
+#if DEBUG
+    #Preview("Recording alerts") {
+        VisibilitySettingsPreview { settings in
+            RecordingAlertRows(settings: settings)
+        }
+    }
+#endif

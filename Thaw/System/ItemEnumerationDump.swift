@@ -53,6 +53,9 @@ enum ItemEnumerationDump {
         let timestamp: String
         let apps: [DumpedApp]
         let discovery: [DiscoveryResult]?
+        /// Where MenuBarAgent draws the items, one entry per bar. Nil when it could not be read,
+        /// and in reports written before this was recorded.
+        let drawnBars: [DrawnBar]?
     }
 
     struct DiscoveryResult: Codable {
@@ -142,7 +145,7 @@ enum ItemEnumerationDump {
             )
         }
 
-        let report = Report(timestamp: ISO8601DateFormatter().string(from: Date()), apps: dumpedApps, discovery: discovery)
+        let report = Report(timestamp: ISO8601DateFormatter().string(from: Date()), apps: dumpedApps, discovery: discovery, drawnBars: readDrawnBars())
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

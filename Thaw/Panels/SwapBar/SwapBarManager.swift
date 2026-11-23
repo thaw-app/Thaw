@@ -25,7 +25,7 @@ final class SwapBarManager {
 
     /// The settings slice this manager observes, injected at setup.
     @ObservationIgnored private var visibilitySettings: VisibilitySettings?
-    @ObservationIgnored private var panel: SwapBarPanel?
+    @ObservationIgnored private(set) var panel: SwapBarPanel?
     @ObservationIgnored private var cancellables = Set<AnyCancellable>()
     @ObservationIgnored private var pointerMonitor: EventMonitor?
     @ObservationIgnored private var currentDisplayID: CGDirectDisplayID?

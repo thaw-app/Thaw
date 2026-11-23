@@ -145,7 +145,7 @@ final class MenuBarSection {
         // An open Thaw Bar counts as revealed even while the assertion conceals its items.
         // A second click must close it, not rerun prewarm and flash hidden items.
         let presentedName = name == .alwaysHidden ? Name.alwaysHidden : Name.hidden
-        if let panel = menuBarManager?.thawBarPanel,
+        if let panel = menuBarManager?.thawBarPanelIfCreated,
            panel.presentation == .section,
            panel.currentSection == presentedName
         {
@@ -278,7 +278,7 @@ final class MenuBarSection {
             return
         }
 
-        menuBarManager.thawBarPanel.close()
+        menuBarManager.thawBarPanelIfCreated?.close()
         menuBarManager.sectionController.show(name)
         switch name {
         case .visible, .hidden:
@@ -330,16 +330,16 @@ final class MenuBarSection {
             return
         }
 
+        menuBarManager.rehideController?.hidden(name, closingPresentation: !isHidden)
         if !isHidden {
             if menuBarManager.shouldAlwaysShowHiddenItems {
                 menuBarManager.synchronizeAlwaysShowHiddenItems(closingSections: true)
             } else {
                 menuBarManager.sectionController.hideRevealedSections()
             }
-            menuBarManager.thawBarPanel.close()
+            menuBarManager.thawBarPanelIfCreated?.close()
         }
         resetClosedPresentationState(using: menuBarManager)
-        menuBarManager.rehideController?.hidden(name)
     }
 
     private func resetClosedPresentationState(using menuBarManager: MenuBarManager) {

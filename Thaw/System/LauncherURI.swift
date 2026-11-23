@@ -51,6 +51,8 @@ nonisolated enum LauncherProfileApplyOutcome: String, Sendable {
     case profileUnavailable
     /// The profile exists but its file could not be read.
     case applyFailed
+    /// Profiles is turned off, so no profile is applied.
+    case profilesOff
 
     var isSuccess: Bool {
         self == .applied || self == .appliedWithoutLayout
@@ -211,6 +213,8 @@ nonisolated enum LauncherURIResponse {
             details = "No saved profile has this identifier"
         case .applyFailed:
             details = "The profile could not be loaded"
+        case .profilesOff:
+            details = "Profiles is turned off"
         }
         return failure(
             payload.outcome,

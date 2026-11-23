@@ -25,6 +25,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
 
     /// App-wide, so only the Thaw Bar page passes it; the template for new displays has no row for it.
     private let shortcutPlacement: Binding<ThawBarShortcutPlacement>?
+    private let useThawBarForAlwaysHidden: Bool
     private let context: Context
     private let extraControls: () -> ExtraControls
 
@@ -36,6 +37,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
         gridColumns: Binding<Int>,
         itemScale: Binding<Double>,
         shortcutPlacement: Binding<ThawBarShortcutPlacement>? = nil,
+        useThawBarForAlwaysHidden: Bool = false,
         context: Context,
         @ViewBuilder extraControls: @escaping () -> ExtraControls
     ) {
@@ -46,6 +48,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
         _gridColumns = gridColumns
         _itemScale = itemScale
         self.shortcutPlacement = shortcutPlacement
+        self.useThawBarForAlwaysHidden = useThawBarForAlwaysHidden
         self.context = context
         self.extraControls = extraControls
     }
@@ -62,7 +65,7 @@ struct ThawBarConfigurationControls<ExtraControls: View>: View {
 
         extraControls()
 
-        if useThawBar {
+        if useThawBar || useThawBarForAlwaysHidden {
             ThawPicker("Location", selection: $location) {
                 ForEach(ThawBarLocation.allCases) { location in
                     Text(location.localized).tag(location)
@@ -190,6 +193,7 @@ extension ThawBarConfigurationControls where ExtraControls == EmptyView {
         gridColumns: Binding<Int>,
         itemScale: Binding<Double>,
         shortcutPlacement: Binding<ThawBarShortcutPlacement>? = nil,
+        useThawBarForAlwaysHidden: Bool = false,
         context: Context
     ) {
         self.init(
@@ -200,6 +204,7 @@ extension ThawBarConfigurationControls where ExtraControls == EmptyView {
             gridColumns: gridColumns,
             itemScale: itemScale,
             shortcutPlacement: shortcutPlacement,
+            useThawBarForAlwaysHidden: useThawBarForAlwaysHidden,
             context: context
         ) {
             EmptyView()

@@ -90,13 +90,15 @@ final class NotificationCenterActivation {
     /// Notification Center is presenting when its panel window is on-screen.
     /// The flag flips within ~100 ms of open and close, inside one poll interval.
     private static nonisolated func systemPanelPresenting() -> Bool {
-        let owners = Set(
-            NSRunningApplication.runningApplications(withBundleIdentifier: panelOwnerBundleID)
-                .map(\.processIdentifier)
-        )
-        guard !owners.isEmpty else { return false }
-        let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
-        return list.contains { isPanelWindow($0, panelOwners: owners) }
+        autoreleasepool {
+            let owners = Set(
+                NSRunningApplication.runningApplications(withBundleIdentifier: panelOwnerBundleID)
+                    .map(\.processIdentifier)
+            )
+            guard !owners.isEmpty else { return false }
+            let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+            return list.contains { isPanelWindow($0, panelOwners: owners) }
+        }
     }
 
     private nonisolated static let panelOwnerBundleID = "com.apple.notificationcenterui"

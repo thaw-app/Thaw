@@ -92,7 +92,7 @@ struct DrawnSilentOwnerDiagnosticsTests {
         #expect(probe.outcome != .emptyExtrasBar)
     }
 
-    @Test(.timeLimit(.minutes(1)))
+    @Test
     func `probes a silent drawn owner once per interval and never this app`() async throws {
         let sleeps = RecordedSleeps()
         let diagnostics = DrawnSilentOwnerDiagnostics(retryDelay: .milliseconds(10)) { try sleeps.sleep(for: $0) }

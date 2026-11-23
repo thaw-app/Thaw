@@ -26,6 +26,22 @@ extension DisplaySettingsPane {
         let activeProfileName: String?
     }
 
+    /// What the person picks in the spacing or the template confirmation.
+    enum ConfirmationChoice {
+        case updateActiveProfile
+        case updateAllProfiles
+        /// The way forward while no profile is active.
+        case apply
+        case cancel
+    }
+
+    /// Answers the page's confirmations in place of their alerts. Each is nil
+    /// in the app, which shows the alert; tests answer here, so none is needed.
+    struct Confirmations {
+        var spacing: (@MainActor (PendingSpacingApply) -> ConfirmationChoice)?
+        var template: (@MainActor (PendingGlobalApply) -> ConfirmationChoice)?
+    }
+
     // MARK: - Spacing Apply Confirmation
 
     /// The one decision point for Apply and reset. Applies at once with no
@@ -45,9 +61,10 @@ extension DisplaySettingsPane {
         // Confirmations off, or write-only mode with nothing to relaunch:
         // save to the profile target the user picked.
         if !displaySettings.confirmSpacingRelaunch || displaySettings.spacingApplyMode == .writeOnly {
-            commitSpacingWithoutConfirmation(
+            commitSpacing(
                 displayID: display.id,
                 offset: offset,
+                savingTo: displaySettings.unconfirmedSpacingProfileScope,
                 activeProfileID: activeID
             )
             return
@@ -56,7 +73,7 @@ extension DisplaySettingsPane {
         let activeName = activeID.flatMap { id in
             appState.profileManager.profiles.first(where: { $0.id == id })?.name
         }
-        pendingSpacingApply = PendingSpacingApply(
+        let pending = PendingSpacingApply(
             displayID: display.id,
             displayName: display.name,
             offset: offset,
@@ -64,45 +81,62 @@ extension DisplaySettingsPane {
             activeProfileID: activeID,
             activeProfileName: activeName
         )
-    }
-
-    /// Writes the new spacing; DisplaySettingsManager starts the relaunch wave
-    /// on the next main-queue turn.
-    private func commitSpacing(displayID: String, offset: Double) {
-        draftSpacing[displayID] = CGFloat(offset)
-        displaySettings.updateConfiguration(forDisplayUUID: displayID) { config in
-            config.withItemSpacingOffset(offset)
+        if let answer = confirmations.spacing {
+            answerSpacingApply(pending, with: answer(pending))
+        } else {
+            pendingSpacingApply = pending
         }
     }
 
-    /// Commits the spacing and, when a profile is active, persists it to the
-    /// profile target chosen by unconfirmedSpacingProfileScope. Mirrors the
-    /// alert's actions, rollback included.
-    private func commitSpacingWithoutConfirmation(
+    /// Writes the new spacing and saves it to the profiles the scope names.
+    /// DisplaySettingsManager starts the relaunch wave on the next main-queue turn.
+    private func commitSpacing(
         displayID: String,
         offset: Double,
-        activeProfileID: UUID?
+        savingTo scope: SpacingProfileSaveScope? = nil,
+        activeProfileID: UUID? = nil
     ) {
-        let previousOffset = displaySettings.configuration(forUUID: displayID).itemSpacingOffset
-        commitSpacing(displayID: displayID, offset: offset)
-        guard let id = activeProfileID else { return }
-        do {
-            switch displaySettings.unconfirmedSpacingProfileScope {
-            case .activeProfile:
-                try appState.profileManager.updateProfile(
-                    id: id,
-                    scope: .configurationOnly,
-                    appState: appState
-                )
-            case .allProfiles:
-                try appState.profileManager.updateAllProfilesItemSpacingOffset(
-                    displayUUID: displayID,
-                    offset: offset
-                )
-            }
-        } catch {
-            commitSpacing(displayID: displayID, offset: previousOffset)
-            errorMessage = error.localizedDescription
+        draftSpacing[displayID] = CGFloat(offset)
+        commit(DisplayProfileCommit(change: .spacing(displayID: displayID, offset: offset), scope: scope, activeProfileID: activeProfileID))
+    }
+
+    /// Makes a change with the profiles that keep it, here or in the app when Settings is in its own process.
+    /// A save that failed has already put the old settings back.
+    func commit(_ commit: DisplayProfileCommit) {
+        commit.perform(on: appState, remote: remote, failed: show)
+    }
+
+    /// Says a commit wasn't saved, with the display's slider back on the spacing it kept.
+    func show(_ failure: DisplayCommitFailure) {
+        if let displayID = failure.displayID {
+            draftSpacing[displayID] = CGFloat(displaySettings.configuration(forUUID: displayID).itemSpacingOffset)
+        }
+        errorMessage = failure.message
+    }
+
+    /// What each button of the spacing alert does.
+    func answerSpacingApply(_ pending: PendingSpacingApply, with choice: ConfirmationChoice) {
+        switch choice {
+        case .updateActiveProfile:
+            commitSpacing(
+                displayID: pending.displayID,
+                offset: pending.offset,
+                savingTo: .activeProfile,
+                activeProfileID: pending.activeProfileID
+            )
+        case .updateAllProfiles:
+            commitSpacing(
+                displayID: pending.displayID,
+                offset: pending.offset,
+                savingTo: .allProfiles,
+                activeProfileID: pending.activeProfileID
+            )
+        case .apply:
+            commitSpacing(displayID: pending.displayID, offset: pending.offset)
+        case .cancel:
+            draftSpacing[pending.displayID] = CGFloat(
+                displaySettings.configuration(forUUID: pending.displayID).itemSpacingOffset
+            )
         }
     }
 
@@ -110,56 +144,18 @@ extension DisplaySettingsPane {
     func spacingConfirmationButtons(for pending: PendingSpacingApply) -> some View {
         if pending.activeProfileID != nil {
             Button(String(localized: "Update Active Profile"), role: .destructive) {
-                if let id = pending.activeProfileID {
-                    // updateProfile captures live state, so commit first and
-                    // roll back if the save fails.
-                    let previousOffset = displaySettings
-                        .configuration(forUUID: pending.displayID)
-                        .itemSpacingOffset
-                    commitSpacing(displayID: pending.displayID, offset: pending.offset)
-                    do {
-                        try appState.profileManager.updateProfile(
-                            id: id,
-                            scope: .configurationOnly,
-                            appState: appState
-                        )
-                    } catch {
-                        commitSpacing(displayID: pending.displayID, offset: previousOffset)
-                        errorMessage = error.localizedDescription
-                    }
-                } else {
-                    commitSpacing(displayID: pending.displayID, offset: pending.offset)
-                }
+                answerSpacingApply(pending, with: .updateActiveProfile)
             }
             Button(String(localized: "Update All Profiles"), role: .destructive) {
-                let previousOffset = displaySettings
-                    .configuration(forUUID: pending.displayID)
-                    .itemSpacingOffset
-                commitSpacing(displayID: pending.displayID, offset: pending.offset)
-                do {
-                    try appState.profileManager.updateAllProfilesItemSpacingOffset(
-                        displayUUID: pending.displayID,
-                        offset: pending.offset
-                    )
-                } catch {
-                    commitSpacing(displayID: pending.displayID, offset: previousOffset)
-                    errorMessage = error.localizedDescription
-                }
-            }
-            Button(String(localized: "Cancel"), role: .cancel) {
-                draftSpacing[pending.displayID] = CGFloat(
-                    displaySettings.configuration(forUUID: pending.displayID).itemSpacingOffset
-                )
+                answerSpacingApply(pending, with: .updateAllProfiles)
             }
         } else {
             Button(String(localized: "Apply"), role: .destructive) {
-                commitSpacing(displayID: pending.displayID, offset: pending.offset)
+                answerSpacingApply(pending, with: .apply)
             }
-            Button(String(localized: "Cancel"), role: .cancel) {
-                draftSpacing[pending.displayID] = CGFloat(
-                    displaySettings.configuration(forUUID: pending.displayID).itemSpacingOffset
-                )
-            }
+        }
+        Button(String(localized: "Cancel"), role: .cancel) {
+            answerSpacingApply(pending, with: .cancel)
         }
     }
 

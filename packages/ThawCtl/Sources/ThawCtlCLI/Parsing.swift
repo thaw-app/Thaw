@@ -21,6 +21,8 @@ struct Command {
 
     /// Settings commands require authorization; this flag only labels help text.
     let needsAuth: Bool
+    /// Flags of which exactly one must be given, as Thaw refuses the request otherwise.
+    var exactlyOneOf: [String] = []
 
     static let all: [Command] = [
         Command(name: "toggle-hidden", host: "toggle-hidden", valueParams: [], flagParams: [], usage: "thawctl toggle-hidden", needsAuth: false),
@@ -35,7 +37,7 @@ struct Command {
         Command(name: "set", host: "set", valueParams: ["key", "value"], flagParams: ["display"], usage: "thawctl set <key>=<value> [--display <uuid>]", needsAuth: true),
         Command(name: "toggle-setting", host: "toggle", valueParams: ["key"], flagParams: ["display"], usage: "thawctl toggle-setting <key> [--display <uuid>]", needsAuth: true),
         Command(name: "authorize", host: "authorize", valueParams: [], flagParams: [], usage: "thawctl authorize", needsAuth: false),
-        Command(name: "reveal-item", host: "reveal-item", valueParams: [], flagParams: ["bundle", "item-id"], usage: "thawctl reveal-item (--bundle <id> | --item-id <id>)", needsAuth: true),
+        Command(name: "reveal-item", host: "reveal-item", valueParams: [], flagParams: ["bundle", "item-id"], usage: "thawctl reveal-item (--bundle <id> | --item-id <id>)", needsAuth: true, exactlyOneOf: ["bundle", "item-id"]),
     ]
 }
 
@@ -46,6 +48,7 @@ enum ParseError: Error, CustomStringConvertible, Equatable {
     case missingValue(command: String, param: String)
     case unexpectedArgument(String)
     case invalidPair(String)
+    case needsExactlyOne(command: String, params: [String])
     case noReplyChannel
 
     var description: String {
@@ -54,6 +57,7 @@ enum ParseError: Error, CustomStringConvertible, Equatable {
         case let .missingValue(command, param): "\(command): missing value for \(param)"
         case let .unexpectedArgument(a): "unexpected argument: \(a)"
         case let .invalidPair(a): "expected key=value, got: \(a)"
+        case let .needsExactlyOne(command, params): "\(command): give exactly one of \(params.map { "--" + $0 }.joined(separator: " or "))"
         case .noReplyChannel:
             "get: thawctl can't receive the reply. Thaw sends setting values only to a callback URL that the approved app handles itself, so read settings from the ThawCtl app or your own app's callback."
         }
@@ -98,6 +102,7 @@ func parse(_ args: [String]) throws -> (host: String, query: [URLQueryItem])? {
     for param in command.valueParams where values[param] == nil && flags[param] == nil {
         throw ParseError.missingValue(command: command.name, param: param)
     }
+    try requireExactlyOne(of: command, in: flags)
 
     var query = values.map { URLQueryItem(name: $0.key, value: $0.value) }
     query += flags.filter { command.valueParams.contains($0.key) || $0.key != "wait" }
@@ -107,10 +112,19 @@ func parse(_ args: [String]) throws -> (host: String, query: [URLQueryItem])? {
     return (command.host, query.sorted { $0.name < $1.name })
 }
 
-/// Reads a name=value argument into the command's values.
+/// Refuses a command given none or several of the flags it needs exactly one of. An empty value counts
+/// as not given, as it does in Thaw.
+private func requireExactlyOne(of command: Command, in flags: [String: String]) throws {
+    guard !command.exactlyOneOf.isEmpty else { return }
+    guard command.exactlyOneOf.count(where: { !(flags[$0] ?? "").isEmpty }) == 1 else {
+        throw ParseError.needsExactlyOne(command: command.name, params: command.exactlyOneOf)
+    }
+}
+
+/// Reads a name=value argument, rejecting empty names and values.
 private func readPair(_ arg: String, for command: Command, into values: inout [String: String]) throws {
-    let pair = arg.split(separator: "=", maxSplits: 1).map(String.init)
-    guard pair.count == 2 else {
+    let pair = arg.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+    guard pair.count == 2, !pair[0].isEmpty, !pair[1].isEmpty else {
         throw ParseError.invalidPair(arg)
     }
     if command.valueParams.contains(pair[0]) {

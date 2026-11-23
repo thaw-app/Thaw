@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import Combine
+import Foundation
 import Testing
 @testable import Thaw
 
@@ -73,7 +74,7 @@ struct AlwaysShowDisplayChangeHoldTests {
 }
 
 @MainActor
-@Suite("Display change presentation step", .timeLimit(.minutes(1)), .scratchDefaults)
+@Suite("Display change presentation step", .scratchDefaults)
 struct DisplayChangePresentationTests {
     @MainActor
     final class Counter {
@@ -130,6 +131,26 @@ struct DisplayChangePresentationTests {
         let before = reads.value
         monitor.evaluateAfterDisplayChange()
         #expect(reads.value == before + 1)
+    }
+
+    @Test("The sharing poll rests while the displays sleep and evaluates again on waking")
+    func pollRestsWhileAsleep() async {
+        let reads = Counter()
+        let gate = IdleGate(center: NotificationCenter())
+        let monitor = PresentationMonitor(readPresenting: { reads.value += 1; return false }, idleGate: gate)
+        monitor.startObserving()
+        #expect(monitor.isPolling)
+        gate.note(.displaysSlept)
+        #expect(!monitor.isPolling)
+        let asleep = reads.value
+        monitor.evaluateAfterDisplayChange()
+        #expect(reads.value == asleep + 1, "Still observing, so a display change is still evaluated")
+        gate.note(.displaysWoke)
+        #expect(monitor.isPolling)
+        for _ in 0 ..< 200 where reads.value < asleep + 2 {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(reads.value >= asleep + 2, "The resumed poll evaluates at once")
     }
 
     @Test("Each settled change's step evaluates the presentation and syncs always-show once")

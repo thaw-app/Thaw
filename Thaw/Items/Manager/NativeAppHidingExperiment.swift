@@ -76,6 +76,13 @@ final class NativeAppHidingExperiment {
         }
     }
 
+    /// Takes the app's answer, for the settings process: it previews the Thaw Bar and never opens one.
+    func mirrorUserSwitchedOffApps(_ bundleIDs: Set<String>) {
+        if bundleIDs != userSwitchedOffBundleIDs {
+            userSwitchedOffBundleIDs = bundleIDs
+        }
+    }
+
     /// Apps Native hiding had switched off when the current reveal began. The reveal switches them
     /// back on, and macOS decides where they appear.
     @ObservationIgnored private(set) var switchedOnForReveal: Set<String> = []
@@ -96,14 +103,6 @@ final class NativeAppHidingExperiment {
     /// the hiding method stays as it is until then.
     var journalNeedsAttention: Bool {
         controller.journalNeedsAttention
-    }
-
-    /// True during a capture the user asked for. Native hiding otherwise allows no
-    /// reveal for a picture, since each one makes macOS rebuild the bar.
-    @ObservationIgnored var allowsCaptureReveal = false
-
-    var blocksCaptureReveal: Bool {
-        isActive && !allowsCaptureReveal
     }
 
     @ObservationIgnored private let controller: NativeAppHidingController

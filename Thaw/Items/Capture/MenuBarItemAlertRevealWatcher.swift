@@ -25,6 +25,12 @@ enum MenuBarItemAlertReveals {
         triggersOn ? saved : []
     }
 
+    /// The saved items to watch under appState's Triggers module, or under triggersOn when given.
+    /// Without an app state the module counts as off.
+    static func watched(in appState: AppState?, triggersOn: Bool? = nil) -> Set<String> {
+        watched(saved: identifiers(), triggersOn: triggersOn ?? appState?.moduleHost.isEnabled(.triggers) ?? false)
+    }
+
     static func contains(_ identifier: String) -> Bool {
         identifiers().contains(identifier)
     }
@@ -80,6 +86,9 @@ final class MenuBarItemAlertRevealWatcher {
     private var cancellables = Set<AnyCancellable>()
 
     private(set) weak var appState: AppState?
+
+    /// The saved choice as the Triggers page lists it. The watcher reads the saved one itself at each capture.
+    let choices = AlertRevealChoices()
 
     func performSetup(with appState: AppState) {
         self.appState = appState

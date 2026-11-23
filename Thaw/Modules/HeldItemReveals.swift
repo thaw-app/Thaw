@@ -39,11 +39,6 @@ final class HeldItemReveals {
         Self.current = self
     }
 
-    /// The items held for anyone, so a release can find the one it names.
-    var heldIdentifiers: [String] {
-        Array(holders.keys)
-    }
-
     /// Shows the item on every hold, not only the first: a click or another
     /// reveal may have hidden it since, and a new hold should bring it back.
     func hold(_ identifier: String, for sender: String) {
@@ -59,6 +54,28 @@ final class HeldItemReveals {
         } else {
             holders[identifier] = current
         }
+    }
+
+    /// Lets go of what release-item names for this sender: one item by item-id, or every item of the
+    /// bundle, since the app's items may have changed since the hold. Returns the items let go of.
+    /// Exactly one of the two must be given, so a URL with both can't release another app's item.
+    @discardableResult
+    func release(bundle: String?, itemID: String?, for sender: String) -> [String] {
+        let bundle = bundle.flatMap { $0.isEmpty ? nil : $0 }
+        let itemID = itemID.flatMap { $0.isEmpty ? nil : $0 }
+        let named: [String] = switch (bundle, itemID) {
+        case let (nil, itemID?):
+            [MenuBarItemTag.canonicalPersistentIdentifier(itemID)]
+        case let (bundle?, nil):
+            holders.keys.filter { $0.hasPrefix("\(bundle):") }.sorted()
+        default:
+            []
+        }
+        let held = named.filter { holders[$0]?.contains(sender) == true }
+        for identifier in held {
+            release(identifier, for: sender)
+        }
+        return held
     }
 
     /// Lets go of every item one sender held, as when the sender quits.

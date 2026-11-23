@@ -75,11 +75,18 @@ final class RehideController {
         startSectionRehide(section)
     }
 
-    /// Stops only this section's rehide, even though hiding it puts the other sections away too.
-    func hidden(_ section: MenuBarSection.Name) {
-        sectionRehides[section]?.cancel()
-        environment.stopPointerMonitor(section)
-        sectionRehides[section] = nil
+    /// A closed presentation releases every section; an already-hidden section only releases itself.
+    func hidden(_ section: MenuBarSection.Name, closingPresentation: Bool = true) {
+        let sections = closingPresentation ? MenuBarSection.Name.allCases : [section]
+        if closingPresentation {
+            // Nothing is left for it to close, and a hotkey reveal doesn't cancel it.
+            outsideClickRehide.cancel()
+        }
+        for section in sections {
+            sectionRehides[section]?.cancel()
+            environment.stopPointerMonitor(section)
+            sectionRehides[section] = nil
+        }
     }
 
     func note(_ event: Event) {
@@ -130,7 +137,12 @@ final class RehideController {
         }
     }
 
+    /// A pointer move releases a disabled rehide's countdown and monitor instead of starting another.
     private func updateTimedRehide(_ section: MenuBarSection.Name) {
+        guard environment.settings().autoRehide else {
+            startSectionRehide(section)
+            return
+        }
         let step = TimedRehideStep.next(
             pointerInBar: environment.isPointerInActiveArea(),
             countdownRunning: sectionRehides[section] != nil
@@ -166,14 +178,15 @@ final class RehideController {
         onOpenMenu: @escaping @MainActor () -> Void
     ) -> Task<Void, Never> {
         Task { [weak self] in
-            guard let self, await waitForContinuousEligibility(interval: interval) else { return }
+            guard let self, await waitForContinuousEligibility(interval: interval), !Task.isCancelled else { return }
+            guard environment.settings().autoRehide else { return }
             if environment.isPointerInActiveArea() {
                 startSectionRehide(section)
                 return
             }
             let menuOpen = await environment.isAnyMenuOpen()
             // A pointer move or a fresh reveal can cancel this task while it waits on the answer.
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, environment.settings().autoRehide else { return }
             if menuOpen {
                 onOpenMenu()
                 return
@@ -187,7 +200,7 @@ final class RehideController {
         var eligibleSince = environment.now()
         while !Task.isCancelled {
             try? await environment.sleep(.milliseconds(250))
-            guard !Task.isCancelled else { return false }
+            guard !Task.isCancelled, environment.settings().autoRehide else { return false }
             if environment.isPointerInActiveArea() {
                 return false
             }
@@ -218,6 +231,7 @@ final class RehideController {
         }
     }
 
+    /// A delayed focus hide must stay enabled and keep the pointer away from the bars after every wait.
     private func rehideAfterFocusChange(interval: TimeInterval) async {
         do {
             try await environment.sleep(.seconds(interval))
@@ -225,7 +239,10 @@ final class RehideController {
             return
         }
         // A reveal can cancel this task even after the sleep returns.
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled,
+              environment.settings().autoRehide,
+              environment.isPointerAwayFromBars()
+        else { return }
 
         if let lastShow, lastShow.duration(to: environment.now()) < Self.revealGrace {
             diagLog.debug("Skipping rehide due to grace period")
@@ -234,6 +251,10 @@ final class RehideController {
         if environment.settings().strategy == .smart, await environment.isAnyMenuOpen() {
             return
         }
+        guard !Task.isCancelled,
+              environment.settings().autoRehide,
+              environment.isPointerAwayFromBars()
+        else { return }
         environment.hideHiddenSection()
     }
 
@@ -253,7 +274,7 @@ final class RehideController {
         } catch {
             return
         }
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, environment.settings().autoRehide else { return }
 
         // A click that moved to another space settles it; the window under the pointer belongs to the new one.
         if environment.activeSpaceID() != spaceAtClick {
@@ -264,7 +285,7 @@ final class RehideController {
         if await environment.isAnyMenuOpen() {
             return
         }
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, environment.settings().autoRehide else { return }
         environment.hideEverySection()
     }
 }

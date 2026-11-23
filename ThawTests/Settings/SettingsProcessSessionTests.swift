@@ -20,9 +20,11 @@ final class SettingsProcessSessionTests {
         var updates = [(canCheck: Bool, lastCheck: Date?)]()
         var terminations = 0
         var closes = 0
+        var windowShows = [String]()
     }
 
     private let calls = Calls()
+    private let general = GeneralSettings()
     private let toProcess = Pipe()
     private let fromProcess = Pipe()
     private var appReceived = [SettingsLinkMessage]()
@@ -37,15 +39,24 @@ final class SettingsProcessSessionTests {
         appReceived.filter { $0 != .settingsChanged }
     }
 
-    private func makeSession(_ navigation: AppNavigationState, handOverTimeout: Duration = .seconds(30)) -> SettingsProcessSession {
-        let calls = calls
+    private func makeSession(
+        _ navigation: AppNavigationState,
+        handOverTimeout: Duration = .seconds(30),
+        settingsShown: Bool = true,
+        settingsFrame: CGRect? = nil
+    ) -> SettingsProcessSession {
+        let (calls, general) = (calls, general)
         return SettingsProcessSession(
             navigationState: navigation,
             side: SettingsProcessSession.ProcessSide(
                 reloadSettings: { calls.reloads += 1 },
                 showSettings: { calls.shows += 1 },
                 updatesStateChanged: { calls.updates.append(($0, $1)) },
-                terminate: { calls.terminations += 1 }
+                terminate: { calls.terminations += 1 },
+                showWindow: { calls.windowShows.append($0) },
+                settingsFrame: { settingsFrame },
+                isSettingsShown: { settingsShown },
+                isSimpleMode: { general.simpleMode }
             ),
             handOverTimeout: handOverTimeout
         )
@@ -88,14 +99,15 @@ final class SettingsProcessSessionTests {
         #expect(calls.terminations == 0)
     }
 
-    @Test("A pane that needs the app goes to the app, and this process closes once the app's window is up")
+    @Test("A pane that needs the app goes to the app with the window's place, and this process closes once the app's window is up")
     func appPaneHandsOver() async {
         let navigation = AppNavigationState()
         navigation.settingsNavigationIdentifier = .general
-        let session = makeSession(navigation)
+        let frame = CGRect(x: 451, y: 165, width: 1018, height: 720)
+        let session = makeSession(navigation, settingsFrame: frame)
         start(session)
         navigation.settingsNavigationIdentifier = .menuBarLayout
-        #expect(await settingsLinkWait { appMessages.contains(.openInApp(pane: "Menu Bar Layout")) })
+        #expect(await settingsLinkWait { appMessages.contains(.openInApp(pane: "Menu Bar Layout", frame: frame)) })
         #expect(session.isClosingItself)
         try? await Task.sleep(for: .milliseconds(100))
         #expect(calls.terminations == 0, "The window stays up until the app's is")
@@ -107,6 +119,34 @@ final class SettingsProcessSessionTests {
         session.willTerminate(hasOpenWindow: true)
         try? await Task.sleep(for: .milliseconds(100))
         #expect(!appMessages.contains(.quit), "Closing itself is not the user's Quit")
+    }
+
+    @Test("Simple Mode turned on here goes to the app, which reads the settings before it opens its window")
+    func simpleModeHandsOver() async throws {
+        let navigation = AppNavigationState()
+        navigation.settingsNavigationIdentifier = .general
+        let frame = CGRect(x: 305, y: 329, width: 804, height: 600)
+        let session = makeSession(navigation, settingsFrame: frame)
+        start(session)
+        #expect(await settingsLinkWait { appMessages.contains(.pageChanged(pane: "General")) })
+        general.simpleMode = true
+        let handOver = SettingsLinkMessage.openInApp(pane: "General", frame: frame)
+        #expect(await settingsLinkWait { appMessages.contains(handOver) })
+        #expect(session.isClosingItself)
+        let opened = try #require(appReceived.firstIndex(of: handOver))
+        #expect(appReceived[..<opened].last == .settingsChanged)
+    }
+
+    @Test("In Simple Mode with only What's New open, nothing is handed to the app")
+    func whatsNewAloneKeepsSimpleMode() async {
+        let navigation = AppNavigationState()
+        navigation.settingsNavigationIdentifier = .general
+        general.simpleMode = true
+        let session = makeSession(navigation, settingsShown: false)
+        start(session)
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(!appMessages.contains { if case .openInApp = $0 { true } else { false } })
+        #expect(!session.isClosingItself)
     }
 
     @Test("The app's messages show the window, reload settings and carry the updater state")
@@ -128,6 +168,32 @@ final class SettingsProcessSessionTests {
         #expect(calls.updates.first?.canCheck == true)
         #expect(calls.updates.first?.lastCheck == checked)
         #expect(calls.terminations == 0)
+    }
+
+    @Test("Asked for a window of its own, the process shows it and leaves the Settings pane alone")
+    func windowTargetsAreShown() async {
+        let navigation = AppNavigationState()
+        navigation.settingsNavigationIdentifier = .about
+        let session = makeSession(navigation)
+        start(session)
+        for target in [SettingsProcessRoute.whatsNew, SettingsProcessRoute.permissions, SettingsProcessRoute.welcomeAgain] {
+            appEnd?.send(.show(pane: target))
+        }
+        #expect(await settingsLinkWait { calls.windowShows.count == 3 })
+        #expect(calls.windowShows == [SettingsProcessRoute.whatsNew, SettingsProcessRoute.permissions, SettingsProcessRoute.welcomeAgain])
+        #expect(calls.shows == 0)
+        #expect(navigation.settingsNavigationIdentifier == .about)
+    }
+
+    @Test("With only What's New open, a last pane that needs the app isn't handed to it")
+    func whatsNewAloneKeepsAnAppPane() async {
+        let navigation = AppNavigationState()
+        navigation.settingsNavigationIdentifier = .menuBarLayout
+        let session = makeSession(navigation, settingsShown: false)
+        start(session)
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(!appMessages.contains(.openInApp(pane: "Menu Bar Layout")))
+        #expect(!session.isClosingItself)
     }
 
     @Test("A hand-over the app never confirms still closes this process after the timeout")

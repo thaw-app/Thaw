@@ -8,6 +8,7 @@
 import AppKit
 import SwiftUI
 import Testing
+@testable import Thaw
 
 /// A SwiftUI view hosted in a window that is never shown, so tests can lay it
 /// out, draw it into a bitmap and wait for its state changes to apply.
@@ -53,5 +54,27 @@ final class OffscreenRender<Content: View> {
             try? await Task.sleep(for: .milliseconds(10))
         }
         return condition()
+    }
+
+    /// Draws the view between run-loop turns until its pixels satisfy condition.
+    /// Returns those pixels, so the caller needn't draw again, or nil at timeout.
+    func pixels(within timeout: Duration = .seconds(120), until condition: (Data) -> Bool) async -> Data? {
+        var matched: Data?
+        await settle(within: timeout) {
+            guard let drawn = try? self.pixels(), condition(drawn) else { return false }
+            matched = drawn
+            return true
+        }
+        return matched
+    }
+}
+
+extension OffscreenRender where Content == AnyView {
+    /// A settings page as the settings window shows it, without its title, against appState.
+    convenience init(settingsPage page: some View, appState: AppState, size: CGSize) {
+        self.init(
+            AnyView(page.environment(appState).environment(\.settingsPaneTitle, nil).frame(width: size.width, height: size.height)),
+            size: size
+        )
     }
 }

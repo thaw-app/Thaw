@@ -25,6 +25,18 @@ public enum MenuBarAgentWindow {
         }
     }
 
+    /// One of the agent's windows: a display's bar, and what is drawn on it.
+    public struct Bar: Equatable, Sendable {
+        /// The window's frame, or nil when it could not be read.
+        public let frame: CGRect?
+        public let entries: [Entry]
+
+        public init(frame: CGRect?, entries: [Entry]) {
+            self.frame = frame
+            self.entries = entries
+        }
+    }
+
     /// The apps with an item drawn on the bar, or nil when the read cannot be trusted.
     ///
     /// While an item leaves, the window keeps an empty child for it for a moment: no owner of its
@@ -40,6 +52,14 @@ public enum MenuBarAgentWindow {
               entries.allSatisfy({ $0.frame.width > 0 && $0.frame.height > 0 })
         else { return nil }
         return entries
+    }
+
+    /// Which of the agent's windows is the bar of display: the first whose middle lies on it. A nil frame matches
+    /// none. Apple documents no window order, and on the one Mac checked the first was not the main display's.
+    public static func windowIndex(onDisplay display: CGRect, among frames: [CGRect?]) -> Int? {
+        frames.firstIndex { frame in
+            frame.map { display.contains(CGPoint(x: $0.midX, y: $0.midY)) } ?? false
+        }
     }
 
     /// The process that owns the item inside one child of the window.
@@ -66,16 +86,42 @@ public enum MenuBarAgentWindow {
 
 public extension AXPrimitives {
     /// One entry per child of MenuBarAgent's window, or nil when the agent or its window cannot be read.
+    /// The window is the agent's first, which can be any display's bar, unless display names the bar to read.
     static func menuBarAgentWindowEntries(
+        onDisplay display: CGRect? = nil,
         messagingTimeout: Float = defaultMessagingTimeout
     ) -> [MenuBarAgentWindow.Entry]? {
-        guard let agentPID = menuBarAgentPID() else { return nil }
-        let agent = AXUIElementCreateApplication(agentPID)
-        AXUIElementSetMessagingTimeout(agent, messagingTimeout)
-        guard let window = (copyAttribute(agent, kAXWindowsAttribute) as? [AXUIElement])?.first else {
-            return nil
+        autoreleasepool {
+            guard let agentPID = menuBarAgentPID() else { return nil }
+            let agent = AXUIElementCreateApplication(agentPID)
+            AXUIElementSetMessagingTimeout(agent, messagingTimeout)
+            let windows = copyAttribute(agent, kAXWindowsAttribute) as? [AXUIElement] ?? []
+            let index = display.map { MenuBarAgentWindow.windowIndex(onDisplay: $0, among: windows.map(frame(of:))) } ?? windows.indices.first
+            guard let window = index.map({ windows[$0] }) else {
+                return nil
+            }
+            return menuBarAgentEntries(in: window, agentPID: agentPID)
         }
-        return children(of: window).map { child in
+    }
+
+    /// One Bar per window of MenuBarAgent, or nil when the agent cannot be read. For a diagnostic report:
+    /// a bar mid-change is included as it is.
+    static func menuBarAgentBars(
+        messagingTimeout: Float = defaultMessagingTimeout
+    ) -> [MenuBarAgentWindow.Bar]? {
+        autoreleasepool {
+            guard let agentPID = menuBarAgentPID() else { return nil }
+            let agent = AXUIElementCreateApplication(agentPID)
+            AXUIElementSetMessagingTimeout(agent, messagingTimeout)
+            guard let windows = copyAttribute(agent, kAXWindowsAttribute) as? [AXUIElement] else { return nil }
+            return windows.map { window in
+                MenuBarAgentWindow.Bar(frame: frame(of: window), entries: menuBarAgentEntries(in: window, agentPID: agentPID))
+            }
+        }
+    }
+
+    private static func menuBarAgentEntries(in window: AXUIElement, agentPID: pid_t) -> [MenuBarAgentWindow.Entry] {
+        children(of: window).map { child in
             MenuBarAgentWindow.Entry(
                 ownerPID: MenuBarAgentWindow.ownerPID(of: child, agentPID: agentPID, pid: pid(of:), children: children(of:)),
                 frame: frame(of: child) ?? .zero
@@ -85,9 +131,10 @@ public extension AXPrimitives {
 
     /// The bar as MenuBarAgent draws it right now, or nil when it could not be read or is mid-change.
     static func menuBarAgentSettledEntries(
+        onDisplay display: CGRect? = nil,
         messagingTimeout: Float = defaultMessagingTimeout
     ) -> [MenuBarAgentWindow.Entry]? {
-        menuBarAgentWindowEntries(messagingTimeout: messagingTimeout).flatMap(MenuBarAgentWindow.settled)
+        menuBarAgentWindowEntries(onDisplay: display, messagingTimeout: messagingTimeout).flatMap(MenuBarAgentWindow.settled)
     }
 
     /// See MenuBarAgentWindow.drawnOwners(in:).

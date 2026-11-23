@@ -25,7 +25,7 @@ final class FullDiskAccessPermission: Permission {
         string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
     )
 
-    init() {
+    init(stub: PermissionStub? = nil) {
         super.init(
             title: String(localized: "Menu Bar Layout Access"),
             iconName: "checkmark.shield",
@@ -35,9 +35,9 @@ final class FullDiskAccessPermission: Permission {
                 String(localized: "macOS keeps that layout in one protected file (~/Library/Group Containers/com.apple.MenuBar). \(Constants.displayName) reads it to place items and writes it only when you reorder."),
                 String(localized: "Choosing that file gives \(Constants.displayName) access to it alone. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
             ],
-            shortDetails: [
-                String(localized: "\(Constants.displayName) puts items in place by updating macOS's saved menu bar layout. It touches only that one file. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
-            ],
+            summary: String(localized: "Put items in their sections and order. In the file window that opens, choose the file it names."),
+            declinedHint: String(localized: "Choose the file again, or turn on Full Disk Access for \(Constants.displayName) instead."),
+            requestOpensFilePanel: true,
             isRequired: true,
             settingsURL: Self.settingsPane,
             check: {
@@ -52,7 +52,8 @@ final class FullDiskAccessPermission: Permission {
                 // Report the panel as a prompt, or the base class would open the
                 // Full Disk Access pane behind it. A dismissal sets wasDeclined.
                 completion(granted, true)
-            }
+            },
+            stub: stub
         )
     }
 }
@@ -61,7 +62,7 @@ final class FullDiskAccessPermission: Permission {
 /// hiding switches apps off there instead of holding the assertion, leaving
 /// camera, microphone and Notification Center to macOS. Optional.
 final class ControlCenterAppListPermission: Permission {
-    init() {
+    init(stub: PermissionStub? = nil) {
         super.init(
             title: String(localized: "Control Center App List"),
             iconName: "switch.2",
@@ -70,9 +71,8 @@ final class ControlCenterAppListPermission: Permission {
                 String(localized: "Lets \(Constants.displayName) keep Live Activities and the camera indicator on the menu bar while apps are hidden."),
                 String(localized: "It also stops hidden items from flashing when Notification Center opens. Choosing the file gives \(Constants.displayName) access to it alone. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
             ],
-            shortDetails: [
-                String(localized: "Keeps Live Activities and the camera indicator visible while apps are hidden, and helps with hidden items flashing when Notification Center opens. You may need to quit and reopen \(Constants.displayName) before it takes effect."),
-            ],
+            summary: String(localized: "Keep Live Activities and the camera indicator visible while apps are hidden."),
+            requestOpensFilePanel: true,
             isRequired: false,
             settingsURL: nil,
             check: {
@@ -80,7 +80,8 @@ final class ControlCenterAppListPermission: Permission {
             },
             request: { completion in
                 completion(PickedFileAccess.controlCenterAppList.requestAccessViaOpenPanel(), true)
-            }
+            },
+            stub: stub
         )
     }
 }

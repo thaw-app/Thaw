@@ -33,9 +33,15 @@ nonisolated struct LearnedOpenMethods {
     }
 
     /// Remembers the method that opened the item, or forgets the item when nothing did.
-    /// Right clicks try a fixed order, so they neither teach nor forget the left-click method.
-    func record(_ opened: ConcealedItemOpenMethod?, for identity: OpenMethodIdentity, clickedWith button: CGMouseButton) {
-        guard button != .right else { return }
+    /// Right clicks and clicks from another display try a fixed order, so they neither teach nor
+    /// forget the left-click method.
+    func record(
+        _ opened: ConcealedItemOpenMethod?,
+        for identity: OpenMethodIdentity,
+        clickedWith button: CGMouseButton,
+        fromAnotherDisplay: Bool = false
+    ) {
+        guard button != .right, !fromAnotherDisplay else { return }
         var stored = stored()
         let current = stored[identity.key].flatMap { $0["version"] == identity.appVersion ? $0 : nil }
         if let entry = Self.entry(after: opened, current: current, appVersion: identity.appVersion) {

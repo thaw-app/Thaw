@@ -1,5 +1,8 @@
 name: CodeQL
 
+# Scans legacy/thaw-2. CodeQL supports neither Swift 6.4 nor traced builds with
+# Xcode 27 (GitHub changelog, 2026-10-19), so Thaw 3 on development can't be
+# scanned. Point this back at development once CodeQL lists Swift 6.4.
 on:
   schedule:
     # Weekly, offset from the hour to avoid GitHub's cron pileup.
@@ -28,7 +31,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: legacy/thaw-2
           persist-credentials: false
+
+      - name: Record the scanned commit
+        id: scanned
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
@@ -38,12 +46,6 @@ jobs:
 
       - name: Select Xcode 26.6
         run: sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
-
-      # The Thaw target's lint build phase requires the pinned SwiftLint on PATH.
-      - name: Install pinned SwiftLint
-        run: |
-          sh scripts/install-swiftlint.sh
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       # CodeQL traces this build to construct the database. Tests are not run;
       # compilation is all the extractor needs.
@@ -63,3 +65,6 @@ jobs:
         uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           category: "/language:swift"
+          # File the results under the branch that was scanned, not development.
+          ref: refs/heads/legacy/thaw-2
+          sha: ${{ steps.scanned.outputs.sha }}

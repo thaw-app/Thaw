@@ -6,9 +6,12 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Combine
+import Observation
 
 extension ActiveMenuBarDisplayWatcher {
-    /// Checks on app activation, a Space change and once a second.
+    /// Checks on app activation and a Space change, and once a second while
+    /// something needs the answer and the displays are awake.
     func start() {
         guard observationTasks.isEmpty else { return }
         check()
@@ -18,11 +21,21 @@ extension ActiveMenuBarDisplayWatcher {
                 self?.check()
             })
         }
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self, self.isNeeded() else { return }
-                self.check()
+        // A display that connects can bring its always-show setting with it, which no observation sees.
+        observationTasks.append(NotificationCenter.default.eventsTask(named: NSApplication.didChangeScreenParametersNotification) { [weak self] in
+            self?.updateTimer()
+        })
+        observationTasks.append(Task { @MainActor [weak self] in
+            for await _ in Observations({ [weak self] in self?.isNeeded() ?? false }) {
+                self?.updateTimer()
+            }
+        })
+        idleGateSubscription = idleGate.subscribe { [weak self] mayRun in
+            self?.updateTimer()
+            if mayRun {
+                self?.check()
             }
         }
+        updateTimer()
     }
 }

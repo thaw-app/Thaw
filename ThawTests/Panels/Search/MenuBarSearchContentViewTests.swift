@@ -175,7 +175,7 @@ struct MenuBarSearchContentViewTests {
         #expect(harness.model.selection == harness.ids.first, "Home goes to the first row")
     }
 
-    @Test("Tab jumps to the next section's first row and Shift-Tab back, wrapping; matches have no sections")
+    @Test("Next Section wraps past the last section, the keyboard's jump stops there; matches have no sections")
     func tabJumpsSections() {
         let model = MenuBarSearchModel()
         let items = ["Alpha", "Beta", "Gamma", "Delta"].map { World.item($0) }
@@ -191,6 +191,11 @@ struct MenuBarSearchContentViewTests {
         #expect(model.selection == Self.itemID(items[0]), "past the last section it wraps to the first")
         model.moveSelection(toSectionFromCurrentBy: -1)
         #expect(model.selection == Self.itemID(items[3]), "and back")
+
+        #expect(!model.moveSelection(toSectionFromCurrentBy: 1, wraps: false), "the keyboard stops at the last section")
+        #expect(model.selection == Self.itemID(items[3]))
+        #expect(model.moveSelection(toSectionFromCurrentBy: -1, wraps: false))
+        #expect(model.selection == Self.itemID(items[2]))
 
         model.results = items.map { MenuBarSearchResult(item: $0, ownerName: nil, section: nil) }
         model.selection = Self.itemID(items[1])

@@ -18,12 +18,12 @@ private struct PermissionsFlowView: View {
         Group {
             switch stage {
             case let .onboarding(skipsAccessStep):
-                ThawOnboardingView(skipsAccessStep: skipsAccessStep) { outcome, pane in
-                    appState.completeOnboarding(outcome: outcome, opening: pane)
+                ThawOnboardingView(skipsAccessStep: skipsAccessStep) { outcome in
+                    appState.finishOnboarding(outcome: outcome)
                 }
             case .recovery:
                 ThawPermissionsView {
-                    appState.completeFirstLaunchSetup()
+                    appState.finishAccessRecovery()
                 }
             case .none?:
                 // Close mistaken openings on the next turn rather than leaving an empty window.
@@ -32,17 +32,13 @@ private struct PermissionsFlowView: View {
                         appState.dismissWindow(.permissions)
                     }
             case nil:
-                // Preserve window size without showing the wrong screen while the stage resolves.
+                // Shows nothing rather than the wrong screen while the stage resolves.
                 Color.clear
             }
         }
-        // Minimum and ideal sizes allow the window to grow with Dynamic Type instead of clipping Larger Text.
-        .frame(
-            minWidth: ThawOnboardingWindowMetrics.width,
-            idealWidth: ThawOnboardingWindowMetrics.width,
-            minHeight: ThawOnboardingWindowMetrics.height,
-            idealHeight: ThawOnboardingWindowMetrics.height
-        )
+        // As tall as each page, so the window has no empty space and grows with Larger Text.
+        .frame(width: ThawOnboardingWindowMetrics.width)
+        .fixedSize(horizontal: false, vertical: true)
         .onAppear(perform: resolveStage)
         // Takes Light or Dark from the Settings choice. Black's background is for Settings, so
         // onboarding keeps its own and only draws dark.
@@ -91,8 +87,7 @@ struct PermissionsWindow: Scene {
                     }
                 }
         }
-        // contentMinSize allows resizing beyond the ideal when Larger Text exceeds a step's budget.
-        .windowResizability(.contentMinSize)
+        .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)
         .environment(appState)
         .environment(appState.permissions)

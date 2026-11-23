@@ -111,6 +111,39 @@ struct RehideControllerTests {
         #expect(world.everySectionHides == 0)
     }
 
+    /// Returning to a bar while the focus delay runs must preserve the revealed items.
+    @Test("Returning to a bar during the focus delay prevents hiding", arguments: [RehideStrategy.smart, .focusedApp])
+    func pointerReturnsDuringFocusDelay(strategy: RehideStrategy) async {
+        let world = RehideWorld()
+        world.settings.strategy = strategy
+        world.controller.note(.focusChanged)
+        await world.settle()
+        world.pointerAwayFromBars = false
+
+        await world.finishWaits()
+
+        #expect(world.hiddenSectionHides == 0)
+    }
+
+    /// A menu probe can finish after the pointer has returned to a bar.
+    @Test("Returning to a bar during the focus menu check prevents hiding")
+    func pointerReturnsDuringFocusMenuCheck() async throws {
+        let world = RehideWorld()
+        world.sleepsReturnAtOnce = true
+        world.heldMenuCheck = 1
+        world.controller.note(.focusChanged)
+        for _ in 0 ..< 100 where world.menuChecks < 1 {
+            await world.settle()
+        }
+        try #require(world.menuChecks >= 1, "The focus action must reach its menu probe")
+        world.pointerAwayFromBars = false
+
+        await world.finishWaits()
+        await world.settle()
+
+        #expect(world.hiddenSectionHides == 0)
+    }
+
     @Test("A focus change does nothing under the timed strategy, with rehide off, or with the pointer on a bar")
     func focusChangeIgnored() async {
         for change in [{ (world: RehideWorld) in world.settings.strategy = .timed },
@@ -132,6 +165,25 @@ struct RehideControllerTests {
         await world.settle()
         world.controller.revealed()
         await world.finishWaits()
+        #expect(world.hiddenSectionHides == 0)
+    }
+
+    /// A late menu answer must not let a cancelled focus action hide a newly revealed section.
+    @Test("A reveal during the focus menu check cancels the pending hide", arguments: [false, true])
+    func revealDuringFocusMenuCheck(menuOpen: Bool) async {
+        let world = RehideWorld()
+        world.sleepsReturnAtOnce = true
+        world.heldMenuCheck = 1
+        world.controller.note(.focusChanged)
+        while world.menuChecks < 1 {
+            await world.settle()
+        }
+        world.controller.revealed()
+        world.menuOpen = menuOpen
+
+        await world.finishWaits()
+        await world.settle()
+
         #expect(world.hiddenSectionHides == 0)
     }
 
@@ -189,6 +241,58 @@ struct RehideControllerTests {
         await world.finishWaits()
         #expect(world.everySectionHides == 1)
         #expect(world.hiddenSectionHides == 0)
+    }
+
+    @Test("Closing the presentation drops a pending outside-click hide")
+    func closingDropsOutsideClickRehide() async {
+        let world = RehideWorld()
+        world.controller.note(.outsideClick { true })
+        await world.settle()
+        world.controller.hidden(.hidden)
+        world.controller.revealed()
+        await world.finishWaits()
+        #expect(world.everySectionHides == 0)
+    }
+
+    /// Disabling the preference while a focus or outside-click delay waits must prevent its hide.
+    @Test("Disabling rehide stops a pending focus or outside-click hide", arguments: [false, true])
+    func disablingStopsPendingHide(outside: Bool) async {
+        let world = RehideWorld()
+        if outside {
+            world.controller.note(.outsideClick { true })
+        } else {
+            world.controller.note(.focusChanged)
+        }
+        await world.settle()
+        world.settings.autoRehide = false
+
+        await world.finishWaits()
+
+        #expect(world.hiddenSectionHides == 0)
+        #expect(world.everySectionHides == 0)
+    }
+
+    /// A menu answer can arrive after the user disabled automatic rehiding.
+    @Test("Disabling rehide during a menu probe prevents the pending hide", arguments: [false, true])
+    func disablingDuringMenuProbe(outside: Bool) async {
+        let world = RehideWorld()
+        world.sleepsReturnAtOnce = true
+        world.heldMenuCheck = 1
+        if outside {
+            world.controller.note(.outsideClick { true })
+        } else {
+            world.controller.note(.focusChanged)
+        }
+        while world.menuChecks < 1 {
+            await world.settle()
+        }
+        world.settings.autoRehide = false
+
+        await world.finishWaits()
+        await world.settle()
+
+        #expect(world.hiddenSectionHides == 0)
+        #expect(world.everySectionHides == 0)
     }
 
     @Test("Outside clicks are not checked unless smart rehide is on", arguments: [RehideStrategy.timed, .focusedApp])
@@ -319,17 +423,23 @@ struct LiveRehideEnvironmentTests {
         let input = appState.hidEventManager
         input.rehideController = world.controller
         let screen = try #require(NSScreen.screens.first)
+        // The click lands in a window of its own, which is never shown. A click with no window would
+        // match the control item, which has none before setup, and be turned away as a click on that
+        // item before the sections are asked.
+        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 10, height: 10), styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
         let event = try #require(NSEvent.mouseEvent(
             with: .leftMouseDown,
             location: .zero,
             modifierFlags: [],
             timestamp: 0,
-            windowNumber: 0,
+            windowNumber: window.windowNumber,
             context: nil,
             eventNumber: 0,
             clickCount: 1,
             pressure: 1
         ))
+        try #require(event.window === window)
         input.handleSmartRehide(with: event, appState: appState, screen: screen)
         await world.settle()
         // Before setup no section is showing, so the click arms nothing. The click is not cancelled
@@ -474,16 +584,140 @@ struct SectionRehideTests {
         }
     }
 
-    @Test("Each section keeps its own timer; hiding one stops only its own and a second reveal replaces it")
-    func oneTimerPerSection() async {
+    /// A countdown already in progress must respect a disabled automatic-rehide preference.
+    @Test("Disabling rehide stops a section countdown", arguments: [RehideStrategy.timed, .smart])
+    func disablingStopsSectionCountdown(strategy: RehideStrategy) async {
+        let world = world(strategy, atOnce: false)
+        world.controller.revealed(.hidden)
+        await world.settle()
+        world.settings.autoRehide = false
+        world.now += .seconds(2)
+        world.sleepsReturnAtOnce = true
+
+        await world.finishWaits()
+        await world.settle()
+        #expect(world.sectionHides.isEmpty)
+        world.movePointer(over: .hidden, inArea: false)
+        await world.settle()
+        #expect(world.moveHandlers.isEmpty)
+    }
+
+    /// Eligibility and the final menu check both suspend, so each must honor a later disabled preference.
+    @Test("Disabling rehide during a section menu check prevents hiding", arguments: [8, 9])
+    func disablingDuringSectionMenuProbe(check: Int) async {
         let world = world(.timed)
+        world.heldMenuCheck = check
+        world.controller.revealed(.hidden)
+        while world.menuChecks < check {
+            await world.settle()
+        }
+        world.settings.autoRehide = false
+
+        await world.finishWaits()
+        await world.settle()
+
+        #expect(world.sectionHides.isEmpty)
+        world.movePointer(over: .hidden, inArea: false)
+        #expect(world.moveHandlers.isEmpty)
+    }
+
+    /// An idle timed monitor must not start a new countdown after automatic rehiding is disabled.
+    @Test("Disabling rehide releases an idle monitor on the next pointer move")
+    func disablingStopsIdleMonitor() async {
+        let world = world(.timed)
+        world.pointerInArea = true
+        world.controller.revealed(.hidden)
+        world.settings.autoRehide = false
+
+        world.movePointer(over: .hidden, inArea: false)
+        await world.controller.waitUntilIdle()
+
+        #expect(world.sectionHides.isEmpty)
+        #expect(world.moveHandlers.isEmpty)
+    }
+
+    /// Hiding either section closes the presentation of both, so neither countdown may survive.
+    @Test("Hiding a section stops every revealed section's countdown", arguments: [RehideStrategy.timed, .smart])
+    func hidingStopsEverySection(strategy: RehideStrategy) async {
+        let world = world(strategy, atOnce: false)
         world.controller.revealed(.hidden)
         world.controller.revealed(.alwaysHidden)
         world.controller.revealed(.alwaysHidden)
+        await world.settle()
+        #expect(world.sleeps.count == 2, "the repeated reveal replaces its old countdown")
+
         world.controller.hidden(.hidden)
-        #expect(Set(world.moveHandlers.keys) == [.alwaysHidden])
-        await world.controller.waitUntilIdle()
-        #expect(world.sectionHides == [.alwaysHidden])
-        #expect(world.sleeps.count == 8)
+        #expect(world.moveHandlers.isEmpty)
+        world.now += .seconds(2)
+        world.sleepsReturnAtOnce = true
+        await world.finishWaits()
+        await world.settle()
+
+        #expect(world.sectionHides.isEmpty, "no countdown may hide a section after it closed")
+        #expect(world.sleeps.count == 2)
+    }
+
+    /// A menu probe can return after closing cancelled the countdown; it must not restart anything.
+    @Test("Closing during an eligibility menu probe cannot restart a section")
+    func closingDuringEligibilityCannotRestart() async {
+        let world = world(.timed)
+        world.heldMenuCheck = 8
+        world.controller.revealed(.hidden)
+        while world.menuChecks < 8 {
+            await world.settle()
+        }
+        let starts = world.monitorStarts.count
+        world.controller.hidden(.hidden)
+        world.pointerInArea = true
+
+        await world.finishWaits()
+        await world.settle()
+
+        #expect(world.monitorStarts.count == starts)
+        #expect(world.moveHandlers.isEmpty)
+    }
+
+    /// Hiding an already-hidden section closes nothing and must leave the other section's rehide alone.
+    @Test("An already-hidden section preserves the open section's pointer monitor")
+    func noOpHidePreservesOtherSection() {
+        let world = world(.timed)
+        world.pointerInArea = true
+        world.controller.revealed(.hidden)
+        world.controller.revealed(.alwaysHidden)
+
+        world.controller.hidden(.alwaysHidden, closingPresentation: false)
+
+        #expect(Set(world.moveHandlers.keys) == [.hidden])
+        world.controller.hidden(.hidden)
+        #expect(world.moveHandlers.isEmpty)
+    }
+
+    /// A timed reveal under the pointer still owns a monitor even before it has a countdown.
+    @Test("Hiding a section stops the other section's idle pointer monitor")
+    func hidingStopsIdlePointerMonitors() {
+        let world = world(.timed)
+        world.pointerInArea = true
+        world.controller.revealed(.hidden)
+        world.controller.revealed(.alwaysHidden)
+        #expect(Set(world.moveHandlers.keys) == [.hidden, .alwaysHidden])
+
+        world.controller.hidden(.hidden)
+
+        #expect(world.moveHandlers.isEmpty)
+        #expect(world.sleeps.isEmpty)
+    }
+}
+
+@Suite("Timed rehide countdown")
+struct TimedRehideStepTests {
+    /// With no countdown and the pointer outside, one starts, so a reveal with no movement still rehides.
+    @Test("The pointer outside starts or keeps the countdown, and in either bar stops it", arguments: [
+        (false, false, TimedRehideStep.start),
+        (false, true, .keep),
+        (true, false, .cancel),
+        (true, true, .cancel),
+    ] as [(Bool, Bool, TimedRehideStep)])
+    func nextStep(pointerInBar: Bool, countdownRunning: Bool, step: TimedRehideStep) {
+        #expect(TimedRehideStep.next(pointerInBar: pointerInBar, countdownRunning: countdownRunning) == step)
     }
 }

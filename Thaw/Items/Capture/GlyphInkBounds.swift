@@ -58,9 +58,18 @@ extension MenuBarItemImageCache {
     /// Whether the picture's ink runs into the left edge of its crop, as when the bar was read while the item
     /// sat left of its frame. An icon that really draws to its edge looks the same.
     static nonisolated func isClippedAtLeadingEdge(_ capture: MenuBarItemGlyphCapture) -> Bool {
+        hasSolidEdgeColumn(capture, trailing: false)
+    }
+
+    /// isClippedAtLeadingEdge(_:) for the right edge, as when the item sat right of its frame.
+    static nonisolated func isClippedAtTrailingEdge(_ capture: MenuBarItemGlyphCapture) -> Bool {
+        hasSolidEdgeColumn(capture, trailing: true)
+    }
+
+    private static nonisolated func hasSolidEdgeColumn(_ capture: MenuBarItemGlyphCapture, trailing: Bool) -> Bool {
         let image = capture.cgImage
         guard image.width > 0, image.height > 0, capture.scale > 0 else { return false }
-        // A context one pixel wide keeps only the picture's first column.
+        // A context one pixel wide keeps only the picture's first or last column.
         let context = CGContext(
             data: nil,
             width: 1,
@@ -71,7 +80,7 @@ extension MenuBarItemImageCache {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         )
         guard let context else { return false }
-        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        context.draw(image, in: CGRect(x: trailing ? 1 - image.width : 0, y: 0, width: image.width, height: image.height))
         guard let data = context.data?.assumingMemoryBound(to: UInt8.self) else { return false }
         let stride = context.bytesPerRow
         let solidRows = (0 ..< image.height).count { data[$0 * stride + 3] > 127 }

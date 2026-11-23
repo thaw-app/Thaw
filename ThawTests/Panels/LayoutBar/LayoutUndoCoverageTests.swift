@@ -2,7 +2,7 @@
 //  LayoutUndoCoverageTests.swift
 //  Project: Thaw
 //
-//  Copyright (Thaw) © 2026 René Jiménez
+//  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import AppKit
@@ -100,7 +100,7 @@ struct LayoutUndoCoverageTests {
         let undoManager = history(world)
         // The folders aren't set up in the test world, so setFolder declines, as it does for a group it can't resolve.
         record(undoManager) {
-            LayoutEditUndo.setFolder(true, for: .user(group.id), members: [alpha, beta], name: "Duo", folders: world.appState.groupFolders, undoManager: undoManager)
+            LayoutEditUndo.setFolder(true, for: .user(group.id), members: [alpha, beta], name: "Duo", manager: world.appState.itemGroupManager, folders: world.appState.groupFolders, undoManager: undoManager)
         }
         // An empty group can still read as undoable; an edit always names its step.
         #expect(undoManager.undoActionName.isEmpty)

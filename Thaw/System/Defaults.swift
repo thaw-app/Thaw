@@ -16,9 +16,9 @@ import ThawUI
 nonisolated enum Defaults {
     /// The store every accessor below reads and writes.
     ///
-    /// Only tests assign this, pointing at a scratch suite, since per-key
-    /// restore cannot protect the real domain under parallel tests. The
-    /// unchecked annotation covers only that test-setup reassignment.
+    /// Tests and Xcode previews assign this, pointing at a scratch suite, since
+    /// per-key restore cannot protect the real domain under parallel tests. The
+    /// unchecked annotation covers that setup reassignment.
     static nonisolated(unsafe) var store: UserDefaults = .standard {
         didSet {
             // A scratch suite starts with no registered defaults, so re-register
@@ -200,6 +200,7 @@ nonisolated enum Defaults {
             .axMessagingTimeout: DefaultValue.axMessagingTimeout,
             .useLCSSectionOrderPlanner: DefaultValue.useLCSSectionOrderPlanner,
             .inputPauseThresholdMs: DefaultValue.inputPauseThresholdMs,
+            .settingsInOwnProcess: DefaultValue.settingsInOwnProcess,
         ]
     }
 
@@ -321,6 +322,9 @@ extension Defaults {
         /// On by default: plan section-order drags with the LCS planner, one
         /// move per misplaced item, instead of the pairwise walk.
         static let useLCSSectionOrderPlanner = true
+
+        /// On by default: Settings runs in a process of its own, so its memory goes away when the window closes.
+        static let settingsInOwnProcess = true
 
         /// Input-idle window (ms) before a synthetic move warps the cursor, so
         /// it never lands between the user's own movements. Default: 50.

@@ -2,18 +2,32 @@
 //  ClockBridgeAvailability.swift
 //  Project: Thaw
 //
-//  Copyright (Thaw) © 2026 René Jiménez
+//  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Combine
 import Observation
 
-/// Whether the Clock and Notification Center bridge taps can ever be needed.
+/// Whether the Clock and Notification Center bridge taps can ever be needed, and on which displays.
 enum ClockBridgeAvailability {
     /// The bridge releases the restriction the Standard method holds. Native hiding holds none,
     /// so with it the taps would sit on every left press and drag in the system for nothing.
     nonisolated static func isPossible(engineIsOperational: Bool, nativeHidingActive: Bool) -> Bool {
         engineIsOperational && !nativeHidingActive
+    }
+
+    /// Whether a display gets a Clock band. A fullscreen Space on a display without a notch
+    /// gets none: the app owns the top of the screen there, and the clock's last frame would
+    /// take its clicks. With a notch the app sits below the camera housing, so the strip beside
+    /// it only ever holds the menu bar when it drops down. Without a band there, a Clock click on
+    /// the dropped-down bar reaches macOS while the restriction is held and cannot open the panel.
+    nonisolated static func hasClockBand(showsFullscreenSpace: Bool, hasNotch: Bool) -> Bool {
+        !showsFullscreenSpace || hasNotch
+    }
+
+    /// Whether the shortcut tap should be up. A key still held keeps it up, so its release is not lost.
+    nonisolated static func wantsHotkeyTap(canBridge: Bool, hasHotkeys: Bool, hasHeldKeys: Bool) -> Bool {
+        (canBridge && hasHotkeys) || hasHeldKeys
     }
 }
 
@@ -30,5 +44,13 @@ extension HIDEventManager {
             }
         }
         return [AnyCancellable { task.cancel() }]
+    }
+
+    /// Keeps the shortcut last read, which includes the system's default Fn-N, and logs a change.
+    func updateNotificationCenterHotkeys(_ hotkeys: [SystemNotificationCenterHotkey]) {
+        if hotkeys != notificationCenterHotkeys {
+            Self.diagLog.info("Notification Center shortcut bindings updated: \(hotkeys.count) enabled")
+        }
+        notificationCenterHotkeys = hotkeys
     }
 }

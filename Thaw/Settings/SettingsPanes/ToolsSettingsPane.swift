@@ -14,6 +14,8 @@ import ThawUI
 struct ToolsSettingsPane: View {
     @Environment(AppState.self) private var appState
     @Bindable var settings: ToolsSettings
+    /// How the page reaches the running app from its settings process. Nil in the app, where it acts itself.
+    var remote = SettingsRemote.current
 
     @State private var currentLogFileName: String?
     @State private var pendingAction: MaintenanceToolAction?
@@ -49,6 +51,8 @@ struct ToolsSettingsPane: View {
         }
         .disabled(isBusy)
         .task(id: settings.enableDiagnosticLogging) {
+            // The settings process hears from the app which file it writes, and asks it to look again.
+            remote?.perform(ToolsLink.refresh)
             try? await Task.sleep(for: .milliseconds(50))
             currentLogFileName = (
                 DiagnosticLogger.shared.currentLogFile
@@ -73,7 +77,7 @@ struct ToolsSettingsPane: View {
                     isBusy = true
                     defer { isBusy = false }
                     do {
-                        try await NativeVisibilityRecoveryLaunch.openRecovery()
+                        try await ToolsTasks.perform(.openRecovery, appState: appState, remote: remote)
                     } catch {
                         failedAction = nil
                         errorMessage = error.localizedDescription
@@ -95,21 +99,26 @@ struct ToolsSettingsPane: View {
             diagnosticLoggingToggle
             if settings.enableDiagnosticLogging {
                 DiagnosticLogRotationRows(settings: settings)
-                if let currentLogFileName {
+                if let logFileName {
                     LabeledContent("Current file") {
-                        Text(currentLogFileName)
+                        Text(logFileName)
                             .foregroundStyle(ThawInk.supporting)
                             .textSelection(.enabled)
                     }
                 }
             }
         }
-        DiagnosticFilesSection()
+        DiagnosticFilesSection.current(appState, remote: remote)
         // The move record is the log's live view, so it shows only while
         // the log is being written.
         if settings.enableDiagnosticLogging {
             MoveInspectorSection()
         }
+    }
+
+    /// The file the app is logging to. Its settings process shows the name the app sent.
+    private var logFileName: String? {
+        remote == nil ? currentLogFileName : settings.appReport.status.logFileName
     }
 
     /// These delete preferences or quit apps. The positions reset writes the
@@ -156,17 +165,9 @@ struct ToolsSettingsPane: View {
                 pendingAction = .resetPermissions
             }
             .settingsSearchAnchor("tools.resetPermissions")
-
-            toolRow(
-                title: "Reduced mode",
-                detail: "Run \(Constants.displayName) as one icon that hides whole apps, without reading the menu bar. Switch back from its menu.",
-                buttonTitle: "Switch to Reduced Mode…",
-                statusFor: .enterReducedMode
-            ) {
-                pendingAction = .enterReducedMode
-            }
+            // Reduced mode is off the visible UI until it moves to its own app; the task stays for the link.
         }
-        MenuBarLayoutBackupsSection(refreshToken: backupsRefreshToken)
+        MenuBarLayoutBackupsSection(refreshToken: backupsRefreshToken, remote: remote)
     }
 
     private var resetTab: some View {
@@ -231,49 +232,14 @@ struct ToolsSettingsPane: View {
         statusAction = action
         defer { isBusy = false }
 
-        if action == .resetMenuBarLayoutPositions || action == .restartMenuBar {
-            // Killing the host mid-move strands the move's events.
-            await appState.itemManager.moveActivity.waitUntilIdle()
-        }
-
         do {
-            switch action {
-            case .resetSettings:
-                appState.settings.resetAllSettingsToDefaults()
-                reportSuccess(String(localized: "Settings were reset to defaults."))
-            case .resetMenuBarLayoutPositions:
-                let backup = try await MaintenanceTools.resetMenuBarLayoutPositions()
-                appState.itemManager.forgetStrandedRepairs()
-                backupsRefreshToken += 1
-                if let backup {
-                    reportSuccess(
-                        String(
-                            localized: "macOS's saved layout was deleted. Backup saved as \(backup.url.lastPathComponent). Relaunching…"
-                        )
-                    )
-                } else {
-                    reportSuccess(String(localized: "macOS's saved layout was deleted. Relaunching…"))
+            try await ToolsTasks.perform(.run(action), appState: appState, remote: remote, report: { event in
+                guard case let .message(message) = event else { return }
+                if action == .resetMenuBarLayoutPositions {
+                    backupsRefreshToken += 1
                 }
-                // Access granted to the old layout table does not carry over to
-                // the one the menu bar writes next, so relaunch once it exists.
-                let table = MenuBarLayoutTableAccess.tableURL.path(percentEncoded: false)
-                for _ in 0 ..< 60 where !FileManager.default.fileExists(atPath: table) {
-                    try? await Task.sleep(for: .milliseconds(500))
-                }
-                appState.restartSelf()
-            case .restartMenuBar:
-                try await MaintenanceTools.restartMenuBar()
-                reportSuccess(String(localized: "The menu bar was restarted. Relaunching…"))
-                // Thaw's hiding and positions sessions ended with the old host.
-                appState.restartSelf()
-            case .resetPermissions:
-                try await MaintenanceTools.resetAppPermissions()
-                reportSuccess(String(localized: "Permissions cleared. Quitting…"))
-                ApplicationTermination.request()
-            case .enterReducedMode:
-                ReducedModeController.choose(keepingWithAccessibility: true)
-                appState.restartSelf()
-            }
+                reportSuccess(message)
+            })
         } catch {
             failedAction = action
             errorMessage = error.localizedDescription
@@ -286,7 +252,8 @@ struct ToolsSettingsPane: View {
     }
 }
 
-private enum MaintenanceToolAction: Identifiable {
+/// A repair or reset on the page. The raw value names it to the app when the settings process asks for it.
+nonisolated enum MaintenanceToolAction: String, Codable, Identifiable, Sendable {
     case resetSettings
     case resetMenuBarLayoutPositions
     case restartMenuBar
@@ -296,7 +263,11 @@ private enum MaintenanceToolAction: Identifiable {
     var id: Self {
         self
     }
+}
 
+/// The words that ask before a tool runs, and that name it when it fails.
+@MainActor
+extension MaintenanceToolAction {
     var confirmationTitle: String {
         switch self {
         case .resetSettings: String(localized: "Reset all settings?")

@@ -2,7 +2,7 @@
 //  DiagnosticLogRotationRows.swift
 //  Project: Thaw
 //
-//  Copyright (Thaw) © 2026 René Jiménez
+//  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
@@ -49,3 +49,11 @@ struct DiagnosticLogRotationRows: View {
         String(AttributedString(localized: "^[\(count) day](inflect: true)").characters)
     }
 }
+
+#if DEBUG
+    #Preview("Log rotation") {
+        ToolsSettingsPreview { settings in
+            DiagnosticLogRotationRows(settings: settings)
+        }
+    }
+#endif

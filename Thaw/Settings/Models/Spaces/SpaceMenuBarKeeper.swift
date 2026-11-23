@@ -33,7 +33,7 @@ final class SpaceMenuBarKeeper {
     init(
         load: @escaping () -> SpaceMenuBarChoices? = loadFromDefaults,
         save: @escaping (SpaceMenuBarChoices) -> Void = saveToDefaults,
-        presentation: @escaping () -> any MenuBarPresentationControlling = { MenuBarPresentationProvider.current }
+        presentation: @escaping () -> any MenuBarPresentationControlling = { MenuBarPresentationProvider.forSettings }
     ) {
         choices = load() ?? SpaceMenuBarChoices()
         self.load = load

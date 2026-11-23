@@ -62,6 +62,7 @@ struct MenuBarWalkConcurrencyTests {
         var reader = Provider.WalkReader(runningApps: { apps }, isTrusted: { true }, read: { app, _, _, _ in read(app) })
         reader.perAppBudget = .seconds(30)
         reader.minimumBudget = .seconds(60)
+        reader.absences = Provider.ExtrasBarAbsences(initialState: ExtrasBarAbsenceLedger())
         return reader
     }
 
@@ -96,6 +97,17 @@ struct MenuBarWalkConcurrencyTests {
         let owners = Array(itemOwners.prefix(2))
         let chosen = Set(owners.map(\.processIdentifier))
         return owners + otherApps.filter { !chosen.contains($0.processIdentifier) }.prefix(10)
+    }
+
+    /// The name the walk knows an app by.
+    private static func walkBundleID(of app: NSRunningApplication) -> String {
+        app.bundleIdentifier ?? app.localizedName ?? "(pid \(app.processIdentifier))"
+    }
+
+    /// A background-only app that had no items last session, so nothing but the ledger decides whether it is read.
+    private static var knownEmptyApp: NSRunningApplication? {
+        let formerHosts = UnseenMenuBarHosts.formerHosts()
+        return otherApps.first { $0.activationPolicy == .prohibited && !formerHosts.contains(walkBundleID(of: $0)) }
     }
 
     private static func item(for pid: pid_t) -> Provider.RawItem {
@@ -163,6 +175,47 @@ struct MenuBarWalkConcurrencyTests {
         #expect(snapshot.freshItems.contains { $0.ownerPID == owner })
     }
 
+    @Test(
+        "An app known to have no extras bar is left out unless it is requested, and the walk still completes",
+        .enabled(
+            if: MenuBarWalkConcurrencyTests.itemOwner != nil && MenuBarWalkConcurrencyTests.knownEmptyApp != nil,
+            "needs an item owner and a background-only app besides the test host"
+        )
+    )
+    func knownEmptyAppIsLeftOut() async throws {
+        let owner = try #require(Self.itemOwner).processIdentifier
+        let emptyApp = try #require(Self.knownEmptyApp)
+        let empty = emptyApp.processIdentifier
+        let log = ReadLog()
+        let sampled = Self.sampledApps
+        let apps = sampled.contains { $0.processIdentifier == empty } ? sampled : sampled + [emptyApp]
+        var reader = Self.patientReader(apps: apps) { app in
+            log.enter(app.processIdentifier)
+            log.leave()
+            return app.processIdentifier == owner ? [Self.item(for: owner)] : []
+        }
+        let now = ContinuousClock.now
+        reader.absences.withLock { ledger in
+            for instant in [now - ExtrasBarAbsenceLedger.confirmationDelay, now] {
+                ledger.noteAnswer(.noAXServer, pid: empty, bundleID: Self.walkBundleID(of: emptyApp), now: instant)
+            }
+        }
+
+        let (snapshot, state) = await Provider.enumerateMenuBarItemsResilient(
+            state: MenuBarScanState(), scope: .discovery, priorityPIDs: [], reader: reader
+        )
+        #expect(!log.read.contains(empty))
+        #expect(log.read.contains(owner))
+        #expect(snapshot.completed)
+        #expect(snapshot.knownInventory.isFresh)
+        #expect(snapshot.items.contains { $0.ownerPID == owner })
+
+        _ = await Provider.enumerateMenuBarItemsResilient(
+            state: state, scope: .requestedOwners, priorityPIDs: [empty], reader: reader
+        )
+        #expect(log.read.contains(empty))
+    }
+
     @Test("Background-only apps are read after every app that can show items")
     func backgroundOnlyAppsGoLast() {
         let apps = Self.runningApps
@@ -180,12 +233,15 @@ struct MenuBarWalkConcurrencyTests {
     )
     func slowAppTruncatesTheWalk() async throws {
         let slow = try #require(Self.slowOwner).processIdentifier
+        // Held until the walk returns, so only its deadline can end it however busy the machine is.
+        let release = DispatchSemaphore(value: 0)
         let reader = Provider.WalkReader(runningApps: { Self.otherApps }, isTrusted: { true }, read: { app, _, _, _ in
             if app.processIdentifier == slow {
-                Thread.sleep(forTimeInterval: 0.6)
+                _ = release.wait(timeout: .now() + 10)
             }
             return []
         })
+        defer { release.signal() }
 
         let (snapshot, _) = await Provider.enumerateMenuBarItemsResilient(
             state: MenuBarScanState(),

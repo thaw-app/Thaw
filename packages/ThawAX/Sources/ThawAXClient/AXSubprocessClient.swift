@@ -200,7 +200,11 @@ public final class AXSubprocessClient: @unchecked Sendable {
         let isWedged = lock.withLock { () -> Bool in
             guard pending[id] != nil else { return false }
             consecutiveTimeouts += 1
-            return consecutiveTimeouts >= Self.wedgedAfterTimeouts
+            guard consecutiveTimeouts >= Self.wedgedAfterTimeouts else { return false }
+            // The replacement starts its own run; otherwise each timeout it
+            // sees counts as the fourth in a row and replaces it again.
+            consecutiveTimeouts = 0
+            return true
         }
         finish(id, with: .failure(AXWire.WireError.timedOut))
         if isWedged {

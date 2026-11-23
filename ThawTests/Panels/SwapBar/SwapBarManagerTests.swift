@@ -80,7 +80,7 @@ struct SwapBarManagerTests {
         await waitUntil { recorder.presented.count == 1 }
 
         appState.settings.visibility.enableSwapBar = false
-        await Task.yield()
+        await waitUntil { manager.panel == nil }
         appState.settings.visibility.enableSwapBar = true
         await waitUntil { recorder.presented.count == 2 }
 
@@ -155,5 +155,46 @@ struct SwapBarManagerTests {
         view.apply(homeMetadata)
         #expect(profiles.layoutTask == nil, "the active profile is not applied again")
         #expect(profiles.activeProfileID == home)
+    }
+}
+
+/// Center under the status-item span right of the notch, not under the screen's notched center.
+@MainActor
+struct SwapBarPlacementTests {
+    @Test("a strip narrower than the status-item span centres in it")
+    func centresUnderTheStatusItems() {
+        guard let screen = NSScreen.main else { return }
+        let span = screen.auxiliaryTopRightArea ?? screen.frame
+        let width: CGFloat = 320
+        let x = SwapBarManager.centerX(under: screen, width: width)
+
+        #expect(abs((x + width / 2) - span.midX) < 0.5)
+        #expect(x >= screen.frame.minX)
+        #expect(x + width <= screen.frame.maxX)
+    }
+
+    @Test("a strip wider than the screen is clamped onto it")
+    func clampsAnOversizedStrip() {
+        guard let screen = NSScreen.main else { return }
+        let x = SwapBarManager.centerX(under: screen, width: screen.frame.width + 400)
+
+        // Oversized strips cannot fit both edges; pin the right edge and let the close-button side extend left.
+        #expect(abs((x + screen.frame.width + 400) - screen.frame.maxX) < 0.5)
+    }
+}
+
+/// The Swap Bar's ✕ was labelled Close but turned the feature off, with no way back shown.
+@MainActor
+@Suite("Swap Bar turn off", .serialized, .scratchDefaults)
+struct SwapBarTurnOffTests {
+    @Test("Turning it off clears the setting and says where to turn it back on")
+    func turnOffSaysWhereToComeBack() {
+        let settings = AppState().settings.visibility
+        settings.enableSwapBar = true
+        var shown: (symbol: String, text: String)?
+        SwapBarTurnOff.turnOff(settings) { shown = ($0, String(localized: $1)) }
+        #expect(!settings.enableSwapBar)
+        #expect(shown?.text.contains("Visibility") == true)
+        #expect(String(localized: SwapBarTurnOff.title) == "Turn Off Swap Bar")
     }
 }

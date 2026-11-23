@@ -26,15 +26,7 @@ struct ThawBarPreviewTests {
     private static let missingDisplay = CGDirectDisplayID(0x00FF_FF00)
 
     private func render(_ view: some View, appState: AppState) -> Page {
-        OffscreenRender(
-            AnyView(
-                view
-                    .environment(appState)
-                    .environment(\.settingsPaneTitle, nil)
-                    .frame(width: Self.size.width, height: Self.size.height)
-            ),
-            size: Self.size
-        )
+        Page(settingsPage: view, appState: appState, size: Self.size)
     }
 
     private func preview(
@@ -59,7 +51,9 @@ struct ThawBarPreviewTests {
     }
 
     private func drawn(_ page: Page) async throws -> Data {
-        await page.settle { (try? page.pixels())?.contains { $0 != 0 } == true }
+        if let pixels = await page.pixels(until: { $0.contains { $0 != 0 } }) {
+            return pixels
+        }
         return try page.pixels()
     }
 
@@ -141,8 +135,8 @@ struct ThawBarPreviewTests {
 
         configuration.thawBarAppearance.hasBorder = true
         world.appState.appearanceManager.configuration = configuration
-        await page.settle { (try? page.pixels()) != plain }
-        #expect(try page.pixels() != plain, "the border stroke changes the drawing")
+        let bordered = await page.pixels { $0 != plain }
+        #expect(bordered != nil, "the border stroke changes the drawing")
     }
 
     @Test("Under the preview, the strip says where the real bar opens")
@@ -158,6 +152,15 @@ struct ThawBarPreviewTests {
         _ = try await drawn(gone)
         #expect(gone.texts().contains("Reconnect this display to open the \(Constants.displayName) Bar."))
         #expect(gone.elements().allSatisfy { OffscreenAccessibility.role(of: $0) != .button })
+
+        let alwaysOnly = render(
+            ThawBarPreviewFooter(useThawBar: false, displayID: Self.missingDisplay, alwaysHiddenOnly: true),
+            appState: world.appState
+        )
+        _ = try await drawn(alwaysOnly)
+        #expect(alwaysOnly.texts().contains(
+            "Preview uses the current Always Hidden section. The real \(Constants.displayName) Bar opens on a connected display."
+        ))
     }
 
     @Test("On a connected display the strip offers to open the bar, or to turn it on first")
@@ -178,8 +181,8 @@ struct ThawBarPreviewTests {
         #expect(off.texts().contains("Preview uses the current hidden section. The \(Constants.displayName) Bar is off on this display."))
     }
 
-    @Test("The stage draws a plain backdrop when the display has no wallpaper to show")
-    func stageWithoutWallpaper() async throws {
+    @Test("The stage draws a plain backdrop when the display has no colour sample")
+    func stageWithoutSample() async throws {
         let world = World()
         let page = render(
             ThawBarPreviewStage(displayID: Self.missingDisplay) { Text(verbatim: "Inside") },
@@ -187,5 +190,18 @@ struct ThawBarPreviewTests {
         )
         _ = try await drawn(page)
         #expect(page.texts().contains("Inside"))
+        // The words show with or without a backdrop, so a point of the stage beside them is read too.
+        await page.settle { (try? alpha(of: page, x: 0.1, y: 0.5)) ?? 0 > 0 }
+        #expect(try alpha(of: page, x: 0.1, y: 0.5) > 0, "the backdrop fills the stage beside its content")
+        #expect(try alpha(of: page, x: 0.1, y: 0.05) == 0, "and stops where the stage does")
+    }
+
+    /// How opaque the drawing is at a point, given as fractions of the page's width and height.
+    private func alpha(of page: Page, x: Double, y: Double) throws -> CGFloat {
+        page.host.layoutSubtreeIfNeeded()
+        let bitmap = try #require(page.host.bitmapImageRepForCachingDisplay(in: page.host.bounds))
+        page.host.cacheDisplay(in: page.host.bounds, to: bitmap)
+        let point = (x: Int(Double(bitmap.pixelsWide) * x), y: Int(Double(bitmap.pixelsHigh) * y))
+        return try #require(bitmap.colorAt(x: point.x, y: point.y)).alphaComponent
     }
 }

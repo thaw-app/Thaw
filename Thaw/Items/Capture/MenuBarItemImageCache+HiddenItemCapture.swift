@@ -40,18 +40,21 @@ nonisolated struct HiddenItemCaptureResult: Equatable {
 }
 
 extension MenuBarItemImageCache {
-    /// Unlike the automatic passes this also runs under Native hiding, where each
-    /// reveal makes macOS rebuild the bar. See RevealCapturePrewarm.captureHiddenItems(retakingAll:).
+    /// The only pass that reveals hidden items for a picture, with either hiding method.
+    /// Under Native hiding each reveal makes macOS rebuild the bar.
     @MainActor
     func captureHiddenItems(retakingAll: Bool = false) async -> HiddenItemCaptureResult? {
         guard let appState else { return nil }
-        let native = appState.menuBarManager.nativeAppHidingExperiment
-        native.allowsCaptureReveal = true
         defer {
-            native.allowsCaptureReveal = false
             withExtendedLifetime(appState) { /* Only keeps appState alive to here. */ }
         }
         return await concealedPrewarm().captureHiddenItems(retakingAll: retakingAll)
+    }
+
+    /// Whether Capture Hidden Items would give a hidden item its first good picture.
+    @MainActor
+    var hiddenItemsNeedPictures: Bool {
+        appState != nil && concealedPrewarm().hiddenItemsNeedPictures
     }
 
     /// Counts kept and attempted pictures using identities that survive a rebuilt menu bar.

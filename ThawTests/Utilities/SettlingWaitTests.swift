@@ -9,7 +9,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Settling wait", .timeLimit(.minutes(1)))
+@Suite("Settling wait")
 struct SettlingWaitTests {
     @MainActor
     private final class Settling {

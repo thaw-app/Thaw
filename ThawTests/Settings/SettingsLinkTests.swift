@@ -16,12 +16,19 @@ struct SettingsLinkTests {
         .show(pane: nil),
         .settingsChanged,
         .openInApp(pane: "Menu Bar Layout"),
+        .openInApp(pane: "Menu Bar Layout", frame: CGRect(x: -1533, y: 129, width: 1018, height: 720)),
         .pageChanged(pane: "About"),
         .updatesState(canCheck: true, lastCheck: Date(timeIntervalSince1970: 1_800_000_000)),
         .updatesState(canCheck: false, lastCheck: nil),
         .checkForUpdates,
         .quit,
         .shownInApp,
+        .status(topic: "modules", payload: Data(#"{"on":true}"#.utf8)),
+        .command(name: "appearance.preview", payload: Data()),
+        .storeChanged(store: "profiles"),
+        .request(id: UUID(uuidString: "0B6C7E0E-5C0E-4F0F-9A51-1D2C3B4A5E6F") ?? UUID(), name: "profiles.perform", payload: Data("{}".utf8)),
+        .reply(id: UUID(uuidString: "0B6C7E0E-5C0E-4F0F-9A51-1D2C3B4A5E6F") ?? UUID(), payload: Data("1".utf8), failure: nil),
+        .reply(id: UUID(uuidString: "0B6C7E0E-5C0E-4F0F-9A51-1D2C3B4A5E6F") ?? UUID(), payload: nil, failure: "No such profile"),
     ])
     func roundTrip(message: SettingsLinkMessage) {
         #expect(message.line.last == 0x0A)
@@ -73,6 +80,12 @@ struct SettingsLinkTests {
         #expect(!SettingsProcessRoute.runsInOwnProcess(pane: "General", simpleMode: false, isEnabled: false))
         #expect(!SettingsProcessRoute.runsInOwnProcess(pane: "General", simpleMode: true, isEnabled: true))
         #expect(!SettingsProcessRoute.runsInOwnProcess(pane: "Menu Bar Layout", simpleMode: false, isEnabled: true))
+        #expect(SettingsProcessRoute.runsInOwnProcess(pane: "Visibility", simpleMode: false, isEnabled: true))
+    }
+
+    @Test("Every pane the settings process keeps is one of the app's panes")
+    func ownProcessPanesExist() {
+        #expect(SettingsProcessRoute.ownProcessPanes.allSatisfy { SettingsNavigationIdentifier(rawValue: $0) != nil })
     }
 
     @Test("The launch pane follows the settings argument")

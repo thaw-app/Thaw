@@ -15,27 +15,61 @@ import Foundation
 public struct FreshVolatileTitleLearner: Sendable {
     private struct Observation: Sendable {
         let title: String
-        let slotX: CGFloat
+        let minX: CGFloat
+        let maxX: CGFloat
         let sourcePID: pid_t
         let read: UInt64
+        /// The title this one replaced, when that change resized the item. One resize is not learned from.
+        var resizedFrom: String?
 
-        /// The observation for an item with a title and a frame on the bar, or nil.
-        static func make(for item: MenuBarItem, sourcePID: pid_t, read: UInt64) -> Self? {
-            guard !item.tag.title.isEmpty, item.bounds.width > 0, item.bounds.midX >= 0
+        /// The observation for an item with a title and a frame on a display, or nil.
+        static func make(for item: MenuBarItem, sourcePID: pid_t, read: UInt64, displays: [CGRect]) -> Self? {
+            guard !item.tag.title.isEmpty, item.bounds.width > 0, FreshVolatileTitleLearner.isOnDisplay(item.bounds, displays: displays)
             else {
                 return nil
             }
             return Self(
                 title: item.tag.title,
-                slotX: item.bounds.midX,
+                minX: item.bounds.minX,
+                maxX: item.bounds.maxX,
                 sourcePID: sourcePID,
                 read: read
             )
+        }
+
+        /// Whether this title, read after old, shows the same process renaming its item where it sits.
+        /// A title that changed the item's width counts only the second time in a row, and a placeholder such as Item-0 never does.
+        mutating func showsRename(after old: Observation) -> Bool {
+            guard old.sourcePID == sourcePID, !MenuBarItemTag.isGenericItemTitle(old.title), !MenuBarItemTag.isGenericItemTitle(title)
+            else {
+                return false
+            }
+            guard old.title != title else {
+                resizedFrom = old.resizedFrom
+                return false
+            }
+            let drift = FreshVolatileTitleLearner.maxDrift
+            if abs(old.midX - midX) <= drift {
+                return true
+            }
+            guard abs(old.minX - minX) <= drift || abs(old.maxX - maxX) <= drift else { return false }
+            if let first = old.resizedFrom, first != title {
+                return true
+            }
+            resizedFrom = old.title
+            return false
+        }
+
+        private var midX: CGFloat {
+            (minX + maxX) / 2
         }
     }
 
     /// A kept title older than this many reads is too old to compare, since the app may have replaced its item.
     static let maxReadsBetweenTitles: UInt64 = 4
+
+    /// How far, in points, a renamed item's centre or edge may sit from where it was.
+    static let maxDrift: CGFloat = 4
 
     private var lastObservationByOwner = [String: Observation]()
     /// Bundles seen from two live processes, with those processes. A read can skip one of them, so they
@@ -46,11 +80,13 @@ public struct FreshVolatileTitleLearner: Sendable {
     /// A learner that has seen no inventory yet.
     public init() {}
 
-    /// Returns owners whose title changed while their single menu bar slot stayed in place and the
-    /// same process kept publishing it. An app a read skipped keeps its last title for a few reads.
-    /// - Parameter isAlive: Whether a process still runs, to tell a relaunch from a second process.
+    /// Returns owners whose title changed while their single slot stayed in place and the same process kept publishing it.
+    /// - Parameters:
+    ///   - displays: The displays' global bounds. A display left of the main one has negative x.
+    ///   - isAlive: Whether a process still runs, to tell a relaunch from a second process.
     public mutating func observe(
         _ freshItems: [MenuBarItem],
+        displays: [CGRect] = [],
         isAlive: (pid_t) -> Bool = { kill($0, 0) == 0 || errno == EPERM }
     ) -> Set<String> {
         reads &+= 1
@@ -75,7 +111,7 @@ public struct FreshVolatileTitleLearner: Sendable {
                 sharedBundles[bundleID] = sourcePIDs
                 continue
             }
-            guard items.count == 1, let item = items.first, let sourcePID = item.sourcePID, let observation = Observation.make(for: item, sourcePID: sourcePID, read: reads)
+            guard items.count == 1, let item = items.first, let sourcePID = item.sourcePID, var observation = Observation.make(for: item, sourcePID: sourcePID, read: reads, displays: displays)
             else {
                 continue
             }
@@ -83,18 +119,30 @@ public struct FreshVolatileTitleLearner: Sendable {
                 sharedBundles[bundleID] = [previous.sourcePID, sourcePID]
                 continue
             }
-            if let previous, reads - previous.read <= Self.maxReadsBetweenTitles, Self.isRename(from: previous, to: observation) {
+            if let previous, reads - previous.read <= Self.maxReadsBetweenTitles, observation.showsRename(after: previous) {
+                // A reported app is dropped, so it is not offered for another read.
                 learned.insert(bundleID)
+                continue
             }
             lastObservationByOwner[bundleID] = observation
         }
         return learned
     }
 
-    /// Whether the same process renamed its item in place. A change to or from a placeholder
-    /// such as Item-0 is the app finishing its launch, so it doesn't count.
-    private static func isRename(from old: Observation, to new: Observation) -> Bool {
-        old.sourcePID == new.sourcePID && old.title != new.title && abs(old.slotX - new.slotX) <= 4
-            && !MenuBarItemTag.isGenericItemTitle(old.title) && !MenuBarItemTag.isGenericItemTitle(new.title)
+    /// Whether a frame's centre is on one of the displays. With none known, a frame right of the main
+    /// display's left edge counts, as it did before the displays were passed in.
+    static func isOnDisplay(_ frame: CGRect, displays: [CGRect]) -> Bool {
+        guard !displays.isEmpty else { return frame.midX >= 0 }
+        let centre = CGPoint(x: frame.midX, y: frame.midY)
+        return displays.contains { $0.contains(centre) }
+    }
+
+    /// Apps whose last title is real and recent enough to compare with the next read, so reading
+    /// the bar again could show them renaming their item.
+    public var comparableOwners: Set<String> {
+        let comparable = lastObservationByOwner.filter { _, last in
+            reads - last.read < Self.maxReadsBetweenTitles && !MenuBarItemTag.isGenericItemTitle(last.title)
+        }
+        return Set(comparable.keys)
     }
 }

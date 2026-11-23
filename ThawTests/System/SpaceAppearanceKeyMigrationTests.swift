@@ -2,7 +2,7 @@
 //  SpaceAppearanceKeyMigrationTests.swift
 //  Project: Thaw
 //
-//  Copyright (Thaw) © 2026 René Jiménez
+//  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Foundation
@@ -14,6 +14,7 @@ import Testing
 @Suite("Per-Space look key migration")
 struct SpaceAppearanceKeyMigrationTests {
     private let key = Defaults.Key.menuBarAppearanceSpaceOverrides.rawValue
+    private let suites = ScratchSuites(prefix: "SpaceAppearanceKeyMigrationTests")
 
     private func space(_ id: CGSSpaceID, _ key: String) -> Bridging.ManagedSpace {
         Bridging.ManagedSpace(spaceID: id, persistentKey: key, displayIdentifier: "D", ordinal: 1)
@@ -30,9 +31,7 @@ struct SpaceAppearanceKeyMigrationTests {
 
     @Test("A raw Space ID the live list knows moves to its persistent key; running again changes nothing")
     func movesResolvedIDs() throws {
-        let suiteName = ScratchDefaults.name("SpaceAppearanceKeyMigrationTests")
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { ScratchDefaults.remove(suiteName) }
+        let defaults = try #require(suites.make())
         try stored(["42": ["look": "red"], "77": ["look": "blue"]], in: defaults)
 
         for _ in 0 ..< 2 {
@@ -46,9 +45,7 @@ struct SpaceAppearanceKeyMigrationTests {
 
     @Test("An entry already under the persistent key wins over the raw one")
     func persistentEntryWins() throws {
-        let suiteName = ScratchDefaults.name("SpaceAppearanceKeyMigrationTests")
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { ScratchDefaults.remove(suiteName) }
+        let defaults = try #require(suites.make())
         try stored(["42": ["look": "old"], "DESK-A": ["look": "new"]], in: defaults)
 
         MigrationManager().migrateSpaceAppearanceKeys(in: defaults, spaces: [space(42, "DESK-A")])
@@ -59,9 +56,7 @@ struct SpaceAppearanceKeyMigrationTests {
 
     @Test("Nothing stored, or nothing resolvable, is left untouched")
     func leavesTheRest() throws {
-        let suiteName = ScratchDefaults.name("SpaceAppearanceKeyMigrationTests")
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { ScratchDefaults.remove(suiteName) }
+        let (defaults, suiteName) = try suites.makeNamed()
         MigrationManager().migrateSpaceAppearanceKeys(in: defaults, spaces: [space(42, "DESK-A")])
         #expect(defaults.persistentDomain(forName: suiteName)?[key] == nil)
 

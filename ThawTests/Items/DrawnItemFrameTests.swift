@@ -113,23 +113,46 @@ struct DrawnItemFrameTests {
         #expect(DrawnItemFrame.clickFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: nil) == Self.axFrame)
     }
 
-    // MARK: canCrop
+    // MARK: cropFrame
 
-    @Test("A crop is cut only where the item is drawn")
-    func cropAgreement() {
-        #expect(!DrawnItemFrame.canCrop(at: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar))
+    @Test("A picture is cut where the item is drawn, at the size it reports")
+    func cropMovesToTheDrawnSeat() {
+        let crop = DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar)
 
-        let onSeat = [Self.entry(Self.driveDx, x: 929, width: 16)]
-        #expect(DrawnItemFrame.canCrop(at: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: onSeat))
+        #expect(crop == CGRect(x: 907, y: 4.5, width: 20, height: 24), "Centred on the drawn frame's middle, x=917")
     }
 
-    @Test("Without a drawn entry, a crop is cut unless the frame is a phantom")
-    func cropWithoutDrawn() {
-        let bar = Self.bar.filter { $0.ownerPID != Self.driveDx }
-        #expect(!DrawnItemFrame.canCrop(at: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: bar))
+    @Test("A picture stays at the reported frame while the drawn one is the same seat")
+    func cropStaysOnAnAgreeingSeat() {
+        let onSeat = [Self.entry(Self.driveDx, x: 929, width: 16)]
+        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: onSeat) == Self.axFrame)
 
-        let clear = CGRect(x: 960, y: 4.5, width: 20, height: 24)
-        #expect(DrawnItemFrame.canCrop(at: clear, ownerPID: Self.driveDx, sourcePID: nil, in: bar))
+        let twoPointsOff = [Self.entry(Self.driveDx, x: 930, width: 16)]
+        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: twoPointsOff) == Self.axFrame)
+    }
+
+    @Test("Without one drawn entry of its own, a picture is cut at the reported frame")
+    func cropWithoutDrawn() {
+        let noEntry = Self.bar.filter { $0.ownerPID != Self.driveDx }
+        let twoEntries = Self.bar + [Self.entry(Self.driveDx, x: 880, width: 20)]
+
+        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: noEntry) == Self.axFrame)
+        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: twoEntries) == Self.axFrame)
+        #expect(DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: nil) == Self.axFrame)
+    }
+
+    @Test("A crop that runs four points or more into another app's drawn item takes in its neighbour")
+    func cropTakingInANeighbour() {
+        // DriveDx drawn at 908 to 926, Window Manager from 926. A 20 wide crop there ends a point into it.
+        let own = DrawnItemFrame.cropFrame(for: Self.axFrame, ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar)
+        #expect(!DrawnItemFrame.takesInNeighbour(own, ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar))
+
+        // Reported 38 wide, the crop runs from 898 to 936: ten points of Window Manager.
+        let wide = DrawnItemFrame.cropFrame(for: CGRect(x: 920, y: 4.5, width: 38, height: 24), ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar)
+        #expect(wide == CGRect(x: 898, y: 4.5, width: 38, height: 24))
+        #expect(DrawnItemFrame.takesInNeighbour(wide, ownerPID: Self.driveDx, sourcePID: nil, in: Self.bar))
+
+        #expect(!DrawnItemFrame.takesInNeighbour(wide, ownerPID: Self.driveDx, sourcePID: nil, in: nil), "An unreadable bar says nothing")
     }
 
     // MARK: Displays

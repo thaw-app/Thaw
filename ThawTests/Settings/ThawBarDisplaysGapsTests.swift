@@ -2,7 +2,7 @@
 //  ThawBarDisplaysGapsTests.swift
 //  Project: Thaw
 //
-//  Copyright (Thaw) © 2026 René Jiménez
+//  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Foundation
@@ -25,18 +25,45 @@ struct ThawBarDisplaysGapsTests {
         world.seat([alpha, beta], in: .hidden)
         let manager = world.appState.itemManager
 
-        #expect(ThawBarItems.items(in: .hidden, itemManager: manager, switchedOff: []).count == 2)
+        #expect(ThawBarItems.items(in: .hidden, itemManager: manager, switchedOff: [], replacedOriginals: []).count == 2)
         let bundleID = "com.example.Alpha"
-        let filtered = ThawBarItems.items(in: .hidden, itemManager: manager, switchedOff: [bundleID])
+        let filtered = ThawBarItems.items(in: .hidden, itemManager: manager, switchedOff: [bundleID], replacedOriginals: [])
         #expect(!filtered.contains { $0.tag == alpha.tag }, "a switched-off app stays out")
 
         let folder = ThawBarItems.items(
             in: .hidden,
             folderMembers: [MenuBarItemTag.canonicalPersistentIdentifier(beta.uniqueIdentifier)],
             itemManager: manager,
-            switchedOff: []
+            switchedOff: [],
+            replacedOriginals: []
         )
         #expect(folder.map(\.tag) == [beta.tag])
+    }
+
+    @Test("The bar leaves out Apple's item while Thaw's stand-in for it is running")
+    func replacedOriginalIsLeftOut() {
+        let world = World()
+        let original = World.item(MenuBarItemTag(namespace: .menuBarAgent, title: "com.apple.menuextra.airdrop"))
+        let standIn = World.item(MenuBarItemTag(namespace: .string(SystemExtraStandIn.airDrop.bundleIdentifier), title: "Thaw.Extra.AirDrop"))
+        world.seat([standIn, original], in: .hidden)
+        let manager = world.appState.itemManager
+
+        let replaced = SystemExtraTakeoverCoordinator.originalIdentifiers(replacedBy: [.airDrop])
+        let listed = ThawBarItems.items(in: .hidden, itemManager: manager, switchedOff: [], replacedOriginals: replaced)
+        #expect(listed.map(\.tag) == [standIn.tag])
+
+        let withoutStandIn = ThawBarItems.items(in: .hidden, itemManager: manager, switchedOff: [], replacedOriginals: [])
+        #expect(withoutStandIn.count == 2, "With no stand-in running the original is listed")
+
+        let folder = ThawBarItems.items(
+            in: .hidden,
+            folderMembers: [original, standIn].map(\.canonicalIdentifier),
+            itemManager: manager,
+            switchedOff: [],
+            replacedOriginals: replaced
+        )
+        #expect(folder.map(\.tag) == [standIn.tag])
+        #expect(SystemExtraTakeoverCoordinator.originalIdentifiers(replacedBy: [.space]).isEmpty, "The Space indicator replaces nothing")
     }
 
     // MARK: Always Hidden only

@@ -16,6 +16,20 @@ final class SettingsProcessSession {
         var showSettings: () -> Void
         var updatesStateChanged: (_ canCheck: Bool, _ lastCheck: Date?) -> Void
         var terminate: () -> Void
+        /// Opens one of SettingsProcessRoute.windowTargets.
+        var showWindow: (String) -> Void = { _ in /* Only the settings process has these windows. */ }
+        /// Where the Settings window is, so the app opens its own there when a pane is handed over.
+        var settingsFrame: () -> CGRect? = { nil }
+        /// Whether the Settings window is up. Without it, as with What's New alone, an app-only pane stays here.
+        var isSettingsShown: () -> Bool = { true }
+        /// Whether Simple Mode is on, read where changes to it are observed.
+        var isSimpleMode: () -> Bool = { false }
+        /// What each page does with the app's live state, and what it reads again.
+        var features: [SettingsChildFeature] = []
+        /// Hands the app's reply to whoever asked.
+        var answered: (_ id: UUID, _ payload: Data?, _ failure: String?) -> Void = {
+            SettingsRemote.current?.answered(id: $0, payload: $1, failure: $2)
+        }
     }
 
     private let navigationState: AppNavigationState
@@ -70,16 +84,27 @@ final class SettingsProcessSession {
 
     private func receive(_ message: SettingsLinkMessage) {
         switch message {
+        case let .show(pane?) where SettingsProcessRoute.windowTargets.contains(pane):
+            side.showWindow(pane)
         case let .show(pane):
             select(pane)
             side.showSettings()
         case .settingsChanged:
-            link?.reloading(side.reloadSettings)
+            link?.reloading {
+                side.reloadSettings()
+                side.features.forEach { $0.reload() }
+            }
         case let .updatesState(canCheck, lastCheck):
             side.updatesStateChanged(canCheck, lastCheck)
         case .shownInApp:
             closeAfterHandOver()
-        case .openInApp, .pageChanged, .checkForUpdates, .quit:
+        case let .status(topic, payload):
+            side.features.forEach { $0.statuses[topic]?(payload) }
+        case let .storeChanged(store):
+            link?.reloading { side.features.forEach { $0.stores[store]?() } }
+        case let .reply(id, payload, failure):
+            side.answered(id, payload, failure)
+        case .openInApp, .pageChanged, .checkForUpdates, .quit, .command, .request:
             break
         }
     }
@@ -87,16 +112,20 @@ final class SettingsProcessSession {
     /// Tells the app each pane shown here, and hands it the panes that need the running app.
     private func watchPane() {
         let navigationState = navigationState
+        let isSimpleMode = side.isSimpleMode
         paneWatch = Task { @MainActor [weak self] in
-            for await identifier in Observations({ navigationState.settingsNavigationIdentifier }) {
-                guard let self, paneShown(identifier) else { return }
+            let changes = Observations { (navigationState.settingsNavigationIdentifier, isSimpleMode()) }
+            for await (identifier, isSimpleMode) in changes {
+                guard let self, paneShown(identifier, isSimpleMode: isSimpleMode) else { return }
             }
         }
     }
 
     /// False once the pane has gone to the app and this process is closing.
-    private func paneShown(_ identifier: SettingsNavigationIdentifier) -> Bool {
-        guard SettingsProcessRoute.ownProcessPanes.contains(identifier.rawValue) else {
+    private func paneShown(_ identifier: SettingsNavigationIdentifier, isSimpleMode: Bool) -> Bool {
+        // Simple Mode's page arranges items, which only the app can do, so it moves there like Layout.
+        guard SettingsProcessRoute.runsInOwnProcess(pane: identifier.rawValue, simpleMode: isSimpleMode, isEnabled: true) else {
+            guard side.isSettingsShown() else { return true }
             handOverToApp(identifier.rawValue)
             return false
         }
@@ -107,7 +136,9 @@ final class SettingsProcessSession {
     /// Sends the pane to the app and keeps this window up until the app's is, so Settings
     /// doesn't disappear for the moment the app takes to open its window.
     private func handOverToApp(_ pane: String) {
-        link?.send(.openInApp(pane: pane))
+        // Ahead of the debounced notice, so the app's window opens with a setting changed just now, such as Simple Mode.
+        link?.send(.settingsChanged)
+        link?.send(.openInApp(pane: pane, frame: side.settingsFrame()))
         isClosingItself = true
         handOver = Task { @MainActor [weak self, handOverTimeout] in
             guard (try? await Task.sleep(for: handOverTimeout)) != nil else { return }

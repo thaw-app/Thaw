@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Combine
 import Darwin
 import Foundation
 import MenuBarModel
@@ -38,15 +39,25 @@ final class PresentationMonitor {
 
     private weak var appState: AppState?
     private let readPresenting: @MainActor () -> Bool
+    private let idleGate: IdleGate
 
     private var settingTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
+    private var idleGateSubscription: AnyCancellable?
+
+    /// Whether the setting is on. The poll also stops while the displays sleep, so it is tracked apart.
+    private var isObserving = false
+
+    var isPolling: Bool {
+        pollTask != nil
+    }
 
     /// The last evaluated state, kept so a repeated signal doesn't re-log.
     private var isPresenting = false
 
-    init(readPresenting: (@MainActor () -> Bool)? = nil) {
+    init(readPresenting: (@MainActor () -> Bool)? = nil, idleGate: IdleGate = .shared) {
         self.readPresenting = readPresenting ?? { Self.isMirroring() || Self.isScreenBeingShared() }
+        self.idleGate = idleGate
     }
 
     func performSetup(with appState: AppState) {
@@ -68,8 +79,24 @@ final class PresentationMonitor {
     }
 
     func startObserving() {
-        guard pollTask == nil else { return }
+        guard !isObserving else { return }
+        isObserving = true
+        idleGateSubscription = idleGate.subscribe { [weak self] _ in
+            self?.updatePolling()
+        }
+        updatePolling()
+        evaluate()
+    }
 
+    /// Polls while observing and the displays are awake. The first pass evaluates at once, so a session
+    /// that began while the displays slept is seen on waking.
+    private func updatePolling() {
+        guard isObserving, idleGate.mayRunIdleWork else {
+            pollTask?.cancel()
+            pollTask = nil
+            return
+        }
+        guard pollTask == nil else { return }
         pollTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
@@ -77,13 +104,12 @@ final class PresentationMonitor {
                 try? await Task.sleep(for: Self.pollInterval)
             }
         }
-
-        evaluate()
     }
 
     private func stopObserving() {
-        pollTask?.cancel()
-        pollTask = nil
+        isObserving = false
+        idleGateSubscription = nil
+        updatePolling()
         // Withdraw anything this monitor engaged; a manual zen mode is left
         // alone by setAutomaticZenMode.
         isPresenting = false
@@ -92,7 +118,7 @@ final class PresentationMonitor {
 
     /// The display-change coordinator's entry, once per settled change. It does nothing while the setting is off.
     func evaluateAfterDisplayChange() {
-        guard pollTask != nil else { return }
+        guard isObserving else { return }
         evaluate()
     }
 

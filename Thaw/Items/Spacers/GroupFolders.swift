@@ -96,20 +96,51 @@ final class GroupFolders {
     }
 
     /// Turns a group into a folder, moving its items to Hidden, or back into
-    /// a plain group, moving them to Visible.
-    func setFolder(_ isFolder: Bool, for origin: MenuBarItemGroupOrigin, members: [MenuBarItem]) {
-        guard let appState,
-              let id = appState.itemGroupManager.userGroupID(for: origin, members: members)
-        else { return }
+    /// a plain group, moving them to Visible. A new folder also takes the other
+    /// items of its members' apps. Returns the items it moved.
+    @discardableResult
+    func setFolder(_ isFolder: Bool, for origin: MenuBarItemGroupOrigin, members: [MenuBarItem]) -> [MenuBarItem] {
+        guard let appState else { return [] }
+        let groupManager = appState.itemGroupManager
+        // macOS hides an app as a whole, so an app left partly outside the folder would show in two places.
+        let moving = isFolder ? AppSiblingSections.withAppSiblings(members, among: appState.itemManager.managedItems) : members
+        guard let id = groupManager.userGroupID(for: origin, members: moving) else { return [] }
         if isFolder {
             folderIDs.insert(id)
+            addMissing(moving, to: id, groupManager: groupManager)
         } else {
             folderIDs.remove(id)
         }
         persist()
         reconcile()
-        MenuBarSearchItemActions.move(members, to: isFolder ? .hidden : .visible, appState: appState)
+        MenuBarSearchItemActions.move(moving, to: isFolder ? .hidden : .visible, appState: appState)
         diagLog.info("Group \(id.uuidString) is \(isFolder ? "now" : "no longer") a folder")
+        return moving
+    }
+
+    /// When group id is a folder, brings the other items of the joined items'
+    /// apps into it too and moves them to the folder's section, so each app
+    /// hides and shows in one place. Call after the joined items were added;
+    /// the moves get a Layout undo step.
+    func takeAppSiblings(of joined: [MenuBarItem], into id: UUID) {
+        guard let appState, folderIDs.contains(id), let first = joined.first else { return }
+        let controller = appState.menuBarManager.sectionController
+        let section = controller.section(for: first)
+        let batch = AppSiblingSections.withAppSiblings(joined, among: appState.itemManager.managedItems)
+        addMissing(batch, to: id, groupManager: appState.itemGroupManager)
+        let outside = batch.filter { controller.section(for: $0) != section }
+        guard !outside.isEmpty else { return }
+        let sources = Dictionary(grouping: outside) { controller.section(for: $0) }.mapValues { $0.map(\.tag) }
+        LayoutSectionMoveUndo.registerMoves(back: sources, forward: [section: outside.map(\.tag)], appState: appState)
+        MenuBarSearchItemActions.move(outside, to: section, appState: appState)
+    }
+
+    /// Adding a member again would move it to the group's end.
+    private func addMissing(_ items: [MenuBarItem], to id: UUID, groupManager: MenuBarItemGroupManager) {
+        guard let group = groupManager.groupSet.groups.first(where: { $0.id == id }) else { return }
+        for item in items where !group.contains(item.uniqueIdentifier) {
+            groupManager.add(item, to: id)
+        }
     }
 
     func ownsWindowID(_ windowID: CGWindowID) -> Bool {
@@ -156,7 +187,7 @@ final class GroupFolders {
         } else {
             image?.isTemplate = true
         }
-        button.image = image
+        button.image = OwnStatusItemSpacing.padded(image)
     }
 
     private func reconcile() {

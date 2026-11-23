@@ -2,7 +2,7 @@
 //  SettingsMissingRowsTests.swift
 //  Project: Thaw
 //
-//  Copyright (Thaw) © 2026 René Jiménez
+//  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import AppKit
@@ -19,6 +19,13 @@ struct SettingsMissingRowsTests {
         #expect(!noIcon.contains("icon to show"))
         #expect(noIcon.contains("empty part of the menu bar"))
         #expect(SimpleModeHowItWorks.text(showsIcon: false, showsOnClick: false).contains("shortcut"))
+    }
+
+    @Test("The welcome's last page shows the same two sentences as Simple Mode, one at a time")
+    func howItWorksParts() {
+        let show = SimpleModeHowItWorks.show(showsIcon: true, showsOnClick: true)
+        #expect(SimpleModeHowItWorks.text(showsIcon: true, showsOnClick: true) == "\(SimpleModeHowItWorks.hide) \(show)")
+        #expect(SimpleModeHowItWorks.hide.contains("⌘"))
     }
 
     @Test("With the Dock icon off, a window you open only activates Thaw")

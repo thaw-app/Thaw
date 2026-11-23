@@ -8,14 +8,44 @@
 import AppKit
 
 extension AppState {
-    /// Shows Settings in its own process when that is on and the pane runs there.
-    /// False for every other window, and while the app's own Settings window is open.
+    /// Shows Settings, What's New or the welcome in the settings process when the window runs there.
+    /// False for other windows, and while the app's own copy is open: once Settings moves here
+    /// for a page only the app shows, it stays until it closes.
     func showsInSettingsProcess(_ id: ThawWindowIdentifier, isOpenHere: Bool) -> Bool {
-        guard id == .settings, !isOpenHere else { return false }
-        return settingsProcessHost.show(
-            pane: navigationState.settingsNavigationIdentifier.rawValue,
-            simpleMode: settings.general.simpleMode
-        )
+        guard !isOpenHere, let pane = settingsProcessPane(for: id) else { return false }
+        let shown = settingsProcessHost.show(pane: pane, simpleMode: settings.general.simpleMode)
+        if shown {
+            // Callers make the app regular for its window first; the settings process has its own Dock icon.
+            restoreAccessoryPolicyIfUnused()
+        }
+        if shown, id == .permissions {
+            // The target tells the process to replay the welcome.
+            replayRequested = false
+        }
+        return shown
+    }
+
+    /// In the settings process, opens a window the app sent: one of SettingsProcessRoute.windowTargets.
+    func openSettingsProcessWindow(_ target: String) {
+        switch target {
+        case SettingsProcessRoute.whatsNew:
+            openWindow(.whatsNew)
+        case SettingsProcessRoute.welcomeAgain:
+            replayRequested = true
+            openWindow(.permissions)
+        default:
+            openWindow(.permissions)
+        }
+    }
+
+    /// What the settings process opens for a window, or nil for one only the app has.
+    private func settingsProcessPane(for id: ThawWindowIdentifier) -> String? {
+        switch id {
+        case .settings: navigationState.settingsNavigationIdentifier.rawValue
+        case .whatsNew: SettingsProcessRoute.whatsNew
+        case .permissions: replayRequested ? SettingsProcessRoute.welcomeAgain : SettingsProcessRoute.permissions
+        default: nil
+        }
     }
 
     /// What the app does when the settings process asks.
@@ -38,7 +68,8 @@ extension AppState {
                     canCheck: self?.updatesManager.canCheckForUpdates ?? false,
                     lastCheck: self?.updatesManager.lastUpdateCheckDate
                 )
-            }
+            },
+            features: SettingsLinkFeatures.app(self)
         )
     }
 

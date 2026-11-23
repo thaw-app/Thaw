@@ -40,4 +40,13 @@ struct WidgetSourceReadingTests {
         let source = CPUSource()
         #expect(try source.readTicks().cores.count == ProcessInfo.processInfo.processorCount)
     }
+
+    @Test("A tick counter past 2^31 reads as a large count, not a crash")
+    func cpuTicksPastSignedRange() {
+        // Mach keeps the counters unsigned but hands them over as integer_t,
+        // so one that passes 2^31 after about 248 days awake arrives negative.
+        #expect(CPUSource.ticks(integer_t(42)) == 42)
+        #expect(CPUSource.ticks(integer_t.min) == 1 << 31)
+        #expect(CPUSource.ticks(-1) == UInt64(UInt32.max))
+    }
 }

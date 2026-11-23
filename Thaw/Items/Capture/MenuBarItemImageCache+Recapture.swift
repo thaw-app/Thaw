@@ -207,7 +207,7 @@ extension MenuBarItemImageCache {
             }
 
             if sectionResult.captured.isEmpty {
-                if section == .visible {
+                if sectionResult.suggestsStaleInventory(in: section) {
                     requestInventoryRefresh(reason: "visible pass captured nothing")
                 }
                 // Expected for off-screen sections (e.g. hidden): live refresh
@@ -338,27 +338,12 @@ extension MenuBarItemImageCache {
         //
         // Assigned back only when the filter dropped something: a
         // same-contents reassignment still invalidates every observer.
-        let survivingImages = capturesByTag.filter { key, _ in
-            if key.isSystemItem {
-                return allValidTags.contains(key)
-                    || recentlyFailedTags.contains(key)
-                    || assignedSnapshotTags.contains(key)
-            }
-            return containsTagMatchingIgnoringWindowID(allValidTags, target: key) ||
-                containsTagMatchingIgnoringWindowID(recentlyFailedTags, target: key) ||
-                containsTagMatchingIgnoringWindowID(assignedSnapshotTags, target: key)
-        }
+        // validateAndCleanupInvalidEntries(preserving:) applies the same rule, so it isn't run again here.
+        let validity = CapturedTagValidity(keeping: allValidTags.union(recentlyFailedTags).union(assignedSnapshotTags))
+        let survivingImages = capturesByTag.filter { key, _ in validity.keeps(key) }
         if survivingImages.count != capturesByTag.count {
             replaceCaptures(with: survivingImages)
         }
-
-        // Additional cleanup must preserve the same transiently valid sets
-        // as the filter above. Otherwise an assigned snapshot can survive
-        // that filter and then be evicted immediately here while its live
-        // item is between concealment and cache re-addition.
-        _ = validateAndCleanupInvalidEntries(
-            preserving: recentlyFailedTags.union(assignedSnapshotTags)
-        )
 
         // Mark all newly captured images as most recently used
         for tag in newImages.keys {
@@ -406,8 +391,8 @@ extension MenuBarItemImageCache {
             }
         }
 
-        // Merge in the new images, preferring settled glyphs over blank
-        // or much-narrower (chevron-bleed) candidates.
+        // Merge in the new images, preferring settled glyphs over blank or
+        // much-narrower (chevron-bleed) candidates; see mergeNewImages.
         //
         // The merge runs on a local copy. capturesByTag is the one
         // property every glyph consumer observes, and the live refresh
@@ -416,9 +401,7 @@ extension MenuBarItemImageCache {
         // views on every tick, including the common one where the merge
         // kept every glyph it already had.
         var mergedImages = capturesByTag
-        mergedImages.merge(newImages) { existing, new in
-            Self.preferredCachedImage(existing: existing, candidate: new)
-        }
+        mergeNewImages(newImages, into: &mergedImages)
 
         // A pass that only re-proved what the cache already holds is
         // changeless: the merge preferred the existing glyphs, and every
@@ -552,10 +535,10 @@ extension MenuBarItemImageCache {
         controller: any MenuBarSectionControlling,
         displayID: CGDirectDisplayID,
         scale: CGFloat
-    ) async {
+    ) async -> [MenuBarItem] {
         guard !items.isEmpty, !Task.isCancelled,
               !skipCaptureWhileScreenLocked("grouped reveal capture"),
-              let appState else { return }
+              let appState else { return [] }
 
         // Before the first await: the display the caller resolved these items
         // and displayID against. Every batch answers to this one.
@@ -578,12 +561,10 @@ extension MenuBarItemImageCache {
             }
         }
 
-        await appState.menuBarManager.revealCover.prepare()
-        defer { appState.menuBarManager.revealCover.dropUnusedPictures() }
         let batchSize = Self.revealBatchSize(
             hasNotch: NSScreen.screen(for: displayID)?.hasNotch ?? false
         )
-        await captureRevealBatches(
+        return await captureRevealBatches(
             items.chunks(ofCount: batchSize).map(Array.init),
             controller: controller,
             target: RevealCaptureTarget(displayID: displayID, admittedDisplayID: admittedDisplayID, scale: scale),
@@ -596,9 +577,6 @@ extension MenuBarItemImageCache {
                 },
                 renderSettle: { await RevealCaptureSession.settleRevealedPixels($0, displayID: displayID, reader: LiveMenuBarCaptureReader()) },
                 reader: LiveMenuBarCaptureReader(),
-                // Captures never see Thaw's own windows, so the cover hides the reveal from the user only.
-                cover: { appState.menuBarManager.revealCover.show(lifetime: Constants.MenuBarTuning.revealCaptureCoverLifetime) },
-                uncover: { appState.menuBarManager.revealCover.hide() },
                 mayReveal: { ConcealedPrewarmGate.mayReveal(for: appState) }
             )
         )
@@ -617,7 +595,7 @@ extension MenuBarItemImageCache {
         target: RevealCaptureTarget,
         appState: AppState,
         sources: RevealCaptureSession.Sources
-    ) async {
+    ) async -> [MenuBarItem] {
         let session = RevealCaptureSession(
             sources: sources,
             displayID: target.displayID,
@@ -650,7 +628,7 @@ extension MenuBarItemImageCache {
                 )
             }
         )
-        await session.capture(batches)
+        return await session.capture(batches)
     }
 
     /// Publishes one revealed batch, or leaves the cache exactly as it was.
@@ -692,6 +670,7 @@ extension MenuBarItemImageCache {
             }
         }
 
+        let itemWidths = listedItemWidths()
         for pair in revealed {
             // The capture result is keyed by the fresh AX item, while the
             // cache is keyed by the concealed snapshot the caller holds.
@@ -708,32 +687,14 @@ extension MenuBarItemImageCache {
                 }
                 continue
             }
-            if let cachedImage = capturesByTag[tag] {
-                let preferred = Self.preferredRevealedImage(existing: cachedImage, candidate: image)
-                if MenuBarItemGlyphCapture.isVisuallyEqual(preferred, cachedImage) {
-                    continue
-                }
-                setCapture(preferred, for: tag)
-            } else {
-                setCapture(image, for: tag)
+            if storeRevealedPicture(image, of: pair.requested, listedWidths: itemWidths) {
+                updateAccessOrder(for: tag)
             }
-            updateAccessOrder(for: tag)
         }
         return true
     }
 
-    /// Briefly reveals concealed macOS 27 sections so their live glyphs can be
-    /// captured before the assertion hides them again.
-    @MainActor
-    func prewarmConcealedImages(
-        sections: [MenuBarSection.Name],
-        onlyMissingImages: Bool = true,
-        tally: RequestedCaptureTally? = nil
-    ) async {
-        await concealedPrewarm().capture(sections: sections, onlyMissingImages: onlyMissingImages, tally: tally)
-    }
-
-    /// The prewarm over this cache and the live bar.
+    /// The prewarm over this cache and the live bar. Only Capture Hidden Items runs it.
     func concealedPrewarm() -> RevealCapturePrewarm {
         RevealCapturePrewarm(
             slot: prewarmSlot,
@@ -744,16 +705,15 @@ extension MenuBarItemImageCache {
                 self.appState?.itemManager.itemDisplayID ?? Bridging.activeMenuBarDisplayID
             },
             isNativeOverflowActive: { self.appState?.menuBarManager.sectionController.isNativeOverflowActive(on: $0) == true },
-            allowsCaptureReveal: { self.appState?.menuBarManager.nativeAppHidingExperiment.allowsCaptureReveal == true },
             cachedImage: { self.image(for: $0) },
             wouldAttemptCapture: { self.wouldAttemptCapture(of: $0) },
             forgetFailures: { self.clearCaptureFailures(tags: $0) },
             captureSection: { items, displayID in
-                guard let controller = self.appState?.menuBarManager.sectionController else { return }
+                guard let controller = self.appState?.menuBarManager.sectionController else { return [] }
                 let scale = NSScreen.screen(for: displayID)?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
                 // A blank or chevron-width entry the reveal cannot better is dropped, so the
                 // Layout thumbnail falls back to the app icon.
-                await self.captureConcealedItemsByGroupedReveal(
+                return await self.captureConcealedItemsByGroupedReveal(
                     items, controller: controller, displayID: displayID, scale: scale
                 )
             },
@@ -882,7 +842,7 @@ extension MenuBarItemImageCache {
         }
 
         let thawBarSection: MenuBarSection.Name? = navSnapshot.isThawBarPresented
-            ? appState.menuBarManager.thawBarPanel.currentSection
+            ? appState.menuBarManager.thawBarPanelIfCreated?.currentSection
             : nil
 
         await recaptureIfWarranted(
@@ -910,7 +870,7 @@ extension MenuBarItemImageCache {
         let navSnapshot = makeNavigationStateSnapshot()
 
         let thawBarSection: MenuBarSection.Name? = navSnapshot.isThawBarPresented
-            ? appState.menuBarManager.thawBarPanel.currentSection
+            ? appState.menuBarManager.thawBarPanelIfCreated?.currentSection
             : nil
         let sectionsNeedingDisplay = navSnapshot.liveCaptureScope.sections(thawBarSection: thawBarSection)
 
@@ -961,11 +921,6 @@ extension MenuBarItemImageCache {
         currentUpdateTask?.cancel()
         currentUpdateTask = Task { [weak self] in
             guard let self else { return }
-            await self.prewarmConcealedImages(
-                sections: [.hidden, .alwaysHidden],
-                onlyMissingImages: true
-            )
-            guard !Task.isCancelled else { return }
             await self.recaptureNow(sections: MenuBarSection.Name.allCases)
             self.saveToDisk()
         }

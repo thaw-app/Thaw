@@ -381,13 +381,15 @@ final class MenuBarItemManager {
     /// isolation marker is needed.
     private var cacheTickCancellable: AnyCancellable?
 
-    @ObservationIgnored var isPurgingDepartedOwners = false
+    @ObservationIgnored var ownerPurge = OwnerPurgeState()
 
     /// Last menu-bar window-list read by the periodic cacheItemsIfNeeded cheap
     /// gate (macOS 27). While this is unchanged tick-to-tick the bar is stable,
     /// so the full identity-signature AX walk is skipped entirely. nil until
     /// the first gated tick.
     var periodicWindowListSignature: [CGWindowID]?
+    /// A partial scan published the cache and left the saved-order mirror and overflow balancing to a complete one.
+    var publishedCacheAwaitsFullScan = false
 
     /// Persisted identifiers of menu bar items we've already seen.
     var knownItemIdentifiers = Set<String>()
@@ -455,8 +457,8 @@ final class MenuBarItemManager {
     /// Debounce for macOS 27 overflow rebalance (assignment backends skip legacy Phase 4).
     var lastOverflowRebalance: ContinuousClock.Instant?
 
-    /// Width the macOS 27 overflow budget gives up for a notch-covered control
-    /// item and for parked Visible items. See OverflowDeficits.
+    /// Width the macOS 27 overflow budget gives up for a notch-covered control item and for parked
+    /// Visible items. Forgotten while overflow is off, so toggling it clears a wrong one. See OverflowDeficits.
     var overflowDeficits = OverflowDeficits()
 
     /// The pending overflow rebalance: its in-flight task and the strongest
@@ -692,7 +694,7 @@ final class MenuBarItemManager {
                     guard !Task.isCancelled else { return }
                     let liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
                     guard !Task.isCancelled else { return }
-                    if liveOrderMatches(
+                    if liveOrderConfirmed(
                         identifiers,
                         section: .visible,
                         controller: controller,
@@ -1166,26 +1168,13 @@ final class MenuBarItemManager {
             }
         }
 
-        switch targetSection {
-        case .visible:
-            return .rightOfItem(controlItems.hidden)
-        case .hidden:
-            if configuration.isAlwaysHiddenSectionEnabled == true {
-                if let alwaysHidden = controlItems.alwaysHidden {
-                    return .rightOfItem(alwaysHidden)
-                } else {
-                    return .leftOfItem(controlItems.hidden)
-                }
-            } else {
-                return .leftOfItem(controlItems.hidden)
-            }
-        case .alwaysHidden:
-            if let alwaysHidden = controlItems.alwaysHidden {
-                return .leftOfItem(alwaysHidden)
-            } else {
-                return .leftOfItem(controlItems.hidden)
-            }
-        }
+        return SectionTransitionDestination.destination(
+            for: targetSection,
+            after: nil,
+            hiddenDivider: controlItems.hidden,
+            alwaysHiddenDivider: controlItems.alwaysHidden,
+            alwaysHiddenEnabled: configuration.isAlwaysHiddenSectionEnabled == true
+        )
     }
 
     private func persistedNewItemsAnchorIdentifier(for item: MenuBarItem) -> String {
@@ -1365,39 +1354,23 @@ final class MenuBarItemManager {
         // When any app launches, refresh the cache to detect new menu bar items
         // (e.g., apps with "unremembered" icons that need restoration) and restore
         // any items that moved to incorrect sections after their app restarted.
-        let (launchEvents, launchContinuation) = AsyncStream<String?>.makeStream()
+        let (launchEvents, launchContinuation) = AsyncStream<Void>.makeStream()
         let launchTask = Task { @MainActor [weak self] in
             let observer = NSWorkspace.shared.notificationCenter.addObserver(
                 forName: NSWorkspace.didLaunchApplicationNotification,
                 object: nil,
                 queue: .main
-            ) { notification in
-                launchContinuation.yield(
-                    (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?
-                        .bundleIdentifier
-                )
+            ) { [weak self] notification in
+                let bundleID = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
+                // Noted as it arrives: the refresh below is debounced, and keeping only the last launch of a
+                // burst lost a tracked relaunch that an unrelated app followed within the second.
+                MainActor.assumeIsolated { self?.noteAppLaunched(bundleID: bundleID) }
+                launchContinuation.yield()
             }
             defer { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
-            for await launchedBundleID in launchEvents.debounce(for: .seconds(1)) {
-                guard let self else { return }
-                MenuBarItemManager.diagLog.debug(
-                    "App launched\(launchedBundleID.map { " (\($0))" } ?? ""), refreshing cache for potential new items"
-                )
-
-                // A launched app we already track an item for just relaunched
-                // (an in-app update, say), and its status item is about to
-                // re-register and churn the bar. Settle on its bundle ID so the
-                // move pass (applyProfileLayout waits on
-                // barSettling.settled()) holds off until the item
-                // re-pairs; otherwise the bulk apply runs on the transient
-                // layout and sweeps hidden items into Visible. Settling ends as
-                // soon as the bundle ID reappears with a resolved PID. Apps with
-                // no tracked item arm nothing.
-                if let launchedBundleID,
-                   MenuBarItemManager.tracksMenuBarItem(bundleID: launchedBundleID, in: self.knownItemIdentifiers)
-                {
-                    self.barSettling.note(.appLaunched(bundleID: launchedBundleID))
-                }
+            for await _ in launchEvents.debounce(for: .seconds(1)) {
+                guard self != nil else { return }
+                MenuBarItemManager.diagLog.debug("Refreshing cache for potential new items after app launches")
                 Task { [weak self] in
                     await self?.cacheItemsRegardless()
                     // Many apps register their NSStatusItem more than 1s after
@@ -1454,11 +1427,11 @@ final class MenuBarItemManager {
         }
         registered.insert(AnyCancellable { activateTask.cancel() })
 
-        // Gap-fill the layout pane's images whenever it comes on screen:
+        // Refresh the layout pane's images whenever it comes on screen:
         // either the selection changes to it, or Settings reopens with it
         // already selected. AppNavigationState is @Observable, so both
-        // flips arrive through one Observations sequence. Gap-fill only,
-        // a forced full recapture can replace settled glyphs with native
+        // flips arrive through one Observations sequence. Only a warranted
+        // recapture: a forced full one can replace settled glyphs with native
         // overflow chevron crops.
         navigationStateObservationTask?.cancel()
         navigationStateObservationTask = Task { @MainActor [weak self, navigationState] in
@@ -1471,10 +1444,6 @@ final class MenuBarItemManager {
                     continue
                 }
                 guard let imageCache = self.appState?.imageCache else { continue }
-                await imageCache.prewarmConcealedImages(
-                    sections: MenuBarSection.Name.allCases,
-                    onlyMissingImages: true
-                )
                 await imageCache.recaptureIfWarranted(sections: MenuBarSection.Name.allCases)
             }
         }
@@ -1486,20 +1455,19 @@ final class MenuBarItemManager {
         // marker windows that source-PID marker-pair resolution depends on,
         // which can appear and disappear between sparser app-event triggers. A
         // short interval keeps marker-pair latency low; the windowID comparison
-        // bails fast and triggers no recache when nothing changed.
-        cacheTickCancellable = Timer.publish(every: 3, tolerance: 0.3, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                Task { [weak self] in
-                    guard let self else { return }
-                    // Liveness first: an exit whose terminate notification never
-                    // arrived (macOS 27 does not reliably post it) must still
-                    // leave the cache, and the window-list gate below never
-                    // sees an AX-only status item withdraw.
-                    await self.purgeDepartedOwners()
-                    await self.cacheItemsIfNeeded()
-                }
-            }
+        // bails fast and triggers no recache when nothing changed. It rests while the
+        // displays sleep or the session is away; one full scan on resume catches up.
+        cacheTickCancellable = IdleGate.shared.repeating(every: 3, tolerance: 0.3, mode: .common) { [weak self] in
+            await self?.cacheItemsRegardless()
+        } tick: { [weak self] in
+            guard let self else { return }
+            // Liveness first: an exit whose terminate notification never
+            // arrived (macOS 27 does not reliably post it) must still
+            // leave the cache, and the window-list gate below never
+            // sees an AX-only status item withdraw.
+            await purgeDepartedOwnersWhenDue()
+            await cacheItemsIfNeeded()
+        }
 
         // Control Center posts com.apple.controlcenter.bentoBoxDidChange
         // when the user drags a control in or out of the bento box. The control

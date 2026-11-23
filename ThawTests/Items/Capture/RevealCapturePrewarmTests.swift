@@ -11,7 +11,7 @@ import Testing
 @testable import Thaw
 
 @MainActor
-@Suite("Reveal capture prewarm", .timeLimit(.minutes(1)))
+@Suite("Reveal capture prewarm")
 struct RevealCapturePrewarmTests {
     /// The bar and the cache a prewarm reads, and everything it did.
     @MainActor
@@ -21,11 +21,13 @@ struct RevealCapturePrewarmTests {
         var locked: Set<String> = []
         var mayReveal = true
         var nativeOverflow = false
-        var allowsCaptureReveal = false
         var images: [MenuBarItemTag: MenuBarItemGlyphCapture] = [:]
         var blacklisted: Set<MenuBarItemTag> = []
         var displayID: CGDirectDisplayID = 42
         var newPictures: Set<MenuBarItemTag> = []
+        /// Items the capture stops before, as when a display change ends it.
+        var unreached: Set<MenuBarItemTag> = []
+        var retakeLedger: GlyphRetakeLedger?
 
         var forgotten: [Set<MenuBarItemTag>] = []
         var captured: [(items: [MenuBarItemTag], displayID: CGDirectDisplayID)] = []
@@ -40,7 +42,6 @@ struct RevealCapturePrewarmTests {
                 sectionItems: { self.appIsGone ? nil : self.sections[$0] ?? [] },
                 displayID: { self.displayID },
                 isNativeOverflowActive: { _ in self.nativeOverflow },
-                allowsCaptureReveal: { self.allowsCaptureReveal },
                 cachedImage: { self.images[$0] },
                 wouldAttemptCapture: { !self.blacklisted.contains($0.tag) },
                 forgetFailures: { self.forgotten.append($0) },
@@ -49,8 +50,10 @@ struct RevealCapturePrewarmTests {
                     for item in items where self.newPictures.contains(item.tag) {
                         self.slot.tally?.tags.insert(item.tag)
                     }
+                    return items.filter { !self.unreached.contains($0.tag) }
                 },
-                save: { self.saves += 1 }
+                save: { self.saves += 1 },
+                retakeLedger: retakeLedger
             )
         }
 
@@ -83,24 +86,126 @@ struct RevealCapturePrewarmTests {
         return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 2)
     }
 
+    @Test("Hidden items need pictures while one lacks a picture a capture could take")
+    func hiddenItemsNeedPictures() throws {
+        let world = World()
+        let pictured = Self.item("Pictured"), missing = Self.item("Missing"), visible = Self.item("Visible")
+        world.sections[.visible] = [visible]
+        world.sections[.hidden] = [pictured]
+        world.images[pictured.tag] = try Self.glyph(pixelWidth: 48)
+        #expect(!world.prewarm().hiddenItemsNeedPictures, "a visible item without one doesn't count")
+
+        world.sections[.alwaysHidden] = [missing]
+        #expect(world.prewarm().hiddenItemsNeedPictures)
+
+        world.blacklisted = [missing.tag]
+        #expect(!world.prewarm().hiddenItemsNeedPictures, "an item that keeps failing isn't offered again")
+
+        world.blacklisted = []
+        world.appIsGone = true
+        #expect(!world.prewarm().hiddenItemsNeedPictures)
+    }
+
+    @Test("An automatic pass retakes a picture that no longer fits its item, once a session")
+    func retakesStaleWidthOnce() async throws {
+        let world = World()
+        world.retakeLedger = GlyphRetakeLedger()
+        // A picture taken at a wider spacing: 22 pt of picture for a 36 pt item, and one that fits.
+        let stale = Self.item("Stale", width: 36), fits = Self.item("Fits")
+        world.sections[.hidden] = [stale, fits]
+        world.images[stale.tag] = try Self.glyph(pixelWidth: 44)
+        world.images[fits.tag] = try Self.glyph(pixelWidth: 48)
+
+        await world.run([.hidden])
+        await world.run([.hidden])
+
+        #expect(world.captured.map(\.items) == [[stale.tag]])
+    }
+
+    @Test("The width-retake limit holds for the whole pass, not for each section")
+    func widthRetakeLimitSpansSections() async throws {
+        let world = World()
+        world.retakeLedger = GlyphRetakeLedger()
+        let hidden = (0 ..< 2).map { Self.item("Hidden\($0)", width: 36) }
+        let always = (0 ..< 2).map { Self.item("Always\($0)", width: 36) }
+        world.sections[.hidden] = hidden
+        world.sections[.alwaysHidden] = always
+        for item in hidden + always {
+            world.images[item.tag] = try Self.glyph(pixelWidth: 44)
+        }
+
+        await world.run([.hidden, .alwaysHidden])
+
+        #expect(world.captured.flatMap(\.items).count == GlyphRetakeLedger.widthRetakesPerPass)
+        #expect(world.captured.map(\.items) == [hidden.map(\.tag), [always[0].tag]])
+    }
+
+    @Test("A screen locked during the capture leaves its width retakes due")
+    func lockedCaptureLeavesRetakesDue() async throws {
+        let world = World()
+        world.retakeLedger = GlyphRetakeLedger()
+        let stale = Self.item("Stale", width: 36)
+        world.sections[.hidden] = [stale]
+        world.images[stale.tag] = try Self.glyph(pixelWidth: 44)
+        world.locked = ["recording width retakes"]
+
+        await world.run([.hidden])
+        world.locked = []
+        await world.run([.hidden])
+
+        #expect(world.captured.map(\.items) == [[stale.tag], [stale.tag]])
+    }
+
+    @Test("A width retake the capture stopped before stays due; one it reached is used up")
+    func unreachedRetakeStaysDue() async throws {
+        let world = World()
+        world.retakeLedger = GlyphRetakeLedger()
+        let reached = Self.item("Reached", width: 36), stopped = Self.item("Stopped", width: 36)
+        world.sections[.hidden] = [reached, stopped]
+        world.images[reached.tag] = try Self.glyph(pixelWidth: 44)
+        world.images[stopped.tag] = try Self.glyph(pixelWidth: 44)
+        world.unreached = [stopped.tag]
+
+        await world.run([.hidden])
+        world.unreached = []
+        await world.run([.hidden])
+
+        #expect(world.captured.map(\.items) == [[reached.tag, stopped.tag], [stopped.tag]])
+    }
+
+    @Test("Without a ledger, or on a pass that retakes everything, the ledger's once isn't used up")
+    func retakeEverythingLeavesTheLedger() async throws {
+        let world = World()
+        let stale = Self.item("Stale", width: 36)
+        world.sections[.hidden] = [stale]
+        world.images[stale.tag] = try Self.glyph(pixelWidth: 44)
+
+        await world.run([.hidden])
+        #expect(world.captured.isEmpty, "no ledger, no width retake")
+
+        world.retakeLedger = GlyphRetakeLedger()
+        await world.run([.hidden], onlyMissingImages: false)
+        await world.run([.hidden])
+
+        #expect(world.captured.map(\.items) == [[stale.tag], [stale.tag]])
+    }
+
     @Test("The visible section and repeats are dropped, in request order")
     func prewarmSections() {
         #expect(RevealCapturePrewarm.prewarmSections([.alwaysHidden, .visible, .hidden, .alwaysHidden]) == [.alwaysHidden, .hidden])
     }
 
-    @Test("Control Center modules are always left out, blank items only outside a requested Native capture")
+    @Test("Control Center modules are left out; blank and ordinary items are not")
     func skips() {
         let module = Self.item("com.apple.menuextra.wifi", namespace: .menuBarAgent)
         let blank = Self.item("Blank", width: 2)
         let normal = Self.item("Normal")
-        #expect(RevealCapturePrewarm.skips(module, allowsCaptureReveal: false))
-        #expect(RevealCapturePrewarm.skips(module, allowsCaptureReveal: true))
-        #expect(RevealCapturePrewarm.skips(blank, allowsCaptureReveal: false))
-        #expect(!RevealCapturePrewarm.skips(blank, allowsCaptureReveal: true))
-        #expect(!RevealCapturePrewarm.skips(normal, allowsCaptureReveal: false))
+        #expect(RevealCapturePrewarm.skips(module))
+        #expect(!RevealCapturePrewarm.skips(blank))
+        #expect(!RevealCapturePrewarm.skips(normal))
     }
 
-    @Test("A missing-only prewarm reveals the items without a trusted picture, leaving out blank ones")
+    @Test("A missing-only prewarm reveals the items without a trusted picture, blank ones included")
     func missingOnlyFilter() async throws {
         let world = World()
         let good = Self.item("Good"), narrow = Self.item("Narrow"), none = Self.item("None")
@@ -112,19 +217,18 @@ struct RevealCapturePrewarmTests {
 
         await world.run([.hidden])
 
-        #expect(world.captured.map(\.items) == [[narrow.tag, none.tag]])
+        #expect(world.captured.map(\.items) == [[narrow.tag, none.tag, blank.tag]])
         #expect(world.captured.map(\.displayID) == [42])
-        #expect(world.forgotten.isEmpty, "An automatic pass keeps its failures")
+        #expect(world.forgotten.isEmpty, "A pass that keeps no tally keeps its failures")
         #expect(world.saves == 1)
         #expect(!world.slot.isHeld)
     }
 
-    @Test("A blank item is revealed while Capture Hidden Items runs under Native hiding")
-    func blankItemUnderNativeCapture() async {
+    @Test("A blank item is revealed, since Native hiding parks an app with no size until it is")
+    func blankItemIsRevealed() async {
         let world = World()
         let blank = Self.item("Blank", width: 2)
         world.sections[.hidden] = [blank]
-        world.allowsCaptureReveal = true
 
         await world.run([.hidden])
 

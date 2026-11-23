@@ -48,7 +48,7 @@ Thaw writes these only when you ask for them. Don't sync them.
 | Path | What it holds |
 |---|---|
 | `~/Library/Logs/Thaw/thaw_<date>.log` | The detailed log, written while **Settings → Troubleshooting → Detailed logging** is on. Thaw Debug writes here too. |
-| `~/Library/Logs/Thaw/item-dump-<time>.json` | A list of menu bar items, written by the `thaw://dump-items` link |
+| `~/Library/Logs/Thaw/item-dump-<time>.json` | A list of menu bar items, with the position each app reports and where macOS draws each item, written by the `thaw://dump-items` link |
 | `ThawCaptureDiagnostics-<number>` in your temporary folder | Sample item pictures, saved while detailed logging is on |
 
 Thaw also saves a backup of the menu bar layout before **Rebuild Saved Layout…** and before it restores a backup. To find them, open **Settings → Troubleshooting** and click **Show Backups in Finder** under **Layout backups**. A backup holds this Mac's layout, so keep it on this Mac.

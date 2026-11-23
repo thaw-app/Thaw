@@ -131,7 +131,8 @@ extension MenuBarItemImageCache {
         freshBounds: Bool = false,
         concealedIdentifiers: Set<String> = [],
         forgivenTags: Set<MenuBarItemTag> = [],
-        geometryOwners: Set<pid_t> = []
+        geometryOwners: Set<pid_t> = [],
+        seatsOnDrawnBar: Bool = false
     ) async -> CapturePass {
         let capturable = items.filter(Self.isCapturable)
 
@@ -171,7 +172,9 @@ extension MenuBarItemImageCache {
             capturable,
             on: displayID,
             screenFrame: screenFrame,
-            options: AXBoundsCropper.Options(freshBounds: freshBounds, concealedIdentifiers: concealedIdentifiers, forgivenTags: forgivenTags),
+            options: AXBoundsCropper.Options(
+                freshBounds: freshBounds, concealedIdentifiers: concealedIdentifiers, forgivenTags: forgivenTags, seatsOnDrawnBar: seatsOnDrawnBar
+            ),
             using: LiveMenuBarCaptureReader(geometryOwners: geometryOwners),
             skipping: { self.shouldSkipCapture(for: $0) }
         )
@@ -187,17 +190,18 @@ extension MenuBarItemImageCache {
         /// directly and ignore the app-icon preference.
         let hasUnfilteredConsumer: Bool
         /// Items the alert-reveal watcher compares capture to capture, so they
-        /// are captured whatever the preference says.
+        /// are captured whatever the preference says. Empty while Triggers is off.
         let alertRevealIdentifiers: Set<String>
     }
 
+    /// triggersOn stands in for the Triggers module in tests; nil asks the app state.
     @MainActor
-    private func captureDemand() -> CaptureDemand {
+    func captureDemand(triggersOn: Bool? = nil) -> CaptureDemand {
         let nav = makeNavigationStateSnapshot()
         return CaptureDemand(
             usesAppIcons: configuration.alwaysUseAppIconForMenuBarItems,
-            hasUnfilteredConsumer: nav.isSearchPresented || nav.isItemHotkeyListExpanded,
-            alertRevealIdentifiers: MenuBarItemAlertReveals.identifiers()
+            hasUnfilteredConsumer: nav.isSearchPresented || nav.isItemHotkeyListExpanded || nav.settingsProcess.needsEveryPicture,
+            alertRevealIdentifiers: MenuBarItemAlertReveals.watched(in: appState, triggersOn: triggersOn)
         )
     }
 
@@ -230,7 +234,7 @@ extension MenuBarItemImageCache {
             demand: captureDemand()
         )
         guard !items.isEmpty else {
-            return CapturePass()
+            return .nothingRequested
         }
         let revealedSection = appState.menuBarManager.sectionController.revealedSection
         let shouldUseFreshBounds = Self.shouldUseFreshBounds(
@@ -274,7 +278,9 @@ extension MenuBarItemImageCache {
             freshBounds: shouldUseFreshBounds,
             concealedIdentifiers: concealedIdentifiers,
             forgivenTags: forgivenTags,
-            geometryOwners: geometryOwners
+            geometryOwners: geometryOwners,
+            // A hidden section the user opened was put back on the bar the same way a capture's reveal is.
+            seatsOnDrawnBar: section != .visible
         )
         if !captureResult.unreadable.isEmpty {
             MenuBarItemImageCache.diagLog.debug(

@@ -14,15 +14,7 @@ import Testing
 @Suite("Boundary repair pass")
 struct BoundaryRepairPassTests {
     private func item(_ title: String, x: CGFloat = 100) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string("test.repair"), title: title),
-            windowID: 1,
-            ownerPID: 100,
-            sourcePID: 100,
-            bounds: CGRect(x: x, y: 0, width: 24, height: 24),
-            title: title,
-            isOnScreen: true
-        )
+        ItemsFixture.item(title, bundle: "test.repair", x: x, sourcePID: 100)
     }
 
     @Test("The give-up line names the budget the pass spent, not the turn that ended it")

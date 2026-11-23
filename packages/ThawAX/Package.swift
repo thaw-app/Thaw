@@ -38,5 +38,10 @@ let package = Package(
             dependencies: ["ThawAXCore"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
+        .testTarget(
+            name: "ThawAXClientTests",
+            dependencies: ["ThawAXClient", "ThawAXCore"],
+            swiftSettings: [.swiftLanguageMode(.v6)]
+        ),
     ]
 )

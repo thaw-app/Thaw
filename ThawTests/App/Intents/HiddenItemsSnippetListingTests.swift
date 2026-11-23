@@ -22,21 +22,6 @@ struct HiddenItemsSnippetListingTests {
         World.item(MenuBarItemTag(namespace: .string("com.example.snippet.\(title)"), title: title, instanceIndex: 0), ownerPID: 999_997)
     }
 
-    private func capture(width: Int) throws -> MenuBarItemGlyphCapture {
-        let context = try #require(CGContext(
-            data: nil,
-            width: width,
-            height: 18,
-            bitsPerComponent: 8,
-            bytesPerRow: width * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ))
-        context.setFillColor(CGColor(gray: 0, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: width, height: 18))
-        return try MenuBarItemGlyphCapture(cgImage: #require(context.makeImage()), scale: 1)
-    }
-
     /// The centre alpha of glyph in a 40 by 18 point box: a capture fills it, the outline fallback leaves it clear.
     private func centerAlpha(of glyph: Image?) throws -> CGFloat {
         let renderer = try ImageRenderer(content: #require(glyph).frame(width: 40, height: 18))
@@ -67,8 +52,8 @@ struct HiddenItemsSnippetListingTests {
         let wide = item("Wide")
         let bare = item("Bare")
         world.seat([medium, wide, bare], in: .hidden)
-        try world.appState.imageCache.setCapture(capture(width: 40), for: medium.tag)
-        try world.appState.imageCache.setCapture(capture(width: 200), for: wide.tag)
+        try world.appState.imageCache.setCapture(MenuBarItemGlyphCapture.sample(width: 40, height: 18), for: medium.tag)
+        try world.appState.imageCache.setCapture(MenuBarItemGlyphCapture.sample(width: 200, height: 18), for: wide.tag)
 
         // Bare's owner isn't running, so it falls back to the outline menubar.rectangle symbol.
         let fallback = try #require(OverflowFallbackIcon.preferredImage(for: bare, appState: world.appState))

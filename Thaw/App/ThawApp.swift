@@ -22,6 +22,11 @@ enum ThawEntryPoint {
             if SettingsProcessApp.isRequested {
                 SettingsProcessApp.main()
             } else {
+                // NSApp must be created as the subclass before SwiftUI first asks for it.
+                _ = AppProcessApplication.shared
+                // Before the first status item exists, or macOS seats Thaw's items with its own spacing.
+                OwnStatusItemSpacing.install()
+                ResidentBench.startAfterLaunchIfRequested()
                 ThawApp.main()
             }
         }

@@ -39,7 +39,7 @@ extension MenuBarItemImageCache {
     // MARK: Live Capture Scope
 
     /// One demand decision drives loop lifetime, periodic capture, and event-driven refresh.
-    nonisolated enum LiveCaptureScope: Equatable, Sendable {
+    nonisolated enum LiveCaptureScope: String, Codable, Equatable, Sendable {
         case none
         case visible
         case allSections
@@ -66,6 +66,8 @@ extension MenuBarItemImageCache {
         /// Simple Mode has no sidebar, so the identifier above never names its
         /// pane and cannot answer for it.
         let isSimpleModeSettings: Bool
+        /// What the page shown in the settings process needs; nothing while no such process runs.
+        var settingsProcess = SettingsProcessCaptureDemand.none
 
         var liveCaptureScope: LiveCaptureScope {
             if isSearchPresented {
@@ -84,35 +86,65 @@ extension MenuBarItemImageCache {
                     break
                 }
             }
+            if settingsProcess.liveScope != .none {
+                return settingsProcess.liveScope
+            }
             return isThawBarPresented ? .thawBar : .none
+        }
+
+        /// The same snapshot with what the settings process's page needs.
+        func including(_ settingsProcess: SettingsProcessCaptureDemand) -> NavigationStateSnapshot {
+            var snapshot = self
+            snapshot.settingsProcess = settingsProcess
+            return snapshot
         }
     }
 
     // MARK: Live Refresh Backoff
 
-    /// Consecutive changeless passes before the tick interval starts backing
-    /// off, and the streak at which it reaches the 1 Hz floor.
-    private static let backoffGraceTicks = 5
-    static let backoffFloorStreak = 15
+    /// Consecutive changeless passes before the tick slows to its floor.
+    nonisolated static let backoffFloorStreak = 5
 
-    /// Sleep for one live-refresh tick.
+    /// Sleep for one live-refresh tick: 2.5 s, or 4 s once the bar stops changing.
     ///
-    /// SCK one-shot captures are the dominant transient memory cost and most
-    /// ticks change nothing, so changeless passes back off to at most 333 ms,
-    /// then 1 Hz. Any change resets the streak to the slider's rate.
+    /// Bar changes recapture on their own, so the tick only refreshes animated icons. Capturing
+    /// about once a second kept macOS's screen-recording indicator on while Layout was open.
+    /// A slower setting is kept.
     static nonisolated func backedOffTickMilliseconds(
         baseMilliseconds: Int,
         changelessStreak: Int
     ) -> Int {
-        let base = max(1, baseMilliseconds)
-        switch changelessStreak {
-        case ..<backoffGraceTicks:
-            return base
-        case ..<backoffFloorStreak:
-            return max(base, min(333, base * 3))
-        default:
-            return max(base, 1000)
-        }
+        let floor = changelessStreak < backoffFloorStreak ? 2500 : 4000
+        return max(baseMilliseconds, floor)
+    }
+}
+
+/// What the page shown in the settings process needs captured. That process works it out from its own
+/// window with the rules above; the app acts on it, because only the app reads the screen.
+nonisolated struct SettingsProcessCaptureDemand: Codable, Equatable, Sendable {
+    /// Whether the page reads the screen at all, as hasVisibleCaptureUI says of a page in the app.
+    var consumesCapture = false
+    /// The item pictures the page draws, whether or not its process is in front.
+    var scope = MenuBarItemImageCache.LiveCaptureScope.none
+    /// Whether the settings process is the frontmost app. Its pictures are only kept fresh while it is.
+    var isFrontmost = false
+    /// Whether the page draws item pictures at all, fresh or not. The app readies none until one does.
+    var showsPictures = false
+    /// Whether the page draws every item's picture whatever "Use app icons" says, as the item shortcut list does.
+    var needsEveryPicture = false
+
+    static let none = SettingsProcessCaptureDemand()
+
+    /// The pictures to keep fresh now.
+    var liveScope: MenuBarItemImageCache.LiveCaptureScope {
+        isFrontmost ? scope : .none
+    }
+
+    /// The same demand with its process in front, to tell whether the page still draws the pictures.
+    var asIfFrontmost: SettingsProcessCaptureDemand {
+        var demand = self
+        demand.isFrontmost = true
+        return demand
     }
 }
 

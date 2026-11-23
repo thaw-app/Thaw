@@ -48,8 +48,8 @@ final class MenuBarManager {
     /// System hiding or auto-hiding, independent of Thaw's concealment.
     private(set) var isMenuBarHiddenBySystem = false
 
-    /// Persisted _HIHideMenuBar value, unlike isMenuBarHiddenBySystem which also reflects transient app presentation options.
-    private(set) var isMenuBarHiddenBySystemUserDefaults = false
+    /// Persisted _HIHideMenuBar value, unlike isMenuBarHiddenBySystem which also reflects transient app presentation options. The settings process, which watches nothing, is handed the app's.
+    var isMenuBarHiddenBySystemUserDefaults = false
 
     /// Pause hover after an explicit toggle so it cannot undo the user; it resumes once the pointer leaves the hover band.
     var showOnHoverAllowed = true {
@@ -69,7 +69,7 @@ final class MenuBarManager {
 
     /// Weak because AppState owns this manager.
     @ObservationIgnored
-    private weak var appState: AppState?
+    private(set) weak var appState: AppState?
 
     /// Engine-facing settings, assigned at setup with shared defaults beforehand; see MenuBarEngineConfiguration.
     private var configuration: any MenuBarEngineConfiguration = AppSettings.engineDefaults
@@ -83,7 +83,7 @@ final class MenuBarManager {
     private(set) var rehideController: RehideController?
 
     /// Menu-opening hotkeys keyed by uniqueIdentifier, mirroring ProfileManager's per-profile bindings.
-    private(set) var itemHotkeys: [String: Hotkey] = [:]
+    var itemHotkeys: [String: Hotkey] = [:]
 
     /// Reverse map from a hotkey instance to the item identifier it opens.
     /// Read by Hotkey.Listener when an openMenuBarItem hotkey fires.
@@ -93,14 +93,11 @@ final class MenuBarManager {
     @ObservationIgnored
     private var itemHotkeyCancellables = [String: AnyCancellable]()
 
-    let thawBarPanel = ThawBarPanel()
-
-    let searchPanel = MenuBarSearchPanel()
-
+    @ObservationIgnored var thawBarPanelIfCreated: ThawBarPanel?
+    @ObservationIgnored var searchPanelIfCreated: MenuBarSearchPanel?
     /// Standalone appearance editor for changes without opening Settings.
-    let appearanceEditorPanel = MenuBarAppearanceEditorPanel()
-
-    let layoutEditorPanel = MenuBarLayoutEditorPanel()
+    @ObservationIgnored var appearanceEditorPanelIfCreated: MenuBarAppearanceEditorPanel?
+    @ObservationIgnored var layoutEditorPanelIfCreated: MenuBarLayoutEditorPanel?
 
     /// Non-optional platform controller behind an interface so app callers need no platform type; settable for tests.
     var sectionController: any MenuBarSectionControlling = InertSectionController()
@@ -169,9 +166,6 @@ final class MenuBarManager {
             .map(MenuBarGroupMoveRefusal.init)
     }
 
-    /// Covers hidden items that flash while an icon capture reveals them.
-    let revealCover = RevealCover()
-
     /// What the bar is drawn over, for anything that paints over the bar.
     let backdrop = MenuBarBackdrop()
 
@@ -215,10 +209,10 @@ final class MenuBarManager {
         configuration = appState.settings
         rehideController = RehideController(environment: .live(appState: appState))
         installObservers()
-        thawBarPanel.performSetup(with: appState, displayInvalidations: displays.invalidations, displaySettlements: displays.settlements)
-        searchPanel.performSetup(with: appState, displayInvalidations: displays.invalidations)
-        appearanceEditorPanel.performSetup(with: appState)
-        layoutEditorPanel.performSetup(with: appState, displayInvalidations: displays.invalidations)
+        thawBarPanelIfCreated?.performSetup(with: appState, displayInvalidations: displays.invalidations, displaySettlements: displays.settlements)
+        searchPanelIfCreated?.performSetup(with: appState, displayInvalidations: displays.invalidations)
+        appearanceEditorPanelIfCreated?.performSetup(with: appState)
+        layoutEditorPanelIfCreated?.performSetup(with: appState, displayInvalidations: displays.invalidations)
         for section in sections {
             section.performSetup(with: appState, displays: displays)
         }
@@ -246,7 +240,6 @@ final class MenuBarManager {
         newIconFollower.start(appState: appState)
         MenuBarPresentationProvider.startDiagnosticSessionIfGated()
         leadingEdgeWatcher.performSetup(with: appState)
-        revealCover.performSetup(with: appState)
         synchronizeAlwaysShowHiddenItems()
         rebuildItemHotkeys()
     }
@@ -525,9 +518,7 @@ final class MenuBarManager {
     /// - Returns: Whether the toggle applied.
     @discardableResult
     func toggleZenMode() -> Bool {
-        // Manual ownership outlives automatic presentation or recording requests.
-        isZenModeEngagedAutomatically = false
-        automaticZenReasons.removeAll()
+        automaticZenRequests.takeManualOwnership()
         if isZenModeActive {
             deactivateZenMode()
         } else {
@@ -536,34 +527,16 @@ final class MenuBarManager {
         return true
     }
 
-    /// Zen stays engaged until the last automatic source clears, so presenting and recording cannot cancel each other.
-    enum AutomaticZenReason: Sendable, Hashable {
-        /// PresentationMonitor sees mirroring or screen sharing.
-        case screenSharing
-        /// RecordingWatchManager sees the camera or microphone in use.
-        case recording
-    }
+    typealias AutomaticZenReason = AutomaticZenRequests.Reason
 
-    /// Only automatic engagements withdraw automatically; ending a recording or presentation cannot cancel manual zen.
-    private var isZenModeEngagedAutomatically = false
-
-    /// Withdraw automatic zen only when the last requesting source clears.
-    private var automaticZenReasons: Set<AutomaticZenReason> = []
+    private var automaticZenRequests = AutomaticZenRequests()
 
     /// Idempotent because sources reevaluate signals rather than track edges.
-    /// Record reasons during manual zen too, but never withdraw a manual engagement.
     func setAutomaticZenMode(_ isActive: Bool, reason: AutomaticZenReason) {
-        if isActive {
-            automaticZenReasons.insert(reason)
-            guard !isZenModeActive else { return }
-            activateZenMode()
-            isZenModeEngagedAutomatically = true
-        } else {
-            automaticZenReasons.remove(reason)
-            guard isZenModeActive, isZenModeEngagedAutomatically,
-                  automaticZenReasons.isEmpty else { return }
-            deactivateZenMode()
-            isZenModeEngagedAutomatically = false
+        switch automaticZenRequests.set(isActive, reason: reason, isZenModeActive: isZenModeActive) {
+        case .engage: activateZenMode()
+        case .withdraw: deactivateZenMode()
+        case .none: break
         }
     }
 
@@ -748,7 +721,7 @@ final class MenuBarManager {
     }
 
     func dismissLayoutEditorPanel() {
-        layoutEditorPanel.close()
+        layoutEditorPanelIfCreated?.close()
     }
 
     @objc private func showAppearanceEditorPanel() {
@@ -761,7 +734,7 @@ final class MenuBarManager {
     }
 
     func dismissAppearanceEditorPanel() {
-        appearanceEditorPanel.close()
+        appearanceEditorPanelIfCreated?.close()
     }
 
     // MARK: - Sections
@@ -805,8 +778,8 @@ final class MenuBarManager {
     /// It clears this before position-restoring writes; the reveal reflow window guards new transitions during suspended restores.
     func setRevealHideTransitionActive(_ active: Bool) {
         barSettling.note(.revealTransition(active: active))
-        // Either edge of the transition moves the items, so the pill should follow closely.
-        leadingEdgeWatcher.expectChange()
+        // Either edge moves the items, so the pill follows closely; at the end it gets the reading it held back.
+        leadingEdgeWatcher.expectChange(resending: !active)
     }
 
     /// Cursor-free invalidation after position writes; suppress during reflow to avoid missed rehide clicks, but allow settled reveals.

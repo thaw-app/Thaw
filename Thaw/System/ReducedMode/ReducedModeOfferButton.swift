@@ -8,28 +8,28 @@
 import SwiftUI
 import ThawUI
 
-/// Lets someone who will not grant Accessibility still hide whole apps, saying what stays off before they choose it.
+/// Lets someone who will not grant Accessibility still hide whole apps.
 struct ReducedModeOfferButton: View {
     @Environment(AppState.self) private var appState
+    /// Previews pass their own, so the choice doesn't start the app.
+    var choose: (() -> Void)?
 
     static let consequence: LocalizedStringResource =
         "You can hide whole apps from a menu. Arranging items, the \(Constants.displayName) Bar and search stay off."
 
+    /// The consequence as the permissions window words it, above this button.
+    static let offer: LocalizedStringResource =
+        "Without Accessibility, you can still hide whole apps from a menu. Arranging items, the \(Constants.displayName) Bar and search stay off."
+
     var body: some View {
-        VStack(alignment: .trailing, spacing: ThawSpacing.hairline) {
-            Button("Continue without Accessibility") {
-                ReducedModeController.isChosen = true
-                appState.completeFirstLaunchSetup()
+        Button("Continue without Accessibility") {
+            if let choose {
+                choose()
+                return
             }
-            .buttonStyle(.link)
-            Text(Self.consequence)
-                .font(ThawType.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.trailing)
-                .fixedSize(horizontal: false, vertical: true)
+            ReducedModeController.isChosen = true
+            appState.finishAccessRecovery()
         }
-        .frame(maxWidth: 320, alignment: .trailing)
-        .padding(.trailing, ThawSpacing.gutter)
-        .padding(.bottom, ThawSpacing.inset)
+        .help(Text(Self.consequence))
     }
 }

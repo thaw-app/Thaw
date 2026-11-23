@@ -11,41 +11,6 @@ import Testing
 @testable import Thaw
 import ThawUI
 
-/// A drag of the selection as the destination sees it, at a fixed spot in the window.
-@MainActor
-private final class SelectionDrag: NSObject, NSDraggingInfo {
-    let draggingSource: Any?
-    let draggingLocation: NSPoint
-    var draggingFormation = NSDraggingFormation.default
-    var animatesToDestination = false
-    var numberOfValidItemsForDrop = 1
-
-    init(source: Any?, location: NSPoint) {
-        self.draggingSource = source
-        self.draggingLocation = location
-    }
-
-    var draggingDestinationWindow: NSWindow? { nil }
-    var draggingSourceOperationMask: NSDragOperation { .move }
-    var draggedImageLocation: NSPoint { draggingLocation }
-    var draggedImage: NSImage? { nil }
-    var draggingPasteboard: NSPasteboard { NSPasteboard(name: NSPasteboard.Name("ThawTests.LayoutSelection")) }
-    var draggingSequenceNumber: Int { 1 }
-    var springLoadingHighlight: NSSpringLoadingHighlight { .none }
-
-    func slideDraggedImage(to _: NSPoint) {}
-
-    func enumerateDraggingItems(
-        options _: NSDraggingItemEnumerationOptions = [],
-        for _: NSView?,
-        classes _: [AnyClass],
-        searchOptions _: [NSPasteboard.ReadingOptionKey: Any] = [:],
-        using _: (NSDraggingItem, Int, UnsafeMutablePointer<ObjCBool>) -> Void
-    ) {}
-
-    func resetSpringLoading() {}
-}
-
 @MainActor
 @Suite(.serialized, .scratchDefaults)
 struct LayoutBarSelectionTests {
@@ -279,7 +244,7 @@ struct LayoutBarSelectionTests {
         let views = try items.map(bar.view)
         _ = try bar.click(views[1])
         _ = try bar.click(views[2], flags: .command)
-        let drop = SelectionDrag(source: bar.scrollView, location: bar.point(on: views[0]))
+        let drop = TestDrag(source: bar.scrollView, location: bar.point(on: views[0]))
 
         #expect(bar.scrollView.draggingEntered(drop) == .move)
         #expect(bar.scrollView.draggingUpdated(drop) == .move)
@@ -298,7 +263,7 @@ struct LayoutBarSelectionTests {
     func otherDragsAreRefused() throws {
         let item = World.item("Alpha")
         let bar = try Bar([item])
-        let drop = SelectionDrag(source: nil, location: .zero)
+        let drop = TestDrag(source: nil, location: .zero)
         #expect(bar.scrollView.draggingEntered(drop) == [])
         #expect(!bar.scrollView.performDragOperation(drop))
     }

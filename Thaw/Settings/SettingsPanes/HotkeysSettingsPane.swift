@@ -18,8 +18,10 @@ struct HotkeysSettingsPane: View {
         let persistenceError = settings.lastPersistenceError
 
         // One tab per area, so a shortcut sits near its setting.
-        // Profiles has a tab only once a profile is saved.
-        let tabs = ShortcutsTab.allCases.filter { $0 != .profiles || !appState.profileManager.profiles.isEmpty }
+        let tabs = ShortcutsTab.offered(
+            hasProfiles: !appState.profileManager.profiles.isEmpty,
+            profilesOn: appState.profilesFeature.isOn
+        )
         ThawForm {
             SettingsPaneTabs(
                 selection: $tab,
@@ -134,7 +136,8 @@ struct HotkeysSettingsPane: View {
 
     @ViewBuilder
     private func hotkeyRecorder(forSection name: MenuBarSection.Name) -> some View {
-        if appState.menuBarManager.section(withName: name)?.isEnabled == true {
+        // The saved setting, which the settings process has too. A section there never learns it.
+        if name != .alwaysHidden || appState.settings.layout.isAlwaysHiddenSectionEnabled {
             if case .hidden = name {
                 hotkeyRecorder(forAction: .toggleHiddenSection)
             } else if case .alwaysHidden = name {
@@ -207,7 +210,7 @@ private struct MenuBarItemHotkeyList: View {
         .task(id: isExpanded) {
             // Hidden sections are captured only on request, so prewarm them.
             guard isExpanded else { return }
-            await imageCache.recaptureNow(sections: MenuBarSection.Name.allCases)
+            await imageCache.captureForItemHotkeyList()
         }
     }
 
@@ -312,6 +315,12 @@ enum ShortcutsTab: CaseIterable, @MainActor ThawTab {
     case layout
     case thawBar
     case profiles
+
+    /// The tabs the page shows. Profiles has one only while Profiles is on, since
+    /// its shortcuts aren't listened for while it is off, and once a profile is saved.
+    static func offered(hasProfiles: Bool, profilesOn: Bool) -> [ShortcutsTab] {
+        allCases.filter { $0 != .profiles || (hasProfiles && profilesOn) }
+    }
 
     /// The tab holding a search result's section.
     init?(section: String) {

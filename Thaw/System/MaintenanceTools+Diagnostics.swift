@@ -2,7 +2,7 @@
 //  MaintenanceTools+Diagnostics.swift
 //  Project: Thaw
 //
-//  Copyright (Thaw) © 2026 René Jiménez
+//  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Foundation
@@ -18,10 +18,16 @@ nonisolated extension MaintenanceTools {
     /// Copies a fresh item list, the one thaw://dump-items writes, to destination.
     @MainActor
     static func saveItemList(to destination: URL) throws {
+        try replaceItem(at: destination, withCopyOf: writeItemList())
+    }
+
+    /// Writes a fresh item list beside the logs and returns where it is.
+    @MainActor
+    static func writeItemList() throws -> URL {
         guard let dump = ItemEnumerationDump.run() else {
             throw CocoaError(.fileWriteUnknown)
         }
-        try replaceItem(at: destination, withCopyOf: dump)
+        return dump
     }
 
     /// The folder an export zips: the logs, and the capture samples when there are any.
@@ -53,7 +59,8 @@ nonisolated extension MaintenanceTools {
         ["-c", "-k", "--sequesterRsrc", "--keepParent", source.path(percentEncoded: false), destination.path(percentEncoded: false)]
     }
 
-    private static func replaceItem(at destination: URL, withCopyOf source: URL) throws {
+    /// Puts a copy of source at destination, in place of anything already there.
+    static func replaceItem(at destination: URL, withCopyOf source: URL) throws {
         try? FileManager.default.removeItem(at: destination)
         try FileManager.default.copyItem(at: source, to: destination)
     }

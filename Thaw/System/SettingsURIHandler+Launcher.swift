@@ -18,6 +18,8 @@ extension SettingsURIHandler {
         var appearance: () -> SharedAppearance
         var profiles: () -> [ProfileMetadata]
         var activeProfileID: () -> UUID?
+        /// Whether the Profiles module is on; off, no profile is applied.
+        var profilesOn: () -> Bool
         var activateItem: (String) async -> MenuBarItemActivationOutcome
         /// Applies a saved profile and reports whether its layout half ran.
         var applyProfile: (UUID) async throws -> Bool
@@ -152,7 +154,9 @@ extension SettingsURIHandler {
         requestId: String
     ) async -> [String: Any] {
         let outcome: LauncherProfileApplyOutcome
-        if let profileID = UUID(uuidString: identifier), environment.profiles().contains(where: { $0.id == profileID }) {
+        if !environment.profilesOn() {
+            outcome = .profilesOff
+        } else if let profileID = UUID(uuidString: identifier), environment.profiles().contains(where: { $0.id == profileID }) {
             do {
                 outcome = try await environment.applyProfile(profileID) ? .applied : .appliedWithoutLayout
             } catch {
@@ -231,6 +235,7 @@ extension SettingsURIHandler.LauncherEnvironment {
             },
             profiles: { appState.profileManager.profiles },
             activeProfileID: { appState.profileManager.activeProfileID },
+            profilesOn: { ProfilesFeature.isOnInDefaults },
             activateItem: { await appState.itemManager.activateItem(withIdentifier: $0) },
             applyProfile: { profileID in
                 let manager = appState.profileManager

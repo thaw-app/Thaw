@@ -2,7 +2,7 @@
 //  MenuBarItemImageCacheDiskStore+Removal.swift
 //  Project: Thaw
 //
-//  Copyright (Thaw) © 2026 René Jiménez
+//  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import Foundation
@@ -32,10 +32,14 @@ extension MenuBarItemImageCacheDiskStore {
 
     /// One picture's entry in the file. A title can end in a number of its own, so the identifier
     /// alone can't say whether its last :<number> is the instance; the load reads it from here.
-    static nonisolated func fileEntry(png: Data, scale: CGFloat, instanceIndex: Int) -> [String: Any] {
+    /// A picture an earlier build took keeps that mark, so the build that saves it still retakes it after a relaunch.
+    static nonisolated func fileEntry(png: Data, scale: CGFloat, instanceIndex: Int, isFromEarlierBuild: Bool = false) -> [String: Any] {
         var entry: [String: Any] = ["png": png, "scale": scale]
         if instanceIndex > 0 {
             entry["instance"] = instanceIndex
+        }
+        if isFromEarlierBuild {
+            entry[earlierBuildKey] = true
         }
         return entry
     }

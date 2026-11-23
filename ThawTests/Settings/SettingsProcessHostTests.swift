@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import AppKit
+import Observation
 import Testing
 @testable import Thaw
 
@@ -71,6 +72,13 @@ private final class FakeSettingsChild {
     }
 }
 
+/// A page's live state, which the host watches and sends.
+@MainActor
+@Observable
+private final class StatusSource {
+    var value = 0
+}
+
 /// What the host asked the app to do.
 @MainActor
 private final class AppSideCalls {
@@ -79,15 +87,36 @@ private final class AppSideCalls {
     var pagesChanged = [String]()
     var updateChecks = 0
     var quits = 0
+    var processEnds = 0
+    var storeReloads = 0
+    /// Each read and the page's end, in the order the host ran them.
+    var steps = [String]()
+    /// A topic the host keeps sending, so a test can count the watches left running.
+    let status = StatusSource()
 
     func side() -> SettingsProcessHost.AppSide {
         SettingsProcessHost.AppSide(
-            reloadSettings: { self.reloads += 1 },
+            reloadSettings: {
+                self.reloads += 1
+                self.steps.append("settings")
+            },
             openInApp: { self.openedInApp.append($0) },
             pageChanged: { self.pagesChanged.append($0) },
             checkForUpdates: { self.updateChecks += 1 },
             quit: { self.quits += 1 },
-            updatesState: { .updatesState(canCheck: true, lastCheck: nil) }
+            updatesState: { .updatesState(canCheck: true, lastCheck: nil) },
+            features: [SettingsAppFeature(
+                statuses: ["test.status": { SettingsLinkPayload.encode(self.status.value) }],
+                reload: { self.steps.append("page") },
+                stores: ["test.store": {
+                    self.storeReloads += 1
+                    self.steps.append("store")
+                }],
+                processEnded: {
+                    self.processEnds += 1
+                    self.steps.append("ended")
+                }
+            )]
         )
     }
 }
@@ -105,6 +134,11 @@ struct SettingsProcessHostTests {
             isEnabled: { isEnabled },
             launch: { try child.launch(arguments: $0, onEnd: $1) }
         )
+    }
+
+    @Test("Settings runs in its own process unless the setting is turned off")
+    func onByDefault() {
+        #expect(Defaults.DefaultValue.settingsInOwnProcess)
     }
 
     @Test("Nothing starts while the setting is off, in Simple Mode, or for a pane that needs the app")
@@ -173,6 +207,55 @@ struct SettingsProcessHostTests {
         #expect(child.launches.count == 2)
     }
 
+    @Test("A process that stopped before its end was handled is let go once when the next one starts")
+    func stoppedProcessIsRetiredOnce() async throws {
+        let host = host()
+        #expect(host.show(pane: "General", simpleMode: false))
+        child.isRunning = false
+        #expect(host.show(pane: "About", simpleMode: false))
+        #expect(calls.processEnds == 1, "the pages let go of the first process")
+        child.isRunning = true
+        try #require(child.launches.first).onEnd(0)
+        await mainActorQueueDrained()
+        #expect(calls.processEnds == 1, "its late end changes nothing")
+
+        let changed = try SettingsLinkMessage.status(topic: "test.status", payload: #require(SettingsLinkPayload.encode(7)))
+        calls.status.value = 7
+        #expect(await settingsLinkWait { child.receivedMessages.contains(changed) })
+        await mainActorQueueDrained()
+        #expect(child.receivedMessages.count { $0 == changed } == 1, "only the new process's watch sends the change")
+    }
+
+    @Test("A process that ends reads the settings and stores again, since its last notice may not have arrived")
+    func endReadsEverythingAgain() async throws {
+        let host = host()
+        #expect(host.show(pane: "General", simpleMode: false))
+        let launched = try #require(child.launches.first)
+        // The process closed its end before its notice went out, so the notice never reaches the app.
+        try launched.fromChild.fileHandleForWriting.close()
+        #expect(await settingsLinkWait { !host.isLinked })
+        calls.steps = []
+        launched.onEnd(0)
+        #expect(await settingsLinkWait { calls.processEnds == 1 })
+        #expect(calls.steps == ["settings", "page", "store", "ended"])
+        await mainActorQueueDrained()
+        #expect(calls.steps.count == 4, "the reads send nothing that comes back")
+    }
+
+    @Test("The late end of an earlier process reads nothing again")
+    func staleEndReadsNothing() async throws {
+        let host = host()
+        #expect(host.show(pane: "General", simpleMode: false))
+        child.isRunning = false
+        #expect(host.show(pane: "About", simpleMode: false))
+        #expect(calls.storeReloads == 1, "letting go of the stopped process read the stores")
+        child.isRunning = true
+        try #require(child.launches.first).onEnd(0)
+        await mainActorQueueDrained()
+        #expect(calls.storeReloads == 1)
+        #expect(calls.processEnds == 1)
+    }
+
     @Test("A process that fails to start leaves the app to show Settings, and the next open tries again")
     func failedLaunch() {
         let host = host()
@@ -195,6 +278,22 @@ struct SettingsProcessHostTests {
         NotificationCenter.default.post(name: NSWindow.didBecomeKeyNotification, object: window)
         #expect(await settingsLinkWait { child.receivedMessages.contains(.shownInApp) })
         #expect(child.receivedMessages.count { $0 == .shownInApp } == 1)
+    }
+
+    @Test("The app's window opens where the process's window was, for that hand-over only")
+    func appWindowTakesTheHandedOverFrame() async throws {
+        let host = host()
+        #expect(host.show(pane: "General", simpleMode: false))
+        let end = try #require(child.launches.first?.end)
+        let frame = CGRect(x: 120, y: 80, width: 1018, height: 720)
+        end.send(.openInApp(pane: "Menu Bar Layout", frame: frame))
+        #expect(await settingsLinkWait { calls.openedInApp == ["Menu Bar Layout"] })
+        let window = NSWindow(contentRect: .zero, styleMask: [], backing: .buffered, defer: true)
+        host.appWindowOpened(window)
+        #expect(window.frame == frame)
+        let later = NSWindow(contentRect: .zero, styleMask: [], backing: .buffered, defer: true)
+        host.appWindowOpened(later)
+        #expect(later.frame == .zero, "A window opened later keeps its own place")
     }
 
     @Test("A later app window replaces the wait for an earlier one")

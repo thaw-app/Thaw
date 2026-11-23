@@ -64,8 +64,14 @@ final class MissionControlShieldProbe {
     /// on-screen window and reveal-desktop can last indefinitely, so it is rationed.
     private var shieldCheckedAt: ContinuousClock.Instant?
 
-    /// The poll subscription, alive only while shouldRun holds.
+    /// The poll subscription, alive only while shouldRun holds and the displays are awake.
     private var cancellable: AnyCancellable?
+
+    /// What the panel last asked for, kept so the poll can come back after the displays wake.
+    private var isWanted = false
+
+    private let idleGate: IdleGate
+    private var idleGateSubscription: AnyCancellable?
 
     /// Whether the probe currently owns an active polling subscription.
     var isPolling: Bool { cancellable != nil }
@@ -86,8 +92,13 @@ final class MissionControlShieldProbe {
     /// activeInterval to restInterval.
     static nonisolated let restSettleInterval: Duration = .seconds(2)
 
-    init(owningScreen: NSScreen) {
+    init(owningScreen: NSScreen, idleGate: IdleGate = .shared) {
         self.owningScreen = owningScreen
+        self.idleGate = idleGate
+        idleGateSubscription = idleGate.subscribe { [weak self] _ in
+            guard let self else { return }
+            updatePolling(isWanted: isWanted)
+        }
     }
 
     /// Defer notifications until Published has stored the value, so visibility and polling read committed activity.
@@ -116,9 +127,10 @@ final class MissionControlShieldProbe {
     /// Starts or stops the poll to match isWanted.
     ///
     /// Each tick is a window-server round trip, so the poll runs only while a
-    /// panel needs it.
+    /// panel needs it and the displays are awake to show Mission Control.
     func updatePolling(isWanted: Bool) {
-        if isWanted {
+        self.isWanted = isWanted
+        if isWanted, idleGate.mayRunIdleWork {
             guard cancellable == nil else { return }
             // Start on the active rate: a displacement can follow immediately.
             atRestSince = nil

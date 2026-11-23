@@ -153,7 +153,9 @@ signed, notarized DMG as an artifact retained for three days, with org-ci's
 `build-macos-app.yml` and no attestation. Select the workflow branch to build
 its triggering commit, or set **ref** to another branch, tag, or commit in this
 repository. Leaving **ref** empty does not switch to the default branch. To
-build a pull request, set **ref** to its branch. The artifact is
+build a pull request, set **ref** to `refs/pull/<number>/head`, which also works
+for one from a fork, whose branch isn't in this repository. The build signs the
+app, so only build a pull request whose code you've read. The artifact is
 `build-dev-<short sha>` and holds `Thaw-dev.dmg`, its checksum, the SBOM and
 the exported app as a ZIP.
 

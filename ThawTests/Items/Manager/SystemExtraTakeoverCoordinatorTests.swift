@@ -7,6 +7,7 @@
 
 import Foundation
 import MenuBarModel
+import os
 import PlatformRuntimeKit
 import Testing
 @testable import Thaw
@@ -317,6 +318,30 @@ struct ModuleStandInCoordinatorTests {
         #expect(rig.sections.writes.suffix(2) == [.section(.hidden, original), .order([original], .hidden)])
     }
 
+    @Test("A running module stand-in names its original as replaced, and a stopped one does not")
+    func runningStandInReplacesItsOriginal() async throws {
+        let rig = rig()
+        let original = TakeoverRig.moduleID(TakeoverRig.airDrop)
+        rig.sections.sectionAssignment[original] = .hidden
+        #expect(rig.coordinator.replacedOriginalIdentifiers.isEmpty, "Nothing is replaced before a stand-in runs")
+        let changes = ObservedChanges()
+        changes.watch { _ = rig.coordinator.replacedOriginalIdentifiers }
+
+        rig.start()
+        await settle { rig.fake.startedProcesses.count == 1 }
+        await rig.drain()
+        #expect(rig.coordinator.replacedOriginalIdentifiers == [original])
+        #expect(changes.count == 1, "whoever reads it hears the stand-in start")
+        changes.watch { _ = rig.coordinator.replacedOriginalIdentifiers }
+
+        let process = try #require(rig.fake.startedProcesses.only)
+        rig.settings.enableModuleStandIns = false
+        await settle { process.terminateCalls > 0 }
+        await rig.drain()
+        #expect(rig.coordinator.replacedOriginalIdentifiers.isEmpty)
+        #expect(changes.count == 2, "and hears it stop")
+    }
+
     @Test("Turning off a stand-in that never joined a saved order returns its original to Visible")
     func disablingUnorderedStandInReturnsOriginal() async throws {
         let rig = rig()
@@ -349,5 +374,80 @@ struct ModuleStandInCoordinatorTests {
         await settle { rig.fake.opens.count == 1 }
 
         #expect(rig.fake.opened(.focus) == 1)
+    }
+}
+
+/// Counts what withObservationTracking reports, one change for each watch.
+private final class ObservedChanges: Sendable {
+    private let changes = OSAllocatedUnfairLock(initialState: 0)
+
+    var count: Int {
+        changes.withLock { $0 }
+    }
+
+    func watch(_ read: () -> Void) {
+        withObservationTracking(read) { [changes] in changes.withLock { $0 += 1 } }
+    }
+}
+
+@Suite("Module stand-in choice")
+@MainActor
+struct ModuleStandInChoiceTests {
+    @Test("A stand-in runs when stand-ins are on and its checkbox is left on")
+    func chosen() {
+        #expect(SystemExtraTakeoverCoordinator.isChosen(.airDrop, enabled: true, skipped: []))
+        #expect(SystemExtraTakeoverCoordinator.isChosen(.airDrop, enabled: true, skipped: ["focus"]))
+    }
+
+    @Test("Unchecking an item, or turning stand-ins off, keeps Apple's own")
+    func notChosen() {
+        #expect(!SystemExtraTakeoverCoordinator.isChosen(.airDrop, enabled: true, skipped: ["airdrop"]))
+        #expect(!SystemExtraTakeoverCoordinator.isChosen(.focus, enabled: false, skipped: []))
+    }
+}
+
+/// What the coordinator reports before it starts. It is never started here:
+/// starting it launches stand-ins and writes the system's own settings.
+@MainActor
+@Suite("System extra takeover status")
+struct SystemExtraTakeoverCoordinatorStatusTests {
+    /// Hands the engine a fixed journal and records every save.
+    private final class StubJournal: SystemExtraOriginalJournaling {
+        let entries: [String: SystemExtraOriginalValue]
+        private(set) var saves = 0
+
+        init(entries: [String: SystemExtraOriginalValue]) {
+            self.entries = entries
+        }
+
+        func load() throws -> [String: SystemExtraOriginalValue] {
+            entries
+        }
+
+        func save(_: [String: SystemExtraOriginalValue]) throws {
+            saves += 1
+        }
+    }
+
+    @Test("With nothing journaled every item reads off")
+    func offWithEmptyJournal() {
+        let journal = StubJournal(entries: [:])
+        let coordinator = SystemExtraTakeoverCoordinator(journal: journal)
+        for item in SystemExtraItem.allCases {
+            #expect(coordinator.status(for: item) == .off)
+        }
+        #expect(journal.saves == 0)
+    }
+
+    @Test("An original journaled by an earlier session reads as owed a restore")
+    func journaledOriginalIsPending() {
+        let journal = StubJournal(entries: [SystemExtraItem.timeMachine.rawValue: .value(1)])
+        let coordinator = SystemExtraTakeoverCoordinator(journal: journal)
+        let status = coordinator.status(for: .timeMachine)
+        #expect(status.phase == .off)
+        #expect(status.recoveryPending)
+        #expect(!coordinator.status(for: .timer).recoveryPending)
+        #expect(!coordinator.status(for: .textInput).recoveryPending)
+        #expect(journal.saves == 0)
     }
 }

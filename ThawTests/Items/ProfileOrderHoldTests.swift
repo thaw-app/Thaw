@@ -63,15 +63,7 @@ struct ProfileOrderHoldTests {
     private static let displays = [CGRect(x: 0, y: 0, width: 1512, height: 982)]
 
     private static func item(_ app: String, x: CGFloat) -> MenuBarItem {
-        MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string(app), title: "Item-0", instanceIndex: 0),
-            windowID: CGWindowID(x),
-            ownerPID: pid_t(x),
-            sourcePID: pid_t(x),
-            bounds: CGRect(x: x, y: 4, width: 24, height: 24),
-            title: "Item-0",
-            isOnScreen: true
-        )
+        ItemsFixture.item("Item-0", bundle: app, x: x, y: 4, windowID: CGWindowID(x), ownerPID: pid_t(x), sourcePID: pid_t(x))
     }
 
     /// Wi-Fi drawn first, as a profile applied without SoundSource left it.

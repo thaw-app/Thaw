@@ -55,6 +55,23 @@ struct MenuBarManagerUnsetupTests {
         #expect(!manager.isZenModeActive)
     }
 
+    @Test("Zen Mode turned off by hand stays off while the same source keeps asking")
+    func manualOffOutlastsRepeatedRequests() {
+        let appState = AppState()
+        let manager = appState.menuBarManager
+        manager.setAutomaticZenMode(true, reason: .screenSharing)
+        manager.toggleZenMode()
+        #expect(!manager.isZenModeActive)
+        // Sources poll and repeat their answer; a repeat is not a new request.
+        manager.setAutomaticZenMode(true, reason: .screenSharing)
+        #expect(!manager.isZenModeActive)
+        #expect(manager.showOnHoverAllowed)
+        // Once sharing ends, the next session engages Zen Mode again.
+        manager.setAutomaticZenMode(false, reason: .screenSharing)
+        manager.setAutomaticZenMode(true, reason: .screenSharing)
+        #expect(manager.isZenModeActive)
+    }
+
     @Test("Clearing the swap state forgets the swap and saves that")
     func clearSwapState() {
         Defaults.set(true, forKey: .swapActive)

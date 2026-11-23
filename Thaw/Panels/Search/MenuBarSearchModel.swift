@@ -93,6 +93,10 @@ final class MenuBarSearchModel {
     @ObservationIgnored
     var candidates = [PaletteCandidate]()
 
+    /// The custom names the cached candidates were built with, independent of inventory turnover.
+    @ObservationIgnored
+    private var candidateCustomNames = [String: String]()
+
     /// Recently opened items, listed on top while nothing is typed.
     @ObservationIgnored
     let recents: MenuBarSearchRecents
@@ -110,8 +114,10 @@ final class MenuBarSearchModel {
     /// With nothing typed: recents, then each section's items in menu bar order.
     /// With a query: the ranked matches. The highlight stays while its row is listed.
     func refresh(from inventory: MenuBarItemCache, sections: [MenuBarSection.Name] = MenuBarSection.Name.allCases) {
-        if candidates.isEmpty {
+        let customNames = MenuBarItemDisplayName.customNames()
+        if candidates.isEmpty || customNames != candidateCustomNames {
             candidates = PaletteCandidate.inventory(from: inventory)
+            candidateCustomNames = customNames
         }
         let query = searchText.trimmingCharacters(in: .whitespaces)
         let fresh = if query.isEmpty {
@@ -201,15 +207,21 @@ final class MenuBarSearchModel {
 
     /// Tab's jump to the next or previous section's first row, wrapping.
     /// Ranked matches have no sections, so it does nothing then.
-    func moveSelection(toSectionFromCurrentBy step: Int) {
+    /// Without wraps, a step past either end leaves the highlight alone and returns false.
+    @discardableResult
+    func moveSelection(toSectionFromCurrentBy step: Int, wraps: Bool = true) -> Bool {
         let starts = sectionStarts
         guard canJumpBetweenSections else {
-            return
+            return false
         }
         let index = selectedIndex ?? 0
         let current = starts.lastIndex { $0 <= index } ?? 0
+        guard wraps || starts.indices.contains(current + step) else {
+            return false
+        }
         let target = (current + step % starts.count + starts.count) % starts.count
         selection = results[starts[target]].id
+        return true
     }
 
     /// Each section's first row, in order: headings start where the section changes.

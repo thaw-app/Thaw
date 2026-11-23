@@ -66,9 +66,9 @@ final class HIDEventManager {
     /// DisplaySettingsManager.configurations, which are all @Observable.
     var hoverSettingsObservationTask: Task<Void, Never>?
 
-    /// Timer that periodically checks whether the event tap is still
-    /// valid and attempts to recreate it if the Mach port was invalidated.
-    var healthCheckTimer: Timer?
+    /// The periodic check that the event tap is still valid, recreating it
+    /// if the Mach port was invalidated. Paused while the displays sleep.
+    var healthCheck: AnyCancellable?
 
     /// The currently pending show-on-hover delay task.
     var hoverTask: Task<Void, any Error>?
@@ -365,7 +365,7 @@ final class HIDEventManager {
     private(set) lazy var mouseDraggedMonitor = EventMonitor.universal(
         for: .leftMouseDragged
     ) { [weak self] event in
-        if let self, isEnabled, let appState, NSScreen.activeMenuBarScreenOrMain != nil {
+        if let self, isEnabled, Self.dragMayMoveItem(modifiers: event.modifierFlags, isDragging: isDraggingMenuBarItem), let appState, NSScreen.activeMenuBarScreenOrMain != nil {
             handleMenuBarItemDragStart(with: event, appState: appState)
         }
         return event
@@ -421,7 +421,7 @@ final class HIDEventManager {
     private(set) lazy var scrollWheelMonitor = EventMonitor.universal(
         for: .scrollWheel
     ) { [weak self] event in
-        if let self, isEnabled, let appState, let screen = NSScreen.activeMenuBarScreenOrMain {
+        if let self, isEnabled, configuration.showOnScroll, let appState, let screen = NSScreen.activeMenuBarScreenOrMain {
             handleShowOnScroll(with: event, appState: appState, screen: screen)
         }
         return event
@@ -604,15 +604,15 @@ final class HIDEventManager {
     /// Brings the notification-center hotkey tap in line with whether bridging
     /// is possible at all, mirroring synchronizeClockActivationTap().
     ///
-    /// A disabled shortcut leaves the tap down. Otherwise it handles the
-    /// configured chord, including the system's default Fn-N.
+    /// The shortcut is read only while bridging is possible, since each read
+    /// syncs the system's preferences. A disabled shortcut leaves the tap down.
     func synchronizeNotificationCenterHotkeyTap() {
-        let hotkeys = SystemNotificationCenterHotkey.shortcuts()
-        if hotkeys != notificationCenterHotkeys {
-            Self.diagLog.info("Notification Center shortcut bindings updated: \(hotkeys.count) enabled")
+        let canBridge = canBridgeClockActivation
+        if canBridge {
+            updateNotificationCenterHotkeys(SystemNotificationCenterHotkey.shortcuts())
         }
-        notificationCenterHotkeys = hotkeys
-        if (canBridgeClockActivation && !hotkeys.isEmpty) || notificationCenterInput.hasHeldKeys {
+        let hasHotkeys = !notificationCenterHotkeys.isEmpty
+        if ClockBridgeAvailability.wantsHotkeyTap(canBridge: canBridge, hasHotkeys: hasHotkeys, hasHeldKeys: notificationCenterInput.hasHeldKeys) {
             if notificationCenterHotkeyTap.ensureValid(), !notificationCenterHotkeyTap.isEnabled {
                 notificationCenterHotkeyTap.start()
             }
@@ -718,7 +718,7 @@ final class HIDEventManager {
     }
 
     isolated deinit {
-        healthCheckTimer?.invalidate()
+        healthCheck?.cancel()
         notificationCenterActivation.cancel()
         hoverSettingsObservationTask?.cancel()
     }

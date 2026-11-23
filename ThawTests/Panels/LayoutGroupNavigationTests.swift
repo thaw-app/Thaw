@@ -2,70 +2,13 @@
 //  LayoutGroupNavigationTests.swift
 //  Project: Thaw
 //
-//  Copyright (Thaw) © 2026 René Jiménez
+//  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
 import AppKit
 import MenuBarModel
 import Testing
 @testable import Thaw
-
-/// A drag as a group row's drop view sees it.
-@MainActor
-private final class GroupRowDrag: NSObject, NSDraggingInfo {
-    let draggingPasteboard: NSPasteboard
-    var draggingFormation = NSDraggingFormation.default
-    var animatesToDestination = false
-    var numberOfValidItemsForDrop = 1
-
-    init(pasteboard: NSPasteboard) {
-        draggingPasteboard = pasteboard
-    }
-
-    var draggingSource: Any? {
-        nil
-    }
-
-    var draggingLocation: NSPoint {
-        .zero
-    }
-
-    var draggingDestinationWindow: NSWindow? {
-        nil
-    }
-
-    var draggingSourceOperationMask: NSDragOperation {
-        .move
-    }
-
-    var draggedImageLocation: NSPoint {
-        .zero
-    }
-
-    var draggedImage: NSImage? {
-        nil
-    }
-
-    var draggingSequenceNumber: Int {
-        1
-    }
-
-    var springLoadingHighlight: NSSpringLoadingHighlight {
-        .none
-    }
-
-    func slideDraggedImage(to _: NSPoint) { /* The drop view never slides the image. */ }
-
-    func enumerateDraggingItems(
-        options _: NSDraggingItemEnumerationOptions = [],
-        for _: NSView?,
-        classes _: [AnyClass],
-        searchOptions _: [NSPasteboard.ReadingOptionKey: Any] = [:],
-        using _: (NSDraggingItem, Int, UnsafeMutablePointer<ObjCBool>) -> Void
-    ) { /* The drop view reads the pasteboard, not the dragging items. */ }
-
-    func resetSpringLoading() { /* Not spring-loaded. */ }
-}
 
 /// The Groups tab as a navigator: selecting a group's members, and taking items dropped on a group's row.
 @MainActor
@@ -166,7 +109,7 @@ struct LayoutGroupNavigationTests {
         view.setTargeted = { targeted.append($0) }
         let pasteboard = NSPasteboard(name: NSPasteboard.Name("LayoutGroupNavigationTests.\(UUID().uuidString)"))
         defer { pasteboard.releaseGlobally() }
-        let drag = GroupRowDrag(pasteboard: pasteboard)
+        let drag = TestDrag(pasteboard: pasteboard)
 
         #expect(view.draggingEntered(drag) == .move)
         #expect(view.draggingUpdated(drag) == .move)
@@ -187,7 +130,7 @@ struct LayoutGroupNavigationTests {
         defer { pasteboard.releaseGlobally() }
         pasteboard.clearContents()
         pasteboard.setString("one\ntwo", forType: .layoutBarSelection)
-        let drag = GroupRowDrag(pasteboard: pasteboard)
+        let drag = TestDrag(pasteboard: pasteboard)
 
         #expect(!view.performDragOperation(drag), "without a selection model there is nothing to drop")
         #expect(dropped.isEmpty)

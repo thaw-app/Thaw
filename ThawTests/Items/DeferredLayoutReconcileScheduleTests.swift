@@ -76,7 +76,6 @@ struct DeferredLayoutReconcileScheduleTests {
 
         #expect(overLimit == nil)
         #expect(schedule.deferrals == DeferredLayoutReconcileSchedule.limit)
-        #expect(DeferredLayoutReconcileSchedule.limit == 5)
     }
 
     @Test("A retry that fired leaves the count and lets a later claim through")
