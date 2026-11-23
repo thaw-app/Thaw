@@ -156,5 +156,8 @@ struct AXElementTests {
     @Test
     func `a process with no extras bar reports why, not success`() {
         #expect(AXPrimitives.extrasMenuBarReadResult(pid: getpid()) != .success)
+        let read = AXPrimitives.extrasMenuBarRead(of: AXUIElementCreateApplication(getpid()))
+        #expect(read.bar == nil)
+        #expect(read.result != .success)
     }
 }
