@@ -20,13 +20,22 @@ struct TeamIdentifierPrefixTests {
         #expect(!MenuBarItemTag.hasDynamicMetricTitles("Y93TK974AT.com.bjango.istatmenus-mas.agent"))
     }
 
-    @Test("Only a ten-character uppercase team identifier is dropped")
-    func dropsOnlyTeamIdentifier() {
-        #expect(MenuBarItemTag.withoutTeamIdentifierPrefix(appStoreHelper) == "com.bjango.istatmenus-mas.status")
-        #expect(MenuBarItemTag.withoutTeamIdentifierPrefix("com.bjango.istatmenus.status")
-            == "com.bjango.istatmenus.status")
-        #expect(MenuBarItemTag.withoutTeamIdentifierPrefix("eu.exelban.Stats") == "eu.exelban.Stats")
-        #expect(MenuBarItemTag.withoutTeamIdentifierPrefix("y93tk974at.com.example") == "y93tk974at.com.example")
+    @Test("Only a ten-character uppercase team identifier is ignored", arguments: [
+        "y93tk974at.com.bjango.istatmenus-mas.status",
+        "Y93TK974A.com.bjango.istatmenus-mas.status",
+        "Y93TK974AT.com.example.status",
+    ])
+    func malformedOrForeignPrefixDoesNotMatch(_ bundleID: String) {
+        #expect(!MenuBarItemTag.hasDynamicMetricTitles(bundleID))
+    }
+
+    @Test("A team-prefixed app outside the matchers keeps ordinal titles distinct")
+    func foreignTeamPrefixedTitlesStayDistinct() {
+        let bundle = "Y93TK974AT.com.example.status"
+        #expect(
+            MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):Fan 1")
+                != MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):Fan 2")
+        )
     }
 
     @Test("Metric ticks from the Mac App Store helper share one identity")
