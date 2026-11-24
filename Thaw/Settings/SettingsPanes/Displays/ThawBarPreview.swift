@@ -57,10 +57,8 @@ struct ThawBarPreview: View {
         return height > 0 ? height : nil
     }
 
-    /// The real panel's item spacing: the base gap plus the clamped offset.
     private var itemSpacing: CGFloat {
-        let offset = CGFloat(itemSpacingOffset).rounded()
-        return itemSizing.spacing(max(0, ThawSpacing.base + offset))
+        itemSizing.itemSpacing(offset: itemSpacingOffset)
     }
 
     /// Scales the tiles the way the real panel scales its glyphs.

@@ -93,4 +93,16 @@ struct ThawBarItemSizeTests {
         #expect(sizing.displayScale == 1)
         #expect(sizing.scaledGlyphSize(CGSize(width: 24, height: 24)) == CGSize(width: 17, height: 17))
     }
+
+    @Test("Thaw Bar spacing follows the display offset and item size while keeping a minimum gap")
+    @MainActor
+    func interItemSpacing() {
+        let fullSize = ThawBarItemSize(fittingHeight: 24)
+        let smallSize = ThawBarItemSize(fittingHeight: 24, scale: 0.6)
+        #expect(fullSize.itemSpacing(offset: 0) == 8)
+        #expect(fullSize.itemSpacing(offset: 5) == 13)
+        #expect(fullSize.itemSpacing(offset: -16) == 2)
+        #expect(smallSize.itemSpacing(offset: 0) == 5)
+        #expect(smallSize.itemSpacing(offset: -7) == 2)
+    }
 }

@@ -92,8 +92,7 @@ struct ThawBarContentView: View {
     }
 
     private var itemSpacing: CGFloat {
-        let offset = CGFloat(displaySettings.configuration(for: screen.displayID).itemSpacingOffset).rounded()
-        return itemSizing.spacing(max(0, ThawSpacing.base + offset))
+        itemSizing.itemSpacing(offset: displaySettings.configuration(for: screen.displayID).itemSpacingOffset)
     }
 
     private var horizontalPadding: CGFloat {

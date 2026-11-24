@@ -6,17 +6,24 @@
 //  Licensed under the GNU GPLv3
 
 import SwiftUI
+import ThawUI
 
 extension ThawBarItemSize {
     /// A status item's height, which the pictures in the bar are cropped to. An icon standing in
     /// for a picture is fitted to it, so it isn't smaller than the pictures beside it.
     static let appIconHeight: CGFloat = 24
 
+    @MainActor
+    func itemSpacing(offset: Double) -> CGFloat {
+        max(ThawSpacing.hairline, spacing(ThawSpacing.base + CGFloat(offset).rounded()))
+    }
+
     /// The size the Thaw Bar draws an item's glyph at: fitted to the menu bar's
     /// height, or an icon standing in for a picture to a picture's, then scaled.
+    @MainActor
     func glyphSize(for image: MenuBarItemDisplayImage) -> CGSize {
         guard case .icon = image else {
-            return scaledGlyphSize(image.targetSize(fittingHeight: fittingHeight))
+            return scaledGlyphSize(image.targetSize(fittingHeight: fittingHeight, trimsCapturePadding: true))
         }
         let intrinsic = image.pointSize
         let limit = min(fittingHeight.flatMap { $0 > 0 ? $0 : nil } ?? Self.appIconHeight, Self.appIconHeight)

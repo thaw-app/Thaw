@@ -94,6 +94,10 @@ struct MenuBarItemGlyphCaptureTests {
 
         #expect(trimmed.width == 8)
         #expect(trimmed.height == 16)
+        let image = MenuBarItemDisplayImage.capture(capture)
+        let bar = ThawBarItemSize(fittingHeight: 8)
+        #expect(bar.glyphSize(for: image) == CGSize(width: 4, height: 8))
+        #expect(image.targetSize(fittingHeight: 8) == CGSize(width: 10, height: 8))
         #expect(capture.horizontallyTrimmedCGImage === trimmed)
         // A copy of the value shares the memoized trim.
         let copy = capture
