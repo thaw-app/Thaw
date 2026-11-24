@@ -1471,17 +1471,22 @@ extension MenuBarItemManager {
         var didReorder = false
         let experimentalSystemItemHiding = configuration.enableExperimentalSystemItemHiding
 
+        func isStillWanted() -> Bool {
+            SectionOrderPassScope.isStillWanted(
+                isCancelled: Task.isCancelled,
+                startedWhileRevealing: revealedSection,
+                revealedNow: controller.revealedSection
+            )
+        }
+
         for section in sections {
-            guard !Task.isCancelled,
-                  revealedSection == nil || controller.revealedSection == revealedSection
-            else { return }
-            let recordedOrder = if section == .visible, let visibleOrderOverride {
-                visibleOrderOverride
-            } else {
-                controller.sectionItemOrder[section] ?? []
-            }
-            var desiredOrder = recordedOrder
-                .filter { controller.section(for: $0) == section }
+            guard isStillWanted() else { return }
+            var desiredOrder = SectionOrderPassScope.desiredOrder(
+                for: section,
+                recorded: controller.sectionItemOrder[section],
+                visibleOverride: visibleOrderOverride,
+                sectionOf: controller.section(for:)
+            )
             guard desiredOrder.count > 1 else {
                 continue
             }
@@ -1506,9 +1511,7 @@ extension MenuBarItemManager {
             // AX enumeration can finish after a hide cancelled this reveal.
             // Revalidate before the first write, not only in the per-pair loop:
             // a cancelled batch otherwise changes the next reveal's order.
-            guard !Task.isCancelled,
-                  revealedSection == nil || controller.revealedSection == revealedSection
-            else { return }
+            guard isStillWanted() else { return }
 
             // One cursor-free write for the whole section first; the per-pair
             // loop fixes any residue after the agent re-sorts.
@@ -1557,10 +1560,7 @@ extension MenuBarItemManager {
             let maximumReplans = 1
             let maximumMoves = max(1, desiredOrder.count * 2)
             for _ in 0 ..< maximumMoves {
-                guard !Task.isCancelled else { return }
-                if let revealedSection, controller.revealedSection != revealedSection {
-                    return
-                }
+                guard isStillWanted() else { return }
 
                 // Yield to a waiting user reorder rather than issue more
                 // background pairs. A user pass never yields to itself.
