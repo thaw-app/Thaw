@@ -165,7 +165,7 @@ public struct MenuBarItemTag: Hashable, CustomStringConvertible, Sendable, Codab
     /// metric values and therefore need canonicalizing before use as identity.
     public static func hasDynamicMetricTitles(_ bundleID: String) -> Bool {
         dynamicMetricTitleBundleMatchers.contains { matcher in
-            bundleID.hasPrefix(matcher.prefix) && bundleID.hasSuffix(matcher.suffix)
+            withoutTeamIdentifierPrefix(bundleID).hasPrefix(matcher.prefix) && bundleID.hasSuffix(matcher.suffix)
         }
     }
 
