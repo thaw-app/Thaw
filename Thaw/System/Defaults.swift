@@ -198,7 +198,6 @@ nonisolated enum Defaults {
 
             // Event Delivery
             .axMessagingTimeout: DefaultValue.axMessagingTimeout,
-            .useLCSSectionOrderPlanner: DefaultValue.useLCSSectionOrderPlanner,
             .inputPauseThresholdMs: DefaultValue.inputPauseThresholdMs,
             .settingsInOwnProcess: DefaultValue.settingsInOwnProcess,
         ]
@@ -318,10 +317,6 @@ extension Defaults {
         // MARK: Event Delivery
 
         static let axMessagingTimeout = 1.0
-
-        /// On by default: plan section-order drags with the LCS planner, one
-        /// move per misplaced item, instead of the pairwise walk.
-        static let useLCSSectionOrderPlanner = true
 
         /// On by default: Settings runs in a process of its own, so its memory goes away when the window closes.
         static let settingsInOwnProcess = true
@@ -546,12 +541,6 @@ extension Defaults {
         ///
         /// Hidden diagnostic flag; not exposed in Settings. Default: 1.0.
         case axMessagingTimeout
-
-        /// Whether automatic section-order passes plan drags with the LCS
-        /// planner (see DefaultValue.useLCSSectionOrderPlanner).
-        ///
-        /// Hidden diagnostic flag; not exposed in Settings. Default: true.
-        case useLCSSectionOrderPlanner
 
         /// Input-idle window (ms) required before a cursor-warping synthetic
         /// move (see DefaultValue.inputPauseThresholdMs).

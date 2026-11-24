@@ -24,6 +24,15 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Changed
+
+- **Exported diagnostics no longer include saved item lists,** and Thaw keeps only the newest five item lists.
+### Fixed
+
+- **Resetting the layout shows item pictures in the Layout bar right away,** instead of leaving them blank.
+- **Closing Settings no longer sends What's New or Credits behind other apps.**
+- **With the arrangement set to Manual, Thaw puts its section divider back left of its icon when the two swap places.** Until then, items such as Sound and Wi-Fi could not be moved in the Layout bar.
+
 ## [3.0.0-alpha.15] - 2026-11-22
 
 **macOS 27 only · Build 127**

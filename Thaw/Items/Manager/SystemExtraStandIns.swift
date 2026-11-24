@@ -8,6 +8,7 @@
 import AppKit
 import MenuBarModel
 import PlatformRuntimeKit
+import ThawConcurrency
 
 // MARK: - Stand-in
 
@@ -182,6 +183,19 @@ protocol StandInProcess: AnyObject {
     func watchTermination(_ exited: @escaping @Sendable (pid_t) -> Void) -> () -> Void
 }
 
+extension StandInProcess {
+    /// Asks the process to quit and waits up to timeout for it to end; cancellation doesn't cut the wait short.
+    func terminateAndWait(
+        upTo timeout: Duration,
+        now: () -> ContinuousClock.Instant = { .now },
+        sleep: (Duration) async -> Void
+    ) async -> Bool {
+        terminate()
+        _ = await pollUntil(every: .milliseconds(50), deadline: now() + timeout, now: now, sleep: sleep) { isTerminated }
+        return isTerminated
+    }
+}
+
 extension NSRunningApplication: StandInProcess {
     func watchTermination(_ exited: @escaping @Sendable (pid_t) -> Void) -> () -> Void {
         let observation = observe(\.isTerminated, options: [.new]) { app, _ in
@@ -290,12 +304,7 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
         for (standIn, entry) in watched {
             entry.stopWatching()
             watched[standIn] = nil
-            entry.app.terminate()
-            let deadline = now() + Self.restartQuitTimeout
-            while !entry.app.isTerminated, now() < deadline {
-                await sleep(.milliseconds(50))
-            }
-            if !entry.app.isTerminated {
+            if await !entry.app.terminateAndWait(upTo: Self.restartQuitTimeout, now: now, sleep: sleep) {
                 entry.app.forceTerminate()
             }
             do {

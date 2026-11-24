@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import AsyncAlgorithms
 import Cocoa
 import MenuBarModel
@@ -1016,18 +1017,16 @@ nonisolated enum MenuBarItemAXProvider {
             )
         }
 
-        var seenFrames = Set<CGRect>()
         let frames: [CGRect] = (attributedControls + AXHelpers.overflowButtons(among: children) + labeledControls).compactMap { control -> CGRect? in
             guard let frame = AXHelpers.frame(for: control),
                   !frame.isNull,
                   !frame.isEmpty,
-                  displayBounds.contains(frame.center),
-                  seenFrames.insert(frame).inserted
+                  displayBounds.contains(frame.center)
             else {
                 return nil
             }
             return frame
-        }
+        }.uniqued(on: \.self)
         // The walk finds only AXOverflowButton; the notchless macOS 27
         // indicator is a composited AXImage outside the extras bar. Fall back
         // to the shared strip hit-test so the cover sees the same answer.

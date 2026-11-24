@@ -91,17 +91,14 @@ actor DisplayStripCaptureSession {
             try await withAbandoningTimeout(ScreenCapture.screenshotTimeout) {
                 try await ready.value
             }
-            while true {
+            let framed = try await pollUntil(every: .milliseconds(16), deadline: deadline) {
                 try Task.checkCancellation()
                 guard ScreenCapture.isCaptureUITicketCurrent(visibilityGeneration), sessions[key.displayID] === session, session.version.matchesConfiguration(revision) else { throw CancellationError() }
                 let snapshot = session.captor.latestCompleteFrame()
                 guard !snapshot.stopped else { throw CaptureStopped() }
-                if snapshot.image != nil {
-                    break
-                }
-                guard ContinuousClock.now < deadline else { throw TaskTimeoutError() }
-                try await Task.sleep(for: .milliseconds(16))
+                return snapshot.image != nil
             }
+            guard framed else { throw TaskTimeoutError() }
             // Settle after the first complete frame, even for slow initial delivery or warm requests.
             try await Task.sleep(for: ScreenCapture.stripSettleWindow)
             try Task.checkCancellation()

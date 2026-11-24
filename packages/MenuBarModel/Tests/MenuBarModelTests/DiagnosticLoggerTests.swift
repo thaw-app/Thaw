@@ -132,4 +132,38 @@ struct DiagnosticLoggerRotationTests {
         taken.insert(second.path)
         #expect(DiagnosticLogger.uniqueLogFileURL(in: dir, baseName: "thaw_x") { taken.contains($0.path) }.lastPathComponent == "thaw_x_3.log")
     }
+
+    @Test("An attached file gets a header and the records, rotates at its size limit, and gets a footer when logging stops")
+    func fileLifecycle() throws {
+        let logger = DiagnosticLogger.shared
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let attached = dir.appendingPathComponent("attached.log")
+        defer {
+            logger.isEnabled = false
+            logger.policyLock.withLock { $0 = nil }
+            try? FileManager.default.removeItem(at: dir)
+        }
+
+        logger.attachToFile(at: attached)
+        #expect(logger.currentLogFile == attached)
+        logger.log(level: .info, category: "Test", message: "first")
+        logger.writeQueue.sync {}
+        logger.setRotationPolicy(DiagnosticLogger.RotationPolicy(maxFileSizeBytes: 1))
+        logger.log(level: .info, category: "Test", message: "second")
+        logger.writeQueue.sync {}
+
+        let rotated = try #require(logger.currentLogFile)
+        defer { try? FileManager.default.removeItem(at: rotated) }
+        #expect(rotated != attached)
+        logger.isEnabled = false
+        #expect(logger.currentLogFile == nil)
+
+        let attachedText = try String(contentsOf: attached, encoding: .utf8)
+        for expected in ["Thaw Diagnostic Log", "[INFO] [Test] first", "[INFO] [Test] second", "Diagnostic logging stopped"] {
+            #expect(attachedText.contains(expected))
+        }
+        let rotatedText = try String(contentsOf: rotated, encoding: .utf8)
+        #expect(rotatedText.contains("Thaw Diagnostic Log"))
+        #expect(rotatedText.contains("Diagnostic logging stopped"))
+    }
 }

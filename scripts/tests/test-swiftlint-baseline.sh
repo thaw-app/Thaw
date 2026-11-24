@@ -46,4 +46,24 @@ cmp -s "$TEMP_DIR/old.json" "$TEMP_DIR/current.json"
 expect 0 update "$TEMP_DIR/current.json" "$TEMP_DIR/smaller.json"
 grep -q '"currently spans 55 lines"' "$TEMP_DIR/current.json"
 
-printf 'swiftlint baseline: shrinking, growth, new entries, other rules and update passed\n'
+# update keeps an unchanged entry's old line number while shrunk entries take the fresh one.
+printf '[%s,%s]' "$(entry 'func a() {' function_body_length 60 10)" "$(entry 'struct A {' type_body_length 400 1)" > "$TEMP_DIR/old.json"
+printf '[%s,%s]' "$(entry 'func a() {' function_body_length 58 40)" "$(entry 'struct A {' type_body_length 400 25)" > "$TEMP_DIR/renumbered.json"
+cp "$TEMP_DIR/old.json" "$TEMP_DIR/current.json"
+expect 0 update "$TEMP_DIR/current.json" "$TEMP_DIR/renumbered.json"
+grep -q '"line": 1$' "$TEMP_DIR/current.json"
+grep -q '"line": 40$' "$TEMP_DIR/current.json"
+if grep -q '"line": 25$' "$TEMP_DIR/current.json"; then
+    printf 'Unchanged entry took the fresh line\n' >&2
+    exit 1
+fi
+
+# An entry that keeps its line is never taken by another fresh entry with the same text and size.
+printf '[%s,%s]' "$(entry 'func a() {' function_body_length 60 10)" "$(entry 'func a() {' function_body_length 58 100)" > "$TEMP_DIR/old.json"
+printf '[%s,%s]' "$(entry 'func a() {' function_body_length 58 10)" "$(entry 'func a() {' function_body_length 58 100)" > "$TEMP_DIR/same-text.json"
+cp "$TEMP_DIR/old.json" "$TEMP_DIR/current.json"
+expect 0 update "$TEMP_DIR/current.json" "$TEMP_DIR/same-text.json"
+grep -q '"line": 10$' "$TEMP_DIR/current.json"
+grep -q '"line": 100$' "$TEMP_DIR/current.json"
+
+printf 'swiftlint baseline: shrinking, growth, new entries, other rules, update and unchanged entries passed\n'

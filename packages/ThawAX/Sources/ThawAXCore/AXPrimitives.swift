@@ -258,8 +258,20 @@ public enum AXPrimitives {
     public static func extrasMenuBarReadResult(pid: pid_t, messagingTimeout: Float = defaultMessagingTimeout) -> AXError {
         let appElement = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(appElement, messagingTimeout)
+        return extrasMenuBarRead(of: appElement).result
+    }
+
+    /// An app element's extras menu bar with the code the read returned and how long it took. The code and
+    /// the time tell an app with no bar, or no Accessibility server, apart from one that did not answer in time.
+    public static func extrasMenuBarRead(of app: AXUIElement) -> (bar: AXUIElement?, result: AXError, elapsed: Duration) {
         var value: CFTypeRef?
-        return AXUIElementCopyAttributeValue(appElement, kAXExtrasMenuBarAttribute as CFString, &value)
+        let start = ContinuousClock.now
+        let result = AXUIElementCopyAttributeValue(app, kAXExtrasMenuBarAttribute as CFString, &value)
+        let elapsed = ContinuousClock.now - start
+        guard result == .success, let value, CFGetTypeID(value) == AXUIElementGetTypeID() else {
+            return (nil, result, elapsed)
+        }
+        return (unsafeDowncast(value, to: AXUIElement.self), result, elapsed)
     }
 
     // MARK: - Status-item presses

@@ -22,7 +22,6 @@ struct SectionOrderApplyGateTests {
         isExplicitLayoutEdit: Bool = false,
         nativeMenuBarDeferred: Bool = false,
         isWithinSettleWindow: Bool = false,
-        repairAfterRestriction: Bool = false,
         wrapsPastNotch: String? = nil,
         budgetExhausted: Bool = false,
         prefersPositionWrites: Bool = true
@@ -37,7 +36,6 @@ struct SectionOrderApplyGateTests {
             isExplicitLayoutEdit: isExplicitLayoutEdit,
             nativeMenuBarDeferred: nativeMenuBarDeferred,
             isWithinSettleWindow: isWithinSettleWindow,
-            repairAfterRestriction: repairAfterRestriction,
             applicationMenuWrapsPastNotch: { wrapsPastNotch },
             isConvergenceBudgetExhausted: { budgetExhausted },
             prefersPositionWrites: prefersPositionWrites
@@ -190,12 +188,6 @@ struct SectionOrderApplyGateTests {
                 makeRequest(controllerRevealedSection: .hidden, revealedSection: .hidden, isWithinSettleWindow: true)
             ) == nil
         )
-        // So does a post-restriction repair.
-        #expect(
-            SectionOrderApplyGate.firstRejection(
-                makeRequest(isWithinSettleWindow: true, repairAfterRestriction: true)
-            ) == nil
-        )
     }
 
     @Test("The notch lane gate skips with the display detail, unless authored")
@@ -238,15 +230,6 @@ struct SectionOrderApplyGateTests {
                 )
             ) == nil
         )
-        #expect(
-            SectionOrderApplyGate.firstRejection(
-                makeRequest(
-                    repairAfterRestriction: true,
-                    budgetExhausted: true,
-                    prefersPositionWrites: true
-                )
-            ) == nil
-        )
         // Cursor-free means the drag channel is out of the picture; a pass
         // that writes positions through the store is what the budget bounds.
         #expect(
@@ -269,7 +252,6 @@ struct SectionOrderApplyGateTests {
             isExplicitLayoutEdit: false,
             nativeMenuBarDeferred: false,
             isWithinSettleWindow: false,
-            repairAfterRestriction: false,
             applicationMenuWrapsPastNotch: { nil },
             isConvergenceBudgetExhausted: {
                 budgetRead = true

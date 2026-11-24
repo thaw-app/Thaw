@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import CoreGraphics
 import MenuBarModel
 
@@ -152,10 +153,7 @@ struct RevealCapturePrewarm {
 
     /// The requested sections without the visible one or repeats, in request order.
     static nonisolated func prewarmSections(_ requested: [MenuBarSection.Name]) -> [MenuBarSection.Name] {
-        requested.reduce(into: [MenuBarSection.Name]()) { result, section in
-            guard section != .visible, !result.contains(section) else { return }
-            result.append(section)
-        }
+        requested.uniqued().filter { $0 != .visible }
     }
 
     /// Whether a Hidden or Always Hidden item still draws its app icon for want of a picture that a capture

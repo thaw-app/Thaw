@@ -6,10 +6,8 @@
 //  Licensed under the GNU GPLv3
 
 import Cocoa
-import ImageIO
 import MenuBarModel
 import os.lock
-import UniformTypeIdentifiers
 
 nonisolated enum CaptureDiagnostics {
     struct SamplingBudget {
@@ -53,11 +51,7 @@ nonisolated enum CaptureDiagnostics {
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let url = directory.appendingPathComponent("cleaned-\(sample).png")
-            guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else {
-                return
-            }
-            CGImageDestinationAddImage(destination, image, nil)
-            guard CGImageDestinationFinalize(destination) else { return }
+            guard image.writePNG(to: url) else { return }
             NotificationCenter.default.post(name: didWriteSample, object: nil)
             log.info(
                 "[CapturePixelTrace] cleaned item=\(item.uniqueIdentifier) source=\(source) " +
@@ -97,11 +91,7 @@ nonisolated enum CaptureDiagnostics {
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let url = directory.appendingPathComponent("crop-\(sample).png")
-            guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else {
-                return
-            }
-            CGImageDestinationAddImage(destination, image, nil)
-            guard CGImageDestinationFinalize(destination) else { return }
+            guard image.writePNG(to: url) else { return }
             NotificationCenter.default.post(name: didWriteSample, object: nil)
             log.info(
                 "[CapturePixelTrace] item=\(item.uniqueIdentifier) owner=\(item.ownerPID) " +

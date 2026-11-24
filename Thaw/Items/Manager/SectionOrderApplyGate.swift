@@ -22,7 +22,6 @@ nonisolated enum SectionOrderApplyGate {
         let isExplicitLayoutEdit: Bool
         let nativeMenuBarDeferred: Bool
         let isWithinSettleWindow: Bool
-        let repairAfterRestriction: Bool
         /// Display log detail if app menus wrap past the notch, nil otherwise; consulted only for non-authored passes.
         let applicationMenuWrapsPastNotch: () -> String?
         /// Consulted only for cursor-free automatic visible passes, excluding authored edits and repairs.
@@ -80,8 +79,7 @@ nonisolated enum SectionOrderApplyGate {
         if request.nativeMenuBarDeferred {
             return .nativeMenuBarUnavailable
         }
-        if !request.repairAfterRestriction,
-           !request.reason.isAuthoredEdit,
+        if !request.reason.isAuthoredEdit,
            request.revealedSection == nil,
            request.isWithinSettleWindow
         {
@@ -95,7 +93,6 @@ nonisolated enum SectionOrderApplyGate {
         if request.prefersPositionWrites,
            !request.reason.isAuthoredEdit,
            request.revealedSection == nil,
-           !request.repairAfterRestriction,
            request.isConvergenceBudgetExhausted()
         {
             return .convergenceBudgetExhausted

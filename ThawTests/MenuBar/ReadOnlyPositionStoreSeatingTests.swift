@@ -174,6 +174,37 @@ struct ReadOnlyPositionStoreSeatingTests {
         #expect(base.positions == positions)
     }
 
+    /// Measured 2026-11-23: Thaw's icon (952) drawn left of the Hidden divider (254) on a bar where heavier rows sit
+    /// further left, so the pair read the axis mirrored. Seating the divider fixes the pair without moving an app.
+    @Test("An inverted divider is seated left of the first Visible item, and the pair then reads the bar's axis")
+    func invertedDividerIsSeatedLeftOfVisible() throws {
+        let chatGPT = Self.member("com.openai.codex", "ChatGPT", windowID: 1, x: 1121)
+        let runCat = Self.member("com.kyome.Neo.RunCat", "Item-0", windowID: 2, x: 1097)
+        let icon = Self.control(tag: .visibleControlItem, windowID: 3, x: 1141)
+        let sound = Self.member("com.example.sound", "Sound", windowID: 4, x: 1183)
+        let divider = Self.control(tag: .hiddenControlItem, windowID: 5, x: 1448)
+        let positions = [
+            Self.key(chatGPT): 2967, Self.key(runCat): 971, Self.key(icon): 952, Self.key(sound): 933, Self.key(divider): 254,
+        ]
+        let base = FakeStore(positions: positions)
+        let store = ReadOnlyPositionStore(wrapping: base)
+
+        let changed = store.applyControlItemOrder(
+            desiredOrder: [chatGPT, divider, runCat, icon, sound],
+            opaqueVisibleKeys: [],
+            liveItems: [runCat, chatGPT, icon, sound, divider]
+        )
+
+        #expect(changed == [divider.uniqueIdentifier])
+        let seated = try #require(base.positions[Self.key(divider)])
+        #expect(seated < 2967 && seated > 971, "divider at \(seated) is not between ChatGPT and RunCat")
+        #expect(base.positions.filter { $0.key != Self.key(divider) } == positions.filter { $0.key != Self.key(divider) })
+        #expect(RuntimePreferenceKeys.storeAxisAscending(in: [
+            "status:com.stonerl.Thaw::Thaw.ControlItem.Visible": 952,
+            "status:com.stonerl.Thaw::Thaw.ControlItem.Hidden": seated,
+        ]) == false)
+    }
+
     // MARK: Fixtures
 
     private static func key(_ item: MenuBarItem) -> String {

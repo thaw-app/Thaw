@@ -34,9 +34,8 @@ extension DisplaySettingsManager {
     /// Reads the stored display settings again after the other process saved them. A value that differs is
     /// assigned as if the page had set it, so the app applies new spacing; a missing key leaves its value alone.
     func loadStoredValues() {
-        let decoder = JSONDecoder()
-        func stored<Value: Decodable>(_: Value.Type, _ key: Defaults.Key) -> Value? {
-            Defaults.data(forKey: key).flatMap { try? decoder.decode(Value.self, from: $0) }
+        func stored<Value: Decodable>(_ type: Value.Type, _ key: Defaults.Key) -> Value? {
+            try? Defaults.decoded(type, forKey: key)
         }
         // The mode and the confirmation come first: a configuration change applies spacing under them.
         if let mode = Defaults.string(forKey: .spacingApplyMode).flatMap(SpacingApplyMode.init(rawValue:)), mode != spacingApplyMode {

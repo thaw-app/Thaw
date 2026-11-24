@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import os
 import Testing
 @testable import Thaw
 
@@ -17,11 +18,12 @@ struct NotificationCenterEventsTaskTests {
     /// the task listens: it adds its observer as it starts on the main actor.
     private func listen(
         on center: NotificationCenter,
-        debounce: Duration? = nil
+        debounce: Duration? = nil,
+        onPost: (@Sendable (Notification) -> Void)? = nil
     ) async -> (task: Task<Void, Never>, runs: () -> Int, ran: AsyncStream<Void>) {
         let (ran, signal) = AsyncStream<Void>.makeStream()
         var runs = 0
-        let task = center.eventsTask(named: Self.name, debounce: debounce) {
+        let task = center.eventsTask(named: Self.name, debounce: debounce, onPost: onPost) {
             runs += 1
             signal.yield()
         }
@@ -56,6 +58,27 @@ struct NotificationCenterEventsTaskTests {
             center.post(name: Self.name, object: nil)
         }
         #expect(runs() == 0)
+        _ = await ran.next()
+        try await Task.sleep(for: .milliseconds(300))
+
+        #expect(runs() == 1)
+    }
+
+    @Test
+    func `onPost sees every posting of a burst the body runs once for`() async throws {
+        let center = NotificationCenter()
+        let posted = OSAllocatedUnfairLock<[Int]>(initialState: [])
+        let (task, runs, stream) = await listen(on: center, debounce: .milliseconds(100)) { notification in
+            let index = notification.object as? Int ?? -1
+            posted.withLock { $0.append(index) }
+        }
+        var ran = stream.makeAsyncIterator()
+        defer { task.cancel() }
+
+        for index in 0 ..< 3 {
+            center.post(name: Self.name, object: index)
+        }
+        #expect(posted.withLock { $0 } == [0, 1, 2])
         _ = await ran.next()
         try await Task.sleep(for: .milliseconds(300))
 

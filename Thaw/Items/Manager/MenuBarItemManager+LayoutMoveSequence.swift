@@ -12,11 +12,6 @@ import PlatformRuntimeKit
 // MARK: - Layout Move Sequence
 
 extension MenuBarItemManager {
-    /// See Defaults.Key.useLCSSectionOrderPlanner.
-    static var usesLCSSectionOrderPlanner: Bool {
-        Defaults.bool(forKey: .useLCSSectionOrderPlanner)
-    }
-
     /// The hidden and always-hidden divider window IDs, read from the live
     /// control items. A zero-length divider has no window, so either is nil
     /// when its section is collapsed.

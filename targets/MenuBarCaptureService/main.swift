@@ -435,20 +435,27 @@ private enum MenuBarCaptureServiceMain {
     /// How recently the app must have written a log for this process to append to it instead of starting its own.
     static let sessionLogAttachWindow: TimeInterval = 600
 
+    private static func acceptSession(_ request: XPCListener.IncomingSessionRequest) -> XPCListener.IncomingSessionRequest.Decision {
+        lifecycle.sessionOpened()
+        return request.accept { (message: CaptureServiceRequest) -> (any Encodable)? in
+            handle(message)
+        } cancellationHandler: { _ in
+            if lifecycle.sessionClosed() {
+                scheduleIdleExit(reason: "last session closed")
+            }
+        }
+    }
+
     static func run() -> Never {
         enableDiagnosticLoggingIfRequested()
         ScreenCapture.desktopIndependentWindowCaptureEnabled = false
         let serviceName = Bundle.main.bundleIdentifier ?? CaptureService.baseServiceBundleIdentifier
         do {
-            listener = try XPCListener(service: serviceName) { request in
-                lifecycle.sessionOpened()
-                return request.accept { (message: CaptureServiceRequest) -> (any Encodable)? in
-                    handle(message)
-                } cancellationHandler: { _ in
-                    if lifecycle.sessionClosed() {
-                        scheduleIdleExit(reason: "last session closed")
-                    }
-                }
+            if CodeSigningInfo.processTeamIdentifier == nil {
+                listener = try XPCListener(service: serviceName) { acceptSession($0) }
+                diagLog.warning("Capture listener is active WITHOUT peer validation (ad-hoc/teamless build): any local process may connect")
+            } else {
+                listener = try XPCListener(service: serviceName, requirement: .isFromSameTeam()) { acceptSession($0) }
             }
         } catch {
             diagLog.error("Failed to create XPCListener for \(serviceName): \(error)")

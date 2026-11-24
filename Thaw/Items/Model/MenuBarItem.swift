@@ -109,9 +109,8 @@ extension MenuBarItem {
             "getMenuBarItems: starting (resolveSourcePID=\(resolveSourcePID))"
         )
 
-        // Items come from each app's AXExtrasMenuBar. The walk stays
-        // in-process: the move verify loop runs it too often for the helper.
-        // It runs on the concurrent pool so a hung app cannot freeze the UI.
+        // Read by the AX helper when it is on, otherwise in-process off the main actor, so a hung app can't freeze the UI.
+        // The move verify loop reads in-process through getFreshMenuBarItemsForMove instead.
         let axItems = await MenuBarItemAXProvider.menuBarItemsConcurrent(
             on: display, option: option, freshOnly: freshOnly, priorityPIDs: priorityPIDs
         )

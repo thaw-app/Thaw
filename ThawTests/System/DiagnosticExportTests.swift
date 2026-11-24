@@ -36,6 +36,7 @@ struct DiagnosticExportTests {
         let logs = root.appending(path: "Logs", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
         try Data("log".utf8).write(to: logs.appending(path: "thaw.log"))
+        try Data("{}".utf8).write(to: logs.appending(path: "item-dump-1.json"))
         let samples = root.appending(path: "samples", directoryHint: .isDirectory)
 
         let withoutSamples = try MaintenanceTools.stageDiagnostics(logs: logs, samples: samples, in: root.appending(path: "a"))
@@ -46,6 +47,23 @@ struct DiagnosticExportTests {
         let withSamples = try MaintenanceTools.stageDiagnostics(logs: logs, samples: samples, in: root.appending(path: "b"))
         #expect(try Set(FileManager.default.contentsOfDirectory(atPath: withSamples.path(percentEncoded: false))) == ["Logs", "Capture Samples"])
         #expect(FileManager.default.fileExists(atPath: withSamples.appending(path: "Logs/thaw.log").path(percentEncoded: false)))
+        #expect(!FileManager.default.fileExists(atPath: withSamples.appending(path: "Logs/item-dump-1.json").path(percentEncoded: false)), "item lists stay out")
+    }
+
+    @Test("A symlinked logs folder is staged as a copy, so its item lists survive")
+    func symlinkedLogs() throws {
+        let root = try Self.scratch()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let logs = root.appending(path: "Real", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
+        let dump = logs.appending(path: "item-dump-1.json")
+        try Data("{}".utf8).write(to: dump)
+        let link = root.appending(path: "Logs")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: logs)
+
+        let staged = try MaintenanceTools.stageDiagnostics(logs: link, samples: root.appending(path: "none"), in: root.appending(path: "a"))
+        #expect(FileManager.default.fileExists(atPath: dump.path(percentEncoded: false)))
+        #expect(try FileManager.default.contentsOfDirectory(atPath: staged.appending(path: "Logs").path(percentEncoded: false)).isEmpty)
     }
 
     @Test("Export writes a zip that unpacks to the logs")
@@ -55,6 +73,7 @@ struct DiagnosticExportTests {
         let logs = root.appending(path: "Logs", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
         try Data("log".utf8).write(to: logs.appending(path: "thaw.log"))
+        try Data("{}".utf8).write(to: logs.appending(path: "item-dump-1.json"))
         let zip = root.appending(path: "out.zip")
 
         try await MaintenanceTools.exportDiagnostics(logs: logs, samples: root.appending(path: "none"), to: zip)
@@ -62,5 +81,6 @@ struct DiagnosticExportTests {
         let unpacked = root.appending(path: "unpacked", directoryHint: .isDirectory)
         try await MaintenanceTools.run(path: "/usr/bin/ditto", arguments: ["-x", "-k", zip.path(percentEncoded: false), unpacked.path(percentEncoded: false)])
         #expect(FileManager.default.fileExists(atPath: unpacked.appending(path: "Thaw Diagnostics/Logs/thaw.log").path(percentEncoded: false)))
+        #expect(!FileManager.default.fileExists(atPath: unpacked.appending(path: "Thaw Diagnostics/Logs/item-dump-1.json").path(percentEncoded: false)))
     }
 }

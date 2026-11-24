@@ -88,23 +88,10 @@ final class MenuBarItemIconChoices {
         let size = glyphSize(for: image.size)
         let pixelHeight = image.representations.map(\.pixelsHigh).max() ?? 0
         let scale = (CGFloat(pixelHeight) / size.height).clamped(to: 2 ... 3)
-        guard let rep = NSBitmapImageRep(
-            bitmapDataPlanes: nil,
+        return image.pngData(
             pixelsWide: max(Int((size.width * scale).rounded()), 1),
             pixelsHigh: max(Int((size.height * scale).rounded()), 1),
-            bitsPerSample: 8,
-            samplesPerPixel: 4,
-            hasAlpha: true,
-            isPlanar: false,
-            colorSpaceName: .deviceRGB,
-            bytesPerRow: 0,
-            bitsPerPixel: 0
-        ) else { return nil }
-        rep.size = size
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-        image.draw(in: CGRect(origin: .zero, size: size))
-        NSGraphicsContext.restoreGraphicsState()
-        return rep.representation(using: .png, properties: [:])
+            pointSize: size
+        )
     }
 }
