@@ -159,7 +159,7 @@ extension MenuBarItemManager {
     /// escape hatch ported from the Thaw 2 move path (there
     /// inputPauseThresholdMs, default 50 ms): users hit by cursor kidnapping
     /// during reordering can widen it via
-    /// defaults write <bundle-id> InputPauseThresholdMs -int <milliseconds>.
+    /// defaults write <bundle-id> inputPauseThresholdMs -int <milliseconds>.
     static nonisolated var inputPauseThreshold: Duration {
         Duration.milliseconds(max(
             0,

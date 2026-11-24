@@ -407,10 +407,6 @@ final class MenuBarItemManager {
         coalescedCacheRerunTask?.cancel()
     }
 
-    /// Resumed when a background cache pass finishes, for callers that need to
-    /// wait one out rather than race it.
-    var backgroundCacheContinuation: CheckedContinuation<Void, Never>?
-
     // MARK: - Layout coordination state
 
     // The flags below gate the cache cycle, the startup settling window, and

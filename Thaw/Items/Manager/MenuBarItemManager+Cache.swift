@@ -549,15 +549,12 @@ extension MenuBarItemManager {
         return nil
     }
 
-    /// Transfer the background continuation to a follow-up pass so waiting callers resume after relocation settles and recaches.
+    /// Schedule a settled follow-up pass after relocation.
     private func scheduleRecacheAfterRelocation() {
         MenuBarItemManager.diagLog.debug("Relocated new leftmost items; scheduling recache")
-        let continuation = backgroundCacheContinuation
-        backgroundCacheContinuation = nil
         Task { [weak self] in
             try? await Task.sleep(for: MenuBarItemManager.uiSettleDelay)
             await self?.cacheItemsRegardless(skipRecentMoveCheck: true)
-            continuation?.resume()
         }
     }
 
@@ -589,11 +586,6 @@ extension MenuBarItemManager {
         MenuBarItemManager.diagLog.debug(
             "cacheItemsRegardless: entering (skipRecentMoveCheck=\(skipRecentMoveCheck), hasCurrentItemWindowIDs=\(currentItemWindowIDs != nil), resolveSourcePID=\(resolveSourcePID), skipSavedLayoutApply=\(skipSavedLayoutApply))"
         )
-        defer {
-            backgroundCacheContinuation?.resume()
-            backgroundCacheContinuation = nil
-        }
-
         guard skipRecentMoveCheck || !lastMoveOperationOccurred(within: .seconds(1)) else {
             MenuBarItemManager.diagLog.debug("Skipping menu bar item cache due to recent item movement")
             return
@@ -849,8 +841,6 @@ extension MenuBarItemManager {
                 currentDisplayID: displayID
             )
             if didApplySavedLayout {
-                backgroundCacheContinuation?.resume()
-                backgroundCacheContinuation = nil
                 return
             }
         }
