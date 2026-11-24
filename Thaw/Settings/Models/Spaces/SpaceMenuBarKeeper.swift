@@ -205,9 +205,8 @@ final class SpaceMenuBarKeeper {
 
 extension SpaceMenuBarKeeper {
     static nonisolated func loadFromDefaults() -> SpaceMenuBarChoices? {
-        guard let data = Defaults.data(forKey: .spaceMenuBarChoices) else { return nil }
         do {
-            return try JSONDecoder().decode(SpaceMenuBarChoices.self, from: data)
+            return try Defaults.decoded(SpaceMenuBarChoices.self, forKey: .spaceMenuBarChoices)
         } catch {
             diagLog.error("Error decoding the Spaces page choices: \(error)")
             return nil
@@ -216,7 +215,7 @@ extension SpaceMenuBarKeeper {
 
     static nonisolated func saveToDefaults(_ choices: SpaceMenuBarChoices) {
         do {
-            try Defaults.set(JSONEncoder().encode(choices), forKey: .spaceMenuBarChoices)
+            try Defaults.setEncoded(choices, forKey: .spaceMenuBarChoices)
         } catch {
             diagLog.error("Error encoding the Spaces page choices: \(error)")
         }

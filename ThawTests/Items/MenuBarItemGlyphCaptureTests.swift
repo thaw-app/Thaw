@@ -35,6 +35,15 @@ struct MenuBarItemGlyphCaptureTests {
         #expect(try !Self.capture(gray: 1).isEffectivelyBlank)
     }
 
+    @Test("Blankness is stable across repeated reads and copies of the same capture")
+    func blanknessIsMemoized() throws {
+        let blank = try Self.capture(gray: nil)
+        let copy = blank
+        #expect(blank.isEffectivelyBlank)
+        #expect(blank.isEffectivelyBlank)
+        #expect(copy.isEffectivelyBlank)
+    }
+
     @Test("Two missing captures are equal, and a missing one never equals a present one")
     func missingCaptures() throws {
         let capture = try Self.capture()

@@ -42,21 +42,6 @@ struct SettingsURISenderTests {
         #expect(sender.codeHash == "0aff1000", "it can still be approved by its code hash")
     }
 
-    @Test("The team requirement names an Apple-issued certificate for that team")
-    func teamRequirementIsAppleAnchored() throws {
-        let text = try #require(SettingsURISender.anchoredTeamRequirement("TEAM123456"))
-        #expect(text == #"anchor apple generic and certificate leaf[subject.OU] = "TEAM123456""#)
-        var requirement: SecRequirement?
-        #expect(SecRequirementCreateWithString(text as CFString, [], &requirement) == errSecSuccess)
-    }
-
-    @Test("A team that isn't ten letters and digits gets no requirement", arguments: [
-        "", "TEAM12345", "team123456", #"TEAM12345" or anchor apple"#, "TEAM123456X",
-    ])
-    func malformedTeamHasNoRequirement(team: String) {
-        #expect(SettingsURISender.anchoredTeamRequirement(team) == nil)
-    }
-
     @Test("Code without an Info.plist is named by its signing identifier and may have no team")
     func signingIdentifierIsTheFallback() throws {
         let info: [String: Any] = [
@@ -223,15 +208,5 @@ struct SettingsURISenderSignatureTests {
         #expect(sender.teamIdentifier == nil)
         #expect(sender.displayName == "Calculator")
         #expect(SettingsURISender.identify(appAt: URL(fileURLWithPath: "/nonexistent/Thaw Test.app")) == nil)
-    }
-
-    @Test("Apple's own code is anchored to no developer team, and a malformed team is anchored to nothing")
-    func appleCodeIsNotATeam() throws {
-        var staticCode: SecStaticCode?
-        let url = URL(fileURLWithPath: "/System/Applications/Calculator.app")
-        try #require(SecStaticCodeCreateWithPath(url as CFURL, [], &staticCode) == errSecSuccess)
-        let code = try #require(staticCode)
-        #expect(!SettingsURISender.isAnchored(code, toTeam: "ABCDE12345"))
-        #expect(!SettingsURISender.isAnchored(code, toTeam: "not a team"))
     }
 }

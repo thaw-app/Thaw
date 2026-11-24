@@ -19,11 +19,6 @@ nonisolated struct WallpaperPalette: Codable, Equatable {
         /// The fraction of the sampled image this swatch covers, 0...1.
         let weight: Double
 
-        /// Uses the app's W3C weighting for light/dark menu bar item selection.
-        var brightness: Double {
-            ((red * 299) + (green * 587) + (blue * 114)) / 1000
-        }
-
         func cgColor(in colorSpace: CGColorSpace) -> CGColor? {
             CGColor(
                 colorSpace: colorSpace,

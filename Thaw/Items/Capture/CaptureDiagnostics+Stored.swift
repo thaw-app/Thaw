@@ -6,10 +6,9 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
-import ImageIO
+import Foundation
 import MenuBarModel
 import os.lock
-import UniformTypeIdentifiers
 
 nonisolated extension CaptureDiagnostics {
     /// The file number each item's stored picture is saved under, so a new picture replaces the old one.
@@ -41,11 +40,7 @@ nonisolated extension CaptureDiagnostics {
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let url = directory.appendingPathComponent("stored-\(slot).png")
-            guard let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil) else {
-                return
-            }
-            CGImageDestinationAddImage(destination, image, nil)
-            guard CGImageDestinationFinalize(destination) else { return }
+            guard image.writePNG(to: url) else { return }
             NotificationCenter.default.post(name: didWriteSample, object: nil)
             DiagLog(category: "CaptureDiagnostics").info(
                 "[CapturePixelTrace] stored item=\(item.uniqueIdentifier) owner=\(item.ownerPID) " +

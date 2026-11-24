@@ -8,7 +8,6 @@
 import AppKit
 import Foundation
 import MenuBarModel
-import Security
 import ThawModuleKit
 
 /// Handles settings manipulation via thaw:// URLs with whitelist-based security.
@@ -161,27 +160,26 @@ enum SettingsURIHandler {
         )
     }
 
-    /// The team identifier in the code signature of the app at appURL.
+    /// The team identifier in the code signature of the app at appURL, read without validating it.
     static func teamIdentifier(ofAppAt appURL: URL, logName bundleId: String) -> String? {
-        var staticCode: SecStaticCode?
-        let createStatus = SecStaticCodeCreateWithPath(appURL as CFURL, [], &staticCode)
-        guard createStatus == errSecSuccess, let code = staticCode else {
-            diagLog.debug("Settings URI: Failed to create static code for \(bundleId): \(createStatus)")
+        do throws(CodeSignature.Failure) {
+            return try teamIdentifier(of: CodeSignature(appAt: appURL), logName: bundleId)
+        } catch {
+            diagLog.debug("Settings URI: Failed to create static code for \(bundleId): \(error.status)")
             return nil
         }
+    }
 
-        var signingInfo: CFDictionary?
-        let infoStatus = SecCodeCopySigningInformation(code, SecCSFlags(rawValue: kSecCSSigningInformation), &signingInfo)
-        guard infoStatus == errSecSuccess, let info = signingInfo as? [String: Any] else {
-            diagLog.debug("Settings URI: Failed to get signing info for \(bundleId): \(infoStatus)")
-            return nil
+    /// The team identifier in signature, read without validating it.
+    static func teamIdentifier(of signature: CodeSignature, logName bundleId: String) -> String? {
+        do throws(CodeSignature.Failure) {
+            if let teamId = try CodeSignature.teamIdentifier(in: signature.signingInformation()) {
+                return teamId
+            }
+            diagLog.debug("Settings URI: No team identifier found for \(bundleId)")
+        } catch {
+            diagLog.debug("Settings URI: Failed to get signing info for \(bundleId): \(error.status)")
         }
-
-        if let teamId = info[kSecCodeInfoTeamIdentifier as String] as? String {
-            return teamId
-        }
-
-        diagLog.debug("Settings URI: No team identifier found for \(bundleId)")
         return nil
     }
 

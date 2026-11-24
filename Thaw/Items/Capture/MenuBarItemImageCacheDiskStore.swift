@@ -6,10 +6,8 @@
 //  Licensed under the GNU GPLv3
 
 import Cocoa
-import ImageIO
 import MenuBarModel
 import os.lock
-import UniformTypeIdentifiers
 
 /// The disk half of MenuBarItemImageCache: the cache file, its format,
 /// and the save queue that writes it.
@@ -245,17 +243,10 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
         }
 
         let cacheData = snapshot.map { tag, image -> (String, Data, CGFloat, Int, Bool)? in
-            let png = NSMutableData()
-            guard
-                let destination = CGImageDestinationCreateWithData(
-                    png, UTType.png.identifier as CFString, 1, nil
-                )
-            else { return nil }
-            CGImageDestinationAddImage(destination, image.cgImage, nil)
-            guard CGImageDestinationFinalize(destination) else { return nil }
+            guard let png = image.cgImage.pngData() else { return nil }
 
             let tagString = tag.tagIdentifier
-            return (tagString, png as Data, image.scale, tag.instanceIndex, image.isFromEarlierBuild)
+            return (tagString, png, image.scale, tag.instanceIndex, image.isFromEarlierBuild)
         }.compactMap(\.self)
 
         guard cacheData.count == snapshot.count else { return }

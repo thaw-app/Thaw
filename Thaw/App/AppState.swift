@@ -666,7 +666,7 @@ final class AppState {
             if navigationState.isWhatsNewRequested, !isUpdateConsentPresented {
                 navigationState.settingsNavigationIdentifier = .about
             }
-        } else {
+        } else if Self.shouldDeactivateAfterSettingsClosed(openWindows: openWindows, pendingWindows: pendingOpenWindows) {
             deactivate(withPolicy: .accessory)
         }
     }

@@ -75,14 +75,14 @@ of Apple’s notarization infrastructure.
                                  │
               ┌──────────────────┼──────────────────┐
               ▼                  ▼                  ▼
-         XPC helpers        macOS TCC / AX     Sparkle (HTTPS)
+         XPC capture        macOS TCC / AX     Sparkle (HTTPS)
     (item PIDs, capture)    WindowServer       EdDSA verify
 ```
 
 | Boundary | What crosses | Controls |
 | --- | --- | --- |
 | External URL → settings | `thaw://set` etc. | Allowlisted keys; range checks; sender whitelist + `SecCode` Team ID binding |
-| App ↔ XPC helpers | Codable requests | Fixed service names; limited request vocabulary; capture requests accept only menu-bar window IDs, validated bounds, and BGRA size limits; listeners accept only same-team peers (`XPCListener(requirement: .isFromSameTeam())`), and a teamless ad-hoc build logs a warning that it is running without peer validation |
+| App ↔ capture service | Codable requests | Fixed service names; limited request vocabulary; capture requests accept only menu-bar window IDs, validated bounds, and BGRA size limits; the listener and the app's session accept only same-team peers (`.isFromSameTeam()`), and a teamless ad-hoc build logs a warning that it is running without peer validation |
 | App ↔ settings process | Link messages (settings changed, statuses, a page's commands and requests) and the item picture file | Started by the app as the same signed executable, with pipes only the two processes hold, so no other process can send on the link; the commands are a fixed list per page and do what that page's controls do in the app's own Settings window; only the app reads the screen and writes profiles |
 | App ↔ network | Appcast / downloads | HTTPS; Sparkle EdDSA (`SUPublicEDKey`); Apple notarization on shipped builds |
 | App ↔ OS | AX / capture | Explicit TCC; features degrade without grants |
@@ -91,11 +91,11 @@ of Apple’s notarization infrastructure.
 
 | Principle | How Thaw applies it |
 | --- | --- |
-| **Economy of mechanism** | Small XPC protocols (four request cases each); URI settings limited to known keys |
+| **Economy of mechanism** | A small XPC protocol (five request cases); URI settings limited to known keys |
 | **Fail-safe defaults** | Settings URI mutation denied unless allowlisted; permissions off until user grants |
 | **Complete mediation** | Each settings URI request re-checks whitelist + signature; numeric keys clamped to ranges |
 | **Open design** | GPL-3.0; public repo; security policy and this assurance case |
-| **Separation of privilege** | XPC helpers separated from UI (PID lookup vs recyclable SkyLight capture); release signing keys not on the public download host as long-lived plaintext |
+| **Separation of privilege** | Screen capture runs in its own XPC service, apart from the UI, and restarts after a capture budget; release signing keys not on the public download host as long-lived plaintext |
 | **Least privilege** | Requests only needed TCC rights; no root requirement for normal use |
 | **Least common mechanism** | Per-user install; no shared multi-user daemon for core features |
 | **Psychological acceptability** | Clear permission prompts; authorize dialog lists what automation can do |
@@ -170,7 +170,7 @@ defect classes before merge.
 | Claim | Evidence |
 | --- | --- |
 | Private vuln reporting + response SLA | [Organization Security Policy](https://github.com/thaw-app/.github/blob/main/.github/SECURITY.md) |
-| URI allowlist + signature binding | `Thaw/Utilities/SettingsURIHandler.swift`, `docs/URI_SCHEMES.md` |
+| URI allowlist + signature binding | `Thaw/System/SettingsURIHandler.swift`, `docs/URI_SCHEMES.md` |
 | Update authenticity | `SUFeedURL` / `SUPublicEDKey` in `Thaw/Resources/Info.plist`; Sparkle release actions |
 | Architecture | `docs/ARCHITECTURE.md` |
 | Automated analysis | `.github/workflows/ci.yml`, SonarCloud project `thaw-app_Thaw` |

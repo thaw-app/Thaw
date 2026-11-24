@@ -88,7 +88,7 @@ extension DiagnosticLogger {
         guard let policy = rotationPolicy, policy.maxFileSizeBytes > 0 || policy.rotationInterval > 0, let file = currentLogFile
         else { return }
         let size = fileSize(of: file, afterWriting: written, limit: policy.maxFileSizeBytes)
-        let openedAt = segmentOpenedAtLock.withLock { $0 } ?? Date()
+        let openedAt = fileState.withLock { $0.openedAt } ?? Date()
         guard Self.shouldRotate(policy: policy, fileSize: size, openFor: Date().timeIntervalSince(openedAt)) else { return }
         closeLogFile()
         // Logging can be turned off from another thread while this runs. That closes the file this
@@ -102,10 +102,10 @@ extension DiagnosticLogger {
 
     /// Counts this process's writes, rereading the size from disk now and then because the XPC service appends too.
     private func fileSize(of file: URL, afterWriting written: UInt64, limit: UInt64) -> UInt64 {
-        let counted = fileSizeLock.withLock { $0.adding(written, limit: limit) }
+        let counted = fileState.withLock { $0.size.adding(written, limit: limit) }
         guard counted.needsCheck else { return counted.bytes }
         let size = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? UInt64) ?? counted.bytes
-        fileSizeLock.withLock { $0 = FileSizeCount(bytes: size) }
+        fileState.withLock { $0.size = FileSizeCount(bytes: size) }
         return size
     }
 }

@@ -36,25 +36,7 @@ nonisolated enum StoredImageData {
         let scale = Double(maximumPixelLength) / max(image.size.width, image.size.height)
         let width = max(1, Int((image.size.width * scale).rounded()))
         let height = max(1, Int((image.size.height * scale).rounded()))
-        guard let bitmap = NSBitmapImageRep(
-            bitmapDataPlanes: nil,
-            pixelsWide: width,
-            pixelsHigh: height,
-            bitsPerSample: 8,
-            samplesPerPixel: 4,
-            hasAlpha: true,
-            isPlanar: false,
-            colorSpaceName: .deviceRGB,
-            bytesPerRow: 0,
-            bitsPerPixel: 0
-        ), let context = NSGraphicsContext(bitmapImageRep: bitmap) else {
-            throw Failure.unreadable
-        }
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = context
-        image.draw(in: NSRect(x: 0, y: 0, width: width, height: height))
-        NSGraphicsContext.restoreGraphicsState()
-        guard let png = bitmap.representation(using: .png, properties: [:]) else {
+        guard let png = image.pngData(pixelsWide: width, pixelsHigh: height) else {
             throw Failure.unreadable
         }
         return png

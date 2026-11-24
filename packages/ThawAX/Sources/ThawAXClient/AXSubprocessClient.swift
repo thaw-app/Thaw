@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import Foundation
+import Synchronization
 import ThawAXCore
 
 public enum AXSubprocessError: Error, CustomStringConvertible {
@@ -32,7 +33,7 @@ public enum AXSubprocessError: Error, CustomStringConvertible {
 /// Replies arrive out of order, one lane per kind of work, so a stuck walk
 /// never delays a hit-test. A timeout fails one request; the process is
 /// replaced only when it exits or keeps timing out.
-public final class AXSubprocessClient: @unchecked Sendable {
+public final class AXSubprocessClient: Sendable {
     public struct Configuration: Sendable {
         /// Absolute URL of the helper executable.
         public var helperURL: URL
@@ -59,25 +60,27 @@ public final class AXSubprocessClient: @unchecked Sendable {
     /// respawns. Callers fall back to in-process reads.
     private static let abandonAfterExits = 5
 
-    private let configuration: Configuration
+    private struct State {
+        var process: Process?
+        var input: FileHandle?
+        var generation: UInt64 = 0
+        var nextID: UInt64 = 0
+        var pending: [UInt64: Pending] = [:]
+        /// Ids cancelled before their continuation was registered.
+        var cancelledEarly: Set<UInt64> = []
+        var consecutiveTimeouts = 0
+        var consecutiveExits = 0
+        var isAbandoned = false
+        var lastExit: String?
+        /// The tail of the running helper's stderr. A helper that dies before it
+        /// can reply, in dyld for instance, says why only there.
+        var helperStandardError = Data()
+    }
 
-    // State below is guarded by lock.
-    private let lock = NSLock()
-    private var process: Process?
-    private var input: FileHandle?
-    private var generation: UInt64 = 0
-    private var nextID: UInt64 = 0
-    private var pending: [UInt64: Pending] = [:]
-    /// Ids cancelled before their continuation was registered.
-    private var cancelledEarly: Set<UInt64> = []
-    private var consecutiveTimeouts = 0
-    private var consecutiveExits = 0
-    private var isAbandoned = false
-    private var lastExit: String?
-    /// The tail of the running helper's stderr. A helper that dies before it
-    /// can reply, in dyld for instance, says why only there.
-    private var helperStandardError = Data()
     private static let standardErrorTailLength = 2048
+
+    private let configuration: Configuration
+    private let state = Mutex(State())
 
     /// Serializes frame writes; frames must not interleave on the pipe.
     private let writeLock = NSLock()
@@ -90,13 +93,13 @@ public final class AXSubprocessClient: @unchecked Sendable {
     /// status or the signal that killed it, or that its reply could not be
     /// read. Nil until a helper has ended unexpectedly.
     public var lastExitDescription: String? {
-        lock.withLock { lastExit }
+        state.withLock { $0.lastExit }
     }
 
     /// Whether the client has stopped launching the helper for this session
     /// after it kept exiting. See abandonAfterExits.
     public var hasAbandonedHelper: Bool {
-        lock.withLock { isAbandoned }
+        state.withLock { $0.isAbandoned }
     }
 
     deinit {
@@ -124,9 +127,9 @@ public final class AXSubprocessClient: @unchecked Sendable {
     }
 
     private func sendOnce(_ request: AXHelperRequest, timeoutSeconds: Double) async throws -> AXHelperReply {
-        let id = lock.withLock {
-            nextID &+= 1
-            return nextID
+        let id = state.withLock { state in
+            state.nextID &+= 1
+            return state.nextID
         }
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
@@ -145,11 +148,11 @@ public final class AXSubprocessClient: @unchecked Sendable {
     ) {
         let input: FileHandle
         do {
-            input = try lock.withLock { () throws -> FileHandle in
-                if cancelledEarly.remove(id) != nil {
+            input = try state.withLock { state throws -> FileHandle in
+                if state.cancelledEarly.remove(id) != nil {
                     throw CancellationError()
                 }
-                let input = try ensureStartedLocked()
+                let input = try ensureStarted(&state)
                 let timer = Task { [weak self] in
                     do {
                         try await Task.sleep(for: .seconds(timeoutSeconds))
@@ -158,7 +161,7 @@ public final class AXSubprocessClient: @unchecked Sendable {
                     }
                     self?.timedOut(id)
                 }
-                pending[id] = Pending(continuation: continuation, timer: timer)
+                state.pending[id] = Pending(continuation: continuation, timer: timer)
                 return input
             }
         } catch {
@@ -184,10 +187,10 @@ public final class AXSubprocessClient: @unchecked Sendable {
         with result: Result<AXHelperReply, Error>,
         cancelledEarlyIfAbsent: Bool = false
     ) {
-        let entry = lock.withLock { () -> Pending? in
-            let entry = pending.removeValue(forKey: id)
+        let entry = state.withLock { state -> Pending? in
+            let entry = state.pending.removeValue(forKey: id)
             if entry == nil, cancelledEarlyIfAbsent {
-                cancelledEarly.insert(id)
+                state.cancelledEarly.insert(id)
             }
             return entry
         }
@@ -197,13 +200,13 @@ public final class AXSubprocessClient: @unchecked Sendable {
     }
 
     private func timedOut(_ id: UInt64) {
-        let isWedged = lock.withLock { () -> Bool in
-            guard pending[id] != nil else { return false }
-            consecutiveTimeouts += 1
-            guard consecutiveTimeouts >= Self.wedgedAfterTimeouts else { return false }
+        let isWedged = state.withLock { state -> Bool in
+            guard state.pending[id] != nil else { return false }
+            state.consecutiveTimeouts += 1
+            guard state.consecutiveTimeouts >= Self.wedgedAfterTimeouts else { return false }
             // The replacement starts its own run; otherwise each timeout it
             // sees counts as the fourth in a row and replaces it again.
-            consecutiveTimeouts = 0
+            state.consecutiveTimeouts = 0
             return true
         }
         finish(id, with: .failure(AXWire.WireError.timedOut))
@@ -214,9 +217,9 @@ public final class AXSubprocessClient: @unchecked Sendable {
 
     /// Routes one reply frame to whoever is waiting for it.
     private func deliver(_ frame: AXReplyFrame) {
-        lock.withLock {
-            consecutiveTimeouts = 0
-            consecutiveExits = 0
+        state.withLock { state in
+            state.consecutiveTimeouts = 0
+            state.consecutiveExits = 0
         }
         switch frame.outcome {
         case let .reply(reply):
@@ -235,10 +238,10 @@ public final class AXSubprocessClient: @unchecked Sendable {
     }
 
     private func restart() {
-        let failed = lock.withLock { () -> [Pending] in
-            tearDownLocked()
-            let failed = Array(pending.values)
-            pending.removeAll()
+        let failed = state.withLock { state -> [Pending] in
+            Self.tearDown(&state)
+            let failed = Array(state.pending.values)
+            state.pending.removeAll()
             return failed
         }
         for entry in failed {
@@ -261,15 +264,14 @@ public final class AXSubprocessClient: @unchecked Sendable {
         return candidates.first { helperIsAvailable(at: $0) }
     }
 
-    /// Returns the running helper's input, launching it if needed. Call with
-    /// lock held.
-    private func ensureStartedLocked() throws -> FileHandle {
-        if let process, process.isRunning, let input {
+    /// Returns the running helper's input, launching it if needed.
+    private func ensureStarted(_ state: inout State) throws -> FileHandle {
+        if let process = state.process, process.isRunning, let input = state.input {
             return input
         }
-        tearDownLocked()
+        Self.tearDown(&state)
 
-        guard !isAbandoned else {
+        guard !state.isAbandoned else {
             throw AXSubprocessError.helperUnavailable("stopped after \(Self.abandonAfterExits) exits in a row")
         }
 
@@ -285,8 +287,7 @@ public final class AXSubprocessClient: @unchecked Sendable {
         process.standardOutput = outputPipe
         let errorPipe = Pipe()
         process.standardError = errorPipe
-        // Called with lock held.
-        helperStandardError.removeAll()
+        state.helperStandardError.removeAll()
         errorPipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
             guard !data.isEmpty else {
@@ -295,10 +296,10 @@ public final class AXSubprocessClient: @unchecked Sendable {
             }
             FileHandle.standardError.write(data)
             guard let self else { return }
-            self.lock.withLock {
-                self.helperStandardError.append(data)
-                if self.helperStandardError.count > Self.standardErrorTailLength {
-                    self.helperStandardError.removeFirst(self.helperStandardError.count - Self.standardErrorTailLength)
+            self.state.withLock { state in
+                state.helperStandardError.append(data)
+                if state.helperStandardError.count > Self.standardErrorTailLength {
+                    state.helperStandardError.removeFirst(state.helperStandardError.count - Self.standardErrorTailLength)
                 }
             }
         }
@@ -314,8 +315,8 @@ public final class AXSubprocessClient: @unchecked Sendable {
         // of throwing, so the request never gets to fail over.
         _ = fcntl(inputPipe.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
 
-        generation &+= 1
-        let readerGeneration = generation
+        state.generation &+= 1
+        let readerGeneration = state.generation
         let output = outputPipe.fileHandleForReading
         let reader = Thread { [weak self] in
             self?.readReplies(from: output, process: process, generation: readerGeneration)
@@ -324,8 +325,8 @@ public final class AXSubprocessClient: @unchecked Sendable {
         reader.qualityOfService = .userInteractive
         reader.start()
 
-        self.process = process
-        input = inputPipe.fileHandleForWriting
+        state.process = process
+        state.input = inputPipe.fileHandleForWriting
         return inputPipe.fileHandleForWriting
     }
 
@@ -350,7 +351,7 @@ public final class AXSubprocessClient: @unchecked Sendable {
         try? output.close()
         // Only the process this reader served may take the state down; a
         // restart may already have launched its replacement.
-        let isCurrent = lock.withLock { generation == readerGeneration }
+        let isCurrent = state.withLock { $0.generation == readerGeneration }
         if isCurrent {
             noteUnexpectedEnd(of: process, unreadableReply: unreadableReply)
             restart()
@@ -375,27 +376,26 @@ public final class AXSubprocessClient: @unchecked Sendable {
         } else {
             "exited with status \(process.terminationStatus)"
         }
-        lock.withLock {
-            let tail = String(decoding: helperStandardError, as: UTF8.self)
+        state.withLock { state in
+            let tail = String(decoding: state.helperStandardError, as: UTF8.self)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .replacingOccurrences(of: "\n", with: " | ")
             let description = tail.isEmpty ? reason : "\(reason); stderr: \(tail)"
-            lastExit = description
-            consecutiveExits += 1
-            if consecutiveExits >= Self.abandonAfterExits {
-                isAbandoned = true
+            state.lastExit = description
+            state.consecutiveExits += 1
+            if state.consecutiveExits >= Self.abandonAfterExits {
+                state.isAbandoned = true
             }
         }
     }
 
-    /// Call with lock held.
-    private func tearDownLocked() {
-        try? input?.close()
-        input = nil
-        if let process, process.isRunning {
+    private static func tearDown(_ state: inout State) {
+        try? state.input?.close()
+        state.input = nil
+        if let process = state.process, process.isRunning {
             process.terminate()
         }
-        process = nil
-        generation &+= 1
+        state.process = nil
+        state.generation &+= 1
     }
 }

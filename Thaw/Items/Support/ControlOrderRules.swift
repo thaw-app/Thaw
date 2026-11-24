@@ -28,6 +28,14 @@ enum ControlOrderRules {
         return RuntimeLayoutCoordinator.visibleControlIsStranded(visible, among: items)
     }
 
+    /// Whether Manual arrangement still re-lays Thaw's controls: its icon is stranded, or the controls stand out of
+    /// order, which leaves the kit reading the bar's weight axis mirrored. Manual seats only the controls.
+    static nonisolated func manualRelaysControls(_ controlItems: ControlItemPair?, among items: [MenuBarItem]) -> Bool {
+        if visibleControlIsStranded(among: items) { return true }
+        guard let controlItems, let visible = items.first(where: { $0.tag.matchesVisibleControlItem }) else { return false }
+        return !controlTrioInCanonicalOrder(alwaysHidden: controlItems.alwaysHidden, hidden: controlItems.hidden, visible: visible)
+    }
+
     /// Whether the three structural controls stand in their canonical
     /// Always-Hidden | Hidden | Visible order. Mid-X compared, so the one-pixel
     /// tie a reflow leaves behind still reads as in order.

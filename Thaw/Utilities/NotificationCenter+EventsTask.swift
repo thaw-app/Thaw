@@ -14,15 +14,20 @@ extension NotificationCenter {
     /// With a `debounce`, a burst of postings runs `body` once, after the burst has been quiet for that long.
     /// The observer belongs to the task: it is added when the task starts and removed when the task ends, so
     /// the caller keeps nothing but the task. A posting that arrives while `body` runs is kept, not dropped.
+    /// `onPost` runs on the main queue for every posting as it arrives, before any debounce.
     @MainActor
     func eventsTask(
         named name: Notification.Name,
         debounce: Duration? = nil,
+        onPost: (@Sendable (Notification) -> Void)? = nil,
         perform body: @escaping @MainActor () async -> Void
     ) -> Task<Void, Never> {
         let (events, continuation) = AsyncStream<Void>.makeStream()
         return Task { @MainActor [self] in
-            let observer = addObserver(forName: name, object: nil, queue: .main) { _ in continuation.yield(()) }
+            let observer = addObserver(forName: name, object: nil, queue: .main) { notification in
+                onPost?(notification)
+                continuation.yield(())
+            }
             defer { removeObserver(observer) }
             if let debounce {
                 for await _ in events.debounce(for: debounce) {

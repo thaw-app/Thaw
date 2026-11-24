@@ -30,7 +30,7 @@ struct MenuBarWallpaperColorMonitorTests {
         monitor.observeSettingsWindowReference(into: &bag)
         #expect(bag.isEmpty)
         monitor.observeSamplingTriggers(into: &bag)
-        #expect(bag.count == 4)
+        #expect(bag.count == 3)
     }
 
     @Test("The menu bar manager forwards the monitor's samples")

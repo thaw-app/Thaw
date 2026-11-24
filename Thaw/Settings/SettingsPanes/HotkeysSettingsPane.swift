@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Algorithms
 import SwiftUI
 import ThawUI
 
@@ -238,27 +239,22 @@ private struct MenuBarItemHotkeyList: View {
     }
 
     private func makeRows() -> [Row] {
-        var rows: [Row] = []
-        var seen = Set<String>()
-
         // By section, reversed so the rightmost item (the clock) comes first.
-        for section in MenuBarSection.Name.allCases {
-            for item in itemManager.managedItems(for: section).reversed()
-                where !item.isControlItem && item.sourcePID != nil
-            {
-                let id = item.uniqueIdentifier
-                guard let hotkey = menuBarManager.itemHotkeys[id], seen.insert(id).inserted else {
-                    continue
-                }
-                rows.append(Row(
-                    id: id,
+        var rows = MenuBarSection.Name.allCases
+            .flatMap { itemManager.managedItems(for: $0).reversed() }
+            .filter { !$0.isControlItem && $0.sourcePID != nil }
+            .uniqued(on: \.uniqueIdentifier)
+            .compactMap { item -> Row? in
+                guard let hotkey = menuBarManager.itemHotkeys[item.uniqueIdentifier] else { return nil }
+                return Row(
+                    id: item.uniqueIdentifier,
                     name: item.displayName,
                     bundle: item.tag.namespace.description,
                     item: item,
                     hotkey: hotkey
-                ))
+                )
             }
-        }
+        let seen = Set(rows.map(\.id))
 
         // Bound items whose app is not running, sorted for a stable order.
         let customNames = Defaults.dictionary(forKey: .menuBarItemCustomNames) as? [String: String] ?? [:]

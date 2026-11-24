@@ -531,8 +531,8 @@ extension MenuBarItemManager {
             guard let appState else { return }
             let situation = structuralNormalizationSituation()
             guard WriteHold.first([.userDragging, .startupSettling, .profileApplying], in: situation) == nil else { return }
-            // Manual arrangement turns this off, except to re-lay a stranded
-            // visible control item, which the user cannot drag back.
+            // Manual arrangement turns this off, except to re-lay stranded or
+            // out-of-order control items, which the user cannot drag back.
             guard manualArrangementAllowsControlRelay else {
                 MenuBarItemManager.diagLog.debug("structural normalization: skipping, manual arrangement is on")
                 return
@@ -1448,7 +1448,6 @@ extension MenuBarItemManager {
         if skipSectionOrderApply(
             controller: controller,
             revealedSection: revealedSection,
-            repairAfterRestriction: false,
             reason: reason
         ) {
             return
@@ -1472,17 +1471,22 @@ extension MenuBarItemManager {
         var didReorder = false
         let experimentalSystemItemHiding = configuration.enableExperimentalSystemItemHiding
 
+        func isStillWanted() -> Bool {
+            SectionOrderPassScope.isStillWanted(
+                isCancelled: Task.isCancelled,
+                startedWhileRevealing: revealedSection,
+                revealedNow: controller.revealedSection
+            )
+        }
+
         for section in sections {
-            guard !Task.isCancelled,
-                  revealedSection == nil || controller.revealedSection == revealedSection
-            else { return }
-            let recordedOrder = if section == .visible, let visibleOrderOverride {
-                visibleOrderOverride
-            } else {
-                controller.sectionItemOrder[section] ?? []
-            }
-            var desiredOrder = recordedOrder
-                .filter { controller.section(for: $0) == section }
+            guard isStillWanted() else { return }
+            var desiredOrder = SectionOrderPassScope.desiredOrder(
+                for: section,
+                recorded: controller.sectionItemOrder[section],
+                visibleOverride: visibleOrderOverride,
+                sectionOf: controller.section(for:)
+            )
             guard desiredOrder.count > 1 else {
                 continue
             }
@@ -1507,9 +1511,7 @@ extension MenuBarItemManager {
             // AX enumeration can finish after a hide cancelled this reveal.
             // Revalidate before the first write, not only in the per-pair loop:
             // a cancelled batch otherwise changes the next reveal's order.
-            guard !Task.isCancelled,
-                  revealedSection == nil || controller.revealedSection == revealedSection
-            else { return }
+            guard isStillWanted() else { return }
 
             // One cursor-free write for the whole section first; the per-pair
             // loop fixes any residue after the agent re-sorts.
@@ -1552,18 +1554,13 @@ extension MenuBarItemManager {
             }
 
             // Confirm each move before it can anchor another; one replan is
-            // allowed after an invalidation. Pairwise mode stops at a blocked
-            // pair because it would pick it again.
-            let usesPlan = Self.usesLCSSectionOrderPlanner
+            // allowed after an invalidation.
             var plannedQueue: LayoutMoveSequenceExecution?
             var replanCount = 0
             let maximumReplans = 1
             let maximumMoves = max(1, desiredOrder.count * 2)
             for _ in 0 ..< maximumMoves {
-                guard !Task.isCancelled else { return }
-                if let revealedSection, controller.revealedSection != revealedSection {
-                    return
-                }
+                guard isStillWanted() else { return }
 
                 // Yield to a waiting user reorder rather than issue more
                 // background pairs. A user pass never yields to itself.
@@ -1575,70 +1572,57 @@ extension MenuBarItemManager {
                 }
 
                 let plannedMove: (item: MenuBarItem, destination: MoveDestination, isBoundary: Bool)
-                if usesPlan {
-                    // Filtered only to build the queue: its moves resolve against liveItems.
-                    if plannedQueue == nil {
-                        let queue = SectionMovePlanning.planSectionMoves(
-                            items: plannableItems(in: liveItems),
-                            desiredOrder: desiredOrder,
-                            section: section,
-                            experimentalSystemItemHiding: experimentalSystemItemHiding,
-                            preferredMoveUIDs: preferredMoveUIDs
-                        )
-                        MenuBarItemManager.diagLog.info(
-                            "macOS 27 section order: planned \(queue.count) move(s) for \(section.logString)"
-                        )
-                        plannedQueue = LayoutMoveSequenceExecution(moves: queue)
-                    }
-                    guard var queue = plannedQueue else { break }
-                    let resolved = SectionMovePlanning.nextResolvedPlannedMove(
-                        from: &queue,
-                        in: liveItems,
-                        controlItems: controlItemPair(in: liveItems)
-                    )
-                    plannedQueue = queue
-                    guard let next = resolved else {
-                        if queue.needsReplan {
-                            guard replanCount < maximumReplans else {
-                                MenuBarItemManager.diagLog.info(
-                                    "macOS 27 section order: invalidated plan stopped in \(section.logString); replan budget exhausted"
-                                )
-                                break
-                            }
-                            replanCount += 1
-                            // A failed drag may have partially displaced the
-                            // bar. Settle and re-read before making a new plan.
-                            do {
-                                try await Task.sleep(for: .milliseconds(120))
-                            } catch {
-                                return
-                            }
-                            liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
-                            plannedQueue = nil
-                            MenuBarItemManager.diagLog.info(
-                                "macOS 27 section order: replanning invalidated sequence in \(section.logString) (\(replanCount)/\(maximumReplans))"
-                            )
-                            continue
-                        }
-                        break
-                    }
-                    plannedMove = next
-                } else {
-                    guard let next = MenuBarLayoutPlannerProvider.current.nextAchievableOrderMove(
+                // Filtered only to build the queue: its moves resolve against liveItems.
+                if plannedQueue == nil {
+                    let queue = SectionMovePlanning.planSectionMoves(
                         items: plannableItems(in: liveItems),
                         desiredOrder: desiredOrder,
-                        experimentalSystemItemHiding: experimentalSystemItemHiding
-                    ) else {
-                        break
-                    }
-                    plannedMove = (next.item, next.destination, false)
+                        section: section,
+                        experimentalSystemItemHiding: experimentalSystemItemHiding,
+                        preferredMoveUIDs: preferredMoveUIDs
+                    )
+                    MenuBarItemManager.diagLog.info(
+                        "macOS 27 section order: planned \(queue.count) move(s) for \(section.logString)"
+                    )
+                    plannedQueue = LayoutMoveSequenceExecution(moves: queue)
                 }
+                guard var queue = plannedQueue else { break }
+                let resolved = SectionMovePlanning.nextResolvedPlannedMove(
+                    from: &queue,
+                    in: liveItems,
+                    controlItems: controlItemPair(in: liveItems)
+                )
+                plannedQueue = queue
+                guard let next = resolved else {
+                    if queue.needsReplan {
+                        guard replanCount < maximumReplans else {
+                            MenuBarItemManager.diagLog.info(
+                                "macOS 27 section order: invalidated plan stopped in \(section.logString); replan budget exhausted"
+                            )
+                            break
+                        }
+                        replanCount += 1
+                        // A failed drag may have partially displaced the
+                        // bar. Settle and re-read before making a new plan.
+                        do {
+                            try await Task.sleep(for: .milliseconds(120))
+                        } catch {
+                            return
+                        }
+                        liveItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
+                        plannedQueue = nil
+                        MenuBarItemManager.diagLog.info(
+                            "macOS 27 section order: replanning invalidated sequence in \(section.logString) (\(replanCount)/\(maximumReplans))"
+                        )
+                        continue
+                    }
+                    break
+                }
+                plannedMove = next
 
                 if let skip = sectionDragSkipReason(
                     plannedMove: plannedMove,
                     isUserInitiated: isUserInitiated,
-                    usesPlan: usesPlan,
-                    repairAfterRestriction: false,
                     liveItems: liveItems,
                     desiredOrder: desiredOrder
                 ) {
@@ -1664,11 +1648,8 @@ extension MenuBarItemManager {
                             "Could not fulfill macOS 27 section order move via preferred positions: " +
                                 "\(plannedMove.item.logString) → \(plannedMove.destination.logString)"
                         )
-                        if usesPlan {
-                            plannedQueue?.invalidate()
-                            continue
-                        }
-                        break
+                        plannedQueue?.invalidate()
+                        continue
                     }
                     plannedQueue?.confirmLastMove()
                     moveFailures.recordSuccess(of: rememberedMove, desiredOrder: desiredOrder)
@@ -1681,11 +1662,8 @@ extension MenuBarItemManager {
                     MenuBarItemManager.diagLog.error(
                         "Failed to apply macOS 27 section order for \(plannedMove.item.logString): \(error)"
                     )
-                    if usesPlan {
-                        plannedQueue?.invalidate()
-                        continue
-                    }
-                    break
+                    plannedQueue?.invalidate()
+                    continue
                 }
 
                 // Resolve the next move against settled geometry. Failed drags
@@ -1696,7 +1674,7 @@ extension MenuBarItemManager {
 
             // Check residue without dragging it. An incomplete plan never
             // reaches this success-path check.
-            if usesPlan, let plannedQueue, plannedQueue.isComplete,
+            if let plannedQueue, plannedQueue.isComplete,
                let residue = MenuBarLayoutPlannerProvider.current.nextAchievableOrderMove(
                    items: plannableItems(in: liveItems),
                    desiredOrder: desiredOrder,
@@ -1722,7 +1700,6 @@ extension MenuBarItemManager {
     private func skipSectionOrderApply(
         controller: any MenuBarSectionControlling,
         revealedSection: MenuBarSection.Name?,
-        repairAfterRestriction: Bool,
         reason: LayoutChangeReason
     ) -> Bool {
         // Also checked here: the opening whole-section write bypasses move(item:to:),
@@ -1740,7 +1717,6 @@ extension MenuBarItemManager {
             isExplicitLayoutEdit: ExplicitLayoutEdit.isActive,
             nativeMenuBarDeferred: barSettling.hold(for: .barMutation) != nil,
             isWithinSettleWindow: barSettling.hold(for: .layoutReorder) != nil,
-            repairAfterRestriction: repairAfterRestriction,
             applicationMenuWrapsPastNotch: {
                 guard let screen = NSScreen.activeMenuBarScreenOrMain,
                       MenuBarCapacitySnapshot.applicationMenuWrapsPastNotch(on: screen)
@@ -1906,8 +1882,6 @@ extension MenuBarItemManager {
     private func sectionDragSkipReason(
         plannedMove: (item: MenuBarItem, destination: MoveDestination, isBoundary: Bool),
         isUserInitiated: Bool,
-        usesPlan: Bool,
-        repairAfterRestriction: Bool,
         liveItems: [MenuBarItem],
         desiredOrder: [String]
     ) -> SectionDragSkip? {
@@ -1918,14 +1892,14 @@ extension MenuBarItemManager {
             destination: plannedMove.destination
         )
         let skip = SectionDragSkip.firstReason(for: SectionDragSkip.Inputs(
-            isParked: !repairAfterRestriction && plannedMove.item.isParkedOffMenuBarBand(among: liveItems),
+            isParked: plannedMove.item.isParkedOffMenuBarBand(among: liveItems),
             isUserInitiated: isUserInitiated,
             breakerTripped: moveFailures.isBreakerTripped(for: rememberedMove),
             hidingUnsupported: plannedMove.item.tag.isHidingUnsupported ||
                 plannedMove.destination.targetItem.tag.isHidingUnsupported,
             agentOwned: plannedMove.item.tag.namespace == .menuBarAgent,
             backingOff: moveFailures.isBackingOff(from: rememberedMove, desiredOrder: desiredOrder),
-            usesPlan: usesPlan
+            usesPlan: true
         ))
         switch skip?.reason {
         case .parked:

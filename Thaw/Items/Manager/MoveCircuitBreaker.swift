@@ -42,12 +42,8 @@ final class MoveCircuitBreaker {
     /// How long without a trip before the backoff resets to the initial value.
     static nonisolated let backoffResetInterval: Duration = .seconds(300)
 
-    private struct Event {
-        let at: ContinuousClock.Instant
-        let signal: Signal
-    }
-
-    private var events: [Event] = []
+    private var storeWrites = TimestampWindow(length: MoveCircuitBreaker.window, expiry: .pastLength)
+    private var failures = TimestampWindow(length: MoveCircuitBreaker.window, expiry: .pastLength)
     private var openUntil: ContinuousClock.Instant?
     private var lastTripAt: ContinuousClock.Instant?
     private var cooldown: Duration = MoveCircuitBreaker.initialCooldown
@@ -63,7 +59,7 @@ final class MoveCircuitBreaker {
     var stateDescription: String {
         let now = ContinuousClock.now
         let openFor = openUntil.map { max(Duration.zero, now.duration(to: $0)) } ?? .zero
-        return "trips=\(trips) open=\(isOpen) openFor=\(openFor) window=\(events.count) cooldown=\(cooldown)"
+        return "trips=\(trips) open=\(isOpen) openFor=\(openFor) window=\(storeWrites.count + failures.count) cooldown=\(cooldown)"
     }
 
     /// Records activity and trips when a limit is crossed. Returns whether the
@@ -71,21 +67,22 @@ final class MoveCircuitBreaker {
     @discardableResult
     func note(_ signal: Signal) -> Bool {
         let now = ContinuousClock.now
-        prune(before: now)
-        events.append(Event(at: now, signal: signal))
+        storeWrites.removeExpired(at: now)
+        failures.removeExpired(at: now)
+        switch signal {
+        case .storeWrite: storeWrites.record(at: now)
+        case .failedVerification: failures.record(at: now)
+        }
         if isOpen {
             return true
         }
 
-        let storeWrites = events.count { $0.signal == .storeWrite }
-        let failures = events.count { $0.signal == .failedVerification }
-
         var reasons = [String]()
-        if storeWrites > Self.storeWriteLimit {
-            reasons.append("\(storeWrites) store writes")
+        if storeWrites.count > Self.storeWriteLimit {
+            reasons.append("\(storeWrites.count) store writes")
         }
-        if failures > Self.failureLimit {
-            reasons.append("\(failures) failed verifications")
+        if failures.count > Self.failureLimit {
+            reasons.append("\(failures.count) failed verifications")
         }
         guard !reasons.isEmpty else { return false }
 
@@ -117,14 +114,11 @@ final class MoveCircuitBreaker {
     /// breaker so automatic passes can resume; the escalated cooldown is kept,
     /// so if the storm returns it backs off for longer than last time.
     func noteUserOverride() {
-        events.removeAll()
+        storeWrites.removeAll()
+        failures.removeAll()
         openUntil = nil
         MenuBarItemManager.diagLog.info(
             "Move circuit breaker cleared by a user move (\(stateDescription))"
         )
-    }
-
-    private func prune(before now: ContinuousClock.Instant) {
-        events.removeAll { now - $0.at > Self.window }
     }
 }

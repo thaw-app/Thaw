@@ -14,13 +14,13 @@ nonisolated struct SyntheticClickBudget {
     static let limit = 12
     static let window: Duration = .seconds(10)
 
-    private var stamps: [ContinuousClock.Instant] = []
+    private var stamps = TimestampWindow(length: Self.window, expiry: .atLength)
 
     /// Spends one click, or returns false when the window is already full.
     mutating func take(now: ContinuousClock.Instant = .now) -> Bool {
-        stamps.removeAll { now - $0 >= Self.window }
+        stamps.removeExpired(at: now)
         guard stamps.count < Self.limit else { return false }
-        stamps.append(now)
+        stamps.record(at: now)
         return true
     }
 }
