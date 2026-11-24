@@ -8,6 +8,7 @@
 import CoreGraphics
 import Foundation
 import MenuBarModel
+import ThawConcurrency
 
 // MARK: - ClickReactionVerifier
 
@@ -105,21 +106,9 @@ nonisolated enum ClickReactionVerifier {
     /// Call after the click is posted and the cursor restored, so the caller's
     /// own overlay work has settled and the signal is the owner's.
     static func verify(against snapshot: Snapshot, budget: Duration = budget) async -> Reaction {
-        let deadline = ContinuousClock.now.advanced(by: budget)
-        while true {
-            if let reaction = observe(snapshot) {
-                return reaction
-            }
-            guard ContinuousClock.now < deadline else {
-                return .unobserved
-            }
-            do {
-                try await Task.sleep(for: pollInterval)
-            } catch {
-                // Cancellation says nothing about the owner.
-                return .unobserved
-            }
-        }
+        // Cancellation says nothing about the owner.
+        let reaction = try? await poll(every: pollInterval, deadline: .now + budget) { observe(snapshot) }
+        return reaction ?? .unobserved
     }
 
     /// verify(against:), then a further lateBudget for a menu that opens late.

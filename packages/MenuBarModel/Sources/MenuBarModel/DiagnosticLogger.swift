@@ -67,24 +67,24 @@ public final class DiagnosticLogger: Sendable {
             .first
     }
 
-    /// The current log file URL, if logging is active.
-    private let currentLogFileLock = OSAllocatedUnfairLock<URL?>(initialState: nil)
-
-    public var currentLogFile: URL? {
-        currentLogFileLock.withLock { $0 }
+    struct FileState {
+        var handle: FileHandle?
+        /// The current log file URL, if logging is active.
+        var url: URL?
+        /// When the current file was opened, for rotation by time.
+        var openedAt: Date?
+        /// The current file's size as this process last knew it, for rotation by size.
+        var size = FileSizeCount()
     }
 
-    /// The file handle for writing.
-    private let fileHandleLock = OSAllocatedUnfairLock<FileHandle?>(initialState: nil)
+    let fileState = Mutex(FileState())
+
+    public var currentLogFile: URL? {
+        fileState.withLock { $0.url }
+    }
 
     /// Set by the app only, so a helper sharing the file never rotates or prunes it.
     let policyLock = OSAllocatedUnfairLock<RotationPolicy?>(initialState: nil)
-
-    /// When the current file was opened, for rotation by time.
-    let segmentOpenedAtLock = OSAllocatedUnfairLock<Date?>(initialState: nil)
-
-    /// The current file's size as this process last knew it, for rotation by size.
-    let fileSizeLock = OSAllocatedUnfairLock(initialState: FileSizeCount())
 
     /// Internal logger for DiagnosticLogger's own messages.
     let osLog = Logger(
@@ -183,9 +183,11 @@ public final class DiagnosticLogger: Sendable {
             return
         }
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
-        fileHandleLock.withLock { $0 = handle }
-        currentLogFileLock.withLock { $0 = fileURL }
-        segmentOpenedAtLock.withLock { $0 = Date() }
+        fileState.withLock { state in
+            state.handle = handle
+            state.url = fileURL
+            state.openedAt = Date()
+        }
 
         // Each process writes its own header into the shared file. The
         // Process line distinguishes them; the per-line timestamps keep
@@ -209,7 +211,7 @@ public final class DiagnosticLogger: Sendable {
         }
         // The file can already hold another process's lines, so start from its real size.
         let size = (try? FileManager.default.attributesOfItem(atPath: fileURL.path)[.size] as? UInt64) ?? 0
-        fileSizeLock.withLock { $0 = FileSizeCount(bytes: size) }
+        fileState.withLock { $0.size = FileSizeCount(bytes: size) }
 
         osLog.info("Diagnostic logging started: \(fileURL.path, privacy: .public)")
 
@@ -217,8 +219,8 @@ public final class DiagnosticLogger: Sendable {
     }
 
     func closeLogFile() {
-        fileHandleLock.withLock { handle in
-            if let handle {
+        fileState.withLock { state in
+            if let handle = state.handle {
                 let ts = Self.timestampStyle.format(Date())
                 let footer = "\n\(ts) [DiagnosticLogger] Diagnostic logging stopped\n"
                 if let data = footer.data(using: .utf8) {
@@ -226,9 +228,9 @@ public final class DiagnosticLogger: Sendable {
                 }
                 try? handle.close()
             }
-            handle = nil
+            state.handle = nil
+            state.url = nil
         }
-        currentLogFileLock.withLock { $0 = nil }
         osLog.info("Diagnostic logging stopped")
     }
 
@@ -260,9 +262,7 @@ public final class DiagnosticLogger: Sendable {
         guard let data = line.data(using: .utf8) else { return }
 
         writeQueue.async { [weak self] in
-            self?.fileHandleLock.withLock { handle in
-                handle?.write(data)
-            }
+            self?.fileState.withLock { $0.handle?.write(data) }
             self?.rotateIfNeeded(afterWriting: UInt64(data.count))
         }
     }

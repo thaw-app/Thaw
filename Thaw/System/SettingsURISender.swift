@@ -49,7 +49,7 @@ nonisolated struct SettingsURISender: Equatable, Sendable {
         guard let bundleIdentifier = plistIdentifier ?? signingIdentifier else {
             return nil
         }
-        let team = teamIsAnchored ? teamIdentifier(inSigningInfo: info) : nil
+        let team = teamIsAnchored ? CodeSignature.teamIdentifier(in: info) : nil
         let hash = (info[kSecCodeInfoUnique as String] as? Data).flatMap { $0.isEmpty ? nil : hexString($0) }
         let name = ["CFBundleDisplayName", "CFBundleName"].firstNonNil { key in
             (plist?[key] as? String).flatMap { $0.isEmpty ? nil : $0 }
@@ -83,50 +83,23 @@ nonisolated struct SettingsURISender: Equatable, Sendable {
         guard SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode else {
             return nil
         }
-        return identity(of: staticCode)
+        return identity(of: CodeSignature(staticCode: staticCode))
     }
 
     /// The identity in the validated signature of the app at url, for an app the user picks by hand.
     static func identify(appAt url: URL) -> SettingsURISender? {
-        var staticCode: SecStaticCode?
-        guard SecStaticCodeCreateWithPath(url as CFURL, [], &staticCode) == errSecSuccess, let staticCode,
-              SecStaticCodeCheckValidity(staticCode, [], nil) == errSecSuccess
-        else {
+        guard let signature = try? CodeSignature(appAt: url), signature.isValid() else {
             return nil
         }
-        return identity(of: staticCode)
+        return identity(of: signature)
     }
 
-    private static func identity(of staticCode: SecStaticCode) -> SettingsURISender? {
-        var info: CFDictionary?
-        guard SecCodeCopySigningInformation(staticCode, SecCSFlags(rawValue: kSecCSSigningInformation), &info) == errSecSuccess, let info = info as? [String: Any]
-        else {
+    private static func identity(of signature: CodeSignature) -> SettingsURISender? {
+        guard let info = try? signature.signingInformation() else {
             return nil
         }
-        let anchored = teamIdentifier(inSigningInfo: info).map { isAnchored(staticCode, toTeam: $0) } ?? false
+        let anchored = CodeSignature.teamIdentifier(in: info).map(signature.isAnchored(toTeam:)) ?? false
         return identity(fromSigningInfo: info, teamIsAnchored: anchored)
-    }
-
-    private static func teamIdentifier(inSigningInfo info: [String: Any]) -> String? {
-        (info[kSecCodeInfoTeamIdentifier as String] as? String).flatMap { $0.isEmpty ? nil : $0 }
-    }
-
-    /// A requirement that only an Apple-issued developer certificate for team satisfies, or nil
-    /// when team isn't a team ID, so nothing a signer wrote can change the requirement's meaning.
-    static func anchoredTeamRequirement(_ team: String) -> String? {
-        guard team.wholeMatch(of: /[A-Z0-9]{10}/) != nil else { return nil }
-        return #"anchor apple generic and certificate leaf[subject.OU] = "\#(team)""#
-    }
-
-    static func isAnchored(_ staticCode: SecStaticCode, toTeam team: String) -> Bool {
-        var requirement: SecRequirement?
-        guard let text = anchoredTeamRequirement(team),
-              SecRequirementCreateWithString(text as CFString, [], &requirement) == errSecSuccess,
-              let requirement
-        else {
-            return false
-        }
-        return SecStaticCodeCheckValidity(staticCode, [], requirement) == errSecSuccess
     }
 
     /// macOS 26 stores the sender PID as a UInt32 on arm64, so any integer type is read raw.

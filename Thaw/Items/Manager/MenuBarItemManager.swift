@@ -1350,21 +1350,16 @@ final class MenuBarItemManager {
         // When any app launches, refresh the cache to detect new menu bar items
         // (e.g., apps with "unremembered" icons that need restoration) and restore
         // any items that moved to incorrect sections after their app restarted.
-        let (launchEvents, launchContinuation) = AsyncStream<Void>.makeStream()
-        let launchTask = Task { @MainActor [weak self] in
-            let observer = NSWorkspace.shared.notificationCenter.addObserver(
-                forName: NSWorkspace.didLaunchApplicationNotification,
-                object: nil,
-                queue: .main
-            ) { [weak self] notification in
-                let bundleID = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
+        let launchTask = NSWorkspace.shared.notificationCenter.eventsTask(
+            named: NSWorkspace.didLaunchApplicationNotification,
+            debounce: .seconds(1),
+            onPost: { [weak self] notification in
                 // Noted as it arrives: the refresh below is debounced, and keeping only the last launch of a
                 // burst lost a tracked relaunch that an unrelated app followed within the second.
+                let bundleID = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
                 MainActor.assumeIsolated { self?.noteAppLaunched(bundleID: bundleID) }
-                launchContinuation.yield()
-            }
-            defer { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
-            for await _ in launchEvents.debounce(for: .seconds(1)) {
+            },
+            perform: { [weak self] in
                 guard self != nil else { return }
                 MenuBarItemManager.diagLog.debug("Refreshing cache for potential new items after app launches")
                 Task { [weak self] in
@@ -1381,7 +1376,7 @@ final class MenuBarItemManager {
                     await self?.cacheItemsIfNeeded()
                 }
             }
-        }
+        )
         registered.insert(AnyCancellable { launchTask.cancel() })
 
         // When any app terminates, refresh the cache (items may have disappeared).

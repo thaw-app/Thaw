@@ -34,10 +34,17 @@ final class ActiveMenuBarDisplayWatcher {
     /// Set by start(), in the +Live file.
     var observationTasks: [Task<Void, Never>] = []
     var idleGateSubscription: AnyCancellable?
-    private var timer: Timer?
+    private lazy var timer = IdleGatedTimer(
+        interval: Self.timerInterval,
+        tolerance: Self.timerTolerance,
+        mode: .default,
+        onResume: nil
+    ) { [weak self] in
+        self?.check()
+    }
 
     var isTimerArmed: Bool {
-        timer != nil
+        timer.isArmed
     }
 
     init(
@@ -49,7 +56,6 @@ final class ActiveMenuBarDisplayWatcher {
     }
 
     isolated deinit {
-        timer?.invalidate()
         observationTasks.forEach { $0.cancel() }
     }
 
@@ -60,20 +66,7 @@ final class ActiveMenuBarDisplayWatcher {
 
     /// Arms or drops the one-second check to match wantsTimer(isNeeded:mayRunIdleWork:).
     func updateTimer() {
-        guard Self.wantsTimer(isNeeded: isNeeded(), mayRunIdleWork: idleGate.mayRunIdleWork) else {
-            timer?.invalidate()
-            timer = nil
-            return
-        }
-        guard timer == nil else { return }
-        let timer = Timer(timeInterval: Self.timerInterval, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.check()
-            }
-        }
-        timer.tolerance = Self.timerTolerance
-        RunLoop.main.add(timer, forMode: .default)
-        self.timer = timer
+        timer.apply(mayRun: Self.wantsTimer(isNeeded: isNeeded(), mayRunIdleWork: idleGate.mayRunIdleWork), resuming: false)
     }
 
     /// Reads the active display and reports a change from the last known one.

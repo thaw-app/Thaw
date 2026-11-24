@@ -47,8 +47,7 @@ final class DisplaySettingsManager {
         didSet {
             guard oldValue != globalConfiguration else { return }
             do {
-                let data = try encoder.encode(globalConfiguration)
-                Defaults.set(data, forKey: .globalDisplayConfiguration)
+                try Defaults.setEncoded(globalConfiguration, forKey: .globalDisplayConfiguration)
                 lastPersistenceFailure = nil
             } catch {
                 diagLog.error("Failed to encode global display configuration: \(error)")
@@ -74,8 +73,7 @@ final class DisplaySettingsManager {
         didSet {
             guard oldValue != knownDisplays else { return }
             do {
-                let data = try encoder.encode(knownDisplays)
-                Defaults.set(data, forKey: .knownDisplays)
+                try Defaults.setEncoded(knownDisplays, forKey: .knownDisplays)
                 lastPersistenceFailure = nil
             } catch {
                 diagLog.error("Failed to encode known display cache: \(error)")
@@ -118,12 +116,6 @@ final class DisplaySettingsManager {
     /// Storage for internal observers.
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
-
-    @ObservationIgnored
-    private let encoder = JSONEncoder()
-
-    @ObservationIgnored
-    private let decoder = JSONDecoder()
 
     /// What active-display spacing changes drive: the spacing manager, settling
     /// and the profile reapply. Set in performSetup; tests pass stand-ins.
@@ -223,32 +215,31 @@ final class DisplaySettingsManager {
     /// Thaw does not overwrite a manual defaults write of NSStatusItemSpacing
     /// and trigger a startup relaunch wave.
     private func loadInitialState() {
-        let persistedData = Defaults.data(forKey: .displayThawBarConfigurations)
-        if let data = persistedData {
-            do {
-                configurations = try decoder.decode([String: DisplayThawBarConfiguration].self, from: data)
+        let hasStoredConfigurations = Defaults.data(forKey: .displayThawBarConfigurations) != nil
+        do {
+            if let stored = try Defaults.decoded([String: DisplayThawBarConfiguration].self, forKey: .displayThawBarConfigurations) {
+                configurations = stored
                 diagLog.info("Loaded per-display configurations for \(configurations.count) display(s)")
-            } catch {
-                diagLog.error("Failed to decode per-display configurations: \(error)")
             }
+        } catch {
+            diagLog.error("Failed to decode per-display configurations: \(error)")
         }
         // Gate seeding on absence of the persisted key rather than an empty
         // in-memory dictionary so a user-initiated reset (which persists an
         // empty dict) is not silently re-seeded from on-disk system spacing.
-        if persistedData == nil {
+        if !hasStoredConfigurations {
             seedConfigurationsFromSystemSpacing()
         }
-        if let data = Defaults.data(forKey: .globalDisplayConfiguration) {
-            do {
-                globalConfiguration = try decoder.decode(DisplayThawBarConfiguration.self, from: data)
+        do {
+            if let stored = try Defaults.decoded(DisplayThawBarConfiguration.self, forKey: .globalDisplayConfiguration) {
+                globalConfiguration = stored
                 diagLog.info("Loaded global display configuration template")
-            } catch {
-                diagLog.error("Failed to decode global display configuration: \(error)")
             }
+        } catch {
+            diagLog.error("Failed to decode global display configuration: \(error)")
         }
-        if let data = Defaults.data(forKey: .knownDisplays) {
-            do {
-                let decoded = try decoder.decode([String: KnownDisplay].self, from: data)
+        do {
+            if let decoded = try Defaults.decoded([String: KnownDisplay].self, forKey: .knownDisplays) {
                 // Drop entries whose name is empty/whitespace, they can be
                 // captured transiently (mirrored slave, GPU sleep) and would
                 // otherwise show up as anonymous rows in the Displays pane.
@@ -261,9 +252,9 @@ final class DisplaySettingsManager {
                 } else {
                     diagLog.info("Loaded known display cache for \(knownDisplays.count) display(s)")
                 }
-            } catch {
-                diagLog.error("Failed to decode known display cache: \(error)")
             }
+        } catch {
+            diagLog.error("Failed to decode known display cache: \(error)")
         }
         Defaults.ifPresent(key: .confirmSpacingRelaunch, assign: &confirmSpacingRelaunch)
         if let raw = Defaults.string(forKey: .unconfirmedSpacingProfileScope),
@@ -313,8 +304,7 @@ final class DisplaySettingsManager {
         guard seeded != configurations else { return }
         configurations = seeded
         do {
-            let data = try encoder.encode(seeded)
-            Defaults.set(data, forKey: .displayThawBarConfigurations)
+            try Defaults.setEncoded(seeded, forKey: .displayThawBarConfigurations)
             diagLog.info(
                 "Seeded itemSpacingOffset=\(offset) from external NSStatusItemSpacing=\(onDisk) for \(seeded.count) display(s)"
             )
@@ -331,8 +321,7 @@ final class DisplaySettingsManager {
     /// didSet.
     private func persistConfigurations() {
         do {
-            let data = try encoder.encode(configurations)
-            Defaults.set(data, forKey: .displayThawBarConfigurations)
+            try Defaults.setEncoded(configurations, forKey: .displayThawBarConfigurations)
             lastPersistenceFailure = nil
         } catch {
             diagLog.error("Failed to encode per-display configurations: \(error)")

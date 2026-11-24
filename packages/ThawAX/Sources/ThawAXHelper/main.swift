@@ -16,19 +16,19 @@ import ThawAXCore
 
 let input = FileHandle.standardInput
 let output = FileHandle.standardOutput
-let writeLock = NSLock()
-let writerFailed = Atomic<Bool>(false)
+/// Serializes reply writes; the value records whether one has failed.
+let writerFailed = Mutex(false)
 
 let scheduler = AXLaneScheduler(
     serve: { AXReader.serve($0) },
     emit: { frame in
-        writeLock.lock()
-        defer { writeLock.unlock() }
-        do {
-            try AXWire.write(frame, to: output)
-        } catch {
-            // The app has gone; nothing left to answer.
-            if writerFailed.compareExchange(expected: false, desired: true, ordering: .acquiringAndReleasing).exchanged {
+        writerFailed.withLock { failed in
+            do {
+                try AXWire.write(frame, to: output)
+            } catch {
+                // The app has gone; nothing left to answer.
+                guard !failed else { return }
+                failed = true
                 FileHandle.standardError.write(Data("ThawAXHelper: failed to write reply: \(error)\n".utf8))
                 exit(0)
             }
