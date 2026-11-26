@@ -26,6 +26,8 @@ final class MenuBarSearchModel {
     var editingItemTag: MenuBarItemTag?
     var editingItemWindowID: CGWindowID?
     var editingName: String = ""
+    /// Bumped when an item is renamed, so the view reruns the search against the new name.
+    var renameCount = 0
 
     @ObservationIgnored
     private var cancellables = Set<AnyCancellable>()
@@ -43,14 +45,12 @@ final class MenuBarSearchModel {
     private func configureCancellables(with panel: MenuBarSearchPanel) {
         var c = Set<AnyCancellable>()
 
-        Publishers.CombineLatest(
-            panel.publisher(for: \.screen),
-            panel.publisher(for: \.isVisible)
+        Self.captureScreens(
+            screen: panel.publisher(for: \.screen),
+            isVisible: panel.publisher(for: \.isVisible),
+            scheduler: DispatchQueue.main,
+            delay: .milliseconds(100)
         )
-        .compactMap { screen, isVisible in
-            isVisible ? screen : nil
-        }
-        .debounce(for: 0.1, scheduler: DispatchQueue.main)
         .sink { [weak self] screen in
             self?.updateAverageColorInfo(for: screen)
         }
@@ -73,6 +73,19 @@ final class MenuBarSearchModel {
             .store(in: &c)
 
         cancellables = c
+    }
+
+    /// The screen to capture once screen and visibility have held together for delay, so a quick close cancels it.
+    nonisolated static func captureScreens<Screen, S: Scheduler>(
+        screen: some Publisher<Screen?, Never>,
+        isVisible: some Publisher<Bool, Never>,
+        scheduler: S,
+        delay: S.SchedulerTimeType.Stride
+    ) -> AnyPublisher<Screen, Never> {
+        Publishers.CombineLatest(screen, isVisible)
+            .debounce(for: delay, scheduler: scheduler)
+            .compactMap { screen, isVisible in isVisible ? screen : nil }
+            .eraseToAnyPublisher()
     }
 
     /// Clears averageColorInfo and invalidates any in-flight capture.
