@@ -388,7 +388,9 @@ jobs:
           target_commitish: main
           files: ${{ steps.update-assets.outputs.files }}
           generate_release_notes: false
-          draft: ${{ !inputs.publish_release }}
+          # thaw-app/updates has immutable releases, which take no assets once published.
+          # Publish updates release below publishes it after the uploads.
+          draft: true
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
           body: |
             Sparkle update payloads for Thaw `${{ steps.meta.outputs.tag }}`.
@@ -437,6 +439,18 @@ jobs:
           # attached, so an unattested release can't ship.
           draft: true
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
+
+      # Before the appcast, so its enclosure URLs resolve once it goes out.
+      - name: Publish updates release
+        if: ${{ inputs.publish_release && !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.UPDATES_GITHUB_TOKEN }}
+          GH_REPO: ${{ env.UPDATES_REPOSITORY }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release edit "$TAG" --draft=false
+          echo "Published updates release ${TAG} on ${GH_REPO}"
 
       - name: Publish appcast to updates gh-pages
         if: ${{ inputs.publish_appcast && inputs.publish_release && !inputs.dry_run }}
