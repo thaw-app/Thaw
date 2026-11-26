@@ -125,3 +125,12 @@ private struct DisplayIdentifyCard: View {
         .accessibilityHidden(true)
     }
 }
+
+#if DEBUG
+    /// The card Identify flashes, without putting a panel on any display.
+    #Preview("Identify card") {
+        DisplayIdentifyCard(number: 2, name: "Studio Display")
+            .frame(width: 320, height: 132)
+            .padding()
+    }
+#endif
