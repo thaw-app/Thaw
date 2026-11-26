@@ -467,7 +467,7 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         var candidate: CGRect?
         var settledCount = 0
         for _ in 0 ..< 10 {
-            guard ContinuousClock.now < deadline else { return }
+            guard !Task.isCancelled, ContinuousClock.now < deadline else { return }
             if let latest = read() {
                 if latest == candidate {
                     settledCount += 1

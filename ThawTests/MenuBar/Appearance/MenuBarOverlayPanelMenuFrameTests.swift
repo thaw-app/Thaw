@@ -68,6 +68,15 @@ struct MenuBarOverlayPanelMenuFrameTests {
         #expect(run.reads == 1)
     }
 
+    @Test("A task cancelled before its first read reads nothing")
+    func cancelledTaskReadsNothing() async {
+        let task = Task { await Run([Self.narrow]) }
+        task.cancel()
+        let run = await task.value
+        #expect(run.reads == 0)
+        #expect(run.published.isEmpty)
+    }
+
     @Test("Nothing is read once the deadline has passed")
     func pastDeadlineReadsNothing() async {
         let run = await Run([Self.narrow], deadline: .now - .seconds(1))

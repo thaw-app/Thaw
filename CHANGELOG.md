@@ -27,10 +27,10 @@ the items under New and Fixed.
 ### Fixed
 
 - **The VPN trigger sees VPNs that bring up their own tunnel,** such as OpenVPN Connect, instead of showing them as inactive.
-- **Opening the Thaw Bar shows a loading message while its icons are captured,** instead of briefly showing app icons.
+- **Opening the Thaw Bar shows a loading message for a row whose icons aren't captured yet,** instead of briefly showing app icons.
 - **A Thaw Bar with its own tint no longer hides its items,** because the tint now colors the bar behind them.
 - **Moving an icon into an empty Always Hidden section works again,** even when the divider style is set to None.
-- **Switching apps no longer makes Thaw stall** while it reads where the new app's menus end.
+- **Switching apps no longer makes Thaw retry back to back** when it can't read where the new app's menus end.
 - **Renaming an item during a search drops it from the results** when the new name no longer matches.
 - **Closing search right after opening it no longer captures the screen.**
 
