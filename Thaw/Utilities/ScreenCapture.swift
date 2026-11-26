@@ -121,8 +121,8 @@ nonisolated enum ScreenCapture {
         guard #available(macOS 26.0, *) else {
             // With nil bounds the window server sizes the capture from other
             // apps' windows, which the #759 guard in captureWindowsImage never
-            // sees, so check their union here as SCK does. Passing the union
-            // as explicit bounds instead returns transparent images on macOS 15.
+            // sees, so check their union here as SCK does. The capture itself
+            // keeps nil bounds, the arguments tested on macOS 15.
             if screenBounds == nil {
                 let union = windowIDs.reduce(CGRect.null) { union, windowID in
                     Bridging.getWindowBounds(for: windowID).map(union.union) ?? union
