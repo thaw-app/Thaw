@@ -126,11 +126,7 @@ final class MenuBarSearchPanel: NSPanel {
         Defaults.set(names, forKey: .menuBarItemCustomNames)
         // Renaming is the only thing that changes a name while the panel is open.
         ItemNameCache.clear()
-        // Rows read names from Defaults, which Observation doesn't track.
-        // Writing displayedItems back unchanged still fires withMutation,
-        // so rows re-render. The local keeps it from reading as x = x.
-        let itemsToRerender = model.displayedItems
-        model.displayedItems = itemsToRerender
+        model.renameCount += 1
     }
 
     /// The default screen to show the panel on.
@@ -469,6 +465,12 @@ private struct MenuBarSearchContentView: View {
             .onChange(of: model.searchText, initial: true) {
                 updateDisplayedItems()
                 selectFirstDisplayedItem()
+            }
+            .onChange(of: model.renameCount) {
+                // Rows read names from Defaults, which Observation doesn't track, and the
+                // new name can drop the item from the results.
+                updateDisplayedItems()
+                ensureValidSelection()
             }
             .onChange(of: itemManager.itemCache, initial: true) {
                 // A new cache can name an item whose source process resolved

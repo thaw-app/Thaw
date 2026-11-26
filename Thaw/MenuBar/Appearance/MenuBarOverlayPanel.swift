@@ -39,25 +39,13 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
         /// Setting the task cancels the previous task for the flag, if there is one.
         ///
         /// flag: The update flag to set the task for.
-        /// timeout: The timeout of the task.
         /// operation: The operation for the task to perform.
         func setTask(
             for flag: UpdateFlag,
-            timeout: Duration,
             operation: @escaping @Sendable () async throws -> Void
         ) {
             cancelTask(for: flag)
-            tasks[flag] = Self.runWithTimeout(timeout: timeout, operation: operation)
-        }
-
-        private static func runWithTimeout(
-            timeout: Duration,
-            operation: @escaping @Sendable () async throws -> Void
-        ) -> Task<Void, Error> {
-            Task {
-                try await operation()
-                try? await Task.sleep(for: timeout)
-            }
+            tasks[flag] = Task { try await operation() }
         }
 
         /// Cancels the task for the given update flag.
@@ -204,39 +192,12 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             guard let self else {
                 return
             }
-            updateTaskContext.setTask(
-                for: .applicationMenuFrame,
-                timeout: .seconds(10)
-            ) { @MainActor [weak self] in
-                var candidate: CGRect?
-                var settledCount = 0
-                for i in 0 ..< 10 {
-                    do {
-                        try Task.checkCancellation()
-                    } catch {
-                        return
-                    }
-                    guard let self else { return }
-                    let latest = self.owningScreen
-                        .getApplicationMenuFrame(bypassCache: true)
-                    guard let latest else { continue }
-                    let isFirst = i == 0
-                    var changed = true
-                    if let c = candidate {
-                        changed = latest != c
-                    }
-                    if isFirst || changed {
-                        self.applicationMenuFrame = latest
-                        candidate = latest
-                        settledCount = 0
-                    } else {
-                        settledCount += 1
-                        if settledCount >= 3 {
-                            return
-                        }
-                    }
-                    try? await Task.sleep(for: .milliseconds(100))
-                }
+            updateTaskContext.setTask(for: .applicationMenuFrame) { @MainActor [weak self] in
+                await Self.settleApplicationMenuFrame(
+                    deadline: .now + .seconds(10),
+                    read: { self?.owningScreen.getApplicationMenuFrame(bypassCache: true) },
+                    publish: { self?.applicationMenuFrame = $0 }
+                )
             }
             Task {
                 try? await Task.sleep(for: .milliseconds(100))
@@ -493,6 +454,36 @@ final class MenuBarOverlayPanel: NSPanel, @unchecked Sendable {
             )
         }
         return stranded
+    }
+
+    /// Publishes each new application menu frame until one holds for three more reads. Waits after
+    /// every read, failed ones too, and stops after ten reads, at the deadline or on cancellation.
+    static func settleApplicationMenuFrame(
+        deadline: ContinuousClock.Instant,
+        read: () -> CGRect?,
+        publish: (CGRect) -> Void,
+        wait: () async throws -> Void = { try await Task.sleep(for: .milliseconds(100)) }
+    ) async {
+        var candidate: CGRect?
+        var settledCount = 0
+        for _ in 0 ..< 10 {
+            guard !Task.isCancelled, ContinuousClock.now < deadline else { return }
+            if let latest = read() {
+                if latest == candidate {
+                    settledCount += 1
+                    if settledCount >= 3 { return }
+                } else {
+                    publish(latest)
+                    candidate = latest
+                    settledCount = 0
+                }
+            }
+            do {
+                try await wait()
+            } catch {
+                return
+            }
+        }
     }
 
     /// The pure decision behind isStrandedOnInactiveSpace. A panel is stranded
