@@ -39,6 +39,16 @@ struct AXSubprocessClientTests {
             return text.split(separator: "\n").count
         }
 
+        /// Waits until the helper has logged that many launches. A helper takes a while to start on a
+        /// busy machine, longer than a short request timeout, and one replaced before it has started
+        /// never logs a launch. Gives up after five seconds so a helper that never starts fails the test.
+        func waitForLaunches(_ count: Int) async throws {
+            let deadline = ContinuousClock.now + .seconds(5)
+            while launches < count, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+        }
+
         func remove() {
             try? FileManager.default.removeItem(at: directory)
         }
@@ -52,10 +62,17 @@ struct AXSubprocessClientTests {
         defer { client.stop() }
 
         // Three timeouts in a row replace the first helper. The fourth and
-        // fifth go to its replacement, which has timed out only twice.
-        for _ in 0 ..< 5 {
+        // fifth go to its replacement, which has timed out only twice. Each
+        // helper is given time to start after its first request, so a slow
+        // start is not mistaken for a helper that was never launched.
+        for request in 0 ..< 5 {
             await #expect(throws: AXWire.WireError.timedOut) {
                 _ = try await client.send(.hitTest(x: 0, y: 0), timeoutSeconds: 0.05)
+            }
+            if request == 0 {
+                try await helper.waitForLaunches(1)
+            } else if request == 3 {
+                try await helper.waitForLaunches(2)
             }
         }
         try await Task.sleep(for: .milliseconds(200))
