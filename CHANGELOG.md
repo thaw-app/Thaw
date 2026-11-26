@@ -24,6 +24,12 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+## [2.2.0-rc.1] - 2026-11-25
+
+**macOS 15 and 26 · Build 66**
+
+The release candidate for 2.2.0, with seven fixes and nothing new. Your settings carry over.
+
 ### Fixed
 
 - **The VPN trigger sees VPNs that bring up their own tunnel,** such as OpenVPN Connect, instead of showing them as inactive.
