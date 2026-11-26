@@ -76,7 +76,7 @@ extension MenuBarItemManager {
             .controlItem(withName: .hidden)?.window
             .flatMap { CGWindowID(exactly: $0.windowNumber) }
         let alwaysHiddenWID: CGWindowID? = appState.menuBarManager
-            .controlItem(withName: .alwaysHidden)?.window
+            .controlItem(withName: .alwaysHidden)?.menuBarWindow
             .flatMap { CGWindowID(exactly: $0.windowNumber) }
 
         guard let controlItems = ControlItemPair(
@@ -260,7 +260,7 @@ extension MenuBarItemManager {
             .controlItem(withName: .hidden)?.window
             .flatMap { CGWindowID(exactly: $0.windowNumber) }
         let refreshAlwaysHiddenWID: CGWindowID? = appState.menuBarManager
-            .controlItem(withName: .alwaysHidden)?.window
+            .controlItem(withName: .alwaysHidden)?.menuBarWindow
             .flatMap { CGWindowID(exactly: $0.windowNumber) }
         guard let refreshedControls = ControlItemPair(
             items: &refreshedItems,
@@ -353,7 +353,7 @@ extension MenuBarItemManager {
             .controlItem(withName: .hidden)?.window
             .flatMap { CGWindowID(exactly: $0.windowNumber) }
         let alwaysHiddenWID: CGWindowID? = appState.menuBarManager
-            .controlItem(withName: .alwaysHidden)?.window
+            .controlItem(withName: .alwaysHidden)?.menuBarWindow
             .flatMap { CGWindowID(exactly: $0.windowNumber) }
 
         guard let controlItems = ControlItemPair(

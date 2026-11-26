@@ -340,7 +340,7 @@ extension MenuBarItemManager {
         let hiddenControlItemWindowNumber = appState?.menuBarManager
             .controlItem(withName: .hidden)?.window?.windowNumber
         let alwaysHiddenControlItemWindowNumber = appState?.menuBarManager
-            .controlItem(withName: .alwaysHidden)?.window?.windowNumber
+            .controlItem(withName: .alwaysHidden)?.menuBarWindow?.windowNumber
         let hiddenControlItemWID = hiddenControlItemWindowNumber.flatMap {
             Self.authoritativeControlItemWindowID(windowNumber: $0)
         }

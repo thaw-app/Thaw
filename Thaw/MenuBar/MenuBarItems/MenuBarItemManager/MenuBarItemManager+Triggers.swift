@@ -286,7 +286,7 @@ extension MenuBarItemManager {
             .controlItem(withName: .hidden)?.window
             .flatMap { CGWindowID(exactly: $0.windowNumber) }
         let alwaysHiddenControlItemWID: CGWindowID? = appState.menuBarManager
-            .controlItem(withName: .alwaysHidden)?.window
+            .controlItem(withName: .alwaysHidden)?.menuBarWindow
             .flatMap { CGWindowID(exactly: $0.windowNumber) }
 
         guard let controlItems = ControlItemPair(

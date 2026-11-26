@@ -254,6 +254,14 @@ final class ControlItem {
         statusItem.isVisible
     }
 
+    /// The control item's window while the item is in the menu bar.
+    ///
+    /// Before macOS 26 a removed status item (a disabled section's divider)
+    /// keeps its window, which must not be read as a live section boundary.
+    var menuBarWindow: NSWindow? {
+        isAddedToMenuBar ? window : nil
+    }
+
     var sectionName: MenuBarSection.Name {
         switch identifier {
         case .visible: .visible
