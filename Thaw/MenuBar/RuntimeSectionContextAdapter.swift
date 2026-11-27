@@ -364,6 +364,8 @@ extension RuntimeSectionContextAdapter {
         await RevealTurns.reconcileBoundaries(revealing: section, cause: revealAttribution.reconcileCause, on: itemManager)
     }
 
+    func refreshLayoutAfterReveal() { RevealTurns.refreshLayout(on: appState) }
+
     func prepareRevealedOrder() {
         appState?.itemManager.prepareReveal(cause: revealAttribution.preRevealCause)
     }
