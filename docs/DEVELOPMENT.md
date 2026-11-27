@@ -1,6 +1,6 @@
 # Developing Thaw
 
-Contribution requirements, review expectations, and security reporting are in the shared [Thaw/Floe policies](https://github.com/thaw-app/.github).
+Contribution requirements, review expectations, and security reporting are in the shared [organization policies](https://github.com/thaw-app/.github).
 
 ## Requirements
 
