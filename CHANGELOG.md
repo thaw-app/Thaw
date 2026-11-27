@@ -40,6 +40,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- Switching away from Thaw no longer logs an NSMenu assertion failure.
 - Thaw Bar pictures of hidden items are taken once the item has finished sliding in, so fewer come out cut in half.
 - Menu bar apps that start or quit while Thaw runs are picked up right away, even those without a Dock icon.
 - With the arrangement set to Manual, items you put in Visible stay there when Thaw starts.
