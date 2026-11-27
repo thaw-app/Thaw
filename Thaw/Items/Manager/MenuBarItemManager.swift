@@ -1347,70 +1347,7 @@ final class MenuBarItemManager {
         AnyCancellable { groupOrderTask.cancel() }
             .store(in: &registered)
 
-        // When any app launches, refresh the cache to detect new menu bar items
-        // (e.g., apps with "unremembered" icons that need restoration) and restore
-        // any items that moved to incorrect sections after their app restarted.
-        let launchTask = NSWorkspace.shared.notificationCenter.eventsTask(
-            named: NSWorkspace.didLaunchApplicationNotification,
-            debounce: .seconds(1),
-            onPost: { [weak self] notification in
-                // Noted as it arrives: the refresh below is debounced, and keeping only the last launch of a
-                // burst lost a tracked relaunch that an unrelated app followed within the second.
-                let bundleID = (notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.bundleIdentifier
-                MainActor.assumeIsolated { self?.noteAppLaunched(bundleID: bundleID) }
-            },
-            perform: { [weak self] in
-                guard self != nil else { return }
-                MenuBarItemManager.diagLog.debug("Refreshing cache for potential new items after app launches")
-                Task { [weak self] in
-                    await self?.cacheItemsRegardless()
-                    // Many apps register their NSStatusItem more than 1s after
-                    // didLaunch fires, so the initial cache pass above sees no
-                    // new window IDs and relocateNewLeftmostItems no-ops. Re-check
-                    // at +2.5s and +5s to catch late arrivals; cacheItemsIfNeeded
-                    // bails when window IDs are unchanged, so this is cheap when
-                    // the item already showed up on the first pass.
-                    try? await Task.sleep(for: .seconds(2.5))
-                    await self?.cacheItemsIfNeeded()
-                    try? await Task.sleep(for: .seconds(2.5))
-                    await self?.cacheItemsIfNeeded()
-                }
-            }
-        )
-        registered.insert(AnyCancellable { launchTask.cancel() })
-
-        // When any app terminates, refresh the cache (items may have disappeared).
-        // Undebounced first: drop the terminated process's memoized icon before
-        // anything can answer from it, so relaunching an app re-reads the icon
-        // rather than serving the dead process's copy.
-        NSWorkspace.shared.notificationCenter.publisher(
-            for: NSWorkspace.didTerminateApplicationNotification
-        )
-        .compactMap { $0.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication }
-        .sink { [weak self] app in
-            OverflowFallbackIcon.forgetIcon(forPID: app.processIdentifier)
-            // Immediate purge: the terminated app's items
-            // leave the cache the moment the workspace reports the exit, so
-            // the layout editor's rows vanish with it instead of waiting
-            // for the debounced rebuild. NSWorkspace posts on the main
-            // thread, so the manager state is safe to touch here.
-            MainActor.assumeIsolated {
-                self?.purgeItemsOwnedBy(app)
-            }
-        }
-        .store(in: &registered)
-
-        let terminateTask = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.didTerminateApplicationNotification, debounce: .seconds(1)) { [weak self] in
-            guard let self else { return }
-            MenuBarItemManager.diagLog.debug("App terminated, refreshing cache")
-            // Unconditional, like the launch path. cacheItemsIfNeeded is
-            // gated on the WindowServer menu bar window list, and an item
-            // published only as an AXExtrasMenuBar child owns no window, so
-            // its app can quit without moving that list and its row would
-            // outlive the owner.
-            await self.cacheItemsRegardless()
-        }
-        registered.insert(AnyCancellable { terminateTask.cancel() })
+        registered.insert(watchAppLaunchesAndExits())
 
         let activateTask = NSWorkspace.shared.notificationCenter.eventsTask(named: NSWorkspace.didActivateApplicationNotification, debounce: .seconds(0.5)) { [weak self] in
             guard let self else { return }
