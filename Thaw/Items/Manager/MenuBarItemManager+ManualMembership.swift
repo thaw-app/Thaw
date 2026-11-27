@@ -44,13 +44,32 @@ extension MenuBarItemManager {
         )
     }
 
+    /// Runs on quit and restart before Thaw's controls are torn down, since the saved dividers are read from them.
+    func prepareForTermination() async {
+        _ = await restoreBlockedItemsToVisible()
+        recordBarAtQuit()
+    }
+
+    /// Saves the stored weights in Manual so the next launch can adopt what was ⌘-dragged while Thaw was off.
+    private func recordBarAtQuit() {
+        guard arrangementIsManual, let observed = currentObservedMembership(),
+              case let .ordered(dividers) = observed.reading
+        else {
+            ObservedMembership.BarAtQuit.clear()
+            return
+        }
+        ObservedMembership.BarAtQuit(candidates: observed.candidates, dividers: dividers).save()
+    }
+
     /// Adopt divider-weight membership without moving items: Manual after drags, mode switches, and launch; Automatic only after user drags.
     /// Leave unweighted, unhideable, Thaw Bar Only, and divider-slot items unchanged.
-    /// keepingAuthored only places items that have no section yet. After a drag, only items it carried across a divider move.
+    /// keepingAuthored only places items that have no section yet, or that crossed a divider since lastSeen.
+    /// After a drag, only items it carried across a divider move.
     func adoptObservedMembership(
         reason: String,
         afterUserDrag: Bool = false,
         keepingAuthored: Bool = false,
+        movedSince lastSeen: ObservedMembership.DragBaseline? = nil,
         alwaysHiddenShownAtDrop: Bool? = nil
     ) {
         guard arrangementIsManual || afterUserDrag, let appState, let observed = currentObservedMembership() else { return }
@@ -76,6 +95,7 @@ extension MenuBarItemManager {
         let moves = observed.reading.moves(
             for: observed.candidates,
             keepingAuthored: keepingAuthored,
+            movedSince: lastSeen,
             since: baseline,
             pressed: afterUserDrag ? dragMembership.pressed : nil,
             alwaysHiddenShownAtDrop: alwaysHiddenShownAtDrop

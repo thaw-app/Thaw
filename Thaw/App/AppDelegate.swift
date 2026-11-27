@@ -178,7 +178,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         appState.diagLog.info("Application asked to terminate \(QuitRequestSource.current()) - restoring blocked items asynchronously")
 
         Task { @MainActor in
-            _ = await appState.itemManager.restoreBlockedItemsToVisible()
+            await appState.itemManager.prepareForTermination()
             guard terminationAttemptID == attemptID else {
                 return
             }
