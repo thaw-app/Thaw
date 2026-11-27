@@ -253,9 +253,16 @@ final class SystemExtraTakeoverCoordinator {
     private func retire(_ standInID: String, returningTo originalID: String) {
         guard let controller else { return }
         let section = controller.authoredSection(for: standInID)
-        controller.setSection(section, identifier: originalID)
+        // Setting a section moves the item to the end of it, even the one it is in.
+        if controller.authoredSection(for: originalID) != section {
+            controller.setSection(section, identifier: originalID)
+        }
         for (orderSection, identifiers) in controller.sectionItemOrder where identifiers.contains(standInID) {
-            controller.setSectionOrder(identifiers.filter { $0 != standInID }, for: orderSection)
+            // The original takes the stand-in's slot.
+            let order = orderSection == section
+                ? identifiers.filter { $0 != originalID }.map { $0 == standInID ? originalID : $0 }
+                : identifiers.filter { $0 != standInID }
+            controller.setSectionOrder(order, for: orderSection)
         }
     }
 

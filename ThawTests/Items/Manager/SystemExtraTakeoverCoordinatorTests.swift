@@ -371,7 +371,7 @@ struct ModuleStandInCoordinatorTests {
         #expect(rig.fake.opens.isEmpty)
         #expect(rig.sections.writes == [
             .section(.alwaysHidden, original),
-            .order(["a", "b"], .alwaysHidden),
+            .order(["a", original, "b"], .alwaysHidden),
         ])
     }
 
@@ -394,7 +394,28 @@ struct ModuleStandInCoordinatorTests {
 
         #expect(process.terminateCalls == 1)
         #expect(rig.launcher.placed.isEmpty)
-        #expect(rig.sections.writes.suffix(2) == [.section(.hidden, original), .order([original], .hidden)])
+        #expect(rig.sections.writes.last == .order([original], .hidden))
+        #expect(!rig.sections.writes.contains(.section(.hidden, original)), "already Hidden")
+    }
+
+    @Test("A retired stand-in's original takes the slot the stand-in was moved to")
+    func retiredOriginalTakesTheStandInSlot() async throws {
+        let rig = rig()
+        let standIn = TakeoverRig.standInID(.focus)
+        let original = TakeoverRig.moduleID(TakeoverRig.focus)
+        rig.sections.sectionAssignment[original] = .hidden
+        rig.sections.sectionItemOrder[.hidden] = [original]
+        rig.start()
+        await settle { rig.fake.startedProcesses.count == 1 }
+        await rig.drain()
+        let process = try #require(rig.fake.startedProcesses.only)
+        rig.sections.setSectionOrder([standIn, "other", original], for: .hidden)
+
+        rig.settings.enableModuleStandIns = false
+        await settle { process.terminateCalls > 0 }
+        await rig.drain()
+
+        #expect(rig.sections.sectionItemOrder[.hidden] == [original, "other"])
     }
 
     @Test("A running module stand-in names its original as replaced, and a stopped one does not")
