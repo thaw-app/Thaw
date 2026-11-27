@@ -279,8 +279,9 @@ extension MenuBarItemImageCache {
             concealedIdentifiers: concealedIdentifiers,
             forgivenTags: forgivenTags,
             geometryOwners: geometryOwners,
-            // A hidden section the user opened was put back on the bar the same way a capture's reveal is.
-            seatsOnDrawnBar: section != .visible
+            // MenuBarAgent can draw a visible item away from the frame its app reports too, and a crop
+            // there shows a neighbour's icon.
+            seatsOnDrawnBar: true
         )
         if !captureResult.unreadable.isEmpty {
             MenuBarItemImageCache.diagLog.debug(

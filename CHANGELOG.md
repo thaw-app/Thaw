@@ -52,6 +52,7 @@ the items under New and Fixed.
 - Closing Settings no longer sends What's New or Credits behind other apps.
 - With the arrangement set to Manual, Sound and Wi-Fi can be moved in the Layout bar again.
 - Item pictures saved by earlier builds are taken again, so a cut-off or wrong picture no longer survives relaunches.
+- Visible items no longer show another app's icon in Layout when macOS draws them away from where their app says they are.
 
 ### Thanks
 
