@@ -279,7 +279,8 @@ enum AudioDevices {
         let pointer = UnsafeMutablePointer<T>.allocate(capacity: count)
         defer { pointer.deallocate() }
         guard AudioObjectGetPropertyData(object, &address, 0, nil, &size, pointer) == noErr else { return [] }
-        return Array(UnsafeBufferPointer(start: pointer, count: count))
+        // A device unplugged between the two calls shrinks the reply; only what was written is read.
+        return Array(UnsafeBufferPointer(start: pointer, count: min(count, Int(size) / MemoryLayout<T>.stride)))
     }
 
     private static func string(_ object: AudioObjectID, _ selector: AudioObjectPropertySelector) -> String? {
