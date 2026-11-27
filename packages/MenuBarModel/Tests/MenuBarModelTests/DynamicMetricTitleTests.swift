@@ -315,3 +315,26 @@ struct DynamicMetricTitleTests {
         #expect(canonical == ["com.microsoft.Outlook:Team sync"])
     }
 }
+
+@Suite("iStat Menus weekday clocks")
+struct IStatWeekdayClockTitleTests {
+    @Test(
+        "A weekday clock keeps one live and saved identity",
+        arguments: ["Mon, 0:00", "Tue, 12:00", "Wed, 9:41 AM", "Thu, 9:41 PM", "Fri, 23:59", "Sat, 0:00", "Sun, 11:59"]
+    )
+    func weekdayClockKeepsOneIdentity(_ title: String) {
+        let bundle = MenuBarItemTag.iStatMenusStatusBundleID
+        let tag = MenuBarItemTag(namespace: .string(bundle), title: title)
+        #expect(tag.tagIdentifier == "\(bundle):#, #:#")
+        #expect(MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):\(title)") == tag.tagIdentifier)
+    }
+
+    @Test("Saved weekday aliases collapse and other item identities stay distinct")
+    func savedWeekdayClockVariantsCollapse() {
+        let bundle = MenuBarItemTag.iStatMenusStatusBundleID
+        let saved = ["Fri, #:#", "Sat, #:#", "Sun, #:#", "Mon, #:#", "#, #:#", "15:41", "CPU 42%", "MEM 42%", "Fri, #:#:1"]
+        let canonical = MenuBarItemTag.canonicalPersistentIdentifiers(saved.map { "\(bundle):\($0)" })
+        let expected = ["#, #:#", "#:#", "CPU #%", "MEM #%", "#, #:#:1"]
+        #expect(canonical == expected.map { "\(bundle):\($0)" })
+    }
+}
