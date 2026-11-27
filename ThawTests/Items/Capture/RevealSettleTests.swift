@@ -295,6 +295,15 @@ struct RevealSettleWaitTests {
         #expect(settled.mayBeChanging(at: 1))
     }
 
+    @Test("An item drawn to one side of its reported frame is watched where it is drawn")
+    func settleWatchesDrawnSeats() {
+        let drawnAside = Self.item("Aside", x: 1000)
+        let inPlace = Self.item("InPlace", x: 1100)
+        let seat = CGRect(x: 940, y: 0, width: 24, height: 22)
+        let frames = Session.settleFrames(for: [drawnAside, inPlace], seats: DrawnSeats(moved: [drawnAside.uniqueIdentifier: seat]))
+        #expect(frames == [seat, inPlace.bounds])
+    }
+
     @Test("A revealed batch whose pixels hold still settles after three matching screenshots")
     func revealedPixelsSettle() async throws {
         let clock = TestClock()
