@@ -192,14 +192,6 @@ nonisolated enum SkyLightAPI {
     ) -> Unmanaged<CGImage>?
 
     static let createImageFromArray: SLWindowListCreateImageFromArrayFn? = {
-        // Before macOS 26 the SkyLight function returns fully transparent
-        // images for other apps' windows even with Screen Recording granted.
-        // The public CoreGraphics function has the same signature and works
-        // there; it is only loaded dynamically because it is unavailable at
-        // compile time for a macOS 15 deployment target.
-        if #unavailable(macOS 26.0), let sym = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGWindowListCreateImageFromArray") {
-            return unsafeBitCast(sym, to: SLWindowListCreateImageFromArrayFn.self)
-        }
         guard let handle else {
             diagLog.error("Cannot load SLWindowListCreateImageFromArray: SkyLight framework handle is nil")
             return nil
