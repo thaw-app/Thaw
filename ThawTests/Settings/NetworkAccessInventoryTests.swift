@@ -22,6 +22,8 @@ struct NetworkAccessInventoryTests {
         "WKWebView",
         "CFStreamCreatePairWithSocket",
         "getaddrinfo",
+        // macOS's speed test tool, which uploads and downloads test data.
+        "networkQuality",
     ]
 
     /// Includes local packages and bundled extensions; excludes standalone ThawCtl, which has no shipping Xcode target.
@@ -37,6 +39,8 @@ struct NetworkAccessInventoryTests {
         "packages/ThawAutomation/Sources",
         "packages/ThawTriggers/Sources",
         "packages/ThawWidgets/Sources",
+        // The Control Center stand-ins.
+        "packages/ThawExtras/Sources",
     ]
 
     /// Repository-relative allowances; the updater wrapper uses Sparkle, but is listed in case it needs a network client.

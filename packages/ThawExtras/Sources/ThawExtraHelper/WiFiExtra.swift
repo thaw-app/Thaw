@@ -17,7 +17,6 @@ final class WiFiExtra: NSObject, MenuActionTarget {
     private let label: String
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ThawExtraHelper", category: "wifi")
     private let events = WiFiEvents()
-    private var speedTest = ConnectionSpeedTest.State.idle
 
     init(button: NSStatusBarButton, label: String) {
         self.button = button
@@ -63,8 +62,6 @@ final class WiFiExtra: NSObject, MenuActionTarget {
                 item.representedObject = router
                 menu.addItem(item)
             }
-            menu.addItem(.separator())
-            addSpeedTest(to: menu, connected: reading.isConnected)
         }
         menu.addItem(.separator())
         menu.addItem(actionItem(String(localized: "Wi-Fi Settings…"), #selector(openSettings)))
@@ -83,35 +80,6 @@ final class WiFiExtra: NSObject, MenuActionTarget {
         button.image = image
         button.appearsDisabled = !reading.isConnected
         button.toolTip = label
-    }
-
-    // MARK: Speed test
-
-    private func addSpeedTest(to menu: NSMenu, connected: Bool) {
-        switch speedTest {
-        case .running:
-            let item = NSMenuItem.info(String(localized: "Testing Connection Speed…"))
-            menu.addItem(item)
-        case let .finished(result):
-            menu.addItem(NSMenuItem.info(result.summary))
-            fallthrough
-        case .idle, .failed:
-            let item = actionItem(String(localized: "Test Connection Speed"), #selector(runSpeedTest))
-            item.isEnabled = connected
-            menu.addItem(item)
-        }
-        if case .failed = speedTest {
-            menu.addItem(NSMenuItem.info(String(localized: "The last speed test didn’t finish.")))
-        }
-    }
-
-    @objc private func runSpeedTest() {
-        guard speedTest != .running else { return }
-        speedTest = .running
-        Task { [weak self] in
-            let result = await ConnectionSpeedTest.run()
-            self?.speedTest = result.map(ConnectionSpeedTest.State.finished) ?? .failed
-        }
     }
 
     // MARK: Actions

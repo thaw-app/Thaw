@@ -37,13 +37,6 @@ struct NetworkStandInTests {
             == NetworkAddresses(address: "192.168.1.23", router: nil))
     }
 
-    @Test("networkQuality's JSON reads as whole megabits per second, and anything else as no result")
-    func speedTestOutput() {
-        let json = Data(#"{"dl_throughput": 412345678, "ul_throughput": 38499999, "base_rtt": 12}"#.utf8)
-        #expect(ConnectionSpeedTest.parse(json) == .init(download: 412, upload: 38))
-        #expect(ConnectionSpeedTest.parse(Data("error".utf8)) == nil)
-    }
-
     @Test("Connected devices come first, then the rest by name")
     func deviceOrder() {
         func row(_ name: String, _ connected: Bool) -> BluetoothDeviceRow {
