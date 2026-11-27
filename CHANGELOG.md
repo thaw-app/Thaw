@@ -54,7 +54,7 @@ the items under New and Fixed.
 - With the arrangement set to Manual, Sound and Wi-Fi can be moved in the Layout bar again.
 - Item pictures saved by earlier builds are taken again, so a cut-off or wrong picture no longer survives relaunches.
 - Visible items no longer show another app's icon in Layout when macOS draws them away from where their app says they are.
-- A Control Center replacement that fails to start no longer leaves Apple's item hidden.
+- A Control Center replacement that fails to start, or to restart after a spacing change, no longer leaves Apple's item hidden.
 - Turning off a Control Center replacement puts Apple's item back where the replacement was.
 - Stats' icons can be moved and no longer snap back or split around Thaw's icon.
 - Thaw rebuilds the menu bar fewer times when it starts, especially with Native hiding.

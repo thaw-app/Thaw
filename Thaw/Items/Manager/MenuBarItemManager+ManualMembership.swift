@@ -51,14 +51,16 @@ extension MenuBarItemManager {
     }
 
     /// Saves the stored weights in Manual so the next launch can adopt what was ⌘-dragged while Thaw was off.
-    private func recordBarAtQuit() {
+    func recordBarAtQuit(to defaults: UserDefaults = Defaults.store) {
+        // A quit before setup can't tell the arrangement, so it keeps the last session's bar.
+        guard appState != nil else { return }
         guard arrangementIsManual, let observed = currentObservedMembership(),
               case let .ordered(dividers) = observed.reading
         else {
-            ObservedMembership.BarAtQuit.clear()
+            ObservedMembership.BarAtQuit.clear(defaults)
             return
         }
-        ObservedMembership.BarAtQuit(candidates: observed.candidates, dividers: dividers).save()
+        ObservedMembership.BarAtQuit(candidates: observed.candidates, dividers: dividers).save(to: defaults)
     }
 
     /// Adopt divider-weight membership without moving items: Manual after drags, mode switches, and launch; Automatic only after user drags.

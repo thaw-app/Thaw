@@ -274,10 +274,12 @@ struct SystemExtraStandInLauncherTests {
         #expect(fake.opens.count == 2)
     }
 
-    @Test("A restart whose open fails leaves the stand-in unwatched")
+    @Test("A restart whose open fails leaves the stand-in unwatched and gives the original back")
     func failedRestartLeavesItDown() async throws {
         struct OpenFailed: Error {}
         let (launcher, _) = makeLauncher()
+        var gaveUp: [SystemExtraStandIn] = []
+        launcher.onGaveUp = { gaveUp.append($0) }
         try await launcher.launch(.timer, replacing: original, in: .hidden)
         fake.openError = OpenFailed()
 
@@ -285,6 +287,7 @@ struct SystemExtraStandInLauncherTests {
         await launcher.restartRunning()
 
         #expect(fake.opens.count == 2)
+        #expect(gaveUp == [.timer])
     }
 
     @Test("The engine's publish and remove reach the item's own stand-in")

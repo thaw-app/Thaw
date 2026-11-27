@@ -313,4 +313,17 @@ struct ObservedMembershipTests {
         #expect(try Self.adoptionMoves(weights: ["plain": 200], assignment: [:], keepingAuthored: false).isEmpty)
         #expect(try Self.adoptionMoves(weights: ["plain": 200], assignment: [:], keepingAuthored: true).isEmpty)
     }
+
+    @Test("A quit before setup keeps the bar the last session saved")
+    func quitBeforeSetupKeepsSavedBar() throws {
+        let suite = ScratchDefaults.name("ObservedMembershipTests")
+        defer { ScratchDefaults.remove(suite) }
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        let dividers = try #require(ObservedMembership.Dividers(hidden: 328, alwaysHidden: 1368, visibleControl: 161))
+        ObservedMembership.BarAtQuit(candidates: [], dividers: dividers).save(to: defaults)
+
+        MenuBarItemManager().recordBarAtQuit(to: defaults)
+
+        #expect(ObservedMembership.BarAtQuit.take(from: defaults) != nil)
+    }
 }

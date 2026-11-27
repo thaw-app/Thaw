@@ -257,6 +257,7 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
                 log.info("restarted \(standIn.rawValue) stand-in")
             } catch {
                 log.error("\(standIn.rawValue) stand-in restart failed: \(error.localizedDescription)")
+                onGaveUp?(standIn)
             }
         }
     }
