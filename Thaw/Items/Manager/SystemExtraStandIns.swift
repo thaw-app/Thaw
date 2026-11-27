@@ -28,6 +28,7 @@ enum SystemExtraStandIn: String, CaseIterable {
     case space
     case wiFi = "wifi"
     case bluetooth
+    case sound
 
     init(_ item: SystemExtraItem) {
         switch item {
@@ -41,40 +42,27 @@ enum SystemExtraStandIn: String, CaseIterable {
         "\(ThawMenuBarIdentity.bundleIdentifier).extra.\(rawValue)"
     }
 
-    /// Must match ExtraRole.autosaveName in ThawExtraHelper.
-    private var autosaveName: String {
+    /// The autosave name, which must match ExtraRole.autosaveName in
+    /// ThawExtraHelper, and the name of the stand-in's app.
+    private var names: (autosave: String, bundle: String) {
         switch self {
-        case .focus: "Thaw.Extra.Focus"
-        case .timeMachine: "Thaw.Extra.TimeMachine"
-        case .timer: "Thaw.Extra.Timer"
-        case .airDrop: "Thaw.Extra.AirDrop"
-        case .nowPlaying: "Thaw.Extra.NowPlaying"
-        case .userSwitcher: "Thaw.Extra.UserSwitcher"
-        case .textInput: "Thaw.Extra.TextInput"
-        case .space: "Thaw.Extra.Space"
-        case .wiFi: "Thaw.Extra.WiFi"
-        case .bluetooth: "Thaw.Extra.Bluetooth"
+        case .focus: ("Thaw.Extra.Focus", "Thaw Focus")
+        case .timeMachine: ("Thaw.Extra.TimeMachine", "Thaw Time Machine")
+        case .timer: ("Thaw.Extra.Timer", "Thaw Timer")
+        case .airDrop: ("Thaw.Extra.AirDrop", "Thaw AirDrop")
+        case .nowPlaying: ("Thaw.Extra.NowPlaying", "Thaw Now Playing")
+        case .userSwitcher: ("Thaw.Extra.UserSwitcher", "Thaw User Switcher")
+        case .textInput: ("Thaw.Extra.TextInput", "Thaw Text Input")
+        case .space: ("Thaw.Extra.Space", "Thaw Space")
+        case .wiFi: ("Thaw.Extra.WiFi", "Thaw Wi-Fi")
+        case .bluetooth: ("Thaw.Extra.Bluetooth", "Thaw Bluetooth")
+        case .sound: ("Thaw.Extra.Sound", "Thaw Sound")
         }
     }
 
     /// The persistent identifier the stand-in's item gets in the layout.
     var itemIdentifier: String {
-        "\(bundleIdentifier):\(autosaveName)"
-    }
-
-    private var bundleName: String {
-        switch self {
-        case .focus: "Thaw Focus"
-        case .timeMachine: "Thaw Time Machine"
-        case .timer: "Thaw Timer"
-        case .airDrop: "Thaw AirDrop"
-        case .nowPlaying: "Thaw Now Playing"
-        case .userSwitcher: "Thaw User Switcher"
-        case .textInput: "Thaw Text Input"
-        case .space: "Thaw Space"
-        case .wiFi: "Thaw Wi-Fi"
-        case .bluetooth: "Thaw Bluetooth"
-        }
+        "\(bundleIdentifier):\(names.autosave)"
     }
 
     /// Whether a bundle identifier belongs to one of this app's stand-ins.
@@ -89,7 +77,7 @@ enum SystemExtraStandIn: String, CaseIterable {
     }
 
     var bundleURL: URL {
-        Bundle.main.bundleURL.appending(path: "Contents/Library/Extras/\(bundleName).app")
+        Bundle.main.bundleURL.appending(path: "Contents/Library/Extras/\(names.bundle).app")
     }
 
     /// The order with identifier right after original, or nil when the order

@@ -14,6 +14,7 @@ case $role in
   textinput) name="Thaw Text Input" symbol=keyboard ;;
   space) name="Thaw Space" symbol=square.stack ;;
   wifi) name="Thaw Wi-Fi" symbol=wifi ;;
+  sound) name="Thaw Sound" symbol=speaker.wave.2.fill ;;
   bluetooth) name="Thaw Bluetooth" symbol=dot.radiowaves.left.and.right
     usage="<key>NSBluetoothAlwaysUsageDescription</key><string>Thaw Bluetooth lists your paired devices so you can connect and disconnect them from the menu bar.</string>" ;;
   slot[1-6]) name="Thaw Stand-In ${role#slot}" symbol=square.dashed ;;

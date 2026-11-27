@@ -83,8 +83,7 @@ extension AppSettings {
         layout.enableTimeMachineTakeover = Defaults.DefaultValue.enableTimeMachineTakeover
         layout.enableTimerTakeover = Defaults.DefaultValue.enableTimerTakeover
         layout.enableTextInputTakeover = Defaults.DefaultValue.enableTextInputTakeover
-        layout.enableWiFiStandIn = Defaults.DefaultValue.enableWiFiStandIn
-        layout.enableBluetoothStandIn = Defaults.DefaultValue.enableBluetoothStandIn
+        layout.optInStandIns = Set(Defaults.DefaultValue.optInStandIns)
     }
 
     func resetVisibility() {

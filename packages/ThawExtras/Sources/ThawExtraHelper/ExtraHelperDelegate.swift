@@ -21,6 +21,7 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
     private var spaceIndicator: SpaceIndicatorExtra?
     private var wiFi: WiFiExtra?
     private var bluetooth: BluetoothExtra?
+    private var sound: SoundExtra?
     /// Whether Thaw asked for this stand-in to be hidden.
     private var isHiddenByThaw = false
     private var slotStandIn: SlotStandIn?
@@ -91,6 +92,10 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
             let bluetooth = BluetoothExtra(button: button, label: role.displayName)
             bluetooth.start()
             self.bluetooth = bluetooth
+        } else if role == .sound, let button = item.button {
+            let sound = SoundExtra(button: button, label: role.displayName)
+            sound.start()
+            self.sound = sound
         } else if role == .airDrop {
             statusItem?.button?.image = AirDropGlyph.image(accessibilityDescription: role.displayName)
             statusItem?.button?.toolTip = role.displayName
@@ -105,6 +110,7 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
         timeMachine?.stop()
         wiFi?.stop()
         bluetooth?.stop()
+        sound?.stop()
     }
 
     // MARK: Menu
@@ -142,6 +148,8 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
             wiFi?.populate(menu)
         case .bluetooth:
             bluetooth?.populate(menu)
+        case .sound:
+            sound?.populate(menu)
         case .slot1, .slot2, .slot3, .slot4, .slot5, .slot6, nil:
             break
         }

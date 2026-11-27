@@ -10,7 +10,7 @@ import IOBluetooth
 import Testing
 @testable import ThawExtraHelper
 
-@Suite("Wi-Fi and Bluetooth stand-ins")
+@Suite("Wi-Fi, Bluetooth and Sound stand-ins")
 struct NetworkStandInTests {
     private func wiFi(on: Bool = true, rssi: Int, rate: Double = 400) -> WiFiReading {
         WiFiReading(interfaceName: "en0", isPoweredOn: on, rssi: rssi, transmitRate: rate)
@@ -51,6 +51,13 @@ struct NetworkStandInTests {
         }
         let sorted = BluetoothReading.sorted([row("Mouse", false), row("Keyboard", false), row("AirPods", true)])
         #expect(sorted.map(\.name) == ["AirPods", "Keyboard", "Mouse"])
+    }
+
+    @Test("The speaker shows a slash while muted or at zero volume")
+    func soundSymbol() {
+        #expect(AudioDevices.symbolName(muted: false, volume: 0.5) == "speaker.wave.3.fill")
+        #expect(AudioDevices.symbolName(muted: true, volume: 0.5) == "speaker.slash.fill")
+        #expect(AudioDevices.symbolName(muted: false, volume: 0) == "speaker.slash.fill")
     }
 
     @Test("Each device class gets its own symbol")

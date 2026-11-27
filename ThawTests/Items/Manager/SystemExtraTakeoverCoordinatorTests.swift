@@ -247,7 +247,7 @@ struct ModuleStandInCoordinatorTests {
     func wiFiStandInReplacesOriginal() async {
         let rig = TakeoverRig()
         rig.settings.enableModuleStandIns = false
-        rig.settings.enableWiFiStandIn = true
+        rig.settings.optInStandIns = ["wifi"]
         rig.shownInControlCenter = [TakeoverRig.moduleTag(TakeoverRig.wiFi)]
         let original = TakeoverRig.moduleID(TakeoverRig.wiFi)
 
@@ -259,7 +259,7 @@ struct ModuleStandInCoordinatorTests {
         #expect(rig.fake.opens.count == 1)
         #expect(rig.sections.replacedItems == [original])
 
-        rig.settings.enableWiFiStandIn = false
+        rig.settings.optInStandIns = []
         await settle { rig.sections.replacedItems.isEmpty }
         #expect(rig.sections.sectionAssignment[original] == .visible)
     }
@@ -419,7 +419,7 @@ struct ModuleStandInChoiceTests {
         let settings = LayoutSettings()
         settings.enableModuleStandIns = modules
         settings.skippedModuleStandIns = skipped
-        settings.enableWiFiStandIn = wiFi
+        settings.optInStandIns = wiFi ? ["wifi"] : []
         return settings
     }
 

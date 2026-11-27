@@ -177,8 +177,6 @@ nonisolated enum Defaults {
             .enableTimeMachineTakeover: DefaultValue.enableTimeMachineTakeover,
             .enableTimerTakeover: DefaultValue.enableTimerTakeover,
             .enableTextInputTakeover: DefaultValue.enableTextInputTakeover,
-            .enableWiFiStandIn: DefaultValue.enableWiFiStandIn,
-            .enableBluetoothStandIn: DefaultValue.enableBluetoothStandIn,
             .zenModeWhileRecording: DefaultValue.zenModeWhileRecording,
             .recordingWatchPlacement: DefaultValue.recordingWatchPlacement.rawValue,
             .enableDesktopMenuHiding: DefaultValue.enableDesktopMenuHiding,
@@ -360,8 +358,7 @@ extension Defaults {
         case enableTimeMachineTakeover = "EnableTimeMachineTakeover"
         case enableTimerTakeover = "EnableTimerTakeover"
         case enableTextInputTakeover = "EnableTextInputTakeover"
-        case enableWiFiStandIn = "EnableWiFiStandIn"
-        case enableBluetoothStandIn = "EnableBluetoothStandIn"
+        case optInStandIns = "OptInStandIns"
         case zenModeWhileRecording = "ZenModeWhileRecording"
         /// Where the recording watch's announcements appear. Stored as the
         /// enum's string tag, since the display case carries an associated

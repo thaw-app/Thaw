@@ -80,14 +80,13 @@ struct ControlCenterReplacementsTests {
         #expect(!replacements.isReplaced(.userSwitcher))
     }
 
-    @Test("Turning the switch on again starts from every item but Wi-Fi and Bluetooth, which stay opt-in")
+    @Test("Turning the switch on again starts from every item but Wi-Fi, Bluetooth and Sound, which stay opt-in")
     func turningOnClearsTheList() {
         var replacements = ControlCenterReplacements(modules: true, timeMachine: false, textInput: false, skipped: [.focus])
         replacements.isOn = true
-        let optIn: Set<SystemExtraStandIn> = [.wiFi, .bluetooth]
+        let optIn = Set(ControlCenterReplacements.optInItems)
         #expect(ControlCenterReplacements.listed.filter { !optIn.contains($0) }.allSatisfy { replacements.isReplaced($0) })
-        #expect(!replacements.isReplaced(.wiFi))
-        #expect(!replacements.isReplaced(.bluetooth))
+        #expect(optIn.allSatisfy { !replacements.isReplaced($0) })
     }
 
     @Test("Wi-Fi alone turns the switch on, and turning it off clears Wi-Fi too")
@@ -104,10 +103,12 @@ struct ControlCenterReplacementsTests {
     func storesTheChoice() {
         let settings = LayoutSettings()
         settings.controlCenterReplacements = ControlCenterReplacements(
-            modules: true, timeMachine: false, textInput: false, skipped: [.userSwitcher]
+            modules: true, timeMachine: false, textInput: false, optIn: [.sound], skipped: [.userSwitcher]
         )
         #expect(settings.skippedModuleStandIns == ["user"])
         #expect(settings.controlCenterReplacements.skipped == [.userSwitcher])
         #expect(Defaults.store.stringArray(forKey: "SkippedModuleStandIns") == ["user"])
+        #expect(settings.controlCenterReplacements.optIn == [.sound])
+        #expect(Defaults.store.stringArray(forKey: "OptInStandIns") == ["sound"])
     }
 }

@@ -177,20 +177,12 @@ final class LayoutSettings: SettingsURIHandling {
         }
     }
 
-    /// Replaces Wi-Fi with a Thaw stand-in. Unlike the four modules, it is
-    /// opt-in on its own: the stand-in has no list of networks to join.
-    var enableWiFiStandIn = Defaults.DefaultValue.enableWiFiStandIn {
+    /// The stand-ins each turned on by their own box: their menus differ
+    /// from Apple's, so the modules switch never turns them on.
+    var optInStandIns: Set<String> = Set(Defaults.DefaultValue.optInStandIns) {
         didSet {
-            guard oldValue != enableWiFiStandIn else { return }
-            Defaults.set(enableWiFiStandIn, forKey: .enableWiFiStandIn)
-        }
-    }
-
-    /// The Bluetooth counterpart of enableWiFiStandIn.
-    var enableBluetoothStandIn = Defaults.DefaultValue.enableBluetoothStandIn {
-        didSet {
-            guard oldValue != enableBluetoothStandIn else { return }
-            Defaults.set(enableBluetoothStandIn, forKey: .enableBluetoothStandIn)
+            guard oldValue != optInStandIns else { return }
+            Defaults.set(optInStandIns.sorted(), forKey: .optInStandIns)
         }
     }
 
@@ -237,8 +229,7 @@ final class LayoutSettings: SettingsURIHandling {
         Defaults.ifPresent(key: .enableTimeMachineTakeover, assign: &enableTimeMachineTakeover)
         Defaults.ifPresent(key: .enableTimerTakeover, assign: &enableTimerTakeover)
         Defaults.ifPresent(key: .enableTextInputTakeover, assign: &enableTextInputTakeover)
-        Defaults.ifPresent(key: .enableWiFiStandIn, assign: &enableWiFiStandIn)
-        Defaults.ifPresent(key: .enableBluetoothStandIn, assign: &enableBluetoothStandIn)
+        optInStandIns = Defaults.stringArray(forKey: .optInStandIns).map(Set.init) ?? optInStandIns
         Defaults.ifPresent(key: .menuBarOrderFulfillmentTimeout, assign: &menuBarOrderFulfillmentTimeout)
         Defaults.ifPresent(key: .sectionDividerStyle) { rawValue in
             if let style = SectionDividerStyle(rawValue: rawValue) {

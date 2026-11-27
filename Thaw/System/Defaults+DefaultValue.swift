@@ -67,8 +67,8 @@ extension Defaults {
         static let enableTimeMachineTakeover = false
         static let enableTimerTakeover = false
         static let enableTextInputTakeover = false
-        static let enableWiFiStandIn = false
-        static let enableBluetoothStandIn = false
+        /// Wi-Fi, Bluetooth and Sound stand-ins turned on, by raw value.
+        static let optInStandIns: [String] = []
         static let zenModeWhileRecording = false
         /// Where the recording watch's announcements appear: the storage key
         /// of a RecordingWatchScreen, parsed back on load.
