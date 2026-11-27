@@ -13,7 +13,7 @@ import ThawCapture
 
 @MainActor
 final class RuntimeSectionContextAdapter: RuntimeSectionContext {
-    private weak var appState: AppState?
+    private(set) weak var appState: AppState?
 
     /// The settings this component reads. MenuBarEngineConfiguration states
     /// why the engine holds this rather than AppState.

@@ -56,6 +56,8 @@ the items under New and Fixed.
 - Visible items no longer show another app's icon in Layout when macOS draws them away from where their app says they are.
 - A Control Center replacement that fails to start no longer leaves Apple's item hidden.
 - Turning off a Control Center replacement puts Apple's item back where the replacement was.
+- Stats' icons can be moved and no longer snap back or split around Thaw's icon.
+- Thaw rebuilds the menu bar fewer times when it starts, especially with Native hiding.
 
 ### Thanks
 
