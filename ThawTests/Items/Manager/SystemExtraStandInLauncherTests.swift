@@ -150,6 +150,7 @@ struct SystemExtraStandInLauncherTests {
         await #expect(throws: OpenFailed.self) {
             try await launcher.launch(.timer, replacing: original, in: .hidden)
         }
+        #expect(launcher.placed.isEmpty)
     }
 
     @Test("A stand-in that exits on its own is started again")

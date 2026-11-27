@@ -295,6 +295,32 @@ struct ModuleStandInCoordinatorTests {
         #expect(rig.sections.replacedItems == [original])
     }
 
+    @Test("A stand-in that fails to open gives its original back its section and leaves the order alone")
+    func failedOpenKeepsOriginal() async {
+        struct OpenFailed: Error {}
+        let rig = TakeoverRig()
+        rig.settings.enableModuleStandIns = false
+        rig.settings.optInStandIns = ["wifi"]
+        rig.shownInControlCenter = [TakeoverRig.moduleTag(TakeoverRig.wiFi)]
+        let original = TakeoverRig.moduleID(TakeoverRig.wiFi)
+        rig.sections.sectionItemOrder[.visible] = ["a", original, "b"]
+        rig.fake.openError = OpenFailed()
+        var ordersAtOpen = 0
+        // What a layout change during the open would do: the placed stand-in's original is hidden.
+        rig.fake.duringOpen = {
+            rig.sections.sectionAssignment[original] = .hidden
+            ordersAtOpen = rig.sections.writes.count { if case .order = $0 { true } else { false } }
+        }
+        rig.start()
+        await settle { rig.sections.sectionAssignment[original] == .visible }
+        await rig.drain()
+
+        #expect(rig.sections.sectionAssignment[original] == .visible)
+        #expect(rig.sections.writes.count { if case .order = $0 { true } else { false } } == ordersAtOpen)
+        #expect(rig.sections.replacedItems.isEmpty)
+        #expect(rig.launcher.placed.isEmpty)
+    }
+
     @Test("An original the user brings back to Visible is moved to Hidden again on the next layout change")
     func layoutChangeRehidesOriginal() async {
         let rig = rig()

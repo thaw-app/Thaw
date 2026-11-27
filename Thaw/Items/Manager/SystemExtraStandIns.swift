@@ -89,69 +89,6 @@ enum SystemExtraStandIn: String, CaseIterable {
     }
 }
 
-// MARK: - Visibility
-
-/// Hides Thaw's extra and module bundles itself: Control Center's app list may have no record of
-/// them, and native hiding never switches off a bundle under Thaw's own identifier.
-/// Must match ExtraVisibilityChannel in ThawExtraHelper and WidgetVisibility in the Widgets module.
-@MainActor
-enum ExtraVisibilityChannel {
-    private static let log = DiagLog(category: "SystemExtraStandIn")
-    private static var lastHidden: Set<String>?
-
-    static func ownsBundle(_ bundleID: String) -> Bool {
-        let own = ThawMenuBarIdentity.bundleIdentifier
-        return bundleID.hasPrefix("\(own).extra.") || bundleID.hasPrefix("\(own).module.")
-    }
-
-    /// Bundles native hiding must not switch off in the system's Menu Bar list: the extras, which are
-    /// hidden through this channel, and Thaw itself, which would lose its icon and both dividers.
-    static func keepsOffSystemList(_ bundleID: String) -> Bool {
-        bundleID == ThawMenuBarIdentity.bundleIdentifier || ownsBundle(bundleID)
-    }
-
-    static var file: URL {
-        file(in: ItemStandInSlot.folder)
-    }
-
-    static func file(in folder: URL) -> URL {
-        folder.appending(path: "hidden-extras.txt")
-    }
-
-    static var notification: Notification.Name {
-        Notification.Name("\(ThawMenuBarIdentity.bundleIdentifier).extra.visibility")
-    }
-
-    static func hide(_ bundleIDs: Set<String>) {
-        hide(bundleIDs, folder: ItemStandInSlot.folder, announce: announceChange)
-    }
-
-    /// The folder and the announcement are parameters so tests write to a scratch folder and post nothing.
-    static func hide(_ requested: Set<String>, folder: URL, announce: () -> Void) {
-        let bundleIDs = requested.filter(ownsBundle)
-        guard bundleIDs != lastHidden else { return }
-        do {
-            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            try bundleIDs.sorted().joined(separator: "\n").write(to: file(in: folder), atomically: true, encoding: .utf8)
-        } catch {
-            log.error("could not write hidden extras: \(error.localizedDescription)")
-            return
-        }
-        lastHidden = bundleIDs
-        announce()
-        log.info("hidden extras: \(bundleIDs.sorted())")
-    }
-
-    private static func announceChange() {
-        DistributedNotificationCenter.default().postNotificationName(
-            notification,
-            object: nil,
-            userInfo: nil,
-            deliverImmediately: true
-        )
-    }
-}
-
 // MARK: - Spacing restart
 
 /// Lets the spacing change reach the stand-in launcher without either owning the other.
@@ -235,6 +172,8 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     /// Recent restarts per stand-in, so one that cannot stay up is not
     /// relaunched forever.
     private var restarts: [SystemExtraStandIn: [ContinuousClock.Instant]] = [:]
+    /// Counts launches per stand-in, so an open that fails after a newer launch leaves that one alone.
+    private var launchCounts: [SystemExtraStandIn: Int] = [:]
     private static let restartLimit = 3
     private static let restartWindow: Duration = .seconds(30)
     private static let restartQuitTimeout: Duration = .seconds(3)
@@ -272,7 +211,18 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
         markKnown?(MenuBarItemTag.canonicalPersistentIdentifier(standIn.itemIdentifier))
         wanted.insert(standIn)
         place(standIn, after: original, in: section)
-        try await open(standIn)
+        let launchCount = launchCounts[standIn, default: 0] + 1
+        launchCounts[standIn] = launchCount
+        do {
+            try await open(standIn)
+        } catch {
+            // Not placed, or the original would be kept hidden for a stand-in that never ran.
+            if launchCounts[standIn] == launchCount {
+                wanted.remove(standIn)
+                placed.remove(standIn)
+            }
+            throw error
+        }
         // Turned off while it started: open quit it, so nothing should listen for it.
         if standIn == .textInput, wanted.contains(standIn) {
             CharacterViewerRelay.shared.start()

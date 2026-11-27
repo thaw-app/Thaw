@@ -203,7 +203,8 @@ final class SystemExtraTakeoverCoordinator {
             activeModuleStandIns.insert(standIn)
             // A stand-in placed in an earlier session keeps its section; a new
             // one starts where the original was.
-            let section = saved.contains(standInID) ? controller.authoredSection(for: standInID) : originalSection
+            let wasSaved = saved.contains(standInID)
+            let section = wasSaved ? controller.authoredSection(for: standInID) : originalSection
             Task { [weak self, launcher] in
                 do {
                     try await launcher.launch(standIn, replacing: original, in: section)
@@ -213,6 +214,10 @@ final class SystemExtraTakeoverCoordinator {
                 } catch {
                     // Forgotten so the next reconcile tries again.
                     self?.activeModuleStandIns.remove(standIn)
+                    // A missing bundle was never placed; only a section from an earlier session says where it was.
+                    if wasSaved || (error as? SystemExtraTakeoverError) != .replacementUnavailable {
+                        self?.unmirror(standInID, onto: originalID)
+                    }
                     self?.publishReplacedItems()
                     DiagLog(category: "SystemExtraStandIn")
                         .error("\(standIn.rawValue) stand-in failed: \(error.localizedDescription)")
@@ -252,6 +257,15 @@ final class SystemExtraTakeoverCoordinator {
         for (orderSection, identifiers) in controller.sectionItemOrder where identifiers.contains(standInID) {
             controller.setSectionOrder(identifiers.filter { $0 != standInID }, for: orderSection)
         }
+    }
+
+    /// Undoes mirrorStandInSections for a stand-in that failed to start, without touching any order:
+    /// a write there would publish a layout change and start it again.
+    private func unmirror(_ standInID: String, onto originalID: String) {
+        guard let controller, controller.authoredSection(for: standInID) == .visible,
+              controller.authoredSection(for: originalID) != .visible
+        else { return }
+        controller.setSection(.visible, identifier: originalID)
     }
 
     /// Keep originals Hidden regardless of stand-in section; only placed stand-ins have taken over.
