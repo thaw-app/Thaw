@@ -563,7 +563,7 @@ nonisolated extension Bridging {
     /// safe in points can exceed maximumCaptureDimension on Retina. The
     /// capture rect often intersects no display (items parked at large negative
     /// x), so the largest scale in use is taken; overestimating fails safe.
-    private static func maximumActiveDisplayScale() -> CGFloat {
+    static func maximumActiveDisplayScale() -> CGFloat {
         var maximum: CGFloat = 1
         for displayID in getActiveDisplayList() {
             guard
