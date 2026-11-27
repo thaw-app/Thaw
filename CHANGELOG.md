@@ -24,26 +24,28 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+## [3.0.0-alpha.16] - 2026-11-27
+
+**macOS 27 only · Build 128**
+
 ### Added
 
 - Replace Control Center items can now replace Wi-Fi, Bluetooth and Sound with Thaw's own items.
+
+### Changed
+
+- Modules shows a list like the other settings pages, or cards from the toolbar.
+- Settings now says that Click, Hover and Scroll under "Show hidden items on" are optional.
+- Exported diagnostics no longer include saved item lists, and Thaw keeps only the newest five.
 
 ### Fixed
 
 - Revealing hidden items no longer leaves some of them on top of others in the menu bar.
 - The Thaw Bar trims transparent side margins from captured icons and keeps a minimum gap between items.
-- iStat Menus from the Mac App Store no longer fills Layout with a new item for every reading, such as each CPU percentage or network speed.
-### Changed
-
-- Modules shows a list like the other settings pages, or cards from the toolbar.
-- Settings now says that Click, Hover and Scroll under "Show hidden items on" are optional.
-- **Exported diagnostics no longer include saved item lists,** and Thaw keeps only the newest five item lists.
-### Fixed
-
-- **Resetting the layout shows item pictures in the Layout bar right away,** instead of leaving them blank.
-- **Closing Settings no longer sends What's New or Credits behind other apps.**
-- **With the arrangement set to Manual, Thaw puts its section divider back left of its icon when the two swap places.** Until then, items such as Sound and Wi-Fi could not be moved in the Layout bar.
-- **The iStat Menus clock keeps its saved menu bar section when the weekday changes.** Reported by @okwme in [#1689](https://github.com/thaw-app/Thaw/issues/1689).
+- iStat Menus from the Mac App Store no longer fills Layout with a new item for every reading.
+- Resetting the layout shows item pictures in the Layout bar right away.
+- Closing Settings no longer sends What's New or Credits behind other apps.
+- With the arrangement set to Manual, Sound and Wi-Fi can be moved in the Layout bar again.
 
 ## [3.0.0-alpha.15] - 2026-11-22
 
