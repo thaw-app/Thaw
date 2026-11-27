@@ -51,6 +51,7 @@ the items under New and Fixed.
 - Resetting the layout shows item pictures in the Layout bar right away.
 - Closing Settings no longer sends What's New or Credits behind other apps.
 - With the arrangement set to Manual, Sound and Wi-Fi can be moved in the Layout bar again.
+- Item pictures saved by earlier builds are taken again, so a cut-off or wrong picture no longer survives relaunches.
 
 ### Thanks
 
