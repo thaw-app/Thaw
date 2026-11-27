@@ -113,6 +113,19 @@ nonisolated enum ObservedMembership {
         let authored: MenuBarSectionName?
     }
 
+    /// The sections the user put items in. The assignment leaves Visible out, so items in the
+    /// saved Visible order count as placed there; an assignment elsewhere wins.
+    static func authoredSections(
+        assignment: [String: MenuBarSectionName],
+        visibleOrder: [String]
+    ) -> [String: MenuBarSectionName] {
+        var sections = [String: MenuBarSectionName]()
+        for identifier in visibleOrder {
+            sections[MenuBarItemTag.canonicalPersistentIdentifier(identifier)] = .visible
+        }
+        return sections.merging(assignment) { _, assigned in assigned }
+    }
+
     /// The items a reading may move, each with the section the user explicitly put it in.
     ///
     /// - Parameters:

@@ -40,6 +40,7 @@ the items under New and Fixed.
 
 ### Fixed
 
+- With the arrangement set to Manual, items you put in Visible stay there when Thaw starts.
 - Revealing hidden items no longer leaves some of them on top of others in the menu bar.
 - The Thaw Bar trims transparent side margins from captured icons and keeps a minimum gap between items.
 - iStat Menus from the Mac App Store no longer fills Layout with a new item for every reading.

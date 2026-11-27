@@ -247,6 +247,23 @@ struct ObservedMembershipTests {
         #expect(moves == ["legacy": .hidden])
     }
 
+    @Test("Launch adoption keeps an item the user put in Visible, even when its weight reads Hidden")
+    func launchAdoptionKeepsVisibleOrder() throws {
+        let kept = Self.item("kept", windowID: 2)
+        let moved = Self.item("moved", windowID: 3)
+        let assignment = ObservedMembership.authoredSections(
+            assignment: [moved.canonicalIdentifier: .alwaysHidden],
+            visibleOrder: [kept.uniqueIdentifier, moved.uniqueIdentifier]
+        )
+        #expect(assignment == [kept.canonicalIdentifier: .visible, moved.canonicalIdentifier: .alwaysHidden])
+        let moves = try Self.adoptionMoves(
+            weights: ["kept": 900, "legacy": 900],
+            assignment: assignment,
+            keepingAuthored: true
+        )
+        #expect(moves == ["legacy": .hidden])
+    }
+
     @Test("Candidates carry only explicit assignments, keyed by canonical identifier")
     func candidatesCarryExplicitAssignments() {
         let assigned = Self.item("assigned", windowID: 2)

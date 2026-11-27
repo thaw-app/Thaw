@@ -105,7 +105,10 @@ extension MenuBarItemManager {
         let candidates = ObservedMembership.candidates(
             among: items,
             weight: { weight($0).flatMap { weights.isParked($0) ? nil : $0 } },
-            assignment: controller.sectionAssignment,
+            assignment: ObservedMembership.authoredSections(
+                assignment: controller.sectionAssignment,
+                visibleOrder: controller.sectionItemOrder[.visible] ?? []
+            ),
             isEligible: {
                 !$0.isControlItem && $0.tag.canBeHidden
                     && $0.isMovable(experimentalSystemItemHiding: experimentalSystemItemHiding)
