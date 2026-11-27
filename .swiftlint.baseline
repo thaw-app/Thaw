@@ -2465,9 +2465,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/System/Defaults.swift",
-    "line": 624
+    "line": 520
    },
-   "reason": "File should contain 400 lines or less: currently contains 624",
+   "reason": "File should contain 400 lines or less: currently contains 520",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
