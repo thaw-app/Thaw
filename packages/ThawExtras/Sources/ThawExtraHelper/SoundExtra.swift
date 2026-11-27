@@ -89,8 +89,9 @@ final class SoundExtra: NSObject, MenuActionTarget {
         let output = AudioDevices.defaultDevice(input: false)
         let volume = output.flatMap(AudioDevices.volume(of:)) ?? 1
         let muted = output.map(AudioDevices.isMuted) ?? false
+        let headphones = output.flatMap(AudioDevices.headphonesSymbolName(of:))
         let image = NSImage(
-            systemSymbolName: AudioDevices.symbolName(muted: muted, volume: volume),
+            systemSymbolName: AudioDevices.symbolName(muted: muted, volume: volume, headphones: headphones),
             variableValue: Double(volume),
             accessibilityDescription: label
         )
@@ -209,10 +210,42 @@ enum AudioDevices {
         set(UInt32(muted ? 1 : 0), on: device, kAudioDevicePropertyMute, scope: kAudioDevicePropertyScopeOutput)
     }
 
-    /// The waves follow the volume through the symbol's variable value.
-    static func symbolName(muted: Bool, volume: Float) -> String {
-        muted || volume == 0 ? "speaker.slash.fill" : "speaker.wave.3.fill"
+    /// Headphones show as themselves, as in Apple's menu. The speaker's waves follow
+    /// the volume through the symbol's variable value.
+    static func symbolName(muted: Bool, volume: Float, headphones: String? = nil) -> String {
+        if let headphones { return headphones }
+        return muted || volume == 0 ? "speaker.slash.fill" : "speaker.wave.3.fill"
     }
+
+    /// Nil for anything that isn't Bluetooth headphones.
+    static func headphonesSymbolName(of device: AudioObjectID) -> String? {
+        let transport: UInt32? = value(device, kAudioDevicePropertyTransportType)
+        guard transport == kAudioDeviceTransportTypeBluetooth || transport == kAudioDeviceTransportTypeBluetoothLE else {
+            return nil
+        }
+        return headphonesSymbolName(modelUID: string(device, kAudioDevicePropertyModelUID), name: string(device, kAudioObjectPropertyName))
+    }
+
+    /// Apple's AirPods by product ID, which a Bluetooth device's model UID carries as
+    /// "<product> <vendor>" in hex. The name is the fallback, since people rename them.
+    static func headphonesSymbolName(modelUID: String?, name: String?) -> String {
+        let parts = (modelUID ?? "").split(separator: " ").compactMap { UInt32($0, radix: 16) }
+        if parts.count == 2, parts[1] == 0x4C, let symbol = airPodsSymbols[parts[0]] {
+            return symbol
+        }
+        let name = name?.lowercased() ?? ""
+        if name.contains("airpods max") { return "airpods.max" }
+        if name.contains("airpods pro") { return "airpods.pro" }
+        if name.contains("airpods") { return "airpods" }
+        if name.contains("beats") { return "beats.headphones" }
+        return "headphones"
+    }
+
+    private static let airPodsSymbols: [UInt32: String] = [
+        0x2002: "airpods", 0x200F: "airpods", 0x2013: "airpods.gen3",
+        0x200E: "airpods.pro", 0x2014: "airpods.pro", 0x2024: "airpods.pro",
+        0x200A: "airpods.max", 0x201F: "airpods.max",
+    ]
 
     // MARK: Property access
 

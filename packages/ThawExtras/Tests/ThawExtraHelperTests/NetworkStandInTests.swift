@@ -60,6 +60,16 @@ struct NetworkStandInTests {
         #expect(AudioDevices.symbolName(muted: false, volume: 0) == "speaker.slash.fill")
     }
 
+    @Test("Headphones show as themselves: AirPods by product ID, then by name, then generic")
+    func headphonesSymbol() {
+        #expect(AudioDevices.symbolName(muted: true, volume: 0, headphones: "airpods.pro") == "airpods.pro")
+        #expect(AudioDevices.headphonesSymbolName(modelUID: "2024 4c", name: "Renamed") == "airpods.pro")
+        #expect(AudioDevices.headphonesSymbolName(modelUID: "200a 4c", name: nil) == "airpods.max")
+        #expect(AudioDevices.headphonesSymbolName(modelUID: "2024 5d", name: "Kitchen AirPods") == "airpods")
+        #expect(AudioDevices.headphonesSymbolName(modelUID: nil, name: "Beats Studio Pro") == "beats.headphones")
+        #expect(AudioDevices.headphonesSymbolName(modelUID: "ffff 4c", name: "Earbuds") == "headphones")
+    }
+
     @Test("Each device class gets its own symbol")
     func deviceSymbols() {
         let audio = BluetoothDeviceClassMajor(kBluetoothDeviceClassMajorAudio)
