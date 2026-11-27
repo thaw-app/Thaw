@@ -43,9 +43,12 @@ final class FakeStandInSections: StandInSectionControlling {
     }
 
     private(set) var replacedItems: Set<String> = []
+    /// How many times the coordinator has reconciled its stand-ins.
+    private(set) var replacedItemsPublishes = 0
 
     func setReplacedItems(_ identifiers: Set<String>) {
         replacedItems = identifiers
+        replacedItemsPublishes += 1
     }
 
     /// Announces a layout change the way the controller's publishers do.

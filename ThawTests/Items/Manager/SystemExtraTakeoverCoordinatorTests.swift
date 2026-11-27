@@ -284,8 +284,11 @@ struct ModuleStandInCoordinatorTests {
         #expect(rig.sections.sectionAssignment[original] == .visible)
         #expect(rig.fake.opened(.wiFi) == 4, "three restarts, then no more")
 
+        // Back to back, the off and the on can reach the coordinator as one change.
+        let publishes = rig.sections.replacedItemsPublishes
         rig.settings.optInStandIns = []
-        await settle { rig.fake.opened(.wiFi) == 4 }
+        await settle { rig.sections.replacedItemsPublishes > publishes }
+        #expect(rig.fake.opened(.wiFi) == 4)
         rig.settings.optInStandIns = ["wifi"]
         await settle { rig.fake.opened(.wiFi) == 5 }
         #expect(rig.fake.opened(.wiFi) == 5)
