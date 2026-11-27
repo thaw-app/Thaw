@@ -219,6 +219,8 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     /// Records an identifier as seen, so the stand-in is not routed to the
     /// new-items section instead of the original's slot.
     var markKnown: ((String) -> Void)?
+    /// Called when a stand-in exits too often to start again, so its original can come back.
+    var onGaveUp: ((SystemExtraStandIn) -> Void)?
     /// Stand-ins given a section of their own. Only these have a section worth
     /// mirroring back onto their original.
     private(set) var placed: Set<SystemExtraStandIn> = []
@@ -351,6 +353,7 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
         let recent = (restarts[standIn] ?? []).filter { $0.duration(to: exitedAt) < Self.restartWindow }
         guard recent.count < Self.restartLimit else {
             log.error("\(standIn.rawValue) stand-in keeps exiting; not starting it again")
+            onGaveUp?(standIn)
             return
         }
         restarts[standIn] = recent + [exitedAt]
@@ -360,6 +363,7 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
                 try await self?.open(standIn)
             } catch {
                 self?.log.error("\(standIn.rawValue) stand-in restart failed: \(error.localizedDescription)")
+                self?.onGaveUp?(standIn)
             }
         }
     }

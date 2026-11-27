@@ -48,6 +48,8 @@ final class SystemExtraTakeoverCoordinator {
     /// It is changed only where it really changes, since every write notifies them.
     private var activeModuleStandIns: Set<SystemExtraStandIn> = []
     @ObservationIgnored private let isShownInMenuBar: @MainActor (String) -> Bool
+    /// Stand-ins the launcher gave up on. Each stays off, with its original back, until its switch is turned off.
+    @ObservationIgnored private var failedStandIns: Set<SystemExtraStandIn> = []
 
     /// The Control Center modules the runtime removes while hidden, keyed to
     /// their stand-ins, with the identifier the runtime gives each on macOS 27.
@@ -116,6 +118,7 @@ final class SystemExtraTakeoverCoordinator {
         self.settings = settings
         launcher.controller = controller
         launcher.markKnown = markKnown
+        launcher.onGaveUp = { [weak self] in self?.standInGaveUp($0) }
         StandInSpacingRestart.launcher = launcher
 
         for item in SystemExtraItem.allCases {
@@ -180,7 +183,10 @@ final class SystemExtraTakeoverCoordinator {
             // so the assignment is what says the module is still wanted.
             let isWanted = originalSection != .visible || isShownInMenuBar(original)
             let isChosen = Self.isChosen(standIn, in: settings)
-            guard isChosen, isWanted else {
+            if !isChosen {
+                failedStandIns.remove(standIn)
+            }
+            guard isChosen, isWanted, !failedStandIns.contains(standIn) else {
                 let wasActive = activeModuleStandIns.contains(standIn)
                 if wasActive {
                     activeModuleStandIns.remove(standIn)
@@ -221,6 +227,15 @@ final class SystemExtraTakeoverCoordinator {
         switch standIn {
         case .wiFi, .bluetooth, .sound: settings.optInStandIns.contains(standIn.rawValue)
         default: settings.enableModuleStandIns && !settings.skippedModuleStandIns.contains(standIn.rawValue)
+        }
+    }
+
+    private func standInGaveUp(_ standIn: SystemExtraStandIn) {
+        failedStandIns.insert(standIn)
+        if let item = SystemExtraItem.allCases.first(where: { SystemExtraStandIn($0) == standIn }) {
+            reconcile(item: item)
+        } else {
+            reconcileModules()
         }
     }
 
@@ -269,8 +284,12 @@ final class SystemExtraTakeoverCoordinator {
     /// Stand-ins start in the original visible slot and retain subsequent user placement while enabled.
     private func reconcile(item: SystemExtraItem) {
         guard let controller else { return }
-        let enabled = isEnabled(item)
-        let standInID = MenuBarItemTag.canonicalPersistentIdentifier(SystemExtraStandIn(item).itemIdentifier)
+        let standIn = SystemExtraStandIn(item)
+        if !isEnabled(item) {
+            failedStandIns.remove(standIn)
+        }
+        let enabled = isEnabled(item) && !failedStandIns.contains(standIn)
+        let standInID = MenuBarItemTag.canonicalPersistentIdentifier(standIn.itemIdentifier)
         let assigned = controller.sectionAssignment[standInID] != nil
         engine.reconcile(
             item: item,

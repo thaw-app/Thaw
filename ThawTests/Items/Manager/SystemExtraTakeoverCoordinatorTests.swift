@@ -264,6 +264,34 @@ struct ModuleStandInCoordinatorTests {
         #expect(rig.sections.sectionAssignment[original] == .visible)
     }
 
+    @Test("A stand-in that keeps exiting gives its original back, until its switch is turned off and on")
+    func crashingStandInReturnsOriginal() async throws {
+        let rig = TakeoverRig()
+        rig.settings.enableModuleStandIns = false
+        rig.settings.optInStandIns = ["wifi"]
+        rig.shownInControlCenter = [TakeoverRig.moduleTag(TakeoverRig.wiFi)]
+        let original = TakeoverRig.moduleID(TakeoverRig.wiFi)
+        rig.start()
+        await settle { rig.sections.sectionAssignment[original] == .hidden }
+
+        for _ in 1 ... 4 {
+            let count = rig.fake.startedProcesses.count
+            try #require(rig.fake.startedProcesses.last).exit()
+            await settle { rig.fake.startedProcesses.count > count || rig.sections.replacedItems.isEmpty }
+        }
+        await settle { rig.sections.sectionAssignment[original] == .visible }
+        #expect(rig.sections.replacedItems.isEmpty)
+        #expect(rig.sections.sectionAssignment[original] == .visible)
+        #expect(rig.fake.opened(.wiFi) == 4, "three restarts, then no more")
+
+        rig.settings.optInStandIns = []
+        await settle { rig.fake.opened(.wiFi) == 4 }
+        rig.settings.optInStandIns = ["wifi"]
+        await settle { rig.fake.opened(.wiFi) == 5 }
+        #expect(rig.fake.opened(.wiFi) == 5)
+        #expect(rig.sections.replacedItems == [original])
+    }
+
     @Test("An original the user brings back to Visible is moved to Hidden again on the next layout change")
     func layoutChangeRehidesOriginal() async {
         let rig = rig()
