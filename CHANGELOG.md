@@ -52,6 +52,16 @@ the items under New and Fixed.
 - Closing Settings no longer sends What's New or Credits behind other apps.
 - With the arrangement set to Manual, Sound and Wi-Fi can be moved in the Layout bar again.
 
+### Thanks
+
+- @elior-esh moved the group interleaving, reveal repair and section order checks out of `MenuBarItemManager+Moving` ([#1683](https://github.com/thaw-app/Thaw/pull/1683), [#1688](https://github.com/thaw-app/Thaw/pull/1688)) and steadied two tests ([#1694](https://github.com/thaw-app/Thaw/pull/1694), [#1696](https://github.com/thaw-app/Thaw/pull/1696)).
+- @alox92 spaced Thaw Bar icons by their visible bounds ([#1693](https://github.com/thaw-app/Thaw/pull/1693)).
+- @WGlegola added previews for the Displays pages ([#1695](https://github.com/thaw-app/Thaw/pull/1695)).
+- @nahuelcamillo matched the Mac App Store iStat Menus helper ([#1697](https://github.com/thaw-app/Thaw/pull/1697)).
+- @chai-in kept the iStat Menus clock in its saved section ([#1709](https://github.com/thaw-app/Thaw/pull/1709)).
+- @amanthanvi stopped the HUD capsule from resizing its own panel ([ThawUI#14](https://github.com/thaw-app/ThawUI/pull/14)).
+- @PurtucRobert, @dmisgano99, @macdaddy1944, @zinowiewfilip, @Macador, @wangzi0218, @okwme and @felixkaiser reported the bugs this release fixes.
+
 ## [3.0.0-alpha.15] - 2026-11-22
 
 **macOS 27 only · Build 127**
