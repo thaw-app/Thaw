@@ -18,6 +18,8 @@
 		<key>MallocSpaceEfficient</key>
 		<string>1</string>
 	</dict>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Lists your paired devices in the menu bar so you can connect and disconnect them.</string>
 	<key>SUFeedURL</key>
 	<string>https://thaw-app.github.io/updates/appcast.xml</string>
 	<key>SUPublicEDKey</key>
