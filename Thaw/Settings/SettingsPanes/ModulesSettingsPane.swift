@@ -44,15 +44,21 @@ struct ModulesSettingsPane: View {
             .onAppear { moduleHost.refresh() }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Picker("View", selection: $layout) {
-                        Label("List", systemImage: "list.bullet").tag(Layout.list)
-                        Label("Icons", systemImage: "square.grid.2x2").tag(Layout.grid)
+                    ControlGroup {
+                        layoutToggle(.list, title: "List", systemImage: "list.bullet")
+                        layoutToggle(.grid, title: "Icons", systemImage: "square.grid.2x2")
                     }
-                    .pickerStyle(.segmented)
-                    .labelStyle(.iconOnly)
                     .help("Show modules as a list or as icons")
                 }
             }
+    }
+
+    private func layoutToggle(_ value: Layout, title: LocalizedStringKey, systemImage: String) -> some View {
+        Toggle(isOn: Binding(get: { layout == value }, set: { if $0 { layout = value } })) {
+            Label(title, systemImage: systemImage)
+        }
+        .toggleStyle(.button)
+        .labelStyle(.iconOnly)
     }
 
     @ViewBuilder
