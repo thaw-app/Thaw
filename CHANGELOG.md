@@ -36,7 +36,7 @@ the items under New and Fixed.
 ### Changed
 
 - Modules shows a list like the other settings pages, or cards from the toolbar.
-- Settings now says that Click, Hover and Scroll under "Show hidden items on" are optional, and that with all three off only the Thaw icon shows hidden items.
+- Settings now says that Click, Hover and Scroll under "Show hidden items on" are optional.
 - **Exported diagnostics no longer include saved item lists,** and Thaw keeps only the newest five item lists.
 ### Fixed
 
