@@ -53,8 +53,11 @@ struct RootSettingsPagesRenderTests {
         return host
     }
 
-    @Test("Modules shows a card per module with why it can't run, and its switches start and stop it")
-    func modulesPane() async throws {
+    @Test(
+        "Modules shows each module with why it can't run, and its switches start and stop it",
+        arguments: [ModulesSettingsPane.Layout.grid, .list]
+    )
+    func modulesPane(layout: ModulesSettingsPane.Layout) async throws {
         let appState = AppState()
         let system = ModuleHostTests.FakeSystem()
         system.savedEnabled = ["triggers"]
@@ -63,10 +66,10 @@ struct RootSettingsPagesRenderTests {
         _ = system.addModule("automation", minimumAPIVersion: 99)
         let host = moduleHost(system)
         let profiles = ProfilesFeature()
-        let page = page(ModulesSettingsPane(moduleHost: host, profiles: profiles), appState: appState)
+        let page = page(ModulesSettingsPane(moduleHost: host, profiles: profiles, layout: layout), appState: appState)
 
         let texts = await page.texts(once: "Not signed by")
-        #expect(texts.contains { $0.contains("Switches saved layouts") }, "the Profiles card comes first")
+        #expect(texts.contains { $0.contains("Switches saved layouts") }, "Profiles comes first")
         #expect(texts.contains { $0.contains("Needs a newer version") })
         #expect(texts.contains { $0.contains("Shows chosen menu bar items") })
 
@@ -75,11 +78,13 @@ struct RootSettingsPagesRenderTests {
         #expect(system.windowsShown == [triggers], "Open launches the module with its window")
 
         let switches = page.elements().filter { OffscreenAccessibility.role(of: $0) == .checkBox }
-        #expect(switches.count == 4, "one switch per card")
+        #expect(switches.count == 4, "one switch per module")
+        // Offscreen, a switch in a grouped form ignores an accessibility press, so only the grid presses one.
+        guard layout == .grid else { return }
         let wasOn = profiles.isOn
-        OffscreenAccessibility.press(try #require(switches.first))
+        OffscreenAccessibility.press(try #require(page.elements(role: .checkBox, label: "Profiles").first))
         await page.settle { profiles.isOn != wasOn }
-        #expect(profiles.isOn != wasOn, "the Profiles card's switch turns Profiles on or off")
+        #expect(profiles.isOn != wasOn, "the Profiles switch turns Profiles on or off")
         profiles.isOn = wasOn
     }
 

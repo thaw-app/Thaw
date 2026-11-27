@@ -9,14 +9,25 @@ import SwiftUI
 import ThawModuleKit
 import ThawUI
 
-/// The optional parts of Thaw as cards, like Floe's extension store.
+/// The optional parts of Thaw, as a list like the other pages or as cards.
 /// Profiles is built in; the others are their own apps, and one that's off doesn't run.
 struct ModulesSettingsPane: View {
+    enum Layout: String {
+        case list
+        case grid
+    }
+
     @Bindable var moduleHost: ModuleHost
     @Bindable var profiles: ProfilesFeature
+    @SceneStorage("ModulesLayout") private var layout: Layout = .list
 
-    /// Cards about as wide as Floe's store cards, as many to a row as fit.
-    private let columns = [GridItem(.adaptive(minimum: 160, maximum: 220), spacing: ThawSpacing.gutter, alignment: .top)]
+    init(moduleHost: ModuleHost, profiles: ProfilesFeature, layout: Layout = .list) {
+        self.moduleHost = moduleHost
+        self.profiles = profiles
+        _layout = SceneStorage(wrappedValue: layout, "ModulesLayout")
+    }
+
+    private let columns = [GridItem(.adaptive(minimum: 200, maximum: 260), spacing: ThawSpacing.gutter, alignment: .top)]
 
     /// The search entry for a card's row.
     private static func searchAnchor(for card: ModuleCard) -> String {
@@ -29,16 +40,44 @@ struct ModulesSettingsPane: View {
     }
 
     var body: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: ThawSpacing.gutter) {
-                ForEach(cards) { card in
-                    ModuleCardView(card: card, moduleHost: moduleHost, profiles: profiles)
-                        .settingsSearchAnchor(Self.searchAnchor(for: card))
+        content
+            .onAppear { moduleHost.refresh() }
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Picker("View", selection: $layout) {
+                        Label("List", systemImage: "list.bullet").tag(Layout.list)
+                        Label("Icons", systemImage: "square.grid.2x2").tag(Layout.grid)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelStyle(.iconOnly)
+                    .help("Show modules as a list or as icons")
                 }
             }
-            .padding(ThawSpacing.inset)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch layout {
+        case .list:
+            ThawForm {
+                ThawSection {
+                    ForEach(cards) { card in
+                        ModuleRowView(card: card, moduleHost: moduleHost, profiles: profiles)
+                            .settingsSearchAnchor(Self.searchAnchor(for: card))
+                    }
+                }
+            }
+        case .grid:
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: ThawSpacing.gutter) {
+                    ForEach(cards) { card in
+                        ModuleCardView(card: card, moduleHost: moduleHost, profiles: profiles)
+                            .settingsSearchAnchor(Self.searchAnchor(for: card))
+                    }
+                }
+                .padding(ThawSpacing.section)
+            }
         }
-        .onAppear { moduleHost.refresh() }
     }
 
     // MARK: Cards
@@ -117,35 +156,41 @@ struct ModuleCard: Identifiable, Equatable {
     }
 }
 
-/// One card: the part's icon, name and description, then its switch.
-private struct ModuleCardView: View {
+/// A part's name with what it does under it. Cards keep three lines for the
+/// description so a row of them lines up.
+private struct ModuleLabel: View {
+    @Environment(\.settingsDescriptionsVisible) private var descriptionsVisible
+    let card: ModuleCard
+    var isCard = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: ThawSpacing.hairline) {
+            Text(verbatim: card.name)
+                .font(ThawType.label)
+                .lineLimit(1)
+            if isCard {
+                Text(verbatim: card.summary)
+                    .font(ThawType.detail)
+                    .foregroundStyle(ThawInk.supporting)
+                    .lineLimit(3, reservesSpace: true)
+            } else if descriptionsVisible {
+                Text(verbatim: card.summary)
+                    .font(ThawType.detail)
+                    .foregroundStyle(ThawInk.supporting)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// The part's switch, with Open… for a module that's on.
+private struct ModuleCardControls: View {
     let card: ModuleCard
     @Bindable var moduleHost: ModuleHost
     @Bindable var profiles: ProfilesFeature
 
     var body: some View {
-        VStack(spacing: ThawSpacing.base) {
-            SettingsPaneIconTile(identifier: card.pane, side: 40)
-            VStack(spacing: ThawSpacing.hairline) {
-                Text(verbatim: card.name)
-                    .lineLimit(1)
-                Text(verbatim: card.summary)
-                    .font(ThawType.detail)
-                    .foregroundStyle(ThawInk.supporting)
-                    .lineLimit(3, reservesSpace: true)
-            }
-            .multilineTextAlignment(.center)
-            control
-        }
-        .padding(ThawSpacing.inset)
-        .frame(maxWidth: .infinity)
-        .background(.quinary, in: RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(verbatim: card.name))
-    }
-
-    @ViewBuilder
-    private var control: some View {
         switch card.kind {
         case .profiles:
             Toggle(isOn: $profiles.isOn) {
@@ -156,5 +201,45 @@ private struct ModuleCardView: View {
         case let .module(identifier):
             ModuleControls(moduleHost: moduleHost, identifier: identifier, name: card.name)
         }
+    }
+}
+
+private struct ModuleRowView: View {
+    let card: ModuleCard
+    @Bindable var moduleHost: ModuleHost
+    @Bindable var profiles: ProfilesFeature
+
+    var body: some View {
+        LabeledContent {
+            ModuleCardControls(card: card, moduleHost: moduleHost, profiles: profiles)
+        } label: {
+            HStack(spacing: ThawSpacing.row) {
+                SettingsPaneIconTile(identifier: card.pane, side: 32)
+                ModuleLabel(card: card)
+            }
+            .padding(.vertical, ThawSpacing.tight)
+        }
+    }
+}
+
+private struct ModuleCardView: View {
+    let card: ModuleCard
+    @Bindable var moduleHost: ModuleHost
+    @Bindable var profiles: ProfilesFeature
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: ThawSpacing.inset) {
+            SettingsPaneIconTile(identifier: card.pane, side: 40)
+            ModuleLabel(card: card, isCard: true)
+            HStack {
+                Spacer(minLength: 0)
+                ModuleCardControls(card: card, moduleHost: moduleHost, profiles: profiles)
+            }
+            .frame(minHeight: 24)
+        }
+        .padding(ThawSpacing.gutter)
+        .background(.quinary, in: RoundedRectangle(cornerRadius: ThawRadius.card, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(verbatim: card.name))
     }
 }

@@ -35,6 +35,7 @@ the items under New and Fixed.
 - iStat Menus from the Mac App Store no longer fills Layout with a new item for every reading, such as each CPU percentage or network speed.
 ### Changed
 
+- **Modules lists each part of Thaw like the other settings pages,** with its switch and Open… on the same row. A button in the toolbar shows them as cards instead.
 - Settings now says that Click, Hover and Scroll under "Show hidden items on" are optional, and that with all three off only the Thaw icon shows hidden items.
 - **Exported diagnostics no longer include saved item lists,** and Thaw keeps only the newest five item lists.
 ### Fixed
