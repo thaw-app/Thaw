@@ -1117,7 +1117,7 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager+RestrictionRepair.swift",
     "line": 68
    },
-   "reason": "Function should have complexity 10 or less; currently complexity is 45",
+   "reason": "Function should have complexity 10 or less; currently complexity is 38",
    "ruleDescription": "Complexity of function bodies should be limited.",
    "ruleIdentifier": "cyclomatic_complexity",
    "ruleName": "Cyclomatic Complexity",
@@ -1132,26 +1132,11 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager+RestrictionRepair.swift",
     "line": 69
    },
-   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 240 lines",
+   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 224 lines",
    "ruleDescription": "Function bodies should not span too many lines",
    "ruleIdentifier": "function_body_length",
    "ruleName": "Function Body Length",
    "severity": "error"
-  }
- },
- {
-  "text": "}",
-  "violation": {
-   "location": {
-    "character": 1,
-    "file": "Thaw/Items/Manager/MenuBarItemManager+RestrictionRepair.swift",
-    "line": 428
-   },
-   "reason": "File should contain 400 lines or less: currently contains 428",
-   "ruleDescription": "Files should not span too many lines.",
-   "ruleIdentifier": "file_length",
-   "ruleName": "File Length",
-   "severity": "warning"
   }
  },
  {

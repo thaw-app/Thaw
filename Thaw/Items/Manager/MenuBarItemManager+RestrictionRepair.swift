@@ -198,7 +198,13 @@ extension MenuBarItemManager {
             )
         }
         let unparkable = parkedVisible.filter { $0.bounds.minX != MenuBarItemGeometry.transientSentinelX }
-        if !unparkable.isEmpty, let anchor = unparkAnchorAmong(liveItems: liveItems, controller: controller) {
+        if !unparkable.isEmpty,
+           let anchor = PostRestrictionUnpark.anchor(
+               among: liveItems,
+               screens: BarAxis.liveDisplayBounds(),
+               sectionOf: controller.section(for:)
+           )
+        {
             MenuBarItemManager.diagLog.info(
                 "post-restriction repair: unparking \(unparkable.count) off-band item(s) " +
                     "using anchor \(anchor.logString)"
@@ -212,61 +218,34 @@ extension MenuBarItemManager {
                 }
                 let freshItems = await MenuBarItem.getMenuBarItems(option: .activeSpace)
                 guard !arrangementIsManual, !Task.isCancelled else { return false }
-                guard let currentAnchor = unparkAnchorAmong(liveItems: freshItems, controller: controller) else {
+                guard let currentAnchor = PostRestrictionUnpark.anchor(
+                    among: freshItems,
+                    screens: BarAxis.liveDisplayBounds(),
+                    sectionOf: controller.section(for:)
+                ) else {
                     break
                 }
                 do {
                     try await unparkVisibleItemAfterRestrictionReflow(
                         item: item,
                         anchor: currentAnchor,
-                        anchorFallbacks: unparkAnchorFallbacks(for: currentAnchor, among: freshItems)
-                    )
-                } catch EventError.destinationAnchorLost {
-                    guard !arrangementIsManual, !Task.isCancelled else { return false }
-                    failedUnparkIDs.insert(item.windowID)
-                    boundaryRepair.unrepairableItemIDs.insert(PostRestrictionRepairItemID(item))
-                    // Every anchor vanished mid-drop, which says nothing about
-                    // the item, so suppress for the session only.
-                    MenuBarItemManager.diagLog.warning(
-                        "post-restriction repair: anchors for \(item.logString) vanished mid-drop; skipping without a persisted verdict"
-                    )
-                } catch let EventError.itemNotMovable(_, refusal) {
-                    guard !arrangementIsManual, !Task.isCancelled else { return false }
-                    failedUnparkIDs.insert(item.windowID)
-                    boundaryRepair.unrepairableItemIDs.insert(PostRestrictionRepairItemID(item))
-                    // Persist the verdict across relaunch, except for a refusal
-                    // the user can lift in Settings.
-                    if refusal == .requiresExperimentalHiding {
-                        MenuBarItemManager.diagLog.info(
-                            "post-restriction repair: \(item.logString) refused pending the system-item-hiding gate; \"won't move\" verdict not persisted"
+                        anchorFallbacks: PostRestrictionUnpark.fallbacks(
+                            for: currentAnchor,
+                            among: freshItems,
+                            screens: BarAxis.liveDisplayBounds(),
+                            experimentalSystemItemHiding: appState.settings.layout.enableExperimentalSystemItemHiding
                         )
-                    } else {
-                        failureLedger.recordFailure(for: item, kind: .cannotComplete)
-                        MenuBarItemManager.diagLog.warning(
-                            "post-restriction repair: suppressing future repair pulses for unmovable \(item.logString)" +
-                                " (reason: \(refusal.map(String.init(describing:)) ?? "none"))"
-                        )
-                    }
-                } catch EventError.cannotComplete {
-                    guard !arrangementIsManual, !Task.isCancelled else { return false }
-                    failedUnparkIDs.insert(item.windowID)
-                    boundaryRepair.unrepairableItemIDs.insert(PostRestrictionRepairItemID(item))
-                    failureLedger.recordFailure(for: item, kind: .cannotComplete)
-                    MenuBarItemManager.diagLog.warning(
-                        "post-restriction repair: suppressing future repair pulses after move could not complete for \(item.logString)"
                     )
-                } catch is CancellationError {
-                    return false
                 } catch {
-                    guard !arrangementIsManual, !Task.isCancelled else { return false }
+                    let failure = PostRestrictionUnpark.failure(for: error)
+                    guard failure != .cancelled, !arrangementIsManual, !Task.isCancelled else { return false }
+                    // Skipped for the rest of the session; the ledger hears only what the failure says about the item.
                     failedUnparkIDs.insert(item.windowID)
                     boundaryRepair.unrepairableItemIDs.insert(PostRestrictionRepairItemID(item))
-                    // A one-off error is not a persisted verdict, it may not
-                    // mean the item is unmovable.
-                    failureLedger.recordFailure(for: item, kind: .other)
-                    MenuBarItemManager.diagLog.warning(
-                        "post-restriction repair: suppressing future repair pulses after move failed for \(item.logString): \(error)"
-                    )
+                    if let kind = failure.ledgerKind {
+                        failureLedger.recordFailure(for: item, kind: kind)
+                    }
+                    logUnparkFailure(failure, of: item, error: error)
                 }
             }
         } else if unparkable.isEmpty {
@@ -357,58 +336,32 @@ extension MenuBarItemManager {
         return stillParked || !blankTags.isEmpty || strandNeedsRetry
     }
 
-    private func unparkAnchorAmong(
-        liveItems: [MenuBarItem],
-        controller: any MenuBarSectionControlling
-    ) -> MenuBarItem? {
-        let screens = BarAxis.liveDisplayBounds()
-        let onBand = liveItems.filter { !$0.isParkedOffMenuBarBand(among: liveItems, screens: screens) }
-        if let control = onBand.first(where: { $0.tag.matchesVisibleControlItem }) {
-            return control
+    private func logUnparkFailure(_ failure: PostRestrictionUnpark.Failure, of item: MenuBarItem, error: any Error) {
+        switch failure {
+        case .cancelled:
+            break
+        case .anchorsLost:
+            MenuBarItemManager.diagLog.warning(
+                "post-restriction repair: anchors for \(item.logString) vanished mid-drop; skipping without a persisted verdict"
+            )
+        case .awaitsExperimentalHiding:
+            MenuBarItemManager.diagLog.info(
+                "post-restriction repair: \(item.logString) refused pending the system-item-hiding gate; \"won't move\" verdict not persisted"
+            )
+        case let .notMovable(refusal):
+            MenuBarItemManager.diagLog.warning(
+                "post-restriction repair: suppressing future repair pulses for unmovable \(item.logString)" +
+                    " (reason: \(refusal.map(String.init(describing:)) ?? "none"))"
+            )
+        case .cannotComplete:
+            MenuBarItemManager.diagLog.warning(
+                "post-restriction repair: suppressing future repair pulses after move could not complete for \(item.logString)"
+            )
+        case .other:
+            MenuBarItemManager.diagLog.warning(
+                "post-restriction repair: suppressing future repair pulses after move failed for \(item.logString): \(error)"
+            )
         }
-        return onBand
-            .filter { !$0.isControlItem && controller.section(for: $0) == .visible }
-            .max(by: { $0.bounds.midX < $1.bounds.midX })
-    }
-
-    /// The anchor's nearest orderable neighbours, taken from the same scan
-    /// because a later scan may no longer be trustworthy.
-    private func unparkAnchorFallbacks(
-        for anchor: MenuBarItem,
-        among liveItems: [MenuBarItem]
-    ) -> [MoveDestination] {
-        let experimentalSystemItemHiding = appState?.settings.layout
-            .enableExperimentalSystemItemHiding ?? false
-        let screens = BarAxis.liveDisplayBounds()
-        let ordered = MenuBarItem.sortByLeadingEdge(
-            liveItems.filter {
-                !$0.isSystemClone &&
-                    !$0.isNativeOverflowControl &&
-                    !$0.isControlItem &&
-                    $0.bounds.width > 0 &&
-                    !$0.isParkedOffMenuBarBand(among: liveItems, screens: screens)
-            }
-        )
-        guard let anchorIndex = ordered.firstIndex(where: {
-            $0.uniqueIdentifier == anchor.uniqueIdentifier
-        }) else {
-            return []
-        }
-
-        var chain = [MoveDestination]()
-        if let left = ordered[..<anchorIndex].last(where: {
-            $0.isPhysicallyOrderable(experimentalSystemItemHiding: experimentalSystemItemHiding)
-        }) {
-            chain.append(.rightOfItem(left))
-        }
-        if anchorIndex + 1 < ordered.count,
-           let right = ordered[(anchorIndex + 1)...].first(where: {
-               $0.isPhysicallyOrderable(experimentalSystemItemHiding: experimentalSystemItemHiding)
-           })
-        {
-            chain.append(.leftOfItem(right))
-        }
-        return chain
     }
 
     private func unparkVisibleItemAfterRestrictionReflow(
