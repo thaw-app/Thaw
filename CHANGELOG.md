@@ -26,7 +26,7 @@ the items under New and Fixed.
 
 ### Added
 
-- **Replace Control Center items can now replace Wi-Fi, Bluetooth and Sound.** Thaw's Wi-Fi item turns Wi-Fi on or off, shows the signal and link speed, copies your IP address, opens your router's page and tests your connection speed. Thaw's Bluetooth item turns Bluetooth on or off and connects or disconnects your paired devices with one click. Thaw's Sound item sets the volume, mutes, and picks the output and input device. All three hide and come back with their section, including with the Native hiding method, and Apple's own menus stay in Control Center.
+- Replace Control Center items can now replace Wi-Fi, Bluetooth and Sound with Thaw's own items.
 
 ### Fixed
 
@@ -35,7 +35,7 @@ the items under New and Fixed.
 - iStat Menus from the Mac App Store no longer fills Layout with a new item for every reading, such as each CPU percentage or network speed.
 ### Changed
 
-- **Modules lists each part of Thaw like the other settings pages,** with its switch and Open… on the same row. A button in the toolbar shows them as cards instead.
+- Modules shows a list like the other settings pages, or cards from the toolbar.
 - Settings now says that Click, Hover and Scroll under "Show hidden items on" are optional, and that with all three off only the Thaw icon shows hidden items.
 - **Exported diagnostics no longer include saved item lists,** and Thaw keeps only the newest five item lists.
 ### Fixed
