@@ -54,6 +54,13 @@ nonisolated enum MenuBarAXQueries {
         if case let .applicationMenuFrames(frames, _) = await viaHelper(.applicationMenuFrames(pid: pid)) {
             return frames
         }
+        // A read superseded by another front app is not retried here; the helper only missed it.
+        guard !Task.isCancelled else { return nil }
+        // After a helper timeout or with the helper off, AppKit would answer a read of Thaw's own
+        // menus on this thread, and NSMenu asserts off the main one.
+        if AXPrimitives.isOwnProcess(pid) {
+            return await MainActor.run { AXPrimitives.applicationMenuFrames(pid: pid) }
+        }
         return AXPrimitives.applicationMenuFrames(pid: pid)
     }
 
