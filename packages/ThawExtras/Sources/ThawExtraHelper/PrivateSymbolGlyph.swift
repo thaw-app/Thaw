@@ -16,8 +16,7 @@ enum PrivateSymbolGlyph {
         return NSImage.perform(selector, with: name, with: label)?.takeUnretainedValue() as? NSImage
     }
 
-    /// Falls back to the rune drawn here: a vertical stroke with two closed
-    /// arrowheads on its right and two crossing strokes on its left.
+    /// Falls back to a drawn Bluetooth rune.
     static func bluetooth(accessibilityDescription label: String) -> NSImage {
         let image = image(named: "bluetooth", accessibilityDescription: label) ?? drawnBluetooth(accessibilityDescription: label)
         image.isTemplate = true

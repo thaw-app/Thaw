@@ -9,9 +9,8 @@ import AppKit
 import CoreWLAN
 import OSLog
 
-/// The Wi-Fi stand-in: signal bars, a power switch, the addresses people copy
-/// most, and a speed test. Nothing here needs Location access, so the network
-/// name and the list of networks stay in Control Center.
+/// Nothing here needs Location access, so the network name and nearby networks
+/// stay in Control Center.
 @MainActor
 final class WiFiExtra: NSObject {
     private let button: NSStatusBarButton
@@ -177,7 +176,6 @@ struct WiFiReading: Equatable {
         isPoweredOn ? "wifi" : "wifi.slash"
     }
 
-    /// Three bars, split where Apple's menu drops one.
     var signalLevel: Double {
         guard isConnected else { return 0 }
         if rssi >= -60 { return 1 }

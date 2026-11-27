@@ -216,8 +216,7 @@ final class SystemExtraTakeoverCoordinator {
         publishReplacedItems()
     }
 
-    /// This stand-in's checkbox in Layout is checked. Wi-Fi, Bluetooth and Sound
-    /// are listed when on; the four modules share a switch and list the skipped ones.
+    /// Wi-Fi, Bluetooth and Sound are listed when on; the four modules list the ones skipped.
     static func isChosen(_ standIn: SystemExtraStandIn, in settings: LayoutSettings) -> Bool {
         switch standIn {
         case .wiFi, .bluetooth, .sound: settings.optInStandIns.contains(standIn.rawValue)

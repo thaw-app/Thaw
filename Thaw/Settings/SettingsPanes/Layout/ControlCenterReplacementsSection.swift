@@ -15,7 +15,6 @@ struct ControlCenterReplacements: Equatable {
     var modules: Bool
     var timeMachine: Bool
     var textInput: Bool
-    /// Wi-Fi, Bluetooth and Sound, each turned on by its own box.
     var optIn: Set<SystemExtraStandIn> = []
     /// The Control Center modules left as Apple's own while modules is on.
     var skipped: Set<SystemExtraStandIn> = []
@@ -174,7 +173,6 @@ struct ControlCenterReplacementsSection: View {
 }
 
 private extension SystemExtraStandIn {
-    /// The item's name in the replacement list.
     var replacementName: LocalizedStringKey {
         switch self {
         case .focus: "Focus"

@@ -9,12 +9,8 @@ import AppKit
 import IOBluetooth
 import OSLog
 
-/// The Bluetooth stand-in: a power switch and the paired devices, each
-/// connected or disconnected with one click.
-///
-/// IOBluetooth waits on the Bluetooth permission prompt and blocks while it
-/// connects, so every call runs off the main thread and the menu shows the
-/// last reading.
+/// IOBluetooth blocks on the permission prompt and while it connects, so every
+/// call runs off the main thread and the menu shows the last reading.
 @MainActor
 final class BluetoothExtra: NSObject {
     private let button: NSStatusBarButton
@@ -35,8 +31,7 @@ final class BluetoothExtra: NSObject {
     func start() {
         button.image = PrivateSymbolGlyph.bluetooth(accessibilityDescription: label)
         button.toolTip = label
-        // Bluetooth has no change notification without registering per device,
-        // so the icon checks the power state now and then.
+        // Bluetooth posts no power change short of registering per device, so poll.
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refresh()
@@ -182,7 +177,6 @@ struct BluetoothReading: Equatable, Sendable {
         return connect ? device.openConnection() : device.closeConnection()
     }
 
-    /// The symbol for a device's Bluetooth class of device.
     nonisolated static func symbolName(major: BluetoothDeviceClassMajor, minor: BluetoothDeviceClassMinor) -> String {
         switch Int(major) {
         case kBluetoothDeviceClassMajorAudio: "headphones"
@@ -196,8 +190,7 @@ struct BluetoothReading: Equatable, Sendable {
     }
 }
 
-/// Bluetooth's power switch is private API; System Settings and blueutil use
-/// the same two IOBluetooth functions.
+/// Bluetooth's power switch is private IOBluetooth API, the pair blueutil calls.
 enum BluetoothPower {
     private typealias Get = @convention(c) () -> Int32
     private typealias SetPower = @convention(c) (Int32) -> Void

@@ -42,8 +42,7 @@ enum SystemExtraStandIn: String, CaseIterable {
         "\(ThawMenuBarIdentity.bundleIdentifier).extra.\(rawValue)"
     }
 
-    /// The autosave name, which must match ExtraRole.autosaveName in
-    /// ThawExtraHelper, and the name of the stand-in's app.
+    /// The autosave name must match ExtraRole.autosaveName in ThawExtraHelper.
     private var names: (autosave: String, bundle: String) {
         switch self {
         case .focus: ("Thaw.Extra.Focus", "Thaw Focus")
