@@ -12,7 +12,7 @@ import OSLog
 /// Nothing here needs Location access, so the network name and nearby networks
 /// stay in Control Center.
 @MainActor
-final class WiFiExtra: NSObject {
+final class WiFiExtra: NSObject, MenuActionTarget {
     private let button: NSStatusBarButton
     private let label: String
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ThawExtraHelper", category: "wifi")
@@ -47,10 +47,10 @@ final class WiFiExtra: NSObject {
             menu.addItem(.separator())
             if reading.isConnected {
                 for line in reading.detailLines {
-                    menu.addItem(infoItem(line))
+                    menu.addItem(NSMenuItem.info(line))
                 }
             } else {
-                menu.addItem(infoItem(String(localized: "Not connected")))
+                menu.addItem(NSMenuItem.info(String(localized: "Not connected")))
             }
             let addresses = NetworkAddresses.current(interface: reading.interfaceName)
             if let address = addresses.address {
@@ -90,10 +90,10 @@ final class WiFiExtra: NSObject {
     private func addSpeedTest(to menu: NSMenu, connected: Bool) {
         switch speedTest {
         case .running:
-            let item = infoItem(String(localized: "Testing Connection Speed…"))
+            let item = NSMenuItem.info(String(localized: "Testing Connection Speed…"))
             menu.addItem(item)
         case let .finished(result):
-            menu.addItem(infoItem(result.summary))
+            menu.addItem(NSMenuItem.info(result.summary))
             fallthrough
         case .idle, .failed:
             let item = actionItem(String(localized: "Test Connection Speed"), #selector(runSpeedTest))
@@ -101,7 +101,7 @@ final class WiFiExtra: NSObject {
             menu.addItem(item)
         }
         if case .failed = speedTest {
-            menu.addItem(infoItem(String(localized: "The last speed test didn’t finish.")))
+            menu.addItem(NSMenuItem.info(String(localized: "The last speed test didn’t finish.")))
         }
     }
 
@@ -138,21 +138,7 @@ final class WiFiExtra: NSObject {
     }
 
     @objc private func openSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.wifi-settings-extension") {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
-    private func actionItem(_ title: String, _ action: Selector) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-        item.target = self
-        return item
-    }
-
-    private func infoItem(_ title: String) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        item.isEnabled = false
-        return item
+        SystemSettings.open("com.apple.wifi-settings-extension")
     }
 }
 

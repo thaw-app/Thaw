@@ -12,7 +12,7 @@ import CoreAudio
 /// The Sound stand-in: output volume and mute, and the output and input
 /// devices to pick from. CoreAudio needs no permission for any of it.
 @MainActor
-final class SoundExtra: NSObject {
+final class SoundExtra: NSObject, MenuActionTarget {
     private let button: NSStatusBarButton
     private let label: String
     private var listeners: [(AudioObjectID, AudioObjectPropertyAddress, AudioObjectPropertyListenerBlock)] = []
@@ -153,15 +153,7 @@ final class SoundExtra: NSObject {
     }
 
     @objc private func openSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.Sound-Settings.extension") {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
-    private func actionItem(_ title: String, _ action: Selector) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-        item.target = self
-        return item
+        SystemSettings.open("com.apple.Sound-Settings.extension")
     }
 }
 

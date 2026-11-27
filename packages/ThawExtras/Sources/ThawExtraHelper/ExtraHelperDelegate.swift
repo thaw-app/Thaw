@@ -11,7 +11,7 @@ import OSLog
 /// Publishes one status item standing in for an Apple menu extra that Thaw has
 /// removed, and exits when the Thaw that launched it quits.
 @MainActor
-final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, MenuActionTarget {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ThawExtraHelper", category: "extra")
     private var role: ExtraRole?
     private var statusItem: NSStatusItem?
@@ -155,12 +155,6 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
         }
     }
 
-    private func actionItem(_ title: String, _ action: Selector) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-        item.target = self
-        return item
-    }
-
     @objc private func backUpNow() {
         let process = Process()
         process.executableURL = URL(filePath: "/usr/bin/tmutil")
@@ -185,9 +179,7 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
     }
 
     @objc private func openTimeMachineSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.Time-Machine-Settings.extension") {
-            NSWorkspace.shared.open(url)
-        }
+        SystemSettings.open("com.apple.Time-Machine-Settings.extension")
     }
 
     @objc private func openClock() {
@@ -201,9 +193,7 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
     }
 
     @objc private func openAirDropSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.AirDrop-Handoff-Settings.extension") {
-            NSWorkspace.shared.open(url)
-        }
+        SystemSettings.open("com.apple.AirDrop-Handoff-Settings.extension")
     }
 
     // MARK: Visibility

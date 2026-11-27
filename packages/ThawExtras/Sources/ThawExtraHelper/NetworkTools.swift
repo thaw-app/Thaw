@@ -54,24 +54,12 @@ enum ConnectionSpeedTest {
         }
     }
 
+    /// A stalled test would otherwise leave the menu saying it is still running.
+    static let timeout = Duration.seconds(90)
+
     static func run() async -> Result? {
-        await withCheckedContinuation { continuation in
-            let process = Process()
-            let output = Pipe()
-            process.executableURL = URL(filePath: "/usr/bin/networkQuality")
-            process.arguments = ["-c"]
-            process.standardOutput = output
-            process.standardError = FileHandle.nullDevice
-            process.terminationHandler = { _ in
-                let data = output.fileHandleForReading.readDataToEndOfFile()
-                continuation.resume(returning: parse(data))
-            }
-            do {
-                try process.run()
-            } catch {
-                continuation.resume(returning: nil)
-            }
-        }
+        let output = await CommandOutput.output(of: URL(filePath: "/usr/bin/networkQuality"), arguments: ["-c"], timeout: timeout)
+        return parse(Data(output.utf8))
     }
 
     /// networkQuality -c prints JSON with throughput in bits per second.

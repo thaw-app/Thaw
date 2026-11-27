@@ -12,7 +12,7 @@ import OSLog
 /// IOBluetooth blocks on the permission prompt and while it connects, so every
 /// call runs off the main thread and the menu shows the last reading.
 @MainActor
-final class BluetoothExtra: NSObject {
+final class BluetoothExtra: NSObject, MenuActionTarget {
     private let button: NSStatusBarButton
     private let label: String
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ThawExtraHelper", category: "bluetooth")
@@ -60,9 +60,7 @@ final class BluetoothExtra: NSObject {
             menu.addItem(.separator())
             menu.addItem(.sectionHeader(title: String(localized: "Devices")))
             if reading.devices.isEmpty {
-                let none = NSMenuItem(title: String(localized: "No Devices"), action: nil, keyEquivalent: "")
-                none.isEnabled = false
-                menu.addItem(none)
+                menu.addItem(.info(String(localized: "No Devices")))
             }
             for device in reading.devices {
                 let busy = busyAddresses.contains(device.address)
@@ -122,15 +120,7 @@ final class BluetoothExtra: NSObject {
     }
 
     @objc private func openSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.BluetoothSettings") {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
-    private func actionItem(_ title: String, _ action: Selector) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-        item.target = self
-        return item
+        SystemSettings.open("com.apple.BluetoothSettings")
     }
 }
 

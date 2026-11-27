@@ -43,7 +43,7 @@ enum SystemModuleGlyph {
     }
 
     /// AppKit's private symbol loader, which also finds the public symbols.
-    private static func privateSymbol(_ name: String) -> NSImage? {
+    static func privateSymbol(_ name: String) -> NSImage? {
         let selector = NSSelectorFromString("imageWithPrivateSystemSymbolName:accessibilityDescription:")
         guard NSImage.responds(to: selector), let implementation = NSImage.method(for: selector) else { return nil }
         typealias Loader = @convention(c) (AnyClass, Selector, NSString, NSString?) -> NSImage?

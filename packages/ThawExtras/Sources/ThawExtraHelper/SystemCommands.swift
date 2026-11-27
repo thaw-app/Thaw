@@ -116,9 +116,7 @@ enum UserSessionCommands {
         }
 
         @objc func openSettings() {
-            if let url = URL(string: "x-apple.systempreferences:com.apple.Users-Groups-Settings.extension") {
-                NSWorkspace.shared.open(url)
-            }
+            SystemSettings.open("com.apple.Users-Groups-Settings.extension")
         }
     }
 }

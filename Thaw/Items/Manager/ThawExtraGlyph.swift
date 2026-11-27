@@ -25,7 +25,7 @@ enum ThawExtraGlyph {
         guard bundleID.hasPrefix(prefix),
               let standIn = SystemExtraStandIn(rawValue: String(bundleID.dropFirst(prefix.count)))
         else { return nil }
-        let image = privateSymbolName(for: standIn).flatMap(privateSymbol)
+        let image = privateSymbolName(for: standIn).flatMap(SystemModuleGlyph.privateSymbol)
             ?? NSImage(systemSymbolName: symbolName(for: standIn), accessibilityDescription: nil)
         image?.isTemplate = true
         return image
@@ -65,11 +65,5 @@ enum ThawExtraGlyph {
         case .bluetooth: "bluetooth"
         default: nil
         }
-    }
-
-    private static func privateSymbol(_ name: String) -> NSImage? {
-        let selector = NSSelectorFromString("imageWithPrivateSystemSymbolName:accessibilityDescription:")
-        guard NSImage.responds(to: selector) else { return nil }
-        return NSImage.perform(selector, with: name, with: nil)?.takeUnretainedValue() as? NSImage
     }
 }
