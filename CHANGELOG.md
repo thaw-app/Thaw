@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Added
+
+- **Replace Control Center items can now replace Wi-Fi and Bluetooth.** Thaw's Wi-Fi item turns Wi-Fi on or off, shows the signal and link speed, copies your IP address, opens your router's page and tests your connection speed. Thaw's Bluetooth item turns Bluetooth on or off and connects or disconnects your paired devices with one click. Both hide and come back with their section, including with the Native hiding method, and Apple's own menus stay in Control Center.
+
 ### Fixed
 
 - Revealing hidden items no longer leaves some of them on top of others in the menu bar.

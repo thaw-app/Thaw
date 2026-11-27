@@ -21,9 +21,7 @@ enum AirDropGlyph {
     }
 
     private static func systemImage(accessibilityDescription label: String) -> NSImage? {
-        let selector = NSSelectorFromString("imageWithPrivateSystemSymbolName:accessibilityDescription:")
-        guard NSImage.responds(to: selector) else { return nil }
-        return NSImage.perform(selector, with: "airdrop", with: label)?.takeUnretainedValue() as? NSImage
+        PrivateSymbolGlyph.image(named: "airdrop", accessibilityDescription: label)
     }
 
     private static func drawn(accessibilityDescription label: String) -> NSImage {

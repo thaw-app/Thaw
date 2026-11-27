@@ -19,6 +19,8 @@ enum ExtraRole: String, CaseIterable {
     case textInput = "textinput"
     /// Not an Apple extra: names the active Space, which macOS doesn't show.
     case space
+    case wiFi = "wifi"
+    case bluetooth
     /// Stand-ins for third-party items macOS won't draw. Thaw hands each slot
     /// the item's icon and name, and does the click itself.
     case slot1, slot2, slot3, slot4, slot5, slot6
@@ -52,6 +54,8 @@ enum ExtraRole: String, CaseIterable {
         case .userSwitcher: "Thaw.Extra.UserSwitcher"
         case .textInput: "Thaw.Extra.TextInput"
         case .space: "Thaw.Extra.Space"
+        case .wiFi: "Thaw.Extra.WiFi"
+        case .bluetooth: "Thaw.Extra.Bluetooth"
         case .slot1: "Thaw.Extra.Slot1"
         case .slot2: "Thaw.Extra.Slot2"
         case .slot3: "Thaw.Extra.Slot3"
@@ -71,6 +75,8 @@ enum ExtraRole: String, CaseIterable {
         case .userSwitcher: String(localized: "Fast User Switching")
         case .textInput: String(localized: "Input Menu")
         case .space: String(localized: "Space")
+        case .wiFi: String(localized: "Wi-Fi")
+        case .bluetooth: String(localized: "Bluetooth")
         case .slot1, .slot2, .slot3, .slot4, .slot5, .slot6: String(localized: "Stand-in")
         }
     }

@@ -42,6 +42,12 @@ final class FakeStandInSections: StandInSectionControlling {
         sectionItemOrder[section] = identifiers
     }
 
+    private(set) var replacedItems: Set<String> = []
+
+    func setReplacedItems(_ identifiers: Set<String>) {
+        replacedItems = identifiers
+    }
+
     /// Announces a layout change the way the controller's publishers do.
     func announce() {
         changes.send()

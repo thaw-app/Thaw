@@ -15,6 +15,8 @@ struct ControlCenterReplacements: Equatable {
     var modules: Bool
     var timeMachine: Bool
     var textInput: Bool
+    var wiFi = false
+    var bluetooth = false
     /// The Control Center modules left as Apple's own while modules is on.
     var skipped: Set<SystemExtraStandIn> = []
 
@@ -22,7 +24,7 @@ struct ControlCenterReplacements: Equatable {
     static let moduleItems: [SystemExtraStandIn] = [.focus, .airDrop, .nowPlaying, .userSwitcher]
 
     /// Every item the list offers, in the order it shows them.
-    static let listed: [SystemExtraStandIn] = moduleItems + [.timeMachine, .textInput]
+    static let listed: [SystemExtraStandIn] = moduleItems + [.timeMachine, .textInput, .wiFi, .bluetooth]
 
     var isOn: Bool {
         get { Self.listed.contains { isReplaced($0) } }
@@ -30,6 +32,11 @@ struct ControlCenterReplacements: Equatable {
             modules = newValue
             timeMachine = newValue
             textInput = newValue
+            // Their stand-ins do less than Apple's menus, so turning the switch on leaves them to their own boxes.
+            if !newValue {
+                wiFi = false
+                bluetooth = false
+            }
             skipped = []
         }
     }
@@ -38,6 +45,8 @@ struct ControlCenterReplacements: Equatable {
         switch item {
         case .timeMachine: timeMachine
         case .textInput: textInput
+        case .wiFi: wiFi
+        case .bluetooth: bluetooth
         case .timer, .space: false
         case .focus, .airDrop, .nowPlaying, .userSwitcher: modules && !skipped.contains(item)
         }
@@ -52,6 +61,10 @@ struct ControlCenterReplacements: Equatable {
             timeMachine = replaced
         case .textInput:
             textInput = replaced
+        case .wiFi:
+            wiFi = replaced
+        case .bluetooth:
+            bluetooth = replaced
         case .timer, .space:
             break
         case .focus, .airDrop, .nowPlaying, .userSwitcher:
@@ -79,6 +92,8 @@ extension LayoutSettings {
                 modules: enableModuleStandIns,
                 timeMachine: enableTimeMachineTakeover,
                 textInput: enableTextInputTakeover,
+                wiFi: enableWiFiStandIn,
+                bluetooth: enableBluetoothStandIn,
                 skipped: Set(skippedModuleStandIns.compactMap(SystemExtraStandIn.init(rawValue:)))
             )
         }
@@ -86,6 +101,8 @@ extension LayoutSettings {
             enableModuleStandIns = newValue.modules
             enableTimeMachineTakeover = newValue.timeMachine
             enableTextInputTakeover = newValue.textInput
+            enableWiFiStandIn = newValue.wiFi
+            enableBluetoothStandIn = newValue.bluetooth
             skippedModuleStandIns = Set(newValue.skipped.map(\.rawValue))
         }
     }
@@ -116,9 +133,9 @@ struct ControlCenterReplacementsSection: View {
                 VStack(alignment: .leading, spacing: ThawSpacing.tight) {
                     Text(
                         """
-                        Puts a \(Constants.displayName) icon in place of each item you choose below. It does \
-                        the same things as the original, and you can move or hide it like any other item. \
-                        Turn this off to bring the originals back.
+                        Puts a \(Constants.displayName) icon in place of each item you choose below, which \
+                        you can move or hide like any other item. Wi-Fi and Bluetooth get menus of their own; \
+                        Apple's are still in Control Center. Turn this off to bring the originals back.
                         """
                     )
                     // Only a failure shows, so a replacement that cannot run never reads as working.
@@ -150,6 +167,8 @@ struct ControlCenterReplacementsSection: View {
         case .textInput: "Input menu"
         case .timer: "Timer"
         case .space: "Space"
+        case .wiFi: "Wi-Fi"
+        case .bluetooth: "Bluetooth"
         }
     }
 

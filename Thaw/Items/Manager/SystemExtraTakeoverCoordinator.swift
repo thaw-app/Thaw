@@ -20,6 +20,8 @@ protocol StandInSectionControlling: AnyObject {
     func authoredSection(for identifier: String) -> MenuBarSectionName
     func setSection(_ section: MenuBarSectionName, identifier: String)
     func setSectionOrder(_ identifiers: [String], for section: MenuBarSectionName)
+    /// Originals with a stand-in, which stay hidden through reveals.
+    func setReplacedItems(_ identifiers: Set<String>)
 }
 
 extension RuntimeSectionController: StandInSectionControlling {
@@ -30,6 +32,7 @@ extension RuntimeSectionController: StandInSectionControlling {
 
 /// Feed SystemExtraTakeoverEngine from settings and authored layout, never geometry; Time Machine uses SystemUIServer.menuExtras and Timer remains unavailable without a verified switch.
 /// Focus, AirDrop, Now Playing, and Fast User Switching bypass the engine: macOS hides them when any third-party item is hidden, even in Visible; enabled stand-ins assign originals Hidden, and disabling restores their stand-in sections.
+/// Wi-Fi and Bluetooth take the same path, and their originals are also kept out of reveals.
 @MainActor
 @Observable
 final class SystemExtraTakeoverCoordinator {
@@ -53,6 +56,8 @@ final class SystemExtraTakeoverCoordinator {
         .airDrop: "com.apple.menuextra.airdrop",
         .nowPlaying: "com.apple.menuextra.now-playing",
         .userSwitcher: "com.apple.menuextra.user",
+        .wiFi: "com.apple.menuextra.wifi",
+        .bluetooth: "com.apple.menuextra.bluetooth",
     ].mapValues { MenuBarItemTag(namespace: .menuBarAgent, title: $0).tagIdentifier }
 
     /// Adapters, launcher and the Control Center read are parameters so tests reach no system setting or app.
@@ -132,7 +137,12 @@ final class SystemExtraTakeoverCoordinator {
 
         observationTasks.append(Task { @MainActor [weak self] in
             let enabled = Observations { [weak self] in
-                (self?.settings?.enableModuleStandIns ?? false, self?.settings?.skippedModuleStandIns ?? [])
+                (
+                    self?.settings?.enableModuleStandIns ?? false,
+                    self?.settings?.skippedModuleStandIns ?? [],
+                    self?.settings?.enableWiFiStandIn ?? false,
+                    self?.settings?.enableBluetoothStandIn ?? false
+                )
             }
             for await _ in enabled {
                 guard !Task.isCancelled else { return }
@@ -169,7 +179,7 @@ final class SystemExtraTakeoverCoordinator {
             // Once the original is assigned Hidden its preference reads as off,
             // so the assignment is what says the module is still wanted.
             let isWanted = originalSection != .visible || isShownInMenuBar(original)
-            let isChosen = Self.isChosen(standIn, enabled: settings.enableModuleStandIns, skipped: settings.skippedModuleStandIns)
+            let isChosen = Self.isChosen(standIn, in: settings)
             guard isChosen, isWanted else {
                 let wasActive = activeModuleStandIns.contains(standIn)
                 if wasActive {
@@ -197,16 +207,28 @@ final class SystemExtraTakeoverCoordinator {
                 } catch {
                     // Forgotten so the next reconcile tries again.
                     self?.activeModuleStandIns.remove(standIn)
+                    self?.publishReplacedItems()
                     DiagLog(category: "SystemExtraStandIn")
                         .error("\(standIn.rawValue) stand-in failed: \(error.localizedDescription)")
                 }
             }
         }
+        publishReplacedItems()
     }
 
-    /// Stand-ins are on and this one's checkbox in Layout is still checked.
-    static func isChosen(_ standIn: SystemExtraStandIn, enabled: Bool, skipped: Set<String>) -> Bool {
-        enabled && !skipped.contains(standIn.rawValue)
+    /// This stand-in's checkbox in Layout is checked. Wi-Fi and Bluetooth have
+    /// their own settings; the four modules share one with a list of skipped ones.
+    static func isChosen(_ standIn: SystemExtraStandIn, in settings: LayoutSettings) -> Bool {
+        switch standIn {
+        case .wiFi: settings.enableWiFiStandIn
+        case .bluetooth: settings.enableBluetoothStandIn
+        default: settings.enableModuleStandIns && !settings.skippedModuleStandIns.contains(standIn.rawValue)
+        }
+    }
+
+    /// Wi-Fi and Bluetooth would otherwise come back beside their stand-ins on every reveal.
+    private func publishReplacedItems() {
+        controller?.setReplacedItems(replacedOriginalIdentifiers)
     }
 
     /// Return the stand-in's section to the original once, including switches disabled between sessions, without undoing later moves.
@@ -233,7 +255,8 @@ final class SystemExtraTakeoverCoordinator {
     /// Control Center's bit 2 means shown (2 always, 18 while active); missing keys mean not shown.
     static func isShownInMenuBar(_ original: String) -> Bool {
         let identifier = MenuBarItemTag.canonicalPersistentIdentifier(original)
-        guard let title = RuntimeModuleController.governableMenuExtraTitle(forItemIdentifier: identifier), let key = RuntimeModuleController.moduleKeysByMenuExtraTitle[title]
+        guard let title = RuntimeModuleController.controlCenterMenuExtraTitle(forItemIdentifier: identifier),
+              let key = SystemMenuBarModuleCatalog.controlCenterKeysByMenuExtraTitle[title]
         else { return false }
         let value = CFPreferencesCopyValue(
             key as CFString,

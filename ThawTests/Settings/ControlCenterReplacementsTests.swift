@@ -80,11 +80,24 @@ struct ControlCenterReplacementsTests {
         #expect(!replacements.isReplaced(.userSwitcher))
     }
 
-    @Test("Turning the switch on again starts from every item")
+    @Test("Turning the switch on again starts from every item but Wi-Fi and Bluetooth, which stay opt-in")
     func turningOnClearsTheList() {
         var replacements = ControlCenterReplacements(modules: true, timeMachine: false, textInput: false, skipped: [.focus])
         replacements.isOn = true
-        #expect(ControlCenterReplacements.listed.allSatisfy { replacements.isReplaced($0) })
+        let optIn: Set<SystemExtraStandIn> = [.wiFi, .bluetooth]
+        #expect(ControlCenterReplacements.listed.filter { !optIn.contains($0) }.allSatisfy { replacements.isReplaced($0) })
+        #expect(!replacements.isReplaced(.wiFi))
+        #expect(!replacements.isReplaced(.bluetooth))
+    }
+
+    @Test("Wi-Fi alone turns the switch on, and turning it off clears Wi-Fi too")
+    func wiFiOnItsOwn() {
+        var replacements = ControlCenterReplacements(modules: false, timeMachine: false, textInput: false)
+        replacements.setReplaced(.wiFi, true)
+        #expect(replacements.isOn)
+        #expect(!replacements.isReplaced(.bluetooth))
+        replacements.isOn = false
+        #expect(!replacements.isReplaced(.wiFi))
     }
 
     @Test("The module choice round-trips through the settings", .scratchDefaults)

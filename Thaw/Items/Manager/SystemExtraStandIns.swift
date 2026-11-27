@@ -26,6 +26,8 @@ enum SystemExtraStandIn: String, CaseIterable {
     case userSwitcher = "user"
     case textInput = "textinput"
     case space
+    case wiFi = "wifi"
+    case bluetooth
 
     init(_ item: SystemExtraItem) {
         switch item {
@@ -50,6 +52,8 @@ enum SystemExtraStandIn: String, CaseIterable {
         case .userSwitcher: "Thaw.Extra.UserSwitcher"
         case .textInput: "Thaw.Extra.TextInput"
         case .space: "Thaw.Extra.Space"
+        case .wiFi: "Thaw.Extra.WiFi"
+        case .bluetooth: "Thaw.Extra.Bluetooth"
         }
     }
 
@@ -68,6 +72,8 @@ enum SystemExtraStandIn: String, CaseIterable {
         case .userSwitcher: "Thaw User Switcher"
         case .textInput: "Thaw Text Input"
         case .space: "Thaw Space"
+        case .wiFi: "Thaw Wi-Fi"
+        case .bluetooth: "Thaw Bluetooth"
         }
     }
 

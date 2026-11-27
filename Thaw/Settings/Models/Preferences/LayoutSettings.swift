@@ -177,6 +177,23 @@ final class LayoutSettings: SettingsURIHandling {
         }
     }
 
+    /// Replaces Wi-Fi with a Thaw stand-in. Unlike the four modules, it is
+    /// opt-in on its own: the stand-in has no list of networks to join.
+    var enableWiFiStandIn = Defaults.DefaultValue.enableWiFiStandIn {
+        didSet {
+            guard oldValue != enableWiFiStandIn else { return }
+            Defaults.set(enableWiFiStandIn, forKey: .enableWiFiStandIn)
+        }
+    }
+
+    /// The Bluetooth counterpart of enableWiFiStandIn.
+    var enableBluetoothStandIn = Defaults.DefaultValue.enableBluetoothStandIn {
+        didSet {
+            guard oldValue != enableBluetoothStandIn else { return }
+            Defaults.set(enableBluetoothStandIn, forKey: .enableBluetoothStandIn)
+        }
+    }
+
     /// Maximum time to wait for MenuBarAgent to apply a preferred-position
     /// reorder before Thaw continues with residual reconciliation.
     var menuBarOrderFulfillmentTimeout = Defaults.DefaultValue.menuBarOrderFulfillmentTimeout {
@@ -220,6 +237,8 @@ final class LayoutSettings: SettingsURIHandling {
         Defaults.ifPresent(key: .enableTimeMachineTakeover, assign: &enableTimeMachineTakeover)
         Defaults.ifPresent(key: .enableTimerTakeover, assign: &enableTimerTakeover)
         Defaults.ifPresent(key: .enableTextInputTakeover, assign: &enableTextInputTakeover)
+        Defaults.ifPresent(key: .enableWiFiStandIn, assign: &enableWiFiStandIn)
+        Defaults.ifPresent(key: .enableBluetoothStandIn, assign: &enableBluetoothStandIn)
         Defaults.ifPresent(key: .menuBarOrderFulfillmentTimeout, assign: &menuBarOrderFulfillmentTimeout)
         Defaults.ifPresent(key: .sectionDividerStyle) { rawValue in
             if let style = SectionDividerStyle(rawValue: rawValue) {

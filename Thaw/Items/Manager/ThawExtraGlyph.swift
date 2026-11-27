@@ -25,7 +25,7 @@ enum ThawExtraGlyph {
         guard bundleID.hasPrefix(prefix),
               let standIn = SystemExtraStandIn(rawValue: String(bundleID.dropFirst(prefix.count)))
         else { return nil }
-        let image = (standIn == .airDrop ? airDropSymbol() : nil)
+        let image = privateSymbolName(for: standIn).flatMap(privateSymbol)
             ?? NSImage(systemSymbolName: symbolName(for: standIn), accessibilityDescription: nil)
         image?.isTemplate = true
         return image
@@ -57,11 +57,19 @@ enum ThawExtraGlyph {
             ?? "questionmark.circle"
     }
 
-    /// AirDrop's own glyph is a private system symbol; see AirDropGlyph in
-    /// ThawExtraHelper.
-    private static func airDropSymbol() -> NSImage? {
+    /// AirDrop's and Bluetooth's own glyphs are private system symbols; see
+    /// PrivateSymbolGlyph in ThawExtraHelper.
+    private static func privateSymbolName(for standIn: SystemExtraStandIn) -> String? {
+        switch standIn {
+        case .airDrop: "airdrop"
+        case .bluetooth: "bluetooth"
+        default: nil
+        }
+    }
+
+    private static func privateSymbol(_ name: String) -> NSImage? {
         let selector = NSSelectorFromString("imageWithPrivateSystemSymbolName:accessibilityDescription:")
         guard NSImage.responds(to: selector) else { return nil }
-        return NSImage.perform(selector, with: "airdrop", with: nil)?.takeUnretainedValue() as? NSImage
+        return NSImage.perform(selector, with: name, with: nil)?.takeUnretainedValue() as? NSImage
     }
 }

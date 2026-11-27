@@ -60,6 +60,7 @@ final class TakeoverRig {
 
     static let focus = "com.apple.menuextra.focusmode"
     static let airDrop = "com.apple.menuextra.airdrop"
+    static let wiFi = "com.apple.menuextra.wifi"
 }
 
 @MainActor
@@ -242,6 +243,27 @@ struct ModuleStandInCoordinatorTests {
         #expect(rig.sections.writes == [.section(.hidden, original)])
     }
 
+    @Test("Wi-Fi gets a stand-in from its own setting, and its original is moved to Hidden and kept out of reveals")
+    func wiFiStandInReplacesOriginal() async {
+        let rig = TakeoverRig()
+        rig.settings.enableModuleStandIns = false
+        rig.settings.enableWiFiStandIn = true
+        rig.shownInControlCenter = [TakeoverRig.moduleTag(TakeoverRig.wiFi)]
+        let original = TakeoverRig.moduleID(TakeoverRig.wiFi)
+
+        rig.start()
+        await settle { rig.sections.sectionAssignment[original] == .hidden }
+        await rig.drain()
+
+        #expect(rig.fake.opened(.wiFi) == 1)
+        #expect(rig.fake.opens.count == 1)
+        #expect(rig.sections.replacedItems == [original])
+
+        rig.settings.enableWiFiStandIn = false
+        await settle { rig.sections.replacedItems.isEmpty }
+        #expect(rig.sections.sectionAssignment[original] == .visible)
+    }
+
     @Test("An original the user brings back to Visible is moved to Hidden again on the next layout change")
     func layoutChangeRehidesOriginal() async {
         let rig = rig()
@@ -390,19 +412,33 @@ private final class ObservedChanges: Sendable {
     }
 }
 
-@Suite("Module stand-in choice")
+@Suite("Module stand-in choice", .scratchDefaults)
 @MainActor
 struct ModuleStandInChoiceTests {
+    private func settings(modules: Bool, skipped: Set<String> = [], wiFi: Bool = false) -> LayoutSettings {
+        let settings = LayoutSettings()
+        settings.enableModuleStandIns = modules
+        settings.skippedModuleStandIns = skipped
+        settings.enableWiFiStandIn = wiFi
+        return settings
+    }
+
     @Test("A stand-in runs when stand-ins are on and its checkbox is left on")
     func chosen() {
-        #expect(SystemExtraTakeoverCoordinator.isChosen(.airDrop, enabled: true, skipped: []))
-        #expect(SystemExtraTakeoverCoordinator.isChosen(.airDrop, enabled: true, skipped: ["focus"]))
+        #expect(SystemExtraTakeoverCoordinator.isChosen(.airDrop, in: settings(modules: true)))
+        #expect(SystemExtraTakeoverCoordinator.isChosen(.airDrop, in: settings(modules: true, skipped: ["focus"])))
     }
 
     @Test("Unchecking an item, or turning stand-ins off, keeps Apple's own")
     func notChosen() {
-        #expect(!SystemExtraTakeoverCoordinator.isChosen(.airDrop, enabled: true, skipped: ["airdrop"]))
-        #expect(!SystemExtraTakeoverCoordinator.isChosen(.focus, enabled: false, skipped: []))
+        #expect(!SystemExtraTakeoverCoordinator.isChosen(.airDrop, in: settings(modules: true, skipped: ["airdrop"])))
+        #expect(!SystemExtraTakeoverCoordinator.isChosen(.focus, in: settings(modules: false)))
+    }
+
+    @Test("Wi-Fi follows its own setting, not the modules switch")
+    func wiFiFollowsItsOwnSetting() {
+        #expect(!SystemExtraTakeoverCoordinator.isChosen(.wiFi, in: settings(modules: true)))
+        #expect(SystemExtraTakeoverCoordinator.isChosen(.wiFi, in: settings(modules: false, wiFi: true)))
     }
 }
 

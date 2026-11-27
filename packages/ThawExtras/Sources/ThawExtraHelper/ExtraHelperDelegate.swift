@@ -19,6 +19,8 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
     private var textInput: TextInputExtra?
     private var timeMachine: TimeMachineExtra?
     private var spaceIndicator: SpaceIndicatorExtra?
+    private var wiFi: WiFiExtra?
+    private var bluetooth: BluetoothExtra?
     /// Whether Thaw asked for this stand-in to be hidden.
     private var isHiddenByThaw = false
     private var slotStandIn: SlotStandIn?
@@ -81,6 +83,14 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
             updateVisibility()
         } else if role == .space, let parentID = ExtraRole.parentBundleIdentifier(of: bundleID), let button = item.button {
             spaceIndicator = SpaceIndicatorExtra(button: button, parentBundleIdentifier: parentID)
+        } else if role == .wiFi, let button = item.button {
+            let wiFi = WiFiExtra(button: button, label: role.displayName)
+            wiFi.start()
+            self.wiFi = wiFi
+        } else if role == .bluetooth, let button = item.button {
+            let bluetooth = BluetoothExtra(button: button, label: role.displayName)
+            bluetooth.start()
+            self.bluetooth = bluetooth
         } else if role == .airDrop {
             statusItem?.button?.image = AirDropGlyph.image(accessibilityDescription: role.displayName)
             statusItem?.button?.toolTip = role.displayName
@@ -93,6 +103,8 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
         focus?.stop()
         textInput?.stop()
         timeMachine?.stop()
+        wiFi?.stop()
+        bluetooth?.stop()
     }
 
     // MARK: Menu
@@ -126,6 +138,10 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
             textInput?.populate(menu)
         case .space:
             spaceIndicator?.populate(menu)
+        case .wiFi:
+            wiFi?.populate(menu)
+        case .bluetooth:
+            bluetooth?.populate(menu)
         case .slot1, .slot2, .slot3, .slot4, .slot5, .slot6, nil:
             break
         }
