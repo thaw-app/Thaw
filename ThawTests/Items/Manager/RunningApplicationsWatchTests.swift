@@ -17,4 +17,13 @@ struct RunningApplicationsWatchTests {
         let none = RunningApplicationsWatch.difference(from: [1, 2], to: [1, 2])
         #expect(none.launched.isEmpty && none.terminated.isEmpty)
     }
+
+    @Test("A copy started beside a running app is not a launch; a relaunch and a new app are")
+    func secondCopies() {
+        let copies = RunningApplicationsWatch.secondCopies(
+            launched: [10: "com.example.sync", 11: "com.example.new", 12: "com.example.relaunched"],
+            alreadyRunning: ["com.example.sync", "com.example.other"]
+        )
+        #expect(copies == [10])
+    }
 }

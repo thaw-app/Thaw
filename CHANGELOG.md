@@ -62,6 +62,7 @@ the items under New and Fixed.
 - Quitting Thaw brings back the Apple items its Control Center replacements stood in for.
 - An app with several icons keeps their order when you move it into Hidden.
 - Two layout backups made in the same second no longer overwrite each other.
+- An app that keeps starting a second copy of itself no longer makes Thaw rescan and tidy the menu bar every few seconds.
 - With a slow double-click speed in macOS, two separate clicks on empty menu bar space no longer open Always Hidden.
 - Layout offers Thaw's own Focus item even if you never changed how Focus shows in the menu bar.
 - App menus Thaw hid always come back when hidden items close, also in full screen or with Settings open.

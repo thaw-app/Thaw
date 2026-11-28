@@ -18,6 +18,8 @@ final class RunningApplicationsWatch {
 
     private var known: [pid_t: NSRunningApplication]
     private var observation: NSKeyValueObservation?
+    /// Copies started beside an app already running. They own no items and usually quit at once.
+    private var secondCopies = Set<pid_t>()
 
     init(onChange: @escaping @MainActor (Change) -> Void) {
         known = Self.byPID(NSWorkspace.shared.runningApplications)
@@ -26,10 +28,17 @@ final class RunningApplicationsWatch {
                 guard let self else { return }
                 let running = Self.byPID(NSWorkspace.shared.runningApplications)
                 let (launched, terminated) = Self.difference(from: Set(known.keys), to: Set(running.keys))
-                let change = Change(
-                    launched: launched.compactMap { running[$0] },
-                    terminated: terminated.compactMap { known[$0] }
+                let stillRunning = known.filter { running[$0.key] != nil }
+                let copies = Self.secondCopies(
+                    launched: launched.reduce(into: [pid_t: String]()) { $0[$1] = running[$1]?.bundleIdentifier },
+                    alreadyRunning: Set(stillRunning.values.compactMap(\.bundleIdentifier))
                 )
+                secondCopies.formUnion(copies)
+                let change = Change(
+                    launched: launched.filter { !copies.contains($0) }.compactMap { running[$0] },
+                    terminated: terminated.filter { !secondCopies.contains($0) }.compactMap { known[$0] }
+                )
+                secondCopies.subtract(terminated)
                 known = running
                 if !change.launched.isEmpty || !change.terminated.isEmpty {
                     onChange(change)
@@ -40,6 +49,11 @@ final class RunningApplicationsWatch {
 
     nonisolated static func difference(from known: Set<pid_t>, to running: Set<pid_t>) -> (launched: [pid_t], terminated: [pid_t]) {
         (running.subtracting(known).sorted(), known.subtracting(running).sorted())
+    }
+
+    /// Launched processes of an app that was already running under another process.
+    nonisolated static func secondCopies(launched: [pid_t: String], alreadyRunning: Set<String>) -> Set<pid_t> {
+        Set(launched.filter { alreadyRunning.contains($0.value) }.keys)
     }
 
     private static func byPID(_ apps: [NSRunningApplication]) -> [pid_t: NSRunningApplication] {
