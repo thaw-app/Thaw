@@ -52,6 +52,7 @@ $(SRCROOT)/Thaw/MenuBar/Appearance/MissionControlDetector.swift
 $(SRCROOT)/Thaw/MenuBar/Appearance/WallpaperChangeMonitor.swift
 $(SRCROOT)/Thaw/MenuBar/Appearance/WallpaperPalette.swift
 $(SRCROOT)/Thaw/MenuBar/Attention/MenuBarItemAttentionDetector.swift
+$(SRCROOT)/Thaw/MenuBar/ControlItem/ControlItem+MenuBarWindow.swift
 $(SRCROOT)/Thaw/MenuBar/ControlItem/ControlItem.swift
 $(SRCROOT)/Thaw/MenuBar/ControlItem/ControlItemImage.swift
 $(SRCROOT)/Thaw/MenuBar/ControlItem/ControlItemImageSet.swift

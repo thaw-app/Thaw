@@ -579,7 +579,7 @@ extension MenuBarItemTriggersManager {
                 // section is disabled. The Advanced-settings subscription
                 // forces a re-evaluation when it becomes available.
                 .hidden
-            } else if appState.menuBarManager.controlItem(withName: .alwaysHidden)?.window != nil {
+            } else if appState.menuBarManager.controlItem(withName: .alwaysHidden)?.menuBarWindow != nil {
                 .alwaysHidden
             } else {
                 // The section is configured but its control item has not

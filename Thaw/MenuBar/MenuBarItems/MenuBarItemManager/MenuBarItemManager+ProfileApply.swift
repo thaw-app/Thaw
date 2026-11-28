@@ -430,7 +430,7 @@ extension MenuBarItemManager {
             .controlItem(withName: .hidden)?.window
             .flatMap { CGWindowID(exactly: $0.windowNumber) }
         let alwaysHiddenWID: CGWindowID? = appState.menuBarManager
-            .controlItem(withName: .alwaysHidden)?.window
+            .controlItem(withName: .alwaysHidden)?.menuBarWindow
             .flatMap { CGWindowID(exactly: $0.windowNumber) }
 
         // Target order, right to left. Control item UIDs are added once the
@@ -484,7 +484,8 @@ extension MenuBarItemManager {
               let controlItems = ControlItemPair(
                   items: &itemsCopy,
                   hiddenControlItemWindowID: hiddenWID,
-                  alwaysHiddenControlItemWindowID: alwaysHiddenWID
+                  alwaysHiddenControlItemWindowID: alwaysHiddenWID,
+                  alwaysHiddenSectionIsOff: appState.menuBarManager.isAlwaysHiddenDividerRemoved
               )
         else {
             MenuBarItemManager.diagLog.error("applyProfileLayout: missing control items")
@@ -1108,7 +1109,8 @@ extension MenuBarItemManager {
             guard let freshControl = ControlItemPair(
                 items: &allFreshItemsCopy,
                 hiddenControlItemWindowID: hiddenWID,
-                alwaysHiddenControlItemWindowID: alwaysHiddenWID
+                alwaysHiddenControlItemWindowID: alwaysHiddenWID,
+                alwaysHiddenSectionIsOff: appState.menuBarManager.isAlwaysHiddenDividerRemoved
             ), freshControl.canRepositionControlItems else {
                 abandonApply(
                     reason: "control items degraded before moving H_ctrl",
@@ -1356,7 +1358,8 @@ extension MenuBarItemManager {
             if let postMoveControl = ControlItemPair(
                 items: &postMoveItemsCopy,
                 hiddenControlItemWindowID: hiddenWID,
-                alwaysHiddenControlItemWindowID: alwaysHiddenWID
+                alwaysHiddenControlItemWindowID: alwaysHiddenWID,
+                alwaysHiddenSectionIsOff: appState.menuBarManager.isAlwaysHiddenDividerRemoved
             ) {
                 canRepositionControlItems = postMoveControl.canRepositionControlItems
                 guard canRepositionControlItems else {
@@ -1436,7 +1439,8 @@ extension MenuBarItemManager {
             guard let freshControl = ControlItemPair(
                 items: &allFreshItemsCopy,
                 hiddenControlItemWindowID: hiddenWID,
-                alwaysHiddenControlItemWindowID: alwaysHiddenWID
+                alwaysHiddenControlItemWindowID: alwaysHiddenWID,
+                alwaysHiddenSectionIsOff: appState.menuBarManager.isAlwaysHiddenDividerRemoved
             ), freshControl.canRepositionControlItems
             else {
                 abandonApply(
@@ -1522,7 +1526,8 @@ extension MenuBarItemManager {
             if let freshControl = ControlItemPair(
                 items: &freshItemsCopy,
                 hiddenControlItemWindowID: hiddenWID,
-                alwaysHiddenControlItemWindowID: alwaysHiddenWID
+                alwaysHiddenControlItemWindowID: alwaysHiddenWID,
+                alwaysHiddenSectionIsOff: appState.menuBarManager.isAlwaysHiddenDividerRemoved
             ) {
                 guard freshControl.canRepositionControlItems else {
                     abandonApply(
@@ -1668,7 +1673,8 @@ extension MenuBarItemManager {
             guard let freshControl = ControlItemPair(
                 items: &itemsCopy2,
                 hiddenControlItemWindowID: hiddenWID,
-                alwaysHiddenControlItemWindowID: alwaysHiddenWID
+                alwaysHiddenControlItemWindowID: alwaysHiddenWID,
+                alwaysHiddenSectionIsOff: appState.menuBarManager.isAlwaysHiddenDividerRemoved
             ), freshControl.canRepositionControlItems else {
                 MenuBarItemManager.diagLog.error("applyProfileLayout: lost control items after phase 1")
                 // Counts as unenacted: the LCS pass never ran.
@@ -1766,7 +1772,8 @@ extension MenuBarItemManager {
             guard let freshControl = ControlItemPair(
                 items: &freshItemsCopy,
                 hiddenControlItemWindowID: hiddenWID,
-                alwaysHiddenControlItemWindowID: alwaysHiddenWID
+                alwaysHiddenControlItemWindowID: alwaysHiddenWID,
+                alwaysHiddenSectionIsOff: appState.menuBarManager.isAlwaysHiddenDividerRemoved
             ), freshControl.canRepositionControlItems else {
                 unenactedMoveCount += plannedMoves.count - plannedIndex
                 break

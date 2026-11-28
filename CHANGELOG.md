@@ -24,6 +24,10 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Thaw Bar shows your hidden items again on macOS 15 while Always Hidden is off.**
+
 ## [2.2.0-rc] - 2026-11-26
 
 **macOS 15 and 26 · Build 66**
