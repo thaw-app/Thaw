@@ -352,3 +352,20 @@ struct IStatWeekdayClockTitleTests {
         #expect(canonical == expected.map { "\(bundle):\($0)" })
     }
 }
+
+@Suite("iStat Menus battery states")
+struct IStatBatteryStateTitleTests {
+    @Test("A battery reading drops its charge state; one that names another reading stays", arguments: [
+        ("Battery 100%, Charged", "Battery #%"),
+        ("Battery 87%, 1:23 Until Full", "Battery #%"),
+        ("Battery #%, #:# Until Full", "Battery #%"),
+        ("Battery 45%, Not Charging.", "Battery #%"),
+        ("Battery 80%, AirPods Pro 45%", "Battery #%, AirPods Pro #%"),
+    ])
+    func batteryStateKeepsOneIdentity(title: String, canonical: String) {
+        let bundle = MenuBarItemTag.iStatMenusStatusBundleID
+        let tag = MenuBarItemTag(namespace: .string(bundle), title: title)
+        #expect(tag.tagIdentifier == "\(bundle):\(canonical)")
+        #expect(MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):\(title)") == tag.tagIdentifier)
+    }
+}

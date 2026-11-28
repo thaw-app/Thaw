@@ -18,8 +18,8 @@ extension MenuBarItemTag {
         singleItemCalendarBundleMatchers.contains { bundleID.hasPrefix($0.prefix) && bundleID.hasSuffix($0.suffix) }
     }
 
-    /// Drops weather conditions, months, AM/PM, and the weekday in a weekday clock
-    /// after the reading's numbers have been replaced with #.
+    /// Drops weather conditions, months, AM/PM, the weekday in a weekday clock and a battery's
+    /// charge state after the reading's numbers have been replaced with #.
     static func collapsingReadingWords(_ neutralized: String) -> String {
         if neutralized.hasPrefix("Currently #°") {
             return "Currently"
@@ -29,5 +29,6 @@ extension MenuBarItemTag {
             .replacing(month, with: "#")
             .replacing(TagRegex.readingMeridiem) { $0.output.1 }
             .replacing(TagRegex.readingWeekday, with: "#")
+            .replacing(TagRegex.readingBatteryState) { $0.output.1 }
     }
 }
