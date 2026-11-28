@@ -257,19 +257,15 @@ extension MenuBarItemImageCache {
             reflowing: appState.barSettling.hold(for: .agentNudge) != nil,
             consecutiveSkips: consecutiveReflowSkips
         )
-        if !reflowSkipsPass, Self.settlesRevealedPixels(
-            for: section,
-            revealedSection: revealedSection,
-            lastRevealChange: appState.barSettling.lastRevealChange,
-            now: .now
-        ) {
-            await settleRevealedSection(items, appState: appState, reader: LiveMenuBarCaptureReader(geometryOwners: geometryOwners))
+        var stillChanging = Set<MenuBarItemTag>()
+        if !reflowSkipsPass, Self.settlesRevealedPixels(for: section, revealedSection: revealedSection, lastRevealChange: appState.barSettling.lastRevealChange, now: .now) {
+            stillChanging = await settleRevealedSection(items, appState: appState, reader: LiveMenuBarCaptureReader(geometryOwners: geometryOwners))
         }
         // A stale item cache can let concealed items into this pass; the crop
         // loop rejects them against this set.
         let concealedIdentifiers = appState.menuBarManager.sectionController
             .effectivelyConcealedIdentifiers
-        let captureResult = await captureImages(
+        var captureResult = await captureImages(
             of: items,
             scale: scale,
             appState: appState,
@@ -283,6 +279,7 @@ extension MenuBarItemImageCache {
             // there shows a neighbour's icon.
             seatsOnDrawnBar: true
         )
+        RevealCaptureSession.dropCutOffPictures(from: &captureResult, amongChanging: stillChanging)
         if !captureResult.unreadable.isEmpty {
             MenuBarItemImageCache.diagLog.debug(
                 "captureImages: \(captureResult.unreadable.count) items failed capture"

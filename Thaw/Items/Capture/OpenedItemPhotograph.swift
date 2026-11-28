@@ -34,8 +34,8 @@ struct OpenedItemPhotograph {
     let displays: @MainActor () -> Displays
     /// The item where the menu bar shows it on the display once its frame is stable, or nil when it isn't shown.
     let shownItem: @MainActor (MenuBarItem, CGDirectDisplayID) async -> Shown?
-    /// Waits for the shown item's pixels on the display to stop changing.
-    let settlePixels: @MainActor (MenuBarItem, CGDirectDisplayID) async -> Void
+    /// Waits for the shown item's pixels on the display to stop changing, and says whether they did.
+    let settlePixels: @MainActor (MenuBarItem, CGDirectDisplayID) async -> RevealCaptureSession.PixelSettle
     /// Admits the picture for publishing against the item cache's display. Asked with nothing awaited before the screenshot.
     let admit: @MainActor (CGDirectDisplayID?) -> CapturePublicationAdmission
     /// Crops the shown item at the frame on the display, moved to where MenuBarAgent draws it.
@@ -66,14 +66,16 @@ struct OpenedItemPhotograph {
             Self.log("\(item.logString) isn't shown in the menu bar")
             return .missed
         }
-        await settlePixels(shown.live, displays.capture)
+        let pixelSettle = await settlePixels(shown.live, displays.capture)
         guard !Task.isCancelled else { return .missed }
         guard await !isMenuOpen() else { return .menuOpened }
         let cropFrame = shown.live.bounds
 
         // Admitted with nothing else awaited before the screenshot, as a revealed batch is.
         let admission = admit(displays.admitted)
-        let pass = await crop(shown.live, cropFrame, displays.capture)
+        var pass = await crop(shown.live, cropFrame, displays.capture)
+        // As for a revealed batch: a picture cut off at an edge while the pixels still changed is the icon mid-slide.
+        RevealCaptureSession.dropCutOffPictures(from: &pass, amongChanging: pixelSettle.mayBeChanging(at: 0) ? [shown.live.tag] : [])
         guard pass.captured[shown.live.tag] != nil else {
             Self.log("no crop of \(item.logString) at \(cropFrame)")
             return .missed

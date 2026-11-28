@@ -34,12 +34,14 @@ extension MenuBarItemImageCache {
 
     /// Waits, within the reveal settle budget, for items' icons to stop moving. Their frames are read fresh,
     /// since the cache can still hold where they were parked; with none on the bar there is nothing to wait for.
+    /// - Returns: The tags among items whose pixels may still have been changing when the wait ended.
+    @discardableResult
     func settleRevealedSection(
         _ items: [MenuBarItem],
         appState: AppState,
         reader: some MenuBarCaptureReading,
         clock: RevealCaptureSession.SettleClock = RevealCaptureSession.SettleClock()
-    ) async {
+    ) async -> Set<MenuBarItemTag> {
         let displayID = Self.captureDisplayID(
             itemCacheDisplayID: appState.itemManager.itemDisplayID,
             activeMenuBarDisplayID: Bridging.getActiveMenuBarDisplayID(),
@@ -48,7 +50,9 @@ extension MenuBarItemImageCache {
         let live = await reader.menuBarItems(displayID: displayID).filter { live in
             items.contains { $0.tag.matchesIgnoringWindowID(live.tag) }
         }
-        guard !live.isEmpty else { return }
-        await RevealCaptureSession.settleRevealedPixels(live, displayID: displayID, reader: reader, clock: clock)
+        guard !live.isEmpty else { return [] }
+        let settle = await RevealCaptureSession.settleRevealedPixels(live, displayID: displayID, reader: reader, clock: clock)
+        let changing = live.indices.filter(settle.mayBeChanging(at:)).map { live[$0].tag }
+        return Set(items.map(\.tag).filter { tag in changing.contains { $0.matchesIgnoringWindowID(tag) } })
     }
 }

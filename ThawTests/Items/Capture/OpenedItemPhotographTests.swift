@@ -44,6 +44,7 @@ struct OpenedItemPhotographTests {
         var picture: MenuBarItemGlyphCapture?
         var commits = true
         var displays: OpenedItemPhotograph.Displays = (42, 42)
+        var pixelSettle = RevealCaptureSession.PixelSettle.settled
 
         var holds = 0
         var releases = 0
@@ -62,7 +63,10 @@ struct OpenedItemPhotographTests {
                 releaseCaptures: { self.releases += 1 },
                 displays: { self.displays },
                 shownItem: { item, _ in self.shown.map { (item, $0) } },
-                settlePixels: { _, displayID in self.settled.append(displayID) },
+                settlePixels: { _, displayID in
+                    self.settled.append(displayID)
+                    return self.pixelSettle
+                },
                 admit: { displayID in
                     self.admitted.append(displayID)
                     return CapturePublicationAdmission(layoutGeneration: 0, displayID: displayID)
@@ -154,6 +158,19 @@ struct OpenedItemPhotographTests {
 
         #expect(world.crops.count == 1)
         #expect(world.committed == 0)
+    }
+
+    @Test("A picture cut off at an edge keeps the old one while the pixels were still changing, and is kept once they settled")
+    func cutOffPictureWaitsForSettledPixels() async throws {
+        let world = World()
+        world.picture = try ItemsFixture.glyph(width: 40, height: 48, scale: 2, ink: CGRect(x: 0, y: 8, width: 10, height: 32))
+        world.pixelSettle = .changing([0])
+
+        #expect(await world.take() == .missed)
+        #expect(world.committed == 0)
+
+        world.pixelSettle = .settled
+        #expect(await world.take() == .stored)
     }
 
     @Test("A picture the bar's change kept from publishing isn't saved")

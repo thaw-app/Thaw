@@ -64,6 +64,7 @@ the items under New and Fixed.
 - An item that appears while the layout is changing no longer stays missing from Layout until the menu bar changes again.
 - Quit in the Reduced mode menu no longer risks leaving Thaw running.
 - A reorder that was already waiting no longer runs once the menu bar starts settling again, or after Thaw has paused moving items because moves kept failing.
+- A picture taken when you reveal a section or open an item from the Thaw Bar is no longer kept if it catches the item still sliding in and cut off.
 
 ### Thanks
 

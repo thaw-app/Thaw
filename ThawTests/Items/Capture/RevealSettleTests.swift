@@ -334,12 +334,22 @@ struct RevealedSectionSettleTests {
         let parked = Self.item(windowID: 7, x: -2000)
         let live = Self.item(windowID: 9, x: 1000)
         let reader = try CaptureFixture(hosting: CaptureFixture.barCapture(opaque: false, glyphXs: [1008]), strip: nil, items: [live])
-        await Cache().settleRevealedSection([parked], appState: AppState(), reader: reader, clock: settleClock)
+        let changing = await Cache().settleRevealedSection([parked], appState: AppState(), reader: reader, clock: settleClock)
         #expect(await reader.captures.count == 3, "three matching reads, and it settles")
+        #expect(changing.isEmpty)
 
         let empty = try CaptureFixture(hosting: CaptureFixture.barCapture(opaque: false, glyphXs: [1008]), strip: nil)
         await Cache().settleRevealedSection([live], appState: AppState(), reader: empty, clock: settleClock)
         #expect(await empty.captures.isEmpty, "nothing on the bar to wait for")
+    }
+
+    @Test("A wait that couldn't read the bar names the requested items as still changing")
+    func unreadSettleNamesTheRequestedItems() async {
+        let parked = Self.item(windowID: 7, x: -2000)
+        let unreadable = CaptureFixture(hosting: nil, strip: nil, items: [Self.item(windowID: 9, x: 1000)])
+        let settleClock = RevealCaptureSession.SettleClock.driven(by: TestClock())
+        let changing = await Cache().settleRevealedSection([parked], appState: AppState(), reader: unreadable, clock: settleClock)
+        #expect(changing == [parked.tag])
     }
 
     @Test("A reflowing bar skips a pass, until enough were skipped in a row")
