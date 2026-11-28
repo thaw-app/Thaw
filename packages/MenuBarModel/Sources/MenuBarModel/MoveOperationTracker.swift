@@ -17,12 +17,16 @@ import Foundation
 public final class MoveOperationTracker {
     private var lastTimestamp: ContinuousClock.Instant?
     private var inFlightCount = 0
+    /// The clock stamps and cooldowns are read on; tests pass one that holds still.
+    private let now: () -> ContinuousClock.Instant
 
-    public init() {}
+    public init(now: @escaping () -> ContinuousClock.Instant = { .now }) {
+        self.now = now
+    }
 
     /// Records that a move operation just disturbed the bar.
     public func noteMoveOperation() {
-        lastTimestamp = .now
+        lastTimestamp = now()
     }
 
     /// Marks the start of a move operation. Until the matching endMoveOperation()
@@ -67,6 +71,6 @@ public final class MoveOperationTracker {
         guard let lastTimestamp else {
             return false
         }
-        return lastTimestamp.duration(to: .now) <= duration
+        return lastTimestamp.duration(to: now()) <= duration
     }
 }
