@@ -62,6 +62,7 @@ the items under New and Fixed.
 - Layout offers Thaw's own Focus item even if you never changed how Focus shows in the menu bar.
 - App menus Thaw hid come back when the hidden items close, also in full screen, with Settings open or after "Hide app menus" is turned off.
 - An item that appears while the layout is changing no longer stays missing from Layout until the menu bar changes again.
+- Quit in the Reduced mode menu no longer risks leaving Thaw running.
 
 ### Thanks
 

@@ -17,6 +17,7 @@ struct ReducedModeControllerTests {
         var saved: Set<String> = []
         var hides: [Set<String>] = []
         var available = true
+        var quits = 0
     }
 
     private func makeController(_ recorder: Recorder) -> (ReducedModeController, NSMenu) {
@@ -25,7 +26,8 @@ struct ReducedModeControllerTests {
             hide: { recorder.hides.append($0) },
             apps: { [ReducedModeApp(bundleID: "com.example.a", name: "A"), ReducedModeApp(bundleID: "com.example.b", name: "B")] },
             loadHidden: { recorder.saved },
-            saveHidden: { recorder.saved = $0 }
+            saveHidden: { recorder.saved = $0 },
+            quit: { recorder.quits += 1 }
         ))
         return (controller, NSMenu())
     }
@@ -34,6 +36,18 @@ struct ReducedModeControllerTests {
         controller.menuNeedsUpdate(menu)
         let index = try #require(menu.items.firstIndex { $0.title == title })
         menu.performActionForItem(at: index)
+    }
+
+    @Test
+    func `Quit goes through the controller instead of terminating inside the menu`() throws {
+        let recorder = Recorder()
+        let (controller, menu) = makeController(recorder)
+        controller.menuNeedsUpdate(menu)
+        let index = try #require(menu.items.firstIndex { $0.keyEquivalent == "q" })
+        // An item without a target would send terminate to the test host.
+        try #require(menu.items[index].target === controller)
+        menu.performActionForItem(at: index)
+        #expect(recorder.quits == 1)
     }
 
     @Test
