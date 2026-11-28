@@ -53,6 +53,8 @@ struct PlatformLimitationsList: View {
             limitation("**Moving Apple’s items:** macOS 27 draws them itself, so \(Constants.displayName) has to ask macOS to move them instead of moving them directly. Some refuse to move, and some return to Visible on their own.")
 
             limitation("**The Native hiding method:** it can’t hide Clock, Control Center or Siri, and macOS may show the screen recording indicator.")
+
+            limitation("**Wi-Fi, Bluetooth and Sound:** with the Native hiding method, they stay off the menu bar while hidden, also when you show hidden items. To reach them, turn on Replace Control Center items in the Apple’s Items tab and choose them there.")
         }
         .font(ThawType.body)
         .foregroundStyle(.primary)

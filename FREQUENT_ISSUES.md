@@ -11,6 +11,7 @@ Thaw 3.0 runs on macOS 27, and Thaw 2.x runs on macOS 26 and, from 2.2, on macOS
     - [Clock and Control Center](#clock-and-control-center)
     - [Items pinned from Control Center](#items-pinned-from-control-center)
     - [Game Mode](#game-mode)
+    - [Wi-Fi, Bluetooth and Sound with the Native hiding method](#wi-fi-bluetooth-and-sound-with-the-native-hiding-method)
     - [Zoom and the Native hiding method](#zoom-and-the-native-hiding-method)
     - [Tray icons listed as `explorer.exe`](#tray-icons-listed-as-explorerexe)
     - [Recording and microphone indicators](#recording-and-microphone-indicators)
@@ -75,6 +76,10 @@ Home and other items pinned from Control Center leave the menu bar while Hidden 
 
 Its indicator stays on the menu bar whichever section you put it in.
 
+#### Wi-Fi, Bluetooth and Sound with the Native hiding method
+
+With the Native hiding method, Thaw hides Apple's Wi-Fi, Bluetooth and Sound by turning them off in Control Center's menu bar settings. They stay off while you show hidden items, so opening Hidden doesn't bring them back. To reach them from the menu bar, turn on **Replace Control Center items** in **Settings → Menu Bar Layout** and choose Wi-Fi, Bluetooth or Sound. Thaw then shows its own icons for them, which hide and show like any other item. Their menus are Thaw's own; Apple's are still in Control Center. [#1661](https://github.com/thaw-app/Thaw/issues/1661)
+
 #### Zoom and the Native hiding method
 
 With the Native hiding method, Zoom and some other apps stay on the menu bar, because System Settings → Menu Bar has no entry for them.
@@ -101,7 +106,9 @@ Siri doesn't run Thaw's actions when you ask by voice. The same actions work fro
 
 #### Shortcuts and Focus
 
-macOS 27 can hide the Shortcuts item at launch, and the Focus icon may not be visible to Thaw at all. Thaw cannot manage either one yet. [#1105](https://github.com/thaw-app/Thaw/issues/1105), [#1124](https://github.com/thaw-app/Thaw/issues/1124), [#1154](https://github.com/thaw-app/Thaw/issues/1154)
+macOS 27 can hide the Shortcuts item at launch, and Thaw cannot manage it yet. [#1105](https://github.com/thaw-app/Thaw/issues/1105), [#1154](https://github.com/thaw-app/Thaw/issues/1154)
+
+macOS can keep the Focus icon off the menu bar while items are hidden, whichever Focus is on, Sleep and Do Not Disturb included. Thaw can't bring Apple's icon back, but it can show its own Focus icon instead. When macOS is set to show Focus in the menu bar, **Settings → Menu Bar Layout** says **Focus is hidden** and offers **Show Focus**. You can also choose Focus under **Replace Control Center items**. [#1124](https://github.com/thaw-app/Thaw/issues/1124), [#1477](https://github.com/thaw-app/Thaw/issues/1477)
 
 #### Live Activities
 
