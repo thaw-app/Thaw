@@ -222,6 +222,29 @@ struct ControlItemPairAlwaysHiddenRecoveryTests {
         #expect(pairItems.isEmpty)
     }
 
+    /// A profile apply can capture the divider's window ID, then await the
+    /// item list while the section is switched off.
+    @Test("With the section off, a window ID captured before it went off isn't a boundary")
+    func switchedOffDividerWithStaleWindowIDIsNotABoundary() {
+        var items = [alwaysHiddenItem(windowID: authoritativeAHWindowID), hiddenItem()]
+        let listed = MenuBarItemManager.ControlItemPair.resolveAlwaysHidden(
+            in: &items,
+            authoritativeWindowID: authoritativeAHWindowID,
+            sectionIsOff: true
+        )
+        #expect(listed == nil)
+        #expect(items.map(\.windowID) == [1_000_001])
+
+        var absent = [hiddenItem()]
+        let recovered = MenuBarItemManager.ControlItemPair.resolveAlwaysHidden(
+            in: &absent,
+            authoritativeWindowID: authoritativeAHWindowID,
+            sectionIsOff: true,
+            recovery: { alwaysHiddenItem(windowID: $0) }
+        )
+        #expect(recovered == nil)
+    }
+
     // MARK: Full-init characterization of the #991 cycle
 
     @Test("Tag-path apply with an absent AH window stays identity-resolved and honestly nil")

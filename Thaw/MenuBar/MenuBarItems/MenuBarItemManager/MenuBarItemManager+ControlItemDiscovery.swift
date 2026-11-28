@@ -206,7 +206,8 @@ extension MenuBarItemManager {
             sectionIsOff: Bool = false,
             recovery: @MainActor (CGWindowID) -> MenuBarItem? = { MenuBarItem.ownControlItem(windowID: $0) }
         ) -> MenuBarItem? {
-            guard let windowID = authoritativeWindowID, windowID != 0 else {
+            // A window ID captured before the section went off is stale.
+            guard let windowID = authoritativeWindowID, windowID != 0, !sectionIsOff else {
                 let ourPID = ProcessInfo.processInfo.processIdentifier
                 let alwaysHiddenTitle = ControlItem.Identifier.alwaysHidden.rawValue
                 let match = items.firstIndex(where: { $0.sourcePID == ourPID && $0.title == alwaysHiddenTitle })
