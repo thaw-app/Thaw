@@ -149,15 +149,17 @@ nonisolated enum ObservedMembership {
         }
     }
 
+    /// Weights keyed by canonical identifier; a later duplicate wins.
+    static func weights(of candidates: [Candidate]) -> [String: Int] {
+        Dictionary(candidates.map { ($0.item.canonicalIdentifier, $0.weight) }) { _, last in last }
+    }
+
     /// Weights and sections when a ⌘-drag started; after the drop only items whose weight crossed a divider move.
     struct DragBaseline {
         private let readings: [String: (weight: Int, section: MenuBarSectionName)]
 
         init(candidates: [Candidate], dividers: Dividers) {
-            self.init(
-                weights: Dictionary(candidates.map { ($0.item.canonicalIdentifier, $0.weight) }) { _, last in last },
-                dividers: dividers
-            )
+            self.init(weights: ObservedMembership.weights(of: candidates), dividers: dividers)
         }
 
         /// Weights keyed by canonical identifier.
@@ -184,7 +186,7 @@ nonisolated enum ObservedMembership {
             hidden = dividers.hidden
             alwaysHidden = dividers.alwaysHidden
             visibleControl = dividers.visibleControl
-            weights = Dictionary(candidates.map { ($0.item.canonicalIdentifier, $0.weight) }) { _, last in last }
+            weights = ObservedMembership.weights(of: candidates)
         }
 
         var baseline: DragBaseline? {

@@ -288,14 +288,8 @@ final class SystemExtraTakeoverCoordinator {
 
     /// Whether this Mac's Control Center settings show original in the menu bar.
     static func isShownInMenuBar(_ original: String) -> Bool {
-        isShownInMenuBar(original) { key in
-            CFPreferencesCopyValue(
-                key as CFString,
-                "com.apple.controlcenter" as CFString,
-                kCFPreferencesCurrentUser,
-                kCFPreferencesCurrentHost
-            ) as? Int
-        }
+        let live = RuntimeModuleController.Environment.live
+        return isShownInMenuBar(original) { live.readValue($0) }
     }
 
     /// Control Center's bit 2 means shown (2 always, 18 while active). Focus has no key until its setting
