@@ -23,14 +23,16 @@ struct OwnerPurgeState {
     /// out processes a launch notice reported, and returns none for the first read.
     ///
     /// A launch noted while the read was in flight stays known, since the read can predate it.
+    /// An app that kept a process the previous read listed didn't restart: a new one beside it is a second copy.
     mutating func noteRunning(_ processes: [pid_t: String]) -> Set<String> {
         let previous = runningProcesses
         let announced = announcedLaunches
         runningProcesses = processes.merging(announced) { listed, _ in listed }
         announcedLaunches = [:]
         guard let previous else { return [] }
+        let stillRunning = Set(processes.compactMap { pid, bundleID in previous[pid] == bundleID ? bundleID : nil })
         return Set(processes.compactMap { pid, bundleID in
-            previous[pid] == bundleID || announced[pid] == bundleID ? nil : bundleID
+            previous[pid] == bundleID || announced[pid] == bundleID || stillRunning.contains(bundleID) ? nil : bundleID
         })
     }
 

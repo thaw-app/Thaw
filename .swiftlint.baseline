@@ -635,9 +635,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Items/Manager/MenuBarItemManager+Cache.swift",
-    "line": 941
+    "line": 924
    },
-   "reason": "File should contain 400 lines or less: currently contains 941",
+   "reason": "File should contain 400 lines or less: currently contains 924",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
@@ -1162,7 +1162,7 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager.swift",
     "line": 29
    },
-   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 847 lines",
+   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 850 lines",
    "ruleDescription": "Type bodies should not span too many lines",
    "ruleIdentifier": "type_body_length",
    "ruleName": "Type Body Length",
@@ -1237,7 +1237,7 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager.swift",
     "line": 1326
    },
-   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 67 lines",
+   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 70 lines",
    "ruleDescription": "Function bodies should not span too many lines",
    "ruleIdentifier": "function_body_length",
    "ruleName": "Function Body Length",
@@ -1250,9 +1250,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Items/Manager/MenuBarItemManager.swift",
-    "line": 1511
+    "line": 1515
    },
-   "reason": "File should contain 1000 lines or less: currently contains 1511",
+   "reason": "File should contain 1000 lines or less: currently contains 1515",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",

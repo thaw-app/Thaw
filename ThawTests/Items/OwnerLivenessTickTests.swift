@@ -96,6 +96,16 @@ struct OwnerLivenessTickTests {
         #expect(await tick(manager, probe: probe(apps: after), after: 3, running: [], apps: [200: "com.example.app"]) == ["com.example.app"])
     }
 
+    @Test("A second copy started beside a running tracked app is not reported")
+    func secondCopyIsNotReported() async {
+        let manager = trackingManager()
+        let before = NSObject()
+        let after = NSObject()
+
+        await tick(manager, probe: probe(apps: before), after: 0, running: [], apps: [100: "com.example.app"])
+        #expect(await tick(manager, probe: probe(apps: after), after: 3, running: [], apps: [100: "com.example.app", 200: "com.example.app"]).isEmpty)
+    }
+
     @Test("The first read reports no app, since every app is new to it")
     func firstReadReportsNothing() async {
         let manager = trackingManager()
