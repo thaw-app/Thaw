@@ -90,6 +90,16 @@ struct StructuralNormalizationHoldsTests {
         StructuralNormalizationHolds.logDeferral(on: .sectionRevealed)
     }
 
+    @Test("Settling or an open breaker that began during the waits ends an admitted pass")
+    func admittedPassEndsOnSettlingOrOpenBreaker() {
+        var settling = WriteHold.Situation()
+        settling.startupSettling = true
+        #expect(WriteHold.first(StructuralNormalizationHolds.endingAfterAdmission, in: settling) == .startupSettling)
+        var breakerOpen = WriteHold.Situation()
+        breakerOpen.circuitBreakerOpen = true
+        #expect(WriteHold.first(StructuralNormalizationHolds.endingAfterAdmission, in: breakerOpen) == .circuitBreakerOpen)
+    }
+
     @Test("The item manager reports the bar read as incomplete before any read")
     @MainActor func managerSituationReadsTheLastBarRead() {
         let manager = MenuBarItemManager()

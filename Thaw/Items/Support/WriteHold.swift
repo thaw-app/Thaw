@@ -85,6 +85,15 @@ nonisolated enum StructuralNormalizationHolds {
         .barReadIncomplete,
     ]
 
+    /// Checked once the pass has the repair lane, where a hold ends it instead of rearming. The pass
+    /// drops its task after the debounce, so a settling period that starts during its waits cannot cancel it.
+    static let endingAfterAdmission: [WriteHold.Check] = [
+        .userDragging,
+        .membershipReadPending,
+        .startupSettling,
+        .circuitBreakerOpen,
+    ]
+
     /// The line logged when the pass defers on this check, or nil for a check it defers on quietly.
     static func deferralNote(for check: WriteHold.Check) -> String? {
         check == .barReadIncomplete ? "structural normalization: the last bar read was incomplete; deferring" : nil

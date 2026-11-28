@@ -574,10 +574,10 @@ extension MenuBarItemManager {
                     repairs.leave(hold)
                 }
             }
-            // A ⌘-drag can start or end while this waited, and its reading
-            // schedules the pass again once it is done.
+            // A ⌘-drag, a settling period or an open breaker can begin while this waited.
+            // The drag's reading and the end of settling schedule the pass again.
             let admitted = structuralNormalizationSituation()
-            guard WriteHold.first([.userDragging, .membershipReadPending], in: admitted) == nil else { return }
+            guard WriteHold.first(StructuralNormalizationHolds.endingAfterAdmission, in: admitted) == nil else { return }
             guard WriteHold.first(StructuralNormalizationHolds.checks, in: admitted) == nil,
                   ControlResortHold.allowsResort(for: "structural normalization", .init(of: self))
             else {

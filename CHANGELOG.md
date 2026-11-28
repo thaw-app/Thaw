@@ -63,6 +63,7 @@ the items under New and Fixed.
 - App menus Thaw hid come back when the hidden items close, also in full screen, with Settings open or after "Hide app menus" is turned off.
 - An item that appears while the layout is changing no longer stays missing from Layout until the menu bar changes again.
 - Quit in the Reduced mode menu no longer risks leaving Thaw running.
+- A reorder that was already waiting no longer runs once the menu bar starts settling again, or after Thaw has paused moving items because moves kept failing.
 
 ### Thanks
 
