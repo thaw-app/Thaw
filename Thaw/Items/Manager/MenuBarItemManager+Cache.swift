@@ -17,19 +17,15 @@ extension MenuBarItemManager {
     /// Cross-pass comparison baselines grouped for atomic reset and synchronized window-ID collections.
     /// Only this file advances them; the rest of the app may read them.
     final class CacheCycleState {
-        /// Window identifiers of the managed items as the previous pass
-        /// enumerated them, already flipped out of Window Server order.
-        fileprivate(set) var cachedItemWindowIDs = [CGWindowID]()
+        /// The window and identity baselines. A pass that publishes nothing puts them back.
+        fileprivate(set) var baselines = CacheBaselines()
+
+        var cachedItemWindowIDs: [CGWindowID] { baselines.current.itemWindowIDs }
+        var cachedCloneWindowIDs: Set<CGWindowID> { baselines.current.cloneWindowIDs }
+        var cachedItemSignature: [String] { baselines.current.itemSignature }
 
         /// Previous resolved source PIDs correct transient errors from stale AX data after moves.
         fileprivate(set) var cachedItemPIDs = [CGWindowID: pid_t]()
-
-        /// Filter these transient clone IDs from change comparisons so clone churn does not trigger recaching.
-        fileprivate(set) var cachedCloneWindowIDs = Set<CGWindowID>()
-
-        /// Ordered owner/title identities for macOS 27, where synthetic AX window IDs churn without movement.
-        /// Stable identities prevent a recache loop while detecting real additions, removals, and reorders.
-        fileprivate(set) var cachedItemSignature = [String]()
 
         /// Whether the cache's last read saw the whole bar, which settling and the structural pass check.
         fileprivate(set) var lastRead = BarReadRecord()
@@ -139,7 +135,7 @@ extension MenuBarItemManager {
         observationOnly: Bool = false
     ) async {
         guard layoutPublication.canPublish(generation: publicationGeneration) else {
-            scheduleCoalescedCacheRerun()
+            scheduleCoalescedCacheRerun(discardingPass: true)
             return
         }
         MenuBarItemManager.diagLog.debug("uncheckedCacheItems: processing \(items.count) items for caching")
@@ -149,7 +145,7 @@ extension MenuBarItemManager {
         // the one at publication and the unseen-host check. The guard after it stops a pass that a purge overtook.
         var running = await RunningApplicationSnapshot.current()
         guard layoutPublication.canPublish(generation: publicationGeneration) else {
-            scheduleCoalescedCacheRerun()
+            scheduleCoalescedCacheRerun(discardingPass: true)
             return
         }
         var context = bucketedCacheContext(
@@ -198,7 +194,7 @@ extension MenuBarItemManager {
                     guard snapshot.knownInventory.isFresh,
                           layoutPublication.canPublish(generation: publicationGeneration)
                     else {
-                        scheduleCoalescedCacheRerun()
+                        scheduleCoalescedCacheRerun(discardingPass: true)
                         return
                     }
                     let rescan = snapshot.freshItems
@@ -230,7 +226,7 @@ extension MenuBarItemManager {
             // A sanity re-scan above can suspend while an owner exits. Check
             // again at publication so the old in-flight pass cannot undo purge.
             guard layoutPublication.canPublish(generation: publicationGeneration) else {
-                scheduleCoalescedCacheRerun()
+                scheduleCoalescedCacheRerun(discardingPass: true)
                 return
             }
             context.cache = context.cache.retainingRunningOwners(
@@ -460,7 +456,11 @@ extension MenuBarItemManager {
 
     /// Recache mid-pass drags or resets only if the live signature differs; unconditional reruns sustain restriction-reflow storms.
     /// RuntimeMenuBarBackend.itemCacheSignature ignores host-child flicker; newer requests cancel pending reruns.
-    private func scheduleCoalescedCacheRerun() {
+    /// - Parameter discardingPass: true after a pass that published nothing, whose baselines are put back first.
+    private func scheduleCoalescedCacheRerun(discardingPass: Bool = false) {
+        if discardingPass {
+            cacheCycleState.baselines.putBack()
+        }
         coalescedCacheRerunTask?.cancel()
         coalescedCacheRerunTask = Task { @MainActor [weak self] in
             guard let self, !Task.isCancelled else { return }
@@ -750,12 +750,6 @@ extension MenuBarItemManager {
             thisRead?.mergedWithOlderItems = true
             guard await recoverPartialCacheSnapshot(&items, itemWindowIDs: itemWindowIDs) else { return }
         }
-        cacheCycleState.cachedItemWindowIDs = itemWindowIDs
-        cacheCycleState.cachedCloneWindowIDs = cloneWindowIDs
-        if let signature = MenuBarBackendProvider.current.itemCacheSignature(items) {
-            // Update the signature on every recache so periodic polling does not immediately repeat an event-driven rebuild.
-            cacheCycleState.cachedItemSignature = signature
-        }
 
         await MainActor.run {
             self.clickTimeouts.prune(keeping: Set(items.map(\.tag)))
@@ -773,7 +767,6 @@ extension MenuBarItemManager {
             hiddenControlItemWID: hiddenControlItemWID,
             alwaysHiddenControlItemWID: alwaysHiddenControlItemWID
         ) else { return }
-        items = resolved.items
         let controlItems = resolved.controlItems
 
         MenuBarItemManager.diagLog.debug("cacheItemsRegardless: found control items, hidden windowID=\(controlItems.hidden.windowID), alwaysHidden=\(controlItems.alwaysHidden.map { "\($0.windowID)" } ?? "nil")")
@@ -782,6 +775,13 @@ extension MenuBarItemManager {
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: cancelled or superseded after control item discovery")
             return
         }
+        cacheCycleState.baselines.beginPass()
+        cacheCycleState.baselines.advance(itemWindowIDs: itemWindowIDs, cloneWindowIDs: cloneWindowIDs)
+        if let signature = MenuBarBackendProvider.current.itemCacheSignature(items) {
+            // Update the signature on every recache so periodic polling does not immediately repeat an event-driven rebuild.
+            cacheCycleState.baselines.advance(itemSignature: signature)
+        }
+        items = resolved.items
 
         // Partial inventory, or one merged with cached items, can populate the editor, but cannot
         // authorize boundary repairs or replace saved order with retained geometry.
