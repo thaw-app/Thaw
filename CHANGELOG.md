@@ -71,6 +71,7 @@ the items under New and Fixed.
 - Quit in the Reduced mode menu no longer leaves Thaw running.
 - Thaw no longer rearranges the menu bar while it is still settling after a launch or display change.
 - Thaw Bar pictures taken while an item is still sliding in are retaken instead of kept cut off.
+- Items left on top of each other by a reveal are straightened out once the menu bar stops moving.
 
 ### Thanks
 

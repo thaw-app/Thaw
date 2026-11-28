@@ -31,9 +31,12 @@ enum RevealTurns {
     }
 
     /// Re-lays a settled reveal, except during a ⌘-drag, where resizing Thaw's icon would move the drop.
+    /// The kit asks while the reveal still reflows, so the nudge waits for that to end.
     static func refreshLayout(on appState: AppState?) {
-        guard let appState, !appState.itemManager.isUserArrangingMenuBar else { return }
-        appState.menuBarManager.requestMenuBarAgentPositionRefresh()
+        appState?.menuBarManager.barSettling.whenNudgeAllowed { [weak appState] in
+            guard let appState, !appState.itemManager.isUserArrangingMenuBar else { return }
+            appState.menuBarManager.requestMenuBarAgentPositionRefresh()
+        }
     }
 
     /// Moves items that ended on the wrong side of a divider after a recovery.
