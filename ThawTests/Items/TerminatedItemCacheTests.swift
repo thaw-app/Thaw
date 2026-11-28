@@ -16,15 +16,16 @@ struct TerminatedItemCacheTests {
     private func item(
         pid: pid_t,
         sourcePID explicitSourcePID: pid_t? = nil,
-        bundle: String = "com.henrikruscon.Alcove"
+        bundle: String = "com.henrikruscon.Alcove",
+        title: String = "Alcove"
     ) -> MenuBarItem {
         MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string(bundle), title: "Alcove", instanceIndex: 0),
+            tag: MenuBarItemTag(namespace: .string(bundle), title: title, instanceIndex: 0),
             windowID: 1,
             ownerPID: pid,
             sourcePID: explicitSourcePID ?? (pid > 0 ? pid : nil),
             bounds: CGRect(x: 100, y: 0, width: 24, height: 24),
-            title: "Alcove",
+            title: title,
             isOnScreen: false
         )
     }
@@ -101,6 +102,18 @@ struct TerminatedItemCacheTests {
         #expect(kept.sourcePID == nil)
         // The click path finds the relaunched process the way it does for a cold-start snapshot.
         #expect(ItemOwnerLookup.resolving(kept, runningPIDs: { _ in [456] }).sourcePID == 456)
+    }
+
+    @Test("A copy of an app that quit leaves its hidden item, while another copy with an item of its own still runs",
+          arguments: [MenuBarSectionName.hidden, .alwaysHidden])
+    func survivingCopyDoesNotKeepItem(section: MenuBarSectionName) {
+        let survivor = item(pid: 456, title: "Alcove 2")
+        var cache = MenuBarItemCache(displayID: nil)
+        cache[section] = [item(pid: 123), survivor]
+
+        let published = cache.retainingRunningOwners(processIDs: [456], bundleIdentifiers: ["com.henrikruscon.Alcove"])
+
+        #expect(published[section] == [survivor])
     }
 
     @Test("Rebucketing brings back a hidden item of a relaunched app", arguments: [MenuBarSectionName.hidden, .alwaysHidden])

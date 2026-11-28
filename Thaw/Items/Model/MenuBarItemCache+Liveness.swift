@@ -21,6 +21,12 @@ extension MenuBarItemCache {
         processIDs: Set<pid_t>,
         bundleIdentifiers: Set<String>
     ) -> Self {
+        // A relaunched app's hidden items are all unread, so none of them has a
+        // running process. An app that has one is another copy still running.
+        let appsWithRunningItems = Set(MenuBarSectionName.allCases.flatMap { self[$0] }.compactMap { item -> String? in
+            let pid = item.sourcePID ?? item.ownerPID
+            return pid > 0 && processIDs.contains(pid) ? item.tag.namespace.bundleIdentifier : nil
+        })
         var cache = self
         for section in MenuBarSectionName.allCases {
             cache[section] = cache[section].compactMap { item in
@@ -28,18 +34,23 @@ extension MenuBarItemCache {
                 if livenessPID > 0, processIDs.contains(livenessPID) {
                     return item
                 }
-                // A relaunched app draws its visible items, so the next walk
-                // reads the new process's own item in place of the old one.
-                guard livenessPID <= 0 || section != .visible,
-                      let bundleIdentifier = item.tag.namespace.bundleIdentifier,
+                guard let bundleIdentifier = item.tag.namespace.bundleIdentifier,
                       bundleIdentifiers.contains(bundleIdentifier)
                 else {
+                    return nil
+                }
+                guard livenessPID > 0 else {
+                    return item
+                }
+                // A relaunched app draws its visible items, so the next walk
+                // reads the new process's own item in place of the old one.
+                guard section != .visible, !appsWithRunningItems.contains(bundleIdentifier) else {
                     return nil
                 }
                 // Persisted conceal snapshots have no PID. Dropping the exited
                 // process's PID makes this one alike: lookups resolve the
                 // running process, and liveness follows the bundle.
-                return livenessPID > 0 ? item.withoutOwnerProcess : item
+                return item.withoutOwnerProcess
             }
         }
         return cache
