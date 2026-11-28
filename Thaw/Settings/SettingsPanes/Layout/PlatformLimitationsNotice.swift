@@ -54,7 +54,7 @@ struct PlatformLimitationsList: View {
 
             limitation("**The Native hiding method:** it can’t hide Clock, Control Center or Siri, and macOS may show the screen recording indicator.")
 
-            limitation("**Wi-Fi, Bluetooth and Sound:** with the Native hiding method, they stay off the menu bar while hidden, also when you show hidden items. To reach them, turn on Replace Control Center items in the Apple’s Items tab and choose them there.")
+            limitation("**Wi-Fi, Bluetooth and Sound:** with the Native hiding method, they stay hidden even when you show hidden items. To reach them, turn on Replace Control Center items in the Apple’s Items tab and choose them there.")
         }
         .font(ThawType.body)
         .foregroundStyle(.primary)

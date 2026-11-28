@@ -37,7 +37,7 @@ the items under New and Fixed.
 - Modules shows a list like the other settings pages, or cards from the toolbar.
 - Settings now says that Click, Hover and Scroll under "Show hidden items on" are optional.
 - Exported diagnostics no longer include saved item lists, and Thaw keeps only the newest five.
-- Known macOS 27 limitations says that Wi-Fi, Bluetooth and Sound stay hidden with Native hiding, and how to reach them.
+- Known macOS 27 limitations now says how to reach Wi-Fi, Bluetooth and Sound with Native hiding.
 
 ### Fixed
 
