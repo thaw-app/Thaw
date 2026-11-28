@@ -140,9 +140,9 @@ struct ShowHiddenItemsOnRow: View {
     /// Says the three are optional, since the icon shows hidden items without any of them.
     static func explanation(anyOn: Bool) -> LocalizedStringResource {
         if anyOn {
-            "Show hidden menu bar items by clicking, hovering or scrolling in an empty area of the menu bar. Turn all three off to show them only from the \(Constants.displayName) icon."
+            "The gestures turned on here show hidden menu bar items from an empty area of the menu bar. With all three off, use the \(Constants.displayName) icon or the Show or hide hidden items shortcut."
         } else {
-            "Only the \(Constants.displayName) icon shows hidden menu bar items."
+            "Only the \(Constants.displayName) icon and the Show or hide hidden items shortcut show hidden menu bar items."
         }
     }
 }

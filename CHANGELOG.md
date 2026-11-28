@@ -31,7 +31,7 @@ the items under New and Fixed.
 > [!NOTE]
 > Making Thaw lighter meant changes across the app, so an issue fixed before might come back. If you see one, please [let us know](https://github.com/thaw-app/Thaw/issues/new/choose), so we can plan around it.
 
-### Added
+### New
 
 - Replace Control Center items can now replace Wi-Fi, Bluetooth and Sound with Thaw's own items.
 
