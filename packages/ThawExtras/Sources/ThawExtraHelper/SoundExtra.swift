@@ -42,12 +42,18 @@ final class SoundExtra: NSObject, MenuActionTarget {
 
     func populate(_ menu: NSMenu) {
         let output = AudioDevices.defaultDevice(input: false)
-        if let output, let volume = AudioDevices.volume(of: output) {
+        let volume = output.flatMap(AudioDevices.volume(of:))
+        let canMute = output.map(AudioDevices.canMute) ?? false
+        if let output, volume != nil || canMute {
             menu.addItem(.sectionHeader(title: String(localized: "Output Volume")))
-            menu.addItem(sliderItem(volume: volume, device: output))
-            let mute = actionItem(String(localized: "Mute"), #selector(toggleMute))
-            mute.state = AudioDevices.isMuted(output) ? .on : .off
-            menu.addItem(mute)
+            if let volume {
+                menu.addItem(sliderItem(volume: volume, device: output))
+            }
+            if canMute {
+                let mute = actionItem(String(localized: "Mute"), #selector(toggleMute))
+                mute.state = AudioDevices.isMuted(output) ? .on : .off
+                menu.addItem(mute)
+            }
             menu.addItem(.separator())
         }
         let devices = AudioDevices.all()
@@ -206,6 +212,12 @@ enum AudioDevices {
         return muted == 1
     }
 
+    /// False when the output has no settable main-element mute, even if it has a volume.
+    static func canMute(_ device: AudioObjectID) -> Bool {
+        var address = address(kAudioDevicePropertyMute, kAudioDevicePropertyScopeOutput)
+        return isSettable(device, &address)
+    }
+
     static func setMuted(_ muted: Bool, of device: AudioObjectID) {
         set(UInt32(muted ? 1 : 0), on: device, kAudioDevicePropertyMute, scope: kAudioDevicePropertyScopeOutput)
     }
@@ -265,10 +277,16 @@ enum AudioDevices {
 
     private static func set<T>(_ value: T, on object: AudioObjectID, _ selector: AudioObjectPropertySelector, scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal) {
         var address = address(selector, scope)
-        var settable: DarwinBoolean = false
-        guard AudioObjectIsPropertySettable(object, &address, &settable) == noErr, settable.boolValue else { return }
+        guard isSettable(object, &address) else { return }
         var value = value
         AudioObjectSetPropertyData(object, &address, 0, nil, UInt32(MemoryLayout<T>.size), &value)
+    }
+
+    private static func isSettable(_ object: AudioObjectID, _ address: inout AudioObjectPropertyAddress) -> Bool {
+        var settable: DarwinBoolean = false
+        return AudioObjectHasProperty(object, &address)
+            && AudioObjectIsPropertySettable(object, &address, &settable) == noErr
+            && settable.boolValue
     }
 
     private static func array<T>(_ object: AudioObjectID, _ selector: AudioObjectPropertySelector) -> [T] {

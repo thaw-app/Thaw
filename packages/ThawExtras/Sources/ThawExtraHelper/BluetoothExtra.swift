@@ -45,6 +45,8 @@ final class BluetoothExtra: NSObject, MenuActionTarget {
     }
 
     func populate(_ menu: NSMenu) {
+        // Autoenabling would turn a busy device's row back on.
+        menu.autoenablesItems = false
         openMenu = menu
         Task { await refresh() }
         fill(menu)
@@ -82,9 +84,10 @@ final class BluetoothExtra: NSObject, MenuActionTarget {
 
     // MARK: Reading
 
-    private func refresh() async {
+    /// Refills an open menu when the reading changes, or always with `refillingMenu`.
+    private func refresh(refillingMenu: Bool = false) async {
         let fresh = await Task.detached { BluetoothReading.current() }.value
-        guard fresh != reading else { return }
+        guard fresh != reading || refillingMenu else { return }
         reading = fresh
         button.appearsDisabled = !fresh.isPoweredOn
         if let openMenu {
@@ -115,7 +118,7 @@ final class BluetoothExtra: NSObject, MenuActionTarget {
                 logger.error("Bluetooth \(connect ? "connect" : "disconnect", privacy: .public) failed: \(status)")
             }
             busyAddresses.remove(address)
-            await refresh()
+            await refresh(refillingMenu: true)
         }
     }
 

@@ -114,6 +114,19 @@ struct TimeMachineStatusReadTests {
         #expect(ContinuousClock.now - start < .seconds(10))
     }
 
+    @Test(
+        "A command that ignores SIGTERM or leaves its output open still ends near the timeout",
+        arguments: ["trap '' TERM; sleep 30", "sleep 30 & echo started"]
+    )
+    func timeoutHolds(script: String) async {
+        let start = ContinuousClock.now
+        let output = await CommandOutput.output(
+            of: URL(filePath: "/bin/sh"), arguments: ["-c", script], timeout: .milliseconds(200)
+        )
+        #expect(output.isEmpty)
+        #expect(ContinuousClock.now - start < .seconds(5))
+    }
+
     @Test("A command that can't start reads as no output")
     func missingCommand() async {
         let output = await CommandOutput.output(

@@ -39,6 +39,8 @@ enum SystemSettings {
 
 nonisolated enum CommandOutput {
     /// The command's standard output, or "" when it can't start or is ended for running past timeout.
+    /// A command that ignores SIGTERM is killed a second later. Output that a child of the command still
+    /// holds open at the timeout reads as "" too.
     static func output(of executable: URL, arguments: [String], timeout: Duration) async -> String {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
@@ -54,23 +56,40 @@ nonisolated enum CommandOutput {
                     continuation.resume(returning: "")
                     return
                 }
-                let deadline = DispatchWorkItem {
-                    if process.isRunning {
-                        process.terminate()
-                    }
-                }
                 let (seconds, attoseconds) = timeout.components
                 let nanoseconds = Int(seconds) * 1_000_000_000 + Int(attoseconds / 1_000_000_000)
-                DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .nanoseconds(nanoseconds), execute: deadline)
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                let deadline = DispatchTime.now() + .nanoseconds(nanoseconds)
+                let output = ReadOutput()
+                DispatchQueue.global(qos: .utility).async {
+                    output.data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    output.done.signal()
+                }
+                let stop = DispatchWorkItem { end(process) }
+                DispatchQueue.global(qos: .utility).asyncAfter(deadline: deadline, execute: stop)
                 process.waitUntilExit()
-                deadline.cancel()
-                guard process.terminationReason == .exit else {
+                stop.cancel()
+                guard process.terminationReason == .exit, output.done.wait(timeout: deadline) == .success else {
                     continuation.resume(returning: "")
                     return
                 }
-                continuation.resume(returning: String(bytes: data, encoding: .utf8) ?? "")
+                continuation.resume(returning: String(bytes: output.data, encoding: .utf8) ?? "")
             }
         }
+    }
+
+    private static func end(_ process: Process) {
+        guard process.isRunning else { return }
+        process.terminate()
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .seconds(1)) {
+            if process.isRunning {
+                kill(process.processIdentifier, SIGKILL)
+            }
+        }
+    }
+
+    /// Written once by the reader before `done` is signaled.
+    private final class ReadOutput: @unchecked Sendable {
+        var data = Data()
+        let done = DispatchSemaphore(value: 0)
     }
 }

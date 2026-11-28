@@ -17,6 +17,7 @@ final class WiFiExtra: NSObject, MenuActionTarget {
     private let label: String
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ThawExtraHelper", category: "wifi")
     private let events = WiFiEvents()
+    private var pollTask: Task<Void, Never>?
 
     init(button: NSStatusBarButton, label: String) {
         self.button = button
@@ -28,11 +29,23 @@ final class WiFiExtra: NSObject, MenuActionTarget {
         events.onChange = { [weak self] in
             Task { @MainActor in self?.refreshIcon() }
         }
-        events.start()
+        do {
+            try events.start()
+        } catch {
+            logger.error("Wi-Fi events unavailable, polling instead: \(error.localizedDescription, privacy: .public)")
+            pollTask = Task { [weak self] in
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(10))
+                    guard let self else { return }
+                    refreshIcon()
+                }
+            }
+        }
         refreshIcon()
     }
 
     func stop() {
+        pollTask?.cancel()
         events.stop()
     }
 
@@ -173,10 +186,10 @@ private final class WiFiEvents: NSObject, CWEventDelegate, @unchecked Sendable {
     var onChange: (@Sendable () -> Void)?
     private let client = CWWiFiClient.shared()
 
-    func start() {
+    func start() throws {
         client.delegate = self
         for event: CWEventType in [.powerDidChange, .linkDidChange, .linkQualityDidChange] {
-            try? client.startMonitoringEvent(with: event)
+            try client.startMonitoringEvent(with: event)
         }
     }
 
