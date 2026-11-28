@@ -13,19 +13,30 @@ struct OwnerPurgeState {
     /// Whether a read of the process table is in flight.
     var isRunning = false
     var gate = OwnerLivenessGate<Set<ObjectIdentifier>>()
-    /// The apps the last read found running, or nil before the first read.
-    private(set) var runningBundles: Set<String>?
+    /// The processes the last read found, with each one's app, or nil before the first read.
+    private(set) var runningProcesses: [pid_t: String]?
+    /// Processes launch notices reported since the last read, with each one's app.
+    private var announcedLaunches: [pid_t: String] = [:]
 
-    /// Records the apps a read found and returns those the previous read didn't list. The first
-    /// read returns none, since every app is new to it.
-    mutating func noteRunning(_ bundles: Set<String>) -> Set<String> {
-        defer { runningBundles = bundles }
-        return runningBundles.map { bundles.subtracting($0) } ?? []
+    /// Records the processes a read found and returns the apps running a process the previous
+    /// read didn't list, so an app that quit and reopened between two reads counts too. Leaves
+    /// out processes a launch notice reported, and returns none for the first read.
+    ///
+    /// A launch noted while the read was in flight stays known, since the read can predate it.
+    mutating func noteRunning(_ processes: [pid_t: String]) -> Set<String> {
+        let previous = runningProcesses
+        let announced = announcedLaunches
+        runningProcesses = processes.merging(announced) { listed, _ in listed }
+        announcedLaunches = [:]
+        guard let previous else { return [] }
+        return Set(processes.compactMap { pid, bundleID in
+            previous[pid] == bundleID || announced[pid] == bundleID ? nil : bundleID
+        })
     }
 
-    /// Counts an app a launch notice reported as running, so the next read doesn't report it again.
-    mutating func noteLaunched(_ bundleID: String) {
-        runningBundles?.insert(bundleID)
+    /// Counts a process a launch notice reported, so the next read doesn't report its app again.
+    mutating func noteLaunched(_ bundleID: String, processIdentifier: pid_t) {
+        announcedLaunches[processIdentifier] = bundleID
     }
 }
 
@@ -74,8 +85,8 @@ extension MenuBarItemManager {
     /// The tick's liveness check: purgeDepartedOwners(readOwners:), skipped while
     /// OwnerLivenessGate says no owner can have left since the last read.
     ///
-    /// Returns the apps Thaw tracks an item for that the read found running again, for the
-    /// caller to rescan. An agent app can relaunch without a launch notice, and a hidden one
+    /// Returns the apps Thaw tracks an item for that the read found running a new process, for
+    /// the caller to rescan. An agent app can relaunch without a launch notice, and a hidden one
     /// leaves the drawn bar as it was, so no other trigger reads its items.
     @discardableResult
     func purgeDepartedOwnersWhenDue(
@@ -91,7 +102,7 @@ extension MenuBarItemManager {
         let owners = await purgeDepartedOwners(readOwners: readOwners)
         ownerPurge.gate.noteRead(signature: signature, at: now)
         guard let owners else { return [] }
-        return ownerPurge.noteRunning(owners.bundleIdentifiers).filter {
+        return ownerPurge.noteRunning(owners.bundleIdentifiersByPID).filter {
             Self.tracksMenuBarItem(bundleID: $0, in: knownItemIdentifiers)
         }
     }

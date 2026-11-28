@@ -24,7 +24,7 @@ extension MenuBarItemManager {
             // Noted as they arrive: the refresh is debounced, and keeping only the last launch of a
             // burst lost a tracked relaunch that an unrelated app followed within the second.
             for app in change.launched {
-                self?.noteAppLaunched(bundleID: app.bundleIdentifier)
+                self?.noteAppLaunched(bundleID: app.bundleIdentifier, processIdentifier: app.processIdentifier)
             }
             if !change.launched.isEmpty { launched.yield() }
             if !change.terminated.isEmpty { exited.yield() }
@@ -53,10 +53,10 @@ extension MenuBarItemManager {
     }
 
     /// Logs a launch and settles the bar when it is a relaunch of an app Thaw tracks an item for.
-    func noteAppLaunched(bundleID: String?) {
+    func noteAppLaunched(bundleID: String?, processIdentifier: pid_t?) {
         Self.diagLog.debug("App launched\(bundleID.map { " (\($0))" } ?? "")")
-        if let bundleID {
-            ownerPurge.noteLaunched(bundleID)
+        if let bundleID, let processIdentifier {
+            ownerPurge.noteLaunched(bundleID, processIdentifier: processIdentifier)
         }
         if let settle = Self.launchSettle(bundleID: bundleID, knownIdentifiers: knownItemIdentifiers) {
             barSettling.note(settle)
