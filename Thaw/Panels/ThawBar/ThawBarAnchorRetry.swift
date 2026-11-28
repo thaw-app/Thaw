@@ -38,9 +38,10 @@ final class ThawBarAnchorRetry {
 }
 
 extension ThawBarPanel {
-    /// Reads the icon's frame again and places the bar by it, while the bar is still open.
+    /// Reads the icon's frame again and places the bar by it, while the bar is still open on that screen.
+    /// A retry left from an opening on another display leaves the bar where the newer opening put it.
     func retryIconAnchor(on screen: NSScreen) {
-        guard currentSection != nil else { return }
+        guard currentSection != nil, self.screen == screen else { return }
         staleAnchorWindowID = nil
         updateOrigin(for: screen)
     }

@@ -216,9 +216,9 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
         do {
             try await open(standIn)
         } catch {
-            // A newer launch owns the stand-in now, so its caller hears nothing of this one.
-            guard launchCounts[standIn] == launchCount else {
-                log.info("\(standIn.rawValue) stand-in open from an earlier launch failed; keeping the newer one")
+            // Turned off since, or a newer launch owns it: the caller has moved on, so it hears nothing.
+            guard launchCounts[standIn] == launchCount, wanted.contains(standIn) else {
+                log.info("\(standIn.rawValue) stand-in open failed after it was turned off or launched again")
                 return
             }
             // Not placed, or the original would be kept hidden for a stand-in that never ran.

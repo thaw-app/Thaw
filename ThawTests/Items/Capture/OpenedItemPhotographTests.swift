@@ -148,6 +148,12 @@ struct OpenedItemPhotographTests {
         #expect(duringCrop.crops.count == 1)
         #expect(duringCrop.committed == 0)
         #expect(duringCrop.saves == 0)
+
+        let droppedDuringCrop = World()
+        droppedDuringCrop.picture = try ItemsFixture.glyph(width: 40, height: 48, scale: 2, ink: CGRect(x: 0, y: 8, width: 10, height: 32))
+        droppedDuringCrop.pixelSettle = .changing([0])
+        droppedDuringCrop.menuOpen = [false, true]
+        #expect(await droppedDuringCrop.take() == .menuOpened, "A cut-off picture dropped while the menu opened still retries")
     }
 
     @Test("A crop that took no picture keeps the old one")

@@ -76,11 +76,12 @@ struct OpenedItemPhotograph {
         var pass = await crop(shown.live, cropFrame, displays.capture)
         // As for a revealed batch: a picture cut off at an edge while the pixels still changed is the icon mid-slide.
         RevealCaptureSession.dropCutOffPictures(from: &pass, amongChanging: pixelSettle.mayBeChanging(at: 0) ? [shown.live.tag] : [])
+        // Before the picture check: a menu that opened mid-slide may be why the picture was dropped.
+        guard await !isMenuOpen() else { return .menuOpened }
         guard pass.captured[shown.live.tag] != nil else {
             Self.log("no crop of \(item.logString) at \(cropFrame)")
             return .missed
         }
-        guard await !isMenuOpen() else { return .menuOpened }
         guard commit(pass, shown, admission) else {
             Self.log("the menu bar changed during the picture of \(item.logString)")
             return .missed

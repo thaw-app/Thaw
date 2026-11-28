@@ -315,6 +315,21 @@ struct SystemExtraStandInLauncherTests {
         #expect(try #require(fake.startedProcesses.only).isWatched)
     }
 
+    @Test("An open that fails after the stand-in was turned off reports nothing")
+    func failureAfterStopIsIgnored() async throws {
+        struct OpenFailed: Error {}
+        let (launcher, _) = makeLauncher()
+        fake.duringOpen = { [fake] in
+            launcher.stop(.timer)
+            fake.openError = OpenFailed()
+        }
+
+        try await launcher.launch(.timer, replacing: original, in: .hidden)
+
+        #expect(launcher.wanted.isEmpty)
+        #expect(launcher.placed.isEmpty)
+    }
+
     @Test("A restart that fails after the stand-in was launched again gives nothing up")
     func supersededRestartFailureIsIgnored() async throws {
         let (launcher, _) = makeLauncher()
