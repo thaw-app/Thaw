@@ -48,7 +48,7 @@ the items under New and Fixed.
 - Revealing hidden items no longer leaves some of them on top of others in the menu bar.
 - The Thaw Bar trims transparent side margins from captured icons and keeps a minimum gap between items.
 - iStat Menus from the Mac App Store no longer fills Layout with a new item for every reading.
-- The iStat Menus clock keeps its saved section when the weekday changes, also when it shows seconds or has no comma after the weekday.
+- The iStat Menus clock keeps its saved section when the weekday changes, also with seconds or without a comma.
 - Resetting the layout shows item pictures in the Layout bar right away.
 - Closing Settings no longer sends What's New or Credits behind other apps.
 - With the arrangement set to Manual, Sound and Wi-Fi can be moved in the Layout bar again.
@@ -60,11 +60,11 @@ the items under New and Fixed.
 - Thaw rebuilds the menu bar fewer times when it starts, especially with Native hiding.
 - With a slow double-click speed in macOS, two separate clicks on empty menu bar space no longer open Always Hidden.
 - Layout offers Thaw's own Focus item even if you never changed how Focus shows in the menu bar.
-- App menus Thaw hid come back when the hidden items close, also in full screen, with Settings open or after "Hide app menus" is turned off.
-- An item that appears while the layout is changing no longer stays missing from Layout until the menu bar changes again.
-- Quit in the Reduced mode menu no longer risks leaving Thaw running.
-- A reorder that was already waiting no longer runs once the menu bar starts settling again, or after Thaw has paused moving items because moves kept failing.
-- A picture taken when you reveal a section or open an item from the Thaw Bar is no longer kept if it catches the item still sliding in and cut off.
+- App menus Thaw hid always come back when hidden items close, also in full screen or with Settings open.
+- Items that appear while the menu bar is being rearranged no longer go missing from Layout.
+- Quit in the Reduced mode menu no longer leaves Thaw running.
+- Thaw no longer rearranges the menu bar while it is still settling after a launch or display change.
+- Thaw Bar pictures taken while an item is still sliding in are retaken instead of kept cut off.
 
 ### Thanks
 
