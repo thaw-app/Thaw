@@ -51,9 +51,10 @@ final class ThawBarPanel: NSPanel {
     private var cacheTask: Task<Void, Never>?
 
     /// Stop repeated failed WindowServer measurements until the control item gets a new ID.
-    private var staleAnchorWindowID: CGWindowID?
+    var staleAnchorWindowID: CGWindowID?
 
     private var clampReport = ThawBarClampReport()
+    let anchorRetry = ThawBarAnchorRetry()
 
     /// Observe the lock setting through Observation rather than a Combine projection.
     private var lockPositionObservationTask: Task<Void, Never>?
@@ -202,9 +203,7 @@ final class ThawBarPanel: NSPanel {
             )
             return item.bounds
         }
-        diagLog.warning(
-            "ThawBar: the visible control item has neither window bounds nor cached bounds (windowID \(item.windowID))"
-        )
+        diagLog.warning("ThawBar: the visible control item has neither window bounds nor cached bounds (windowID \(item.windowID))")
         return nil
     }
 
@@ -302,9 +301,9 @@ final class ThawBarPanel: NSPanel {
 
         guard let desiredX else {
             // Log the unresolved anchor so right-edge fallback is distinguishable from an ignored setting.
-            diagLog.warning(
-                "ThawBar: \(resolved) did not resolve an anchor; parking at the screen's right edge"
-            )
+            diagLog.warning("ThawBar: \(resolved) did not resolve an anchor; parking at the screen's right edge")
+            let lookAgain: @MainActor () -> Void = { [weak self] in self?.retryIconAnchor(on: screen) }
+            anchorRetry.schedule(for: resolved, opening: lastShowTimestamp, lookAgain)
             return CGPoint(x: rightEdgeX, y: y)
         }
         let clamped = desiredX.clamped(to: xRange)
@@ -316,7 +315,7 @@ final class ThawBarPanel: NSPanel {
         return CGPoint(x: clamped, y: y)
     }
 
-    private func updateOrigin(for screen: NSScreen) {
+    func updateOrigin(for screen: NSScreen) {
         guard let appState else { return }
         let origin = floatingOrigin(for: appState.settings.displaySettings.thawBarLocation(for: screen.displayID), on: screen, appState: appState)
         guard origin != frame.origin else { return }
@@ -519,6 +518,7 @@ final class ThawBarPanel: NSPanel {
         CustomTooltipPanel.shared.dismiss()
         cacheTask?.cancel()
         cacheTask = nil
+        anchorRetry.cancel()
         outsideClickMonitor?.stop()
         outsideClickMonitor = nil
         escapeMonitor?.stop()

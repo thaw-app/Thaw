@@ -72,6 +72,7 @@ the items under New and Fixed.
 - Thaw no longer rearranges the menu bar while it is still settling after a launch or display change.
 - Thaw Bar pictures taken while an item is still sliding in are retaken instead of kept cut off.
 - Items left on top of each other by a reveal are straightened out once the menu bar stops moving.
+- The Thaw Bar no longer stays at the right edge when it opens before the Thaw icon reports where it is.
 
 ### Thanks
 
