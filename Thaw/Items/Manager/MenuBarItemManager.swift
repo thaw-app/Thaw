@@ -1392,12 +1392,8 @@ final class MenuBarItemManager {
             // Liveness first: an exit whose terminate notification never
             // arrived (macOS 27 does not reliably post it) must still
             // leave the cache, and the window-list gate below never
-            // sees an AX-only status item withdraw. A relaunch can go
-            // unannounced the same way.
-            let runningAgain = await purgeDepartedOwnersWhenDue()
-            if !runningAgain.isEmpty {
-                noteAppsRunningAgain(runningAgain)
-            }
+            // sees an AX-only status item withdraw, or an unannounced relaunch.
+            await noteAppsRunningAgain(purgeDepartedOwnersWhenDue())
             await cacheItemsIfNeeded()
         }
 

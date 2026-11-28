@@ -66,6 +66,7 @@ extension MenuBarItemManager {
     /// Handles tracked apps the liveness check found running again as launches with no notice:
     /// settles on each and rescans. Their hidden items come back from their conceal snapshots.
     func noteAppsRunningAgain(_ bundleIDs: Set<String>) {
+        guard !bundleIDs.isEmpty else { return }
         for bundleID in bundleIDs.sorted() {
             Self.diagLog.debug("App running again without a launch notice (\(bundleID))")
             if let settle = Self.launchSettle(bundleID: bundleID, knownIdentifiers: knownItemIdentifiers) {
