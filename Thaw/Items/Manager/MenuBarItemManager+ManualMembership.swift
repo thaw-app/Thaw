@@ -46,8 +46,20 @@ extension MenuBarItemManager {
 
     /// Runs on quit and restart before Thaw's controls are torn down, since the saved dividers are read from them.
     func prepareForTermination() async {
+        await adoptPendingDragBeforeQuit()
         _ = await restoreBlockedItemsToVisible()
         recordBarAtQuit()
+    }
+
+    /// A ⌘-drag still waiting out the settle delay is read now, or the saved bar would hold its old sections.
+    private func adoptPendingDragBeforeQuit() async {
+        guard manualMembershipTask != nil, dragMembership.baseline != nil else { return }
+        manualMembershipTask?.cancel()
+        manualMembershipTask = nil
+        let alwaysHiddenShown = appState?.menuBarManager.sectionController.revealedSection == .alwaysHidden
+        await cacheItemsRegardless(skipRecentMoveCheck: true, skipSavedLayoutApply: true)
+        adoptObservedMembership(reason: "⌘-drag before quit", afterUserDrag: true, alwaysHiddenShownAtDrop: alwaysHiddenShown)
+        dragMembership.clear()
     }
 
     /// Saves the stored weights in Manual so the next launch can adopt what was ⌘-dragged while Thaw was off.

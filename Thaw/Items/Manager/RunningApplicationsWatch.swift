@@ -21,29 +21,33 @@ final class RunningApplicationsWatch {
     /// Copies started beside an app already running. They own no items and usually quit at once.
     private var secondCopies = Set<pid_t>()
 
+    private let onChange: @MainActor (Change) -> Void
+
     init(onChange: @escaping @MainActor (Change) -> Void) {
+        self.onChange = onChange
         known = Self.byPID(NSWorkspace.shared.runningApplications)
         observation = NSWorkspace.shared.observe(\.runningApplications) { [weak self] _, _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                let running = Self.byPID(NSWorkspace.shared.runningApplications)
-                let (launched, terminated) = Self.difference(from: Set(known.keys), to: Set(running.keys))
-                let stillRunning = known.filter { running[$0.key] != nil }
-                let copies = Self.secondCopies(
-                    launched: launched.reduce(into: [pid_t: String]()) { $0[$1] = running[$1]?.bundleIdentifier },
-                    alreadyRunning: Set(stillRunning.values.compactMap(\.bundleIdentifier))
-                )
-                secondCopies.formUnion(copies)
-                let change = Change(
-                    launched: launched.filter { !copies.contains($0) }.compactMap { running[$0] },
-                    terminated: terminated.filter { !secondCopies.contains($0) }.compactMap { known[$0] }
-                )
-                secondCopies.subtract(terminated)
-                known = running
-                if !change.launched.isEmpty || !change.terminated.isEmpty {
-                    onChange(change)
-                }
-            }
+            Task { @MainActor [weak self] in self?.readRunningApplications() }
+        }
+    }
+
+    private func readRunningApplications() {
+        let running = Self.byPID(NSWorkspace.shared.runningApplications)
+        let (launched, terminated) = Self.difference(from: Set(known.keys), to: Set(running.keys))
+        let stillRunning = known.filter { running[$0.key] != nil }
+        let copies = Self.secondCopies(
+            launched: launched.reduce(into: [pid_t: String]()) { $0[$1] = running[$1]?.bundleIdentifier },
+            alreadyRunning: Set(stillRunning.values.compactMap(\.bundleIdentifier))
+        )
+        secondCopies.formUnion(copies)
+        let change = Change(
+            launched: launched.filter { !copies.contains($0) }.compactMap { running[$0] },
+            terminated: terminated.filter { !secondCopies.contains($0) }.compactMap { known[$0] }
+        )
+        secondCopies.subtract(terminated)
+        known = running
+        if !change.launched.isEmpty || !change.terminated.isEmpty {
+            onChange(change)
         }
     }
 

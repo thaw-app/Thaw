@@ -807,7 +807,7 @@ extension MenuBarItemManager {
 
         guard !Task.isCancelled else {
             MenuBarItemManager.diagLog.debug("cacheItemsRegardless: cancelled before relocateNewLeftmostItems")
-            return
+            return cacheCycleState.baselines.putBack()
         }
 
         if await relocateNewLeftmostItems(

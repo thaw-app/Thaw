@@ -133,7 +133,7 @@ final class FakeStandInSystem {
     var nextStartsTerminated = false
     private(set) var opens: [Open] = []
     /// Runs inside an open before it returns, standing in for the wait on the system.
-    var duringOpen: (() -> Void)?
+    var duringOpen: (() async -> Void)?
     var openError: (any Error)?
     private var nextPID: pid_t = 70000
 
@@ -159,7 +159,7 @@ final class FakeStandInSystem {
                     promptsUserIfNeeded: configuration.promptsUserIfNeeded,
                     arguments: configuration.arguments
                 ))
-                duringOpen?()
+                await duringOpen?()
                 if let openError {
                     throw openError
                 }

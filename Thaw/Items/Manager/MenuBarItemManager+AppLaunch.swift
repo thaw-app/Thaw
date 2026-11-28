@@ -33,12 +33,13 @@ extension MenuBarItemManager {
             for await _ in launches.debounce(for: .seconds(1)) {
                 Self.diagLog.debug("Refreshing cache for potential new items after app launches")
                 await self?.cacheItemsRegardless()
-                // Many apps register their status item more than a second after they start.
-                // cacheItemsIfNeeded bails when window IDs are unchanged, so these are cheap.
-                try? await Task.sleep(for: .seconds(2.5))
-                await self?.cacheItemsIfNeeded()
-                try? await Task.sleep(for: .seconds(2.5))
-                await self?.cacheItemsIfNeeded()
+                // Many apps register their status item more than a second after they start. The window-list
+                // gate is dropped first: an item published only as an AXExtrasMenuBar child adds no window.
+                for _ in 0 ..< 2 {
+                    try? await Task.sleep(for: .seconds(2.5))
+                    self?.periodicWindowListSignature = nil
+                    await self?.cacheItemsIfNeeded()
+                }
             }
         }
         let exitTask = Task { @MainActor [weak self] in
@@ -50,11 +51,12 @@ extension MenuBarItemManager {
             }
         }
         return AnyCancellable {
-            withExtendedLifetime(watch) {}
-            launched.finish()
-            exited.finish()
-            launchTask.cancel()
-            exitTask.cancel()
+            withExtendedLifetime(watch) {
+                launched.finish()
+                exited.finish()
+                launchTask.cancel()
+                exitTask.cancel()
+            }
         }
     }
 

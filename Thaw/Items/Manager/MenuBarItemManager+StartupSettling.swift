@@ -44,11 +44,11 @@ extension MenuBarItemManager {
 
     private func finishSettling(_ ending: BarSettling.Ending) async {
         let reason = ending.disturbance.label
-        let barAtQuit = ObservedMembership.BarAtQuit.take()
         // A bar arranged by hand while Thaw was not running, or under an
         // older build, has to be read once before its sections can be.
         // Layout's sections win over stale weights, except for icons ⌘-dragged across a divider since the last quit.
         if ending.adoptsObservedMembership {
+            let barAtQuit = ObservedMembership.BarAtQuit.take()
             adoptObservedMembership(reason: "settled launch", keepingAuthored: true, movedSince: barAtQuit)
         }
 

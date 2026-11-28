@@ -216,11 +216,14 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
         do {
             try await open(standIn)
         } catch {
-            // Not placed, or the original would be kept hidden for a stand-in that never ran.
-            if launchCounts[standIn] == launchCount {
-                wanted.remove(standIn)
-                placed.remove(standIn)
+            // A newer launch owns the stand-in now, so its caller hears nothing of this one.
+            guard launchCounts[standIn] == launchCount else {
+                log.info("\(standIn.rawValue) stand-in open from an earlier launch failed; keeping the newer one")
+                return
             }
+            // Not placed, or the original would be kept hidden for a stand-in that never ran.
+            wanted.remove(standIn)
+            placed.remove(standIn)
             throw error
         }
         // Turned off while it started: open quit it, so nothing should listen for it.
@@ -252,12 +255,13 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
             if await !entry.app.terminateAndWait(upTo: Self.restartQuitTimeout, now: now, sleep: sleep) {
                 entry.app.forceTerminate()
             }
+            let launchCount = launchCounts[standIn]
             do {
                 try await open(standIn)
                 log.info("restarted \(standIn.rawValue) stand-in")
             } catch {
                 log.error("\(standIn.rawValue) stand-in restart failed: \(error.localizedDescription)")
-                onGaveUp?(standIn)
+                giveUpUnlessRelaunched(standIn, since: launchCount)
             }
         }
     }
@@ -309,14 +313,21 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
         }
         restarts[standIn] = recent + [exitedAt]
         log.info("\(standIn.rawValue) stand-in (pid \(pid)) exited; starting it again")
+        let launchCount = launchCounts[standIn]
         Task { [weak self] in
             do {
                 try await self?.open(standIn)
             } catch {
                 self?.log.error("\(standIn.rawValue) stand-in restart failed: \(error.localizedDescription)")
-                self?.onGaveUp?(standIn)
+                self?.giveUpUnlessRelaunched(standIn, since: launchCount)
             }
         }
+    }
+
+    /// A restart that fails after the stand-in was turned off, or launched again, leaves the newer state alone.
+    private func giveUpUnlessRelaunched(_ standIn: SystemExtraStandIn, since launchCount: Int?) {
+        guard wanted.contains(standIn), launchCounts[standIn] == launchCount else { return }
+        onGaveUp?(standIn)
     }
 
     /// Puts the stand-in in section, right after the original when the
