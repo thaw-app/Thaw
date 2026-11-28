@@ -352,7 +352,8 @@ extension MenuBarItemManager {
         guard let controlItems = ControlItemPair(
             items: &items,
             hiddenControlItemWindowID: hiddenControlItemWID,
-            alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWID
+            alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWID,
+            alwaysHiddenSectionIsOff: appState?.menuBarManager.isAlwaysHiddenDividerRemoved ?? false
         ) else {
             guard snapshotIsCurrent("before control-item recovery") else { return }
             // Keep the last good cache and leave the window IDs uncommitted so the

@@ -49,7 +49,8 @@ extension MenuBarItemManager {
         init?(
             items: inout [MenuBarItem],
             hiddenControlItemWindowID: CGWindowID? = nil,
-            alwaysHiddenControlItemWindowID: CGWindowID? = nil
+            alwaysHiddenControlItemWindowID: CGWindowID? = nil,
+            alwaysHiddenSectionIsOff: Bool = false
         ) {
             // Duplicate Thaw instances share titles, and tag matching favors the
             // lowest window ID, which may be another process's.
@@ -59,7 +60,8 @@ extension MenuBarItemManager {
                 self.hidden = items.remove(at: hiddenIndex)
                 self.alwaysHidden = Self.resolveAlwaysHidden(
                     in: &items,
-                    authoritativeWindowID: alwaysHiddenControlItemWindowID
+                    authoritativeWindowID: alwaysHiddenControlItemWindowID,
+                    sectionIsOff: alwaysHiddenSectionIsOff
                 )
                 self.resolution = .identity
                 MenuBarItemManager.diagLog.debug("ControlItemPair: resolved via window ID")
@@ -79,7 +81,8 @@ extension MenuBarItemManager {
                 self.hidden = hidden
                 self.alwaysHidden = Self.resolveAlwaysHidden(
                     in: &items,
-                    authoritativeWindowID: alwaysHiddenControlItemWindowID
+                    authoritativeWindowID: alwaysHiddenControlItemWindowID,
+                    sectionIsOff: alwaysHiddenSectionIsOff
                 )
                 self.resolution = .identity
                 MenuBarItemManager.diagLog.info(
@@ -98,7 +101,7 @@ extension MenuBarItemManager {
                    pair.alwaysHidden != nil
                 {
                     self.hidden = pair.hidden
-                    self.alwaysHidden = pair.alwaysHidden
+                    self.alwaysHidden = alwaysHiddenSectionIsOff ? nil : pair.alwaysHidden
                     self.resolution = .axFrameCorrelation
                     MenuBarItemManager.diagLog.info(
                         "ControlItemPair: resolved duplicate control-item titles via unambiguous current-process AX frames"
@@ -116,7 +119,8 @@ extension MenuBarItemManager {
                 self.hidden = hidden
                 self.alwaysHidden = Self.resolveAlwaysHidden(
                     in: &items,
-                    authoritativeWindowID: alwaysHiddenControlItemWindowID
+                    authoritativeWindowID: alwaysHiddenControlItemWindowID,
+                    sectionIsOff: alwaysHiddenSectionIsOff
                 )
                 self.resolution = .identity
                 MenuBarItemManager.diagLog.debug("ControlItemPair: resolved via tag")
@@ -131,7 +135,8 @@ extension MenuBarItemManager {
                 self.hidden = items.remove(at: idx)
                 self.alwaysHidden = Self.resolveAlwaysHidden(
                     in: &items,
-                    authoritativeWindowID: alwaysHiddenControlItemWindowID
+                    authoritativeWindowID: alwaysHiddenControlItemWindowID,
+                    sectionIsOff: alwaysHiddenSectionIsOff
                 )
                 self.resolution = .identity
                 MenuBarItemManager.diagLog.debug("ControlItemPair: resolved via sourcePID and title")
@@ -142,7 +147,7 @@ extension MenuBarItemManager {
             // Works when every CG-side identity channel has degraded.
             if let pair = Self.matchViaAXFrame(items: &items) {
                 self.hidden = pair.hidden
-                self.alwaysHidden = pair.alwaysHidden
+                self.alwaysHidden = alwaysHiddenSectionIsOff ? nil : pair.alwaysHidden
                 self.resolution = .axFrameCorrelation
                 return
             }
@@ -193,18 +198,20 @@ extension MenuBarItemManager {
         ///
         /// Zero (kCGNullWindowID) counts as no ID; unbuilt status items convert to it.
         /// Without an ID, match our PID plus canonical title, then plain tag.
+        /// With the section off, a match is still taken out of the list but isn't returned:
+        /// before macOS 26 a switched-off divider keeps its window.
         static func resolveAlwaysHidden(
             in items: inout [MenuBarItem],
             authoritativeWindowID: CGWindowID?,
+            sectionIsOff: Bool = false,
             recovery: @MainActor (CGWindowID) -> MenuBarItem? = { MenuBarItem.ownControlItem(windowID: $0) }
         ) -> MenuBarItem? {
             guard let windowID = authoritativeWindowID, windowID != 0 else {
                 let ourPID = ProcessInfo.processInfo.processIdentifier
                 let alwaysHiddenTitle = ControlItem.Identifier.alwaysHidden.rawValue
-                if let index = items.firstIndex(where: { $0.sourcePID == ourPID && $0.title == alwaysHiddenTitle }) {
-                    return items.remove(at: index)
-                }
-                return items.removeFirst(matching: .alwaysHiddenControlItem)
+                let match = items.firstIndex(where: { $0.sourcePID == ourPID && $0.title == alwaysHiddenTitle })
+                    .map { items.remove(at: $0) } ?? items.removeFirst(matching: .alwaysHiddenControlItem)
+                return sectionIsOff ? nil : match
             }
             if let index = items.firstIndex(where: { $0.windowID == windowID }) {
                 return items.remove(at: index)
@@ -409,7 +416,7 @@ extension MenuBarItemManager {
         guard let menuBarManager = appState?.menuBarManager else { return [:] }
         return MenuBarSection.Name.allCases.reduce(into: [:]) { result, name in
             guard let controlItem = menuBarManager.controlItem(withName: name),
-                  let window = controlItem.window,
+                  let window = controlItem.menuBarWindow,
                   let windowID = Self.authoritativeControlItemWindowID(
                       windowNumber: window.windowNumber
                   )

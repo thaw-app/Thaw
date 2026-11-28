@@ -198,6 +198,30 @@ struct ControlItemPairAlwaysHiddenRecoveryTests {
         #expect(pair?.resolution == .identity)
     }
 
+    @Test("With the section off, a listed divider leaves the list but isn't a boundary (#1705)")
+    func switchedOffDividerIsNotABoundary() {
+        var items = [alwaysHiddenItem(windowID: 366), hiddenItem()]
+
+        let resolved = MenuBarItemManager.ControlItemPair.resolveAlwaysHidden(
+            in: &items,
+            authoritativeWindowID: nil,
+            sectionIsOff: true
+        )
+
+        #expect(resolved == nil)
+        #expect(items.map(\.windowID) == [1_000_001])
+
+        var pairItems = [hiddenItem(), alwaysHiddenItem(windowID: 366)]
+        let pair = MenuBarItemManager.ControlItemPair(
+            items: &pairItems,
+            hiddenControlItemWindowID: 1_000_001,
+            alwaysHiddenSectionIsOff: true
+        )
+        #expect(pair?.hidden.windowID == 1_000_001)
+        #expect(pair?.alwaysHidden == nil)
+        #expect(pairItems.isEmpty)
+    }
+
     // MARK: Full-init characterization of the #991 cycle
 
     @Test("Tag-path apply with an absent AH window stays identity-resolved and honestly nil")

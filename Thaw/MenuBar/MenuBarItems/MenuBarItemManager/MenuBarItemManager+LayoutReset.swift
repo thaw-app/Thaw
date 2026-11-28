@@ -82,7 +82,8 @@ extension MenuBarItemManager {
         guard let controlItems = ControlItemPair(
             items: &items,
             hiddenControlItemWindowID: hiddenWID,
-            alwaysHiddenControlItemWindowID: alwaysHiddenWID
+            alwaysHiddenControlItemWindowID: alwaysHiddenWID,
+            alwaysHiddenSectionIsOff: appState.menuBarManager.isAlwaysHiddenDividerRemoved
         ) else {
             MenuBarItemManager.diagLog.error("Layout reset aborted: missing hidden section control item")
 
@@ -97,7 +98,8 @@ extension MenuBarItemManager {
                 if let retryControlItems = ControlItemPair(
                     items: &items,
                     hiddenControlItemWindowID: hiddenWID,
-                    alwaysHiddenControlItemWindowID: alwaysHiddenWID
+                    alwaysHiddenControlItemWindowID: alwaysHiddenWID,
+                    alwaysHiddenSectionIsOff: appState.menuBarManager.isAlwaysHiddenDividerRemoved
                 ), retryControlItems.canRepositionControlItems {
                     guard !target.requiresAlwaysHiddenDivider || retryControlItems.alwaysHidden != nil else {
                         throw LayoutResetError.missingControlItems
@@ -265,7 +267,8 @@ extension MenuBarItemManager {
         guard let refreshedControls = ControlItemPair(
             items: &refreshedItems,
             hiddenControlItemWindowID: refreshHiddenWID,
-            alwaysHiddenControlItemWindowID: refreshAlwaysHiddenWID
+            alwaysHiddenControlItemWindowID: refreshAlwaysHiddenWID,
+            alwaysHiddenSectionIsOff: appState.menuBarManager.isAlwaysHiddenDividerRemoved
         ), refreshedControls.canRepositionControlItems,
         !target.requiresAlwaysHiddenDivider || refreshedControls.alwaysHidden != nil
         else {
@@ -359,7 +362,8 @@ extension MenuBarItemManager {
         guard let controlItems = ControlItemPair(
             items: &items,
             hiddenControlItemWindowID: hiddenWID,
-            alwaysHiddenControlItemWindowID: alwaysHiddenWID
+            alwaysHiddenControlItemWindowID: alwaysHiddenWID,
+            alwaysHiddenSectionIsOff: appState.menuBarManager.isAlwaysHiddenDividerRemoved
         ), controlItems.canRepositionControlItems else {
             MenuBarItemManager.diagLog.error("Cannot restore items: unable to find hidden control item")
             return blockedItems.count

@@ -292,7 +292,8 @@ extension MenuBarItemManager {
         guard let controlItems = ControlItemPair(
             items: &items,
             hiddenControlItemWindowID: hiddenControlItemWID,
-            alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWID
+            alwaysHiddenControlItemWindowID: alwaysHiddenControlItemWID,
+            alwaysHiddenSectionIsOff: appState.menuBarManager.isAlwaysHiddenDividerRemoved
         ) else {
             MenuBarItemManager.diagLog.warning("moveItem(trigger): missing control items; cannot move \(target.logString)")
             return .deferred
