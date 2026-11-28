@@ -97,9 +97,7 @@ final class TextInputExtra: NSObject {
     }
 
     @objc private func openKeyboardSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension") {
-            NSWorkspace.shared.open(url)
-        }
+        SystemSettings.open("com.apple.Keyboard-Settings.extension")
     }
 
     // MARK: Input sources

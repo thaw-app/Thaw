@@ -1,0 +1,75 @@
+//
+//  NetworkStandInTests.swift
+//  Project: Thaw
+//
+//  Copyright (Thaw) © 2026 Toni Förster
+//  Licensed under the GNU GPLv3
+
+import Foundation
+import IOBluetooth
+import Testing
+@testable import ThawExtraHelper
+
+@Suite("Wi-Fi, Bluetooth and Sound stand-ins")
+struct NetworkStandInTests {
+    private func wiFi(on: Bool = true, rssi: Int, rate: Double = 400) -> WiFiReading {
+        WiFiReading(interfaceName: "en0", isPoweredOn: on, rssi: rssi, transmitRate: rate)
+    }
+
+    @Test("Signal bars drop at -60 and -70 dBm, and show none while not associated")
+    func signalBars() {
+        #expect(wiFi(rssi: -50).signalLevel == 1)
+        #expect(wiFi(rssi: -60).signalLevel == 1)
+        #expect(wiFi(rssi: -65).signalLevel == 0.66)
+        #expect(wiFi(rssi: -80).signalLevel == 0.33)
+        #expect(wiFi(rssi: 0, rate: 0).signalLevel == 0)
+        #expect(!wiFi(on: false, rssi: -50).isConnected)
+        #expect(wiFi(on: false, rssi: 0).symbolName == "wifi.slash")
+    }
+
+    @Test("The router is offered only while Wi-Fi carries the default route")
+    func routerFollowsPrimaryInterface() {
+        let interface = ["Addresses": ["192.168.1.23"]]
+        let global: [String: Any] = ["PrimaryInterface": "en0", "Router": "192.168.1.1"]
+        #expect(NetworkAddresses(interfaceState: interface, globalState: global, interface: "en0")
+            == NetworkAddresses(address: "192.168.1.23", router: "192.168.1.1"))
+        #expect(NetworkAddresses(interfaceState: interface, globalState: global, interface: "en1")
+            == NetworkAddresses(address: "192.168.1.23", router: nil))
+    }
+
+    @Test("Connected devices come first, then the rest by name")
+    func deviceOrder() {
+        func row(_ name: String, _ connected: Bool) -> BluetoothDeviceRow {
+            BluetoothDeviceRow(address: name, name: name, isConnected: connected, symbolName: "")
+        }
+        let sorted = BluetoothReading.sorted([row("Mouse", false), row("Keyboard", false), row("AirPods", true)])
+        #expect(sorted.map(\.name) == ["AirPods", "Keyboard", "Mouse"])
+    }
+
+    @Test("The speaker shows a slash while muted or at zero volume")
+    func soundSymbol() {
+        #expect(AudioDevices.symbolName(muted: false, volume: 0.5) == "speaker.wave.3.fill")
+        #expect(AudioDevices.symbolName(muted: true, volume: 0.5) == "speaker.slash.fill")
+        #expect(AudioDevices.symbolName(muted: false, volume: 0) == "speaker.slash.fill")
+    }
+
+    @Test("Headphones show as themselves: AirPods by product ID, then by name, then generic")
+    func headphonesSymbol() {
+        #expect(AudioDevices.symbolName(muted: true, volume: 0, headphones: "airpods.pro") == "airpods.pro")
+        #expect(AudioDevices.headphonesSymbolName(modelUID: "2024 4c", name: "Renamed") == "airpods.pro")
+        #expect(AudioDevices.headphonesSymbolName(modelUID: "200a 4c", name: nil) == "airpods.max")
+        #expect(AudioDevices.headphonesSymbolName(modelUID: "2024 5d", name: "Kitchen AirPods") == "airpods")
+        #expect(AudioDevices.headphonesSymbolName(modelUID: nil, name: "Beats Studio Pro") == "beats.headphones")
+        #expect(AudioDevices.headphonesSymbolName(modelUID: "ffff 4c", name: "Earbuds") == "headphones")
+    }
+
+    @Test("Each device class gets its own symbol")
+    func deviceSymbols() {
+        let audio = BluetoothDeviceClassMajor(kBluetoothDeviceClassMajorAudio)
+        let peripheral = BluetoothDeviceClassMajor(kBluetoothDeviceClassMajorPeripheral)
+        #expect(BluetoothReading.symbolName(major: audio, minor: 0) == "headphones")
+        #expect(BluetoothReading.symbolName(major: peripheral, minor: 0x10) == "keyboard")
+        #expect(BluetoothReading.symbolName(major: peripheral, minor: 0x20) == "computermouse")
+        #expect(BluetoothReading.symbolName(major: 0x1F, minor: 0) == "dot.radiowaves.left.and.right")
+    }
+}

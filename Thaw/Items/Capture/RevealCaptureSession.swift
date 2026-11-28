@@ -112,7 +112,7 @@ struct RevealCaptureSession {
     /// Takes out the pictures, of the items whose pixels were still changing at the screenshot, whose ink runs
     /// into their left or right edge: such a picture is most likely the icon caught while it slides in. Either
     /// sign alone is not enough. An icon that keeps redrawing never settles, and one can draw to its edge.
-    private static nonisolated func dropCutOffPictures(
+    static nonisolated func dropCutOffPictures(
         from pass: inout AXBoundsCropper.CapturePass,
         amongChanging changing: Set<MenuBarItemTag>
     ) {
@@ -126,7 +126,7 @@ struct RevealCaptureSession {
         }
         pass.recoveredItems.removeAll { cutOff.contains($0.tag) }
         MenuBarItemImageCache.diagLog.debug(
-            "grouped reveal capture: pixels were still changing and \(cutOff.count) picture(s) are cut off at an edge; not publishing \(cutOff.map(\.description).sorted())"
+            "capture: pixels were still changing and \(cutOff.count) picture(s) are cut off at an edge; not publishing \(cutOff.map(\.description).sorted())"
         )
     }
 

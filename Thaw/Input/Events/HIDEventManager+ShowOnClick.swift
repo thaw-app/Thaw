@@ -102,7 +102,7 @@ extension HIDEventManager {
         // gesture, timed here because clickCount cannot see a quiet first click.
         if let pending = pendingMenuBarClick,
            pending.displayID == screen.displayID,
-           ContinuousClock.now - pending.timestamp < .seconds(NSEvent.doubleClickInterval)
+           ContinuousClock.now - pending.timestamp < Self.menuBarClickPairingWindow()
         {
             cancelPendingMenuBarClick()
             // Not re-armed: the first click's guard is still inside its window,
@@ -184,7 +184,7 @@ extension HIDEventManager {
         pendingMenuBarClick = (timestamp, screen.displayID)
         pendingMenuBarClickTask = Task { [weak self] in
             do {
-                try await Task.sleep(for: .seconds(NSEvent.doubleClickInterval))
+                try await Task.sleep(for: Self.menuBarClickPairingWindow())
             } catch {
                 return
             }
@@ -244,7 +244,7 @@ extension HIDEventManager {
             height: protectionHeight
         )
         showOnClickGuardDisplayID = screen.displayID
-        showOnClickGuardDeadline = .now + .seconds(NSEvent.doubleClickInterval)
+        showOnClickGuardDeadline = .now + Self.menuBarClickPairingWindow()
         guardMouseUpState = .idle
 
         // Validate (and recreate if needed) before enabling; a stale Mach port
@@ -260,7 +260,7 @@ extension HIDEventManager {
         clickTaskToken = token
         clickTask = Task { [weak self] in
             do {
-                try await Task.sleep(for: .seconds(NSEvent.doubleClickInterval))
+                try await Task.sleep(for: Self.menuBarClickPairingWindow())
             } catch {
                 return
             }

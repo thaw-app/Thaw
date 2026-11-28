@@ -24,19 +24,70 @@ the items under New and Fixed.
 
 ## [Unreleased]
 
-### Fixed
+## [3.0.0-alpha.16] - 2026-11-27
 
-- The Thaw Bar trims transparent side margins from captured icons and keeps a minimum gap between items.
-- iStat Menus from the Mac App Store no longer fills Layout with a new item for every reading, such as each CPU percentage or network speed.
+**macOS 27 only · Build 128**
+
+> [!NOTE]
+> Making Thaw lighter meant changes across the app, so an issue fixed before might come back. If you see one, please [let us know](https://github.com/thaw-app/Thaw/issues/new/choose), so we can plan around it.
+
+### New
+
+- Replace Control Center items can now replace Wi-Fi, Bluetooth and Sound with Thaw's own items.
+
 ### Changed
 
-- **Exported diagnostics no longer include saved item lists,** and Thaw keeps only the newest five item lists.
+- Modules shows a list like the other settings pages, or cards from the toolbar.
+- Settings now says that Click, Hover and Scroll under "Show hidden items on" are optional.
+- Exported diagnostics no longer include saved item lists, and Thaw keeps only the newest five.
+- Known macOS 27 limitations now says how to reach Wi-Fi, Bluetooth and Sound with Native hiding.
+
 ### Fixed
 
-- **Resetting the layout shows item pictures in the Layout bar right away,** instead of leaving them blank.
-- **Closing Settings no longer sends What's New or Credits behind other apps.**
-- **With the arrangement set to Manual, Thaw puts its section divider back left of its icon when the two swap places.** Until then, items such as Sound and Wi-Fi could not be moved in the Layout bar.
-- **The iStat Menus clock keeps its saved menu bar section when the weekday changes.** Reported by @okwme in [#1689](https://github.com/thaw-app/Thaw/issues/1689).
+- Switching away from Thaw no longer logs an NSMenu assertion failure.
+- Thaw Bar pictures of hidden items are taken once the item has finished sliding in, so fewer come out cut in half.
+- Menu bar apps that start or quit while Thaw runs are picked up right away, even those without a Dock icon.
+- With the arrangement set to Manual, items you put in Visible stay there when Thaw starts.
+- With the arrangement set to Manual, an item you ⌘-drag to another section while Thaw is closed stays there when Thaw starts.
+- Revealing hidden items no longer leaves some of them on top of others in the menu bar.
+- The Thaw Bar trims transparent side margins from captured icons and keeps a minimum gap between items.
+- iStat Menus from the Mac App Store no longer fills Layout with a new item for every reading.
+- The iStat Menus clock keeps its saved section when the weekday changes, also with seconds or without a comma.
+- The iStat Menus battery item keeps its saved section when its charging state changes.
+- Resetting the layout shows item pictures in the Layout bar right away.
+- Closing Settings no longer sends What's New or Credits behind other apps.
+- With the arrangement set to Manual, Sound and Wi-Fi can be moved in the Layout bar again.
+- Item pictures saved by earlier builds are taken again, so a cut-off or wrong picture no longer survives relaunches.
+- Visible items no longer show another app's icon in Layout when macOS draws them away from where their app says they are.
+- A Control Center replacement that fails to start, or to restart after a spacing change, no longer leaves Apple's item hidden.
+- Turning off a Control Center replacement puts Apple's item back where the replacement was.
+- Stats' icons can be moved and no longer snap back or split around Thaw's icon.
+- Thaw rebuilds the menu bar fewer times when it starts, especially with Native hiding.
+- Control Center items you hide stay hidden when Thaw quits, so starting Thaw no longer restarts Control Center.
+- Quitting Thaw brings back the Apple items its Control Center replacements stood in for.
+- An app with several icons keeps their order when you move it into Hidden.
+- Two layout backups made in the same second no longer overwrite each other.
+- An app that keeps starting a second copy of itself no longer makes Thaw rescan and tidy the menu bar every few seconds.
+- Layout, Search and menu bar scans are faster with many items.
+- With a slow double-click speed in macOS, two separate clicks on empty menu bar space no longer open Always Hidden.
+- Layout offers Thaw's own Focus item even if you never changed how Focus shows in the menu bar.
+- App menus Thaw hid always come back when hidden items close, also in full screen or with Settings open.
+- Items that appear while the menu bar is being rearranged no longer go missing from Layout.
+- Quit in the Reduced mode menu no longer leaves Thaw running.
+- Thaw no longer rearranges the menu bar while it is still settling after a launch or display change.
+- Thaw Bar pictures taken while an item is still sliding in are retaken instead of kept cut off.
+- Items left on top of each other by a reveal are straightened out once the menu bar stops moving.
+- The Thaw Bar no longer stays at the right edge when it opens before the Thaw icon reports where it is.
+
+### Thanks
+
+- @elior-esh moved the group interleaving, reveal repair and section order checks out of `MenuBarItemManager+Moving` ([#1683](https://github.com/thaw-app/Thaw/pull/1683), [#1688](https://github.com/thaw-app/Thaw/pull/1688)) and steadied two tests ([#1694](https://github.com/thaw-app/Thaw/pull/1694), [#1696](https://github.com/thaw-app/Thaw/pull/1696)).
+- @alox92 spaced Thaw Bar icons by their visible bounds ([#1693](https://github.com/thaw-app/Thaw/pull/1693)).
+- @WGlegola added previews for the Displays pages ([#1695](https://github.com/thaw-app/Thaw/pull/1695)).
+- @nahuelcamillo matched the Mac App Store iStat Menus helper ([#1697](https://github.com/thaw-app/Thaw/pull/1697)).
+- @chai-in kept the iStat Menus clock in its saved section ([#1709](https://github.com/thaw-app/Thaw/pull/1709)).
+- @amanthanvi stopped the HUD capsule from resizing its own panel ([ThawUI#14](https://github.com/thaw-app/ThawUI/pull/14)).
+- @PurtucRobert, @dmisgano99, @macdaddy1944, @zinowiewfilip, @Macador, @wangzi0218, @okwme and @felixkaiser reported the bugs this release fixes.
 
 ## [3.0.0-alpha.15] - 2026-11-22
 

@@ -19,7 +19,8 @@ enum TagRegex {
     static nonisolated(unsafe) let byteSize = /#\s*[KMGTPE]?[Bb]/
     static nonisolated(unsafe) let readingMonth = /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?(?= #| at\b)/
     static nonisolated(unsafe) let readingMeridiem = /(#:#)\s*[AaPp]\.?\s?[Mm]\.?$/
-    static nonisolated(unsafe) let readingWeekday = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)(?=, #:#$)/
+    static nonisolated(unsafe) let readingWeekday = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)(?=,? #:#(?::#)?$)/
+    static nonisolated(unsafe) let readingBatteryState = /^(Battery #%), [\p{L}#: ]+\.?$/
     static nonisolated(unsafe) let camelBoundary = /([a-z]{2})([A-Z])/
     static nonisolated(unsafe) let timeMachine = /TimeMachine/
 }

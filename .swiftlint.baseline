@@ -1162,7 +1162,7 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager.swift",
     "line": 29
    },
-   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 883 lines",
+   "reason": "Class body should span 350 lines or less excluding comments and whitespace: currently spans 847 lines",
    "ruleDescription": "Type bodies should not span too many lines",
    "ruleIdentifier": "type_body_length",
    "ruleName": "Type Body Length",
@@ -1237,26 +1237,11 @@
     "file": "Thaw/Items/Manager/MenuBarItemManager.swift",
     "line": 1326
    },
-   "reason": "Function should have complexity 10 or less; currently complexity is 11",
-   "ruleDescription": "Complexity of function bodies should be limited.",
-   "ruleIdentifier": "cyclomatic_complexity",
-   "ruleName": "Cyclomatic Complexity",
-   "severity": "warning"
-  }
- },
- {
-  "text": "    private func configureObservers(itemGroupManager: MenuBarItemGroupManager, navigationState: AppNavigationState) {",
-  "violation": {
-   "location": {
-    "character": 13,
-    "file": "Thaw/Items/Manager/MenuBarItemManager.swift",
-    "line": 1326
-   },
-   "reason": "Function body should span 100 lines or less excluding comments and whitespace: currently spans 103 lines",
+   "reason": "Function body should span 50 lines or less excluding comments and whitespace: currently spans 67 lines",
    "ruleDescription": "Function bodies should not span too many lines",
    "ruleIdentifier": "function_body_length",
    "ruleName": "Function Body Length",
-   "severity": "error"
+   "severity": "warning"
   }
  },
  {
@@ -1265,9 +1250,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Items/Manager/MenuBarItemManager.swift",
-    "line": 1574
+    "line": 1511
    },
-   "reason": "File should contain 1000 lines or less: currently contains 1574",
+   "reason": "File should contain 1000 lines or less: currently contains 1511",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",
@@ -2465,9 +2450,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/System/Defaults.swift",
-    "line": 624
+    "line": 517
    },
-   "reason": "File should contain 400 lines or less: currently contains 624",
+   "reason": "File should contain 400 lines or less: currently contains 517",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",

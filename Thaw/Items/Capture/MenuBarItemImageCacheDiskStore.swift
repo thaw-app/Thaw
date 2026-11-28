@@ -103,7 +103,7 @@ final class MenuBarItemImageCacheDiskStore: @unchecked Sendable {
     /// would otherwise never be replaced. A file from another build in this
     /// version keeps its hidden items' pictures, marked for a retake; bump
     /// this when even those must go.
-    private static nonisolated let cacheVersion = 12
+    private static nonisolated let cacheVersion = 13
 
     /// How long an unchanged cache may go without its file being re-stamped.
     ///

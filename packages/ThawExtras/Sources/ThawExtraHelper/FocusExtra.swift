@@ -120,8 +120,6 @@ final class FocusExtra: NSObject {
     }
 
     @objc private func openSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.Focus-Settings.extension") {
-            NSWorkspace.shared.open(url)
-        }
+        SystemSettings.open("com.apple.Focus-Settings.extension")
     }
 }

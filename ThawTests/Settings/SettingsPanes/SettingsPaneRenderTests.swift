@@ -83,6 +83,19 @@ struct SettingsPaneRenderTests {
         await expectRedraw(render, from: before)
     }
 
+    @Test("Visibility explains the icon alone with every gesture off, and turning one on redraws it")
+    func visibilityGesturesOff() async throws {
+        let appState = AppState()
+        let settings = appState.settings
+        settings.visibility.showOnClick = false
+        settings.visibility.showOnHover = false
+        settings.visibility.showOnScroll = false
+        let render = render(MenuBarAccessPane(settings: settings.visibility), appState: appState)
+        let before = try await drawnPixels(render)
+        settings.visibility.showOnScroll = true
+        await expectRedraw(render, from: before)
+    }
+
     @Test("Visibility draws the double-click switch with Always Hidden on, and turning it off redraws it")
     func visibilityDoubleClickSwitch() async throws {
         let appState = AppState()

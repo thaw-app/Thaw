@@ -139,6 +139,22 @@ struct BarSettlingHoldTests {
         #expect(settling.hold(for: .agentNudge) == .revealReflow)
     }
 
+    @Test("A nudge asked for inside the reflow window runs once when the window ends")
+    func heldNudgeRunsOnceAfterTheHold() async {
+        let clock = clock
+        let settling = BarSettling(now: { clock.now }, sleep: { try await clock.sleep(for: $0) })
+        var nudges = 0
+        settling.note(.revealedSectionChanged)
+
+        settling.whenNudgeAllowed { nudges += 1 }
+        settling.whenNudgeAllowed { nudges += 1 }
+        #expect(nudges == 0)
+
+        await settling.heldNudge.waitUntilFinished()
+        #expect(nudges == 1)
+        #expect(settling.hold(for: .agentNudge) == nil)
+    }
+
     // MARK: Observers
 
     @Test("A revealed-section change is reported as it is made, and the current value is not a change")

@@ -63,7 +63,7 @@ nonisolated extension MenuBarItemAXProvider {
     ) -> AXElement? {
         let read = AXHelpers.extrasMenuBarRead(for: app)
         if runningApp.bundleIdentifier == ourBundleID {
-            noteOwnExtrasBar(isMissing: read.bar == nil, appBundleID: appBundleID)
+            noteOwnExtrasBar(isMissing: read.bar == nil, pid: runningApp.processIdentifier, appBundleID: appBundleID)
         }
         let absence = read.bar == nil ? ExtrasBarAbsenceLedger.absence(for: read.result, elapsed: read.elapsed) : nil
         sharedExtrasBarAbsences.withLock {
@@ -75,20 +75,27 @@ nonisolated extension MenuBarItemAXProvider {
         return read.bar
     }
 
-    /// Records whether Thaw's own extras bar is missing.
+    /// Records whether Thaw's own extras bar is missing. Settings runs as a second process with Thaw's
+    /// bundle ID and never has one, so a read of any process but this one changes nothing.
     ///
     /// - Returns: Whether that changed since the last read.
     @discardableResult
-    static func ownExtrasBarChanged(isMissing: Bool, in state: OSAllocatedUnfairLock<Bool> = ownExtrasBarMissing) -> Bool {
-        state.withLock { wasMissing in
+    static func ownExtrasBarChanged(
+        isMissing: Bool,
+        readFrom pid: pid_t = ProcessInfo.processInfo.processIdentifier,
+        ownPID: pid_t = ProcessInfo.processInfo.processIdentifier,
+        in state: OSAllocatedUnfairLock<Bool> = ownExtrasBarMissing
+    ) -> Bool {
+        guard pid == ownPID else { return false }
+        return state.withLock { wasMissing in
             defer { wasMissing = isMissing }
             return wasMissing != isMissing
         }
     }
 
     /// Every walk reads Thaw's own bar, so the warning is logged when the bar goes, not on each read.
-    private static func noteOwnExtrasBar(isMissing: Bool, appBundleID: String) {
-        guard ownExtrasBarChanged(isMissing: isMissing) else { return }
+    private static func noteOwnExtrasBar(isMissing: Bool, pid: pid_t, appBundleID: String) {
+        guard ownExtrasBarChanged(isMissing: isMissing, readFrom: pid) else { return }
         if isMissing {
             extrasBarLog.warning("menuBarItems: Thaw (\(appBundleID)) has no AXExtrasMenuBar, control items cannot be discovered")
         } else {

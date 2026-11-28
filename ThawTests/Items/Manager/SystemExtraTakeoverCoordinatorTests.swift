@@ -60,6 +60,7 @@ final class TakeoverRig {
 
     static let focus = "com.apple.menuextra.focusmode"
     static let airDrop = "com.apple.menuextra.airdrop"
+    static let wiFi = "com.apple.menuextra.wifi"
 }
 
 @MainActor
@@ -242,6 +243,84 @@ struct ModuleStandInCoordinatorTests {
         #expect(rig.sections.writes == [.section(.hidden, original)])
     }
 
+    @Test("Wi-Fi gets a stand-in from its own setting, and its original is moved to Hidden and kept out of reveals")
+    func wiFiStandInReplacesOriginal() async {
+        let rig = TakeoverRig()
+        rig.settings.enableModuleStandIns = false
+        rig.settings.optInStandIns = ["wifi"]
+        rig.shownInControlCenter = [TakeoverRig.moduleTag(TakeoverRig.wiFi)]
+        let original = TakeoverRig.moduleID(TakeoverRig.wiFi)
+
+        rig.start()
+        await settle { rig.sections.sectionAssignment[original] == .hidden }
+        await rig.drain()
+
+        #expect(rig.fake.opened(.wiFi) == 1)
+        #expect(rig.fake.opens.count == 1)
+        #expect(rig.sections.replacedItems == [original])
+
+        rig.settings.optInStandIns = []
+        await settle { rig.sections.replacedItems.isEmpty }
+        #expect(rig.sections.sectionAssignment[original] == .visible)
+    }
+
+    @Test("A stand-in that keeps exiting gives its original back, until its switch is turned off and on")
+    func crashingStandInReturnsOriginal() async throws {
+        let rig = TakeoverRig()
+        rig.settings.enableModuleStandIns = false
+        rig.settings.optInStandIns = ["wifi"]
+        rig.shownInControlCenter = [TakeoverRig.moduleTag(TakeoverRig.wiFi)]
+        let original = TakeoverRig.moduleID(TakeoverRig.wiFi)
+        rig.start()
+        await settle { rig.sections.sectionAssignment[original] == .hidden }
+
+        for _ in 1 ... 4 {
+            let count = rig.fake.startedProcesses.count
+            try #require(rig.fake.startedProcesses.last).exit()
+            await settle { rig.fake.startedProcesses.count > count || rig.sections.replacedItems.isEmpty }
+        }
+        await settle { rig.sections.sectionAssignment[original] == .visible }
+        #expect(rig.sections.replacedItems.isEmpty)
+        #expect(rig.sections.sectionAssignment[original] == .visible)
+        #expect(rig.fake.opened(.wiFi) == 4, "three restarts, then no more")
+
+        // Back to back, the off and the on can reach the coordinator as one change.
+        let publishes = rig.sections.replacedItemsPublishes
+        rig.settings.optInStandIns = []
+        await settle { rig.sections.replacedItemsPublishes > publishes }
+        #expect(rig.fake.opened(.wiFi) == 4)
+        rig.settings.optInStandIns = ["wifi"]
+        await settle { rig.fake.opened(.wiFi) == 5 }
+        #expect(rig.fake.opened(.wiFi) == 5)
+        #expect(rig.sections.replacedItems == [original])
+    }
+
+    @Test("A stand-in that fails to open gives its original back its section and leaves the order alone")
+    func failedOpenKeepsOriginal() async {
+        struct OpenFailed: Error {}
+        let rig = TakeoverRig()
+        rig.settings.enableModuleStandIns = false
+        rig.settings.optInStandIns = ["wifi"]
+        rig.shownInControlCenter = [TakeoverRig.moduleTag(TakeoverRig.wiFi)]
+        let original = TakeoverRig.moduleID(TakeoverRig.wiFi)
+        rig.sections.sectionItemOrder[.visible] = ["a", original, "b"]
+        rig.fake.openError = OpenFailed()
+        var ordersAtOpen = 0
+        // What a layout change during the open would do: the placed stand-in's original is hidden.
+        rig.fake.duringOpen = {
+            rig.sections.sectionAssignment[original] = .hidden
+            ordersAtOpen = rig.sections.writes.count { if case .order = $0 { true } else { false } }
+        }
+        rig.start()
+        await settle { rig.sections.sectionAssignment[original] == .visible }
+        await rig.drain()
+
+        #expect(rig.sections.sectionAssignment[original] == .visible)
+        #expect(rig.sections.writes.count { if case .order = $0 { true } else { false } } == ordersAtOpen)
+        #expect(rig.sections.replacedItems.isEmpty)
+        #expect(rig.launcher.placed.isEmpty)
+    }
+
     @Test("An original the user brings back to Visible is moved to Hidden again on the next layout change")
     func layoutChangeRehidesOriginal() async {
         let rig = rig()
@@ -292,7 +371,7 @@ struct ModuleStandInCoordinatorTests {
         #expect(rig.fake.opens.isEmpty)
         #expect(rig.sections.writes == [
             .section(.alwaysHidden, original),
-            .order(["a", "b"], .alwaysHidden),
+            .order(["a", original, "b"], .alwaysHidden),
         ])
     }
 
@@ -315,7 +394,28 @@ struct ModuleStandInCoordinatorTests {
 
         #expect(process.terminateCalls == 1)
         #expect(rig.launcher.placed.isEmpty)
-        #expect(rig.sections.writes.suffix(2) == [.section(.hidden, original), .order([original], .hidden)])
+        #expect(rig.sections.writes.last == .order([original], .hidden))
+        #expect(!rig.sections.writes.contains(.section(.hidden, original)), "already Hidden")
+    }
+
+    @Test("A retired stand-in's original takes the slot the stand-in was moved to")
+    func retiredOriginalTakesTheStandInSlot() async throws {
+        let rig = rig()
+        let standIn = TakeoverRig.standInID(.focus)
+        let original = TakeoverRig.moduleID(TakeoverRig.focus)
+        rig.sections.sectionAssignment[original] = .hidden
+        rig.sections.sectionItemOrder[.hidden] = [original]
+        rig.start()
+        await settle { rig.fake.startedProcesses.count == 1 }
+        await rig.drain()
+        let process = try #require(rig.fake.startedProcesses.only)
+        rig.sections.setSectionOrder([standIn, "other", original], for: .hidden)
+
+        rig.settings.enableModuleStandIns = false
+        await settle { process.terminateCalls > 0 }
+        await rig.drain()
+
+        #expect(rig.sections.sectionItemOrder[.hidden] == [original, "other"])
     }
 
     @Test("A running module stand-in names its original as replaced, and a stopped one does not")
@@ -390,19 +490,33 @@ private final class ObservedChanges: Sendable {
     }
 }
 
-@Suite("Module stand-in choice")
+@Suite("Module stand-in choice", .scratchDefaults)
 @MainActor
 struct ModuleStandInChoiceTests {
+    private func settings(modules: Bool, skipped: Set<String> = [], wiFi: Bool = false) -> LayoutSettings {
+        let settings = LayoutSettings()
+        settings.enableModuleStandIns = modules
+        settings.skippedModuleStandIns = skipped
+        settings.optInStandIns = wiFi ? ["wifi"] : []
+        return settings
+    }
+
     @Test("A stand-in runs when stand-ins are on and its checkbox is left on")
     func chosen() {
-        #expect(SystemExtraTakeoverCoordinator.isChosen(.airDrop, enabled: true, skipped: []))
-        #expect(SystemExtraTakeoverCoordinator.isChosen(.airDrop, enabled: true, skipped: ["focus"]))
+        #expect(SystemExtraTakeoverCoordinator.isChosen(.airDrop, in: settings(modules: true)))
+        #expect(SystemExtraTakeoverCoordinator.isChosen(.airDrop, in: settings(modules: true, skipped: ["focus"])))
     }
 
     @Test("Unchecking an item, or turning stand-ins off, keeps Apple's own")
     func notChosen() {
-        #expect(!SystemExtraTakeoverCoordinator.isChosen(.airDrop, enabled: true, skipped: ["airdrop"]))
-        #expect(!SystemExtraTakeoverCoordinator.isChosen(.focus, enabled: false, skipped: []))
+        #expect(!SystemExtraTakeoverCoordinator.isChosen(.airDrop, in: settings(modules: true, skipped: ["airdrop"])))
+        #expect(!SystemExtraTakeoverCoordinator.isChosen(.focus, in: settings(modules: false)))
+    }
+
+    @Test("Wi-Fi follows its own setting, not the modules switch")
+    func wiFiFollowsItsOwnSetting() {
+        #expect(!SystemExtraTakeoverCoordinator.isChosen(.wiFi, in: settings(modules: true)))
+        #expect(SystemExtraTakeoverCoordinator.isChosen(.wiFi, in: settings(modules: false, wiFi: true)))
     }
 }
 

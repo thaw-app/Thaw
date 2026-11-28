@@ -11,7 +11,7 @@ import OSLog
 /// Publishes one status item standing in for an Apple menu extra that Thaw has
 /// removed, and exits when the Thaw that launched it quits.
 @MainActor
-final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, MenuActionTarget {
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ThawExtraHelper", category: "extra")
     private var role: ExtraRole?
     private var statusItem: NSStatusItem?
@@ -19,6 +19,9 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
     private var textInput: TextInputExtra?
     private var timeMachine: TimeMachineExtra?
     private var spaceIndicator: SpaceIndicatorExtra?
+    private var wiFi: WiFiExtra?
+    private var bluetooth: BluetoothExtra?
+    private var sound: SoundExtra?
     /// Whether Thaw asked for this stand-in to be hidden.
     private var isHiddenByThaw = false
     private var slotStandIn: SlotStandIn?
@@ -81,6 +84,18 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
             updateVisibility()
         } else if role == .space, let parentID = ExtraRole.parentBundleIdentifier(of: bundleID), let button = item.button {
             spaceIndicator = SpaceIndicatorExtra(button: button, parentBundleIdentifier: parentID)
+        } else if role == .wiFi, let button = item.button {
+            let wiFi = WiFiExtra(button: button, label: role.displayName)
+            wiFi.start()
+            self.wiFi = wiFi
+        } else if role == .bluetooth, let button = item.button {
+            let bluetooth = BluetoothExtra(button: button, label: role.displayName)
+            bluetooth.start()
+            self.bluetooth = bluetooth
+        } else if role == .sound, let button = item.button {
+            let sound = SoundExtra(button: button, label: role.displayName)
+            sound.start()
+            self.sound = sound
         } else if role == .airDrop {
             statusItem?.button?.image = AirDropGlyph.image(accessibilityDescription: role.displayName)
             statusItem?.button?.toolTip = role.displayName
@@ -93,6 +108,9 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
         focus?.stop()
         textInput?.stop()
         timeMachine?.stop()
+        wiFi?.stop()
+        bluetooth?.stop()
+        sound?.stop()
     }
 
     // MARK: Menu
@@ -126,15 +144,15 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
             textInput?.populate(menu)
         case .space:
             spaceIndicator?.populate(menu)
+        case .wiFi:
+            wiFi?.populate(menu)
+        case .bluetooth:
+            bluetooth?.populate(menu)
+        case .sound:
+            sound?.populate(menu)
         case .slot1, .slot2, .slot3, .slot4, .slot5, .slot6, nil:
             break
         }
-    }
-
-    private func actionItem(_ title: String, _ action: Selector) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-        item.target = self
-        return item
     }
 
     @objc private func backUpNow() {
@@ -161,9 +179,7 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
     }
 
     @objc private func openTimeMachineSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.Time-Machine-Settings.extension") {
-            NSWorkspace.shared.open(url)
-        }
+        SystemSettings.open("com.apple.Time-Machine-Settings.extension")
     }
 
     @objc private func openClock() {
@@ -177,9 +193,7 @@ final class ExtraHelperDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate
     }
 
     @objc private func openAirDropSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.AirDrop-Handoff-Settings.extension") {
-            NSWorkspace.shared.open(url)
-        }
+        SystemSettings.open("com.apple.AirDrop-Handoff-Settings.extension")
     }
 
     // MARK: Visibility

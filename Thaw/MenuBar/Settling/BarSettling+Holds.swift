@@ -51,6 +51,22 @@ extension BarSettling {
         return candidates.filter(\.0).map(\.1)
     }
 
+    /// How often a held-off nudge looks again, and how many looks it gets before it is dropped.
+    static nonisolated let heldNudgeCheckInterval = Duration.milliseconds(100)
+    static nonisolated let heldNudgeCheckLimit = 30
+
+    /// Runs nudge now, or once nothing holds it off. One nudge waits at a time, so a repeat is dropped.
+    func whenNudgeAllowed(_ nudge: @escaping @MainActor () -> Void) {
+        guard hold(for: .agentNudge) != nil else { return nudge() }
+        guard !heldNudge.isRunning else { return }
+        heldNudge.replace { [weak self] _ in
+            for _ in 0 ..< Self.heldNudgeCheckLimit {
+                guard let self, (try? await self.sleep(Self.heldNudgeCheckInterval)) != nil else { return }
+                if hold(for: .agentNudge) == nil { return nudge() }
+            }
+        }
+    }
+
     static nonisolated func isQuiet(
         now: ContinuousClock.Instant,
         events: [ContinuousClock.Instant?],

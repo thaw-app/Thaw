@@ -6,6 +6,7 @@
 //  Licensed under the GNU GPLv3
 
 import CoreGraphics
+import Foundation
 import MenuBarModel
 import Testing
 @testable import Thaw
@@ -217,22 +218,39 @@ struct ObservedMembershipTests {
     private static func adoptionMoves(
         weights: [String: Int],
         assignment: [String: MenuBarSectionName],
-        keepingAuthored: Bool
+        keepingAuthored: Bool,
+        lastSeen: [String: Int]? = nil
     ) throws -> [String: MenuBarSectionName] {
         let dividers = try #require(ObservedMembership.Dividers(hidden: 328, alwaysHidden: 1368, visibleControl: 161))
         let items = weights.keys.sorted().map { item($0, windowID: CGWindowID(abs(weights[$0] ?? 0) + 1)) }
-        let candidates = ObservedMembership.candidates(
-            among: items,
-            weight: { weights[$0.title ?? ""] },
-            assignment: assignment,
-            isEligible: { _ in true }
+        let candidates = { (weights: [String: Int]) in
+            ObservedMembership.candidates(
+                among: items,
+                weight: { weights[$0.title ?? ""] },
+                assignment: assignment,
+                isEligible: { _ in true }
+            )
+        }
+        let baseline = try lastSeen.map { seen in
+            let suite = ScratchDefaults.name("ObservedMembershipTests")
+            defer { ScratchDefaults.remove(suite) }
+            let defaults = try #require(UserDefaults(suiteName: suite))
+            ObservedMembership.BarAtQuit(candidates: candidates(seen), dividers: dividers).save(to: defaults)
+            let saved = try #require(ObservedMembership.BarAtQuit.take(from: defaults))
+            #expect(ObservedMembership.BarAtQuit.take(from: defaults) == nil)
+            return saved
+        }
+        return ObservedMembership.moves(
+            for: candidates(weights),
+            dividers: dividers,
+            keepingAuthored: keepingAuthored,
+            movedSince: baseline
         )
-        return ObservedMembership.moves(for: candidates, dividers: dividers, keepingAuthored: keepingAuthored)
-            .reduce(into: [:]) { result, move in
-                for item in move.items {
-                    result[item.title ?? ""] = move.section
-                }
+        .reduce(into: [:]) { result, move in
+            for item in move.items {
+                result[item.title ?? ""] = move.section
             }
+        }
     }
 
     @Test("Launch adoption places an item the user never assigned from its weight, and keeps assigned ones")
@@ -245,6 +263,35 @@ struct ObservedMembershipTests {
             keepingAuthored: true
         )
         #expect(moves == ["legacy": .hidden])
+    }
+
+    @Test("Launch adoption keeps an item the user put in Visible, even when its weight reads Hidden")
+    func launchAdoptionKeepsVisibleOrder() throws {
+        let kept = Self.item("kept", windowID: 2)
+        let moved = Self.item("moved", windowID: 3)
+        let assignment = ObservedMembership.authoredSections(
+            assignment: [moved.canonicalIdentifier: .alwaysHidden],
+            visibleOrder: [kept.uniqueIdentifier, moved.uniqueIdentifier]
+        )
+        #expect(assignment == [kept.canonicalIdentifier: .visible, moved.canonicalIdentifier: .alwaysHidden])
+        let moves = try Self.adoptionMoves(
+            weights: ["kept": 900, "legacy": 900],
+            assignment: assignment,
+            keepingAuthored: true
+        )
+        #expect(moves == ["legacy": .hidden])
+    }
+
+    @Test("Launch adoption moves a placed item ⌘-dragged across a divider since the last quit, and keeps the rest")
+    func launchAdoptionFollowsDragsSinceQuit() throws {
+        let placed = ["dragged", "still", "new", "nudged"].map { Self.item($0, windowID: 2).canonicalIdentifier }
+        let moves = try Self.adoptionMoves(
+            weights: ["dragged": 900, "still": 900, "new": 900, "nudged": 200],
+            assignment: Dictionary(uniqueKeysWithValues: placed.map { ($0, MenuBarSectionName.visible) }),
+            keepingAuthored: true,
+            lastSeen: ["dragged": 100, "still": 900, "nudged": 100]
+        )
+        #expect(moves == ["dragged": .hidden])
     }
 
     @Test("Candidates carry only explicit assignments, keyed by canonical identifier")
@@ -265,5 +312,18 @@ struct ObservedMembershipTests {
     func unassignedVisibleItemStays() throws {
         #expect(try Self.adoptionMoves(weights: ["plain": 200], assignment: [:], keepingAuthored: false).isEmpty)
         #expect(try Self.adoptionMoves(weights: ["plain": 200], assignment: [:], keepingAuthored: true).isEmpty)
+    }
+
+    @Test("A quit before setup keeps the bar the last session saved")
+    func quitBeforeSetupKeepsSavedBar() throws {
+        let suite = ScratchDefaults.name("ObservedMembershipTests")
+        defer { ScratchDefaults.remove(suite) }
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        let dividers = try #require(ObservedMembership.Dividers(hidden: 328, alwaysHidden: 1368, visibleControl: 161))
+        ObservedMembership.BarAtQuit(candidates: [], dividers: dividers).save(to: defaults)
+
+        MenuBarItemManager().recordBarAtQuit(to: defaults)
+
+        #expect(ObservedMembership.BarAtQuit.take(from: defaults) != nil)
     }
 }

@@ -30,6 +30,15 @@ enum RevealTurns {
         await aftermath.readCacheIfOwed { await itemManager.cacheItemsRegardless(skipRecentMoveCheck: true) }
     }
 
+    /// Re-lays a settled reveal, except during a ⌘-drag, where resizing Thaw's icon would move the drop.
+    /// The kit asks while the reveal still reflows, so the nudge waits for that to end.
+    static func refreshLayout(on appState: AppState?) {
+        appState?.menuBarManager.barSettling.whenNudgeAllowed { [weak appState] in
+            guard let appState, !appState.itemManager.isUserArrangingMenuBar else { return }
+            appState.menuBarManager.requestMenuBarAgentPositionRefresh()
+        }
+    }
+
     /// Moves items that ended on the wrong side of a divider after a recovery.
     static func reconcileBoundaries(revealing section: MenuBarSectionName, cause: RepairOrchestrator.Cause, on itemManager: MenuBarItemManager) async {
         let nothingToRead: () async -> Bool? = { nil }

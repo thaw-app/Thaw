@@ -216,6 +216,7 @@ nonisolated enum SearchIndex {
         // Set by Replace Control Center items, indexed under layout.enableModuleStandIns.
         .layout("enableTimeMachineTakeover"),
         .layout("enableTextInputTakeover"),
+        .layout("optInStandIns"),
         .layout("skippedModuleStandIns"),
         // Experimental toggles with no Settings UI.
         .layout("enableExperimentalOverflowPrevention"),

@@ -15,14 +15,18 @@ struct ControlCenterReplacements: Equatable {
     var modules: Bool
     var timeMachine: Bool
     var textInput: Bool
+    var optIn: Set<SystemExtraStandIn> = []
     /// The Control Center modules left as Apple's own while modules is on.
     var skipped: Set<SystemExtraStandIn> = []
 
     /// The four Control Center modules one switch used to cover.
     static let moduleItems: [SystemExtraStandIn] = [.focus, .airDrop, .nowPlaying, .userSwitcher]
 
+    /// Their menus differ from Apple's, so the switch never turns them on.
+    static let optInItems: [SystemExtraStandIn] = [.wiFi, .bluetooth, .sound]
+
     /// Every item the list offers, in the order it shows them.
-    static let listed: [SystemExtraStandIn] = moduleItems + [.timeMachine, .textInput]
+    static let listed: [SystemExtraStandIn] = moduleItems + [.timeMachine, .textInput] + optInItems
 
     var isOn: Bool {
         get { Self.listed.contains { isReplaced($0) } }
@@ -30,6 +34,9 @@ struct ControlCenterReplacements: Equatable {
             modules = newValue
             timeMachine = newValue
             textInput = newValue
+            if !newValue {
+                optIn = []
+            }
             skipped = []
         }
     }
@@ -38,6 +45,7 @@ struct ControlCenterReplacements: Equatable {
         switch item {
         case .timeMachine: timeMachine
         case .textInput: textInput
+        case .wiFi, .bluetooth, .sound: optIn.contains(item)
         case .timer, .space: false
         case .focus, .airDrop, .nowPlaying, .userSwitcher: modules && !skipped.contains(item)
         }
@@ -52,6 +60,12 @@ struct ControlCenterReplacements: Equatable {
             timeMachine = replaced
         case .textInput:
             textInput = replaced
+        case .wiFi, .bluetooth, .sound:
+            if replaced {
+                optIn.insert(item)
+            } else {
+                optIn.remove(item)
+            }
         case .timer, .space:
             break
         case .focus, .airDrop, .nowPlaying, .userSwitcher:
@@ -79,6 +93,7 @@ extension LayoutSettings {
                 modules: enableModuleStandIns,
                 timeMachine: enableTimeMachineTakeover,
                 textInput: enableTextInputTakeover,
+                optIn: Set(optInStandIns.compactMap(SystemExtraStandIn.init(rawValue:))),
                 skipped: Set(skippedModuleStandIns.compactMap(SystemExtraStandIn.init(rawValue:)))
             )
         }
@@ -86,6 +101,7 @@ extension LayoutSettings {
             enableModuleStandIns = newValue.modules
             enableTimeMachineTakeover = newValue.timeMachine
             enableTextInputTakeover = newValue.textInput
+            optInStandIns = Set(newValue.optIn.map(\.rawValue))
             skippedModuleStandIns = Set(newValue.skipped.map(\.rawValue))
         }
     }
@@ -116,9 +132,9 @@ struct ControlCenterReplacementsSection: View {
                 VStack(alignment: .leading, spacing: ThawSpacing.tight) {
                     Text(
                         """
-                        Puts a \(Constants.displayName) icon in place of each item you choose below. It does \
-                        the same things as the original, and you can move or hide it like any other item. \
-                        Turn this off to bring the originals back.
+                        Puts a \(Constants.displayName) icon in place of each item you choose below, which \
+                        you can move or hide like any other item. Wi-Fi, Bluetooth and Sound get menus of their own; \
+                        Apple's are still in Control Center. Turn this off to bring the originals back.
                         """
                     )
                     // Only a failure shows, so a replacement that cannot run never reads as working.
@@ -130,26 +146,13 @@ struct ControlCenterReplacementsSection: View {
             FocusStandInNotice(settings: settings, focusShownInControlCenter: FocusStandInNotice.focusShownInControlCenter())
             if settings.controlCenterReplacements.isOn {
                 ForEach(ControlCenterReplacements.listed, id: \.self) { item in
-                    Toggle(Self.name(of: item), isOn: Binding(
+                    Toggle(item.replacementName, isOn: Binding(
                         get: { settings.controlCenterReplacements.isReplaced(item) },
                         set: { settings.controlCenterReplacements.setReplaced(item, $0) }
                     ))
                     .toggleStyle(.thawCheckbox)
                 }
             }
-        }
-    }
-
-    private static func name(of item: SystemExtraStandIn) -> LocalizedStringKey {
-        switch item {
-        case .focus: "Focus"
-        case .airDrop: "AirDrop"
-        case .nowPlaying: "Now Playing"
-        case .userSwitcher: "Fast User Switching"
-        case .timeMachine: "Time Machine"
-        case .textInput: "Input menu"
-        case .timer: "Timer"
-        case .space: "Space"
         }
     }
 
@@ -165,6 +168,24 @@ struct ControlCenterReplacementsSection: View {
                 Image(systemName: "exclamationmark.triangle")
             }
             .foregroundStyle(Color.warning)
+        }
+    }
+}
+
+private extension SystemExtraStandIn {
+    var replacementName: LocalizedStringKey {
+        switch self {
+        case .focus: "Focus"
+        case .airDrop: "AirDrop"
+        case .nowPlaying: "Now Playing"
+        case .userSwitcher: "Fast User Switching"
+        case .timeMachine: "Time Machine"
+        case .textInput: "Input menu"
+        case .timer: "Timer"
+        case .space: "Space"
+        case .wiFi: "Wi-Fi"
+        case .bluetooth: "Bluetooth"
+        case .sound: "Sound"
         }
     }
 }

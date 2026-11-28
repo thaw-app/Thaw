@@ -154,10 +154,10 @@ struct ApplicationMenuHiderTests {
         #expect(calls.log.last == "deactivateToAccessory")
     }
 
-    @Test("Closed sections restore automatic hiding")
-    func closedSectionsRestoreAutomaticHiding() async throws {
+    @Test("Closed sections restore automatic hiding, also once the setting is off", arguments: [true, false])
+    func closedSectionsRestoreAutomaticHiding(hidingEnabled: Bool) async throws {
         let appState = AppState()
-        appState.settings.general.hideApplicationMenus = true
+        appState.settings.general.hideApplicationMenus = hidingEnabled
         let calls = Calls()
         let hider = ApplicationMenuHider()
         hider.performSetup(with: appState, environment: environment(calls: calls, sleeps: RecordedSleeps()))
@@ -165,6 +165,20 @@ struct ApplicationMenuHiderTests {
         hider.reconcileApplicationMenuVisibility()
         #expect(!hider.isHidingApplicationMenus)
         #expect(calls.log == ["activateAsRegular", "activate", "deactivateToAccessory"])
+    }
+
+    @Test("Closed sections give the menus back under open Settings without deactivating Thaw")
+    func closedSectionsUnderSettingsKeepThawActive() async throws {
+        let appState = AppState()
+        appState.settings.general.hideApplicationMenus = true
+        appState.navigationState.isSettingsPresented = true
+        let calls = Calls()
+        let hider = ApplicationMenuHider()
+        hider.performSetup(with: appState, environment: environment(calls: calls, sleeps: RecordedSleeps()))
+        await hider.hideApplicationMenus()?.value
+        hider.reconcileApplicationMenuVisibility()
+        #expect(!hider.isHidingApplicationMenus)
+        #expect(calls.log == ["activateAsRegular", "activate"])
     }
 
     @Test("A settled section that needs room hides the menus after 50 ms", arguments: [

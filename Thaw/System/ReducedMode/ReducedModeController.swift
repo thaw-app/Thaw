@@ -24,6 +24,7 @@ final class ReducedModeController: NSObject, NSMenuDelegate {
         var apps: () -> [ReducedModeApp]
         var loadHidden: () -> Set<String>
         var saveHidden: (Set<String>) -> Void
+        var quit: () -> Void = { ApplicationTermination.request() }
     }
 
     let environment: Environment
@@ -145,9 +146,10 @@ final class ReducedModeController: NSObject, NSMenuDelegate {
         menu.addItem(full)
         let quit = NSMenuItem(
             title: String(localized: "Quit \(Constants.displayName)"),
-            action: #selector(NSApplication.terminate(_:)),
+            action: #selector(quitFromMenu),
             keyEquivalent: "q"
         )
+        quit.target = self
         menu.addItem(quit)
     }
 
@@ -188,6 +190,11 @@ final class ReducedModeController: NSObject, NSMenuDelegate {
     @objc private func toggleHiding() {
         isHiding.toggle()
         applyHiding()
+    }
+
+    /// Terminating inside menu tracking can strand the .terminateLater reply, so the request waits for it to end.
+    @objc private func quitFromMenu() {
+        environment.quit()
     }
 
     @objc private func toggleApp(_ sender: NSMenuItem) {

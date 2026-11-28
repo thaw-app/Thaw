@@ -46,9 +46,10 @@ extension MenuBarItemManager {
         let reason = ending.disturbance.label
         // A bar arranged by hand while Thaw was not running, or under an
         // older build, has to be read once before its sections can be.
-        // Only items with no section yet: Layout's sections win over stale weights.
+        // Layout's sections win over stale weights, except for icons ⌘-dragged across a divider since the last quit.
         if ending.adoptsObservedMembership {
-            adoptObservedMembership(reason: "settled launch", keepingAuthored: true)
+            let barAtQuit = ObservedMembership.BarAtQuit.take()
+            adoptObservedMembership(reason: "settled launch", keepingAuthored: true, movedSince: barAtQuit)
         }
 
         // Once per launch, after login items register: hygiene asks

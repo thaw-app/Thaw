@@ -29,6 +29,18 @@ struct TeamIdentifierPrefixTests {
         #expect(!MenuBarItemTag.hasDynamicMetricTitles(bundleID))
     }
 
+    @Test("The prefix is dropped only when ten uppercase letters or digits come before a dot", arguments: [
+        ("Y93TK974AT.com.example", "com.example"),
+        ("Y93TK974AT.", ""),
+        ("com.example", "com.example"),
+        ("Y93TK974ATX.com.example", "Y93TK974ATX.com.example"),
+        ("Y93TK974AÉ.com.example", "Y93TK974AÉ.com.example"),
+        ("Y93", "Y93"),
+    ])
+    func prefixIsDroppedExactly(_ bundleID: String, _ expected: String) {
+        #expect(MenuBarItemTag.withoutTeamIdentifierPrefix(bundleID) == expected)
+    }
+
     @Test("A team-prefixed app outside the matchers keeps ordinal titles distinct")
     func foreignTeamPrefixedTitlesStayDistinct() {
         let bundle = "Y93TK974AT.com.example.status"

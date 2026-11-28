@@ -44,13 +44,46 @@ extension MenuBarItemManager {
         )
     }
 
+    /// Runs on quit and restart before Thaw's controls are torn down, since the saved dividers are read from them.
+    func prepareForTermination() async {
+        await adoptPendingDragBeforeQuit()
+        _ = await restoreBlockedItemsToVisible()
+        recordBarAtQuit()
+    }
+
+    /// A ⌘-drag still waiting out the settle delay is read now, or the saved bar would hold its old sections.
+    private func adoptPendingDragBeforeQuit() async {
+        guard manualMembershipTask != nil, dragMembership.baseline != nil else { return }
+        manualMembershipTask?.cancel()
+        manualMembershipTask = nil
+        let alwaysHiddenShown = appState?.menuBarManager.sectionController.revealedSection == .alwaysHidden
+        await cacheItemsRegardless(skipRecentMoveCheck: true, skipSavedLayoutApply: true)
+        adoptObservedMembership(reason: "⌘-drag before quit", afterUserDrag: true, alwaysHiddenShownAtDrop: alwaysHiddenShown)
+        dragMembership.clear()
+    }
+
+    /// Saves the stored weights in Manual so the next launch can adopt what was ⌘-dragged while Thaw was off.
+    func recordBarAtQuit(to defaults: UserDefaults = Defaults.store) {
+        // A quit before setup can't tell the arrangement, so it keeps the last session's bar.
+        guard appState != nil else { return }
+        guard arrangementIsManual, let observed = currentObservedMembership(),
+              case let .ordered(dividers) = observed.reading
+        else {
+            ObservedMembership.BarAtQuit.clear(defaults)
+            return
+        }
+        ObservedMembership.BarAtQuit(candidates: observed.candidates, dividers: dividers).save(to: defaults)
+    }
+
     /// Adopt divider-weight membership without moving items: Manual after drags, mode switches, and launch; Automatic only after user drags.
     /// Leave unweighted, unhideable, Thaw Bar Only, and divider-slot items unchanged.
-    /// keepingAuthored only places items that have no section yet. After a drag, only items it carried across a divider move.
+    /// keepingAuthored only places items that have no section yet, or that crossed a divider since lastSeen.
+    /// After a drag, only items it carried across a divider move.
     func adoptObservedMembership(
         reason: String,
         afterUserDrag: Bool = false,
         keepingAuthored: Bool = false,
+        movedSince lastSeen: ObservedMembership.DragBaseline? = nil,
         alwaysHiddenShownAtDrop: Bool? = nil
     ) {
         guard arrangementIsManual || afterUserDrag, let appState, let observed = currentObservedMembership() else { return }
@@ -76,6 +109,7 @@ extension MenuBarItemManager {
         let moves = observed.reading.moves(
             for: observed.candidates,
             keepingAuthored: keepingAuthored,
+            movedSince: lastSeen,
             since: baseline,
             pressed: afterUserDrag ? dragMembership.pressed : nil,
             alwaysHiddenShownAtDrop: alwaysHiddenShownAtDrop
@@ -105,7 +139,10 @@ extension MenuBarItemManager {
         let candidates = ObservedMembership.candidates(
             among: items,
             weight: { weight($0).flatMap { weights.isParked($0) ? nil : $0 } },
-            assignment: controller.sectionAssignment,
+            assignment: ObservedMembership.authoredSections(
+                assignment: controller.sectionAssignment,
+                visibleOrder: controller.sectionItemOrder[.visible] ?? []
+            ),
             isEligible: {
                 !$0.isControlItem && $0.tag.canBeHidden
                     && $0.isMovable(experimentalSystemItemHiding: experimentalSystemItemHiding)

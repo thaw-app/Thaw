@@ -150,6 +150,7 @@ struct SystemExtraStandInLauncherTests {
         await #expect(throws: OpenFailed.self) {
             try await launcher.launch(.timer, replacing: original, in: .hidden)
         }
+        #expect(launcher.placed.isEmpty)
     }
 
     @Test("A stand-in that exits on its own is started again")
@@ -273,10 +274,12 @@ struct SystemExtraStandInLauncherTests {
         #expect(fake.opens.count == 2)
     }
 
-    @Test("A restart whose open fails leaves the stand-in unwatched")
+    @Test("A restart whose open fails leaves the stand-in unwatched and gives the original back")
     func failedRestartLeavesItDown() async throws {
         struct OpenFailed: Error {}
         let (launcher, _) = makeLauncher()
+        var gaveUp: [SystemExtraStandIn] = []
+        launcher.onGaveUp = { gaveUp.append($0) }
         try await launcher.launch(.timer, replacing: original, in: .hidden)
         fake.openError = OpenFailed()
 
@@ -284,6 +287,61 @@ struct SystemExtraStandInLauncherTests {
         await launcher.restartRunning()
 
         #expect(fake.opens.count == 2)
+        #expect(gaveUp == [.timer])
+    }
+
+    /// Stands in for turning the stand-in off and on while its first open waits, then fails that open.
+    private func relaunchDuringFirstOpen(_ launcher: SystemExtraStandInLauncher) {
+        struct OpenFailed: Error {}
+        var relaunched = false
+        fake.duringOpen = { [fake, original] in
+            guard !relaunched else { return }
+            relaunched = true
+            launcher.stop(.timer)
+            try? await launcher.launch(.timer, replacing: original, in: .hidden)
+            fake.openError = OpenFailed()
+        }
+    }
+
+    @Test("An open that fails after a newer launch started leaves that launch running")
+    func supersededOpenFailureIsIgnored() async throws {
+        let (launcher, _) = makeLauncher()
+        relaunchDuringFirstOpen(launcher)
+
+        try await launcher.launch(.timer, replacing: original, in: .hidden)
+
+        #expect(launcher.wanted == [.timer])
+        #expect(launcher.placed == [.timer])
+        #expect(try #require(fake.startedProcesses.only).isWatched)
+    }
+
+    @Test("An open that fails after the stand-in was turned off reports nothing")
+    func failureAfterStopIsIgnored() async throws {
+        struct OpenFailed: Error {}
+        let (launcher, _) = makeLauncher()
+        fake.duringOpen = { [fake] in
+            launcher.stop(.timer)
+            fake.openError = OpenFailed()
+        }
+
+        try await launcher.launch(.timer, replacing: original, in: .hidden)
+
+        #expect(launcher.wanted.isEmpty)
+        #expect(launcher.placed.isEmpty)
+    }
+
+    @Test("A restart that fails after the stand-in was launched again gives nothing up")
+    func supersededRestartFailureIsIgnored() async throws {
+        let (launcher, _) = makeLauncher()
+        var gaveUp: [SystemExtraStandIn] = []
+        launcher.onGaveUp = { gaveUp.append($0) }
+        try await launcher.launch(.timer, replacing: original, in: .hidden)
+        relaunchDuringFirstOpen(launcher)
+
+        await launcher.restartRunning()
+
+        #expect(gaveUp.isEmpty)
+        #expect(launcher.wanted == [.timer])
     }
 
     @Test("The engine's publish and remove reach the item's own stand-in")

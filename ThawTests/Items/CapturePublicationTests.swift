@@ -240,7 +240,9 @@ private struct CaptureWorld {
     func completeMoveBeforeAdmission() {
         appState.itemManager.layoutPublication.beginMutation()
         appState.itemManager.layoutPublication.endMutation()
-        let tracker = MoveOperationTracker()
+        // A clock that holds still, so a slow runner can't let the cooldown run out mid-test.
+        let stamped = ContinuousClock.now
+        let tracker = MoveOperationTracker(now: { stamped })
         tracker.noteMoveOperation()
         cache.moveActivity = tracker
     }

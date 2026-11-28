@@ -16,7 +16,7 @@ final class BarSettling {
 
     /// Monotonic, so a wall-clock change can neither open nor close a hold.
     let now: @MainActor () -> ContinuousClock.Instant
-    private let sleep: @MainActor (Duration) async throws -> Void
+    let sleep: @MainActor (Duration) async throws -> Void
     private let pollInterval: Duration
     private let minimumDuration: Duration
     private var host = Host.idle
@@ -36,6 +36,8 @@ final class BarSettling {
     private(set) var lastRestrictionChange: ContinuousClock.Instant?
     private(set) var lastNativeBarChange: ContinuousClock.Instant?
     private var thawPressFlipsDisplayUntil: ContinuousClock.Instant?
+    /// The nudge a hold refused, waiting for the hold to end.
+    let heldNudge = TaskSlot()
 
     init(
         now: @escaping @MainActor () -> ContinuousClock.Instant = { .now },

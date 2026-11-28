@@ -5,6 +5,7 @@
 //  Copyright (Thaw) © 2026 Toni Förster
 //  Licensed under the GNU GPLv3
 
+import Foundation
 import MenuBarModel
 
 /// Which items a reading of the position table says sit in another section than Thaw has them in.
@@ -46,6 +47,7 @@ nonisolated enum ObservedMembership {
         func moves(
             for candidates: [Candidate],
             keepingAuthored: Bool = false,
+            movedSince lastSeen: DragBaseline? = nil,
             since baseline: DragBaseline? = nil,
             pressed: Set<MenuBarItemTag>? = nil,
             alwaysHiddenShownAtDrop: Bool? = nil
@@ -55,6 +57,7 @@ nonisolated enum ObservedMembership {
                 for: candidates,
                 dividers: dividers,
                 keepingAuthored: keepingAuthored,
+                movedSince: lastSeen,
                 since: baseline,
                 pressed: pressed,
                 alwaysHiddenShownAtDrop: alwaysHiddenShownAtDrop
@@ -113,6 +116,19 @@ nonisolated enum ObservedMembership {
         let authored: MenuBarSectionName?
     }
 
+    /// The sections the user put items in. The assignment leaves Visible out, so items in the
+    /// saved Visible order count as placed there; an assignment elsewhere wins.
+    static func authoredSections(
+        assignment: [String: MenuBarSectionName],
+        visibleOrder: [String]
+    ) -> [String: MenuBarSectionName] {
+        var sections = [String: MenuBarSectionName]()
+        for identifier in visibleOrder {
+            sections[MenuBarItemTag.canonicalPersistentIdentifier(identifier)] = .visible
+        }
+        return sections.merging(assignment) { _, assigned in assigned }
+    }
+
     /// The items a reading may move, each with the section the user explicitly put it in.
     ///
     /// - Parameters:
@@ -133,16 +149,22 @@ nonisolated enum ObservedMembership {
         }
     }
 
+    /// Weights keyed by canonical identifier; a later duplicate wins.
+    static func weights(of candidates: [Candidate]) -> [String: Int] {
+        Dictionary(candidates.map { ($0.item.canonicalIdentifier, $0.weight) }) { _, last in last }
+    }
+
     /// Weights and sections when a ⌘-drag started; after the drop only items whose weight crossed a divider move.
     struct DragBaseline {
         private let readings: [String: (weight: Int, section: MenuBarSectionName)]
 
         init(candidates: [Candidate], dividers: Dividers) {
-            var readings = [String: (weight: Int, section: MenuBarSectionName)]()
-            for candidate in candidates {
-                readings[candidate.item.canonicalIdentifier] = (candidate.weight, dividers.section(for: candidate.weight))
-            }
-            self.readings = readings
+            self.init(weights: ObservedMembership.weights(of: candidates), dividers: dividers)
+        }
+
+        /// Weights keyed by canonical identifier.
+        init(weights: [String: Int], dividers: Dividers) {
+            readings = weights.mapValues { ($0, dividers.section(for: $0)) }
         }
 
         /// Whether the drag gave candidate a new weight that reads as another
@@ -153,18 +175,59 @@ nonisolated enum ObservedMembership {
         }
     }
 
+    /// The weights Thaw read just before it quit, so the next launch can tell which icons were ⌘-dragged meanwhile.
+    struct BarAtQuit: Codable, Equatable {
+        let hidden: Int
+        let alwaysHidden: Int?
+        let visibleControl: Int
+        let weights: [String: Int]
+
+        init(candidates: [Candidate], dividers: Dividers) {
+            hidden = dividers.hidden
+            alwaysHidden = dividers.alwaysHidden
+            visibleControl = dividers.visibleControl
+            weights = ObservedMembership.weights(of: candidates)
+        }
+
+        var baseline: DragBaseline? {
+            Dividers(hidden: hidden, alwaysHidden: alwaysHidden, visibleControl: visibleControl)
+                .map { DragBaseline(weights: weights, dividers: $0) }
+        }
+
+        private static let key = "ManualBarAtQuit"
+
+        func save(to defaults: UserDefaults = Defaults.store) {
+            guard let data = try? JSONEncoder().encode(self) else { return Self.clear(defaults) }
+            defaults.set(data, forKey: Self.key)
+        }
+
+        static func clear(_ defaults: UserDefaults = Defaults.store) {
+            defaults.removeObject(forKey: key)
+        }
+
+        /// Read once: a launch after a crash must not compare against an older quit.
+        static func take(from defaults: UserDefaults = Defaults.store) -> DragBaseline? {
+            defer { clear(defaults) }
+            return defaults.data(forKey: key).flatMap { try? JSONDecoder().decode(Self.self, from: $0) }?.baseline
+        }
+    }
+
     /// The items to move, grouped by the section they sit in on the bar, in reading order.
-    /// keepingAuthored places only unassigned items; a baseline limits moves to what the drag carried.
+    /// keepingAuthored places only unassigned items, and those that crossed a divider since lastSeen;
+    /// a baseline limits moves to what the drag carried.
     static func moves(
         for candidates: [Candidate],
         dividers: Dividers,
         keepingAuthored: Bool = false,
+        movedSince lastSeen: DragBaseline? = nil,
         since baseline: DragBaseline? = nil,
         pressed: Set<MenuBarItemTag>? = nil,
         alwaysHiddenShownAtDrop: Bool? = nil
     ) -> [(section: MenuBarSectionName, items: [MenuBarItem])] {
         let moving = candidates.compactMap { candidate -> (section: MenuBarSectionName, item: MenuBarItem)? in
-            if keepingAuthored, candidate.authored != nil {
+            if keepingAuthored, candidate.authored != nil,
+               lastSeen?.crossedDivider(candidate, dividers: dividers) != true
+            {
                 return nil
             }
             if let baseline, !baseline.crossedDivider(candidate, dividers: dividers) {

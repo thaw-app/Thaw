@@ -109,7 +109,8 @@ extension RevealCaptureSession {
         reader: any MenuBarCaptureReading,
         clock: SettleClock = SettleClock()
     ) async -> PixelSettle {
-        let frames = revealed.map(\.bounds)
+        let seats = await reader.drawnSeats(for: revealed.map { ($0, $0.bounds) }, displayID: displayID)
+        let frames = settleFrames(for: revealed, seats: seats)
         let settle = await waitForSettledPixels(clock: clock) {
             await reader.hostingCapture(displayID: displayID).map { pixelFingerprint(of: frames, in: $0) }
         }
@@ -123,6 +124,12 @@ extension RevealCaptureSession {
             MenuBarItemImageCache.diagLog.debug("grouped reveal capture: bar unreadable while settling; treating every item as still changing")
         }
         return settle
+    }
+
+    /// Watched where MenuBarAgent draws each item, which is where the crop cuts it. An item drawn to one side
+    /// of the frame it reports would otherwise be watched at pixels that hold still while it slides in.
+    nonisolated static func settleFrames(for revealed: [MenuBarItem], seats: DrawnSeats) -> [CGRect] {
+        revealed.map { seats.moved[$0.uniqueIdentifier] ?? $0.bounds }
     }
 
     /// Waits for three matching reads of each frame, since AX reports the final frame while the glyph still slides.

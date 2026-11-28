@@ -410,8 +410,8 @@ final class AppState {
         Task { @MainActor in
             do {
                 _ = try await NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: config)
-                // Restore blocked items before exit so none remain off-screen; this is a no-op on macOS 27.
-                _ = await itemManager.restoreBlockedItemsToVisible()
+                // Saves the Manual bar while the controls still exist. Restoring blocked items is a no-op on macOS 27.
+                await itemManager.prepareForTermination()
                 menuBarManager.tearDownControlItemsForTermination()
                 diagLog.info("Restart: tore down control items, waiting for MenuBarAgent to reclaim")
                 try? await Task.sleep(for: .milliseconds(150))

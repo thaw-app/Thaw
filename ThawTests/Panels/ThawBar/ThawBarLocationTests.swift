@@ -123,6 +123,31 @@ struct ThawBarPointerPlacementTests {
         }
     }
 
+    @Test("An open that finds no Thaw icon looks once more and moves under it")
+    func missingIconAnchorIsReadAgain() async throws {
+        let previousPolicy = NSApp.activationPolicy()
+        defer { NSApp.setActivationPolicy(previousPolicy) }
+        let fixture = try PlacementFixture(location: .thawIcon, showsIcon: true)
+        defer { fixture.panel.close() }
+        fixture.show()
+        fixture.resize(width: 160)
+        #expect(abs(fixture.panel.frame.maxX - fixture.screen.frame.maxX) < 1)
+
+        let iconX = fixture.screen.frame.minX + fixture.screen.frame.width * 0.6
+        fixture.appState.itemManager.itemCache[.visible] = [MenuBarItem(
+            tag: .visibleControlItem,
+            windowID: CGWindowID(UInt32.max - 7),
+            ownerPID: ProcessInfo.processInfo.processIdentifier,
+            sourcePID: ProcessInfo.processInfo.processIdentifier,
+            bounds: CGRect(x: iconX - 12, y: 0, width: 24, height: 24),
+            title: MenuBarItemTag.visibleControlItem.title,
+            isOnScreen: true
+        )]
+        await fixture.panel.anchorRetry.waitUntilFinished()
+
+        #expect(abs(fixture.panel.frame.midX - iconX) < 1)
+    }
+
     private func withPanel(
         location: ThawBarLocation = .dynamic,
         showsIcon: Bool = false,

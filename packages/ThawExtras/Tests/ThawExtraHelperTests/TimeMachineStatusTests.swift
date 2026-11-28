@@ -98,7 +98,7 @@ struct TimeMachinePollTests {
 struct TimeMachineStatusReadTests {
     @Test("A command that answers in time returns its output")
     func answersInTime() async {
-        let output = await TimeMachineExtra.output(
+        let output = await CommandOutput.output(
             of: URL(filePath: "/bin/echo"), arguments: ["Running = 0;"], timeout: .seconds(5)
         )
         #expect(output == "Running = 0;\n")
@@ -107,16 +107,29 @@ struct TimeMachineStatusReadTests {
     @Test("A command that hangs is ended at the timeout and reads as no output")
     func hangIsCutOff() async {
         let start = ContinuousClock.now
-        let output = await TimeMachineExtra.output(
+        let output = await CommandOutput.output(
             of: URL(filePath: "/bin/sleep"), arguments: ["30"], timeout: .milliseconds(200)
         )
         #expect(output.isEmpty)
         #expect(ContinuousClock.now - start < .seconds(10))
     }
 
+    @Test(
+        "A command that ignores SIGTERM or leaves its output open still ends near the timeout",
+        arguments: ["trap '' TERM; sleep 30", "sleep 30 & echo started"]
+    )
+    func timeoutHolds(script: String) async {
+        let start = ContinuousClock.now
+        let output = await CommandOutput.output(
+            of: URL(filePath: "/bin/sh"), arguments: ["-c", script], timeout: .milliseconds(200)
+        )
+        #expect(output.isEmpty)
+        #expect(ContinuousClock.now - start < .seconds(5))
+    }
+
     @Test("A command that can't start reads as no output")
     func missingCommand() async {
-        let output = await TimeMachineExtra.output(
+        let output = await CommandOutput.output(
             of: URL(filePath: "/nonexistent/tmutil"), arguments: [], timeout: .seconds(1)
         )
         #expect(output.isEmpty)

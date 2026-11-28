@@ -177,6 +177,15 @@ final class LayoutSettings: SettingsURIHandling {
         }
     }
 
+    /// The stand-ins each turned on by their own box: their menus differ
+    /// from Apple's, so the modules switch never turns them on.
+    var optInStandIns: Set<String> = Set(Defaults.DefaultValue.optInStandIns) {
+        didSet {
+            guard oldValue != optInStandIns else { return }
+            Defaults.set(optInStandIns.sorted(), forKey: .optInStandIns)
+        }
+    }
+
     /// Maximum time to wait for MenuBarAgent to apply a preferred-position
     /// reorder before Thaw continues with residual reconciliation.
     var menuBarOrderFulfillmentTimeout = Defaults.DefaultValue.menuBarOrderFulfillmentTimeout {
@@ -220,6 +229,7 @@ final class LayoutSettings: SettingsURIHandling {
         Defaults.ifPresent(key: .enableTimeMachineTakeover, assign: &enableTimeMachineTakeover)
         Defaults.ifPresent(key: .enableTimerTakeover, assign: &enableTimerTakeover)
         Defaults.ifPresent(key: .enableTextInputTakeover, assign: &enableTextInputTakeover)
+        optInStandIns = Defaults.stringArray(forKey: .optInStandIns).map(Set.init) ?? optInStandIns
         Defaults.ifPresent(key: .menuBarOrderFulfillmentTimeout, assign: &menuBarOrderFulfillmentTimeout)
         Defaults.ifPresent(key: .sectionDividerStyle) { rawValue in
             if let style = SectionDividerStyle(rawValue: rawValue) {

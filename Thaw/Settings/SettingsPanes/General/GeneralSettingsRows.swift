@@ -134,7 +134,16 @@ struct ShowHiddenItemsOnRow: View {
                 .settingsSearchAnchor("general.showOnScroll")
                 .help("Scroll or swipe in the menu bar to show hidden menu bar items.")
         }
-        .annotation("Show hidden menu bar items by clicking, hovering, or scrolling in an empty area of the menu bar.")
+        .annotation(Self.explanation(anyOn: settings.showOnClick || settings.showOnHover || settings.showOnScroll))
+    }
+
+    /// Says the three are optional, since the icon shows hidden items without any of them.
+    static func explanation(anyOn: Bool) -> LocalizedStringResource {
+        if anyOn {
+            "The gestures turned on here show hidden menu bar items from an empty area of the menu bar. With all three off, use the \(Constants.displayName) icon or the Show or hide hidden items shortcut."
+        } else {
+            "Only the \(Constants.displayName) icon and the Show or hide hidden items shortcut show hidden menu bar items."
+        }
     }
 }
 

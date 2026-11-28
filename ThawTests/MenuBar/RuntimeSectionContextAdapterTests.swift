@@ -105,6 +105,7 @@ struct RuntimeSectionContextAdapterTests {
         adapter.mirrorSectionOrder(["a"], for: .visible)
         adapter.runPostRestrictionSceneProbes()
         adapter.prepareRevealedOrder()
+        adapter.refreshLayoutAfterReveal()
         #expect(adapter.completedLiveWalkGeneration == appState.itemManager.onScreenItemSnapshot.completedWalkGeneration)
         #expect(appState.menuBarManager.showOnHoverAllowed)
         #expect(adapter.loadSavedSectionOrder()[.visible] == ["a"])

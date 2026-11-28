@@ -13,7 +13,7 @@ import ThawCapture
 
 @MainActor
 final class RuntimeSectionContextAdapter: RuntimeSectionContext {
-    private weak var appState: AppState?
+    private(set) weak var appState: AppState?
 
     /// The settings this component reads. MenuBarEngineConfiguration states
     /// why the engine holds this rather than AppState.
@@ -363,6 +363,8 @@ extension RuntimeSectionContextAdapter {
         guard let itemManager = appState?.itemManager else { return }
         await RevealTurns.reconcileBoundaries(revealing: section, cause: revealAttribution.reconcileCause, on: itemManager)
     }
+
+    func refreshLayoutAfterReveal() { RevealTurns.refreshLayout(on: appState) }
 
     func prepareRevealedOrder() {
         appState?.itemManager.prepareReveal(cause: revealAttribution.preRevealCause)

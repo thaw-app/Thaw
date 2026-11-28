@@ -26,6 +26,9 @@ enum SystemExtraStandIn: String, CaseIterable {
     case userSwitcher = "user"
     case textInput = "textinput"
     case space
+    case wiFi = "wifi"
+    case bluetooth
+    case sound
 
     init(_ item: SystemExtraItem) {
         switch item {
@@ -39,36 +42,26 @@ enum SystemExtraStandIn: String, CaseIterable {
         "\(ThawMenuBarIdentity.bundleIdentifier).extra.\(rawValue)"
     }
 
-    /// Must match ExtraRole.autosaveName in ThawExtraHelper.
-    private var autosaveName: String {
+    /// The autosave name must match ExtraRole.autosaveName in ThawExtraHelper.
+    private var names: (autosave: String, bundle: String) {
         switch self {
-        case .focus: "Thaw.Extra.Focus"
-        case .timeMachine: "Thaw.Extra.TimeMachine"
-        case .timer: "Thaw.Extra.Timer"
-        case .airDrop: "Thaw.Extra.AirDrop"
-        case .nowPlaying: "Thaw.Extra.NowPlaying"
-        case .userSwitcher: "Thaw.Extra.UserSwitcher"
-        case .textInput: "Thaw.Extra.TextInput"
-        case .space: "Thaw.Extra.Space"
+        case .focus: ("Thaw.Extra.Focus", "Thaw Focus")
+        case .timeMachine: ("Thaw.Extra.TimeMachine", "Thaw Time Machine")
+        case .timer: ("Thaw.Extra.Timer", "Thaw Timer")
+        case .airDrop: ("Thaw.Extra.AirDrop", "Thaw AirDrop")
+        case .nowPlaying: ("Thaw.Extra.NowPlaying", "Thaw Now Playing")
+        case .userSwitcher: ("Thaw.Extra.UserSwitcher", "Thaw User Switcher")
+        case .textInput: ("Thaw.Extra.TextInput", "Thaw Text Input")
+        case .space: ("Thaw.Extra.Space", "Thaw Space")
+        case .wiFi: ("Thaw.Extra.WiFi", "Thaw Wi-Fi")
+        case .bluetooth: ("Thaw.Extra.Bluetooth", "Thaw Bluetooth")
+        case .sound: ("Thaw.Extra.Sound", "Thaw Sound")
         }
     }
 
     /// The persistent identifier the stand-in's item gets in the layout.
     var itemIdentifier: String {
-        "\(bundleIdentifier):\(autosaveName)"
-    }
-
-    private var bundleName: String {
-        switch self {
-        case .focus: "Thaw Focus"
-        case .timeMachine: "Thaw Time Machine"
-        case .timer: "Thaw Timer"
-        case .airDrop: "Thaw AirDrop"
-        case .nowPlaying: "Thaw Now Playing"
-        case .userSwitcher: "Thaw User Switcher"
-        case .textInput: "Thaw Text Input"
-        case .space: "Thaw Space"
-        }
+        "\(bundleIdentifier):\(names.autosave)"
     }
 
     /// Whether a bundle identifier belongs to one of this app's stand-ins.
@@ -83,7 +76,7 @@ enum SystemExtraStandIn: String, CaseIterable {
     }
 
     var bundleURL: URL {
-        Bundle.main.bundleURL.appending(path: "Contents/Library/Extras/\(bundleName).app")
+        Bundle.main.bundleURL.appending(path: "Contents/Library/Extras/\(names.bundle).app")
     }
 
     /// The order with identifier right after original, or nil when the order
@@ -93,69 +86,6 @@ enum SystemExtraStandIn: String, CaseIterable {
         var placed = order
         placed.insert(identifier, at: originalIndex + 1)
         return placed
-    }
-}
-
-// MARK: - Visibility
-
-/// Hides Thaw's extra and module bundles itself: Control Center's app list may have no record of
-/// them, and native hiding never switches off a bundle under Thaw's own identifier.
-/// Must match ExtraVisibilityChannel in ThawExtraHelper and WidgetVisibility in the Widgets module.
-@MainActor
-enum ExtraVisibilityChannel {
-    private static let log = DiagLog(category: "SystemExtraStandIn")
-    private static var lastHidden: Set<String>?
-
-    static func ownsBundle(_ bundleID: String) -> Bool {
-        let own = ThawMenuBarIdentity.bundleIdentifier
-        return bundleID.hasPrefix("\(own).extra.") || bundleID.hasPrefix("\(own).module.")
-    }
-
-    /// Bundles native hiding must not switch off in the system's Menu Bar list: the extras, which are
-    /// hidden through this channel, and Thaw itself, which would lose its icon and both dividers.
-    static func keepsOffSystemList(_ bundleID: String) -> Bool {
-        bundleID == ThawMenuBarIdentity.bundleIdentifier || ownsBundle(bundleID)
-    }
-
-    static var file: URL {
-        file(in: ItemStandInSlot.folder)
-    }
-
-    static func file(in folder: URL) -> URL {
-        folder.appending(path: "hidden-extras.txt")
-    }
-
-    static var notification: Notification.Name {
-        Notification.Name("\(ThawMenuBarIdentity.bundleIdentifier).extra.visibility")
-    }
-
-    static func hide(_ bundleIDs: Set<String>) {
-        hide(bundleIDs, folder: ItemStandInSlot.folder, announce: announceChange)
-    }
-
-    /// The folder and the announcement are parameters so tests write to a scratch folder and post nothing.
-    static func hide(_ requested: Set<String>, folder: URL, announce: () -> Void) {
-        let bundleIDs = requested.filter(ownsBundle)
-        guard bundleIDs != lastHidden else { return }
-        do {
-            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            try bundleIDs.sorted().joined(separator: "\n").write(to: file(in: folder), atomically: true, encoding: .utf8)
-        } catch {
-            log.error("could not write hidden extras: \(error.localizedDescription)")
-            return
-        }
-        lastHidden = bundleIDs
-        announce()
-        log.info("hidden extras: \(bundleIDs.sorted())")
-    }
-
-    private static func announceChange() {
-        DistributedNotificationCenter.default().postNotificationName(
-            notification,
-            object: nil,
-            userInfo: nil,
-            deliverImmediately: true
-        )
     }
 }
 
@@ -226,6 +156,8 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     /// Records an identifier as seen, so the stand-in is not routed to the
     /// new-items section instead of the original's slot.
     var markKnown: ((String) -> Void)?
+    /// Called when a stand-in exits too often to start again, so its original can come back.
+    var onGaveUp: ((SystemExtraStandIn) -> Void)?
     /// Stand-ins given a section of their own. Only these have a section worth
     /// mirroring back onto their original.
     private(set) var placed: Set<SystemExtraStandIn> = []
@@ -240,6 +172,8 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
     /// Recent restarts per stand-in, so one that cannot stay up is not
     /// relaunched forever.
     private var restarts: [SystemExtraStandIn: [ContinuousClock.Instant]] = [:]
+    /// Counts launches per stand-in, so an open that fails after a newer launch leaves that one alone.
+    private var launchCounts: [SystemExtraStandIn: Int] = [:]
     private static let restartLimit = 3
     private static let restartWindow: Duration = .seconds(30)
     private static let restartQuitTimeout: Duration = .seconds(3)
@@ -277,7 +211,21 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
         markKnown?(MenuBarItemTag.canonicalPersistentIdentifier(standIn.itemIdentifier))
         wanted.insert(standIn)
         place(standIn, after: original, in: section)
-        try await open(standIn)
+        let launchCount = launchCounts[standIn, default: 0] + 1
+        launchCounts[standIn] = launchCount
+        do {
+            try await open(standIn)
+        } catch {
+            // Turned off since, or a newer launch owns it: the caller has moved on, so it hears nothing.
+            guard launchCounts[standIn] == launchCount, wanted.contains(standIn) else {
+                log.info("\(standIn.rawValue) stand-in open failed after it was turned off or launched again")
+                return
+            }
+            // Not placed, or the original would be kept hidden for a stand-in that never ran.
+            wanted.remove(standIn)
+            placed.remove(standIn)
+            throw error
+        }
         // Turned off while it started: open quit it, so nothing should listen for it.
         if standIn == .textInput, wanted.contains(standIn) {
             CharacterViewerRelay.shared.start()
@@ -307,11 +255,13 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
             if await !entry.app.terminateAndWait(upTo: Self.restartQuitTimeout, now: now, sleep: sleep) {
                 entry.app.forceTerminate()
             }
+            let launchCount = launchCounts[standIn]
             do {
                 try await open(standIn)
                 log.info("restarted \(standIn.rawValue) stand-in")
             } catch {
                 log.error("\(standIn.rawValue) stand-in restart failed: \(error.localizedDescription)")
+                giveUpUnlessRelaunched(standIn, since: launchCount)
             }
         }
     }
@@ -358,17 +308,26 @@ final class SystemExtraStandInLauncher: SystemExtraReplacementProviding {
         let recent = (restarts[standIn] ?? []).filter { $0.duration(to: exitedAt) < Self.restartWindow }
         guard recent.count < Self.restartLimit else {
             log.error("\(standIn.rawValue) stand-in keeps exiting; not starting it again")
+            onGaveUp?(standIn)
             return
         }
         restarts[standIn] = recent + [exitedAt]
         log.info("\(standIn.rawValue) stand-in (pid \(pid)) exited; starting it again")
+        let launchCount = launchCounts[standIn]
         Task { [weak self] in
             do {
                 try await self?.open(standIn)
             } catch {
                 self?.log.error("\(standIn.rawValue) stand-in restart failed: \(error.localizedDescription)")
+                self?.giveUpUnlessRelaunched(standIn, since: launchCount)
             }
         }
+    }
+
+    /// A restart that fails after the stand-in was turned off, or launched again, leaves the newer state alone.
+    private func giveUpUnlessRelaunched(_ standIn: SystemExtraStandIn, since launchCount: Int?) {
+        guard wanted.contains(standIn), launchCounts[standIn] == launchCount else { return }
+        onGaveUp?(standIn)
     }
 
     /// Puts the stand-in in section, right after the original when the

@@ -3,6 +3,7 @@
 # Usage: assemble-extra-helper.sh <executable> <output dir> <parent bundle id> <role> [signing identity]
 set -euo pipefail
 exe=$1 out=$2 parent=$3 role=$4 identity=${5:--}
+usage=""
 case $role in
   focus) name="Thaw Focus" symbol=moon ;;
   timemachine) name="Thaw Time Machine" symbol=clock.arrow.trianglehead.counterclockwise.rotate.90 ;;
@@ -12,6 +13,10 @@ case $role in
   user) name="Thaw User Switcher" symbol=person.crop.circle ;;
   textinput) name="Thaw Text Input" symbol=keyboard ;;
   space) name="Thaw Space" symbol=square.stack ;;
+  wifi) name="Thaw Wi-Fi" symbol=wifi ;;
+  sound) name="Thaw Sound" symbol=speaker.wave.2.fill ;;
+  bluetooth) name="Thaw Bluetooth" symbol=dot.radiowaves.left.and.right
+    usage="<key>NSBluetoothAlwaysUsageDescription</key><string>Thaw Bluetooth lists your paired devices so you can connect and disconnect them from the menu bar.</string>" ;;
   slot[1-6]) name="Thaw Stand-In ${role#slot}" symbol=square.dashed ;;
   *) echo "unknown role $role" >&2; exit 1 ;;
 esac
@@ -33,6 +38,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>27.0</string>
   <key>LSUIElement</key><true/>
   <key>ThawExtraSymbol</key><string>$symbol</string>
+  $usage
 </dict>
 </plist>
 PLIST
