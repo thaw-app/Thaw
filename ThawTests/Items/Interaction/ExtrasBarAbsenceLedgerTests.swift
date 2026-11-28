@@ -121,4 +121,13 @@ struct ExtrasBarAbsenceLedgerTests {
         #expect(MenuBarItemAXProvider.ownExtrasBarChanged(isMissing: false, in: state))
         #expect(!MenuBarItemAXProvider.ownExtrasBarChanged(isMissing: false, in: state))
     }
+
+    @Test("Settings, a second process with Thaw's bundle ID and no extras bar, doesn't flip the warning on each scan")
+    func otherProcessDoesNotFlipTheWarning() {
+        let state = OSAllocatedUnfairLock(initialState: false)
+        for _ in 0 ..< 2 {
+            #expect(!MenuBarItemAXProvider.ownExtrasBarChanged(isMissing: false, readFrom: 1, ownPID: 1, in: state))
+            #expect(!MenuBarItemAXProvider.ownExtrasBarChanged(isMissing: true, readFrom: 2, ownPID: 1, in: state))
+        }
+    }
 }
