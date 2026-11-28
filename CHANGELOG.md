@@ -78,7 +78,7 @@ the items under New and Fixed.
 - Thaw Bar pictures taken while an item is still sliding in are retaken instead of kept cut off.
 - Items left on top of each other by a reveal are straightened out once the menu bar stops moving.
 - The Thaw Bar no longer stays at the right edge when it opens before the Thaw icon reports where it is.
-- A hidden item stays in the Thaw Bar when its app restarts.
+- A hidden item comes back to the Thaw Bar within seconds of its app restarting.
 
 ### Thanks
 

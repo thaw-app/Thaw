@@ -34,21 +34,73 @@ struct OwnerLivenessTickTests {
         return OwnerLivenessProbe(isAlive: { !dead.contains($0) }, runningApplications: { signature })
     }
 
-    /// One tick, reading a process table that holds the given processes.
+    /// One tick, reading a process table that holds the given processes and apps. Returns the
+    /// tracked apps the tick found running again.
+    @discardableResult
     private func tick(
         _ manager: MenuBarItemManager,
         probe: OwnerLivenessProbe,
         after seconds: Int,
-        running: Set<pid_t>
-    ) async {
+        running: Set<pid_t>,
+        apps bundles: Set<String> = []
+    ) async -> Set<String> {
         await manager.purgeDepartedOwnersWhenDue(
             probe: probe,
             now: start.advanced(by: .seconds(seconds)),
             readOwners: { [reads] in
                 reads.withLock { $0 += 1 }
-                return RunningApplicationSnapshot(processIDs: running, bundleIdentifiers: [])
+                return RunningApplicationSnapshot(processIDs: running, bundleIdentifiers: bundles)
             }
         )
+    }
+
+    @Test("A tracked app that runs again is reported once, so its items are read without a launch notice")
+    func trackedAppRunningAgainIsReported() async {
+        let manager = MenuBarItemManager()
+        manager.knownItemIdentifiers = ["com.example.app:Item"]
+        // Each list stays alive to the end, so a later one cannot take an earlier one's identity.
+        let withoutApp = NSObject()
+        let withApp = NSObject()
+        let later = NSObject()
+
+        let quit = await tick(manager, probe: probe(apps: withoutApp), after: 0, running: [], apps: ["com.example.other"])
+        let relaunched = await tick(manager, probe: probe(apps: withApp), after: 3, running: [], apps: ["com.example.other", "com.example.app"])
+        let stillRunning = await tick(manager, probe: probe(apps: later), after: 6, running: [], apps: ["com.example.other", "com.example.app"])
+
+        #expect(quit.isEmpty)
+        #expect(relaunched == ["com.example.app"])
+        #expect(stillRunning.isEmpty)
+    }
+
+    @Test("The first read reports no app, since every app is new to it")
+    func firstReadReportsNothing() async {
+        let manager = MenuBarItemManager()
+        manager.knownItemIdentifiers = ["com.example.app:Item"]
+
+        #expect(await tick(manager, probe: probe(apps: NSObject()), after: 0, running: [], apps: ["com.example.app"]).isEmpty)
+    }
+
+    @Test("An app with no tracked item is not reported when it starts")
+    func untrackedAppIsNotReported() async {
+        let manager = MenuBarItemManager()
+        manager.knownItemIdentifiers = ["com.example.app:Item"]
+        let before = NSObject()
+        let after = NSObject()
+
+        await tick(manager, probe: probe(apps: before), after: 0, running: [], apps: [])
+        #expect(await tick(manager, probe: probe(apps: after), after: 3, running: [], apps: ["com.example.unrelated"]).isEmpty)
+    }
+
+    @Test("An app a launch notice already reported is not reported again")
+    func launchNoticeIsNotRepeated() async {
+        let manager = MenuBarItemManager()
+        manager.knownItemIdentifiers = ["com.example.app:Item"]
+        let before = NSObject()
+        let after = NSObject()
+
+        await tick(manager, probe: probe(apps: before), after: 0, running: [], apps: [])
+        manager.ownerPurge.noteLaunched("com.example.app")
+        #expect(await tick(manager, probe: probe(apps: after), after: 3, running: [], apps: ["com.example.app"]).isEmpty)
     }
 
     @Test("Ticks read the process table once while nothing has changed")
