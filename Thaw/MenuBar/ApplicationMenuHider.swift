@@ -114,27 +114,20 @@ final class ApplicationMenuHider {
             isHiding: isHidingApplicationMenus,
             isManual: isManuallyHidingApplicationMenus
         )
+        if reconciliation == .showMenus {
+            // A close gives the menus back even when hiding is no longer allowed. Open Settings keeps Thaw active.
+            showApplicationMenus(deactivating: !appState.navigationState.isSettingsPresented)
+            return
+        }
         guard
             appState.settings.hideApplicationMenus,
             !menuBarManager.shouldUseThawBar(for: activeDisplayID, section: Self.thawBarSection(for: reconciliation)),
             !menuBarManager.isMenuBarHiddenBySystem,
             !appState.activeSpace.isFullscreen,
-            !appState.navigationState.isSettingsPresented
+            !appState.navigationState.isSettingsPresented,
+            case let .hideIfSectionNeedsRoom(shownName) = reconciliation,
+            let screen = environment.activeMenuBarScreen() ?? environment.mainScreen()
         else {
-            return
-        }
-        let shownName: MenuBarSectionName
-        switch reconciliation {
-        case .leaveMenus:
-            return
-        case .showMenus:
-            showApplicationMenus()
-            return
-        case let .hideIfSectionNeedsRoom(name):
-            shownName = name
-        }
-
-        guard let screen = environment.activeMenuBarScreen() ?? environment.mainScreen() else {
             return
         }
         hideIfNeedingRoom(menuBarManager.section(withName: shownName), on: screen)
@@ -200,13 +193,16 @@ final class ApplicationMenuHider {
     }
 
     /// Return to accessory policy and clear manual ownership of menu hiding.
-    func showApplicationMenus() {
+    /// - Parameter deactivating: false keeps Thaw active for a window of its own, which returns the policy when it closes.
+    func showApplicationMenus(deactivating: Bool = true) {
         guard appState != nil, let environment else {
             diagLog.error("Error showing application menus: Missing app state")
             return
         }
         diagLog.info("Showing application menus")
-        environment.deactivateToAccessory()
+        if deactivating {
+            environment.deactivateToAccessory()
+        }
         isHidingApplicationMenus = false
         isManuallyHidingApplicationMenus = false
     }

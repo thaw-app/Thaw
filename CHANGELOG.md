@@ -60,6 +60,7 @@ the items under New and Fixed.
 - Thaw rebuilds the menu bar fewer times when it starts, especially with Native hiding.
 - With a slow double-click speed in macOS, two separate clicks on empty menu bar space no longer open Always Hidden.
 - Layout offers Thaw's own Focus item even if you never changed how Focus shows in the menu bar.
+- App menus Thaw hid come back when the hidden items close, also in full screen, with Settings open or after "Hide app menus" is turned off.
 
 ### Thanks
 
