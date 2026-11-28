@@ -40,7 +40,7 @@ enum SystemSettings {
 nonisolated enum CommandOutput {
     /// The command's standard output, or "" when it can't start or is ended for running past timeout.
     /// A command that ignores SIGTERM is killed a second later. Output that a child of the command still
-    /// holds open at the timeout reads as "" too.
+    /// holds open at the timeout reads as "", and the read stops there.
     static func output(of executable: URL, arguments: [String], timeout: Duration) async -> String {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
@@ -59,16 +59,13 @@ nonisolated enum CommandOutput {
                 let (seconds, attoseconds) = timeout.components
                 let nanoseconds = Int(seconds) * 1_000_000_000 + Int(attoseconds / 1_000_000_000)
                 let deadline = DispatchTime.now() + .nanoseconds(nanoseconds)
-                let output = ReadOutput()
-                DispatchQueue.global(qos: .utility).async {
-                    output.data = pipe.fileHandleForReading.readDataToEndOfFile()
-                    output.done.signal()
-                }
+                let output = ReadOutput(pipe.fileHandleForReading)
                 let stop = DispatchWorkItem { end(process) }
                 DispatchQueue.global(qos: .utility).asyncAfter(deadline: deadline, execute: stop)
                 process.waitUntilExit()
                 stop.cancel()
                 guard process.terminationReason == .exit, output.done.wait(timeout: deadline) == .success else {
+                    output.cancel()
                     continuation.resume(returning: "")
                     return
                 }
@@ -87,9 +84,37 @@ nonisolated enum CommandOutput {
         }
     }
 
-    /// Written once by the reader before `done` is signaled.
+    /// Reads a pipe to its end on a dispatch source, which a timeout can cancel even while a child holds the pipe.
+    /// `data` is written only on the source's queue and read only after `done` is signaled.
     private final class ReadOutput: @unchecked Sendable {
-        var data = Data()
+        private(set) var data = Data()
         let done = DispatchSemaphore(value: 0)
+        private let handle: FileHandle
+        private let source: any DispatchSourceRead
+
+        init(_ handle: FileHandle) {
+            self.handle = handle
+            source = DispatchSource.makeReadSource(
+                fileDescriptor: handle.fileDescriptor, queue: DispatchQueue(label: "CommandOutput.read")
+            )
+            // Held strongly until the source is cancelled, which every path does: at the end of the output or on timeout.
+            source.setEventHandler { [self] in readAvailable() }
+            source.resume()
+        }
+
+        private func readAvailable() {
+            var buffer = [UInt8](repeating: 0, count: 16384)
+            let count = read(handle.fileDescriptor, &buffer, buffer.count)
+            if count > 0 {
+                data.append(buffer, count: count)
+            } else {
+                source.cancel()
+                done.signal()
+            }
+        }
+
+        func cancel() {
+            source.cancel()
+        }
     }
 }
