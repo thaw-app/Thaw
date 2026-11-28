@@ -48,7 +48,7 @@ the items under New and Fixed.
 - Revealing hidden items no longer leaves some of them on top of others in the menu bar.
 - The Thaw Bar trims transparent side margins from captured icons and keeps a minimum gap between items.
 - iStat Menus from the Mac App Store no longer fills Layout with a new item for every reading.
-- The iStat Menus clock keeps its saved section when the weekday changes.
+- The iStat Menus clock keeps its saved section when the weekday changes, also when it shows seconds or has no comma after the weekday.
 - Resetting the layout shows item pictures in the Layout bar right away.
 - Closing Settings no longer sends What's New or Credits behind other apps.
 - With the arrangement set to Manual, Sound and Wi-Fi can be moved in the Layout bar again.

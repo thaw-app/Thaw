@@ -329,12 +329,26 @@ struct IStatWeekdayClockTitleTests {
         #expect(MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):\(title)") == tag.tagIdentifier)
     }
 
+    @Test("A weekday clock with seconds or without the comma drops its weekday; a weekday before another reading stays", arguments: [
+        ("Fri, 23:59:07", "#, #:#:#"),
+        ("Sat, 0:00:00", "#, #:#:#"),
+        ("Fri 23:59", "# #:#"),
+        ("Sat 12:00:00 AM", "# #:#:#"),
+        ("Sat 42%", "Sat #%"),
+    ])
+    func weekdayClockVariantsKeepOneIdentity(title: String, canonical: String) {
+        let bundle = MenuBarItemTag.iStatMenusStatusBundleID
+        let tag = MenuBarItemTag(namespace: .string(bundle), title: title)
+        #expect(tag.tagIdentifier == "\(bundle):\(canonical)")
+        #expect(MenuBarItemTag.canonicalPersistentIdentifier("\(bundle):\(title)") == tag.tagIdentifier)
+    }
+
     @Test("Saved weekday aliases collapse and other item identities stay distinct")
     func savedWeekdayClockVariantsCollapse() {
         let bundle = MenuBarItemTag.iStatMenusStatusBundleID
-        let saved = ["Fri, #:#", "Sat, #:#", "Sun, #:#", "Mon, #:#", "#, #:#", "15:41", "CPU 42%", "MEM 42%", "Fri, #:#:1"]
+        let saved = ["Fri, #:#", "Sat, #:#", "Sun, #:#", "Mon, #:#", "#, #:#", "15:41", "CPU 42%", "MEM 42%", "Fri, #:#:1", "Fri, #:#:#", "Sat, #:#:#"]
         let canonical = MenuBarItemTag.canonicalPersistentIdentifiers(saved.map { "\(bundle):\($0)" })
-        let expected = ["#, #:#", "#:#", "CPU #%", "MEM #%", "#, #:#:1"]
+        let expected = ["#, #:#", "#:#", "CPU #%", "MEM #%", "#, #:#:1", "#, #:#:#"]
         #expect(canonical == expected.map { "\(bundle):\($0)" })
     }
 }
