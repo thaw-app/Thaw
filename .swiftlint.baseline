@@ -635,9 +635,9 @@
    "location": {
     "character": 1,
     "file": "Thaw/Items/Manager/MenuBarItemManager+Cache.swift",
-    "line": 941
+    "line": 924
    },
-   "reason": "File should contain 400 lines or less: currently contains 941",
+   "reason": "File should contain 400 lines or less: currently contains 924",
    "ruleDescription": "Files should not span too many lines.",
    "ruleIdentifier": "file_length",
    "ruleName": "File Length",

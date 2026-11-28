@@ -78,6 +78,7 @@ the items under New and Fixed.
 - Thaw Bar pictures taken while an item is still sliding in are retaken instead of kept cut off.
 - Items left on top of each other by a reveal are straightened out once the menu bar stops moving.
 - The Thaw Bar no longer stays at the right edge when it opens before the Thaw icon reports where it is.
+- A hidden item comes back to the Thaw Bar within seconds of its app restarting.
 
 ### Thanks
 
@@ -87,6 +88,7 @@ the items under New and Fixed.
 - @nahuelcamillo matched the Mac App Store iStat Menus helper ([#1697](https://github.com/thaw-app/Thaw/pull/1697)).
 - @chai-in kept the iStat Menus clock in its saved section ([#1709](https://github.com/thaw-app/Thaw/pull/1709)).
 - @amanthanvi stopped the HUD capsule from resizing its own panel ([ThawUI#14](https://github.com/thaw-app/ThawUI/pull/14)).
+- @Omoeba kept hidden items in the Thaw Bar when their app restarts ([#1713](https://github.com/thaw-app/Thaw/pull/1713)).
 - @PurtucRobert, @dmisgano99, @macdaddy1944, @zinowiewfilip, @Macador, @wangzi0218, @okwme and @felixkaiser reported the bugs this release fixes.
 
 ## [3.0.0-alpha.15] - 2026-11-22

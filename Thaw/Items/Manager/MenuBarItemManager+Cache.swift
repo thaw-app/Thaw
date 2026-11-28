@@ -93,23 +93,6 @@ extension MenuBarItemManager {
         )
     }
 
-    /// Purge before the periodic window-list gate: macOS 27 can omit terminate notifications, and AX-only items own no window.
-    /// Read LaunchServices-backed owner properties off MainActor and reject the snapshot if the cache changes during the read.
-    func purgeDepartedOwners(
-        readOwners: @Sendable () async -> RunningApplicationSnapshot = { await RunningApplicationSnapshot.current() }
-    ) async {
-        guard !isPurgingDepartedOwners, !Task.isCancelled else { return }
-        isPurgingDepartedOwners = true
-        defer { isPurgingDepartedOwners = false }
-        let cacheAtStart = itemCache
-        let owners = await readOwners()
-        guard !Task.isCancelled, itemCache == cacheAtStart else { return }
-        purgeDepartedOwners(
-            processIDs: owners.processIDs,
-            bundleIdentifiers: owners.bundleIdentifiers
-        )
-    }
-
     /// The injectable core of purgeDepartedOwners(): the live call site
     /// supplies the current process table, tests supply a fixture one.
     func purgeDepartedOwners(processIDs: Set<pid_t>, bundleIdentifiers: Set<String>) {

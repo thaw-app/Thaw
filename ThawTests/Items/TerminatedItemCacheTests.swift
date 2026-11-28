@@ -16,15 +16,16 @@ struct TerminatedItemCacheTests {
     private func item(
         pid: pid_t,
         sourcePID explicitSourcePID: pid_t? = nil,
-        bundle: String = "com.henrikruscon.Alcove"
+        bundle: String = "com.henrikruscon.Alcove",
+        title: String = "Alcove"
     ) -> MenuBarItem {
         MenuBarItem(
-            tag: MenuBarItemTag(namespace: .string(bundle), title: "Alcove", instanceIndex: 0),
+            tag: MenuBarItemTag(namespace: .string(bundle), title: title, instanceIndex: 0),
             windowID: 1,
             ownerPID: pid,
             sourcePID: explicitSourcePID ?? (pid > 0 ? pid : nil),
             bounds: CGRect(x: 100, y: 0, width: 24, height: 24),
-            title: "Alcove",
+            title: title,
             isOnScreen: false
         )
     }
@@ -74,13 +75,63 @@ struct TerminatedItemCacheTests {
         #expect(cache.retainingRunningOwners(processIDs: [456], bundleIdentifiers: []).isEmpty)
     }
 
-    @Test("Relaunch does not validate a snapshot belonging to the old process")
-    func relaunchUsesNewSnapshot() {
+    @Test("A visible item of a relaunched app waits for the new process's item")
+    func relaunchUsesNewVisibleItem() {
         var cache = MenuBarItemCache(displayID: nil)
-        cache[.hidden] = [item(pid: 123)]
+        cache[.visible] = [item(pid: 123)]
         #expect(cache.retainingRunningOwners(processIDs: [456], bundleIdentifiers: ["com.henrikruscon.Alcove"]).isEmpty)
-        cache[.hidden] = [item(pid: 456)]
-        #expect(cache.retainingRunningOwners(processIDs: [456], bundleIdentifiers: ["com.henrikruscon.Alcove"])[.hidden].count == 1)
+        cache[.visible] = [item(pid: 456)]
+        #expect(cache.retainingRunningOwners(processIDs: [456], bundleIdentifiers: ["com.henrikruscon.Alcove"])[.visible].count == 1)
+    }
+
+    @Test("A hidden item seen before its app relaunched stays, without the old process",
+          arguments: [MenuBarSectionName.hidden, .alwaysHidden])
+    func relaunchKeepsHiddenItem(section: MenuBarSectionName) throws {
+        let seen = item(pid: 123)
+        var cache = MenuBarItemCache(displayID: nil)
+        cache[section] = [seen]
+
+        let kept = try #require(cache.retainingRunningOwners(
+            processIDs: [456],
+            bundleIdentifiers: ["com.henrikruscon.Alcove"]
+        )[section].first)
+
+        #expect(kept.uniqueIdentifier == seen.uniqueIdentifier)
+        #expect(kept.bounds == seen.bounds)
+        #expect(kept.ownerPID == 0)
+        #expect(kept.sourcePID == nil)
+        // The click path finds the relaunched process the way it does for a cold-start snapshot.
+        #expect(ItemOwnerLookup.resolving(kept, runningPIDs: { _ in [456] }).sourcePID == 456)
+    }
+
+    @Test("A copy of an app that quit leaves its hidden item, while another copy with an item of its own still runs",
+          arguments: [MenuBarSectionName.hidden, .alwaysHidden])
+    func survivingCopyDoesNotKeepItem(section: MenuBarSectionName) {
+        let survivor = item(pid: 456, title: "Alcove 2")
+        var cache = MenuBarItemCache(displayID: nil)
+        cache[section] = [item(pid: 123), survivor]
+
+        let published = cache.retainingRunningOwners(processIDs: [456], bundleIdentifiers: ["com.henrikruscon.Alcove"])
+
+        #expect(published[section] == [survivor])
+    }
+
+    @Test("Rebucketing brings back a hidden item of a relaunched app", arguments: [MenuBarSectionName.hidden, .alwaysHidden])
+    func relaunchedAppReturns(section: MenuBarSectionName) {
+        let snapshot = item(pid: 123)
+        let rebuilt = RuntimeCacheMapper.rebucket(
+            MenuBarItemCache(displayID: 2),
+            sectionFor: { _ in .visible },
+            sectionAssignment: [snapshot.uniqueIdentifier: section],
+            allowsAlwaysHidden: true,
+            retainedSnapshotFor: { _ in snapshot },
+            orderedItems: { items, _ in items }
+        )
+        let published = rebuilt.retainingRunningOwners(processIDs: [456], bundleIdentifiers: ["com.henrikruscon.Alcove"])
+
+        #expect(published[section].map(\.uniqueIdentifier) == [snapshot.uniqueIdentifier])
+        // Without a PID the item no longer marks a departed owner for the liveness tick.
+        #expect(published.livenessPIDs.isEmpty)
     }
 
     @Test("A cached item follows its source app rather than the hosting process")
@@ -89,9 +140,10 @@ struct TerminatedItemCacheTests {
         var cache = MenuBarItemCache(displayID: nil)
         cache[.hidden] = [cached]
 
+        // The app quit; only the hosting process still runs.
         #expect(cache.retainingRunningOwners(
             processIDs: [100],
-            bundleIdentifiers: ["com.henrikruscon.Alcove"]
+            bundleIdentifiers: []
         ).isEmpty)
         #expect(cache.retainingRunningOwners(
             processIDs: [200],
@@ -161,6 +213,20 @@ struct TerminatedItemCacheTests {
 
         #expect(manager.itemCache[.visible].map(\.ownerPID) == [111])
         #expect(!manager.isPurgingDepartedOwners)
+    }
+
+    @Test("The tick's liveness sweep keeps a hidden item whose app relaunched")
+    func tickSweepKeepsRelaunchedHiddenItem() {
+        let manager = MenuBarItemManager()
+        var cache = MenuBarItemCache(displayID: 1)
+        cache[.hidden] = [item(pid: 222, bundle: "com.relaunched.app")]
+        manager.itemCache = cache
+
+        // The old process's didTerminate never arrived, and the app runs again as 333.
+        manager.purgeDepartedOwners(processIDs: [333], bundleIdentifiers: ["com.relaunched.app"])
+
+        #expect(manager.managedItems(for: .hidden).map(\.uniqueIdentifier) == cache[.hidden].map(\.uniqueIdentifier))
+        #expect(manager.managedItems(for: .hidden).map(\.ownerPID) == [0])
     }
 
     @Test("The tick's liveness sweep leaves an all-owners-running cache untouched")

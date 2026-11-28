@@ -24,22 +24,14 @@ extension MenuBarItemManager {
             // Noted as they arrive: the refresh is debounced, and keeping only the last launch of a
             // burst lost a tracked relaunch that an unrelated app followed within the second.
             for app in change.launched {
-                self?.noteAppLaunched(bundleID: app.bundleIdentifier)
+                self?.noteAppLaunched(bundleID: app.bundleIdentifier, processIdentifier: app.processIdentifier)
             }
             if !change.launched.isEmpty { launched.yield() }
             if !change.terminated.isEmpty { exited.yield() }
         }
         let launchTask = Task { @MainActor [weak self] in
             for await _ in launches.debounce(for: .seconds(1)) {
-                Self.diagLog.debug("Refreshing cache for potential new items after app launches")
-                await self?.cacheItemsRegardless()
-                // Many apps register their status item more than a second after they start. The window-list
-                // gate is dropped first: an item published only as an AXExtrasMenuBar child adds no window.
-                for _ in 0 ..< 2 {
-                    try? await Task.sleep(for: .seconds(2.5))
-                    self?.periodicWindowListSignature = nil
-                    await self?.cacheItemsIfNeeded()
-                }
+                await self?.refreshForLaunchedApps()
             }
         }
         let exitTask = Task { @MainActor [weak self] in
@@ -61,10 +53,39 @@ extension MenuBarItemManager {
     }
 
     /// Logs a launch and settles the bar when it is a relaunch of an app Thaw tracks an item for.
-    func noteAppLaunched(bundleID: String?) {
+    func noteAppLaunched(bundleID: String?, processIdentifier: pid_t?) {
         Self.diagLog.debug("App launched\(bundleID.map { " (\($0))" } ?? "")")
+        if let bundleID, let processIdentifier {
+            ownerPurge.noteLaunched(bundleID, processIdentifier: processIdentifier)
+        }
         if let settle = Self.launchSettle(bundleID: bundleID, knownIdentifiers: knownItemIdentifiers) {
             barSettling.note(settle)
+        }
+    }
+
+    /// Handles tracked apps the liveness check found running again as launches with no notice:
+    /// settles on each and rescans. Their hidden items come back from their conceal snapshots.
+    func noteAppsRunningAgain(_ bundleIDs: Set<String>) {
+        guard !bundleIDs.isEmpty else { return }
+        for bundleID in bundleIDs.sorted() {
+            Self.diagLog.debug("App running again without a launch notice (\(bundleID))")
+            if let settle = Self.launchSettle(bundleID: bundleID, knownIdentifiers: knownItemIdentifiers) {
+                barSettling.note(settle)
+            }
+        }
+        Task { [weak self] in await self?.refreshForLaunchedApps() }
+    }
+
+    /// Rescans for the items of launched apps now, and again at +2.5 s and +5 s.
+    func refreshForLaunchedApps() async {
+        Self.diagLog.debug("Refreshing cache for potential new items after app launches")
+        await cacheItemsRegardless()
+        // Many apps register their status item more than a second after they start. The window-list
+        // gate is dropped first: an item published only as an AXExtrasMenuBar child adds no window.
+        for _ in 0 ..< 2 {
+            try? await Task.sleep(for: .seconds(2.5))
+            periodicWindowListSignature = nil
+            await cacheItemsIfNeeded()
         }
     }
 
