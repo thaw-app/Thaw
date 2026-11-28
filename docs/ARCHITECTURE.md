@@ -115,7 +115,7 @@ CompactSlider is locked there too, as a dependency of ThawUI.
 | Saved order and move planning | [`ThawLayout`](../packages/ThawLayout/Sources/ThawLayout), [`LayoutMoveSequencePlanner`](../packages/MenuBarModel/Sources/MenuBarModel/LayoutMoveSequencePlanner.swift) |
 | Layout writes and automatic repair | [`RepairOrchestrator`](../Thaw/Items/Manager/RepairOrchestrator.swift), [`MenuBarPositionStoreProvider`](../Thaw/MenuBar/Backends/MenuBarPositionStoreProvider.swift) |
 | Hide, reveal and section policy | [`MenuBarManager`](../Thaw/MenuBar/MenuBarManager.swift), [`RuntimeSectionContextAdapter`](../Thaw/MenuBar/RuntimeSectionContextAdapter.swift) |
-| Item images | [`Items/Capture`](../Thaw/Items/Capture), [`ThawCapture`](../packages/ThawCapture), [`MenuBarCaptureService`](../MenuBarCaptureService) |
+| Item images | [`Items/Capture`](../Thaw/Items/Capture), [`ThawCapture`](../packages/ThawCapture), [`MenuBarCaptureService`](../targets/MenuBarCaptureService) |
 | Display and Space changes | [`Environment`](../Thaw/Environment) |
 | Settings and profiles | [`Settings/Models`](../Thaw/Settings/Models), [`Defaults`](../Thaw/System/Defaults.swift) |
 | Automation and sender authorization | [`SettingsURIParser`](../Thaw/System/SettingsURIParser.swift), [`SettingsURIHandler`](../Thaw/System/SettingsURIHandler.swift), [`SettingsURISender`](../Thaw/System/SettingsURISender.swift) |
