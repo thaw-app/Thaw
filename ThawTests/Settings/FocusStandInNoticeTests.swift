@@ -20,6 +20,16 @@ struct FocusStandInNoticeTests {
         #expect(!FocusStandInNotice.shows(focusShownInControlCenter: false, focusReplaced: false))
     }
 
+    @Test("Focus counts as shown while Control Center has no setting for it, which no other module does")
+    func focusWithoutControlCenterSetting() {
+        func focusShown(_ value: Int?) -> Bool {
+            FocusStandInNotice.focusShownInControlCenter { SystemExtraTakeoverCoordinator.isShownInMenuBar($0) { _ in value } }
+        }
+        #expect(focusShown(nil))
+        #expect(!focusShown(8))
+        #expect(!SystemExtraTakeoverCoordinator.isShownInMenuBar(TakeoverRig.moduleTag(TakeoverRig.airDrop)) { _ in nil })
+    }
+
     @Test("Turning it on replaces Focus alone and keeps the other modules as they were")
     func turnsOnFocusOnly() {
         var off = ControlCenterReplacements(modules: false, timeMachine: true, textInput: false)

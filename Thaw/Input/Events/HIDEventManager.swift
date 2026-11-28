@@ -115,7 +115,7 @@ final class HIDEventManager {
 
     /// The temporary protected region around the first click that revealed
     /// hidden items. Clicks inside this region are intercepted until the
-    /// system double-click window expires.
+    /// click pairing window expires.
     var showOnClickGuardRegion: CGRect?
 
     /// The display hosting the current protected region.

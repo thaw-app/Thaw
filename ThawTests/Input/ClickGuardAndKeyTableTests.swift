@@ -42,6 +42,13 @@ struct ShowOnClickGuardTests {
         #expect(!HIDEventManager.shouldSwallowClick(clickLocation: outside, guardRegion: region, isDoubleClick: true, withinDoubleClickWindow: true))
         #expect(!HIDEventManager.shouldSwallowClick(clickLocation: inside, guardRegion: region, isDoubleClick: true, withinDoubleClickWindow: false))
     }
+
+    @MainActor
+    @Test("A slow double-click speed in macOS does not stretch the wait for a second click on empty menu bar space")
+    func pairingWindowIsCapped() {
+        #expect(HIDEventManager.menuBarClickPairingWindow(systemInterval: 5) == .seconds(0.5))
+        #expect(HIDEventManager.menuBarClickPairingWindow(systemInterval: 0.25) == .seconds(0.25))
+    }
 }
 
 /// The table of named keys.

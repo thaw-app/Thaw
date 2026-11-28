@@ -58,6 +58,8 @@ the items under New and Fixed.
 - Turning off a Control Center replacement puts Apple's item back where the replacement was.
 - Stats' icons can be moved and no longer snap back or split around Thaw's icon.
 - Thaw rebuilds the menu bar fewer times when it starts, especially with Native hiding.
+- With a slow double-click speed in macOS, two separate clicks on empty menu bar space no longer open Always Hidden.
+- Layout offers Thaw's own Focus item even if you never changed how Focus shows in the menu bar.
 
 ### Thanks
 

@@ -79,6 +79,11 @@ extension ControlItem {
         /// five seconds, and with that ordinary clicks paired up and skipped Hidden.
         static let maximumPairingInterval: TimeInterval = 0.5
 
+        /// The gap that pairs two clicks at the given macOS double-click speed.
+        static func pairingInterval(systemInterval: TimeInterval) -> TimeInterval {
+            min(systemInterval, maximumPairingInterval)
+        }
+
         private var previous: (timestamp: TimeInterval, location: CGPoint, modifiers: NSEvent.ModifierFlags)?
 
         mutating func clickCount(
@@ -94,7 +99,7 @@ extension ControlItem {
             }
             if let previous,
                timestamp > previous.timestamp,
-               timestamp - previous.timestamp <= min(interval, Self.maximumPairingInterval),
+               timestamp - previous.timestamp <= Self.pairingInterval(systemInterval: interval),
                location.distance(to: previous.location) <= 4,
                modifiers == previous.modifiers
             {

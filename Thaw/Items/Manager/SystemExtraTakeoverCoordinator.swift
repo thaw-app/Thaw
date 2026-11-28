@@ -286,19 +286,26 @@ final class SystemExtraTakeoverCoordinator {
         }
     }
 
-    /// Control Center's bit 2 means shown (2 always, 18 while active); missing keys mean not shown.
+    /// Whether this Mac's Control Center settings show original in the menu bar.
     static func isShownInMenuBar(_ original: String) -> Bool {
+        isShownInMenuBar(original) { key in
+            CFPreferencesCopyValue(
+                key as CFString,
+                "com.apple.controlcenter" as CFString,
+                kCFPreferencesCurrentUser,
+                kCFPreferencesCurrentHost
+            ) as? Int
+        }
+    }
+
+    /// Control Center's bit 2 means shown (2 always, 18 while active). Focus has no key until its setting
+    /// is changed and shows while a Focus is on; any other missing key means not shown.
+    static func isShownInMenuBar(_ original: String, readValue: (String) -> Int?) -> Bool {
         let identifier = MenuBarItemTag.canonicalPersistentIdentifier(original)
         guard let title = RuntimeModuleController.controlCenterMenuExtraTitle(forItemIdentifier: identifier),
               let key = SystemMenuBarModuleCatalog.controlCenterKeysByMenuExtraTitle[title]
         else { return false }
-        let value = CFPreferencesCopyValue(
-            key as CFString,
-            "com.apple.controlcenter" as CFString,
-            kCFPreferencesCurrentUser,
-            kCFPreferencesCurrentHost
-        ) as? Int
-        return value.map { $0 & RuntimeModuleController.shownValue != 0 } ?? false
+        return readValue(key).map { $0 & RuntimeModuleController.shownValue != 0 } ?? (key == "FocusModes")
     }
 
     /// Forced-visible SystemUIServer items require a switch, not Hidden placement, to trigger replacement; disabling returns originals.
